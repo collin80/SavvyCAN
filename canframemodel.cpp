@@ -98,8 +98,14 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 
 void CANFrameModel::addFrame(CANFrame &frame)
 {
-    beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
+    //beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
     frames.append(frame);
+    //endInsertRows();
+}
+
+void CANFrameModel::sendRefresh()
+{
+    beginInsertRows(QModelIndex(), 0, frames.count());
     endInsertRows();
 }
 

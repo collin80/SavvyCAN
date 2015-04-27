@@ -74,6 +74,7 @@ void MainWindow::loadNativeCSVFile(QString filename)
         }
     }
     inFile->close();
+    model->sendRefresh();
 
 }
 

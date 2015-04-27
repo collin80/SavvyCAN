@@ -19,6 +19,7 @@ public:
     int CANFrameModel::columnCount(const QModelIndex &) const;
 
     void addFrame(CANFrame &frame);
+    void sendRefresh();
     void clearFrames();
 
 
