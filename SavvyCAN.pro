@@ -13,9 +13,11 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    canframemodel.cpp
 
 HEADERS  += mainwindow.h \
-    can_structs.h
+    can_structs.h \
+    canframemodel.h
 
 FORMS    += mainwindow.ui

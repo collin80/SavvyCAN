@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QStandardItemModel>
+#include "canframemodel.h"
 #include "can_structs.h"
 
 namespace Ui {
@@ -22,13 +22,13 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
-    QStandardItemModel *model;
+    CANFrameModel *model;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);
     void loadLogFile(QString);
     void loadMicrochipFile(QString);
-    void addFrameToDisplay(CANFrame);
+    void addFrameToDisplay(CANFrame &);
 };
 
 #endif // MAINWINDOW_H

@@ -3,43 +3,25 @@
 #include "can_structs.h"
 #include <QDateTime>
 #include <QFileDialog>
-#include <QStandardItemModel>
+#include "canframemodel.h"
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    model = new QStandardItemModel();
+    model = new CANFrameModel();
     ui->canFramesView->setModel(model);
 
     QStringList headers;
     headers << "Timestamp" << "ID" << "Ext" << "Bus" << "Len" << "Data";
-    model->setHorizontalHeaderLabels(headers);
+    //model->setHorizontalHeaderLabels(headers);
     ui->canFramesView->setColumnWidth(0, 110);
     ui->canFramesView->setColumnWidth(1, 70);
     ui->canFramesView->setColumnWidth(2, 40);
     ui->canFramesView->setColumnWidth(3, 40);
     ui->canFramesView->setColumnWidth(4, 40);
     ui->canFramesView->setColumnWidth(5, 300);
-
-    /*
-    for (int row = 0; row < 4000; row++)
-    {
-        QStandardItem *item = new QStandardItem(QString("10000ms"));
-        model->setItem(row, 0, item);
-        item = new QStandardItem(QString("0x107"));
-        model->setItem(row, 1, item);
-        item = new QStandardItem(QString("F"));
-        model->setItem(row, 2, item);
-        item = new QStandardItem(QString("1"));
-        model->setItem(row, 3, item);
-        item = new QStandardItem(QString("8"));
-        model->setItem(row, 4, item);
-        item = new QStandardItem(QString("0x10 0xE0 0x10 0x30 0x40 0x50 0xFF 0x23"));
-        model->setItem(row, 5, item);
-    }
-    */
 }
 
 MainWindow::~MainWindow()
@@ -47,27 +29,9 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::addFrameToDisplay(CANFrame frame)
+void MainWindow::addFrameToDisplay(CANFrame &frame)
 {
-    int row = model->rowCount();
-    QStandardItem *item = new QStandardItem(QString::number(frame.timestamp));
-    model->setItem(row, 0, item);
-    item = new QStandardItem(QString::number(frame.ID, 16));
-    model->setItem(row, 1, item);
-    item = new QStandardItem(QString::number(frame.extended));
-    model->setItem(row, 2, item);
-    item = new QStandardItem(QString::number(frame.bus));
-    model->setItem(row, 3, item);
-    item = new QStandardItem(QString::number(frame.len));
-    model->setItem(row, 4, item);
-    QString tempString;
-    for (int i = 0; i < frame.len; i++)
-    {
-        tempString.append(QString::number(frame.data[i], 16));
-        tempString.append(" ");
-    }
-    item = new QStandardItem(tempString);
-    model->setItem(row, 5, item);
+    model->addFrame(frame);
 }
 
 void MainWindow::loadCRTDFile(QString filename)
