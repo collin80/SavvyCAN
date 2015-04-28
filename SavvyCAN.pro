@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport
 
 TARGET = SavvyCAN
 TEMPLATE = app
@@ -14,10 +14,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    canframemodel.cpp
+    canframemodel.cpp \
+    utility.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
-    canframemodel.h
+    canframemodel.h \
+    utility.h
 
 FORMS    += mainwindow.ui

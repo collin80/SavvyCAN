@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSerialPort>
 #include "canframemodel.h"
 #include "can_structs.h"
 
@@ -19,10 +20,12 @@ public:
 
 private slots:
     void handleLoadFile();
+    void connButtonPress();
 
 private:
     Ui::MainWindow *ui;
     CANFrameModel *model;
+    QSerialPort *port;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);
