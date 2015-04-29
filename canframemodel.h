@@ -18,8 +18,9 @@ public:
                         int role = Qt::DisplayRole) const;
     int CANFrameModel::columnCount(const QModelIndex &) const;
 
-    void addFrame(CANFrame &frame);
+    void addFrame(CANFrame &, bool);
     void sendRefresh();
+    void sendRefresh(int);
     void clearFrames();
 
 

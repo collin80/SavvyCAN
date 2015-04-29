@@ -34,7 +34,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QString::number(thisFrame.timestamp);
             break;
         case 1: //id
-            return QString::number(thisFrame.ID, 16);
+            return QString::number(thisFrame.ID, 16).toUpper().rightJustified(2,'0');
             break;
         case 2: //ext
             return QString::number(thisFrame.extended);
@@ -48,7 +48,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case 5: //data
             for (int i = 0; i < thisFrame.len; i++)
             {
-                tempString.append(QString::number(thisFrame.data[i], 16));
+                tempString.append(QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2,'0'));
                 tempString.append(" ");
             }
             return tempString;
@@ -93,14 +93,14 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     }
 
     else
-        return QString::number(section);
+        return QString::number(section + 1);
 }
 
-void CANFrameModel::addFrame(CANFrame &frame)
+void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 {
-    //beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
+    if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
     frames.append(frame);
-    //endInsertRows();
+    if (autoRefresh) endInsertRows();
 }
 
 void CANFrameModel::sendRefresh()
@@ -108,6 +108,13 @@ void CANFrameModel::sendRefresh()
     beginInsertRows(QModelIndex(), 0, frames.count());
     endInsertRows();
 }
+
+void CANFrameModel::sendRefresh(int pos)
+{
+    beginInsertRows(QModelIndex(), pos, pos);
+    endInsertRows();
+}
+
 
 void CANFrameModel::clearFrames()
 {

@@ -33,6 +33,9 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     port = new QSerialPort(this);
+
+    rx_state = IDLE;
+    rx_step = 0;
 }
 
 MainWindow::~MainWindow()
@@ -40,9 +43,9 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::addFrameToDisplay(CANFrame &frame)
+void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 {
-    model->addFrame(frame);
+    model->addFrame(frame, autoRefresh);
 }
 
 void MainWindow::loadCRTDFile(QString filename)
@@ -231,7 +234,126 @@ void MainWindow::connButtonPress()
         output.append(0xE7);
         port->write(output);
         ///isConnected = true;
+        connect(port, SIGNAL(readyRead()), this, SLOT(readSerialData()));
 
     }
+}
 
+void MainWindow::readSerialData()
+{
+    QByteArray data = port->readAll();
+    unsigned char c;
+    ui->statusBar->showMessage(tr("Got data from serial. Len = %0").arg(data.length()));
+    for (int i = 0; i < data.length(); i++)
+    {
+        c = data.at(i);
+        procRXChar(c);
+    }
+}
+
+void MainWindow::procRXChar(unsigned char c)
+{
+    switch (rx_state)
+    {
+    case IDLE:
+        if (c == 0xF1) rx_state = GET_COMMAND;
+        break;
+    case GET_COMMAND:
+        switch (c)
+        {
+        case 0: //receiving a can frame
+            rx_state = BUILD_CAN_FRAME;
+            rx_step = 0;
+            break;
+        case 1: //we don't accept time sync commands from the firmware
+            rx_state = IDLE;
+            break;
+        case 2: //process a return reply for digital input states.
+            rx_state = GET_DIG_INPUTS;
+            rx_step = 0;
+            break;
+        case 3: //process a return reply for analog inputs
+            rx_state = GET_ANALOG_INPUTS;
+            break;
+        case 4: //we set digital outputs we don't accept replies so nothing here.
+            rx_state = IDLE;
+            break;
+        case 5: //we set canbus specs we don't accept replies.
+            rx_state = IDLE;
+            break;
+        }
+        break;
+    case BUILD_CAN_FRAME:
+        switch (rx_step)
+        {
+        case 0:
+            buildFrame.timestamp = c;
+            break;
+        case 1:
+            buildFrame.timestamp |= (uint)(c << 8);
+            break;
+        case 2:
+            buildFrame.timestamp |= (uint)c << 16;
+            break;
+        case 3:
+            buildFrame.timestamp |= (uint)c << 24;
+            break;
+        case 4:
+            buildFrame.ID = c;
+            break;
+        case 5:
+            buildFrame.ID |= c << 8;
+            break;
+        case 6:
+            buildFrame.ID |= c << 16;
+            break;
+        case 7:
+            buildFrame.ID |= c << 24;
+            if ((buildFrame.ID & 1 << 31) == 1 << 31)
+            {
+                buildFrame.ID &= 0x7FFFFFFF;
+                buildFrame.extended = true;
+            }
+            else buildFrame.extended = false;
+            break;
+        case 8:
+            buildFrame.len = c & 0xF;
+            if (buildFrame.len > 8) buildFrame.len = 8;
+            buildFrame.bus = (c & 0xF0) >> 4;
+            break;
+        default:
+            if (rx_step < buildFrame.len + 9)
+            {
+                buildFrame.data[rx_step - 9] = c;
+            }
+            else
+            {
+                rx_state = IDLE;
+                rx_step = 0;
+                addFrameToDisplay(buildFrame, true);
+            }
+            break;
+        }
+        rx_step++;
+        break;
+    case GET_ANALOG_INPUTS: //get 9 bytes - 2 per analog input plus checksum
+        switch (rx_step)
+        {
+        case 0:
+            break;
+        }
+        rx_step++;
+        break;
+    case GET_DIG_INPUTS: //get two bytes. One for digital in status and one for checksum.
+        switch (rx_step)
+        {
+        case 0:
+            break;
+        case 1:
+            rx_state = IDLE;
+            break;
+        }
+        rx_step++;
+        break;
+    }
 }
