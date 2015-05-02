@@ -22,6 +22,7 @@ public:
     void sendRefresh();
     void sendRefresh(int);
     void clearFrames();
+    QList<CANFrame> *getListReference();
 
 
 private:

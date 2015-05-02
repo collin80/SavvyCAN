@@ -36,11 +36,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     rx_state = IDLE;
     rx_step = 0;
+
+    graphingWindow = NULL;
+    frameInfoWindow = NULL;
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    if (graphingWindow) delete graphingWindow;
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
@@ -237,6 +241,19 @@ void MainWindow::connButtonPress()
         connect(port, SIGNAL(readyRead()), this, SLOT(readSerialData()));
 
     }
+}
+
+void MainWindow::showGraphingWindow()
+{
+    if (!graphingWindow) graphingWindow = new GraphingWindow();
+    graphingWindow->show();
+}
+
+void MainWindow::showFrameDataAnalysis()
+{
+    //only create an instance of the object if we dont have one. Otherwise just display the existing one.
+    if (!frameInfoWindow) frameInfoWindow = new FrameInfoWindow(model->getListReference());
+    frameInfoWindow->show();
 }
 
 void MainWindow::readSerialData()

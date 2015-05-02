@@ -122,3 +122,11 @@ void CANFrameModel::clearFrames()
     frames.clear();
     endRemoveRows();
 }
+
+//Is this safe? Maybe not but if we don't change it then that's OK
+//Is it the best C++ practice? Probably not. This breaks the MVC paradigm
+//but, it's for a good cause.
+QList<CANFrame>* CANFrameModel::getListReference()
+{
+    return &frames;
+}

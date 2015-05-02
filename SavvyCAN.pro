@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport
 
 TARGET = SavvyCAN
 TEMPLATE = app
@@ -15,11 +15,19 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     canframemodel.cpp \
-    utility.cpp
+    utility.cpp \
+    qcustomplot.cpp \
+    graphingwindow.cpp \
+    frameinfowindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \
-    utility.h
+    utility.h \
+    qcustomplot.h \
+    graphingwindow.h \
+    frameinfowindow.h
 
-FORMS    += mainwindow.ui
+FORMS    += mainwindow.ui \
+    graphingwindow.ui \
+    frameinfowindow.ui

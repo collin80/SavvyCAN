@@ -104,6 +104,7 @@
     <addaction name="actionFlow_View"/>
     <addaction name="actionFuzzy_Scope"/>
     <addaction name="actionGraph_Dta"/>
+    <addaction name="actionFrame_Data_Analysis"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -177,6 +178,11 @@
     <string>Save Log File</string>
    </property>
   </action>
+  <action name="actionFrame_Data_Analysis">
+   <property name="text">
+    <string>Frame Data Analysis</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
@@ -213,9 +219,43 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionGraph_Dta</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showGraphingWindow()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>463</x>
+     <y>249</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionFrame_Data_Analysis</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>showFrameDataAnalysis()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>463</x>
+     <y>249</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>handleLoadFile()</slot>
   <slot>connButtonPress()</slot>
+  <slot>showGraphingWindow()</slot>
+  <slot>showFrameDataAnalysis()</slot>
  </slots>
 </ui>

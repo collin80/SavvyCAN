@@ -5,6 +5,8 @@
 #include <QSerialPort>
 #include "canframemodel.h"
 #include "can_structs.h"
+#include "graphingwindow.h"
+#include "frameinfowindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -34,6 +36,8 @@ private slots:
     void handleLoadFile();
     void connButtonPress();
     void readSerialData();
+    void showGraphingWindow();
+    void showFrameDataAnalysis();
 
 private:
     Ui::MainWindow *ui;
@@ -43,6 +47,8 @@ private:
     STATE rx_state;
     int rx_step;
     CANFrame buildFrame;
+    GraphingWindow *graphingWindow;
+    FrameInfoWindow *frameInfoWindow;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);
