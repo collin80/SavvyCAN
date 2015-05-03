@@ -18,7 +18,8 @@ SOURCES += main.cpp\
     utility.cpp \
     qcustomplot.cpp \
     graphingwindow.cpp \
-    frameinfowindow.cpp
+    frameinfowindow.cpp \
+    newgraphdialog.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -26,8 +27,10 @@ HEADERS  += mainwindow.h \
     utility.h \
     qcustomplot.h \
     graphingwindow.h \
-    frameinfowindow.h
+    frameinfowindow.h \
+    newgraphdialog.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
-    frameinfowindow.ui
+    frameinfowindow.ui \
+    newgraphdialog.ui
