@@ -2,6 +2,7 @@
 #define FRAMEINFOWINDOW_H
 
 #include <QDialog>
+#include <QListWidget>
 #include "can_structs.h"
 
 namespace Ui {
@@ -17,7 +18,7 @@ public:
     ~FrameInfoWindow();
 
 private slots:
-    void updateDetailsWindow(int frameIdx);
+    void updateDetailsWindow(QListWidgetItem *);
 
 private:
     Ui::FrameInfoWindow *ui;
