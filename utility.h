@@ -32,7 +32,11 @@ public:
         }
 
         return temp;
+    }
 
+    static int ParseStringToNum(QString input)
+    {
+        return ParseStringToNum(input.toUtf8());
     }
 
     static long GetTimeMS()

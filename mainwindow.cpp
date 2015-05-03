@@ -245,7 +245,7 @@ void MainWindow::connButtonPress()
 
 void MainWindow::showGraphingWindow()
 {
-    if (!graphingWindow) graphingWindow = new GraphingWindow();
+    if (!graphingWindow) graphingWindow = new GraphingWindow(model->getListReference());
     graphingWindow->show();
 }
 

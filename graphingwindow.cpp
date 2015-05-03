@@ -1,15 +1,34 @@
 #include "graphingwindow.h"
 #include "ui_graphingwindow.h"
 #include "newgraphdialog.h"
+#include <QDebug>
 
-GraphingWindow::GraphingWindow(QWidget *parent) :
+GraphingWindow::GraphingWindow(QList<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
 {
     ui->setupUi(this);
 
+    modelFrames = frames;
+
     ui->graphingView->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);
+
+    ui->graphingView->xAxis->setRange(-8, 8);
+    ui->graphingView->yAxis->setRange(-5, 5);
+    ui->graphingView->axisRect()->setupFullAxesBox();
+
+    //ui->graphingView->plotLayout()->insertRow(0);
+    //ui->graphingView->plotLayout()->addElement(0, 0, new QCPPlotTitle(ui->graphingView, "Data Graphing"));
+
+    ui->graphingView->xAxis->setLabel("Time Axis");
+    ui->graphingView->yAxis->setLabel("Value Axis");
+    ui->graphingView->legend->setVisible(true);
+    QFont legendFont = font();
+    legendFont.setPointSize(10);
+    ui->graphingView->legend->setFont(legendFont);
+    ui->graphingView->legend->setSelectedFont(legendFont);
+    ui->graphingView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
 
     connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
     connect(ui->graphingView, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
@@ -191,8 +210,107 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
 
 void GraphingWindow::addNewGraph()
 {
+    int tempVal;
     NewGraphDialog *thisDialog = new NewGraphDialog();
-    thisDialog->show();
+    if (thisDialog->exec() == QDialog::Accepted)
+    {
+        GraphParams params;
+        thisDialog->getParams(params);
+        qDebug() << "Returned ID: " << params.ID;
+        qDebug() << "Start byte: " << params.startByte;
+        qDebug() << "End Byte: " << params.endByte;
+        qDebug() << "Mask: " << params.mask;
+
+        frameCache.clear();
+        for (int i = 0; i < modelFrames->count(); i++)
+        {
+            CANFrame thisFrame = modelFrames->at(i);
+            if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
+        }
+
+        int numEntries = frameCache.count() / params.stride;
+
+        QVector<double> x(numEntries), y(numEntries);
+
+        if (params.endByte == -1  || params.startByte == params.endByte)
+        {
+            for (int j = 0; j < numEntries; j++)
+            {
+                tempVal = (frameCache[j * params.stride].data[params.startByte] & params.mask);
+                if (params.isSigned && tempVal > 127)
+                {
+                    tempVal = tempVal - 256;
+                }
+                x[j] = j;
+                y[j] = (tempVal + params.bias) * params.scale;
+            }
+        }
+        else if (params.endByte > params.startByte) //big endian
+        {
+            float tempValue;
+            int tempValInt;
+            int numBytes = (params.endByte - params.startByte) + 1;
+            int shiftRef = 1 << (numBytes * 8);
+            for (int j = 0; j < numEntries; j++)
+            {
+                tempValInt = 0;
+                int expon = 1;
+                for (int c = 0; c < numBytes; c++)
+                {
+                    tempValInt += (frameCache[j * params.stride].data[params.endByte - c] * expon);
+                    expon *= 256;
+                }
+
+                tempValInt &= params.mask;
+
+                if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
+                {
+                    tempValInt = tempValInt - shiftRef;
+                }
+
+                tempValue = (float)tempValInt;
+                x[j] = j;
+                y[j] = (tempValue + params.bias) * params.scale;
+            }
+        }
+        else //little endian
+        {
+            float tempValue;
+            int tempValInt;
+            int numBytes = (params.startByte - params.endByte) + 1;
+            int shiftRef = 1 << (numBytes * 8);
+            for (int j = 0; j < numEntries; j++)
+            {
+                tempValInt = 0;
+                int expon = 1;
+                for (int c = 0; c < numBytes; c++)
+                {
+                    tempValInt += frameCache[j * params.stride].data[params.endByte + c] * expon;
+                    expon *= 256;
+                }
+                tempValInt &= params.mask;
+
+                if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
+                {
+                    tempValInt = tempValInt - shiftRef;
+                }
+
+                tempValue = (float)tempValInt;
+                x[j] = j;
+                y[j] = (tempValue + params.bias) * params.scale;
+            }
+        }
+        ui->graphingView->addGraph();
+        ui->graphingView->graph()->setName(QString("Graph %1").arg(ui->graphingView->graphCount()-1));
+        ui->graphingView->graph()->setData(x,y);
+        ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
+        QPen graphPen;
+        graphPen.setColor(params.color);
+        graphPen.setWidth(1);
+        ui->graphingView->graph()->setPen(graphPen);
+        ui->graphingView->replot();
+    }
+    delete thisDialog;
 }
 
 void GraphingWindow::moveLegend()

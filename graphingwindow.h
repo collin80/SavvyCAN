@@ -2,6 +2,7 @@
 #define GRAPHINGWINDOW_H
 
 #include "qcustomplot.h"
+#include "can_structs.h"
 
 #include <QDialog>
 
@@ -14,7 +15,7 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(QWidget *parent = 0);
+    explicit GraphingWindow(QList<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
 
 private slots:
@@ -32,6 +33,21 @@ private slots:
 
 private:
     Ui::GraphingWindow *ui;
+    QList<CANFrame> frameCache;
+    QList<CANFrame> *modelFrames;
+};
+
+class GraphParams
+{
+public:
+    int32_t ID;
+    int startByte, endByte;
+    bool isSigned;
+    int32_t mask;
+    float bias;
+    float scale;
+    int stride;
+    QColor color;
 };
 
 #endif // GRAPHINGWINDOW_H
