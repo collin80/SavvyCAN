@@ -38,6 +38,7 @@ private slots:
     void readSerialData();
     void showGraphingWindow();
     void showFrameDataAnalysis();
+    void clearFrames();
 
 private:
     Ui::MainWindow *ui;

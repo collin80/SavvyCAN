@@ -7,11 +7,33 @@
 #include "canframemodel.h"
 #include "utility.h"
 
+/*
+This first order of business is to attempt to gain feature parity (roughly) with GVRET-PC so  that this
+can replace it as a cross platform solution.
+
+Here are things yet to do
+- Support saving frames
+- Add flow view - ability to see bits change over time
+- Implement the rest of the file loading formats
+- Add frame counter to main screen and a way to auto scroll
+- Ability to send frames via playback mechanism (people use this so get it working!)
+- Ability to use programmatic frame sending interface (only I use it and it's complicated but helpful)
+
+*/
+
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
+    connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
+    connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
+    connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
+    connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
+
     model = new CANFrameModel();
     ui->canFramesView->setModel(model);
 
@@ -50,13 +72,85 @@ MainWindow::~MainWindow()
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 {
     model->addFrame(frame, autoRefresh);
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+    if (autoRefresh)
+    {
+        ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    }
 }
+
+void MainWindow::clearFrames()
+{
+    model->clearFrames();
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+}
+
+//CRTD format from Mark Webb-Johnson / OVMS project
+/*
+Sample data in CRTD format
+1320745424.000 CXX OVMS Tesla Roadster cando2crtd converted log
+1320745424.000 CXX OVMS Tesla roadster log: charge.20111108.csv
+1320745424.002 R11 402 FA 01 C3 A0 96 00 07 01
+1320745424.015 R11 400 02 9E 01 80 AB 80 55 00
+1320745424.066 R11 400 01 01 00 00 00 00 4C 1D
+1320745424.105 R11 100 A4 53 46 5A 52 45 38 42
+1320745424.106 R11 100 A5 31 35 42 33 30 30 30
+1320745424.106 R11 100 A6 35 36 39
+1320745424.106 CEV Open charge port door
+1320745424.106 R11 100 9B 97 A6 31 03 15 05 06
+1320745424.107 R11 100 07 64
+
+tokens:
+0 = timestamp
+1 = line type
+2 = ID
+3-x = The data bytes
+*/
 
 void MainWindow::loadCRTDFile(QString filename)
 {
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
+
+    line = inFile->readLine(); //read out the header first and discard it.
+
+    while (!inFile->atEnd()) {
+        line = inFile->readLine();
+        if (line.length() > 2)
+        {
+            QList<QByteArray> tokens = line.split(' ');
+            thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * 1000);
+            if (tokens[1] == "R11" || tokens[1] == "R29")
+            {
+                thisFrame.ID = tokens[2].toInt(NULL, 16);
+                if (tokens[1] == "R29") thisFrame.extended = true;
+                else thisFrame.extended = false;
+                thisFrame.bus = 0;
+                thisFrame.len = tokens.length() - 3;
+                for (int d = 0; d < thisFrame.len; d++)
+                {
+                    if (tokens[d + 3] != "")
+                    {
+                        thisFrame.data[d] = tokens[d + 3].toInt(NULL, 16);
+                    }
+                    else thisFrame.data[d] = 0;
+                }
+                addFrameToDisplay(thisFrame);
+            }
+        }
+    }
+    inFile->close();
+    model->sendRefresh();
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
 }
 
+//The "native" file format for this program
 void MainWindow::loadNativeCSVFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
@@ -97,7 +191,8 @@ void MainWindow::loadNativeCSVFile(QString filename)
     }
     inFile->close();
     model->sendRefresh();
-
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 }
 
 void MainWindow::loadGenericCSVFile(QString filename)
@@ -133,14 +228,63 @@ void MainWindow::loadGenericCSVFile(QString filename)
     }
     inFile->close();
     model->sendRefresh();
-
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 }
 
+//busmaster log file
+/*
+tokens:
+0 = timestamp
+1 = Transmission direction
+2 = Channel
+3 = ID
+4 = Type (s = standard, I believe x = extended)
+5 = Data byte length
+6-x = The data bytes
+*/
 void MainWindow::loadLogFile(QString filename)
 {
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
 
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
+
+    line = inFile->readLine(); //read out the header first and discard it.
+
+    while (!inFile->atEnd()) {
+        line = inFile->readLine();
+        if (line.startsWith("***")) continue;
+        if (line.length() > 1)
+        {
+            QList<QByteArray> tokens = line.split(' ');
+            thisFrame.timestamp = Utility::GetTimeMS();
+            thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
+            if (tokens[4] == "s") thisFrame.extended = false;
+            else thisFrame.extended = true;
+            thisFrame.bus = tokens[2].toInt() - 1;
+            thisFrame.len = tokens[5].toInt();
+            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = tokens[d + 6].toInt(NULL, 16);
+        }
+        addFrameToDisplay(thisFrame);
+    }
+    inFile->close();
+    model->sendRefresh();
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 }
 
+//log file from microchip tool
+/*
+tokens:
+0 = timestamp
+1 = Transmission direction
+2 = ID
+3 = Data byte length
+4-x = The data bytes
+*/
 void MainWindow::loadMicrochipFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
@@ -163,15 +307,6 @@ void MainWindow::loadMicrochipFile(QString filename)
             }
             else
             {
-
-                /*
-                tokens:
-                0 = timestamp
-                1 = Transmission direction
-                2 = ID
-                3 = Data byte length
-                4-x = The data bytes
-                */
                 if (!inComment)
                 {
                     QList<QByteArray> tokens = line.split(';');
@@ -191,7 +326,8 @@ void MainWindow::loadMicrochipFile(QString filename)
     }
     inFile->close();
     model->sendRefresh();
-
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
 }
 
@@ -348,6 +484,7 @@ void MainWindow::procRXChar(unsigned char c)
                 rx_state = IDLE;
                 rx_step = 0;
                 addFrameToDisplay(buildFrame, true);
+                ui->lbNumFrames->setText(QString::number(model->rowCount()));
             }
             break;
         }
