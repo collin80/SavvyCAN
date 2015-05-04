@@ -14,8 +14,8 @@ GraphingWindow::GraphingWindow(QList<CANFrame> *frames, QWidget *parent) :
     ui->graphingView->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);
 
-    ui->graphingView->xAxis->setRange(-8, 8);
-    ui->graphingView->yAxis->setRange(-5, 5);
+    ui->graphingView->xAxis->setRange(0, 8);
+    ui->graphingView->yAxis->setRange(0, 255);
     ui->graphingView->axisRect()->setupFullAxesBox();
 
     //ui->graphingView->plotLayout()->insertRow(0);
@@ -30,6 +30,9 @@ GraphingWindow::GraphingWindow(QList<CANFrame> *frames, QWidget *parent) :
     ui->graphingView->legend->setSelectedFont(legendFont);
     ui->graphingView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
 
+    // connect slot that ties some axis selections together (especially opposite axes):
+    connect(ui->graphingView, SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
+    //connect up the mouse controls
     connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
     connect(ui->graphingView, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
 
@@ -211,6 +214,7 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
 void GraphingWindow::addNewGraph()
 {
     int tempVal;
+    float minval=1000000, maxval = -100000;
     NewGraphDialog *thisDialog = new NewGraphDialog();
     if (thisDialog->exec() == QDialog::Accepted)
     {
@@ -243,6 +247,8 @@ void GraphingWindow::addNewGraph()
                 }
                 x[j] = j;
                 y[j] = (tempVal + params.bias) * params.scale;
+                if (y[j] < minval) minval = y[j];
+                if (y[j] > maxval) maxval = y[j];
             }
         }
         else if (params.endByte > params.startByte) //big endian
@@ -271,6 +277,8 @@ void GraphingWindow::addNewGraph()
                 tempValue = (float)tempValInt;
                 x[j] = j;
                 y[j] = (tempValue + params.bias) * params.scale;
+                if (y[j] < minval) minval = y[j];
+                if (y[j] > maxval) maxval = y[j];
             }
         }
         else //little endian
@@ -298,6 +306,8 @@ void GraphingWindow::addNewGraph()
                 tempValue = (float)tempValInt;
                 x[j] = j;
                 y[j] = (tempValue + params.bias) * params.scale;
+                if (y[j] < minval) minval = y[j];
+                if (y[j] > maxval) maxval = y[j];
             }
         }
         ui->graphingView->addGraph();
@@ -308,6 +318,12 @@ void GraphingWindow::addNewGraph()
         graphPen.setColor(params.color);
         graphPen.setWidth(1);
         ui->graphingView->graph()->setPen(graphPen);
+
+        ui->graphingView->xAxis->setRange(0, numEntries);
+        ui->graphingView->yAxis->setRange(minval, maxval);
+        ui->graphingView->axisRect()->setupFullAxesBox();
+
+
         ui->graphingView->replot();
     }
     delete thisDialog;
