@@ -118,9 +118,9 @@ void CANFrameModel::sendRefresh(int pos)
 
 void CANFrameModel::clearFrames()
 {
-    beginRemoveRows(QModelIndex(), 0, frames.count());
+    this->beginResetModel();
     frames.clear();
-    endRemoveRows();
+    this->endResetModel();
 }
 
 //Is this safe? Maybe not but if we don't change it then that's OK

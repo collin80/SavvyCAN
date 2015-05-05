@@ -14,8 +14,6 @@ can replace it as a cross platform solution.
 Here are things yet to do
 - Support saving frames
 - Add flow view - ability to see bits change over time
-- Implement the rest of the file loading formats
-- Add frame counter to main screen and a way to auto scroll
 - Ability to send frames via playback mechanism (people use this so get it working!)
 - Ability to use programmatic frame sending interface (only I use it and it's complicated but helpful)
 
@@ -33,6 +31,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
     connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
     connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
+    connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
 
     model = new CANFrameModel();
     ui->canFramesView->setModel(model);
@@ -81,6 +80,7 @@ void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 
 void MainWindow::clearFrames()
 {
+    ui->canFramesView->scrollToTop();
     model->clearFrames();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
 }
@@ -147,7 +147,40 @@ void MainWindow::loadCRTDFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+}
 
+void MainWindow::saveCRTDFile(QString filename)
+{
+    QFile *outFile = new QFile(filename);
+    QList<CANFrame> *frames = model->getListReference();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+
+    outFile->write(QString::number(frames->at(0).timestamp).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output").toUtf8());
+    outFile->write("\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        outFile->write(QString::number(frames->at(c).timestamp).toUtf8());
+        outFile->putChar(' ');
+        if (frames->at(c).extended)
+        {
+            outFile->write("R29 ");
+        }
+        else outFile->write("R11 ");
+        outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        outFile->putChar(' ');
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
+        }
+
+        outFile->write("\n");
+    }
+    outFile->close();
 }
 
 //The "native" file format for this program
@@ -195,6 +228,48 @@ void MainWindow::loadNativeCSVFile(QString filename)
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 }
 
+void MainWindow::saveNativeCSVFile(QString filename)
+{
+    QFile *outFile = new QFile(filename);
+    QList<CANFrame> *frames = model->getListReference();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+
+    outFile->write("Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
+    outFile->write("\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        outFile->write(QString::number(frames->at(c).timestamp).toUtf8());
+        outFile->putChar(44);
+
+        outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        outFile->putChar(44);
+
+        if (frames->at(c).extended) outFile->write("true,");
+        else outFile->write("false,");
+
+        outFile->write(QString::number(frames->at(c).bus).toUtf8());
+        outFile->putChar(44);
+
+        outFile->write(QString::number(frames->at(c).len).toUtf8());
+        outFile->putChar(44);
+
+
+        for (int temp = 0; temp < 8; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(44);
+        }
+
+        outFile->write("\n");
+
+
+    }
+    outFile->close();
+}
+
 void MainWindow::loadGenericCSVFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
@@ -230,6 +305,11 @@ void MainWindow::loadGenericCSVFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+}
+
+void MainWindow::saveGenericCSVFile(QString filename)
+{
+
 }
 
 //busmaster log file
@@ -274,6 +354,11 @@ void MainWindow::loadLogFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+}
+
+void MainWindow::saveLogFile(QString filename)
+{
+
 }
 
 //log file from microchip tool
@@ -331,6 +416,11 @@ void MainWindow::loadMicrochipFile(QString filename)
 
 }
 
+void MainWindow::saveMicrochipFile(QString filename)
+{
+
+}
+
 void MainWindow::handleLoadFile()
 {
     QString filename;
@@ -357,6 +447,35 @@ void MainWindow::handleLoadFile()
     if (dialog.selectedNameFilter() == filters[2]) loadGenericCSVFile(filename);
     if (dialog.selectedNameFilter() == filters[3]) loadLogFile(filename);
     if (dialog.selectedNameFilter() == filters[4]) loadMicrochipFile(filename);
+}
+
+void MainWindow::handleSaveFile()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("CRTD Logs (*.txt)")));
+    filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
+    filters.append(QString(tr("BusMaster Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.log)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec())
+    {
+        filename = dialog.selectedFiles()[0];
+    }
+
+    if (dialog.selectedNameFilter() == filters[0]) saveCRTDFile(filename);
+    if (dialog.selectedNameFilter() == filters[1]) saveNativeCSVFile(filename);
+    if (dialog.selectedNameFilter() == filters[2]) saveGenericCSVFile(filename);
+    if (dialog.selectedNameFilter() == filters[3]) saveLogFile(filename);
+    if (dialog.selectedNameFilter() == filters[4]) saveMicrochipFile(filename);
 }
 
 void MainWindow::connButtonPress()
@@ -396,7 +515,7 @@ void MainWindow::readSerialData()
 {
     QByteArray data = port->readAll();
     unsigned char c;
-    ui->statusBar->showMessage(tr("Got data from serial. Len = %0").arg(data.length()));
+    qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         c = data.at(i);

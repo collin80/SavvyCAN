@@ -34,6 +34,7 @@ public:
 
 private slots:
     void handleLoadFile();
+    void handleSaveFile();
     void connButtonPress();
     void readSerialData();
     void showGraphingWindow();
@@ -55,6 +56,11 @@ private:
     void loadGenericCSVFile(QString);
     void loadLogFile(QString);
     void loadMicrochipFile(QString);
+    void saveCRTDFile(QString);
+    void saveNativeCSVFile(QString);
+    void saveGenericCSVFile(QString);
+    void saveLogFile(QString);
+    void saveMicrochipFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void procRXChar(unsigned char);
 };
