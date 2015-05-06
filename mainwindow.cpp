@@ -157,7 +157,7 @@ void MainWindow::saveCRTDFile(QString filename)
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 
-    outFile->write(QString::number(frames->at(0).timestamp).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output").toUtf8());
+    outFile->write(QString::number(frames->at(0).timestamp / 1000.0).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output").toUtf8());
     outFile->write("\n");
 
     for (int c = 0; c < frames->count(); c++)
@@ -189,6 +189,7 @@ void MainWindow::loadNativeCSVFile(QString filename)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
@@ -202,13 +203,13 @@ void MainWindow::loadNativeCSVFile(QString filename)
             QList<QByteArray> tokens = line.split(',');
             if (tokens[0].length() > 10)
             {
-                long long temp = tokens[0].toInt();
+                long long temp = tokens[0].right(10).toLongLong();
                 thisFrame.timestamp = temp;
             }
             else
             {
-                QDateTime stamp = QDateTime::currentDateTime();
-                thisFrame.timestamp = (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
+                timeStamp += 5;
+                thisFrame.timestamp = timeStamp;
             }
 
             thisFrame.ID = tokens[1].toInt(NULL, 16);
@@ -275,6 +276,7 @@ void MainWindow::loadGenericCSVFile(QString filename)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
@@ -287,8 +289,8 @@ void MainWindow::loadGenericCSVFile(QString filename)
         {
             QList<QByteArray> tokens = line.split(',');
 
-            QDateTime stamp = QDateTime::currentDateTime();
-            thisFrame.timestamp = (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
+            timeStamp += 5;
+            thisFrame.timestamp = timeStamp;
             thisFrame.ID = tokens[0].toInt(NULL, 16);
             if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
             else thisFrame.extended  = false;
@@ -322,12 +324,34 @@ tokens:
 4 = Type (s = standard, I believe x = extended)
 5 = Data byte length
 6-x = The data bytes
+
+Sample chunk of a busmaster log:
+***BUSMASTER Ver 2.4.0***
+***PROTOCOL CAN***
+***NOTE: PLEASE DO NOT EDIT THIS DOCUMENT***
+***[START LOGGING SESSION]***
+***START DATE AND TIME 8:8:2014 11:49:7:965***
+***HEX***
+***SYSTEM MODE***
+***START CHANNEL BAUD RATE***
+***CHANNEL 1 - Kvaser - Kvaser Leaf Light HS #0 (Channel 0), Serial Number- 0, Firmware- 0x00000037 0x00020000 - 500000 bps***
+***END CHANNEL BAUD RATE***
+***START DATABASE FILES (DBF/DBC)***
+***END OF DATABASE FILES (DBF/DBC)***
+***<Time><Tx/Rx><Channel><CAN ID><Type><DLC><DataBytes>***
+11:49:12:9420 Rx 1 0x023 s 1 40
+11:49:12:9440 Rx 1 0x460 s 8 03 E0 00 00 C0 00 00 00
+11:49:12:9530 Rx 1 0x023 s 1 40
+11:49:12:9680 Rx 1 0x408 s 8 0F 02 00 30 00 00 7F 00
+11:49:12:9680 Rx 1 0x40B s 8 00 00 00 00 00 10 60 00
+11:49:12:9690 Rx 1 0x045 s 8 40 00 00 00 00 00 00 00
 */
 void MainWindow::loadLogFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
@@ -340,7 +364,10 @@ void MainWindow::loadLogFile(QString filename)
         if (line.length() > 1)
         {
             QList<QByteArray> tokens = line.split(' ');
-            thisFrame.timestamp = Utility::GetTimeMS();
+            QList<QByteArray> timeToks = tokens[0].split(':');
+            timeStamp = (timeToks[0].toInt() * (1000 * 60 * 60)) + (timeToks[1].toInt() * (1000 * 60))
+                      + (timeToks[2].toInt() * (1000)) + (timeToks[3].toInt() / 10);
+            thisFrame.timestamp = timeStamp;
             thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
             if (tokens[4] == "s") thisFrame.extended = false;
             else thisFrame.extended = true;
@@ -376,6 +403,7 @@ void MainWindow::loadMicrochipFile(QString filename)
     CANFrame thisFrame;
     QByteArray line;
     bool inComment = false;
+    long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
@@ -395,8 +423,8 @@ void MainWindow::loadMicrochipFile(QString filename)
                 if (!inComment)
                 {
                     QList<QByteArray> tokens = line.split(';');
-                    QDateTime stamp = QDateTime::currentDateTime();
-                    thisFrame.timestamp = (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
+                    timeStamp += 5;
+                    thisFrame.timestamp = timeStamp;
 
                     //thisFrame.ID = Utility::ParseStringToNum(tokens[2]);
                     if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
