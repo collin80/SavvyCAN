@@ -7,6 +7,7 @@
 #include "can_structs.h"
 #include "graphingwindow.h"
 #include "frameinfowindow.h"
+#include "frameplaybackwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -40,6 +41,7 @@ private slots:
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
+    void showPlaybackWindow();
 
 private:
     Ui::MainWindow *ui;
@@ -51,6 +53,7 @@ private:
     CANFrame buildFrame;
     GraphingWindow *graphingWindow;
     FrameInfoWindow *frameInfoWindow;
+    FramePlaybackWindow *playbackWindow;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);

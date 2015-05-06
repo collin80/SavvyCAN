@@ -12,11 +12,9 @@ This first order of business is to attempt to gain feature parity (roughly) with
 can replace it as a cross platform solution.
 
 Here are things yet to do
-- Support saving frames
 - Add flow view - ability to see bits change over time
 - Ability to send frames via playback mechanism (people use this so get it working!)
 - Ability to use programmatic frame sending interface (only I use it and it's complicated but helpful)
-
 */
 
 
@@ -32,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
     connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
     connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
+    connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
 
     model = new CANFrameModel();
     ui->canFramesView->setModel(model);
@@ -60,6 +59,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
+    playbackWindow = NULL;
 }
 
 MainWindow::~MainWindow()
@@ -537,6 +537,12 @@ void MainWindow::showFrameDataAnalysis()
     //only create an instance of the object if we dont have one. Otherwise just display the existing one.
     if (!frameInfoWindow) frameInfoWindow = new FrameInfoWindow(model->getListReference());
     frameInfoWindow->show();
+}
+
+void MainWindow::showPlaybackWindow()
+{
+    if (!playbackWindow) playbackWindow = new FramePlaybackWindow(model->getListReference());
+    playbackWindow->show();
 }
 
 void MainWindow::readSerialData()
