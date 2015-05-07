@@ -13,18 +13,6 @@ namespace Ui {
 class MainWindow;
 }
 
-enum STATE //keep this enum synchronized with the Arduino firmware project
-{
-    IDLE,
-    GET_COMMAND,
-    BUILD_CAN_FRAME,
-    TIME_SYNC,
-    GET_DIG_INPUTS,
-    GET_ANALOG_INPUTS,
-    SET_DIG_OUTPUTS,
-    SETUP_CANBUS
-};
-
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -37,20 +25,22 @@ private slots:
     void handleLoadFile();
     void handleSaveFile();
     void connButtonPress();
-    void readSerialData();
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
     void showPlaybackWindow();
 
+public slots:
+    void gotFrame(CANFrame *frame);
+
+signals:
+    void sendSerialPort(QString portName);
+
 private:
     Ui::MainWindow *ui;
     CANFrameModel *model;
-    QSerialPort *port;
+    QThread serialWorkerThread;
     QByteArray inputBuffer;
-    STATE rx_state;
-    int rx_step;
-    CANFrame buildFrame;
     GraphingWindow *graphingWindow;
     FrameInfoWindow *frameInfoWindow;
     FramePlaybackWindow *playbackWindow;
@@ -65,7 +55,6 @@ private:
     void saveLogFile(QString);
     void saveMicrochipFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
-    void procRXChar(unsigned char);
 };
 
 #endif // MAINWINDOW_H

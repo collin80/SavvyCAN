@@ -6,6 +6,7 @@
 #include <QtSerialPort/QSerialPortInfo>
 #include "canframemodel.h"
 #include "utility.h"
+#include "serialworker.h"
 
 /*
 This first order of business is to attempt to gain feature parity (roughly) with GVRET-PC so  that this
@@ -23,14 +24,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-
-    connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
-    connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
-    connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
-    connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
-    connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
-    connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
-    connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
 
     model = new CANFrameModel();
     ui->canFramesView->setModel(model);
@@ -52,20 +45,43 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->cbSerialPorts->addItem(ports[i].portName());
     }
 
-    port = new QSerialPort(this);
-
-    rx_state = IDLE;
-    rx_step = 0;
+    SerialWorker *worker = new SerialWorker();
+    worker->moveToThread(&serialWorkerThread);
+    connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
+    //connect(this, &Controller::operate, worker, &Worker::doWork);
+    //connect(worker, &Worker::resultReady, this, &Controller::handleResults);
+    connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::receivedFrame, this, &MainWindow::gotFrame, Qt::QueuedConnection);
+    serialWorkerThread.start();
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
     playbackWindow = NULL;
+
+    connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
+    connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
+    connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
+    connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
+    connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
+    connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
+    connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
+
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
     if (graphingWindow) delete graphingWindow;
+
+    serialWorkerThread.quit();
+    serialWorkerThread.wait();
+}
+
+void MainWindow::gotFrame(CANFrame *frame)
+{
+    qDebug() << "got frame from serial side. ID was " << frame->ID;
+    addFrameToDisplay(*frame, true);
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
@@ -508,22 +524,7 @@ void MainWindow::handleSaveFile()
 
 void MainWindow::connButtonPress()
 {
-    if (port->isOpen())
-    {
-        port->close();
-    }
-    else
-    {
-        port->setPortName(ui->cbSerialPorts->currentText());
-        port->open(QIODevice::ReadWrite);
-        QByteArray output;
-        output.append(0xE7);
-        output.append(0xE7);
-        port->write(output);
-        ///isConnected = true;
-        connect(port, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-
-    }
+    emit sendSerialPort(ui->cbSerialPorts->currentText());
 }
 
 void MainWindow::showGraphingWindow()
@@ -543,124 +544,4 @@ void MainWindow::showPlaybackWindow()
 {
     if (!playbackWindow) playbackWindow = new FramePlaybackWindow(model->getListReference());
     playbackWindow->show();
-}
-
-void MainWindow::readSerialData()
-{
-    QByteArray data = port->readAll();
-    unsigned char c;
-    qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
-    for (int i = 0; i < data.length(); i++)
-    {
-        c = data.at(i);
-        procRXChar(c);
-    }
-}
-
-void MainWindow::procRXChar(unsigned char c)
-{
-    switch (rx_state)
-    {
-    case IDLE:
-        if (c == 0xF1) rx_state = GET_COMMAND;
-        break;
-    case GET_COMMAND:
-        switch (c)
-        {
-        case 0: //receiving a can frame
-            rx_state = BUILD_CAN_FRAME;
-            rx_step = 0;
-            break;
-        case 1: //we don't accept time sync commands from the firmware
-            rx_state = IDLE;
-            break;
-        case 2: //process a return reply for digital input states.
-            rx_state = GET_DIG_INPUTS;
-            rx_step = 0;
-            break;
-        case 3: //process a return reply for analog inputs
-            rx_state = GET_ANALOG_INPUTS;
-            break;
-        case 4: //we set digital outputs we don't accept replies so nothing here.
-            rx_state = IDLE;
-            break;
-        case 5: //we set canbus specs we don't accept replies.
-            rx_state = IDLE;
-            break;
-        }
-        break;
-    case BUILD_CAN_FRAME:
-        switch (rx_step)
-        {
-        case 0:
-            buildFrame.timestamp = c;
-            break;
-        case 1:
-            buildFrame.timestamp |= (uint)(c << 8);
-            break;
-        case 2:
-            buildFrame.timestamp |= (uint)c << 16;
-            break;
-        case 3:
-            buildFrame.timestamp |= (uint)c << 24;
-            break;
-        case 4:
-            buildFrame.ID = c;
-            break;
-        case 5:
-            buildFrame.ID |= c << 8;
-            break;
-        case 6:
-            buildFrame.ID |= c << 16;
-            break;
-        case 7:
-            buildFrame.ID |= c << 24;
-            if ((buildFrame.ID & 1 << 31) == 1 << 31)
-            {
-                buildFrame.ID &= 0x7FFFFFFF;
-                buildFrame.extended = true;
-            }
-            else buildFrame.extended = false;
-            break;
-        case 8:
-            buildFrame.len = c & 0xF;
-            if (buildFrame.len > 8) buildFrame.len = 8;
-            buildFrame.bus = (c & 0xF0) >> 4;
-            break;
-        default:
-            if (rx_step < buildFrame.len + 9)
-            {
-                buildFrame.data[rx_step - 9] = c;
-            }
-            else
-            {
-                rx_state = IDLE;
-                rx_step = 0;
-                addFrameToDisplay(buildFrame, true);
-                ui->lbNumFrames->setText(QString::number(model->rowCount()));
-            }
-            break;
-        }
-        rx_step++;
-        break;
-    case GET_ANALOG_INPUTS: //get 9 bytes - 2 per analog input plus checksum
-        switch (rx_step)
-        {
-        case 0:
-            break;
-        }
-        rx_step++;
-        break;
-    case GET_DIG_INPUTS: //get two bytes. One for digital in status and one for checksum.
-        switch (rx_step)
-        {
-        case 0:
-            break;
-        case 1:
-            rx_state = IDLE;
-            break;
-        }
-        rx_step++;
-        break;
-    }
 }

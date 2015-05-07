@@ -20,7 +20,8 @@ SOURCES += main.cpp\
     graphingwindow.cpp \
     frameinfowindow.cpp \
     newgraphdialog.cpp \
-    frameplaybackwindow.cpp
+    frameplaybackwindow.cpp \
+    serialworker.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -30,7 +31,8 @@ HEADERS  += mainwindow.h \
     graphingwindow.h \
     frameinfowindow.h \
     newgraphdialog.h \
-    frameplaybackwindow.h
+    frameplaybackwindow.h \
+    serialworker.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
