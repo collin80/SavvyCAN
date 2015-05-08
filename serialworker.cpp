@@ -50,6 +50,54 @@ void SerialWorker::readSerialData()
     }
 }
 
+void SerialWorker::sendFrame(CANFrame *frame, int bus = 0)
+{
+    QByteArray buffer;
+    int c;
+    int ID;
+
+    ID = frame->ID;
+    if (frame->extended) ID |= 1 << 31;
+
+    buffer[0] = 0xF1; //start of a command over serial
+    buffer[1] = 0; //command ID for sending a CANBUS frame
+    buffer[2] = (unsigned char)(ID & 0xFF); //four bytes of ID LSB first
+    buffer[3] = (unsigned char)(ID >> 8);
+    buffer[4] = (unsigned char)(ID >> 16);
+    buffer[5] = (unsigned char)(ID >> 24);
+    buffer[6] = (unsigned char)(bus & 1);
+    buffer[7] = (unsigned char)frame->len;
+    for (c = 0; c < frame->len; c++)
+    {
+        buffer[8 + c] = frame->data[c];
+    }
+    buffer[8 + frame->len] = 0;
+
+    if (serial == NULL) return;
+    if (!serial->isOpen()) return;
+    serial->write(buffer);
+}
+
+void SerialWorker::updateBaudRates(int Speed1, int Speed2)
+{
+    QByteArray buffer;
+    qDebug() << "Got signal to update bauds. 1: " << Speed1 <<" 2: " << Speed2;
+    buffer[0] = 0xF1; //start of a command over serial
+    buffer[1] = 5; //setup canbus
+    buffer[2] = (unsigned char)(Speed1 & 0xFF); //four bytes of ID LSB first
+    buffer[3] = (unsigned char)(Speed1 >> 8);
+    buffer[4] = (unsigned char)(Speed1 >> 16);
+    buffer[5] = (unsigned char)(Speed1 >> 24);
+    buffer[6] = (unsigned char)(Speed2 & 0xFF); //four bytes of ID LSB first
+    buffer[7] = (unsigned char)(Speed2 >> 8);
+    buffer[8] = (unsigned char)(Speed2 >> 16);
+    buffer[9] = (unsigned char)(Speed2 >> 24);
+    buffer[10] = 0;
+    if (serial == NULL) return;
+    if (!serial->isOpen()) return;
+    serial->write(buffer);
+}
+
 void SerialWorker::procRXChar(unsigned char c)
 {
     switch (rx_state)

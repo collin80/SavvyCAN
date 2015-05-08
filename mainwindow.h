@@ -29,12 +29,14 @@ private slots:
     void showFrameDataAnalysis();
     void clearFrames();
     void showPlaybackWindow();
+    void changeBaudRates();
 
 public slots:
     void gotFrame(CANFrame *frame);
 
 signals:
     void sendSerialPort(QString portName);
+    void updateBaudRates(int, int);
 
 private:
     Ui::MainWindow *ui;

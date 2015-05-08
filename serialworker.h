@@ -26,14 +26,17 @@ public:
     ~SerialWorker();
 
 signals: //we emit signals
-    void error(const QString &s);
-    void receivedFrame(CANFrame *frame);
+    void error(const QString &);
+    void receivedFrame(CANFrame *);
 
 private slots: //we receive things in slots
-    void readSerialData();
+    void readSerialData();    
 
 public slots:
-    void setSerialPort(QString portName);
+    void setSerialPort(QString);
+    void sendFrame(CANFrame *, int);
+    void updateBaudRates(int, int);
+
 
 private:
     QString portName;
@@ -43,7 +46,7 @@ private:
     int rx_step;
     CANFrame *buildFrame;
 
-    void procRXChar(unsigned char c);
+    void procRXChar(unsigned char);
 };
 
 #endif // SERIALTHREAD_H

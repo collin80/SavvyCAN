@@ -45,13 +45,25 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->cbSerialPorts->addItem(ports[i].portName());
     }
 
+    ui->cbSpeed1->addItem(tr("Disabled"));
+    ui->cbSpeed1->addItem(tr("125000"));
+    ui->cbSpeed1->addItem(tr("250000"));
+    ui->cbSpeed1->addItem(tr("500000"));
+    ui->cbSpeed1->addItem(tr("1000000"));
+    ui->cbSpeed1->addItem(tr("33333"));
+    ui->cbSpeed2->addItem(tr("Disabled"));
+    ui->cbSpeed2->addItem(tr("125000"));
+    ui->cbSpeed2->addItem(tr("250000"));
+    ui->cbSpeed2->addItem(tr("500000"));
+    ui->cbSpeed2->addItem(tr("1000000"));
+    ui->cbSpeed2->addItem(tr("33333"));
+
     SerialWorker *worker = new SerialWorker();
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
-    //connect(this, &Controller::operate, worker, &Worker::doWork);
-    //connect(worker, &Worker::resultReady, this, &Controller::handleResults);
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
     connect(worker, &SerialWorker::receivedFrame, this, &MainWindow::gotFrame, Qt::QueuedConnection);
+    connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
     serialWorkerThread.start();
 
     graphingWindow = NULL;
@@ -65,7 +77,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
     connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
     connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
-
+    connect(ui->btnBaudSet, SIGNAL(clicked(bool)), this, SLOT(changeBaudRates()));
 }
 
 MainWindow::~MainWindow()
@@ -99,6 +111,54 @@ void MainWindow::clearFrames()
     ui->canFramesView->scrollToTop();
     model->clearFrames();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
+}
+
+void MainWindow::changeBaudRates()
+{
+    int Speed1 = 0, Speed2 = 0;
+
+    switch (ui->cbSpeed1->currentIndex())
+    {
+    case 0: //disable
+        break;
+    case 1:
+        Speed1 = 125000;
+        break;
+    case 2:
+        Speed1 = 250000;
+        break;
+    case 3:
+        Speed1 = 500000;
+        break;
+    case 4:
+        Speed1 = 1000000;
+        break;
+    case 5:
+        Speed1 = 33333;
+        break;
+    }
+    switch (ui->cbSpeed2->currentIndex())
+    {
+    case 0: //disable
+        break;
+    case 1:
+        Speed2 = 125000;
+        break;
+    case 2:
+        Speed2 = 250000;
+        break;
+    case 3:
+        Speed2 = 500000;
+        break;
+    case 4:
+        Speed2 = 1000000;
+        break;
+    case 5:
+        Speed2 = 33333;
+        break;
+    }
+
+    emit updateBaudRates(Speed1, Speed2);
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project
