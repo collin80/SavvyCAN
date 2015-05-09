@@ -1,5 +1,6 @@
 #include "frameplaybackwindow.h"
 #include "ui_frameplaybackwindow.h"
+#include <QDebug>
 
 FramePlaybackWindow::FramePlaybackWindow(QList<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -202,9 +203,10 @@ void FramePlaybackWindow::updatePosition(bool forward)
         if (idList.at(0)->checkState() == Qt::Checked)
         {
             //index 0 is none, 1 is Bus 0, 2 is bus 1, 3 is both, 4 is from file
-            //if (whichBusSend & 1) parent.SendCANFrame(modelFrames->at(currentPosition), 0);
-            //if (whichBusSend & 2) parent.SendCANFrame(modelFrames->at(currentPosition), 1);
-            //if (whichBusSend & 4) parent.SendCANFrame(modelFrames->at(currentPosition), loadedFrames[playbackPos].bus);
+            const CANFrame *thisFrame = &modelFrames->at(currentPosition);
+            if (whichBusSend & 1) emit sendCANFrame(thisFrame, 0);
+            if (whichBusSend & 2) emit sendCANFrame(thisFrame, 1);
+            if (whichBusSend & 4) emit sendCANFrame(thisFrame, thisFrame->bus);
             updateFrameLabel();
         }
     }

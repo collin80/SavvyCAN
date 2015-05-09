@@ -37,6 +37,7 @@ public slots:
 signals:
     void sendSerialPort(QString portName);
     void updateBaudRates(int, int);
+    void sendCANFrame(const CANFrame *, int);
 
 private:
     Ui::MainWindow *ui;

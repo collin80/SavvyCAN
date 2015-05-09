@@ -64,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
     connect(worker, &SerialWorker::receivedFrame, this, &MainWindow::gotFrame, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
+    connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
     serialWorkerThread.start();
 
     graphingWindow = NULL;
@@ -596,12 +597,20 @@ void MainWindow::showGraphingWindow()
 void MainWindow::showFrameDataAnalysis()
 {
     //only create an instance of the object if we dont have one. Otherwise just display the existing one.
-    if (!frameInfoWindow) frameInfoWindow = new FrameInfoWindow(model->getListReference());
+    if (!frameInfoWindow)
+    {
+        frameInfoWindow = new FrameInfoWindow(model->getListReference());
+    }
     frameInfoWindow->show();
 }
 
 void MainWindow::showPlaybackWindow()
 {
-    if (!playbackWindow) playbackWindow = new FramePlaybackWindow(model->getListReference());
+    if (!playbackWindow)
+    {
+        playbackWindow = new FramePlaybackWindow(model->getListReference());
+        //connect signal to signal to pass the signal through to whoever is handling the slot
+        connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
+    }
     playbackWindow->show();
 }

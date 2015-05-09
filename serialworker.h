@@ -34,7 +34,7 @@ private slots: //we receive things in slots
 
 public slots:
     void setSerialPort(QString);
-    void sendFrame(CANFrame *, int);
+    void sendFrame(const CANFrame *, int);
     void updateBaudRates(int, int);
 
 

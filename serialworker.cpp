@@ -50,11 +50,13 @@ void SerialWorker::readSerialData()
     }
 }
 
-void SerialWorker::sendFrame(CANFrame *frame, int bus = 0)
+void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 {
     QByteArray buffer;
     int c;
     int ID;
+
+    qDebug() << "Sending out frame with id " << frame->ID;
 
     ID = frame->ID;
     if (frame->extended) ID |= 1 << 31;
@@ -75,6 +77,7 @@ void SerialWorker::sendFrame(CANFrame *frame, int bus = 0)
 
     if (serial == NULL) return;
     if (!serial->isOpen()) return;
+    qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
 }
 

@@ -33,6 +33,9 @@ private slots:
     void btnSelectNoneClick();
     void timerTriggered();
 
+signals:
+    void sendCANFrame(const CANFrame *, int);
+
 private:
     Ui::FramePlaybackWindow *ui;
     QList<int> foundID;
