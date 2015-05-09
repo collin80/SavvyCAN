@@ -26,8 +26,11 @@ GraphingWindow::GraphingWindow(QList<CANFrame> *frames, QWidget *parent) :
     ui->graphingView->legend->setVisible(true);
     QFont legendFont = font();
     legendFont.setPointSize(10);
+    QFont legendSelectedFont = font();
+    legendSelectedFont.setPointSize(12);
+    legendSelectedFont.setBold(true);
     ui->graphingView->legend->setFont(legendFont);
-    ui->graphingView->legend->setSelectedFont(legendFont);
+    ui->graphingView->legend->setSelectedFont(legendSelectedFont);
     ui->graphingView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
 
     // connect slot that ties some axis selections together (especially opposite axes):
@@ -48,8 +51,8 @@ GraphingWindow::GraphingWindow(QList<CANFrame> *frames, QWidget *parent) :
     ui->graphingView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->graphingView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequest(QPoint)));
 
-
-
+    selectedPen.setWidth(1);
+    selectedPen.setColor(Qt::blue);
 }
 
 GraphingWindow::~GraphingWindow()
@@ -176,14 +179,48 @@ void GraphingWindow::removeSelectedGraph()
 {
   if (ui->graphingView->selectedGraphs().size() > 0)
   {
+    int idx = -1;
+    for (int i = 0; i < graphParams.count(); i++)
+    {
+        if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+        {
+            idx = i;
+            break;
+        }
+    }
+    graphParams.removeAt(idx);
+
     ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().first());
     ui->graphingView->replot();
   }
 }
 
+void GraphingWindow::editSelectedGraph()
+{
+    if (ui->graphingView->selectedGraphs().size() > 0)
+    {
+        int idx = -1;
+        for (int i = 0; i < graphParams.count(); i++)
+        {
+            if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+            {
+                idx = i;
+                break;
+            }
+        }
+
+        qDebug() << "Selected index for editing: " << idx;
+
+        showParamsDialog(idx);
+
+        //ui->graphingView->replot();
+    }
+}
+
 void GraphingWindow::removeAllGraphs()
 {
   ui->graphingView->clearGraphs();
+  graphParams.clear();
   ui->graphingView->replot();
 }
 
@@ -194,139 +231,163 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
 
   if (ui->graphingView->legend->selectTest(pos, false) >= 0) // context menu on legend requested
   {
-    menu->addAction("Move to top left", this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignLeft));
-    menu->addAction("Move to top center", this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignHCenter));
-    menu->addAction("Move to top right", this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignRight));
-    menu->addAction("Move to bottom right", this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignRight));
-    menu->addAction("Move to bottom left", this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignLeft));
+    menu->addAction(tr("Move to top left"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignLeft));
+    menu->addAction(tr("Move to top center"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignHCenter));
+    menu->addAction(tr("Move to top right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignRight));
+    menu->addAction(tr("Move to bottom right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignRight));
+    menu->addAction(tr("Move to bottom left"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignLeft));
   } else  // general context menu on graphs requested
   {
-    menu->addAction("Add new graph", this, SLOT(addNewGraph()));
+    menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
-      menu->addAction("Remove selected graph", this, SLOT(removeSelectedGraph()));
+    {
+        menu->addAction(tr("Edit selected graph"), this, SLOT(editSelectedGraph()));
+       menu->addAction(tr("Remove selected graph"), this, SLOT(removeSelectedGraph()));
+    }
     if (ui->graphingView->graphCount() > 0)
-      menu->addAction("Remove all graphs", this, SLOT(removeAllGraphs()));
+      menu->addAction(tr("Remove all graphs"), this, SLOT(removeAllGraphs()));
   }
 
   menu->popup(ui->graphingView->mapToGlobal(pos));
 }
 
+void GraphingWindow::showParamsDialog(int idx = -1)
+{
+    NewGraphDialog *thisDialog = new NewGraphDialog();
+    if (idx > -1) thisDialog->setParams(graphParams[idx]);
+    if (thisDialog->exec() == QDialog::Accepted)
+    {
+        if (idx > -1) //if there was an existing graph then delete it
+        {
+            graphParams.removeAt(idx);
+            ui->graphingView->removeGraph(idx);
+        }
+        //create a new graph with the returned parameters.
+        GraphParams params;
+        thisDialog->getParams(params);
+        createGraph(params);
+    }
+    delete thisDialog;
+}
+
 void GraphingWindow::addNewGraph()
+{
+    showParamsDialog(-1);
+}
+
+void GraphingWindow::createGraph(GraphParams &params)
 {
     int tempVal;
     float minval=1000000, maxval = -100000;
-    NewGraphDialog *thisDialog = new NewGraphDialog();
-    if (thisDialog->exec() == QDialog::Accepted)
+
+    qDebug() << "New Graph ID: " << params.ID;
+    qDebug() << "Start byte: " << params.startByte;
+    qDebug() << "End Byte: " << params.endByte;
+    qDebug() << "Mask: " << params.mask;
+
+    frameCache.clear();
+    for (int i = 0; i < modelFrames->count(); i++)
     {
-        GraphParams params;
-        thisDialog->getParams(params);
-        qDebug() << "Returned ID: " << params.ID;
-        qDebug() << "Start byte: " << params.startByte;
-        qDebug() << "End Byte: " << params.endByte;
-        qDebug() << "Mask: " << params.mask;
-
-        frameCache.clear();
-        for (int i = 0; i < modelFrames->count(); i++)
-        {
-            CANFrame thisFrame = modelFrames->at(i);
-            if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
-        }
-
-        int numEntries = frameCache.count() / params.stride;
-
-        QVector<double> x(numEntries), y(numEntries);
-
-        if (params.endByte == -1  || params.startByte == params.endByte)
-        {
-            for (int j = 0; j < numEntries; j++)
-            {
-                tempVal = (frameCache[j * params.stride].data[params.startByte] & params.mask);
-                if (params.isSigned && tempVal > 127)
-                {
-                    tempVal = tempVal - 256;
-                }
-                x[j] = j;
-                y[j] = (tempVal + params.bias) * params.scale;
-                if (y[j] < minval) minval = y[j];
-                if (y[j] > maxval) maxval = y[j];
-            }
-        }
-        else if (params.endByte > params.startByte) //big endian
-        {
-            float tempValue;
-            int tempValInt;
-            int numBytes = (params.endByte - params.startByte) + 1;
-            int shiftRef = 1 << (numBytes * 8);
-            for (int j = 0; j < numEntries; j++)
-            {
-                tempValInt = 0;
-                int expon = 1;
-                for (int c = 0; c < numBytes; c++)
-                {
-                    tempValInt += (frameCache[j * params.stride].data[params.endByte - c] * expon);
-                    expon *= 256;
-                }
-
-                tempValInt &= params.mask;
-
-                if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
-                {
-                    tempValInt = tempValInt - shiftRef;
-                }
-
-                tempValue = (float)tempValInt;
-                x[j] = j;
-                y[j] = (tempValue + params.bias) * params.scale;
-                if (y[j] < minval) minval = y[j];
-                if (y[j] > maxval) maxval = y[j];
-            }
-        }
-        else //little endian
-        {
-            float tempValue;
-            int tempValInt;
-            int numBytes = (params.startByte - params.endByte) + 1;
-            int shiftRef = 1 << (numBytes * 8);
-            for (int j = 0; j < numEntries; j++)
-            {
-                tempValInt = 0;
-                int expon = 1;
-                for (int c = 0; c < numBytes; c++)
-                {
-                    tempValInt += frameCache[j * params.stride].data[params.endByte + c] * expon;
-                    expon *= 256;
-                }
-                tempValInt &= params.mask;
-
-                if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
-                {
-                    tempValInt = tempValInt - shiftRef;
-                }
-
-                tempValue = (float)tempValInt;
-                x[j] = j;
-                y[j] = (tempValue + params.bias) * params.scale;
-                if (y[j] < minval) minval = y[j];
-                if (y[j] > maxval) maxval = y[j];
-            }
-        }
-        ui->graphingView->addGraph();
-        ui->graphingView->graph()->setName(QString("Graph %1").arg(ui->graphingView->graphCount()-1));
-        ui->graphingView->graph()->setData(x,y);
-        ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
-        QPen graphPen;
-        graphPen.setColor(params.color);
-        graphPen.setWidth(1);
-        ui->graphingView->graph()->setPen(graphPen);
-
-        ui->graphingView->xAxis->setRange(0, numEntries);
-        ui->graphingView->yAxis->setRange(minval, maxval);
-        ui->graphingView->axisRect()->setupFullAxesBox();
-
-
-        ui->graphingView->replot();
+        CANFrame thisFrame = modelFrames->at(i);
+        if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
     }
-    delete thisDialog;
+
+    int numEntries = frameCache.count() / params.stride;
+
+    QVector<double> x(numEntries), y(numEntries);
+
+    if (params.endByte == -1  || params.startByte == params.endByte)
+    {
+        for (int j = 0; j < numEntries; j++)
+        {
+            tempVal = (frameCache[j * params.stride].data[params.startByte] & params.mask);
+            if (params.isSigned && tempVal > 127)
+            {
+                tempVal = tempVal - 256;
+            }
+            x[j] = j;
+            y[j] = (tempVal + params.bias) * params.scale;
+            if (y[j] < minval) minval = y[j];
+            if (y[j] > maxval) maxval = y[j];
+        }
+    }
+    else if (params.endByte > params.startByte) //big endian
+    {
+        float tempValue;
+        int tempValInt;
+        int numBytes = (params.endByte - params.startByte) + 1;
+        int shiftRef = 1 << (numBytes * 8);
+        for (int j = 0; j < numEntries; j++)
+        {
+            tempValInt = 0;
+            int expon = 1;
+            for (int c = 0; c < numBytes; c++)
+            {
+                tempValInt += (frameCache[j * params.stride].data[params.endByte - c] * expon);
+                expon *= 256;
+            }
+
+            tempValInt &= params.mask;
+
+            if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
+            {
+                tempValInt = tempValInt - shiftRef;
+            }
+
+            tempValue = (float)tempValInt;
+            x[j] = j;
+            y[j] = (tempValue + params.bias) * params.scale;
+            if (y[j] < minval) minval = y[j];
+            if (y[j] > maxval) maxval = y[j];
+        }
+    }
+    else //little endian
+    {
+        float tempValue;
+        int tempValInt;
+        int numBytes = (params.startByte - params.endByte) + 1;
+        int shiftRef = 1 << (numBytes * 8);
+        for (int j = 0; j < numEntries; j++)
+        {
+            tempValInt = 0;
+            int expon = 1;
+            for (int c = 0; c < numBytes; c++)
+            {
+                tempValInt += frameCache[j * params.stride].data[params.endByte + c] * expon;
+                expon *= 256;
+            }
+            tempValInt &= params.mask;
+
+            if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
+            {
+                tempValInt = tempValInt - shiftRef;
+            }
+
+            tempValue = (float)tempValInt;
+            x[j] = j;
+            y[j] = (tempValue + params.bias) * params.scale;
+            if (y[j] < minval) minval = y[j];
+            if (y[j] > maxval) maxval = y[j];
+        }
+    }
+    ui->graphingView->addGraph();
+    params.ref = ui->graphingView->graph();
+    graphParams.append(params);
+    ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
+    ui->graphingView->graph()->setSelectedPen(selectedPen);
+    ui->graphingView->graph()->setName(QString("Graph %1").arg(ui->graphingView->graphCount()-1));
+    ui->graphingView->graph()->setData(x,y);
+    ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
+    QPen graphPen;
+    graphPen.setColor(params.color);
+    graphPen.setWidth(1);
+    ui->graphingView->graph()->setPen(graphPen);
+
+    ui->graphingView->xAxis->setRange(0, numEntries);
+    ui->graphingView->yAxis->setRange(minval, maxval);
+    ui->graphingView->axisRect()->setupFullAxesBox();
+
+    ui->graphingView->replot();
 }
 
 void GraphingWindow::moveLegend()

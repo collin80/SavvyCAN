@@ -16,6 +16,7 @@ public:
     explicit NewGraphDialog(QWidget *parent = 0);
     ~NewGraphDialog();
     void getParams(GraphParams &);
+    void setParams(GraphParams &);
 
 private slots:
     void addButtonClicked();

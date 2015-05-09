@@ -10,6 +10,20 @@ namespace Ui {
 class GraphingWindow;
 }
 
+class GraphParams
+{
+public:
+    int32_t ID;
+    int startByte, endByte;
+    bool isSigned;
+    int32_t mask;
+    float bias;
+    float scale;
+    int stride;
+    QColor color;
+    QCPGraph *ref;
+};
+
 class GraphingWindow : public QDialog
 {
     Q_OBJECT
@@ -30,24 +44,17 @@ private slots:
     void contextMenuRequest(QPoint pos);
     void moveLegend();
     void addNewGraph();
+    void createGraph(GraphParams &params);
+    void editSelectedGraph();
 
 private:
     Ui::GraphingWindow *ui;
     QList<CANFrame> frameCache;
     QList<CANFrame> *modelFrames;
-};
+    QList<GraphParams> graphParams;
+    QPen selectedPen;
 
-class GraphParams
-{
-public:
-    int32_t ID;
-    int startByte, endByte;
-    bool isSigned;
-    int32_t mask;
-    float bias;
-    float scale;
-    int stride;
-    QColor color;
+    void showParamsDialog(int idx);
 };
 
 #endif // GRAPHINGWINDOW_H

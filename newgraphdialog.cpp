@@ -42,6 +42,29 @@ void NewGraphDialog::colorSwatchClick()
 
 }
 
+void NewGraphDialog::setParams(GraphParams &params)
+{
+    ui->txtID->setText("0x" + QString::number(params.ID, 16).toUpper());
+    ui->txtBias->setText(QString::number(params.bias));
+    ui->txtMask->setText("0x" + QString::number(params.mask, 16).toUpper());
+    ui->txtScale->setText(QString::number(params.scale));
+    ui->txtStride->setText(QString::number(params.stride));
+    ui->cbSigned->setChecked(params.isSigned);
+
+    if (params.endByte > -1)
+    {
+        ui->txtData->setText(QString::number(params.startByte) + "-" + QString::number(params.endByte));
+    }
+    else
+    {
+        ui->txtData->setText(QString::number(params.startByte));
+    }
+
+    QPalette p = ui->colorSwatch->palette();
+    p.setColor(QPalette::Button, params.color);
+    ui->colorSwatch->setPalette(p);
+}
+
 void NewGraphDialog::getParams(GraphParams &params)
 {
     params.ID = Utility::ParseStringToNum(ui->txtID->text());
