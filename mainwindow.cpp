@@ -14,8 +14,13 @@ can replace it as a cross platform solution.
 
 Here are things yet to do
 - Add flow view - ability to see bits change over time
-- Ability to send frames via playback mechanism (people use this so get it working!)
 - Ability to use programmatic frame sending interface (only I use it and it's complicated but helpful)
+- Continuous logging. But, I see no real reason why this is needed. It would only be helpful if the program were prone to crashing. SO, don't do that.
+
+Things that were planned for the GVRET-PC project but never completed.
+Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
+Range state - Find things that range like accelerator pedal inputs, road speed, tach, etc
+fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 */
 
 
@@ -70,6 +75,7 @@ MainWindow::MainWindow(QWidget *parent) :
     graphingWindow = NULL;
     frameInfoWindow = NULL;
     playbackWindow = NULL;
+    flowViewWindow = NULL;
 
     connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
     connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
@@ -79,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
     connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
     connect(ui->btnBaudSet, SIGNAL(clicked(bool)), this, SLOT(changeBaudRates()));
+    connect(ui->actionFlow_View, SIGNAL(triggered(bool)), this, SLOT(showFlowViewWindow()));
 }
 
 MainWindow::~MainWindow()
@@ -613,4 +620,14 @@ void MainWindow::showPlaybackWindow()
         connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
     }
     playbackWindow->show();
+}
+
+void MainWindow::showFlowViewWindow()
+{
+    if (!flowViewWindow)
+    {
+        flowViewWindow = new FlowViewWindow();
+    }
+    flowViewWindow->show();
+
 }

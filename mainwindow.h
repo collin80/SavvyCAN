@@ -8,6 +8,7 @@
 #include "graphingwindow.h"
 #include "frameinfowindow.h"
 #include "frameplaybackwindow.h"
+#include "flowviewwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -29,6 +30,7 @@ private slots:
     void showFrameDataAnalysis();
     void clearFrames();
     void showPlaybackWindow();
+    void showFlowViewWindow();
     void changeBaudRates();
 
 public slots:
@@ -47,6 +49,7 @@ private:
     GraphingWindow *graphingWindow;
     FrameInfoWindow *frameInfoWindow;
     FramePlaybackWindow *playbackWindow;
+    FlowViewWindow *flowViewWindow;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);

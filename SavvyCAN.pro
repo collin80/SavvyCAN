@@ -21,7 +21,9 @@ SOURCES += main.cpp\
     frameinfowindow.cpp \
     newgraphdialog.cpp \
     frameplaybackwindow.cpp \
-    serialworker.cpp
+    serialworker.cpp \
+    candatagrid.cpp \
+    flowviewwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -32,13 +34,17 @@ HEADERS  += mainwindow.h \
     frameinfowindow.h \
     newgraphdialog.h \
     frameplaybackwindow.h \
-    serialworker.h
+    serialworker.h \
+    candatagrid.h \
+    flowviewwindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
     frameinfowindow.ui \
     newgraphdialog.ui \
-    frameplaybackwindow.ui
+    frameplaybackwindow.ui \
+    candatagrid.ui \
+    flowviewwindow.ui
 
 DISTFILES +=
 
