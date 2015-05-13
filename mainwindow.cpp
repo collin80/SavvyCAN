@@ -626,7 +626,7 @@ void MainWindow::showFlowViewWindow()
 {
     if (!flowViewWindow)
     {
-        flowViewWindow = new FlowViewWindow();
+        flowViewWindow = new FlowViewWindow(model->getListReference());
     }
     flowViewWindow->show();
 
