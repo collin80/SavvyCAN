@@ -38,7 +38,7 @@ public slots:
     void gotFrame(CANFrame *frame);
 
 signals:
-    void sendSerialPort(QSerialPortInfo &port);
+    void sendSerialPort(QSerialPortInfo *port);
     void updateBaudRates(int, int);
     void sendCANFrame(const CANFrame *, int);
 

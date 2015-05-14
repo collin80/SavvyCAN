@@ -596,7 +596,7 @@ void MainWindow::connButtonPress()
     {
         if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
         {
-            emit sendSerialPort(ports[x]);
+            emit sendSerialPort(&ports[x]);
             return;
         }
     }

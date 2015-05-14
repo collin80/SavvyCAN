@@ -16,7 +16,7 @@ SerialWorker::~SerialWorker()
     if (serial != NULL) delete serial;
 }
 
-void SerialWorker::setSerialPort(QSerialPortInfo &port)
+void SerialWorker::setSerialPort(QSerialPortInfo *port)
 {
     if (!(serial == NULL))
     {
@@ -27,9 +27,9 @@ void SerialWorker::setSerialPort(QSerialPortInfo &port)
         delete serial;
     }
 
-    serial = new QSerialPort(port);
+    serial = new QSerialPort(*port);
 
-    qDebug() << "Serial port name is " << port.portName();
+    qDebug() << "Serial port name is " << port->portName();
     serial->open(QIODevice::ReadWrite);
     QByteArray output;
     output.append(0xE7);
