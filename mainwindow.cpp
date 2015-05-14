@@ -43,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(4, 40);
     ui->canFramesView->setColumnWidth(5, 300);
 
-    QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
+    ports = QSerialPortInfo::availablePorts();
 
     for (int i = 0; i < ports.count(); i++)
     {
@@ -592,7 +592,14 @@ void MainWindow::handleSaveFile()
 
 void MainWindow::connButtonPress()
 {
-    emit sendSerialPort(ui->cbSerialPorts->currentText());
+    for (int x = 0; x < ports.count(); x++)
+    {
+        if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
+        {
+            emit sendSerialPort(ports[x]);
+            return;
+        }
+    }
 }
 
 void MainWindow::showGraphingWindow()

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QSerialPort>
+#include <QSerialPortInfo>
 #include "canframemodel.h"
 #include "can_structs.h"
 #include "graphingwindow.h"
@@ -37,13 +38,14 @@ public slots:
     void gotFrame(CANFrame *frame);
 
 signals:
-    void sendSerialPort(QString portName);
+    void sendSerialPort(QSerialPortInfo &port);
     void updateBaudRates(int, int);
     void sendCANFrame(const CANFrame *, int);
 
 private:
     Ui::MainWindow *ui;
     CANFrameModel *model;
+    QList<QSerialPortInfo> ports;
     QThread serialWorkerThread;
     QByteArray inputBuffer;
     GraphingWindow *graphingWindow;

@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QSerialPort>
+#include <QSerialPortInfo>
 #include "can_structs.h"
 
 enum STATE //keep this enum synchronized with the Arduino firmware project
@@ -33,7 +34,7 @@ private slots: //we receive things in slots
     void readSerialData();    
 
 public slots:
-    void setSerialPort(QString);
+    void setSerialPort(QSerialPortInfo&);
     void sendFrame(const CANFrame *, int);
     void updateBaudRates(int, int);
 

@@ -16,26 +16,27 @@ SerialWorker::~SerialWorker()
     if (serial != NULL) delete serial;
 }
 
-void SerialWorker::setSerialPort(QString portName)
+void SerialWorker::setSerialPort(QSerialPortInfo &port)
 {
-    if (serial == NULL) serial = new QSerialPort(this);
+    if (!(serial == NULL))
+    {
+        if (serial->isOpen())
+        {
+            serial->close();
+        }
+        delete serial;
+    }
 
-    if (serial->isOpen())
-    {
-        serial->close();
-    }
-    else
-    {
-        qDebug() << "Serial port name is " << portName;
-        serial->setPortName(portName);
-        serial->open(QIODevice::ReadWrite);
-        QByteArray output;
-        output.append(0xE7);
-        output.append(0xE7);
-        serial->write(output);
-        ///isConnected = true;
-        connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-    }
+    serial = new QSerialPort(port);
+
+    qDebug() << "Serial port name is " << port.portName();
+    serial->open(QIODevice::ReadWrite);
+    QByteArray output;
+    output.append(0xE7);
+    output.append(0xE7);
+    serial->write(output);
+    ///isConnected = true;
+    connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
 }
 
 void SerialWorker::readSerialData()
