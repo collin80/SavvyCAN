@@ -30,7 +30,12 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     serial = new QSerialPort(*port);
 
     qDebug() << "Serial port name is " << port->portName();
+    serial->setBaudRate(serial->Baud115200);
+    serial->setDataBits(serial->Data8);
+    serial->setFlowControl(serial->HardwareControl);
     serial->open(QIODevice::ReadWrite);
+    serial->setDataTerminalReady(true);
+    serial->setRequestToSend(true);
     QByteArray output;
     output.append(0xE7);
     output.append(0xE7);
