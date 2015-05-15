@@ -39,11 +39,14 @@ private:
     QTimer *playbackTimer;
     bool playbackActive;
     bool playbackForward;
+    static const QColor graphColors[8];
 
     void refreshIDList();
     void updateFrameLabel();
     void updatePosition(bool forward);
     void updateDataView();
+    void removeAllGraphs();
+    void createGraph(int);
 };
 
 #endif // FLOWVIEWWINDOW_H

@@ -13,9 +13,7 @@ This first order of business is to attempt to gain feature parity (roughly) with
 can replace it as a cross platform solution.
 
 Here are things yet to do
-- Add flow view - ability to see bits change over time
 - Ability to use programmatic frame sending interface (only I use it and it's complicated but helpful)
-- Continuous logging. But, I see no real reason why this is needed. It would only be helpful if the program were prone to crashing. SO, don't do that.
 
 Things that were planned for the GVRET-PC project but never completed.
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)

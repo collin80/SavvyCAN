@@ -1,6 +1,10 @@
 #include "flowviewwindow.h"
 #include "ui_flowviewwindow.h"
 
+const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red,
+                                               Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta};
+
+
 FlowViewWindow::FlowViewWindow(QList<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FlowViewWindow)
@@ -21,6 +25,24 @@ FlowViewWindow::FlowViewWindow(QList<CANFrame> *frames, QWidget *parent) :
     refreshIDList();
 
     updateFrameLabel();
+
+    //ui->graphView->setInteractions();
+
+    ui->graphView->xAxis->setRange(0, 8);
+    ui->graphView->yAxis->setRange(0, 255);
+    ui->graphView->axisRect()->setupFullAxesBox();
+
+    ui->graphView->xAxis->setLabel("Time Axis");
+    ui->graphView->yAxis->setLabel("Value Axis");
+    //ui->graphView->legend->setVisible(true);
+    QFont legendFont = font();
+    legendFont.setPointSize(10);
+    QFont legendSelectedFont = font();
+    legendSelectedFont.setPointSize(12);
+    legendSelectedFont.setBold(true);
+    ui->graphView->legend->setFont(legendFont);
+    ui->graphView->legend->setSelectedFont(legendSelectedFont);
+    ui->graphView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
 
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
@@ -43,6 +65,41 @@ FlowViewWindow::~FlowViewWindow()
 
     playbackTimer->stop();
     delete playbackTimer;
+}
+
+void FlowViewWindow::removeAllGraphs()
+{
+  ui->graphView->clearGraphs();
+  ui->graphView->replot();
+}
+
+void FlowViewWindow::createGraph(int byteNum)
+{
+    int tempVal;
+    float minval=1000000, maxval = -100000;
+
+    int numEntries = frameCache.count();
+
+    QVector<double> x(numEntries), y(numEntries);
+
+    for (int j = 0; j < numEntries; j++)
+    {
+        tempVal = frameCache[j].data[byteNum];
+        x[j] = j;
+        y[j] = tempVal;
+        if (y[j] < minval) minval = y[j];
+        if (y[j] > maxval) maxval = y[j];
+    }
+
+    ui->graphView->addGraph();
+    ui->graphView->graph()->setName(QString("Graph %1").arg(ui->graphView->graphCount()-1));
+    ui->graphView->graph()->setData(x,y);
+    ui->graphView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
+    QPen graphPen;
+    graphPen.setColor(graphColors[byteNum]);
+    graphPen.setWidth(1);
+    ui->graphView->graph()->setPen(graphPen);
+    ui->graphView->axisRect()->setupFullAxesBox();
 }
 
 void FlowViewWindow::refreshIDList()
@@ -83,7 +140,14 @@ void FlowViewWindow::changeID(QString newID)
     }
     currentPosition = 0;
 
-    updateFrameLabel();
+    removeAllGraphs();
+    for (int c = 0; c < frameCache.at(0).len; c++)
+    {
+        createGraph(c);
+    }
+    ui->graphView->replot();
+
+    updateDataView();
 }
 
 void FlowViewWindow::btnBackOneClick()
@@ -189,6 +253,9 @@ void FlowViewWindow::updateDataView()
 
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);
+
+    ui->graphView->xAxis->setRange(currentPosition - 5, currentPosition + 5);
+    ui->graphView->replot();
 
     updateFrameLabel();
 
