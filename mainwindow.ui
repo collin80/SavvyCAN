@@ -219,6 +219,9 @@
     </property>
     <addaction name="actionOpen_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="actionLoad_DBC_File"/>
+    <addaction name="actionEdit_Messages_Signals"/>
+    <addaction name="actionSave_DBC_File"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_RE_Tools"/>
@@ -281,6 +284,21 @@
   <action name="actionFrame_Data_Analysis">
    <property name="text">
     <string>Frame Data Analysis</string>
+   </property>
+  </action>
+  <action name="actionLoad_DBC_File">
+   <property name="text">
+    <string>Load DBC File</string>
+   </property>
+  </action>
+  <action name="actionEdit_Messages_Signals">
+   <property name="text">
+    <string>Edit Messages/Signals</string>
+   </property>
+  </action>
+  <action name="actionSave_DBC_File">
+   <property name="text">
+    <string>Save DBC File</string>
    </property>
   </action>
  </widget>

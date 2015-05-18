@@ -10,6 +10,7 @@
 #include "frameinfowindow.h"
 #include "frameplaybackwindow.h"
 #include "flowviewwindow.h"
+#include "framesenderwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -26,12 +27,16 @@ public:
 private slots:
     void handleLoadFile();
     void handleSaveFile();
+    void handleLoadDBC();
+    void handleSaveDBC();
+    void showEditSignalsWindow();
     void connButtonPress();
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
     void showPlaybackWindow();
     void showFlowViewWindow();
+    void showFrameSenderWindow();
     void changeBaudRates();
 
 public slots:
@@ -52,6 +57,7 @@ private:
     FrameInfoWindow *frameInfoWindow;
     FramePlaybackWindow *playbackWindow;
     FlowViewWindow *flowViewWindow;
+    FrameSenderWindow *frameSenderWindow;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);

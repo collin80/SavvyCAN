@@ -23,7 +23,9 @@ SOURCES += main.cpp\
     frameplaybackwindow.cpp \
     serialworker.cpp \
     candatagrid.cpp \
-    flowviewwindow.cpp
+    flowviewwindow.cpp \
+    framesenderwindow.cpp \
+    dbcloader.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -36,7 +38,11 @@ HEADERS  += mainwindow.h \
     frameplaybackwindow.h \
     serialworker.h \
     candatagrid.h \
-    flowviewwindow.h
+    flowviewwindow.h \
+    framesenderwindow.h \
+    can_trigger_structs.h \
+    dbc_classes.h \
+    dbcloader.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -44,7 +50,8 @@ FORMS    += mainwindow.ui \
     newgraphdialog.ui \
     frameplaybackwindow.ui \
     candatagrid.ui \
-    flowviewwindow.ui
+    flowviewwindow.ui \
+    framesenderwindow.ui
 
 DISTFILES +=
 
