@@ -11,6 +11,7 @@
 #include "frameplaybackwindow.h"
 #include "flowviewwindow.h"
 #include "framesenderwindow.h"
+#include "dbchandler.h"
 
 namespace Ui {
 class MainWindow;
@@ -58,6 +59,7 @@ private:
     FramePlaybackWindow *playbackWindow;
     FlowViewWindow *flowViewWindow;
     FrameSenderWindow *frameSenderWindow;
+    DBCHandler *dbcHandler;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);

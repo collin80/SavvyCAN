@@ -25,7 +25,7 @@ SOURCES += main.cpp\
     candatagrid.cpp \
     flowviewwindow.cpp \
     framesenderwindow.cpp \
-    dbcloader.cpp
+    dbchandler.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -42,7 +42,7 @@ HEADERS  += mainwindow.h \
     framesenderwindow.h \
     can_trigger_structs.h \
     dbc_classes.h \
-    dbcloader.h
+    dbchandler.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \

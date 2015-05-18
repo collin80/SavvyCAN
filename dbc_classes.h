@@ -24,7 +24,7 @@ enum DBC_SIG_VAL_TYPE
 enum DBC_ATTRIBUTE_VAL_TYPE
 {
     HEX,
-    FLOAT,
+    QFLOAT,
     QSTRING,
     ENUM
 };
@@ -38,21 +38,17 @@ class DBC_ATTRIBUTE
     QStringList enumVals; //also used for STRING type but then you're assured to have only one
 };
 
+class DBC_VAL
+{
+    int value;
+    QString descript;
+};
+
 class DBC_NODE
 {
 public:
     QString name;
     QString comment;
-    QList<DBC_ATTRIBUTE> attributes;
-};
-
-class DBC_MESSAGE
-{
-    int ID;
-    QString name;
-    QString comment;
-    int len;
-    DBC_NODE *sender;
     QList<DBC_ATTRIBUTE> attributes;
 };
 
@@ -71,7 +67,20 @@ class DBC_SIGNAL
     QString unitName;
     QString comment;
     QList<DBC_ATTRIBUTE> attributes;
+    QList<DBC_VAL> valList;
 };
+
+class DBC_MESSAGE
+{
+    int ID;
+    QString name;
+    QString comment;
+    int len;
+    DBC_NODE *sender;
+    QList<DBC_ATTRIBUTE> attributes;
+    QList<DBC_SIGNAL> msgSignals;
+};
+
 
 #endif // DBC_CLASSES_H
 
