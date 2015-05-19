@@ -15,6 +15,7 @@ void DBCHandler::loadDBCFile(QString filename)
     QString line;
     QRegularExpression regex;
     QRegularExpressionMatch match;
+    DBC_MESSAGE *currentMessage;
 
     qDebug() << "DBC File: " << filename;
 
@@ -36,6 +37,13 @@ void DBCHandler::loadDBCFile(QString filename)
             //captured 4 = the NODE responsible for this message
             if (match.hasMatch())
             {
+                DBC_MESSAGE msg;
+                msg.ID = match.captured(1).toInt(); //the ID is always stored in decimal format
+                msg.name = match.captured(2);
+                msg.len = match.captured(3).toInt();
+                msg.sender = findNodeByName(match.captured(4));
+                dbc_messages.append(msg);
+                currentMessage = &dbc_messages.last();
             }
         }
         if (line.startsWith("SG_ "))
@@ -57,6 +65,41 @@ void DBCHandler::loadDBCFile(QString filename)
 
             if (match.hasMatch())
             {
+                DBC_SIGNAL sig;
+                sig.name = match.captured(1);
+                sig.startBit = match.captured(2).toInt();
+                sig.signalSize = match.captured(3).toInt();
+                int val = match.captured(4).toInt();
+                if (val < 2)
+                {
+                    if (match.captured(5) == "+") sig.valType = UNSIGNED_INT;
+                    else sig.valType = SIGNED_INT;
+                }
+                switch (val)
+                {
+                case 0:
+                    sig.intelByteOrder = true;
+                    break;
+                case 1:
+                    sig.intelByteOrder = false;
+                    break;
+                case 2:
+                    sig.valType = SP_FLOAT;
+                    break;
+                case 3:
+                    sig.valType = DP_FLOAT;
+                    break;
+                case 4:
+                    sig.valType = STRING;
+                    break;
+                }
+                sig.factor = match.captured(6).toDouble();
+                sig.bias = match.captured(7).toDouble();
+                sig.min = match.captured(8).toDouble();
+                sig.max = match.captured(9).toDouble();
+                sig.unitName = match.captured(10);
+                sig.receiver = findNodeByName(match.captured(11));
+                currentMessage->msgSignals.append(sig);
             }
         }
         if (line.startsWith("BU_:"))
@@ -71,7 +114,13 @@ void DBCHandler::loadDBCFile(QString filename)
                 qDebug() << "Found " << nodeStrings.count() << " node names";
                 for (int i = 0; i < nodeStrings.count(); i++)
                 {
-                    qDebug() << nodeStrings[i];
+                    //qDebug() << nodeStrings[i];
+                    if (nodeStrings[i].length() > 1)
+                    {
+                        DBC_NODE node;
+                        node.name = nodeStrings[i];
+                        dbc_nodes.append(node);
+                    }
                 }
             }
         }
@@ -155,3 +204,40 @@ void DBCHandler::loadDBCFile(QString filename)
     }
     inFile->close();
 }
+
+DBC_NODE *DBCHandler::findNodeByName(QString name)
+{
+    for (int i = 0; i < dbc_nodes.length(); i++)
+    {
+        if (dbc_nodes[i].name == name)
+        {
+            return &dbc_nodes[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_MESSAGE *DBCHandler::findMsgByID(int id)
+{
+    for (int i = 0; i < dbc_messages.length(); i++)
+    {
+        if (dbc_messages[i].ID == id)
+        {
+            return &dbc_messages[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
+{
+    for (int i = 0; i < msg->msgSignals.length(); i++)
+    {
+        if (msg->msgSignals[i].name == name)
+        {
+            return &msg->msgSignals[i];
+        }
+    }
+    return NULL;
+}
+

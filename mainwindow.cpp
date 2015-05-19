@@ -91,6 +91,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showEditSignalsWindow()));
     connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
 
+    lbStatusConnected.setText(tr("Not connected"));
+    lbStatusBauds.setText(tr("Baud 1: 0 Baud 2: 0"));
+    lbStatusDatabase.setText(tr("No database loaded"));
+    ui->statusBar->addWidget(&lbStatusConnected);
+    ui->statusBar->addWidget(&lbStatusBauds);
+    ui->statusBar->addWidget(&lbStatusDatabase);
 }
 
 MainWindow::~MainWindow()
@@ -178,6 +184,8 @@ void MainWindow::changeBaudRates()
     }
 
     emit updateBaudRates(Speed1, Speed2);
+
+    lbStatusBauds.setText(tr("Baud 1: ") + QString::number(Speed1) + tr(" Baud 2:") + QString::number(Speed2));
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project
@@ -654,6 +662,7 @@ void MainWindow::connButtonPress()
         if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
         {
             emit sendSerialPort(&ports[x]);
+            lbStatusConnected.setText(tr("Connected to port ") + ports[x].portName());
             return;
         }
     }

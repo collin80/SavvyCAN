@@ -60,6 +60,9 @@ private:
     FlowViewWindow *flowViewWindow;
     FrameSenderWindow *frameSenderWindow;
     DBCHandler *dbcHandler;
+    QLabel lbStatusConnected;
+    QLabel lbStatusBauds;
+    QLabel lbStatusDatabase;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);

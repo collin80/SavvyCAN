@@ -31,6 +31,7 @@ enum DBC_ATTRIBUTE_VAL_TYPE
 
 class DBC_ATTRIBUTE
 {
+public:
     QString name;
     DBC_ATTRIBUTE_VAL_TYPE type;
     double startVal;
@@ -40,6 +41,7 @@ class DBC_ATTRIBUTE
 
 class DBC_VAL
 {
+public:
     int value;
     QString descript;
 };
@@ -54,6 +56,7 @@ public:
 
 class DBC_SIGNAL
 {
+public:
     QString name;
     int startBit;
     int signalSize;
@@ -72,6 +75,7 @@ class DBC_SIGNAL
 
 class DBC_MESSAGE
 {
+public:
     int ID;
     QString name;
     QString comment;

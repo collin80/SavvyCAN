@@ -18,6 +18,10 @@ public slots:
 private:
     QList<DBC_NODE> dbc_nodes;
     QList<DBC_MESSAGE> dbc_messages;
+
+    DBC_NODE *findNodeByName(QString name);
+    DBC_MESSAGE *findMsgByID(int id);
+    DBC_SIGNAL *findSignalByName(DBC_MESSAGE *msg, QString name);
 };
 
 #endif // DBCHANDLER_H
