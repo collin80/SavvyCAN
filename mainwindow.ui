@@ -138,7 +138,7 @@
       <item>
        <widget class="QPushButton" name="btnBaudSet">
         <property name="text">
-         <string>Set Baud Rates</string>
+         <string>Set CANBUS Speeds</string>
         </property>
        </widget>
       </item>

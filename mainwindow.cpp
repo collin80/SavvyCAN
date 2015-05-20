@@ -119,10 +119,10 @@ void MainWindow::updateBaudLabel(int baud0, int baud1)
 {
     QString labelText;
     labelText = tr("Baud 0: ");
-    if (baud0 > 0) labelText += QString::number(baud0);
+    if (baud0 > 0) labelText += QString::number(baud0 / 1000.0) + "kbps";
     else labelText += tr("disabled");
     labelText += tr("    Baud 1: ");
-    if (baud1 > 0) labelText += QString::number(baud1);
+    if (baud1 > 0) labelText += QString::number(baud1 / 1000.0) + "kbps";
     else labelText += tr("disabled");
     lbStatusBauds.setText(labelText);
 }
@@ -662,7 +662,7 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed1->setCurrentIndex(ui->cbSpeed1->count() - 1);
     }
 
-    idx = ui->cbSpeed2->findText(QString::number(baud0));
+    idx = ui->cbSpeed2->findText(QString::number(baud1));
     if (idx > -1) ui->cbSpeed2->setCurrentIndex(idx);
     else
     {
