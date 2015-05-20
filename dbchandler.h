@@ -10,6 +10,7 @@ class DBCHandler : public QObject
 public:
     explicit DBCHandler(QObject *parent = 0);
     void loadDBCFile(QString);
+    void listDebugging();
 
 signals:
 
