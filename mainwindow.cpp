@@ -69,6 +69,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
     connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
     connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::connectionFailure, this, &MainWindow::connectionFailed, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::deviceInfo, this, &MainWindow::gotDeviceInfo, Qt::QueuedConnection);
     serialWorkerThread.start();
 
     graphingWindow = NULL;
@@ -670,6 +672,18 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
     ui->btnConnect->setEnabled(false);
+}
+
+void MainWindow::connectionFailed()
+{
+    lbStatusConnected.setText(tr("Failed to connect!"));
+}
+
+void MainWindow::gotDeviceInfo(int build, int swCAN)
+{
+    QString str = tr("Connected to GVRET ") + QString::number(build);
+    if (swCAN == 1) str += "(SW)";
+    lbStatusConnected.setText(str);
 }
 
 void MainWindow::showGraphingWindow()

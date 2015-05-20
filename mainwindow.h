@@ -39,10 +39,13 @@ private slots:
     void showFlowViewWindow();
     void showFrameSenderWindow();
     void changeBaudRates();
+    void connectionFailed();
+    void gotDeviceInfo(int, int);
+    void connectionSucceeded(int, int);
 
 public slots:
     void gotFrame(CANFrame *frame);
-    void connectionSucceeded(int, int);
+
 
 signals:
     void sendSerialPort(QSerialPortInfo *port);
