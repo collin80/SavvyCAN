@@ -2,6 +2,7 @@
 
 #include <QSerialPort>
 #include <QDebug>
+#include <QTimer>
 
 SerialWorker::SerialWorker(QObject *parent) : QObject(parent)
 {
@@ -53,9 +54,23 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append(0xE7);
     output.append(0xF1); //signal we want to issue a command
     output.append(0x06); //request canbus stats from the board
+    output.append(0xF1); //another command to the GVRET
+    output.append(0x07); //request device information
     serial->write(output);
-    ///isConnected = true;
+    connected = false;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
+    QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
+}
+
+void SerialWorker::connectionTimeout()
+{
+    //one second after trying to connect are we actually connected?
+    if (!connected) //no?
+    {
+        //then emit the the failure signal and see if anyone cares
+        qDebug() << "Failed to connect to GVRET at that com port";
+        emit connectionFailure();
+    }
 }
 
 void SerialWorker::readSerialData()
@@ -154,6 +169,11 @@ void SerialWorker::procRXChar(unsigned char c)
         case 6: //get canbus parameters from GVRET
             rx_state = GET_CANBUS_PARAMS;
             rx_step = 0;
+            break;
+        case 7: //get device info
+            rx_state = GET_DEVICE_INFO;
+            rx_step = 0;
+            break;
         }
         break;
     case BUILD_CAN_FRAME:
@@ -262,12 +282,38 @@ void SerialWorker::procRXChar(unsigned char c)
             break;
         case 9:
             can1Baud |= c << 24;
-            rx_step = IDLE;
+            rx_state = IDLE;
             qDebug() << "Baud 0 = " << can0Baud;
             qDebug() << "Baud 1 = " << can1Baud;
             if (!can1Enabled) can1Baud = 0;
             if (!can0Enabled) can0Baud = 0;
+            connected = true;
             emit connectionSuccess(can0Baud, can1Baud);
+            break;
+        }
+        rx_step++;
+        break;
+    case GET_DEVICE_INFO:
+        switch (rx_step)
+        {
+        case 0:
+            deviceBuildNum = c;
+            break;
+        case 1:
+            deviceBuildNum |= c << 8;
+            break;
+        case 2:
+            break; //don't care about eeprom version
+        case 3:
+            break; //don't care about file type
+        case 4:
+            break; //don't care about whether it auto logs or not
+        case 5:
+            deviceSingleWireMode = c;
+            rx_state = IDLE;
+            qDebug() << "build num: " << deviceBuildNum;
+            qDebug() << "single wire can: " << deviceSingleWireMode;
+            emit deviceInfo(deviceBuildNum, deviceSingleWireMode);
             break;
         }
         rx_step++;
