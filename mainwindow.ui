@@ -65,7 +65,7 @@
       <item>
        <widget class="QPushButton" name="btnConnect">
         <property name="text">
-         <string>Connect To Dongle</string>
+         <string>Connect To GVRET</string>
         </property>
        </widget>
       </item>

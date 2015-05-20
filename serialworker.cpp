@@ -13,17 +13,29 @@ SerialWorker::SerialWorker(QObject *parent) : QObject(parent)
 
 SerialWorker::~SerialWorker()
 {
-    if (serial != NULL) delete serial;
+    if (serial != NULL)
+    {
+        if (serial->isOpen())
+        {
+            serial->clear();
+            serial->close();
+
+        }
+        serial->disconnect(); //disconnect all signals
+        delete serial;
+    }
 }
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
 {
-    if (!(serial == NULL))
+    if (serial != NULL)
     {
         if (serial->isOpen())
         {
+            serial->clear();
             serial->close();
         }
+        serial->disconnect(); //disconnect all signals
         delete serial;
     }
 
@@ -37,8 +49,10 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     serial->setDataTerminalReady(true);
     serial->setRequestToSend(true);
     QByteArray output;
+    output.append(0xE7); //this puts the device into binary comm mode
     output.append(0xE7);
-    output.append(0xE7);
+    output.append(0xF1); //signal we want to issue a command
+    output.append(0x06); //request canbus stats from the board
     serial->write(output);
     ///isConnected = true;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
@@ -137,6 +151,9 @@ void SerialWorker::procRXChar(unsigned char c)
         case 5: //we set canbus specs we don't accept replies.
             rx_state = IDLE;
             break;
+        case 6: //get canbus parameters from GVRET
+            rx_state = GET_CANBUS_PARAMS;
+            rx_step = 0;
         }
         break;
     case BUILD_CAN_FRAME:
@@ -209,6 +226,48 @@ void SerialWorker::procRXChar(unsigned char c)
             break;
         case 1:
             rx_state = IDLE;
+            break;
+        }
+        rx_step++;
+        break;
+    case GET_CANBUS_PARAMS:
+        switch (rx_step)
+        {
+        case 0:
+            can0Enabled = c;
+            break;
+        case 1:
+            can0Baud = c;
+            break;
+        case 2:
+            can0Baud |= c << 8;
+            break;
+        case 3:
+            can0Baud |= c << 16;
+            break;
+        case 4:
+            can0Baud |= c << 24;
+            break;
+        case 5:
+            can1Enabled = c;
+            break;
+        case 6:
+            can1Baud = c;
+            break;
+        case 7:
+            can1Baud |= c << 8;
+            break;
+        case 8:
+            can1Baud |= c << 16;
+            break;
+        case 9:
+            can1Baud |= c << 24;
+            rx_step = IDLE;
+            qDebug() << "Baud 0 = " << can0Baud;
+            qDebug() << "Baud 1 = " << can1Baud;
+            if (!can1Enabled) can1Baud = 0;
+            if (!can0Enabled) can0Baud = 0;
+            emit connectionSuccess(can0Baud, can1Baud);
             break;
         }
         rx_step++;

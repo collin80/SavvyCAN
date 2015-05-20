@@ -68,6 +68,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(worker, &SerialWorker::receivedFrame, this, &MainWindow::gotFrame, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
     connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
     serialWorkerThread.start();
 
     graphingWindow = NULL;
@@ -92,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
 
     lbStatusConnected.setText(tr("Not connected"));
-    lbStatusBauds.setText(tr("Baud 1: 0 Baud 2: 0"));
+    updateBaudLabel(0,0);
     lbStatusDatabase.setText(tr("No database loaded"));
     ui->statusBar->addWidget(&lbStatusConnected);
     ui->statusBar->addWidget(&lbStatusBauds);
@@ -112,6 +113,18 @@ MainWindow::~MainWindow()
 
     serialWorkerThread.quit();
     serialWorkerThread.wait();
+}
+
+void MainWindow::updateBaudLabel(int baud0, int baud1)
+{
+    QString labelText;
+    labelText = tr("Baud 0: ");
+    if (baud0 > 0) labelText += QString::number(baud0);
+    else labelText += tr("disabled");
+    labelText += tr("    Baud 1: ");
+    if (baud1 > 0) labelText += QString::number(baud1);
+    else labelText += tr("disabled");
+    lbStatusBauds.setText(labelText);
 }
 
 void MainWindow::gotFrame(CANFrame *frame)
@@ -142,50 +155,12 @@ void MainWindow::changeBaudRates()
 {
     int Speed1 = 0, Speed2 = 0;
 
-    switch (ui->cbSpeed1->currentIndex())
-    {
-    case 0: //disable
-        break;
-    case 1:
-        Speed1 = 125000;
-        break;
-    case 2:
-        Speed1 = 250000;
-        break;
-    case 3:
-        Speed1 = 500000;
-        break;
-    case 4:
-        Speed1 = 1000000;
-        break;
-    case 5:
-        Speed1 = 33333;
-        break;
-    }
-    switch (ui->cbSpeed2->currentIndex())
-    {
-    case 0: //disable
-        break;
-    case 1:
-        Speed2 = 125000;
-        break;
-    case 2:
-        Speed2 = 250000;
-        break;
-    case 3:
-        Speed2 = 500000;
-        break;
-    case 4:
-        Speed2 = 1000000;
-        break;
-    case 5:
-        Speed2 = 33333;
-        break;
-    }
+    Speed1 = ui->cbSpeed1->currentText().toInt();
+    Speed2 = ui->cbSpeed2->currentText().toInt();
 
     emit updateBaudRates(Speed1, Speed2);
 
-    lbStatusBauds.setText(tr("Baud 1: ") + QString::number(Speed1) + tr(" Baud 2:") + QString::number(Speed2));
+    updateBaudLabel(Speed1, Speed2);
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project
@@ -628,6 +603,9 @@ void MainWindow::handleLoadDBC()
 
     //right now there is only one file type that can be loaded here so just do it.
     dbcHandler->loadDBCFile(filename);
+    dbcHandler->listDebugging();
+    QStringList fileList = filename.split('/');
+    lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 }
 
 void MainWindow::handleSaveDBC()
@@ -661,11 +639,37 @@ void MainWindow::connButtonPress()
     {
         if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
         {
-            emit sendSerialPort(&ports[x]);
-            lbStatusConnected.setText(tr("Connected to port ") + ports[x].portName());
+            emit sendSerialPort(&ports[x]);            
+            lbStatusConnected.setText(tr("Attempting to connect to port ") + ports[x].portName());
             return;
         }
     }
+}
+
+void MainWindow::connectionSucceeded(int baud0, int baud1)
+{
+    lbStatusConnected.setText(tr("Connected to GVRET"));
+    //now update the status message for baud rates
+    updateBaudLabel(baud0, baud1);
+    //finally, find the baud rate in the list of rates or
+    //add it to the bottom if needed (that'll be weird though...
+
+    int idx = ui->cbSpeed1->findText(QString::number(baud0));
+    if (idx > -1) ui->cbSpeed1->setCurrentIndex(idx);
+    else
+    {
+        ui->cbSpeed1->addItem(QString::number(baud0));
+        ui->cbSpeed1->setCurrentIndex(ui->cbSpeed1->count() - 1);
+    }
+
+    idx = ui->cbSpeed2->findText(QString::number(baud0));
+    if (idx > -1) ui->cbSpeed2->setCurrentIndex(idx);
+    else
+    {
+        ui->cbSpeed2->addItem(QString::number(baud1));
+        ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
+    }
+    ui->btnConnect->setEnabled(false);
 }
 
 void MainWindow::showGraphingWindow()

@@ -42,6 +42,7 @@ private slots:
 
 public slots:
     void gotFrame(CANFrame *frame);
+    void connectionSucceeded(int, int);
 
 signals:
     void sendSerialPort(QSerialPortInfo *port);
@@ -74,6 +75,7 @@ private:
     void saveLogFile(QString);
     void saveMicrochipFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
+    void updateBaudLabel(int, int);
 };
 
 #endif // MAINWINDOW_H
