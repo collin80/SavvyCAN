@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QList>
 #include "can_structs.h"
+#include "dbchandler.h"
 
 class CANFrameModel: public QAbstractTableModel
 {
@@ -22,11 +23,17 @@ public:
     void sendRefresh();
     void sendRefresh(int);
     void clearFrames();
+    void setDBCHandler(DBCHandler *);
+    void setInterpetMode(bool);
+    void setOverwriteMode(bool);
     QList<CANFrame> *getListReference();
 
 
 private:
     QList<CANFrame> frames;
+    DBCHandler *dbcHandler;
+    bool interpretFrames; //should we use the dbcHandler?
+    bool overwriteDups; //should we display all frames or only the newest for each ID?
 };
 
 

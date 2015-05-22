@@ -318,3 +318,44 @@ void DBCHandler::listDebugging()
         }
     }
 }
+
+
+//DBC files use what I'd consider a completely stupid way to count bits. The lowest bit
+//in a byte is 7 while the highest is 0. So, the counting for a byte goes like this:
+//0 1 2 3 4 5 6 7. That only makes sense if you write it out like that. In reality bits are stored
+//7 6 5 4 3 2 1 0. So, plan accordingly. It's confusing when you're used to bit 7 being the highest, not lowest
+//But, bytes are still in order. Byte 0 is the first byte, byte 7 would be the last byte in a frame.
+//So, the lowest bit of the last byte is 63. The upshot is that, if you took all the bytes in a canbus
+//frame and started labeling from left to right you would really number 0 to 63 in complete order. It's
+//just that computers don't store data like that. Have I mentioned that already? Screw Vector. Go away on a CANoe.
+//0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31    Vector bit ordering
+//7 6 5 4 3 2 1 0 7 6 5  4  3  2  1  0  7  6  5  4  3  2  1  0  7  6  5  4  3  2  1  0     Bitwise ordering within bytes
+//0               1                     2                       3                          Byte ordering
+//For intel format invert the starting bit within a byte.
+//Otherwise, iterate over the bytes that it encompasses and
+void DBCHandler::processSignal(CANFrame *frame, DBC_SIGNAL *sig)
+{
+    int startBit, endBit, startByte, endByte, bitWithinByteStart, bitWithinByteEnd;
+
+    startBit = sig->startBit;
+    startByte = startBit / 8;
+    bitWithinByteStart = startBit % 8;
+    if (sig->intelByteOrder)
+    {
+        bitWithinByteStart = 7 - bitWithinByteStart;
+        startBit = (startByte * 8) + bitWithinByteStart;
+    }
+
+    endBit = startBit + sig->signalSize - 1;
+    endByte = endBit / 8;
+    bitWithinByteEnd = endBit % 8;
+
+    if (sig->intelByteOrder) //little endian - startBit is least sig. bit
+    {
+
+    }
+    else //motorola / big endian - startBit is most sig. bit
+    {
+
+    }
+}

@@ -77,7 +77,7 @@ void SerialWorker::readSerialData()
 {
     QByteArray data = serial->readAll();
     unsigned char c;
-    qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
+    //qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         c = data.at(i);
@@ -91,7 +91,9 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     int c;
     int ID;
 
-    qDebug() << "Sending out frame with id " << frame->ID;
+    if (!connected) return;
+
+    //qDebug() << "Sending out frame with id " << frame->ID;
 
     ID = frame->ID;
     if (frame->extended) ID |= 1 << 31;
@@ -223,7 +225,7 @@ void SerialWorker::procRXChar(unsigned char c)
             {
                 rx_state = IDLE;
                 rx_step = 0;
-                qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
+                //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
                 emit receivedFrame(buildFrame);
                 buildFrame = new CANFrame;
             }

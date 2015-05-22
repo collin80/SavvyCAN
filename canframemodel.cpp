@@ -14,6 +14,24 @@ CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
     frames.reserve(100000); //ask for at least 100,000 entries. This gives good performance up to this limit
+    dbcHandler = NULL;
+    interpretFrames = false;
+    overwriteDups = false;
+}
+
+void CANFrameModel::setDBCHandler(DBCHandler *handler)
+{
+    dbcHandler = handler;
+}
+
+void CANFrameModel::setInterpetMode(bool mode)
+{
+    interpretFrames = mode;
+}
+
+void CANFrameModel::setOverwriteMode(bool mode)
+{
+    overwriteDups = mode;
 }
 
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
@@ -50,6 +68,18 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             {
                 tempString.append(QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2,'0'));
                 tempString.append(" ");
+            }
+            //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
+            if (dbcHandler != NULL)
+            {
+                DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
+                if (msg != NULL)
+                {
+                    for (int j = 0; j < msg->msgSignals.length(); j++)
+                    {
+
+                    }
+                }
             }
             return tempString;
             break;

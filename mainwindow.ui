@@ -169,6 +169,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnClearFrames">
+        <property name="text">
+         <string>Clear Frames</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="cbAutoScroll">
         <property name="text">
          <string>Auto Scroll Window</string>
@@ -176,9 +183,16 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="btnClearFrames">
+       <widget class="QCheckBox" name="cbInterpret">
         <property name="text">
-         <string>Clear Frames</string>
+         <string>Interpret Frames</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="cbOverwrite">
+        <property name="text">
+         <string>Overwrite Mode</string>
         </property>
        </widget>
       </item>

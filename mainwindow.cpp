@@ -28,6 +28,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
+
     model = new CANFrameModel();
     ui->canFramesView->setModel(model);
 
@@ -39,7 +41,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(2, 40);
     ui->canFramesView->setColumnWidth(3, 40);
     ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 300);
+    ui->canFramesView->setColumnWidth(5, 275);
+    QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
+    HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
 
     ports = QSerialPortInfo::availablePorts();
 
@@ -79,6 +83,8 @@ MainWindow::MainWindow(QWidget *parent) :
     flowViewWindow = NULL;
     frameSenderWindow = NULL;
     dbcHandler = new DBCHandler;
+
+    model->setDBCHandler(dbcHandler);
 
     connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
     connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
@@ -120,10 +126,10 @@ MainWindow::~MainWindow()
 void MainWindow::updateBaudLabel(int baud0, int baud1)
 {
     QString labelText;
-    labelText = tr("Baud 0: ");
+    labelText = tr("CAN 0 Speed: ");
     if (baud0 > 0) labelText += QString::number(baud0 / 1000.0) + "kbps";
     else labelText += tr("disabled");
-    labelText += tr("    Baud 1: ");
+    labelText += tr("    CAN 1 Speed: ");
     if (baud1 > 0) labelText += QString::number(baud1 / 1000.0) + "kbps";
     else labelText += tr("disabled");
     lbStatusBauds.setText(labelText);
@@ -131,7 +137,7 @@ void MainWindow::updateBaudLabel(int baud0, int baud1)
 
 void MainWindow::gotFrame(CANFrame *frame)
 {
-    qDebug() << "got frame from serial side. ID was " << frame->ID;
+    //qDebug() << "got frame from serial side. ID was " << frame->ID;
     addFrameToDisplay(*frame, true);
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
 }
