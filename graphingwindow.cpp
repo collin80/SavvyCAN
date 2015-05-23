@@ -3,7 +3,7 @@
 #include "newgraphdialog.h"
 #include <QDebug>
 
-GraphingWindow::GraphingWindow(QList<CANFrame> *frames, QWidget *parent) :
+GraphingWindow::GraphingWindow(QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
 {

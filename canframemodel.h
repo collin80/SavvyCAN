@@ -3,6 +3,7 @@
 
 #include <QAbstractTableModel>
 #include <QList>
+#include <QVector>
 #include "can_structs.h"
 #include "dbchandler.h"
 
@@ -26,11 +27,11 @@ public:
     void setDBCHandler(DBCHandler *);
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
-    QList<CANFrame> *getListReference();
+    QVector<CANFrame> *getListReference();
 
 
 private:
-    QList<CANFrame> frames;
+    QVector<CANFrame> frames;
     DBCHandler *dbcHandler;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?

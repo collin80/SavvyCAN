@@ -5,7 +5,7 @@ const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Q
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta};
 
 
-FlowViewWindow::FlowViewWindow(QList<CANFrame> *frames, QWidget *parent) :
+FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FlowViewWindow)
 {

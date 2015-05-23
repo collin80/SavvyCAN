@@ -13,7 +13,7 @@ class FlowViewWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FlowViewWindow(QList<CANFrame> *frames, QWidget *parent = 0);
+    explicit FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FlowViewWindow();
 
 private slots:
@@ -32,7 +32,7 @@ private:
     Ui::FlowViewWindow *ui;
     QList<int> foundID;
     QList<CANFrame> frameCache;
-    QList<CANFrame> *modelFrames;
+    QVector<CANFrame> *modelFrames;
     unsigned char refBytes[8];
     unsigned char currBytes[8];
     int currentPosition;

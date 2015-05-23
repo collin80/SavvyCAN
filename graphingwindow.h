@@ -29,7 +29,7 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(QList<CANFrame> *, QWidget *parent = 0);
+    explicit GraphingWindow(QVector<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
 
 private slots:
@@ -50,7 +50,7 @@ private slots:
 private:
     Ui::GraphingWindow *ui;
     QList<CANFrame> frameCache;
-    QList<CANFrame> *modelFrames;
+    QVector<CANFrame> *modelFrames;
     QList<GraphParams> graphParams;
     QPen selectedPen;
 

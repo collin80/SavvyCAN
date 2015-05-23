@@ -2,7 +2,7 @@
 #include "ui_frameinfowindow.h"
 #include <QtDebug>
 
-FrameInfoWindow::FrameInfoWindow(QList<CANFrame> *frames, QWidget *parent) :
+FrameInfoWindow::FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FrameInfoWindow)
 {

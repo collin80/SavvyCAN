@@ -2,7 +2,7 @@
 #include "ui_framesenderwindow.h"
 #include "utility.h"
 
-FrameSenderWindow::FrameSenderWindow(QList<CANFrame> *frames, QWidget *parent) :
+FrameSenderWindow::FrameSenderWindow(QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FrameSenderWindow)
 {

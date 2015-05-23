@@ -248,7 +248,7 @@ void MainWindow::loadCRTDFile(QString filename)
 void MainWindow::saveCRTDFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    QList<CANFrame> *frames = model->getListReference();
+    QVector<CANFrame> *frames = model->getListReference();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
@@ -328,7 +328,7 @@ void MainWindow::loadNativeCSVFile(QString filename)
 void MainWindow::saveNativeCSVFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    QList<CANFrame> *frames = model->getListReference();
+    QVector<CANFrame> *frames = model->getListReference();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;

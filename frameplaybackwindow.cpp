@@ -2,7 +2,7 @@
 #include "ui_frameplaybackwindow.h"
 #include <QDebug>
 
-FramePlaybackWindow::FramePlaybackWindow(QList<CANFrame> *frames, QWidget *parent) :
+FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FramePlaybackWindow)
 {
