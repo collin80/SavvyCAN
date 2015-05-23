@@ -75,11 +75,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbSpeed2->addItem(tr("1000000"));
     ui->cbSpeed2->addItem(tr("33333"));
 
-    SerialWorker *worker = new SerialWorker();
+    SerialWorker *worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::receivedFrame, this, &MainWindow::gotFrame, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::receivedFrames, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
     connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
     connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
@@ -145,11 +145,12 @@ void MainWindow::updateBaudLabel(int baud0, int baud1)
     lbStatusBauds.setText(labelText);
 }
 
-void MainWindow::gotFrame(CANFrame *frame)
+//most of the work is handled elsewhere. Need only to update the # of frames
+//and maybe auto scroll
+void MainWindow::gotFrames()
 {
-    //qDebug() << "got frame from serial side. ID was " << frame->ID;
-    addFrameToDisplay(*frame, true);
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)

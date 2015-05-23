@@ -4,12 +4,19 @@
 #include <QDebug>
 #include <QTimer>
 
-SerialWorker::SerialWorker(QObject *parent) : QObject(parent)
+SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(parent)
 {
     serial = NULL;
     rx_state = IDLE;
     rx_step = 0;
     buildFrame = new CANFrame;
+    canModel = model;
+    ticker.setInterval(250); //tick four times per second
+    ticker.setSingleShot(false); //keep ticking
+    ticker.start();
+    gotFrames = 0;
+
+    connect(&ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
 }
 
 SerialWorker::~SerialWorker()
@@ -25,6 +32,7 @@ SerialWorker::~SerialWorker()
         serial->disconnect(); //disconnect all signals
         delete serial;
     }
+    ticker.stop();
 }
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
@@ -226,8 +234,10 @@ void SerialWorker::procRXChar(unsigned char c)
                 rx_state = IDLE;
                 rx_step = 0;
                 //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
-                emit receivedFrame(buildFrame);
-                buildFrame = new CANFrame;
+                //emit receivedFrame(buildFrame);
+                canModel->addFrame(*buildFrame, false);
+                gotFrames++;
+                //buildFrame = new CANFrame;
             }
             break;
         }
@@ -320,5 +330,15 @@ void SerialWorker::procRXChar(unsigned char c)
         }
         rx_step++;
         break;
+    }
+}
+
+void SerialWorker::handleTick()
+{
+    if (gotFrames > 0)
+    {
+        emit receivedFrames(); //notify interested parties that there are new frames
+        canModel->sendBulkRefresh(gotFrames);
+        gotFrames = 0;
     }
 }

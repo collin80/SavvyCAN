@@ -4,6 +4,7 @@
 #include <QAbstractTableModel>
 #include <QList>
 #include <QVector>
+#include <QDebug>
 #include "can_structs.h"
 #include "dbchandler.h"
 
@@ -23,6 +24,7 @@ public:
     void addFrame(CANFrame &, bool);
     void sendRefresh();
     void sendRefresh(int);
+    void sendBulkRefresh(int);
     void clearFrames();
     void setDBCHandler(DBCHandler *);
     void setInterpetMode(bool);

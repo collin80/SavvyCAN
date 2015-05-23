@@ -145,6 +145,15 @@ void CANFrameModel::sendRefresh(int pos)
     endInsertRows();
 }
 
+//issue a refresh for the last num entries in the model.
+//used by the serial worker to do batch updates so it doesn't
+//have to send thousands of messages per second
+void CANFrameModel::sendBulkRefresh(int num)
+{
+    //qDebug() << "Bulk refresh of " << num;
+    beginInsertRows(QModelIndex(), frames.count() - num, frames.count() - 1);
+    endInsertRows();
+}
 
 void CANFrameModel::clearFrames()
 {

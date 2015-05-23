@@ -4,7 +4,9 @@
 #include <QObject>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <QTimer>
 #include "can_structs.h"
+#include "canframemodel.h"
 
 enum STATE //keep this enum synchronized with the Arduino firmware project
 {
@@ -25,12 +27,12 @@ class SerialWorker : public QObject
     Q_OBJECT
 
 public:
-    SerialWorker(QObject *parent = 0);
+    SerialWorker(CANFrameModel *model, QObject *parent = 0);
     ~SerialWorker();
 
 signals: //we emit signals
     void error(const QString &);
-    void receivedFrame(CANFrame *);
+    void receivedFrames(); //since the last tick we got at least one more frame
     void connectionSuccess(int, int);
     void connectionFailure();
     void deviceInfo(int, int);
@@ -38,6 +40,7 @@ signals: //we emit signals
 private slots: //we receive things in slots
     void readSerialData();    
     void connectionTimeout();
+    void handleTick();
 
 public slots:
     void setSerialPort(QSerialPortInfo*);
@@ -49,6 +52,9 @@ private:
     bool quit;
     bool connected;
     QSerialPort *serial;
+    CANFrameModel *canModel;
+    QTimer ticker;
+    int gotFrames;
     STATE rx_state;
     int rx_step;
     CANFrame *buildFrame;
