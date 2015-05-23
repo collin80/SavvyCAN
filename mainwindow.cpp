@@ -19,6 +19,16 @@ Things that were planned for the GVRET-PC project but never completed.
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
 Range state - Find things that range like accelerator pedal inputs, road speed, tach, etc
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
+
+
+Things currently broken or in need of attention:
+1. It should be possible to stop the capture at any time.
+2. The details window should tell you the min/max/avg time between frames of this ID
+3. Frame reception gets weird somewhere between 100k and 150k frames. Increase prealloc and re-test
+4. Expanding the main window (while having a large capture going?) could lock up the program
+5. Clicking one of the three main checkboxes (auto scroll, interpret, overwrite) locks up reception
+6. The windows that deal with canbus data should update based on incoming frames. It should not be required to load files to use these windows
+7. Overall, test more often with large captures coming in. Use Kvaser to simulate incoming data in large quantities.
 */
 
 
@@ -205,7 +215,7 @@ void MainWindow::loadCRTDFile(QString filename)
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
-        line = inFile->readLine();
+        line = inFile->readLine().simplified();
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(' ');

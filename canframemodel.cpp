@@ -13,7 +13,7 @@ int CANFrameModel::columnCount(const QModelIndex &index) const
 CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
-    frames.reserve(100000); //ask for at least 100,000 entries. This gives good performance up to this limit
+    frames.reserve(10000000); //yes, I'm preallocating 10 million entries in this list. I don't think anyone will exceed this.
     dbcHandler = NULL;
     interpretFrames = false;
     overwriteDups = false;
