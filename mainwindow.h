@@ -51,6 +51,7 @@ public slots:
 
 signals:
     void sendSerialPort(QSerialPortInfo *port);
+    void closeSerialPort();
     void updateBaudRates(int, int);
     void sendCANFrame(const CANFrame *, int);
 
@@ -69,6 +70,7 @@ private:
     QLabel lbStatusConnected;
     QLabel lbStatusBauds;
     QLabel lbStatusDatabase;
+    bool isConnected;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);

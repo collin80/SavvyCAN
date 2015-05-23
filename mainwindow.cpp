@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
     connect(worker, &SerialWorker::connectionFailure, this, &MainWindow::connectionFailed, Qt::QueuedConnection);
     connect(worker, &SerialWorker::deviceInfo, this, &MainWindow::gotDeviceInfo, Qt::QueuedConnection);
+    connect(this, &MainWindow::closeSerialPort, worker, &SerialWorker::closeSerialPort, Qt::QueuedConnection);
     serialWorkerThread.start();
 
     graphingWindow = NULL;
@@ -116,6 +117,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addWidget(&lbStatusConnected);
     ui->statusBar->addWidget(&lbStatusBauds);
     ui->statusBar->addWidget(&lbStatusDatabase);
+
+    isConnected = false;
 }
 
 MainWindow::~MainWindow()
@@ -654,14 +657,24 @@ void MainWindow::showEditSignalsWindow()
 
 void MainWindow::connButtonPress()
 {
-    for (int x = 0; x < ports.count(); x++)
+    if (!isConnected)
     {
-        if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
+        for (int x = 0; x < ports.count(); x++)
         {
-            emit sendSerialPort(&ports[x]);            
-            lbStatusConnected.setText(tr("Attempting to connect to port ") + ports[x].portName());
-            return;
+            if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
+            {
+                emit sendSerialPort(&ports[x]);
+                lbStatusConnected.setText(tr("Attempting to connect to port ") + ports[x].portName());
+                return;
+            }
         }
+    }
+    else
+    {
+        emit closeSerialPort();
+        isConnected = false;
+        lbStatusConnected.setText(tr("Not Connected"));
+        ui->btnConnect->setText(tr("Connect to GVRET"));
     }
 }
 
@@ -688,7 +701,9 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->addItem(QString::number(baud1));
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
-    ui->btnConnect->setEnabled(false);
+    //ui->btnConnect->setEnabled(false);
+    ui->btnConnect->setText(tr("Disconnect from GVRET"));
+    isConnected = true;
 }
 
 void MainWindow::connectionFailed()

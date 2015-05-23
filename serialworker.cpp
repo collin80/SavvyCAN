@@ -11,12 +11,8 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     rx_step = 0;
     buildFrame = new CANFrame;
     canModel = model;
-    ticker.setInterval(250); //tick four times per second
-    ticker.setSingleShot(false); //keep ticking
-    ticker.start();
     gotFrames = 0;
-
-    connect(&ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
+    ticker = NULL;
 }
 
 SerialWorker::~SerialWorker()
@@ -32,7 +28,7 @@ SerialWorker::~SerialWorker()
         serial->disconnect(); //disconnect all signals
         delete serial;
     }
-    ticker.stop();
+    ticker->stop();
 }
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
@@ -68,6 +64,14 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     connected = false;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
     QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
+    if (ticker == NULL)
+    {
+        ticker = new QTimer;
+        connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
+    }
+    ticker->setInterval(250); //tick four times per second
+    ticker->setSingleShot(false); //keep ticking
+    ticker->start();
 }
 
 void SerialWorker::connectionTimeout()
@@ -77,6 +81,7 @@ void SerialWorker::connectionTimeout()
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
+        ticker->stop();
         emit connectionFailure();
     }
 }
@@ -335,10 +340,25 @@ void SerialWorker::procRXChar(unsigned char c)
 
 void SerialWorker::handleTick()
 {
+    //qDebug() << "Tick!";
     if (gotFrames > 0)
     {
         emit receivedFrames(); //notify interested parties that there are new frames
         canModel->sendBulkRefresh(gotFrames);
         gotFrames = 0;
     }
+}
+
+//totally shuts down the whole thing
+void SerialWorker::closeSerialPort()
+{
+    if (serial->isOpen())
+    {
+        serial->clear();
+        serial->close();
+    }
+    serial->disconnect();
+    ticker->stop();
+    delete serial;
+    serial = NULL;
 }

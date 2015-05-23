@@ -44,6 +44,7 @@ private slots: //we receive things in slots
 
 public slots:
     void setSerialPort(QSerialPortInfo*);
+    void closeSerialPort();
     void sendFrame(const CANFrame *, int);
     void updateBaudRates(int, int);
 
@@ -53,7 +54,7 @@ private:
     bool connected;
     QSerialPort *serial;
     CANFrameModel *canModel;
-    QTimer ticker;
+    QTimer *ticker;
     int gotFrames;
     STATE rx_state;
     int rx_step;
