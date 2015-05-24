@@ -46,7 +46,7 @@ private slots:
     void connectionSucceeded(int, int);
 
 public slots:
-    void gotFrames(int);
+    void gotFrames(int, int);
 
 
 signals:

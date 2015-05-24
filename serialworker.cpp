@@ -350,12 +350,9 @@ void SerialWorker::handleTick()
     //qDebug() << "Tick!";
     framesPerSec += gotFrames * 1000 / elapsedTime->elapsed() - (framesPerSec / 4);
     elapsedTime->restart();
-    //if (gotFrames > 0)
-    //{
-        emit receivedFrames(framesPerSec / 4); //misnamed now. Just notifies of FPS and that frames might exist
-        canModel->sendBulkRefresh(gotFrames);
-        gotFrames = 0;
-    //}
+    emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
+    canModel->sendBulkRefresh(gotFrames);
+    gotFrames = 0;
 }
 
 //totally shuts down the whole thing

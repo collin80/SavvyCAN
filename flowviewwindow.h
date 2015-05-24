@@ -15,6 +15,7 @@ class FlowViewWindow : public QDialog
 public:
     explicit FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FlowViewWindow();
+    void showEvent(QShowEvent*);
 
 private slots:
     void btnBackOneClick();

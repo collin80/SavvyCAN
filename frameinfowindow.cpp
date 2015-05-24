@@ -8,6 +8,11 @@ FrameInfoWindow::FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent) :
 {
     ui->setupUi(this);
     modelFrames = frames;
+}
+
+void FrameInfoWindow::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
     refreshIDList();
 }
 

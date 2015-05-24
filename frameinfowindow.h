@@ -16,6 +16,7 @@ class FrameInfoWindow : public QDialog
 public:
     explicit FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FrameInfoWindow();
+    void showEvent(QShowEvent*);
 
 private slots:
     void updateDetailsWindow(QListWidgetItem *);

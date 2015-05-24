@@ -22,13 +22,8 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 
 Things currently broken or in need of attention:
-1. It should be possible to stop the capture at any time.
-2. The details window should tell you the min/max/avg time between frames of this ID
-3. Frame reception gets weird somewhere between 100k and 150k frames. Increase prealloc and re-test
-4. Expanding the main window (while having a large capture going?) could lock up the program
-5. Clicking one of the three main checkboxes (auto scroll, interpret, overwrite) locks up reception
-6. The windows that deal with canbus data should update based on incoming frames. It should not be required to load files to use these windows
-7. Overall, test more often with large captures coming in. Use Kvaser to simulate incoming data in large quantities.
+1. The details window should tell you the min/max/avg time between frames of this ID
+2. The windows that deal with canbus data should update based on incoming frames. It should not be required to load files to use these windows
 */
 
 
@@ -79,7 +74,7 @@ MainWindow::MainWindow(QWidget *parent) :
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::receivedFrames, this, &MainWindow::gotFrames, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::frameUpdateTick, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
     connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
     connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
@@ -153,7 +148,7 @@ void MainWindow::updateBaudLabel(int baud0, int baud1)
 
 //most of the work is handled elsewhere. Need only to update the # of frames
 //and maybe auto scroll
-void MainWindow::gotFrames(int FPS)
+void MainWindow::gotFrames(int FPS, int framesSinceLastUpdate)
 {
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();

@@ -22,10 +22,6 @@ FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
     memset(refBytes, 0, 8);
     memset(currBytes, 0, 8);
 
-    refreshIDList();
-
-    updateFrameLabel();
-
     //ui->graphView->setInteractions();
 
     ui->graphView->xAxis->setRange(0, 8);
@@ -57,6 +53,13 @@ FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
 
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 
+}
+
+void FlowViewWindow::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+    refreshIDList();
+    updateFrameLabel();
 }
 
 FlowViewWindow::~FlowViewWindow()

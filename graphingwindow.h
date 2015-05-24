@@ -31,6 +31,7 @@ class GraphingWindow : public QDialog
 public:
     explicit GraphingWindow(QVector<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
+    void showEvent(QShowEvent*);
 
 private slots:
     void titleDoubleClick(QMouseEvent *event, QCPPlotTitle *title);

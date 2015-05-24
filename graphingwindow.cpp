@@ -60,6 +60,10 @@ GraphingWindow::~GraphingWindow()
     delete ui;
 }
 
+void GraphingWindow::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+}
 
 void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
 {

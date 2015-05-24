@@ -33,7 +33,7 @@ public:
 
 signals: //we emit signals
     void error(const QString &);
-    void receivedFrames(int); //since the last tick we got at least one more frame
+    void frameUpdateTick(int, int); //update interested parties about the # of frames that have come in
     void connectionSuccess(int, int);
     void connectionFailure();
     void deviceInfo(int, int);
