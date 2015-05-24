@@ -118,22 +118,25 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addWidget(&lbStatusBauds);
     ui->statusBar->addWidget(&lbStatusDatabase);
 
+    ui->lbFPS->setText("0");
+    ui->lbNumFrames->setText("0");
+
     isConnected = false;
 }
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+    serialWorkerThread.quit();
+    serialWorkerThread.wait();
+
     if (graphingWindow) delete graphingWindow;
     if (frameInfoWindow) delete frameInfoWindow;
     if (playbackWindow) delete playbackWindow;
     if (flowViewWindow) delete flowViewWindow;
     if (frameSenderWindow) delete frameSenderWindow;
 
+    delete ui;
     delete dbcHandler;
-
-    serialWorkerThread.quit();
-    serialWorkerThread.wait();
 }
 
 void MainWindow::updateBaudLabel(int baud0, int baud1)
@@ -150,10 +153,11 @@ void MainWindow::updateBaudLabel(int baud0, int baud1)
 
 //most of the work is handled elsewhere. Need only to update the # of frames
 //and maybe auto scroll
-void MainWindow::gotFrames()
+void MainWindow::gotFrames(int FPS)
 {
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+    ui->lbFPS->setText(QString::number(FPS));
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)

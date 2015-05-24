@@ -13,6 +13,8 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     canModel = model;
     gotFrames = 0;
     ticker = NULL;
+    elapsedTime = NULL;
+    framesPerSec = 0;
 }
 
 SerialWorker::~SerialWorker()
@@ -68,6 +70,11 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     {
         ticker = new QTimer;
         connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
+    }
+    if (elapsedTime == NULL)
+    {
+        elapsedTime = new QTime;
+        elapsedTime->start();
     }
     ticker->setInterval(250); //tick four times per second
     ticker->setSingleShot(false); //keep ticking
@@ -341,12 +348,14 @@ void SerialWorker::procRXChar(unsigned char c)
 void SerialWorker::handleTick()
 {
     //qDebug() << "Tick!";
-    if (gotFrames > 0)
-    {
-        emit receivedFrames(); //notify interested parties that there are new frames
+    framesPerSec += gotFrames * 1000 / elapsedTime->elapsed() - (framesPerSec / 4);
+    elapsedTime->restart();
+    //if (gotFrames > 0)
+    //{
+        emit receivedFrames(framesPerSec / 4); //misnamed now. Just notifies of FPS and that frames might exist
         canModel->sendBulkRefresh(gotFrames);
         gotFrames = 0;
-    }
+    //}
 }
 
 //totally shuts down the whole thing

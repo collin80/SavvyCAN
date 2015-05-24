@@ -1,6 +1,7 @@
 #ifndef SERIALWORKER_H
 #define SERIALWORKER_H
 
+#include <QDateTime>
 #include <QObject>
 #include <QSerialPort>
 #include <QSerialPortInfo>
@@ -32,7 +33,7 @@ public:
 
 signals: //we emit signals
     void error(const QString &);
-    void receivedFrames(); //since the last tick we got at least one more frame
+    void receivedFrames(int); //since the last tick we got at least one more frame
     void connectionSuccess(int, int);
     void connectionFailure();
     void deviceInfo(int, int);
@@ -55,6 +56,8 @@ private:
     QSerialPort *serial;
     CANFrameModel *canModel;
     QTimer *ticker;
+    QTime *elapsedTime;
+    int framesPerSec;
     int gotFrames;
     STATE rx_state;
     int rx_step;

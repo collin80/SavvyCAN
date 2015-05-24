@@ -128,9 +128,11 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 
 void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 {
+    mutex.lock();
     if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
     frames.append(frame);
     if (autoRefresh) endInsertRows();
+    mutex.unlock();
 }
 
 void CANFrameModel::sendRefresh()
@@ -151,15 +153,23 @@ void CANFrameModel::sendRefresh(int pos)
 void CANFrameModel::sendBulkRefresh(int num)
 {
     //qDebug() << "Bulk refresh of " << num;
+    //the next three lines protect against a crash in case someone clicked clear frames
+    //in between the time we got some frames and the time this was called
+    //otherwise it's possible that the grid is in an odd state.
+    if (num == 0) return;
+    if (frames.count() == 0) return;
+    if (num > frames.count()) num = frames.count();
     beginInsertRows(QModelIndex(), frames.count() - num, frames.count() - 1);
     endInsertRows();
 }
 
 void CANFrameModel::clearFrames()
 {
+    mutex.lock();
     this->beginResetModel();
     frames.clear();
     this->endResetModel();
+    mutex.unlock();
 }
 
 //Is this safe? Maybe not but if we don't change it then that's OK

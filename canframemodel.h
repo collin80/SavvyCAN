@@ -35,6 +35,7 @@ public:
 private:
     QVector<CANFrame> frames;
     DBCHandler *dbcHandler;
+    QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
 };

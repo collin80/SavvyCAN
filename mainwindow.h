@@ -13,7 +13,7 @@
 #include "framesenderwindow.h"
 #include "dbchandler.h"
 
-#define VERSION 102
+#define VERSION 103
 
 namespace Ui {
 class MainWindow;
@@ -46,7 +46,7 @@ private slots:
     void connectionSucceeded(int, int);
 
 public slots:
-    void gotFrames();
+    void gotFrames(int);
 
 
 signals:
