@@ -13,7 +13,7 @@
 #include "framesenderwindow.h"
 #include "dbchandler.h"
 
-#define VERSION 103
+#define VERSION 104
 
 namespace Ui {
 class MainWindow;

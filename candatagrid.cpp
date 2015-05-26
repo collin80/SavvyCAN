@@ -82,8 +82,8 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
         {
             thisBit = false;
             prevBit = false;
-            if ((thisByte & (1 << x)) == (1 << x)) thisBit = true;
-            if ((prevByte & (1 << x)) == (1 << x)) prevBit = true;
+            if ((thisByte & (1 << (7-x))) == (1 << (7-x))) thisBit = true;
+            if ((prevByte & (1 << (7-x))) == (1 << (7-x))) prevBit = true;
 
             if (thisBit)
             {

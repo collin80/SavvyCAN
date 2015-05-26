@@ -1,8 +1,8 @@
 #include "flowviewwindow.h"
 #include "ui_flowviewwindow.h"
 
-const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red,
-                                               Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta};
+const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
+                                               Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
 
 
 FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
@@ -25,12 +25,20 @@ FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
     //ui->graphView->setInteractions();
 
     ui->graphView->xAxis->setRange(0, 8);
-    ui->graphView->yAxis->setRange(0, 255);
+    ui->graphView->yAxis->setRange(-10, 265); //run range a bit outside possible number so they aren't plotted in a hard to see place
     ui->graphView->axisRect()->setupFullAxesBox();
+
+    QCPItemText *textLabel = new QCPItemText(ui->graphView);
+    ui->graphView->addItem(textLabel);
+    textLabel->setPositionAlignment(Qt::AlignTop|Qt::AlignHCenter);
+    textLabel->position->setType(QCPItemPosition::ptAxisRectRatio);
+    textLabel->position->setCoords(0.5, .5);
+    textLabel->setText("+");
+    textLabel->setFont(QFont(font().family(), 16)); // make font a bit larger
+    textLabel->setPen(QPen(Qt::black)); // show black border around text
 
     ui->graphView->xAxis->setLabel("Time Axis");
     ui->graphView->yAxis->setLabel("Value Axis");
-    //ui->graphView->legend->setVisible(true);
     QFont legendFont = font();
     legendFont.setPointSize(10);
     QFont legendSelectedFont = font();
