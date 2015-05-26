@@ -30,7 +30,7 @@ SerialWorker::~SerialWorker()
         serial->disconnect(); //disconnect all signals
         delete serial;
     }
-    ticker->stop();
+    if (ticker != NULL) ticker->stop();
 }
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
