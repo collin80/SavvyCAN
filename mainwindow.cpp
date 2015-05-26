@@ -22,7 +22,8 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 
 Things currently broken or in need of attention:
-1. The details window should tell you the min/max/avg time between frames of this ID
+1. Need to standardize application where things might differ. All byte and bit references
+should be 0-7 not 1-8. All timings should be in microseconds.
 2. The windows that deal with canbus data should update based on incoming frames. It should not be required to load files to use these windows
 */
 
@@ -222,7 +223,20 @@ void MainWindow::loadCRTDFile(QString filename)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(' ');
-            thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * 1000);
+            int multiplier;
+            int idxOfDecimal = tokens[0].indexOf('.');
+            if (idxOfDecimal > -1) {
+                int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
+                //the result of the above is the # of digits after the decimal.
+                //This program deals in microsecond so turn the value into microseconds
+                multiplier = pow(10, 6 - decimalPlaces);
+            }
+            else
+            {
+                multiplier = 1; //special case. Assume no decimal means microseconds
+            }
+            //qDebug() << "decimal places " << decimalPlaces;
+            thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * multiplier);
             if (tokens[1] == "R11" || tokens[1] == "R29")
             {
                 thisFrame.ID = tokens[2].toInt(NULL, 16);
@@ -256,12 +270,12 @@ void MainWindow::saveCRTDFile(QString filename)
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 
-    outFile->write(QString::number(frames->at(0).timestamp / 1000.0).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output").toUtf8());
+    outFile->write(QString::number(frames->at(0).timestamp / 1000000.0).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output V").toUtf8() + QString::number(VERSION).toUtf8());
     outFile->write("\n");
 
     for (int c = 0; c < frames->count(); c++)
     {
-        outFile->write(QString::number(frames->at(c).timestamp).toUtf8());
+        outFile->write(QString::number(frames->at(c).timestamp / 1000000.0).toUtf8());
         outFile->putChar(' ');
         if (frames->at(c).extended)
         {

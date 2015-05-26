@@ -25,6 +25,7 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
 {
     int idx, numFrames, targettedID;
     int minLen, maxLen, thisLen;
+    int avgInterval;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
@@ -33,6 +34,8 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
     targettedID = item->text().toInt(NULL, 16);
 
     qDebug() << "Started update details window with id " << targettedID;
+
+    avgInterval = 0;
 
     if (targettedID > -1)
     {
@@ -107,6 +110,7 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
+            if (j != 0) avgInterval += (frameCache[j].timestamp - frameCache[j-1].timestamp);
             thisLen = frameCache.at(j).len;
             if (thisLen > maxLen) maxLen = thisLen;
             if (thisLen < minLen) minLen = thisLen;
@@ -119,6 +123,8 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
             }
         }
 
+        avgInterval = avgInterval / (frameCache.count() - 1);
+
         tempItem = new QTreeWidgetItem();
 
         if (minLen < maxLen)
@@ -126,6 +132,10 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
         else
             tempItem->setText(0, tr("Data Length: ") + QString::number(minLen));
 
+        baseNode->addChild(tempItem);
+
+        tempItem = new QTreeWidgetItem();
+        tempItem->setText(0, tr("Average inter-frame interval: ") + QString::number(avgInterval) + "us");
         baseNode->addChild(tempItem);
 
         for (int c = 0; c < maxLen; c++)
