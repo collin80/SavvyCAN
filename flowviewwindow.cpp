@@ -146,6 +146,7 @@ void FlowViewWindow::changeID(QString newID)
         CANFrame thisFrame = modelFrames->at(x);
         if (thisFrame.ID == id)
         {
+            for (int j = thisFrame.len; j < 8; j++) thisFrame.data[j] = 0;
             frameCache.append(thisFrame);
         }
     }
@@ -157,6 +158,9 @@ void FlowViewWindow::changeID(QString newID)
         createGraph(c);
     }
     ui->graphView->replot();
+
+    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+    memcpy(refBytes, currBytes, 8);
 
     updateDataView();
 }
@@ -189,7 +193,12 @@ void FlowViewWindow::btnStopClick()
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
     currentPosition = 0;
+
+    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+    memcpy(refBytes, currBytes, 8);
+
     updateFrameLabel();
+    updateDataView();
 }
 
 void FlowViewWindow::btnPlayClick()

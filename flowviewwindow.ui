@@ -241,7 +241,7 @@
         </sizepolicy>
        </property>
        <property name="title">
-        <string>Reference Values</string>
+        <string>Reference Values (Hex)</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_8">
         <item>
@@ -528,7 +528,7 @@
         </sizepolicy>
        </property>
        <property name="title">
-        <string>Current Values</string>
+        <string>Current Values (Hex)</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_9">
         <item>
