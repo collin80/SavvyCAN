@@ -50,6 +50,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(5, 275);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+    //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
+    //ui->canFramesView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
     ports = QSerialPortInfo::availablePorts();
 
@@ -106,6 +108,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoad_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadDBC()));
     connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showEditSignalsWindow()));
     connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
+    connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
+    connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
+    connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateBaudLabel(0,0);
@@ -118,6 +123,16 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lbNumFrames->setText("0");
 
     isConnected = false;
+
+    //create a temporary frame to be able to capture the correct
+    //default height of an item in the table. Need to do this in case
+    //of scaling or font differences between different computers.
+    CANFrame temp;
+    model->addFrame(temp, true);
+    normalRowHeight = ui->canFramesView->rowHeight(0);
+    qDebug() << "normal row height = " << normalRowHeight;
+    model->clearFrames();
+
 }
 
 MainWindow::~MainWindow()
@@ -133,6 +148,27 @@ MainWindow::~MainWindow()
 
     delete ui;
     delete dbcHandler;
+}
+
+void MainWindow::gridClicked(QModelIndex idx)
+{
+    if (ui->canFramesView->rowHeight(idx.row()) > normalRowHeight)
+    {
+        ui->canFramesView->setRowHeight(idx.row(), normalRowHeight);
+    }
+    else {
+        ui->canFramesView->resizeRowToContents(idx.row());
+    }
+}
+
+void MainWindow::interpretToggled(bool state)
+{
+    model->setInterpetMode(state);
+}
+
+void MainWindow::overwriteToggled(bool state)
+{
+    model->setOverwriteMode(state);
 }
 
 void MainWindow::updateBaudLabel(int baud0, int baud1)
@@ -638,7 +674,7 @@ void MainWindow::handleLoadDBC()
 
     //right now there is only one file type that can be loaded here so just do it.
     dbcHandler->loadDBCFile(filename);
-    dbcHandler->listDebugging();
+    //dbcHandler->listDebugging();
     QStringList fileList = filename.split('/');
     lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 }

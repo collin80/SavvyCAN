@@ -44,6 +44,9 @@ private slots:
     void connectionFailed();
     void gotDeviceInfo(int, int);
     void connectionSucceeded(int, int);
+    void gridClicked(QModelIndex);
+    void interpretToggled(bool);
+    void overwriteToggled(bool);
 
 public slots:
     void gotFrames(int, int);
@@ -70,6 +73,7 @@ private:
     QLabel lbStatusConnected;
     QLabel lbStatusBauds;
     QLabel lbStatusDatabase;
+    int normalRowHeight;
     bool isConnected;
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);

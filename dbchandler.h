@@ -17,7 +17,7 @@ public:
     explicit DBCHandler(QObject *parent = 0);
     void loadDBCFile(QString);
     void listDebugging();
-    void processSignal(CANFrame *frame, DBC_SIGNAL *sig);
+    QString processSignal(const CANFrame &frame, const DBC_SIGNAL &sig);
     DBC_NODE *findNodeByName(QString name);
     DBC_MESSAGE *findMsgByID(int id);
     DBC_SIGNAL *findSignalByName(DBC_MESSAGE *msg, QString name);
@@ -30,6 +30,8 @@ private:
     QList<DBC_NODE> dbc_nodes;
     QList<DBC_MESSAGE> dbc_messages;
 
+    unsigned char reverseBits(unsigned char);
+    unsigned char processByte(unsigned char, int, int);
 };
 
 #endif // DBCHANDLER_H

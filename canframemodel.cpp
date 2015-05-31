@@ -26,7 +26,14 @@ void CANFrameModel::setDBCHandler(DBCHandler *handler)
 
 void CANFrameModel::setInterpetMode(bool mode)
 {
-    interpretFrames = mode;
+    //if the state of interpretFrames changes then we need to reset the model
+    //so that QT will refresh the view properly
+    if (interpretFrames != mode)
+    {
+        this->beginResetModel();
+        interpretFrames = mode;
+        this->endResetModel();
+    }
 }
 
 void CANFrameModel::setOverwriteMode(bool mode)
@@ -70,14 +77,17 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(" ");
             }
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
-            if (dbcHandler != NULL)
+            if (dbcHandler != NULL && interpretFrames)
             {
                 DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
                 if (msg != NULL)
                 {
+                    tempString.append("\r\n");
                     for (int j = 0; j < msg->msgSignals.length(); j++)
                     {
 
+                        tempString.append(dbcHandler->processSignal(thisFrame, msg->msgSignals.at(j)));
+                        tempString.append("\r\n");
                     }
                 }
             }

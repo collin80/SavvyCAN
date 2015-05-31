@@ -320,42 +320,158 @@ void DBCHandler::listDebugging()
 }
 
 
-//DBC files use what I'd consider a completely stupid way to count bits. The lowest bit
-//in a byte is 7 while the highest is 0. So, the counting for a byte goes like this:
-//0 1 2 3 4 5 6 7. That only makes sense if you write it out like that. In reality bits are stored
-//7 6 5 4 3 2 1 0. So, plan accordingly. It's confusing when you're used to bit 7 being the highest, not lowest
-//But, bytes are still in order. Byte 0 is the first byte, byte 7 would be the last byte in a frame.
-//So, the lowest bit of the last byte is 63. The upshot is that, if you took all the bytes in a canbus
-//frame and started labeling from left to right you would really number 0 to 63 in complete order. It's
-//just that computers don't store data like that. Have I mentioned that already? Screw Vector. Go away on a CANoe.
+//Vector uses a special format for bit ordering. It pretends that the bits are numbered
+//0 to 63 in ascending order of bits as if a 64 bit integer were stored lowest first
+//and highest bit last.
 //0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31    Vector bit ordering
-//7 6 5 4 3 2 1 0 7 6 5  4  3  2  1  0  7  6  5  4  3  2  1  0  7  6  5  4  3  2  1  0     Bitwise ordering within bytes
-//0               1                     2                       3                          Byte ordering
+//7 6 5 4 3 2 1 0 7 6 5  4  3  2  1  0  7  6  5  4  3  2  1  0  7  6  5  4  3  2  1  0     Normal bitwise ordering within bytes
+//0 1 2 3 4 5 6 7 0 1 2  3  4  5  6  7  0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7     Reversed bit order used by Vector
+//0               1                     2                       3                          Byte ordering (same either way)
+//A 16 bit integer would be stored Low first high second for intel format and high first, low second for motorola
+
 //For intel format invert the starting bit within a byte.
-//Otherwise, iterate over the bytes that it encompasses and
-void DBCHandler::processSignal(CANFrame *frame, DBC_SIGNAL *sig)
+//Otherwise, iterate over the bytes that it encompasses
+//For intel format this works nicely as it means you can just go through the list getting higher and higher
+//values for each bit as you go.
+//For motorola it is backwards but only partially. For each byte you can go through and it's higher as you go
+//but, at each byte boundary the next byte is lower than the multiplier for the last.
+QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
 {
     int startBit, endBit, startByte, endByte, bitWithinByteStart, bitWithinByteEnd;
+    int result = 0;
+    int multiplier;
+    int bitsToGo;
 
-    startBit = sig->startBit;
+    startBit = sig.startBit;
     startByte = startBit / 8;
     bitWithinByteStart = startBit % 8;
-    if (sig->intelByteOrder)
+    if (sig.intelByteOrder)
     {
         bitWithinByteStart = 7 - bitWithinByteStart;
         startBit = (startByte * 8) + bitWithinByteStart;
     }
 
-    endBit = startBit + sig->signalSize - 1;
+    if (sig.valType == STRING)
+    {
+        QString buildString;
+        int bytes = sig.signalSize / 8;
+        for (int x = 0; x < bytes; x++) buildString.append(frame.data[startByte + x]);
+        return buildString;
+    }
+
+    endBit = startBit + sig.signalSize - 1;
     endByte = endBit / 8;
     bitWithinByteEnd = endBit % 8;
+    bitsToGo = sig.signalSize - 1;
 
-    if (sig->intelByteOrder) //little endian - startBit is least sig. bit
+    multiplier = 1;
+    if (sig.intelByteOrder)
     {
-
+        for (int y = startByte; y < endByte; y++) multiplier *= 256;
     }
-    else //motorola / big endian - startBit is most sig. bit
+
+    //qDebug() << "Signal Name: " << sig.name;
+    //qDebug() << "Intel Order: " << sig.intelByteOrder;
+    //qDebug() << "start byte: " << startByte;
+    //qDebug() << "End Byte: " << endByte;
+
+    int sBit, eBit;
+    sBit = bitWithinByteStart;
+    eBit = sBit + bitsToGo;
+    if (eBit > 7) eBit = 7;
+    bitsToGo -= (eBit - sBit + 1);
+    for (int b = startByte; b <= endByte; b++)
     {
+        //qDebug() << "Byte: " << frame.data[b];
+        //qDebug() << "S: " << sBit;
+        //qDebug() << "E: " << eBit;
+        //process this byte
+        result += processByte(frame.data[b], sBit, eBit) * multiplier;
 
+        //add to multiplier
+        if (!sig.intelByteOrder)
+            multiplier = multiplier << 8;
+        else
+            multiplier = multiplier >> 8;
+
+        //Prepare sBit and eBit for next byte
+        sBit = 0; //fresh byte so we start at the beginning now
+        eBit = sBit + bitsToGo;
+        if (eBit > 7) eBit = 7;
+        bitsToGo -= (eBit - sBit + 1);
     }
+
+    if (sig.valType == SIGNED_INT)
+    {
+        int mask = (1 << (sig.signalSize - 1));
+        if ((result & mask) == mask) //is the highest bit possible for this signal size set?
+        {
+            /*
+             * if so we need to also set every bit higher in the result int too.
+             * This leads to the below two lines that are nasty. Here's the theory behind that...
+             * If the value is signed and the highest bit is set then it is negative. To create
+             * a negative value out of this even though the variable result is 64 bit we have to
+             * run 1's all of the way up to bit 63 in result. -1 is all ones for whatever size integer
+             * you have. So, it's 64 1's in this case.
+             * signedMask is done this way:
+             * first you take the signal size and shift 1 up that far. Then subtract one. Lets
+             * see that for a 16 bit signal:
+             * (1 << 16) - 1 = the first 16 bits set as 1's. So far so good. We then negate the whole
+             * thing which flips all bits. Thus signedMask ends up with 1's everwhere that the signal
+             * doesn't take up in the 64 bit signed integer result. Then, result has an OR operation on
+             * it with the old value and -1 masked so that the the 1 bits from -1 don't overwrite bits from the
+             * actual signal. This extends the sign bits out so that the integer result reads as the proper negative
+             * value. We dont need to do any of this if the sign bit wasn't set.
+            */
+            int signedMask = ~((1 << sig.signalSize) - 1);
+            result = (-1 & signedMask) | result;
+        }
+    }
+
+    double endResult = ((double)result * sig.factor) + sig.bias;
+    result = (int) endResult;
+
+    //qDebug() << "Result: " << result;
+
+    QString outputString;
+
+    outputString = sig.name + ": ";
+
+    if (sig.valList.count() > 0) //if this is a value list type then look it up and display the proper string
+    {
+        for (int x = 0; x < sig.valList.count(); x++)
+        {
+            if (sig.valList.at(x).value == result) outputString += sig.valList.at(x).descript;
+        }
+    }
+    else //otherwise display the actual number and unit (if it exists)
+    {
+       outputString += QString::number(endResult) + sig.unitName;
+    }
+
+    return outputString;
 }
+
+//given a byte it will reverse the bit order in that byte
+unsigned char DBCHandler::reverseBits(unsigned char b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
+unsigned char DBCHandler::processByte(unsigned char input, int start, int end)
+{
+    unsigned char output = 0, size = end - start + 1;
+    //first knock it down so that bottom is is start
+    output = input >> start;
+    //then mask off all bits above the proper ending
+    output &= ((1 << size) - 1);
+    return output;
+}
+
+/*
+ SG_ NLG5_E_B_P : 15|1@0+ (1,0) [0|1] ""  Control
+ SG_ NLG5_S_MC_M_PI : 23|8@0+ (0.1,0) [0|20] "A"  Control
+ SG_ NLG5_S_MC_M_CP : 7|16@0+ (0.1,0) [0|100] "A"  Control
+*/
