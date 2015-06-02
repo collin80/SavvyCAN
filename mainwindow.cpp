@@ -91,6 +91,7 @@ MainWindow::MainWindow(QWidget *parent) :
     playbackWindow = NULL;
     flowViewWindow = NULL;
     frameSenderWindow = NULL;
+    dbcMainEditor = NULL;
     dbcHandler = new DBCHandler;
 
     model->setDBCHandler(dbcHandler);
@@ -111,6 +112,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
     connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
     connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
+    connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateBaudLabel(0,0);
@@ -132,7 +134,6 @@ MainWindow::MainWindow(QWidget *parent) :
     normalRowHeight = ui->canFramesView->rowHeight(0);
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
-
 }
 
 MainWindow::~MainWindow()
@@ -145,9 +146,12 @@ MainWindow::~MainWindow()
     if (playbackWindow) delete playbackWindow;
     if (flowViewWindow) delete flowViewWindow;
     if (frameSenderWindow) delete frameSenderWindow;
+    if (dbcMainEditor) delete dbcMainEditor;
 
     delete ui;
     delete dbcHandler;
+    model->clearFrames();
+    delete model;
 }
 
 void MainWindow::gridClicked(QModelIndex idx)
@@ -807,5 +811,13 @@ void MainWindow::showFlowViewWindow()
         flowViewWindow = new FlowViewWindow(model->getListReference());
     }
     flowViewWindow->show();
+}
 
+void MainWindow::showDBCEditor()
+{
+    if (!dbcMainEditor)
+    {
+        dbcMainEditor = new DBCMainEditor(dbcHandler);
+    }
+    dbcMainEditor->show();
 }

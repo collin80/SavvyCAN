@@ -22,13 +22,14 @@ public:
     DBC_MESSAGE *findMsgByID(int id);
     DBC_SIGNAL *findSignalByName(DBC_MESSAGE *msg, QString name);
 
+    QList<DBC_NODE> dbc_nodes;
+    QList<DBC_MESSAGE> dbc_messages;
+
 signals:
 
 public slots:
 
 private:
-    QList<DBC_NODE> dbc_nodes;
-    QList<DBC_MESSAGE> dbc_messages;
 
     unsigned char reverseBits(unsigned char);
     unsigned char processByte(unsigned char, int, int);

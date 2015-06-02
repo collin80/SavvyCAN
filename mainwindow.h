@@ -12,6 +12,7 @@
 #include "flowviewwindow.h"
 #include "framesenderwindow.h"
 #include "dbchandler.h"
+#include "dbcmaineditor.h"
 
 #define VERSION 105
 
@@ -47,6 +48,7 @@ private slots:
     void gridClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
+    void showDBCEditor();
 
 public slots:
     void gotFrames(int, int);
@@ -60,21 +62,30 @@ signals:
 
 private:
     Ui::MainWindow *ui;
+
+    //canbus related data
     CANFrameModel *model;
+    DBCHandler *dbcHandler;
     QList<QSerialPortInfo> ports;
     QThread serialWorkerThread;
     QByteArray inputBuffer;
+
+    //References to other windows we can display
     GraphingWindow *graphingWindow;
     FrameInfoWindow *frameInfoWindow;
     FramePlaybackWindow *playbackWindow;
     FlowViewWindow *flowViewWindow;
     FrameSenderWindow *frameSenderWindow;
-    DBCHandler *dbcHandler;
+    DBCMainEditor *dbcMainEditor;
+
+    //various private storage
     QLabel lbStatusConnected;
     QLabel lbStatusBauds;
     QLabel lbStatusDatabase;
     int normalRowHeight;
     bool isConnected;
+
+    //private methods
     void loadCRTDFile(QString);
     void loadNativeCSVFile(QString);
     void loadGenericCSVFile(QString);
