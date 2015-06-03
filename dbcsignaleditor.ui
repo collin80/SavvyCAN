@@ -7,17 +7,17 @@
     <x>0</x>
     <y>0</y>
     <width>884</width>
-    <height>530</height>
+    <height>791</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Signal Editor</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,5">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="10,1,5">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
      <item>
-      <widget class="QListWidget" name="listWidget"/>
+      <widget class="QListWidget" name="signalsList"/>
      </item>
      <item>
       <widget class="QGroupBox" name="groupBox">
@@ -33,7 +33,7 @@
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QLineEdit" name="lineEdit"/>
+         <widget class="QLineEdit" name="txtName"/>
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_3">
@@ -43,7 +43,7 @@
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="CANDataGrid" name="widget" native="true">
+         <widget class="CANDataGrid" name="bitfield" native="true">
           <property name="minimumSize">
            <size>
             <width>0</width>
@@ -67,10 +67,10 @@
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QLineEdit" name="lineEdit_2"/>
+         <widget class="QLineEdit" name="txtBitLength"/>
         </item>
         <item row="3" column="1">
-         <widget class="QCheckBox" name="checkBox">
+         <widget class="QCheckBox" name="cbIntelFormat">
           <property name="text">
            <string>Intel (Little Endian)</string>
           </property>
@@ -133,28 +133,28 @@
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QComboBox" name="comboBox"/>
+         <widget class="QComboBox" name="comboType"/>
         </item>
         <item row="5" column="1">
-         <widget class="QLineEdit" name="lineEdit_3"/>
+         <widget class="QLineEdit" name="txtScale"/>
         </item>
         <item row="6" column="1">
-         <widget class="QLineEdit" name="lineEdit_4"/>
+         <widget class="QLineEdit" name="txtBias"/>
         </item>
         <item row="7" column="1">
-         <widget class="QLineEdit" name="lineEdit_5"/>
+         <widget class="QLineEdit" name="txtMinVal"/>
         </item>
         <item row="8" column="1">
-         <widget class="QLineEdit" name="lineEdit_6"/>
+         <widget class="QLineEdit" name="txtMaxVal"/>
         </item>
         <item row="9" column="1">
-         <widget class="QLineEdit" name="lineEdit_7"/>
+         <widget class="QLineEdit" name="txtUnitName"/>
         </item>
         <item row="10" column="1">
-         <widget class="QComboBox" name="comboBox_2"/>
+         <widget class="QComboBox" name="comboReceiver"/>
         </item>
         <item row="12" column="1">
-         <widget class="QLineEdit" name="lineEdit_8"/>
+         <widget class="QLineEdit" name="txtComment"/>
         </item>
        </layout>
       </widget>

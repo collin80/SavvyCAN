@@ -18,10 +18,17 @@ public:
     void showEvent(QShowEvent*);
     ~DBCSignalEditor();
 
+private slots:
+    void clickSignalList(int);
+
 private:
     Ui::DBCSignalEditor *ui;
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
+
+    void refreshSignalsList();
+    void fillSignalForm(DBC_SIGNAL *sig);
+    void fillValueTable(DBC_SIGNAL *sig);
 };
 
 #endif // DBCSIGNALEDITOR_H
