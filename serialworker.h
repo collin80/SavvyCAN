@@ -48,11 +48,14 @@ public slots:
     void closeSerialPort();
     void sendFrame(const CANFrame *, int);
     void updateBaudRates(int, int);
+    void stopFrameCapture();
+    void startFrameCapture(); //only need to call this if previously stopped. Otherwise it's the default
 
 private:
     QString portName;
     bool quit;
     bool connected;
+    bool capturing;
     QSerialPort *serial;
     CANFrameModel *canModel;
     QTimer *ticker;

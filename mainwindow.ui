@@ -195,6 +195,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnCaptureToggle">
+        <property name="text">
+         <string>Suspend Capturing</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="btnClearFrames">
         <property name="text">
          <string>Clear Frames</string>

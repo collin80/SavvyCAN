@@ -15,6 +15,7 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     ticker = NULL;
     elapsedTime = NULL;
     framesPerSec = 0;
+    capturing = true;
 }
 
 SerialWorker::~SerialWorker()
@@ -246,10 +247,11 @@ void SerialWorker::procRXChar(unsigned char c)
                 rx_state = IDLE;
                 rx_step = 0;
                 //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
-                //emit receivedFrame(buildFrame);
-                canModel->addFrame(*buildFrame, false);
-                gotFrames++;
-                //buildFrame = new CANFrame;
+                if (capturing)
+                {
+                    canModel->addFrame(*buildFrame, false);
+                    gotFrames++;
+                }
             }
             break;
         }
@@ -368,3 +370,16 @@ void SerialWorker::closeSerialPort()
     delete serial;
     serial = NULL;
 }
+
+void SerialWorker::stopFrameCapture()
+{
+    qDebug() << "Stopping frame capture";
+    capturing = false;
+}
+
+void SerialWorker::startFrameCapture()
+{
+    qDebug() << "Starting up frame capture";
+    capturing = true;
+}
+

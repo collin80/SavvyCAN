@@ -84,6 +84,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(worker, &SerialWorker::connectionFailure, this, &MainWindow::connectionFailed, Qt::QueuedConnection);
     connect(worker, &SerialWorker::deviceInfo, this, &MainWindow::gotDeviceInfo, Qt::QueuedConnection);
     connect(this, &MainWindow::closeSerialPort, worker, &SerialWorker::closeSerialPort, Qt::QueuedConnection);
+    connect(this, &MainWindow::startFrameCapturing, worker, &SerialWorker::startFrameCapture);
+    connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
     serialWorkerThread.start();
 
     graphingWindow = NULL;
@@ -113,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
     connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
     connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
+    connect(ui->btnCaptureToggle, SIGNAL(clicked(bool)), this, SLOT(toggleCapture()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateBaudLabel(0,0);
@@ -125,6 +128,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lbNumFrames->setText("0");
 
     isConnected = false;
+    allowCapture = true;
 
     //create a temporary frame to be able to capture the correct
     //default height of an item in the table. Need to do this in case
@@ -728,6 +732,21 @@ void MainWindow::connButtonPress()
         isConnected = false;
         lbStatusConnected.setText(tr("Not Connected"));
         ui->btnConnect->setText(tr("Connect to GVRET"));
+    }
+}
+
+void MainWindow::toggleCapture()
+{
+    allowCapture = !allowCapture;
+    if (allowCapture)
+    {
+        ui->btnCaptureToggle->setText("Suspend Capturing");
+        emit startFrameCapturing();
+    }
+    else
+    {
+        ui->btnCaptureToggle->setText("Restart Capturing");
+        emit stopFrameCapturing();
     }
 }
 

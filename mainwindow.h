@@ -14,7 +14,7 @@
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 
-#define VERSION 105
+#define VERSION 106
 
 namespace Ui {
 class MainWindow;
@@ -49,6 +49,7 @@ private slots:
     void interpretToggled(bool);
     void overwriteToggled(bool);
     void showDBCEditor();
+    void toggleCapture();
 
 public slots:
     void gotFrames(int, int);
@@ -59,6 +60,9 @@ signals:
     void closeSerialPort();
     void updateBaudRates(int, int);
     void sendCANFrame(const CANFrame *, int);
+    void stopFrameCapturing();
+    void startFrameCapturing();
+
 
 private:
     Ui::MainWindow *ui;
@@ -69,6 +73,7 @@ private:
     QList<QSerialPortInfo> ports;
     QThread serialWorkerThread;
     QByteArray inputBuffer;
+    bool allowCapture;
 
     //References to other windows we can display
     GraphingWindow *graphingWindow;
