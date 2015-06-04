@@ -25,8 +25,12 @@ Things currently broken or in need of attention:
 1. Need to standardize application where things might differ. All byte and bit references
 should be 0-7 not 1-8. All timings should be in microseconds.
 2. The windows that deal with canbus data should update based on incoming frames. It should not be required to load files to use these windows
+3. Test CRTD output to make sure it saves properly now
+4. Screens like flowview seem to sometimes stick with the old data after you've already cleared and loaded a different file
+5. Each screen should mention which file is loaded so that it's easier to keep track of what you're doing.
 */
 
+QString MainWindow::loadedFileName = "";
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -95,6 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
     frameSenderWindow = NULL;
     dbcMainEditor = NULL;
     dbcHandler = new DBCHandler;
+    bDirty = false;
 
     model->setDBCHandler(dbcHandler);
 
@@ -118,10 +123,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnCaptureToggle, SIGNAL(clicked(bool)), this, SLOT(toggleCapture()));
 
     lbStatusConnected.setText(tr("Not connected"));
-    updateBaudLabel(0,0);
-    lbStatusDatabase.setText(tr("No database loaded"));
+    updateFileStatus();
+    lbStatusDatabase.setText(tr("No DBC database loaded"));
     ui->statusBar->addWidget(&lbStatusConnected);
-    ui->statusBar->addWidget(&lbStatusBauds);
+    ui->statusBar->addWidget(&lbStatusFilename);
     ui->statusBar->addWidget(&lbStatusDatabase);
 
     ui->lbFPS->setText("0");
@@ -179,18 +184,6 @@ void MainWindow::overwriteToggled(bool state)
     model->setOverwriteMode(state);
 }
 
-void MainWindow::updateBaudLabel(int baud0, int baud1)
-{
-    QString labelText;
-    labelText = tr("CAN 0 Speed: ");
-    if (baud0 > 0) labelText += QString::number(baud0 / 1000.0) + "kbps";
-    else labelText += tr("disabled");
-    labelText += tr("    CAN 1 Speed: ");
-    if (baud1 > 0) labelText += QString::number(baud1 / 1000.0) + "kbps";
-    else labelText += tr("disabled");
-    lbStatusBauds.setText(labelText);
-}
-
 //most of the work is handled elsewhere. Need only to update the # of frames
 //and maybe auto scroll
 void MainWindow::gotFrames(int FPS, int framesSinceLastUpdate)
@@ -198,6 +191,10 @@ void MainWindow::gotFrames(int FPS, int framesSinceLastUpdate)
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
     ui->lbFPS->setText(QString::number(FPS));
+    if (framesSinceLastUpdate > 0)
+    {
+        bDirty = true;
+    }
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
@@ -215,6 +212,8 @@ void MainWindow::clearFrames()
     ui->canFramesView->scrollToTop();
     model->clearFrames();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    bDirty = false;
+    loadedFileName = "";
 }
 
 void MainWindow::changeBaudRates()
@@ -225,8 +224,6 @@ void MainWindow::changeBaudRates()
     Speed2 = ui->cbSpeed2->currentText().toInt();
 
     emit updateBaudRates(Speed1, Speed2);
-
-    updateBaudLabel(Speed1, Speed2);
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project
@@ -260,6 +257,9 @@ void MainWindow::loadCRTDFile(QString filename)
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
 
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
+
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
@@ -273,7 +273,7 @@ void MainWindow::loadCRTDFile(QString filename)
                 int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
                 //the result of the above is the # of digits after the decimal.
                 //This program deals in microsecond so turn the value into microseconds
-                multiplier = pow(10, 6 - decimalPlaces);
+                multiplier = 1000000; //turn the decimal into full microseconds
             }
             else
             {
@@ -304,6 +304,8 @@ void MainWindow::loadCRTDFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+
+    updateFileStatus();
 }
 
 void MainWindow::saveCRTDFile(QString filename)
@@ -314,12 +316,16 @@ void MainWindow::saveCRTDFile(QString filename)
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 
-    outFile->write(QString::number(frames->at(0).timestamp / 1000000.0).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output V").toUtf8() + QString::number(VERSION).toUtf8());
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
+
+    //write in float format with 6 digits after the decimal point
+    outFile->write(QString::number(frames->at(0).timestamp / 1000000.0, 'f', 6).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output V").toUtf8() + QString::number(VERSION).toUtf8());
     outFile->write("\n");
 
     for (int c = 0; c < frames->count(); c++)
     {
-        outFile->write(QString::number(frames->at(c).timestamp / 1000000.0).toUtf8());
+        outFile->write(QString::number(frames->at(c).timestamp / 1000000.0, 'f', 6).toUtf8());
         outFile->putChar(' ');
         if (frames->at(c).extended)
         {
@@ -338,6 +344,8 @@ void MainWindow::saveCRTDFile(QString filename)
         outFile->write("\n");
     }
     outFile->close();
+
+    updateFileStatus();
 }
 
 //The "native" file format for this program
@@ -351,6 +359,9 @@ void MainWindow::loadNativeCSVFile(QString filename)
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
 
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
+
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
@@ -358,7 +369,7 @@ void MainWindow::loadNativeCSVFile(QString filename)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
-            if (tokens[0].length() > 10)
+            if (tokens[0].length() > 3)
             {
                 long long temp = tokens[0].right(10).toLongLong();
                 thisFrame.timestamp = temp;
@@ -384,6 +395,8 @@ void MainWindow::loadNativeCSVFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+
+    updateFileStatus();
 }
 
 void MainWindow::saveNativeCSVFile(QString filename)
@@ -393,6 +406,9 @@ void MainWindow::saveNativeCSVFile(QString filename)
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
+
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
 
     outFile->write("Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
     outFile->write("\n");
@@ -426,6 +442,8 @@ void MainWindow::saveNativeCSVFile(QString filename)
 
     }
     outFile->close();
+
+    updateFileStatus();
 }
 
 void MainWindow::loadGenericCSVFile(QString filename)
@@ -437,6 +455,9 @@ void MainWindow::loadGenericCSVFile(QString filename)
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
+
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -464,6 +485,8 @@ void MainWindow::loadGenericCSVFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+
+    updateFileStatus();
 }
 
 void MainWindow::saveGenericCSVFile(QString filename)
@@ -508,10 +531,13 @@ void MainWindow::loadLogFile(QString filename)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
-    long long timeStamp = Utility::GetTimeMS();
+    uint64_t timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
+
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -522,8 +548,8 @@ void MainWindow::loadLogFile(QString filename)
         {
             QList<QByteArray> tokens = line.split(' ');
             QList<QByteArray> timeToks = tokens[0].split(':');
-            timeStamp = (timeToks[0].toInt() * (1000 * 60 * 60)) + (timeToks[1].toInt() * (1000 * 60))
-                      + (timeToks[2].toInt() * (1000)) + (timeToks[3].toInt() / 10);
+            timeStamp = (timeToks[0].toInt() * (1000 * 1000 * 60 * 60)) + (timeToks[1].toInt() * (1000 * 1000 * 60))
+                      + (timeToks[2].toInt() * (1000 * 1000)) + (timeToks[3].toInt() * 100);
             thisFrame.timestamp = timeStamp;
             thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
             if (tokens[4] == "s") thisFrame.extended = false;
@@ -538,6 +564,8 @@ void MainWindow::loadLogFile(QString filename)
     model->sendRefresh();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+
+    updateFileStatus();
 }
 
 void MainWindow::saveLogFile(QString filename)
@@ -564,6 +592,9 @@ void MainWindow::loadMicrochipFile(QString filename)
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return;
+
+    QStringList fileList = filename.split('/');
+    loadedFileName = fileList[fileList.length() - 1];
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -599,6 +630,7 @@ void MainWindow::loadMicrochipFile(QString filename)
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
+    updateFileStatus();
 }
 
 void MainWindow::saveMicrochipFile(QString filename)
@@ -753,8 +785,6 @@ void MainWindow::toggleCapture()
 void MainWindow::connectionSucceeded(int baud0, int baud1)
 {
     lbStatusConnected.setText(tr("Connected to GVRET"));
-    //now update the status message for baud rates
-    updateBaudLabel(baud0, baud1);
     //finally, find the baud rate in the list of rates or
     //add it to the bottom if needed (that'll be weird though...
 
@@ -781,6 +811,32 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
 void MainWindow::connectionFailed()
 {
     lbStatusConnected.setText(tr("Failed to connect!"));
+}
+
+void MainWindow::updateFileStatus()
+{
+    QString output;
+    if (model->rowCount() == 0)
+    {
+        output = tr("No file loaded");
+    }
+    else
+    {
+        if (loadedFileName.length() > 2)
+        {
+            output = loadedFileName + " loaded";
+        }
+        else
+        {
+            output = tr("No file loaded");
+        }
+
+        if (bDirty)
+        {
+            output += " (X)";
+        }
+    }
+    lbStatusFilename.setText(output);
 }
 
 void MainWindow::gotDeviceInfo(int build, int swCAN)

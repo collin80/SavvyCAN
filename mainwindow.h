@@ -14,7 +14,7 @@
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 
-#define VERSION 106
+#define VERSION 107
 
 namespace Ui {
 class MainWindow;
@@ -26,6 +26,7 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = 0);
+    static QString loadedFileName;
     ~MainWindow();
 
 private slots:
@@ -62,6 +63,7 @@ signals:
     void sendCANFrame(const CANFrame *, int);
     void stopFrameCapturing();
     void startFrameCapturing();
+    void gotNewFrames();
 
 
 private:
@@ -74,6 +76,7 @@ private:
     QThread serialWorkerThread;
     QByteArray inputBuffer;
     bool allowCapture;
+    bool bDirty; //have frames been added or subtracted since the last save/load?
 
     //References to other windows we can display
     GraphingWindow *graphingWindow;
@@ -85,7 +88,7 @@ private:
 
     //various private storage
     QLabel lbStatusConnected;
-    QLabel lbStatusBauds;
+    QLabel lbStatusFilename;
     QLabel lbStatusDatabase;
     int normalRowHeight;
     bool isConnected;
@@ -102,7 +105,7 @@ private:
     void saveLogFile(QString);
     void saveMicrochipFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
-    void updateBaudLabel(int, int);
+    void updateFileStatus();
 };
 
 #endif // MAINWINDOW_H

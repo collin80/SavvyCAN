@@ -1,6 +1,8 @@
 #ifndef CAN_STRUCTS_H
 #define CAN_STRUCTS_H
 
+#include <stdint.h>
+
 struct CANFrame
 {
 public:
@@ -9,7 +11,7 @@ public:
     bool extended;
     int len;
     unsigned char data[8];
-    long long timestamp;
+    uint64_t timestamp;
 };
 
 struct J1939ID
