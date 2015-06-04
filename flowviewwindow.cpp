@@ -67,7 +67,13 @@ void FlowViewWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     refreshIDList();
+    if (ui->listFrameID->count() > 0)
+    {
+        changeID(ui->listFrameID->item(0)->text());
+        ui->listFrameID->setCurrentRow(0);
+    }
     updateFrameLabel();
+    qDebug() << "FlowView show event was processed";
 }
 
 FlowViewWindow::~FlowViewWindow()

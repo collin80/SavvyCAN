@@ -22,21 +22,24 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 
 Things currently broken or in need of attention:
-1. Need to standardize application where things might differ. All byte and bit references
-should be 0-7 not 1-8. All timings should be in microseconds.
-2. The windows that deal with canbus data should update based on incoming frames. It should not be required to load files to use these windows
-3. Test CRTD output to make sure it saves properly now
-4. Screens like flowview seem to sometimes stick with the old data after you've already cleared and loaded a different file
-5. Each screen should mention which file is loaded so that it's easier to keep track of what you're doing.
+1. Each screen should mention which file is loaded so that it's easier to keep track of what you're doing.
 */
 
 QString MainWindow::loadedFileName = "";
+MainWindow *MainWindow::selfRef = NULL;
+
+MainWindow *MainWindow::getReference()
+{
+    return selfRef;
+}
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
 
@@ -194,6 +197,7 @@ void MainWindow::gotFrames(int FPS, int framesSinceLastUpdate)
     if (framesSinceLastUpdate > 0)
     {
         bDirty = true;
+        emit framesUpdated(framesSinceLastUpdate); //anyone care that frames were updated?
     }
 }
 
@@ -214,6 +218,8 @@ void MainWindow::clearFrames()
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     bDirty = false;
     loadedFileName = "";
+    updateFileStatus();
+    emit framesUpdated(-1);
 }
 
 void MainWindow::changeBaudRates()
@@ -306,6 +312,7 @@ void MainWindow::loadCRTDFile(QString filename)
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
     updateFileStatus();
+    emit framesUpdated(-2);
 }
 
 void MainWindow::saveCRTDFile(QString filename)
@@ -397,6 +404,7 @@ void MainWindow::loadNativeCSVFile(QString filename)
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
     updateFileStatus();
+    emit framesUpdated(-2);
 }
 
 void MainWindow::saveNativeCSVFile(QString filename)
@@ -487,6 +495,7 @@ void MainWindow::loadGenericCSVFile(QString filename)
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
     updateFileStatus();
+    emit framesUpdated(-2);
 }
 
 void MainWindow::saveGenericCSVFile(QString filename)
@@ -566,6 +575,7 @@ void MainWindow::loadLogFile(QString filename)
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
     updateFileStatus();
+    emit framesUpdated(-2);
 }
 
 void MainWindow::saveLogFile(QString filename)
@@ -631,6 +641,7 @@ void MainWindow::loadMicrochipFile(QString filename)
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
     updateFileStatus();
+    emit framesUpdated(-2);
 }
 
 void MainWindow::saveMicrochipFile(QString filename)

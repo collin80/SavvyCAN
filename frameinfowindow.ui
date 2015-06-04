@@ -64,24 +64,7 @@
   </layout>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>listFrameID</sender>
-   <signal>itemClicked(QListWidgetItem*)</signal>
-   <receiver>FrameInfoWindow</receiver>
-   <slot>updateDetailsWindow(QListWidgetItem*)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>139</x>
-     <y>258</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>396</x>
-     <y>246</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>updateDetailsWindow(QListWidgetItem*)</slot>
  </slots>

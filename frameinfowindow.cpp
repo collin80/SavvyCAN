@@ -1,5 +1,6 @@
 #include "frameinfowindow.h"
 #include "ui_frameinfowindow.h"
+#include "mainwindow.h"
 #include <QtDebug>
 
 FrameInfoWindow::FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent) :
@@ -8,12 +9,20 @@ FrameInfoWindow::FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent) :
 {
     ui->setupUi(this);
     modelFrames = frames;
+
+    connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(updateDetailsWindow(QString)));
+    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     refreshIDList();
+    if (ui->listFrameID->count() > 0)
+    {
+        updateDetailsWindow(ui->listFrameID->item(0)->text());
+        ui->listFrameID->setCurrentRow(0);
+    }
 }
 
 FrameInfoWindow::~FrameInfoWindow()
@@ -21,7 +30,31 @@ FrameInfoWindow::~FrameInfoWindow()
     delete ui;
 }
 
-void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
+//remember, negative numbers are special -1 = all frames deleted, -2 = totally new set of frames.
+void FrameInfoWindow::updatedFrames(int numFrames)
+{
+    if (numFrames == -1) //all frames deleted. Kill the display
+    {
+        ui->listFrameID->clear();
+        ui->treeDetails->clear();
+        refreshIDList();
+    }
+    else if (numFrames == -2) //all new set of frames. Reset
+    {
+        refreshIDList();
+        if (ui->listFrameID->count() > 0)
+        {
+            updateDetailsWindow(ui->listFrameID->item(0)->text());
+            ui->listFrameID->setCurrentRow(0);
+        }
+    }
+    else //just got some new frames. See if they are relevant.
+    {
+        //not done yet. :(
+    }
+}
+
+void FrameInfoWindow::updateDetailsWindow(QString newID)
 {
     int idx, numFrames, targettedID;
     int minLen, maxLen, thisLen;
@@ -31,7 +64,9 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
     int dataHistogram[256][8];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *numBase, *tempItem;
 
-    targettedID = item->text().toInt(NULL, 16);
+    targettedID = newID.toInt(NULL, 16);
+
+    if (modelFrames->count() == 0) return;
 
     qDebug() << "Started update details window with id " << targettedID;
 
@@ -50,7 +85,7 @@ void FrameInfoWindow::updateDetailsWindow(QListWidgetItem *item)
         ui->treeDetails->clear();
 
         baseNode = new QTreeWidgetItem();
-        baseNode->setText(0, QString("ID: 0x") + ui->listFrameID->currentItem()->text());
+        baseNode->setText(0, QString("ID: 0x") + newID );
 
         if (frameCache[0].extended) //if these frames seem to be extended then try for J1939 decoding
         {

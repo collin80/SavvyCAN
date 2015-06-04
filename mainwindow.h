@@ -27,6 +27,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
+    static MainWindow *getReference();
     ~MainWindow();
 
 private slots:
@@ -63,11 +64,13 @@ signals:
     void sendCANFrame(const CANFrame *, int);
     void stopFrameCapturing();
     void startFrameCapturing();
-    void gotNewFrames();
 
+    //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
+    void framesUpdated(int numFrames); //something has updated the frame list
 
 private:
     Ui::MainWindow *ui;
+    static MainWindow *selfRef;
 
     //canbus related data
     CANFrameModel *model;

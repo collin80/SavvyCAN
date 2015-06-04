@@ -19,7 +19,8 @@ public:
     void showEvent(QShowEvent*);
 
 private slots:
-    void updateDetailsWindow(QListWidgetItem *);
+    void updateDetailsWindow(QString);
+    void updatedFrames(int);
 
 private:
     Ui::FrameInfoWindow *ui;
