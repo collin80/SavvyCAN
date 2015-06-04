@@ -1,5 +1,6 @@
 #include "flowviewwindow.h"
 #include "ui_flowviewwindow.h"
+#include "mainwindow.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -59,6 +60,8 @@ FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(changeID(QString)));
     connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
 
+    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 
 }
@@ -82,6 +85,38 @@ FlowViewWindow::~FlowViewWindow()
 
     playbackTimer->stop();
     delete playbackTimer;
+}
+
+void FlowViewWindow::updatedFrames(int numFrames)
+{
+    if (numFrames == -1) //all frames deleted. Kill the display
+    {
+        ui->listFrameID->clear();
+        foundID.clear();
+        currentPosition = 0;
+        refreshIDList();
+        updateFrameLabel();
+        removeAllGraphs();
+        memset(refBytes, 0, 8);
+        memset(currBytes, 0, 8);
+        updateDataView();
+    }
+    else if (numFrames == -2) //all new set of frames. Reset
+    {
+        ui->listFrameID->clear();
+        foundID.clear();
+        currentPosition = 0;
+        refreshIDList();
+        if (ui->listFrameID->count() > 0)
+        {
+            changeID(ui->listFrameID->item(0)->text());
+            ui->listFrameID->setCurrentRow(0);
+        }
+        updateFrameLabel();
+    }
+    else //just got some new frames. See if they are relevant.
+    {
+    }
 }
 
 void FlowViewWindow::removeAllGraphs()
@@ -145,6 +180,9 @@ void FlowViewWindow::changeID(QString newID)
     //parse the ID and then load up the frame cache with just messages with that ID.
     int id = newID.toInt(NULL, 16);
     frameCache.clear();
+
+    if (modelFrames->count() == 0) return;
+
     playbackTimer->stop();
     playbackActive = false;
     for (int x = 0; x < modelFrames->count(); x++)

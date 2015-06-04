@@ -50,7 +50,26 @@ void FrameInfoWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
-        //not done yet. :(
+        int currID = ui->listFrameID->currentItem()->text().toInt(NULL, 16);
+        bool foundID = false;
+        for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
+        {
+            if (currID = modelFrames->at(x).ID)
+            {
+                foundID = true;
+                break;
+            }
+        }
+        if (foundID)
+        {
+            //the problem here is that it'll blast us out of the details as soon as this
+            //happens. The only way to do this properly is to actually traverse
+            //the details structure and change the text. We don't do that yet.
+            //so, the line is commented out. If people need to see the updated
+            //data they can click another ID and back and it'll be OK
+
+            //updateDetailsWindow(ui->listFrameID->currentItem()->text());
+        }
     }
 }
 
