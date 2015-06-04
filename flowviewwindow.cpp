@@ -196,6 +196,8 @@ void FlowViewWindow::changeID(QString newID)
     }
     currentPosition = 0;
 
+    if (frameCache.count() == 0) return;
+
     removeAllGraphs();
     for (int c = 0; c < frameCache.at(0).len; c++)
     {
