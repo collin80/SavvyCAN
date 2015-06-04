@@ -1,6 +1,7 @@
 #include "graphingwindow.h"
 #include "ui_graphingwindow.h"
 #include "newgraphdialog.h"
+#include "mainwindow.h"
 #include <QDebug>
 
 GraphingWindow::GraphingWindow(QVector<CANFrame> *frames, QWidget *parent) :
@@ -47,6 +48,8 @@ GraphingWindow::GraphingWindow(QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->graphingView, SIGNAL(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart,QMouseEvent*)), this, SLOT(axisLabelDoubleClick(QCPAxis*,QCPAxis::SelectablePart)));
     connect(ui->graphingView, SIGNAL(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*)));
 
+    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+
     // setup policy and connect slot for context menu popup:
     ui->graphingView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->graphingView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequest(QPoint)));
@@ -63,7 +66,32 @@ GraphingWindow::~GraphingWindow()
 void GraphingWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
+    ui->graphingView->replot();
 }
+
+void GraphingWindow::updatedFrames(int numFrames)
+{
+    if (numFrames == -1) //all frames deleted. Kill the display
+    {
+        removeAllGraphs();
+    }
+    else if (numFrames == -2) //all new set of frames. Reset
+    {
+        //there shouldn't be any need to actually remove the graphs.
+        //regenerate them instead
+        ui->graphingView->clearGraphs(); //temporarily remove the graphs from the graph view
+        for (int i = 0; i < graphParams.count(); i++)
+        {
+            createGraph(graphParams[i], false); //regenerate each one
+        }
+        ui->graphingView->replot(); //now, redisplay them all
+    }
+    else //just got some new frames. See if they are relevant.
+    {
+    }
+}
+
+
 
 void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
 {
@@ -279,7 +307,7 @@ void GraphingWindow::addNewGraph()
     showParamsDialog(-1);
 }
 
-void GraphingWindow::createGraph(GraphParams &params)
+void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
     int tempVal;
     float minval=1000000, maxval = -100000;
@@ -376,7 +404,7 @@ void GraphingWindow::createGraph(GraphParams &params)
     }
     ui->graphingView->addGraph();
     params.ref = ui->graphingView->graph();
-    graphParams.append(params);
+    if (createGraphParam) graphParams.append(params);
     ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
     ui->graphingView->graph()->setSelectedPen(selectedPen);
     ui->graphingView->graph()->setName(QString("Graph %1").arg(ui->graphingView->graphCount()-1));

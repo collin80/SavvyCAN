@@ -45,8 +45,9 @@ private slots:
     void contextMenuRequest(QPoint pos);
     void moveLegend();
     void addNewGraph();
-    void createGraph(GraphParams &params);
+    void createGraph(GraphParams &params, bool createGraphParam = true);
     void editSelectedGraph();
+    void updatedFrames(int);
 
 private:
     Ui::GraphingWindow *ui;

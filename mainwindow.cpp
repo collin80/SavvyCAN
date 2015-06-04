@@ -557,8 +557,8 @@ void MainWindow::loadLogFile(QString filename)
         {
             QList<QByteArray> tokens = line.split(' ');
             QList<QByteArray> timeToks = tokens[0].split(':');
-            timeStamp = (timeToks[0].toInt() * (1000 * 1000 * 60 * 60)) + (timeToks[1].toInt() * (1000 * 1000 * 60))
-                      + (timeToks[2].toInt() * (1000 * 1000)) + (timeToks[3].toInt() * 100);
+            timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
+                      + (timeToks[2].toInt() * (1000ul * 1000ul)) + (timeToks[3].toInt() * 100ul);
             thisFrame.timestamp = timeStamp;
             thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
             if (tokens[4] == "s") thisFrame.extended = false;
@@ -669,6 +669,9 @@ void MainWindow::handleLoadFile()
     {
         filename = dialog.selectedFiles()[0];
     }
+
+    ui->canFramesView->scrollToTop();
+    model->clearFrames();
 
     if (dialog.selectedNameFilter() == filters[0]) loadCRTDFile(filename);
     if (dialog.selectedNameFilter() == filters[1]) loadNativeCSVFile(filename);
