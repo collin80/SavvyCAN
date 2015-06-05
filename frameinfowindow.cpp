@@ -54,7 +54,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         bool foundID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
-            if (currID = modelFrames->at(x).ID)
+            if (currID == modelFrames->at(x).ID)
             {
                 foundID = true;
                 break;
