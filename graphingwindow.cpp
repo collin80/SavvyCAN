@@ -58,6 +58,8 @@ GraphingWindow::GraphingWindow(QVector<CANFrame> *frames, QWidget *parent) :
 
     selectedPen.setWidth(1);
     selectedPen.setColor(Qt::blue);
+
+    needScaleSetup = true;
 }
 
 GraphingWindow::~GraphingWindow()
@@ -82,6 +84,7 @@ void GraphingWindow::updatedFrames(int numFrames)
         //there shouldn't be any need to actually remove the graphs.
         //regenerate them instead
         ui->graphingView->clearGraphs(); //temporarily remove the graphs from the graph view
+        needScaleSetup = true;
         for (int i = 0; i < graphParams.count(); i++)
         {
             createGraph(graphParams[i], false); //regenerate each one
@@ -225,6 +228,9 @@ void GraphingWindow::removeSelectedGraph()
     graphParams.removeAt(idx);
 
     ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().first());
+
+    if (graphParams.count() == 0) needScaleSetup = true;
+
     ui->graphingView->replot();
   }
 }
@@ -255,6 +261,7 @@ void GraphingWindow::removeAllGraphs()
 {
   ui->graphingView->clearGraphs();
   graphParams.clear();
+  needScaleSetup = true;
   ui->graphingView->replot();
 }
 
@@ -425,9 +432,13 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     graphPen.setWidth(1);
     ui->graphingView->graph()->setPen(graphPen);
 
-    ui->graphingView->xAxis->setRange(xminval, xmaxval);
-    ui->graphingView->yAxis->setRange(yminval, ymaxval);
-    ui->graphingView->axisRect()->setupFullAxesBox();
+    if (needScaleSetup)
+    {
+        needScaleSetup = false;
+        ui->graphingView->xAxis->setRange(xminval, xmaxval);
+        ui->graphingView->yAxis->setRange(yminval, ymaxval);
+        ui->graphingView->axisRect()->setupFullAxesBox();
+    }
 
     ui->graphingView->replot();
 }

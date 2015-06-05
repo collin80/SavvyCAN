@@ -55,6 +55,7 @@ private:
     QVector<CANFrame> *modelFrames;
     QList<GraphParams> graphParams;
     QPen selectedPen;
+    bool needScaleSetup; //do we need to set x,y graphing extents?s
 
     void showParamsDialog(int idx);
 };
