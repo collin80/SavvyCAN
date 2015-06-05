@@ -1,5 +1,6 @@
 #include "dbcsignaleditor.h"
 #include "ui_dbcsignaleditor.h"
+#include <QDebug>
 
 DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     QDialog(parent),
@@ -62,9 +63,6 @@ void DBCSignalEditor::refreshSignalsList()
 void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
     unsigned char bitpattern[8];
-
-
-
 
     ui->txtName->setText(sig->name);
     ui->txtBias->setText(QString::number(sig->bias));
@@ -144,7 +142,10 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 
 void DBCSignalEditor::clickSignalList(int row)
 {
+    if (row < 0) return;
+    //qDebug() << ui->signalsList->item(row)->text();
     DBC_SIGNAL *thisSig = dbcHandler->findSignalByName(dbcMessage, ui->signalsList->item(row)->text());
+    if (thisSig == NULL) return;
     fillSignalForm(thisSig);
     fillValueTable(thisSig);
 

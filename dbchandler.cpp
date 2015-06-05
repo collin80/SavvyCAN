@@ -281,6 +281,7 @@ DBC_MESSAGE *DBCHandler::findMsgByID(int id)
 
 DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
 {
+    if (msg == NULL) return NULL;
     if (msg->msgSignals.length() == 0) return NULL;
     for (int i = 0; i < msg->msgSignals.length(); i++)
     {
