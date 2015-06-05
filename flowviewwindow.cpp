@@ -48,6 +48,13 @@ FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
     ui->graphView->legend->setFont(legendFont);
     ui->graphView->legend->setSelectedFont(legendSelectedFont);
     ui->graphView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
+    //ui->graphView->xAxis->setAutoSubTicks(false);
+    //ui->graphView->xAxis->setAutoTicks(false);
+    ui->graphView->xAxis->setAutoTickStep(false);
+    ui->graphView->xAxis->setAutoSubTicks(false);
+    ui->graphView->xAxis->setNumberFormat("gb");
+    ui->graphView->xAxis->setTickStep(5.0);
+    ui->graphView->xAxis->setSubTickCount(0);
 
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
@@ -130,6 +137,8 @@ void FlowViewWindow::createGraph(int byteNum)
     int tempVal;
     float minval=1000000, maxval = -100000;
 
+    bool graphByTime = ui->cbTimeGraph->isChecked();
+
     int numEntries = frameCache.count();
 
     QVector<double> x(numEntries), y(numEntries);
@@ -137,7 +146,16 @@ void FlowViewWindow::createGraph(int byteNum)
     for (int j = 0; j < numEntries; j++)
     {
         tempVal = frameCache[j].data[byteNum];
-        x[j] = j;
+
+        if (graphByTime)
+        {
+            x[j] = frameCache[j].timestamp;
+        }
+        else
+        {
+            x[j] = j;
+        }
+
         y[j] = tempVal;
         if (y[j] < minval) minval = y[j];
         if (y[j] > maxval) maxval = y[j];
@@ -203,7 +221,8 @@ void FlowViewWindow::changeID(QString newID)
     {
         createGraph(c);
     }
-    ui->graphView->replot();
+
+    updateGraphLocation();
 
     memcpy(currBytes, frameCache.at(currentPosition).data, 8);
     memcpy(refBytes, currBytes, 8);
@@ -320,8 +339,7 @@ void FlowViewWindow::updateDataView()
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);
 
-    ui->graphView->xAxis->setRange(currentPosition - 5, currentPosition + 5);
-    ui->graphView->replot();
+    updateGraphLocation();
 
     updateFrameLabel();
 
@@ -350,4 +368,28 @@ void FlowViewWindow::updatePosition(bool forward)
 
 }
 
+void FlowViewWindow::updateGraphLocation()
+{
+    int start = currentPosition - 5;
+    if (start < 0) start = 0;
+    int end = currentPosition + 5;
+    if (end >= frameCache.count()) end = frameCache.count() - 1;
+    if (ui->cbTimeGraph->isChecked())
+    {
+        ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
+        ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
+        ui->graphView->xAxis->setSubTickCount(0);
+        ui->graphView->xAxis->setNumberFormat("f");
+        ui->graphView->xAxis->setNumberPrecision(0);
+    }
+    else
+    {
+        ui->graphView->xAxis->setRange(start, end);
+        ui->graphView->xAxis->setTickStep(5.0);
+        ui->graphView->xAxis->setSubTickCount(0);
+        ui->graphView->xAxis->setNumberFormat("gb");
+    }
+
+    ui->graphView->replot();
+}
 

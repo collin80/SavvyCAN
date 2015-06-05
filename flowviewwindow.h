@@ -49,6 +49,7 @@ private:
     void updateDataView();
     void removeAllGraphs();
     void createGraph(int);
+    void updateGraphLocation();
 };
 
 #endif // FLOWVIEWWINDOW_H

@@ -22,7 +22,7 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 
 Things currently broken or in need of attention:
-1. Each screen should mention which file is loaded so that it's easier to keep track of what you're doing.
+1. Currently no screen supports dynamic updates when new frames come in.
 */
 
 QString MainWindow::loadedFileName = "";

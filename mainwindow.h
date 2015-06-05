@@ -14,7 +14,7 @@
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 
-#define VERSION 108
+#define VERSION 109
 
 namespace Ui {
 class MainWindow;

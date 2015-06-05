@@ -52,7 +52,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,1,0">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,0">
      <item>
       <widget class="QGroupBox" name="groupBox_3">
        <property name="title">
@@ -204,7 +204,14 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Capture Traffic</string>
+        <string>Realtime Capture</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="cbTimeGraph">
+       <property name="text">
+        <string>Graph by timestamp</string>
        </property>
       </widget>
      </item>

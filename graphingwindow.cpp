@@ -24,6 +24,8 @@ GraphingWindow::GraphingWindow(QVector<CANFrame> *frames, QWidget *parent) :
 
     ui->graphingView->xAxis->setLabel("Time Axis");
     ui->graphingView->yAxis->setLabel("Value Axis");
+    ui->graphingView->xAxis->setNumberFormat("f");
+    ui->graphingView->xAxis->setNumberPrecision(0);
     ui->graphingView->legend->setVisible(true);
     QFont legendFont = font();
     legendFont.setPointSize(10);
@@ -310,7 +312,8 @@ void GraphingWindow::addNewGraph()
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
     int tempVal;
-    float minval=1000000, maxval = -100000;
+    float yminval=10000000, ymaxval = -1000000;
+    float xminval=100000000000, xmaxval = -100000000000;
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start byte: " << params.startByte;
@@ -337,10 +340,13 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             {
                 tempVal = tempVal - 256;
             }
-            x[j] = j;
+            x[j] = frameCache[j].timestamp;
             y[j] = (tempVal + params.bias) * params.scale;
-            if (y[j] < minval) minval = y[j];
-            if (y[j] > maxval) maxval = y[j];
+            if (y[j] < yminval) yminval = y[j];
+            if (y[j] > ymaxval) ymaxval = y[j];
+            if (x[j] < xminval) xminval = x[j];
+            if (x[j] > xmaxval) xmaxval = x[j];
+
         }
     }
     else if (params.endByte > params.startByte) //big endian
@@ -367,10 +373,12 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
 
             tempValue = (float)tempValInt;
-            x[j] = j;
+            x[j] = frameCache[j].timestamp;
             y[j] = (tempValue + params.bias) * params.scale;
-            if (y[j] < minval) minval = y[j];
-            if (y[j] > maxval) maxval = y[j];
+            if (y[j] < yminval) yminval = y[j];
+            if (y[j] > ymaxval) ymaxval = y[j];
+            if (x[j] < xminval) xminval = x[j];
+            if (x[j] > xmaxval) xmaxval = x[j];
         }
     }
     else //little endian
@@ -396,10 +404,12 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
 
             tempValue = (float)tempValInt;
-            x[j] = j;
+            x[j] = frameCache[j].timestamp;
             y[j] = (tempValue + params.bias) * params.scale;
-            if (y[j] < minval) minval = y[j];
-            if (y[j] > maxval) maxval = y[j];
+            if (y[j] < yminval) yminval = y[j];
+            if (y[j] > ymaxval) ymaxval = y[j];
+            if (x[j] < xminval) xminval = x[j];
+            if (x[j] > xmaxval) xmaxval = x[j];
         }
     }
     ui->graphingView->addGraph();
@@ -415,8 +425,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     graphPen.setWidth(1);
     ui->graphingView->graph()->setPen(graphPen);
 
-    ui->graphingView->xAxis->setRange(0, numEntries);
-    ui->graphingView->yAxis->setRange(minval, maxval);
+    ui->graphingView->xAxis->setRange(xminval, xmaxval);
+    ui->graphingView->yAxis->setRange(yminval, ymaxval);
     ui->graphingView->axisRect()->setupFullAxesBox();
 
     ui->graphingView->replot();
