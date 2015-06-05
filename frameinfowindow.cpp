@@ -231,7 +231,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int c = 0; c < 64; c++)
         {
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, QString::number(c) + " (" + QString::number(c / 8) + "-"
+            tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
                             + QString::number(c % 8) + ") :" + QString::number(bitfieldHistogram[c]));
 
             dataBase->addChild(tempItem);
