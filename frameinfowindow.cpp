@@ -81,6 +81,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
+    int bitfieldHistogram[64];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *numBase, *tempItem;
 
     targettedID = newID.toInt(NULL, 16);
@@ -160,6 +161,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             maxData[i] = -1;
             for (int k = 0; k < 256; k++) dataHistogram[k][i] = 0;
         }
+        for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
 
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
@@ -174,6 +176,14 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 if (minData[c] > dat) minData[c] = dat;
                 if (maxData[c] < dat) maxData[c] = dat;
                 dataHistogram[dat][c]++; //add one to count for this
+                for (int l = 0; l < 8; l++)
+                {
+                    int bit =  dat & (1 << l);
+                    if (bit == (1 << l))
+                    {
+                        bitfieldHistogram[c * 8 + l]++;
+                    }
+                }
             }
         }
 
@@ -213,8 +223,21 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                     tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +": " + QString::number(dataHistogram[d][c]));
                     histBase->addChild(tempItem);
                 }
-            }
+            }            
         }
+
+        dataBase = new QTreeWidgetItem();
+        dataBase->setText(0, tr("Bitfield Histogram"));
+        for (int c = 0; c < 64; c++)
+        {
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, QString::number(c) + " (" + QString::number(c / 8) + "-"
+                            + QString::number(c % 8) + ") :" + QString::number(bitfieldHistogram[c]));
+
+            dataBase->addChild(tempItem);
+        }
+        baseNode->addChild(dataBase);
+
         ui->treeDetails->insertTopLevelItem(0, baseNode);
     }
     else
