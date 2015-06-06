@@ -72,7 +72,7 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.color = ui->colorSwatch->palette().button().color();
     params.isSigned = ui->cbSigned->isChecked();
     params.mask = Utility::ParseStringToNum(ui->txtMask->text());
-    params.scale = Utility::ParseStringToNum(ui->txtScale->text());
+    params.scale = ui->txtScale->text().toFloat();
     params.stride = Utility::ParseStringToNum(ui->txtStride->text());
 
     QStringList values = ui->txtData->text().split('-');
