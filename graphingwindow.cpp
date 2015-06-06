@@ -424,7 +424,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     if (createGraphParam) graphParams.append(params);
     ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
     ui->graphingView->graph()->setSelectedPen(selectedPen);
-    ui->graphingView->graph()->setName(QString("Graph %1").arg(ui->graphingView->graphCount()-1));
+
+    QString gName = "0x"+ QString::number(params.ID, 16) + ":" + QString::number(params.startByte);
+    if ((params.endByte != -1) && (params.endByte != params.startByte)) gName += "-" + QString::number(params.endByte);
+    ui->graphingView->graph()->setName(gName);
+
     ui->graphingView->graph()->setData(x,y);
     ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
     QPen graphPen;

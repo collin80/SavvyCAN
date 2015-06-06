@@ -23,6 +23,8 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 Things currently broken or in need of attention:
 1. Currently no screen supports dynamic updates when new frames come in.
+3. Graph masks seem to not work.
+4. It's possible to close the main window and have the other open windows stay behind. That's weird.
 */
 
 QString MainWindow::loadedFileName = "";
