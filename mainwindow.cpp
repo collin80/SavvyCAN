@@ -23,8 +23,9 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 Things currently broken or in need of attention:
 1. Currently no screen supports dynamic updates when new frames come in.
-3. Graph masks seem to not work.
-4. It's possible to close the main window and have the other open windows stay behind. That's weird.
+2. Graph masks seem to not work - well, it does but it can turn into a 64 bit value and that doesn't work.
+3. It's possible to close the main window and have the other open windows stay behind. That's weird.
+4. There should be a way to write out the decoded messages/signals when a DBC file is loaded (new save format)
 */
 
 QString MainWindow::loadedFileName = "";
@@ -119,13 +120,17 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFlow_View, SIGNAL(triggered(bool)), this, SLOT(showFlowViewWindow()));
     connect(ui->action_Custom, SIGNAL(triggered(bool)), this, SLOT(showFrameSenderWindow()));
     connect(ui->actionLoad_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadDBC()));
-    connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showEditSignalsWindow()));
     connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
     connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
     connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
     connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
     connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
     connect(ui->btnCaptureToggle, SIGNAL(clicked(bool)), this, SLOT(toggleCapture()));
+    connect(ui->actionExit_Application, SIGNAL(triggered(bool)), this, SLOT(exitApp()));
+    connect(ui->actionFuzzy_Scope, SIGNAL(triggered(bool)), this, SLOT(showFuzzyScopeWindow()));
+    connect(ui->actionRange_State, SIGNAL(triggered(bool)), this, SLOT(showRangeWindow()));
+    connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
+    connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -667,19 +672,18 @@ void MainWindow::handleLoadFile()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
 
-    if (dialog.exec())
+    if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        ui->canFramesView->scrollToTop();
+        model->clearFrames();
+
+        if (dialog.selectedNameFilter() == filters[0]) loadCRTDFile(filename);
+        if (dialog.selectedNameFilter() == filters[1]) loadNativeCSVFile(filename);
+        if (dialog.selectedNameFilter() == filters[2]) loadGenericCSVFile(filename);
+        if (dialog.selectedNameFilter() == filters[3]) loadLogFile(filename);
+        if (dialog.selectedNameFilter() == filters[4]) loadMicrochipFile(filename);
     }
-
-    ui->canFramesView->scrollToTop();
-    model->clearFrames();
-
-    if (dialog.selectedNameFilter() == filters[0]) loadCRTDFile(filename);
-    if (dialog.selectedNameFilter() == filters[1]) loadNativeCSVFile(filename);
-    if (dialog.selectedNameFilter() == filters[2]) loadGenericCSVFile(filename);
-    if (dialog.selectedNameFilter() == filters[3]) loadLogFile(filename);
-    if (dialog.selectedNameFilter() == filters[4]) loadMicrochipFile(filename);
 }
 
 void MainWindow::handleSaveFile()
@@ -699,16 +703,15 @@ void MainWindow::handleSaveFile()
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
 
-    if (dialog.exec())
+    if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (dialog.selectedNameFilter() == filters[0]) saveCRTDFile(filename);
+        if (dialog.selectedNameFilter() == filters[1]) saveNativeCSVFile(filename);
+        if (dialog.selectedNameFilter() == filters[2]) saveGenericCSVFile(filename);
+        if (dialog.selectedNameFilter() == filters[3]) saveLogFile(filename);
+        if (dialog.selectedNameFilter() == filters[4]) saveMicrochipFile(filename);
     }
-
-    if (dialog.selectedNameFilter() == filters[0]) saveCRTDFile(filename);
-    if (dialog.selectedNameFilter() == filters[1]) saveNativeCSVFile(filename);
-    if (dialog.selectedNameFilter() == filters[2]) saveGenericCSVFile(filename);
-    if (dialog.selectedNameFilter() == filters[3]) saveLogFile(filename);
-    if (dialog.selectedNameFilter() == filters[4]) saveMicrochipFile(filename);
 }
 
 void MainWindow::handleLoadDBC()
@@ -723,16 +726,15 @@ void MainWindow::handleLoadDBC()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
 
-    if (dialog.exec())
+    if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        //right now there is only one file type that can be loaded here so just do it.
+        dbcHandler->loadDBCFile(filename);
+        //dbcHandler->listDebugging();
+        QStringList fileList = filename.split('/');
+        lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
     }
-
-    //right now there is only one file type that can be loaded here so just do it.
-    dbcHandler->loadDBCFile(filename);
-    //dbcHandler->listDebugging();
-    QStringList fileList = filename.split('/');
-    lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 }
 
 void MainWindow::handleSaveDBC()
@@ -748,16 +750,83 @@ void MainWindow::handleSaveDBC()
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
 
-    if (dialog.exec())
+    if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
     }
 
 }
 
-void MainWindow::showEditSignalsWindow()
+void MainWindow::handleSaveDecoded()
 {
+    QString filename;
+    QFileDialog dialog(this);
 
+    QStringList filters;
+    filters.append(QString(tr("Text File (*.txt)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        saveDecodedTextFile(filename);
+    }
+}
+
+void MainWindow::saveDecodedTextFile(QString filename)
+{
+    QFile *outFile = new QFile(filename);
+    QVector<CANFrame> *frames = model->getListReference();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+/*
+Time: 205.173000   ID: 0x20E Std Bus: 0 Len: 8
+Data Bytes: 88 10 00 13 BB 00 06 00
+    SignalName	Value
+*/
+    for (int c = 0; c < frames->count(); c++)
+    {
+        CANFrame thisFrame = frames->at(c);
+        QString builderString;
+        builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
+        builderString += tr("    ID: 0x") + QString::number(thisFrame.ID, 16).toUpper().rightJustified(8, '0');
+        if (thisFrame.extended) builderString += tr(" Ext ");
+        else builderString += tr(" Std ");
+        builderString += tr("Bus: ") + QString::number(thisFrame.bus);
+        builderString += " Len: " + QString::number(thisFrame.len) + "\n";
+        outFile->write(builderString.toUtf8());
+
+        builderString = tr("Data Bytes: ");
+        for (int temp = 0; temp < thisFrame.len; temp++)
+        {
+            builderString += QString::number(thisFrame.data[temp], 16).toUpper().rightJustified(2, '0') + " ";
+        }
+        builderString += "\n";
+        outFile->write(builderString.toUtf8());
+
+        builderString = "";
+        if (dbcHandler != NULL)
+        {
+            DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
+            if (msg != NULL)
+            {
+                for (int j = 0; j < msg->msgSignals.length(); j++)
+                {
+
+                    builderString.append("\t" + dbcHandler->processSignal(thisFrame, msg->msgSignals.at(j)));
+                    builderString.append("\n");
+                }
+            }
+            builderString.append("\n");
+            outFile->write(builderString.toUtf8());
+        }
+    }
+    outFile->close();
 }
 
 void MainWindow::connButtonPress()
@@ -893,6 +962,32 @@ void MainWindow::showPlaybackWindow()
         connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
     }
     playbackWindow->show();
+}
+
+void MainWindow::showSingleMultiWindow()
+{
+    //not done yet
+}
+
+void MainWindow::showRangeWindow()
+{
+    //not done yet
+}
+
+void MainWindow::showFuzzyScopeWindow()
+{
+    //not done yet
+}
+
+void MainWindow::exitApp()
+{
+    if (graphingWindow) graphingWindow->close();
+    if (frameInfoWindow) frameInfoWindow->close();
+    if (playbackWindow) playbackWindow->close();
+    if (flowViewWindow) flowViewWindow->close();
+    if (frameSenderWindow) frameSenderWindow->close();
+    if (dbcMainEditor) dbcMainEditor->close();
+    this->close();
 }
 
 void MainWindow::showFlowViewWindow()

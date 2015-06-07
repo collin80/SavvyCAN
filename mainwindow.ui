@@ -266,9 +266,13 @@
     </property>
     <addaction name="actionOpen_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="separator"/>
     <addaction name="actionLoad_DBC_File"/>
     <addaction name="actionEdit_Messages_Signals"/>
     <addaction name="actionSave_DBC_File"/>
+    <addaction name="actionSave_Decoded_Frames"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit_Application"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_RE_Tools"/>
@@ -346,6 +350,16 @@
   <action name="actionSave_DBC_File">
    <property name="text">
     <string>Save DBC File</string>
+   </property>
+  </action>
+  <action name="actionSave_Decoded_Frames">
+   <property name="text">
+    <string>Save Decoded Frames</string>
+   </property>
+  </action>
+  <action name="actionExit_Application">
+   <property name="text">
+    <string>Exit Application</string>
    </property>
   </action>
  </widget>

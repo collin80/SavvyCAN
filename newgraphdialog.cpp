@@ -46,7 +46,7 @@ void NewGraphDialog::setParams(GraphParams &params)
 {
     ui->txtID->setText("0x" + QString::number(params.ID, 16).toUpper());
     ui->txtBias->setText(QString::number(params.bias));
-    ui->txtMask->setText("0x" + QString::number(params.mask, 16).toUpper());
+    ui->txtMask->setText("0x" + QString::number(params.mask, 16).toUpper().left(10));
     ui->txtScale->setText(QString::number(params.scale));
     ui->txtStride->setText(QString::number(params.stride));
     ui->cbSigned->setChecked(params.isSigned);

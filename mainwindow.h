@@ -35,7 +35,6 @@ private slots:
     void handleSaveFile();
     void handleLoadDBC();
     void handleSaveDBC();
-    void showEditSignalsWindow();
     void connButtonPress();
     void showGraphingWindow();
     void showFrameDataAnalysis();
@@ -43,6 +42,11 @@ private slots:
     void showPlaybackWindow();
     void showFlowViewWindow();
     void showFrameSenderWindow();
+    void showSingleMultiWindow();
+    void showRangeWindow();
+    void showFuzzyScopeWindow();
+    void exitApp();
+    void handleSaveDecoded();
     void changeBaudRates();
     void connectionFailed();
     void gotDeviceInfo(int, int);
@@ -107,6 +111,7 @@ private:
     void saveGenericCSVFile(QString);
     void saveLogFile(QString);
     void saveMicrochipFile(QString);
+    void saveDecodedTextFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
 };
