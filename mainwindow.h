@@ -14,7 +14,7 @@
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 
-#define VERSION 109
+#define VERSION 110
 
 namespace Ui {
 class MainWindow;
@@ -114,6 +114,7 @@ private:
     void saveDecodedTextFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
+    void closeEvent(QCloseEvent *event);
 };
 
 #endif // MAINWINDOW_H

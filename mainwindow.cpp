@@ -23,9 +23,7 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 Things currently broken or in need of attention:
 1. Currently no screen supports dynamic updates when new frames come in.
-2. Graph masks seem to not work - well, it does but it can turn into a 64 bit value and that doesn't work.
-3. It's possible to close the main window and have the other open windows stay behind. That's weird.
-4. There should be a way to write out the decoded messages/signals when a DBC file is loaded (new save format)
+2. Some of the save formats are not actually implemented and silently fail.
 */
 
 QString MainWindow::loadedFileName = "";
@@ -160,17 +158,51 @@ MainWindow::~MainWindow()
     serialWorkerThread.quit();
     serialWorkerThread.wait();
 
-    if (graphingWindow) delete graphingWindow;
-    if (frameInfoWindow) delete frameInfoWindow;
-    if (playbackWindow) delete playbackWindow;
-    if (flowViewWindow) delete flowViewWindow;
-    if (frameSenderWindow) delete frameSenderWindow;
-    if (dbcMainEditor) delete dbcMainEditor;
+    if (graphingWindow)
+    {
+        graphingWindow->close();
+        delete graphingWindow;
+    }
+
+    if (frameInfoWindow)
+    {
+        frameInfoWindow->close();
+        delete frameInfoWindow;
+    }
+
+    if (playbackWindow)
+    {
+        playbackWindow->close();
+        delete playbackWindow;
+    }
+
+    if (flowViewWindow)
+    {
+        flowViewWindow->close();
+        delete flowViewWindow;
+    }
+
+    if (frameSenderWindow)
+    {
+        frameSenderWindow->close();
+        delete frameSenderWindow;
+    }
+
+    if (dbcMainEditor)
+    {
+        dbcMainEditor->close();
+        delete dbcMainEditor;
+    }
 
     delete ui;
     delete dbcHandler;
     model->clearFrames();
     delete model;
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    exitApp();
 }
 
 void MainWindow::gridClicked(QModelIndex idx)
@@ -395,7 +427,7 @@ void MainWindow::loadNativeCSVFile(QString filename)
             }
 
             thisFrame.ID = tokens[1].toInt(NULL, 16);
-            if (tokens[2].contains("True")) thisFrame.extended = 1;
+            if (tokens[2].toUpper().contains("TRUE")) thisFrame.extended = 1;
             else thisFrame.extended = 0;
             thisFrame.bus = tokens[3].toInt();
             thisFrame.len = tokens[4].toInt();
