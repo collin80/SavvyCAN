@@ -84,7 +84,7 @@ void GraphingWindow::updatedFrames(int numFrames)
         //there shouldn't be any need to actually remove the graphs.
         //regenerate them instead
         ui->graphingView->clearGraphs(); //temporarily remove the graphs from the graph view
-        needScaleSetup = true;
+        //needScaleSetup = true;
         for (int i = 0; i < graphParams.count(); i++)
         {
             createGraph(graphParams[i], false); //regenerate each one
@@ -95,8 +95,6 @@ void GraphingWindow::updatedFrames(int numFrames)
     {
     }
 }
-
-
 
 void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
 {
@@ -277,19 +275,46 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     menu->addAction(tr("Move to top right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignRight));
     menu->addAction(tr("Move to bottom right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignRight));
     menu->addAction(tr("Move to bottom left"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignLeft));
-  } else  // general context menu on graphs requested
+  }
+  else  // general context menu on graphs requested
   {
+    menu->addAction(tr("Save Graphs to File"), this, SLOT(saveGraphs()));
     menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
     {
         menu->addAction(tr("Edit selected graph"), this, SLOT(editSelectedGraph()));
-       menu->addAction(tr("Remove selected graph"), this, SLOT(removeSelectedGraph()));
+        menu->addAction(tr("Remove selected graph"), this, SLOT(removeSelectedGraph()));
     }
     if (ui->graphingView->graphCount() > 0)
-      menu->addAction(tr("Remove all graphs"), this, SLOT(removeAllGraphs()));
+        menu->addAction(tr("Remove all graphs"), this, SLOT(removeAllGraphs()));
   }
 
   menu->popup(ui->graphingView->mapToGlobal(pos));
+}
+
+void GraphingWindow::saveGraphs()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("PDF Files (*.pdf)")));
+    filters.append(QString(tr("PNG Files (*.png)")));
+    filters.append(QString(tr("JPEG Files (*.jpg)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        if (dialog.selectedNameFilter() == filters[0]) ui->graphingView->savePdf(filename, true, 0, 0);
+        if (dialog.selectedNameFilter() == filters[1]) ui->graphingView->savePng(filename, 0, 0);
+        if (dialog.selectedNameFilter() == filters[2]) ui->graphingView->saveJpg(filename, 0, 0);
+    }
 }
 
 void GraphingWindow::showParamsDialog(int idx = -1)
@@ -419,6 +444,14 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             if (x[j] > xmaxval) xmaxval = x[j];
         }
     }
+
+    for (int ct = 0; ct < x.count(); ct++)
+    {
+        x[ct] -= xminval;
+    }
+    xmaxval -= xminval;
+    xminval = 0;
+
     ui->graphingView->addGraph();
     params.ref = ui->graphingView->graph();
     if (createGraphParam) graphParams.append(params);

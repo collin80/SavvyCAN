@@ -44,6 +44,7 @@ private slots:
     void removeAllGraphs();
     void contextMenuRequest(QPoint pos);
     void moveLegend();
+    void saveGraphs();
     void addNewGraph();
     void createGraph(GraphParams &params, bool createGraphParam = true);
     void editSelectedGraph();
