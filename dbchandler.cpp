@@ -266,6 +266,13 @@ DBC_NODE *DBCHandler::findNodeByName(QString name)
     return NULL;
 }
 
+DBC_NODE *DBCHandler::findNodeByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= dbc_nodes.count()) return NULL;
+    return &dbc_nodes[idx];
+}
+
 DBC_MESSAGE *DBCHandler::findMsgByID(int id)
 {
     if (dbc_messages.length() == 0) return NULL;
@@ -277,6 +284,13 @@ DBC_MESSAGE *DBCHandler::findMsgByID(int id)
         }
     }
     return NULL;
+}
+
+DBC_MESSAGE *DBCHandler::findMsgByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= dbc_messages.count()) return NULL;
+    return &dbc_messages[idx];
 }
 
 DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
@@ -291,6 +305,15 @@ DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
         }
     }
     return NULL;
+}
+
+DBC_SIGNAL *DBCHandler::findSignalByIdx(DBC_MESSAGE *msg, int idx)
+{
+    if (msg == NULL) return NULL;
+    if (msg->msgSignals.length() == 0) return NULL;
+    if (idx < 0) return NULL;
+    if (idx >= msg->msgSignals.count()) return NULL;
+    return &msg->msgSignals[idx];
 }
 
 //Dumps the messages, signals, values structs out in order to debugging console. Used only for debugging

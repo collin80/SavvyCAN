@@ -29,9 +29,11 @@ private:
     DBCHandler *dbcHandler;
     DBCSignalEditor *sigEditor;
     int currRow;
+    bool inhibitCellChanged;
 
     void refreshNodesTable();
     void refreshMessagesTable(const DBC_NODE *node);
+    void showEvent(QShowEvent* event);
 };
 
 #endif // DBCMAINEDITOR_H

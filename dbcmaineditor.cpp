@@ -1,6 +1,8 @@
 #include "dbcmaineditor.h"
 #include "ui_dbcmaineditor.h"
 
+#include <QMessageBox>
+
 DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMainEditor)
@@ -28,18 +30,27 @@ DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
     ui->MessagesTable->setHorizontalHeaderLabels(headers2);
     ui->MessagesTable->horizontalHeader()->setStretchLastSection(true);
 
-
-    refreshNodesTable();
-    refreshMessagesTable(&dbcHandler->dbc_nodes.at(0));
-    currRow = 0;
-
     connect(ui->NodesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChangedNode(int,int)));
     connect(ui->NodesTable, SIGNAL(cellClicked(int,int)), this, SLOT(onCellClickedNode(int,int)));
+
 
     connect(ui->MessagesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChangedMessage(int,int)));
     connect(ui->MessagesTable, SIGNAL(cellClicked(int,int)), this, SLOT(onCellClickedMessage(int,int)));
 
     sigEditor = new DBCSignalEditor(handler);
+}
+
+void DBCMainEditor::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+
+    inhibitCellChanged = true;
+    refreshNodesTable();
+    if (dbcHandler->dbc_nodes.count() > 0)
+        refreshMessagesTable(&dbcHandler->dbc_nodes.at(0));
+
+    currRow = 0;
+    inhibitCellChanged = false;
 }
 
 DBCMainEditor::~DBCMainEditor()
@@ -50,22 +61,83 @@ DBCMainEditor::~DBCMainEditor()
 
 void DBCMainEditor::onCellChangedNode(int row,int col)
 {
+    if (inhibitCellChanged) return;
+    if (row == ui->NodesTable->rowCount() - 1)
+    {
+        //if this was the last row then it's new and we need to both
+        //create another potentially new record underneath and also
+        //add a node entry in the nodes list and store the record
+        //That is, so long as the node name was filled out
+        if (col == 0)
+        {
+            DBC_NODE newNode;
+            QString newName =  ui->NodesTable->item(row, col)->text().simplified().replace(' ', '_');
+            qDebug() << "new name: " << newName;
+            if (newName.length() == 0) return;
+            if (dbcHandler->findNodeByName(newName) != NULL) //duplicates an existing node!
+            {
+                QMessageBox msg;
+                msg.setText("An existing node with that name already exists! Aborting!");
+                msg.show();
+                return;
+            }
+            newNode.name = newName;
+            dbcHandler->dbc_nodes.append(newNode);
+            qDebug() <<  "# of nodes now " << dbcHandler->dbc_nodes.count();
+            QTableWidgetItem *widgetName = new QTableWidgetItem(newName);
+            inhibitCellChanged = true;
+            ui->NodesTable->setItem(row, col, widgetName);
+            ui->NodesTable->insertRow(ui->NodesTable->rowCount());
+            inhibitCellChanged = false;
+        }
+    }
+    else
+    {
+        if (col == 0)
+        {
+            DBC_NODE *oldNode = dbcHandler->findNodeByIdx(row);
+            QString nodeName = ui->NodesTable->item(row, col)->text().simplified().replace(' ', '_');
+            if (oldNode == NULL) return;
+            oldNode->name = nodeName;
+            inhibitCellChanged = true;
+            QTableWidgetItem *widgetName = new QTableWidgetItem(nodeName);
+            ui->NodesTable->setItem(row, col, widgetName);
+            inhibitCellChanged = false;
+        }
+        if (col == 1) //must have been col 1 then
+        {
+            QString nodeName = ui->NodesTable->item(row, 0)->text().simplified().replace(' ', '_');
+            qDebug() << "searching for node " << nodeName;
+            DBC_NODE *thisNode = dbcHandler->findNodeByName(nodeName);
+            if (thisNode == NULL) return;
+            thisNode->comment = ui->NodesTable->item(row, col)->text().simplified();
+            qDebug() << "New comment: " << thisNode->comment;
+        }
+    }
 
 }
 
 void DBCMainEditor::onCellChangedMessage(int row,int col)
 {
-
+    if (inhibitCellChanged) return;
+    if (row == ui->MessagesTable->rowCount() - 1)
+    {
+        ui->MessagesTable->insertRow(ui->MessagesTable->rowCount());
+    }
 }
 
 void DBCMainEditor::onCellClickedNode(int row, int col)
 {
     //reload messages list if the currently selected row has changed.
-    //qDebug() << "Entered at row " << row  << " col " << col;
+    qDebug() << "Entered at row " << row  << " col " << col;
     if (row != currRow)
     {
         currRow = row;
-        QString nodeName = ui->NodesTable->item(currRow, 0)->text();
+        QTableWidgetItem *item = ui->NodesTable->item(currRow, 0);
+        QString nodeName;
+        if (nodeName == NULL) return;
+
+        nodeName = item->text();
         qDebug() << "Trying to find node with name " << nodeName;
         DBC_NODE *node = dbcHandler->findNodeByName(nodeName);
         //qDebug() << "Address of node: " << (int)node;
@@ -102,6 +174,7 @@ void DBCMainEditor::refreshNodesTable()
         ui->NodesTable->setItem(rowIdx, 1, nodeComment);
     }
 
+    //insert a fresh entry at the bottom that contains nothing
     ui->NodesTable->insertRow(ui->NodesTable->rowCount());
 }
 
@@ -140,5 +213,6 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
         }
     }
 
+    //insert blank record that can be used to add new messages
     ui->MessagesTable->insertRow(ui->MessagesTable->rowCount());
 }

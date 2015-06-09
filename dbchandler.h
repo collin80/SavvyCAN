@@ -19,8 +19,13 @@ public:
     void listDebugging();
     QString processSignal(const CANFrame &frame, const DBC_SIGNAL &sig);
     DBC_NODE *findNodeByName(QString name);
+    DBC_NODE *findNodeByIdx(int idx);
+
     DBC_MESSAGE *findMsgByID(int id);
+    DBC_MESSAGE *findMsgByIdx(int idx);
+
     DBC_SIGNAL *findSignalByName(DBC_MESSAGE *msg, QString name);
+    DBC_SIGNAL *findSignalByIdx(DBC_MESSAGE *msg, int idx);
 
     QList<DBC_NODE> dbc_nodes;
     QList<DBC_MESSAGE> dbc_messages;
