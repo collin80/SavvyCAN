@@ -23,6 +23,7 @@ public:
 
     DBC_MESSAGE *findMsgByID(int id);
     DBC_MESSAGE *findMsgByIdx(int idx);
+    DBC_MESSAGE *findMsgByName(QString name);
 
     DBC_SIGNAL *findSignalByName(DBC_MESSAGE *msg, QString name);
     DBC_SIGNAL *findSignalByIdx(DBC_MESSAGE *msg, int idx);

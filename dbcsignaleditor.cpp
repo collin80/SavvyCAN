@@ -46,8 +46,11 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
     QDialog::showEvent(event);
 
     refreshSignalsList();
-    fillSignalForm(&dbcMessage->msgSignals[0]);
-    fillValueTable(&dbcMessage->msgSignals[0]);
+    if (dbcMessage->msgSignals.count() > 0)
+    {
+        fillSignalForm(&dbcMessage->msgSignals[0]);
+        fillValueTable(&dbcMessage->msgSignals[0]);
+    }
 }
 
 void DBCSignalEditor::refreshSignalsList()

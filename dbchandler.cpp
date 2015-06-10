@@ -288,9 +288,23 @@ DBC_MESSAGE *DBCHandler::findMsgByID(int id)
 
 DBC_MESSAGE *DBCHandler::findMsgByIdx(int idx)
 {
+    if (dbc_messages.length() == 0) return NULL;
     if (idx < 0) return NULL;
     if (idx >= dbc_messages.count()) return NULL;
     return &dbc_messages[idx];
+}
+
+DBC_MESSAGE *DBCHandler::findMsgByName(QString name)
+{
+    if (dbc_messages.length() == 0) return NULL;
+    for (int i = 0; i < dbc_messages.length(); i++)
+    {
+        if (dbc_messages[i].name.compare(name, Qt::CaseInsensitive))
+        {
+            return &dbc_messages[i];
+        }
+    }
+    return NULL;
 }
 
 DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
