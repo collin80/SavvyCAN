@@ -1,6 +1,7 @@
 #include "dbcmaineditor.h"
 #include "ui_dbcmaineditor.h"
 
+#include <QMenu>
 #include <QMessageBox>
 
 DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
@@ -32,10 +33,13 @@ DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
 
     connect(ui->NodesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChangedNode(int,int)));
     connect(ui->NodesTable, SIGNAL(cellClicked(int,int)), this, SLOT(onCellClickedNode(int,int)));
-
+    connect(ui->NodesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuNode(QPoint)));
+    ui->NodesTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     connect(ui->MessagesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChangedMessage(int,int)));
     connect(ui->MessagesTable, SIGNAL(cellClicked(int,int)), this, SLOT(onCellClickedMessage(int,int)));
+    connect(ui->MessagesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuMessage(QPoint)));
+    ui->MessagesTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     sigEditor = new DBCSignalEditor(handler);
 }
@@ -59,6 +63,53 @@ DBCMainEditor::~DBCMainEditor()
     delete sigEditor;
 }
 
+void DBCMainEditor::onCustomMenuNode(QPoint point)
+{
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    menu->addAction(tr("Delete currently selected node"), this, SLOT(deleteCurrentNode()));
+
+    menu->popup(ui->NodesTable->mapToGlobal(point));
+
+}
+
+void DBCMainEditor::onCustomMenuMessage(QPoint point)
+{
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    menu->addAction(tr("Delete currently selected message"), this, SLOT(deleteCurrentMessage()));
+
+    menu->popup(ui->MessagesTable->mapToGlobal(point));
+
+}
+
+void DBCMainEditor::deleteCurrentNode()
+{
+    int thisRow = ui->NodesTable->currentRow();
+    QString nodeName = ui->NodesTable->item(thisRow, 0)->text();
+    if (nodeName.length() > 0 && nodeName.compare("Vector_XXX", Qt::CaseInsensitive) != 0)
+    {
+        ui->NodesTable->removeRow(thisRow);
+        dbcHandler->dbc_nodes.removeAt(thisRow);
+        inhibitCellChanged = true;
+        refreshMessagesTable(&dbcHandler->dbc_nodes[0]);
+        ui->NodesTable->selectRow(0);
+        inhibitCellChanged = false;
+    }
+}
+
+void DBCMainEditor::deleteCurrentMessage()
+{
+    int thisRow = ui->MessagesTable->currentRow();
+    if (ui->MessagesTable->item(thisRow, 0)->text().length() > 0)
+    {
+        ui->MessagesTable->removeRow(thisRow);
+        dbcHandler->dbc_messages.removeAt(thisRow);
+    }
+}
+
 void DBCMainEditor::onCellChangedNode(int row,int col)
 {
     if (inhibitCellChanged) return;
@@ -77,8 +128,9 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
             if (dbcHandler->findNodeByName(newName) != NULL) //duplicates an existing node!
             {
                 QMessageBox msg;
+                msg.setParent(0);
                 msg.setText("An existing node with that name already exists! Aborting!");
-                msg.show();
+                msg.exec();
                 return;
             }
             newNode.name = newName;
@@ -98,7 +150,8 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
             DBC_NODE *oldNode = dbcHandler->findNodeByIdx(row);
             QString nodeName = ui->NodesTable->item(row, col)->text().simplified().replace(' ', '_');
             if (oldNode == NULL) return;
-            oldNode->name = nodeName;
+            if (row != 0) oldNode->name = nodeName;
+            else nodeName = oldNode->name;
             inhibitCellChanged = true;
             QTableWidgetItem *widgetName = new QTableWidgetItem(nodeName);
             ui->NodesTable->setItem(row, col, widgetName);
@@ -139,8 +192,9 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             if (dbcHandler->findMsgByID(msgID) != NULL)
             {
                 QMessageBox msg;
+                msg.setParent(0);
                 msg.setText("An existing msg with that ID already exists! Aborting!");
-                msg.show();
+                msg.exec();
                 return;
             }
             newMsg.ID = msgID;
@@ -168,8 +222,9 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             if (dbcHandler->findMsgByName(msgName) != NULL)
             {
                 QMessageBox msg;
+                msg.setParent(0);
                 msg.setText("An existing msg with that name already exists! Aborting!");
-                msg.show();
+                msg.exec();
                 return;
             }
             newMsg.ID = -1;
@@ -276,6 +331,11 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
         DBC_MESSAGE *message = dbcHandler->findMsgByID(idString.toInt(NULL, 16));
         sigEditor->setMessageRef(message);
         sigEditor->exec(); //blocks this window from being active until we're done
+        //now update the displayed # of signals
+        inhibitCellChanged = true;
+        QTableWidgetItem *replacement = new QTableWidgetItem(QString::number(message->msgSignals.count()));
+        ui->MessagesTable->setItem(row, col, replacement);
+        inhibitCellChanged = false;
     }
 }
 

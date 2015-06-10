@@ -23,6 +23,10 @@ private slots:
     void onCellClickedNode(int, int);
     void onCellClickedMessage(int, int);
     void onCellChangedMessage(int,int);
+    void onCustomMenuNode(QPoint);
+    void onCustomMenuMessage(QPoint);
+    void deleteCurrentNode();
+    void deleteCurrentMessage();
 
 private:
     Ui::DBCMainEditor *ui;
