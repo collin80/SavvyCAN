@@ -90,12 +90,14 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 
     endBit = startBit + sig->signalSize - 1;
 
-    for (int y = startBit; y <= endBit; y++)
+    bitpattern[startBit / 8] |= 1 << (startBit % 8);
+    ui->bitfield->setReference(bitpattern, false);
+
+    for (int y = startBit + 1; y <= endBit; y++)
     {
         int byt = y / 8;
         bitpattern[byt] |= 1 << (y % 8);
-    }
-    ui->bitfield->setReference(bitpattern, false);
+    }    
     ui->bitfield->updateData(bitpattern, true);
 
     ui->cbIntelFormat->setChecked(sig->intelByteOrder);

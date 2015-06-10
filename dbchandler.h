@@ -16,6 +16,7 @@ class DBCHandler : public QObject
 public:
     explicit DBCHandler(QObject *parent = 0);
     void loadDBCFile(QString);
+    void saveDBCFile(QString);
     void listDebugging();
     QString processSignal(const CANFrame &frame, const DBC_SIGNAL &sig);
     DBC_NODE *findNodeByName(QString name);

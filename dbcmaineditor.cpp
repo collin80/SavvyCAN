@@ -114,7 +114,7 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
             qDebug() << "New comment: " << thisNode->comment;
         }
     }
-
+    ui->NodesTable->setCurrentCell(row, col);
 }
 
 void DBCMainEditor::onCellChangedMessage(int row,int col)
@@ -243,6 +243,8 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
     {
         ui->MessagesTable->insertRow(ui->MessagesTable->rowCount());
     }
+
+    ui->MessagesTable->setCurrentCell(row, col);
 }
 
 void DBCMainEditor::onCellClickedNode(int row, int col)
@@ -283,6 +285,14 @@ void DBCMainEditor::refreshNodesTable()
     ui->NodesTable->setRowCount(0);
 
     int rowIdx;
+
+    if (dbcHandler->findNodeByName("Vector_XXX") == NULL)
+    {
+        DBC_NODE newNode;
+        newNode.name = "Vector_XXX";
+        newNode.comment = "Default node if no other node is specified";
+        dbcHandler->dbc_nodes.append(newNode);
+    }
 
     for (int x = 0; x < dbcHandler->dbc_nodes.count(); x++)
     {

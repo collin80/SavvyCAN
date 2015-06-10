@@ -253,12 +253,18 @@ void DBCHandler::loadDBCFile(QString filename)
     inFile->close();
 }
 
+void DBCHandler::saveDBCFile(QString filename)
+{
+
+}
+
+
 DBC_NODE *DBCHandler::findNodeByName(QString name)
 {
     if (dbc_nodes.length() == 0) return NULL;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
-        if (dbc_nodes[i].name == name)
+        if (dbc_nodes[i].name.compare(name, Qt::CaseInsensitive) == 0)
         {
             return &dbc_nodes[i];
         }
@@ -299,7 +305,7 @@ DBC_MESSAGE *DBCHandler::findMsgByName(QString name)
     if (dbc_messages.length() == 0) return NULL;
     for (int i = 0; i < dbc_messages.length(); i++)
     {
-        if (dbc_messages[i].name.compare(name, Qt::CaseInsensitive))
+        if (dbc_messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
         {
             return &dbc_messages[i];
         }
@@ -313,7 +319,7 @@ DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
     if (msg->msgSignals.length() == 0) return NULL;
     for (int i = 0; i < msg->msgSignals.length(); i++)
     {
-        if (msg->msgSignals[i].name == name)
+        if (msg->msgSignals[i].name.compare(name, Qt::CaseInsensitive) == 0)
         {
             return &msg->msgSignals[i];
         }
