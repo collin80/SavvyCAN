@@ -24,6 +24,8 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 Things currently broken or in need of attention:
 1. Currently no screen supports dynamic updates when new frames come in.
 2. Some of the save formats are not actually implemented and silently fail.
+3. It would be nice to be able to save the graphing view in the flow view.
+4. It would also be nice to be able to save an image of the bitfield grid too.
 */
 
 QString MainWindow::loadedFileName = "";
@@ -785,6 +787,9 @@ void MainWindow::handleSaveDBC()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        dbcHandler->saveDBCFile(filename);
+        QStringList fileList = filename.split('/');
+        lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
     }
 
 }

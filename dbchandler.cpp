@@ -105,7 +105,12 @@ void DBCHandler::loadDBCFile(QString filename)
                 sig.min = match.captured(8).toDouble();
                 sig.max = match.captured(9).toDouble();
                 sig.unitName = match.captured(10);
-                sig.receiver = findNodeByName(match.captured(11));
+                if (match.captured(11).contains(','))
+                {
+                    QString tmp = match.captured(11).split(',')[0];
+                    sig.receiver = findNodeByName(tmp);
+                }
+                else sig.receiver = findNodeByName(match.captured(11));
                 currentMessage->msgSignals.append(sig);
             }
         }
@@ -253,9 +258,132 @@ void DBCHandler::loadDBCFile(QString filename)
     inFile->close();
 }
 
+/*Yes, this is really hard to follow and all of the sections are mixed up in code
+ * believe it or not I think this is actually the easiest, simplest way to do it.
+*/
 void DBCHandler::saveDBCFile(QString filename)
 {
+    QFile *outFile = new QFile(filename);
+    QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
 
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+
+    //right now it outputs a standard hard coded boilerplate
+    outFile->write("VERSION \"\"\n");
+    outFile->write("\n");
+    outFile->write("\n");
+    outFile->write("NS_ :\n");
+    outFile->write("    NS_DESC_\n");
+    outFile->write("    CM_\n");
+    outFile->write("    BA_DEF_\n");
+    outFile->write("    BA_\n");
+    outFile->write("    VAL_\n");
+    outFile->write("    CAT_DEF_\n");
+    outFile->write("    CAT_\n");
+    outFile->write("    FILTER\n");
+    outFile->write("    BA_DEF_DEF_\n");
+    outFile->write("    EV_DATA_\n");
+    outFile->write("    ENVVAR_DATA_\n");
+    outFile->write("    SGTYPE_\n");
+    outFile->write("    SGTYPE_VAL_\n");
+    outFile->write("    BA_DEF_SGTYPE_\n");
+    outFile->write("    BA_SGTYPE_\n");
+    outFile->write("    SIG_TYPE_REF_\n");
+    outFile->write("    VAL_TABLE_\n");
+    outFile->write("    SIG_GROUP_\n");
+    outFile->write("    SIG_VALTYPE_\n");
+    outFile->write("    SIGTYPE_VALTYPE_\n");
+    outFile->write("    BO_TX_BU_\n");
+    outFile->write("    BA_DEF_REL_\n");
+    outFile->write("    BA_REL_\n");
+    outFile->write("    BA_DEF_DEF_REL_\n");
+    outFile->write("    BU_SG_REL_\n");
+    outFile->write("    BU_EV_REL_\n");
+    outFile->write("    BU_BO_REL_\n");
+    outFile->write("    SG_MUL_VAL_\n");
+    outFile->write("\n");
+    outFile->write("BS_: \n");
+
+    nodesOutput.append("BU_: ");
+    for (int x = 0; x < dbc_nodes.count(); x++)
+    {
+        DBC_NODE node = dbc_nodes[x];
+        if (node.name.compare("Vector_XXX", Qt::CaseInsensitive) != 0)
+        {
+            nodesOutput.append(node.name + " ");
+            if (node.comment.length() > 0)
+            {
+                commentsOutput.append("CM_ BU_ " + node.name + " \"" + node.comment + "\";\n");
+            }
+        }
+    }
+    nodesOutput.append("\n");
+    outFile->write(nodesOutput.toUtf8());
+
+    for (int x = 0; x < dbc_messages.count(); x++)
+    {
+        DBC_MESSAGE msg = dbc_messages[x];
+        msgOutput.append("BO_ " + QString::number(msg.ID) + " " + msg.name + ": " + QString::number(msg.len) +
+                         " " + msg.sender->name + "\n");
+        if (msg.comment.length() > 0)
+        {
+            commentsOutput.append("CM_ BO_ " + QString::number(msg.ID) + " \"" + msg.comment + "\";\n");
+        }
+        for (int s = 0; s < msg.msgSignals.count(); s++)
+        {
+            DBC_SIGNAL sig = msg.msgSignals[s];
+            msgOutput.append("    SG_ " + sig.name + " : " + QString::number(sig.startBit) + "|" + QString::number(sig.signalSize) + "@");
+            switch (sig.valType)
+            {
+            case UNSIGNED_INT:
+                msgOutput.append("0+");
+                break;
+            case SIGNED_INT:
+                msgOutput.append("0-");
+                break;
+            case SP_FLOAT:
+                msgOutput.append("1-");
+                break;
+            case DP_FLOAT:
+                msgOutput.append("2-");
+                break;
+            case STRING:
+                msgOutput.append("3-");
+                break;
+            default:
+                msgOutput.append("0-");
+                break;
+            }
+            msgOutput.append(" (" + QString::number(sig.factor) + "," + QString::number(sig.bias) + ") [" +
+                             QString::number(sig.min) + "|" + QString::number(sig.max) + "] \"" + sig.unitName
+                             + "\" " + sig.receiver->name + "\n");
+            if (sig.comment.length() > 0)
+            {
+                commentsOutput.append("CM_ SG_ " + QString::number(msg.ID) + " " + sig.name + " \"" + sig.comment + "\";\n");
+            }
+            if (sig.valList.count() > 0)
+            {
+                valuesOutput.append("VAL_ " + QString::number(msg.ID) + " " + sig.name);
+                for (int v = 0; v < sig.valList.count(); v++)
+                {
+                    DBC_VAL val = sig.valList[v];
+                    valuesOutput.append(" " + QString::number(val.value) + " \"" + val.descript +"\"");
+                }
+                valuesOutput.append(";\n");
+            }
+        }
+        msgOutput.append("\n");
+        //write it out every message so the string doesn't end up too huge
+        outFile->write(msgOutput.toUtf8());
+        msgOutput.clear(); //got to reset it after writing
+    }
+
+    //now write out all of the accumulated comments and value tables from above
+    outFile->write(commentsOutput.toUtf8());
+    outFile->write(valuesOutput.toUtf8());
+
+    outFile->close();
 }
 
 
@@ -513,9 +641,3 @@ unsigned char DBCHandler::processByte(unsigned char input, int start, int end)
     output &= ((1 << size) - 1);
     return output;
 }
-
-/*
- SG_ NLG5_E_B_P : 15|1@0+ (1,0) [0|1] ""  Control
- SG_ NLG5_S_MC_M_PI : 23|8@0+ (0.1,0) [0|20] "A"  Control
- SG_ NLG5_S_MC_M_CP : 7|16@0+ (0.1,0) [0|100] "A"  Control
-*/
