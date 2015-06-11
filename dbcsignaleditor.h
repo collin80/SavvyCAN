@@ -20,6 +20,7 @@ public:
 
 private slots:
     void clickSignalList(int);
+    void bitfieldClicked(int x, int y);
 
 private:
     Ui::DBCSignalEditor *ui;

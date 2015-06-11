@@ -3,6 +3,7 @@
 
 #include <QPainter>
 #include <QDebug>
+#include <QMouseEvent>
 
 CANDataGrid::CANDataGrid(QWidget *parent) :
     QWidget(parent),
@@ -17,6 +18,25 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
 CANDataGrid::~CANDataGrid()
 {
     delete ui;
+}
+
+void CANDataGrid::mousePressEvent(QMouseEvent *event)
+{
+    QPoint clickedPoint = event->pos();
+    if (event->button() == Qt::LeftButton)
+    {
+        //qDebug() << "Mouse Loc " << clickedPoint;
+        clickedPoint -= upperLeft;
+        if (clickedPoint.x() < 0 || clickedPoint.y() < 0)
+        {
+            //qDebug() << "Clicked outside the grid you wanker";
+            return;
+        }
+        int x = clickedPoint.x() / gridSize.x();
+        int y = clickedPoint.y() / gridSize.y();
+        //qDebug() << "Grid square clicked " << x << " " << y;
+        emit gridClicked(x,y);
+    }
 }
 
 void CANDataGrid::paintEvent(QPaintEvent *event)
@@ -111,7 +131,11 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
             //painter.fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
             painter.drawRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector);
         }
-    }             
+    }
+    upperLeft.setX(viewport.left() + 2 * xSector);
+    upperLeft.setY(viewport.top() + 2 * ySector);
+    gridSize.setX(xSector);
+    gridSize.setY(ySector);
 }
 
 void CANDataGrid::setReference(unsigned char *newRef, bool bUpdate = true)

@@ -29,6 +29,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     }
 
     connect(ui->signalsList, SIGNAL(currentRowChanged(int)), this, SLOT(clickSignalList(int)));
+    connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
 }
 
 DBCSignalEditor::~DBCSignalEditor()
@@ -89,6 +90,10 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     }
 
     endBit = startBit + sig->signalSize - 1;
+    if (endBit > 63)
+    {
+        endBit = 63;
+    }
 
     bitpattern[startBit / 8] |= 1 << (startBit % 8);
     ui->bitfield->setReference(bitpattern, false);
@@ -154,4 +159,13 @@ void DBCSignalEditor::clickSignalList(int row)
     fillSignalForm(thisSig);
     fillValueTable(thisSig);
 
+}
+
+void DBCSignalEditor::bitfieldClicked(int x, int y)
+{
+    int bit = (x) + (y * 8);
+    DBC_SIGNAL *thisSig = dbcHandler->findSignalByIdx(dbcMessage, ui->signalsList->currentRow());
+    if (thisSig == NULL) return;
+    thisSig->startBit = bit;
+    fillSignalForm(thisSig);
 }
