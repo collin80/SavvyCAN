@@ -81,6 +81,7 @@ private:
     DBCHandler *dbcHandler;
     QList<QSerialPortInfo> ports;
     QThread serialWorkerThread;
+    SerialWorker *worker;
     QByteArray inputBuffer;
     bool allowCapture;
     bool bDirty; //have frames been added or subtracted since the last save/load?

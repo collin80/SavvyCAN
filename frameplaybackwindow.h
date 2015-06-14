@@ -5,6 +5,7 @@
 #include <QListWidget>
 #include <QTimer>
 #include "can_structs.h"
+#include "serialworker.h"
 
 namespace Ui {
 class FramePlaybackWindow;
@@ -15,7 +16,7 @@ class FramePlaybackWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FramePlaybackWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent = 0);
     ~FramePlaybackWindow();
 
 private slots:
@@ -43,6 +44,7 @@ private:
     QVector<CANFrame> *modelFrames;
     int currentPosition;
     QTimer *playbackTimer;
+    SerialWorker *serialWorker;
     bool playbackActive;
     bool playbackForward;
     int whichBusSend;

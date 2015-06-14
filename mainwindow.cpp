@@ -26,6 +26,8 @@ Things currently broken or in need of attention:
 2. Some of the save formats are not actually implemented and silently fail.
 3. It would be nice to be able to save the graphing view in the flow view.
 4. It would also be nice to be able to save an image of the bitfield grid too.
+5. New GVRET firmware has a hard time sending data (6 frames per second!)
+6. If you load a file, use detailed view, clear it, load another, it seems to only show new IDs
 */
 
 QString MainWindow::loadedFileName = "";
@@ -83,7 +85,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->cbSpeed2->addItem(tr("1000000"));
     ui->cbSpeed2->addItem(tr("33333"));
 
-    SerialWorker *worker = new SerialWorker(model);
+    worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
@@ -97,6 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::startFrameCapturing, worker, &SerialWorker::startFrameCapture);
     connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
     serialWorkerThread.start();
+    serialWorkerThread.setPriority(QThread::TimeCriticalPriority);
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -994,9 +997,9 @@ void MainWindow::showPlaybackWindow()
 {
     if (!playbackWindow)
     {
-        playbackWindow = new FramePlaybackWindow(model->getListReference());
+        playbackWindow = new FramePlaybackWindow(model->getListReference(), worker);
         //connect signal to signal to pass the signal through to whoever is handling the slot
-        connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
+        //connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
     }
     playbackWindow->show();
 }

@@ -2,13 +2,14 @@
 #include "ui_frameplaybackwindow.h"
 #include <QDebug>
 
-FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, QWidget *parent) :
+FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FramePlaybackWindow)
 {
     ui->setupUi(this);
 
     modelFrames = frames;
+    serialWorker = worker;
 
     playbackTimer = new QTimer();
 
@@ -42,6 +43,8 @@ FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, QWidget *par
     connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
 
     playbackTimer->setInterval(ui->spinPlaySpeed->value()); //set the timer to the default value of the control
+
+    connect(this, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)), Qt::QueuedConnection);
 
 }
 
@@ -197,6 +200,7 @@ void FramePlaybackWindow::updatePosition(bool forward)
     }
 
     //only send frame out if its ID is checked in the list. Otherwise discard it.
+
     QList<QListWidgetItem *> idList = ui->listID->findItems(QString::number(modelFrames->at(currentPosition).ID, 16).toUpper().rightJustified(4,'0'), Qt::MatchExactly);
     if (idList.count() > 0)
     {
@@ -207,7 +211,11 @@ void FramePlaybackWindow::updatePosition(bool forward)
             if (whichBusSend & 1) emit sendCANFrame(thisFrame, 0);
             if (whichBusSend & 2) emit sendCANFrame(thisFrame, 1);
             if (whichBusSend & 4) emit sendCANFrame(thisFrame, thisFrame->bus);
+            //if (whichBusSend & 1) serialWorker->sendFrame(thisFrame, 0);
+            //if (whichBusSend & 2) serialWorker->sendFrame(thisFrame, 1);
+            //if (whichBusSend & 4) serialWorker->sendFrame(thisFrame, thisFrame->bus);
             updateFrameLabel();
         }
     }
+
 }

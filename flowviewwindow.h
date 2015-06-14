@@ -28,7 +28,7 @@ private slots:
     void changeLooping(bool check);
     void timerTriggered();
     void changeID(QString);
-    void updatedFrames(int);
+    void updatedFrames(int);    
 
 private:
     Ui::FlowViewWindow *ui;
