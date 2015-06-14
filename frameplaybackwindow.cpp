@@ -164,24 +164,27 @@ void FramePlaybackWindow::btnSelectNoneClick()
 
 void FramePlaybackWindow::timerTriggered()
 {
-    if (!playbackActive)
+    for (int count = 0; count < ui->spinBurstSpeed->value(); count++)
     {
-        playbackTimer->stop();
-        return;
-    }
-    if (playbackForward)
-    {
-        updatePosition(true);
-    }
-    else
-    {
-        updatePosition(false);
-    }
+        if (!playbackActive)
+        {
+            playbackTimer->stop();
+            return;
+        }
+        if (playbackForward)
+        {
+            updatePosition(true);
+        }
+        else
+        {
+            updatePosition(false);
+        }
 
-    if (!ui->cbLoop->isChecked())
-    {
-        if (currentPosition == 0) playbackActive = false;
-        if (currentPosition == (modelFrames->count() - 1)) playbackActive = false;
+        if (!ui->cbLoop->isChecked())
+        {
+            if (currentPosition == 0) playbackActive = false;
+            if (currentPosition == (modelFrames->count() - 1)) playbackActive = false;
+        }
     }
 }
 

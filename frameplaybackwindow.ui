@@ -121,6 +121,26 @@
     </widget>
    </item>
    <item alignment="Qt::AlignHCenter">
+    <widget class="QLabel" name="label_3">
+     <property name="text">
+      <string>Burst Rate:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSpinBox" name="spinBurstSpeed">
+     <property name="minimum">
+      <number>1</number>
+     </property>
+     <property name="maximum">
+      <number>8</number>
+     </property>
+     <property name="value">
+      <number>1</number>
+     </property>
+    </widget>
+   </item>
+   <item alignment="Qt::AlignHCenter">
     <widget class="QCheckBox" name="cbLoop">
      <property name="text">
       <string>Loop playback</string>
