@@ -64,7 +64,7 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append(0xF1); //another command to the GVRET
     output.append(0x07); //request device information
     serial->write(output);
-    connected = true; //should be false. only set true to test old firmware
+    connected = false;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
     QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
     if (ticker == NULL)
@@ -88,9 +88,9 @@ void SerialWorker::connectionTimeout()
     if (!connected) //no?
     {
         //then emit the the failure signal and see if anyone cares
-        //qDebug() << "Failed to connect to GVRET at that com port";
-        //ticker->stop();
-        //emit connectionFailure();
+        qDebug() << "Failed to connect to GVRET at that com port";
+        ticker->stop();
+        emit connectionFailure();
     }
 }
 
