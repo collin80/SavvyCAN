@@ -1,11 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "config.h"
 #include <QMainWindow>
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include "canframemodel.h"
 #include "can_structs.h"
+#include "framefileio.h"
 #include "graphingwindow.h"
 #include "frameinfowindow.h"
 #include "frameplaybackwindow.h"
@@ -13,8 +15,6 @@
 #include "framesenderwindow.h"
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
-
-#define VERSION 111
 
 namespace Ui {
 class MainWindow;
@@ -102,16 +102,6 @@ private:
     bool isConnected;
 
     //private methods
-    void loadCRTDFile(QString);
-    void loadNativeCSVFile(QString);
-    void loadGenericCSVFile(QString);
-    void loadLogFile(QString);
-    void loadMicrochipFile(QString);
-    void saveCRTDFile(QString);
-    void saveNativeCSVFile(QString);
-    void saveGenericCSVFile(QString);
-    void saveLogFile(QString);
-    void saveMicrochipFile(QString);
     void saveDecodedTextFile(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();

@@ -27,7 +27,8 @@ SOURCES += main.cpp\
     framesenderwindow.cpp \
     dbchandler.cpp \
     dbcmaineditor.cpp \
-    dbcsignaleditor.cpp
+    dbcsignaleditor.cpp \
+    framefileio.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -46,7 +47,9 @@ HEADERS  += mainwindow.h \
     dbc_classes.h \
     dbchandler.h \
     dbcmaineditor.h \
-    dbcsignaleditor.h
+    dbcsignaleditor.h \
+    framefileio.h \
+    config.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
