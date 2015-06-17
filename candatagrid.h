@@ -17,6 +17,7 @@ public:
     void paintEvent(QPaintEvent *event);
     void setReference(unsigned char *, bool);
     void updateData(unsigned char *, bool);
+    void saveImage(QString filename, int width, int height);
 
 protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;

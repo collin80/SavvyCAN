@@ -138,6 +138,28 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     gridSize.setY(ySector);
 }
 
+void CANDataGrid::saveImage(QString filename, int width, int height)
+{
+    //can't quite do the below commented out stuff
+    //it works but doesn't scale the image into that pixmap. Need to
+    //figure out how to draw the size of the pixmap
+    /*
+    QSize pSize;
+
+    if (width == 0) pSize.setWidth(this->size().width());
+        else pSize.setWidth(width);
+
+    if (height == 0) pSize.setHeight(this->size().height());
+        else pSize.setHeight(height);
+
+    QPixmap pixmap(pSize);
+    */
+    QPixmap pixmap(this->size());
+
+    this->render(&pixmap);
+    pixmap.save(filename); //QT will automatically pick the file format given the extension
+}
+
 void CANDataGrid::setReference(unsigned char *newRef, bool bUpdate = true)
 {
     memcpy(refData, newRef, 8);

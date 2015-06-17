@@ -21,13 +21,8 @@ Range state - Find things that range like accelerator pedal inputs, road speed, 
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 
 
-Things currently broken or in need of attention:
-1. Currently no screen supports dynamic updates when new frames come in.
-2. Some of the save formats are not actually implemented and silently fail.
-3. It would be nice to be able to save the graphing view in the flow view.
-4. It would also be nice to be able to save an image of the bitfield grid too.
-5. New GVRET firmware has a hard time sending data (6 frames per second!)
-6. If you load a file, use detailed view, clear it, load another, it seems to only show new IDs
+Things currently broken or in need of attention: (push these over to github issues as soon as you can)
+1. If you load a file, use detailed view, clear it, load another, it seems to only show new IDs
 */
 
 QString MainWindow::loadedFileName = "";

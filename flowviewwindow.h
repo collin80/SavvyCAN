@@ -28,7 +28,11 @@ private slots:
     void changeLooping(bool check);
     void timerTriggered();
     void changeID(QString);
-    void updatedFrames(int);    
+    void updatedFrames(int);
+    void contextMenuRequestFlow(QPoint pos);
+    void contextMenuRequestGraph(QPoint pos);
+    void saveFileFlow();
+    void saveFileGraph();
 
 private:
     Ui::FlowViewWindow *ui;

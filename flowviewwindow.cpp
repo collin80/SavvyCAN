@@ -69,6 +69,11 @@ FlowViewWindow::FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent) :
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
+    ui->graphView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->graphView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestGraph(QPoint)));
+    ui->flowView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
+
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 
 }
@@ -92,6 +97,74 @@ FlowViewWindow::~FlowViewWindow()
 
     playbackTimer->stop();
     delete playbackTimer;
+}
+
+void FlowViewWindow::contextMenuRequestFlow(QPoint pos)
+{
+  QMenu *menu = new QMenu(this);
+  menu->setAttribute(Qt::WA_DeleteOnClose);
+
+  menu->addAction(tr("Save image to file"), this, SLOT(saveFileFlow()));
+
+  menu->popup(ui->flowView->mapToGlobal(pos));
+}
+
+void FlowViewWindow::contextMenuRequestGraph(QPoint pos)
+{
+  QMenu *menu = new QMenu(this);
+  menu->setAttribute(Qt::WA_DeleteOnClose);
+
+  menu->addAction(tr("Save image to file"), this, SLOT(saveFileGraph()));
+
+  menu->popup(ui->graphView->mapToGlobal(pos));
+}
+
+void FlowViewWindow::saveFileGraph()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("PDF Files (*.pdf)")));
+    filters.append(QString(tr("PNG Files (*.png)")));
+    filters.append(QString(tr("JPEG Files (*.jpg)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        if (dialog.selectedNameFilter() == filters[0]) ui->graphView->savePdf(filename, true, 0, 0);
+        if (dialog.selectedNameFilter() == filters[1]) ui->graphView->savePng(filename, 1024, 768);
+        if (dialog.selectedNameFilter() == filters[2]) ui->graphView->saveJpg(filename, 1024, 768);
+    }
+}
+
+void FlowViewWindow::saveFileFlow()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("PNG Files (*.png)")));
+    filters.append(QString(tr("JPEG Files (*.jpg)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        if (dialog.selectedNameFilter() == filters[0]) ui->flowView->saveImage(filename, 1024, 768);
+        if (dialog.selectedNameFilter() == filters[1]) ui->flowView->saveImage(filename, 1024, 768);
+    }
 }
 
 void FlowViewWindow::updatedFrames(int numFrames)
