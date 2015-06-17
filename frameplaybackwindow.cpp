@@ -8,7 +8,9 @@ FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker
 {
     ui->setupUi(this);
 
-    modelFrames = frames;
+    //this code intentionally creates a copy here so that we
+    //don't pick up more frames coming in as we're going.
+    modelFrames = new QVector<CANFrame>(*frames);
     serialWorker = worker;
 
     playbackTimer = new QTimer();
