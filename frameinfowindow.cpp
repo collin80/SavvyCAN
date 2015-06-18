@@ -259,4 +259,5 @@ void FrameInfoWindow::refreshIDList()
     }
     //default is to sort in ascending order
     ui->listFrameID->sortItems();
+    ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
 }

@@ -22,7 +22,6 @@ fuzzy scope - Try to find potential places where a given value might be stored -
 
 
 Things currently broken or in need of attention: (push these over to github issues as soon as you can)
-1. If you load a file, use detailed view, clear it, load another, it seems to only show new IDs
 */
 
 QString MainWindow::loadedFileName = "";

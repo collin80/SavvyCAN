@@ -17,7 +17,7 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_3">
      <item>
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="lblFrameID">
        <property name="text">
         <string>Frame IDs:</string>
        </property>
