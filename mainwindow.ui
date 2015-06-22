@@ -252,6 +252,7 @@
     <addaction name="actionFuzzy_Scope"/>
     <addaction name="actionGraph_Dta"/>
     <addaction name="actionFrame_Data_Analysis"/>
+    <addaction name="actionFile_Comparison"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -360,6 +361,11 @@
   <action name="actionExit_Application">
    <property name="text">
     <string>Exit Application</string>
+   </property>
+  </action>
+  <action name="actionFile_Comparison">
+   <property name="text">
+    <string>File Comparison</string>
    </property>
   </action>
  </widget>

@@ -44,6 +44,18 @@ public:
         QDateTime stamp = QDateTime::currentDateTime();
         return (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
     }
+
+    //prints hex numbers in uppercase with 0's filling out the number depending
+    //on the size needed. Promotes hex numbers to either 2, 4, or 8 digits
+    static QString formatHexNum(int input)
+    {
+        if (input < 256)
+            return QString::number(input, 16).toUpper().rightJustified(2,'0');
+        if (input < 65536)
+            return QString::number(input, 16).toUpper().rightJustified(4,'0');
+
+        return QString::number(input, 16).toUpper().rightJustified(8,'0');
+    }
 };
 
 #endif // UTILITY_H

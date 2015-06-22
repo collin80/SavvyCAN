@@ -10,6 +10,7 @@
 #include <QFile>
 #include <QString>
 #include <QStringList>
+#include <QFileDialog>
 #include "can_structs.h"
 #include "utility.h"
 
@@ -30,6 +31,7 @@ public:
     static bool saveGenericCSVFile(QString, QVector<CANFrame>*);
     static bool saveLogFile(QString, QVector<CANFrame>*);
     static bool saveMicrochipFile(QString, QVector<CANFrame>*);
+    static QString loadFrameFile(QVector<CANFrame>*);
 };
 
 #endif // FRAMEFILEIO_H

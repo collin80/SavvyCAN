@@ -28,7 +28,8 @@ SOURCES += main.cpp\
     dbchandler.cpp \
     dbcmaineditor.cpp \
     dbcsignaleditor.cpp \
-    framefileio.cpp
+    framefileio.cpp \
+    filecomparatorwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -49,7 +50,8 @@ HEADERS  += mainwindow.h \
     dbcmaineditor.h \
     dbcsignaleditor.h \
     framefileio.h \
-    config.h
+    config.h \
+    filecomparatorwindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -60,7 +62,8 @@ FORMS    += mainwindow.ui \
     flowviewwindow.ui \
     framesenderwindow.ui \
     dbcmaineditor.ui \
-    dbcsignaleditor.ui
+    dbcsignaleditor.ui \
+    filecomparatorwindow.ui
 
 DISTFILES +=
 

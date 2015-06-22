@@ -5,6 +5,43 @@ FrameFileIO::FrameFileIO()
 
 }
 
+QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
+{
+    QString filename;
+    QFileDialog dialog;
+    bool result = false;
+
+    QStringList filters;
+    filters.append(QString(tr("CRTD Logs (*.txt)")));
+    filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
+    filters.append(QString(tr("BusMaster Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.log)")));
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        if (dialog.selectedNameFilter() == filters[0]) result = loadCRTDFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[1]) result = loadNativeCSVFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[2]) result = loadGenericCSVFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
+        if (result)
+        {
+            QStringList fileList = filename.split('/');
+            filename = fileList[fileList.length() - 1];
+            return filename;
+        }
+        else return QString("");
+    }
+    return QString("");
+}
+
 //CRTD format from Mark Webb-Johnson / OVMS project
 /*
 Sample data in CRTD format

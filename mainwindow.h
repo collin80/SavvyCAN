@@ -13,6 +13,7 @@
 #include "frameplaybackwindow.h"
 #include "flowviewwindow.h"
 #include "framesenderwindow.h"
+#include "filecomparatorwindow.h"
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 
@@ -45,6 +46,7 @@ private slots:
     void showSingleMultiWindow();
     void showRangeWindow();
     void showFuzzyScopeWindow();
+    void showComparisonWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -93,6 +95,7 @@ private:
     FlowViewWindow *flowViewWindow;
     FrameSenderWindow *frameSenderWindow;
     DBCMainEditor *dbcMainEditor;
+    FileComparatorWindow *comparatorWindow;
 
     //various private storage
     QLabel lbStatusConnected;

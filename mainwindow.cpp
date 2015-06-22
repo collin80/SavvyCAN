@@ -101,6 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     flowViewWindow = NULL;
     frameSenderWindow = NULL;
     dbcMainEditor = NULL;
+    comparatorWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
 
@@ -128,6 +129,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionRange_State, SIGNAL(triggered(bool)), this, SLOT(showRangeWindow()));
     connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
     connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
+    connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -185,6 +187,12 @@ MainWindow::~MainWindow()
     {
         frameSenderWindow->close();
         delete frameSenderWindow;
+    }
+
+    if (comparatorWindow)
+    {
+        comparatorWindow->close();
+        delete comparatorWindow;
     }
 
     if (dbcMainEditor)
@@ -600,6 +608,15 @@ void MainWindow::showPlaybackWindow()
         //connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
     }
     playbackWindow->show();
+}
+
+void MainWindow::showComparisonWindow()
+{
+    if (!comparatorWindow)
+    {
+        comparatorWindow = new FileComparatorWindow();
+    }
+    comparatorWindow->show();
 }
 
 void MainWindow::showSingleMultiWindow()
