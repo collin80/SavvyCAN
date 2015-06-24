@@ -130,6 +130,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
     connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
     connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
+    connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -266,6 +267,11 @@ void MainWindow::clearFrames()
     loadedFileName = "";
     updateFileStatus();
     emit framesUpdated(-1);
+}
+
+void MainWindow::normalizeTiming()
+{
+    model->normalizeTiming();
 }
 
 void MainWindow::changeBaudRates()

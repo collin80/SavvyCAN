@@ -58,6 +58,7 @@ private slots:
     void overwriteToggled(bool);
     void showDBCEditor();
     void toggleCapture();
+    void normalizeTiming();
 
 public slots:
     void gotFrames(int, int);

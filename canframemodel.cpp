@@ -17,6 +17,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     dbcHandler = NULL;
     interpretFrames = false;
     overwriteDups = false;
+    timeOffset = 0;
 }
 
 void CANFrameModel::setDBCHandler(DBCHandler *handler)
@@ -34,6 +35,18 @@ void CANFrameModel::setInterpetMode(bool mode)
         interpretFrames = mode;
         this->endResetModel();
     }
+}
+
+void CANFrameModel::normalizeTiming()
+{
+    if (frames.count() == 0) return;
+    this->beginResetModel();
+    timeOffset = frames[0].timestamp;
+    for (int i = 0; i < frames.count(); i++)
+    {
+        frames[i].timestamp -= timeOffset;
+    }
+    this->endResetModel();
 }
 
 void CANFrameModel::setOverwriteMode(bool mode)
@@ -140,6 +153,7 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 {
     mutex.lock();
     if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
+    frame.timestamp -= timeOffset;
     frames.append(frame);
     if (autoRefresh) endInsertRows();
     mutex.unlock();

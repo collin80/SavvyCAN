@@ -202,6 +202,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="btnNormalize">
+        <property name="text">
+         <string>Normalize Frame Timing</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="btnClearFrames">
         <property name="text">
          <string>Clear Frames</string>
