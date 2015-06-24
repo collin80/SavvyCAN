@@ -6,10 +6,21 @@
 #include <QTimer>
 #include "can_structs.h"
 #include "serialworker.h"
+#include "framefileio.h"
 
 namespace Ui {
 class FramePlaybackWindow;
 }
+
+//one entry in the sequence of data to use
+struct SequenceItem
+{
+    QString filename;
+    QVector<CANFrame> data;
+    QHash<int, bool> idFilters;
+    int maxLoops;
+    int currentLoopCount;
+};
 
 class FramePlaybackWindow : public QDialog
 {
@@ -33,6 +44,10 @@ private slots:
     void btnSelectAllClick();
     void btnSelectNoneClick();
     void timerTriggered();
+    void btnLoadFile();
+    void btnLoadLive();
+    void seqTableCellClicked(int row, int col);
+    void seqTableCellChanged(int row, int col);
 
 signals:
     void sendCANFrame(const CANFrame *, int);
@@ -48,10 +63,14 @@ private:
     bool playbackActive;
     bool playbackForward;
     int whichBusSend;
+    QList<SequenceItem> seqItems;
+    SequenceItem *currentSeqItem;
+    int currentSeqNum;
 
     void refreshIDList();
     void updateFrameLabel();
     void updatePosition(bool forward);
+    void fillIDHash(SequenceItem &item);
 };
 
 #endif // FRAMEPLAYBACKWINDOW_H

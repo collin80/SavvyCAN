@@ -1,6 +1,20 @@
 #include "frameplaybackwindow.h"
 #include "ui_frameplaybackwindow.h"
 #include <QDebug>
+#include <QFileDialog>
+
+/*
+ * Notes about new functionality:
+ * The system has a sequence of files or captured data to play back. It starts at the first item in the list
+ * and goes through all of the frames. When it gets to the end it sees if there is a loop count for this file.
+ * If so it increments the loop count and goes back to the beginning. If not it goes to the next file in the list.
+ * At the end of the list it either stops (if looping is off) or goes back to the first item in the list.
+ * All items in the list have their own frame cache and filters
+ *
+ * So, to do this we'll have to track which item we're on and which frame within that item. As we go through
+ * items it should highlight the row we're on
+ *
+*/
 
 FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent) :
     QDialog(parent),
@@ -8,9 +22,7 @@ FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker
 {
     ui->setupUi(this);
 
-    //this code intentionally creates a copy here so that we
-    //don't pick up more frames coming in as we're going.
-    modelFrames = new QVector<CANFrame>(*frames);
+    modelFrames = frames;
     serialWorker = worker;
 
     playbackTimer = new QTimer();
@@ -19,8 +31,8 @@ FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker
     playbackActive = false;
     playbackForward = true;
     whichBusSend = 0; //0 = no bus, 1 = bus 0, 2 = bus 1, 4 = from file - Bitfield so you can 'or' them.
-
-    refreshIDList();
+    currentSeqItem = NULL;
+    currentSeqNum = -1;
 
     ui->comboCANBus->addItem(tr("None"));
     ui->comboCANBus->addItem(tr("0"));
@@ -39,15 +51,25 @@ FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker
     connect(ui->btnSelectAll, SIGNAL(clicked(bool)), this, SLOT(btnSelectAllClick()));
     connect(ui->btnSelectNone, SIGNAL(clicked(bool)), this, SLOT(btnSelectNoneClick()));
     connect(ui->spinPlaySpeed, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
-    connect(ui->cbLoop, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
+    //connect(ui->cbLoop, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->comboCANBus, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSendingBus(int)));
     connect(ui->listID, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(changeIDFiltering(QListWidgetItem*)));
     connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
+    connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(btnLoadFile()));
+    connect(ui->btnLoadLive, SIGNAL(clicked(bool)), this, SLOT(btnLoadLive()));
+    connect(ui->tblSequence, SIGNAL(cellPressed(int,int)), this, SLOT(seqTableCellClicked(int,int)));
+    connect(ui->tblSequence, SIGNAL(cellChanged(int,int)), this, SLOT(seqTableCellChanged(int,int)));
 
     playbackTimer->setInterval(ui->spinPlaySpeed->value()); //set the timer to the default value of the control
 
     connect(this, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)), Qt::QueuedConnection);
 
+    QStringList headers;
+    headers << "Source" << "Loops";
+    ui->tblSequence->setColumnCount(2);
+    ui->tblSequence->setColumnWidth(0, 260);
+    ui->tblSequence->setColumnWidth(1, 80);
+    ui->tblSequence->setHorizontalHeaderLabels(headers);
 }
 
 FramePlaybackWindow::~FramePlaybackWindow()
@@ -60,17 +82,21 @@ FramePlaybackWindow::~FramePlaybackWindow()
 
 void FramePlaybackWindow::refreshIDList()
 {
-    int id;
-    for (int i = 0; i < modelFrames->count(); i++)
+    int id;    
+
+    if (currentSeqNum < 0 || currentSeqItem == NULL) return;
+
+    ui->tblSequence->setCurrentCell(currentSeqNum, 0);
+
+    ui->listID->clear();
+
+    QHash<int, bool>::Iterator filterIter;
+    for (filterIter = currentSeqItem->idFilters.begin(); filterIter != currentSeqItem->idFilters.end(); ++filterIter)
     {
-        id = modelFrames->at(i).ID;
-        if (!foundID.contains(id))
-        {
-            foundID.append(id);
-            QListWidgetItem* item = new QListWidgetItem(QString::number(id, 16).toUpper().rightJustified(4,'0'), ui->listID);
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-            item->setCheckState(Qt::Checked);
-        }
+        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatHexNum(filterIter.key()), ui->listID);
+        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
+        if (filterIter.value()) listItem->setCheckState(Qt::Checked);
+        else listItem->setCheckState(Qt::Unchecked);
     }
     //default is to sort in ascending order
     ui->listID->sortItems();
@@ -78,7 +104,135 @@ void FramePlaybackWindow::refreshIDList()
 
 void FramePlaybackWindow::updateFrameLabel()
 {
-    ui->lblPosition->setText(QString::number(currentPosition) + tr(" of ") + QString::number(modelFrames->count()));
+    int row = currentSeqNum;
+
+    if (row != ui->tblSequence->currentRow())
+    {
+        ui->tblSequence->setCurrentCell(row, 0);
+    }
+
+    if (row == -1)
+    {
+        ui->lblCurrPlayback->setText("");
+        ui->lblPosition->setText("");
+        return;
+    }
+
+    ui->lblCurrPlayback->setText(currentSeqItem->filename);
+
+    ui->lblPosition->setText(QString::number(currentPosition) + tr(" of ") + QString::number(seqItems[row].data.count()));
+}
+
+void FramePlaybackWindow::seqTableCellClicked(int row, int col)
+{
+    qDebug() << "Row: " << QString::number(row) << " Col: " << QString::number(col);
+    if (currentSeqNum != row)
+    {
+        currentSeqNum = row;
+        currentSeqItem = &seqItems[row];
+        refreshIDList();
+    }
+}
+
+void FramePlaybackWindow::seqTableCellChanged(int row,int col)
+{
+    if (col == 1) //don't save any changes to the first column (0)
+    {
+        seqItems[row].maxLoops = ui->tblSequence->item(row, col)->text().toInt();
+        if (seqItems[row].maxLoops < 1) seqItems[row].maxLoops = 1;
+    }
+}
+
+void FramePlaybackWindow::fillIDHash(SequenceItem &item)
+{
+    int id;
+
+    item.idFilters.clear();
+
+    for (int i = 0; i < item.data.count(); i++)
+    {
+        id = item.data[i].ID;
+        if (!item.idFilters.contains(id))
+        {
+            item.idFilters.insert(id, true);
+        }
+    }
+}
+
+void FramePlaybackWindow::btnLoadFile()
+{
+    QString filename;
+    QFileDialog dialog(this);
+    bool result = false;
+    SequenceItem item;
+
+    QStringList filters;
+    filters.append(QString(tr("CRTD Logs (*.txt)")));
+    filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
+    filters.append(QString(tr("BusMaster Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.log)")));
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, &item.data);
+        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, &item.data);
+        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &item.data);
+        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &item.data);
+        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &item.data);
+        if (result)
+        {
+            QStringList fileList = filename.split('/');
+            item.filename = fileList[fileList.length() - 1];
+            item.currentLoopCount = 0;
+            item.maxLoops = 1;
+            fillIDHash(item);
+            if (ui->tblSequence->currentRow() == -1)
+            {
+                ui->tblSequence->setCurrentCell(0,0);
+            }
+            seqItems.append(item);
+            int row = ui->tblSequence->rowCount();
+            ui->tblSequence->insertRow(row);
+            ui->tblSequence->setItem(row, 0, new QTableWidgetItem(item.filename));
+            ui->tblSequence->setItem(row, 1, new QTableWidgetItem(QString::number(item.maxLoops)));
+            qDebug() << currentSeqNum;
+            if (currentSeqNum == -1)
+            {
+                currentSeqNum = 0;
+                currentSeqItem = &seqItems[0];
+            }
+            updateFrameLabel();
+        }
+    }
+
+}
+
+void FramePlaybackWindow::btnLoadLive()
+{
+    SequenceItem item;
+    item.filename = "<CAPTURED DATA>";
+    item.currentLoopCount = 0;
+    item.maxLoops = 1;
+    item.data = QVector<CANFrame>(*modelFrames); //create a copy of the current frames from the main view
+    fillIDHash(item);
+    seqItems.append(item);
+    int row = ui->tblSequence->rowCount();
+    ui->tblSequence->insertRow(row);
+    ui->tblSequence->setItem(row, 0, new QTableWidgetItem(item.filename));
+    ui->tblSequence->setItem(row, 1, new QTableWidgetItem(QString::number(item.maxLoops)));
+    if (currentSeqNum == -1)
+    {
+        currentSeqNum = 0;
+        currentSeqItem = &seqItems[0];
+    }
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnBackOneClick()
@@ -107,6 +261,20 @@ void FramePlaybackWindow::btnStopClick()
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
     currentPosition = 0;
+    if (seqItems.count() > 0)
+    {
+        currentSeqNum = 0;
+        currentSeqItem = &seqItems[currentSeqNum];
+    }
+    else {
+        currentSeqNum = -1;
+        currentSeqItem = NULL;
+    }
+    if (ui->tblSequence->rowCount() > 0)
+    {
+        ui->tblSequence->setCurrentCell(0, 0);
+        refreshIDList();
+    }
     updateFrameLabel();
 }
 
@@ -143,7 +311,9 @@ void FramePlaybackWindow::changeSendingBus(int newIdx)
 
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
 {
-
+    qDebug() << "Changed ID filter";
+    int ID = item->text().toInt(NULL, 16);
+    currentSeqItem->idFilters[ID] = item->checkState();
 }
 
 void FramePlaybackWindow::btnSelectAllClick()
@@ -152,6 +322,7 @@ void FramePlaybackWindow::btnSelectAllClick()
     {
         QListWidgetItem *item = ui->listID->item(i);
         item->setCheckState(Qt::Checked);
+        currentSeqItem->idFilters[item->text().toInt(NULL, 16)] = true;
     }
 }
 
@@ -161,6 +332,7 @@ void FramePlaybackWindow::btnSelectNoneClick()
     {
         QListWidgetItem *item = ui->listID->item(i);
         item->setCheckState(Qt::Unchecked);
+        currentSeqItem->idFilters[item->text().toInt(NULL, 16)] = false;
     }
 }
 
@@ -181,12 +353,6 @@ void FramePlaybackWindow::timerTriggered()
         {
             updatePosition(false);
         }
-
-        if (!ui->cbLoop->isChecked())
-        {
-            if (currentPosition == 0) playbackActive = false;
-            if (currentPosition == (modelFrames->count() - 1)) playbackActive = false;
-        }
     }
 }
 
@@ -195,32 +361,76 @@ void FramePlaybackWindow::updatePosition(bool forward)
 
     if (forward)
     {
-        if (currentPosition < (modelFrames->count() - 1)) currentPosition++;
-        else if (ui->cbLoop->isChecked()) currentPosition = 0;
+        if (currentPosition < (currentSeqItem->data.count() - 1)) currentPosition++; //still in same file so keep going
+        else //hit the end of the current file
+        {
+            qDebug() << "hit end of current sequence";
+            currentSeqItem->currentLoopCount++;
+            currentPosition = 0;
+            if (currentSeqItem->currentLoopCount == currentSeqItem->maxLoops) //have we looped enough times?
+            {
+                currentSeqNum++; //go forward in the sequence
+                if (currentSeqNum == seqItems.count()) //are we at the end of the sequence?
+                {
+                    //reset the loop figures for each sequence entry
+                    for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
+                    currentSeqNum = 0;
+                    if (ui->cbLoop->isChecked()) //go back to beginning if we're looping the sequence
+                    {
+
+                    }
+                    else //not looping so stop playback entirely
+                    {
+                        playbackActive = false;
+                        playbackTimer->stop();
+                    }
+                }
+                currentSeqItem = &seqItems[currentSeqNum];
+                ui->tblSequence->setCurrentCell(currentSeqNum, 0);
+            }
+        }
     }
     else
     {
         if (currentPosition > 0) currentPosition--;
-        else if (ui->cbLoop->isChecked()) currentPosition = modelFrames->count() - 1;
+        else //hit the beginning of the current sequence
+        {
+            qDebug() << "hit start of current sequence";
+            currentSeqItem->currentLoopCount++;
+            currentPosition = currentSeqItem->data.count() - 1;
+            if (currentSeqItem->currentLoopCount == currentSeqItem->maxLoops) //have we looped enough times?
+            {
+                currentSeqNum--; //go backward in the sequence
+                if (currentSeqNum == -1) //are we trying to go past the beginning?
+                {
+                    //reset the loop figures for each sequence entry
+                    for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
+                    currentSeqNum = seqItems.count() - 1;
+                    if (ui->cbLoop->isChecked()) //go back to the last sequence entry if we're looping
+                    {
+
+                    }
+                    else //not looping so stop playback entirely
+                    {
+                        playbackActive = false;
+                        playbackTimer->stop();
+                    }
+                }
+                currentSeqItem = &seqItems[currentSeqNum];
+                ui->tblSequence->setCurrentCell(currentSeqNum, 0);
+            }
+        }
     }
 
     //only send frame out if its ID is checked in the list. Otherwise discard it.
-
-    QList<QListWidgetItem *> idList = ui->listID->findItems(QString::number(modelFrames->at(currentPosition).ID, 16).toUpper().rightJustified(4,'0'), Qt::MatchExactly);
-    if (idList.count() > 0)
+    const CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
+    if (currentSeqItem->idFilters.find(thisFrame->ID).value())
     {
-        if (idList.at(0)->checkState() == Qt::Checked)
-        {
-            //index 0 is none, 1 is Bus 0, 2 is bus 1, 3 is both, 4 is from file
-            const CANFrame *thisFrame = &modelFrames->at(currentPosition);
-            if (whichBusSend & 1) emit sendCANFrame(thisFrame, 0);
-            if (whichBusSend & 2) emit sendCANFrame(thisFrame, 1);
-            if (whichBusSend & 4) emit sendCANFrame(thisFrame, thisFrame->bus);
-            //if (whichBusSend & 1) serialWorker->sendFrame(thisFrame, 0);
-            //if (whichBusSend & 2) serialWorker->sendFrame(thisFrame, 1);
-            //if (whichBusSend & 4) serialWorker->sendFrame(thisFrame, thisFrame->bus);
-            updateFrameLabel();
-        }
+        //index 0 is none, 1 is Bus 0, 2 is bus 1, 3 is both, 4 is from file
+        if (whichBusSend & 1) emit sendCANFrame(thisFrame, 0);
+        if (whichBusSend & 2) emit sendCANFrame(thisFrame, 1);
+        if (whichBusSend & 4) emit sendCANFrame(thisFrame, thisFrame->bus);
+        updateFrameLabel();
     }
 
 }
