@@ -50,6 +50,7 @@ FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker
     connect(ui->btnStepForward, SIGNAL(clicked(bool)), this, SLOT(btnFwdOneClick()));
     connect(ui->btnSelectAll, SIGNAL(clicked(bool)), this, SLOT(btnSelectAllClick()));
     connect(ui->btnSelectNone, SIGNAL(clicked(bool)), this, SLOT(btnSelectNoneClick()));
+    connect(ui->btnDelete, SIGNAL(clicked(bool)), this, SLOT(btnDeleteCurrSeq()));
     connect(ui->spinPlaySpeed, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     //connect(ui->cbLoop, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->comboCANBus, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSendingBus(int)));
@@ -157,6 +158,31 @@ void FramePlaybackWindow::fillIDHash(SequenceItem &item)
             item.idFilters.insert(id, true);
         }
     }
+}
+
+void FramePlaybackWindow::btnDeleteCurrSeq()
+{
+    if (currentSeqNum == -1) return;
+
+    if (playbackActive)
+    {
+        playbackActive = false;
+        playbackTimer->stop();
+    }
+
+    seqItems.removeAt(currentSeqNum);
+    ui->tblSequence->removeRow(currentSeqNum);
+    if (seqItems.count() > 0)
+    {
+        currentSeqNum = 0;
+        currentSeqItem = &seqItems[currentSeqNum];
+    }
+    else
+    {
+        currentSeqNum = -1;
+        currentSeqItem = NULL;
+    }
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnLoadFile()

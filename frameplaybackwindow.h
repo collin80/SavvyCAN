@@ -37,6 +37,7 @@ private slots:
     void btnStopClick();
     void btnPlayClick();
     void btnFwdOneClick();
+    void btnDeleteCurrSeq();
     void changePlaybackSpeed(int newSpeed);
     void changeLooping(bool check);
     void changeSendingBus(int newIdx);
