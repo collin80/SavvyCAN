@@ -317,6 +317,7 @@ void MainWindow::handleLoadFile()
             QStringList fileList = filename.split('/');
             loadedFileName = fileList[fileList.length() - 1];
 
+            model->recalcOverwrite();
             model->sendRefresh();
             ui->lbNumFrames->setText(QString::number(model->rowCount()));
             if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();

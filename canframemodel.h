@@ -30,6 +30,7 @@ public:
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
     void normalizeTiming();
+    void recalcOverwrite();
     QVector<CANFrame> *getListReference();
 
 

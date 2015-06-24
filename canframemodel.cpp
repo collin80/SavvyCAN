@@ -54,6 +54,38 @@ void CANFrameModel::setOverwriteMode(bool mode)
     overwriteDups = mode;
 }
 
+void CANFrameModel::recalcOverwrite()
+{
+    if (!overwriteDups) return; //no need to do a thing if mode is disabled
+
+    int lastUnique = 0;
+    bool found;
+
+    beginResetModel();
+    for (int i = 1; i < frames.count(); i++)
+    {
+        found = false;
+        for (int j = 0; j <= lastUnique; j++)
+        {
+            if (frames[i].ID == frames[j].ID)
+            {
+                frames.replace(j, frames[i]);
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            lastUnique++;
+            frames.replace(lastUnique, frames[i]);
+        }
+    }
+
+    while (frames.count() > lastUnique) frames.removeLast();
+
+    endResetModel();
+}
+
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
     QString tempString;
@@ -152,17 +184,41 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 {
     mutex.lock();
-    if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
     frame.timestamp -= timeOffset;
-    frames.append(frame);
-    if (autoRefresh) endInsertRows();
+    if (!overwriteDups)
+    {
+        if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
+        frames.append(frame);
+        if (autoRefresh) endInsertRows();
+    }
+    else
+    {
+        bool found = false;
+        for (int i = 0; i < frames.count(); i++)
+        {
+            if (frames[i].ID == frame.ID)
+            {
+                if (autoRefresh) beginResetModel();
+                frames.replace(i, frame);
+                if (autoRefresh) endResetModel();
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+        {
+            if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
+            frames.append(frame);
+            if (autoRefresh) endInsertRows();
+        }
+    }
     mutex.unlock();
 }
 
 void CANFrameModel::sendRefresh()
 {
-    beginInsertRows(QModelIndex(), 0, frames.count());
-    endInsertRows();
+    beginResetModel();
+    endResetModel();
 }
 
 void CANFrameModel::sendRefresh(int pos)
@@ -182,9 +238,17 @@ void CANFrameModel::sendBulkRefresh(int num)
     //otherwise it's possible that the grid is in an odd state.
     if (num == 0) return;
     if (frames.count() == 0) return;
-    if (num > frames.count()) num = frames.count();
-    beginInsertRows(QModelIndex(), frames.count() - num, frames.count() - 1);
-    endInsertRows();
+
+    if (!overwriteDups)
+    {
+        if (num > frames.count()) num = frames.count();
+        beginInsertRows(QModelIndex(), frames.count() - num, frames.count() - 1);
+        endInsertRows();
+    }
+    else
+    {
+        sendRefresh();
+    }
 }
 
 void CANFrameModel::clearFrames()
@@ -199,6 +263,9 @@ void CANFrameModel::clearFrames()
 //Is this safe? Maybe not but if we don't change it then that's OK
 //Is it the best C++ practice? Probably not. This breaks the MVC paradigm
 //but, it's for a good cause.
+//Implement proper "const"ness for this function. No one should be
+//adding frames via this reference. Unfortunately, I've done just that in
+//places like the file loading code.
 QVector<CANFrame>* CANFrameModel::getListReference()
 {
     return &frames;
