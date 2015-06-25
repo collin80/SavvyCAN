@@ -16,7 +16,7 @@
  *
 */
 
-FramePlaybackWindow::FramePlaybackWindow(QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent) :
+FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FramePlaybackWindow)
 {

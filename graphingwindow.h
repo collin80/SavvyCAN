@@ -29,7 +29,7 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(QVector<CANFrame> *, QWidget *parent = 0);
+    explicit GraphingWindow(const QVector<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
     void showEvent(QShowEvent*);
 
@@ -53,7 +53,7 @@ private slots:
 private:
     Ui::GraphingWindow *ui;
     QList<CANFrame> frameCache;
-    QVector<CANFrame> *modelFrames;
+    const QVector<CANFrame> *modelFrames;
     QList<GraphParams> graphParams;
     QPen selectedPen;
     bool needScaleSetup; //do we need to set x,y graphing extents?s

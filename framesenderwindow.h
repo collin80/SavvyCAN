@@ -15,7 +15,7 @@ class FrameSenderWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FrameSenderWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FrameSenderWindow();
 
 private slots:
@@ -26,7 +26,7 @@ private:
     Ui::FrameSenderWindow *ui;
     QList<FrameSendData> sendingData;
     QList<CANFrame> frameCache;
-    QVector<CANFrame> *modelFrames;
+    const QVector<CANFrame> *modelFrames;
     QTimer *intervalTimer;
 
     void doModifiers(int);

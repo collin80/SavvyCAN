@@ -117,7 +117,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
-bool FrameFileIO::saveCRTDFile(QString filename, QVector<CANFrame>* frames)
+bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
 
@@ -197,7 +197,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
-bool FrameFileIO::saveNativeCSVFile(QString filename, QVector<CANFrame>* frames)
+bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
 
@@ -273,7 +273,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
     return true;
 }
 
-bool FrameFileIO::saveGenericCSVFile(QString filename, QVector<CANFrame>* frames)
+bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* frames)
 {
     return false;
 }
@@ -345,7 +345,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
-bool FrameFileIO::saveLogFile(QString filename, QVector<CANFrame>* frames)
+bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 {
     return false;
 }
@@ -403,7 +403,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
-bool FrameFileIO::saveMicrochipFile(QString filename, QVector<CANFrame>* frames)
+bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* frames)
 {
     return false;
 }

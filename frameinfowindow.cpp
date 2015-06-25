@@ -3,7 +3,7 @@
 #include "mainwindow.h"
 #include <QtDebug>
 
-FrameInfoWindow::FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent) :
+FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FrameInfoWindow)
 {

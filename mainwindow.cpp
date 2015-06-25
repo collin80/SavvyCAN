@@ -307,18 +307,21 @@ void MainWindow::handleLoadFile()
         ui->canFramesView->scrollToTop();
         model->clearFrames();
 
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, model->getListReference());
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, model->getListReference());
-        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, model->getListReference());
-        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, model->getListReference());
-        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, model->getListReference());
+        QVector<CANFrame> tempFrames;
+
+        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
         if (result)
         {
+            model->insertFrames(tempFrames);
+
             QStringList fileList = filename.split('/');
             loadedFileName = fileList[fileList.length() - 1];
 
             model->recalcOverwrite();
-            model->sendRefresh();
             ui->lbNumFrames->setText(QString::number(model->rowCount()));
             if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
@@ -348,7 +351,7 @@ void MainWindow::handleSaveFile()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        QVector<CANFrame> *frames = model->getListReference();
+        const QVector<CANFrame> *frames = model->getListReference();
         filename = dialog.selectedFiles()[0];
         if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::saveCRTDFile(filename, frames);
         if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::saveNativeCSVFile(filename, frames);
@@ -433,7 +436,7 @@ void MainWindow::handleSaveDecoded()
 void MainWindow::saveDecodedTextFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    QVector<CANFrame> *frames = model->getListReference();
+    const QVector<CANFrame> *frames = model->getListReference();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;

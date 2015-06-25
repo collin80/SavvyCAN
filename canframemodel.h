@@ -31,7 +31,8 @@ public:
     void setOverwriteMode(bool);
     void normalizeTiming();
     void recalcOverwrite();
-    QVector<CANFrame> *getListReference();
+    void insertFrames(const QVector<CANFrame> &newFrames);
+    const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
 
 
 private:

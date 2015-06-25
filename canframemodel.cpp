@@ -260,13 +260,29 @@ void CANFrameModel::clearFrames()
     mutex.unlock();
 }
 
-//Is this safe? Maybe not but if we don't change it then that's OK
-//Is it the best C++ practice? Probably not. This breaks the MVC paradigm
-//but, it's for a good cause.
-//Implement proper "const"ness for this function. No one should be
-//adding frames via this reference. Unfortunately, I've done just that in
-//places like the file loading code.
-QVector<CANFrame>* CANFrameModel::getListReference()
+/*
+ * Since the getListReference function returns readonly
+ * you can't insert frames with it. Instead this function
+ * allows for a mass import of frames into the model
+ */
+void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
+{
+    beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + newFrames.count());
+    for (int i = 0; i < newFrames.count(); i++)
+    {
+        frames.append(newFrames[i]);
+    }
+    endInsertRows();
+}
+
+/*
+ *This used to not be const correct but it is now. So, there's little harm in
+ * allowing external code to peek at our frames. There's just no touching.
+ * This ability to get a direct read-only reference speeds up a variety of
+ * external code that needs to access frames directly and doesn't care about
+ * this model's normal output mechanism.
+ */
+const QVector<CANFrame>* CANFrameModel::getListReference() const
 {
     return &frames;
 }

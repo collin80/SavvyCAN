@@ -4,7 +4,7 @@
 #include "mainwindow.h"
 #include <QDebug>
 
-GraphingWindow::GraphingWindow(QVector<CANFrame> *frames, QWidget *parent) :
+GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
 {
@@ -344,8 +344,8 @@ void GraphingWindow::addNewGraph()
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
     int tempVal;
-    float yminval=10000000, ymaxval = -1000000;
-    float xminval=100000000000, xmaxval = -100000000000;
+    float yminval=10000000.0, ymaxval = -1000000.0;
+    float xminval=10000000000.0, xmaxval = -10000000000.0;
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start byte: " << params.startByte;

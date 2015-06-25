@@ -14,7 +14,7 @@ class FrameInfoWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FrameInfoWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FrameInfoWindow();
     void showEvent(QShowEvent*);
 
@@ -27,7 +27,7 @@ private:
 
     QList<int> foundID;
     QList<CANFrame> frameCache;
-    QVector<CANFrame> *modelFrames;
+    const QVector<CANFrame> *modelFrames;
 
     void refreshIDList();
 };

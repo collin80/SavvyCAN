@@ -13,7 +13,7 @@ class FlowViewWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FlowViewWindow(QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FlowViewWindow();
     void showEvent(QShowEvent*);
 
@@ -38,7 +38,7 @@ private:
     Ui::FlowViewWindow *ui;
     QList<int> foundID;
     QList<CANFrame> frameCache;
-    QVector<CANFrame> *modelFrames;
+    const QVector<CANFrame> *modelFrames;
     unsigned char refBytes[8];
     unsigned char currBytes[8];
     int currentPosition;

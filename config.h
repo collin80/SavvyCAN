@@ -1,7 +1,7 @@
 #ifndef CONFIG
 #define CONFIG
 
-#define VERSION 114
+#define VERSION 115
 
 #endif // CONFIG
 
