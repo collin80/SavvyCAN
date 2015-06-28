@@ -280,19 +280,13 @@
     <addaction name="actionSave_DBC_File"/>
     <addaction name="actionSave_Decoded_Frames"/>
     <addaction name="separator"/>
+    <addaction name="actionPreferences"/>
+    <addaction name="separator"/>
     <addaction name="actionExit_Application"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_RE_Tools"/>
    <addaction name="menuSend_Frames"/>
-  </widget>
-  <widget class="QToolBar" name="mainToolBar">
-   <attribute name="toolBarArea">
-    <enum>TopToolBarArea</enum>
-   </attribute>
-   <attribute name="toolBarBreak">
-    <bool>false</bool>
-   </attribute>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="action_Playback">
@@ -373,6 +367,11 @@
   <action name="actionFile_Comparison">
    <property name="text">
     <string>File Comparison</string>
+   </property>
+  </action>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Preferences</string>
    </property>
   </action>
  </widget>

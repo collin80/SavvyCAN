@@ -16,6 +16,7 @@
 #include "filecomparatorwindow.h"
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
+#include "mainsettingsdialog.h"
 
 namespace Ui {
 class MainWindow;
@@ -47,6 +48,7 @@ private slots:
     void showRangeWindow();
     void showFuzzyScopeWindow();
     void showComparisonWindow();
+    void showSettingsDialog();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -97,6 +99,7 @@ private:
     FrameSenderWindow *frameSenderWindow;
     DBCMainEditor *dbcMainEditor;
     FileComparatorWindow *comparatorWindow;
+    MainSettingsDialog *settingsDialog;
 
     //various private storage
     QLabel lbStatusConnected;

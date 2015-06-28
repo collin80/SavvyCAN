@@ -1,0 +1,60 @@
+#include "mainsettingsdialog.h"
+#include "ui_mainsettingsdialog.h"
+
+MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
+    QDialog(parent),
+    ui(new Ui::MainSettingsDialog)
+{
+    ui->setupUi(this);
+
+    settings = new QSettings();
+
+    //update the GUI with all the settings we have stored giving things
+    //defaults if nothing was stored (if this is the first time)
+    ui->cbDisplayHex->setChecked(settings->value("Main/UseHex", true).toBool());
+    ui->cbFlowAutoRef->setChecked(settings->value("FlowView/AutoRef", false).toBool());
+    ui->cbFlowUseTimestamp->setChecked(settings->value("FlowView/UseTimestamp", true).toBool());
+    ui->cbInfoAutoExpand->setChecked(settings->value("InfoCompare/AutoExpand", false).toBool());
+    ui->cbMainAutoScroll->setChecked(settings->value("Main/AutoScroll", false).toBool());
+    ui->cbPlaybackLoop->setChecked(settings->value("Playback/AutoLoop", false).toBool());
+    ui->cbRestorePositions->setChecked(settings->value("Main/SaveRestorePositions", true).toBool());
+    ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
+    ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
+
+    //just for simplicity they all call the same function and that function updates all settings at once
+    connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbFlowAutoRef, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbFlowUseTimestamp, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbInfoAutoExpand, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbMainAutoScroll, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbPlaybackLoop, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbRestorePositions, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbValidate, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->spinPlaybackSpeed, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
+}
+
+MainSettingsDialog::~MainSettingsDialog()
+{
+    delete ui;
+    delete settings;
+}
+
+void MainSettingsDialog::closeEvent(QCloseEvent *event)
+{
+    settings->sync();
+}
+
+void MainSettingsDialog::updateSettings()
+{
+    settings->setValue("Main/UseHex", ui->cbDisplayHex->isChecked());
+    settings->setValue("FlowView/AutoRef", ui->cbFlowAutoRef->isChecked());
+    settings->setValue("FlowView/UseTimestamp", ui->cbFlowUseTimestamp->isChecked());
+    settings->setValue("InfoCompare/AutoExpand", ui->cbInfoAutoExpand->isChecked());
+    settings->setValue("Main/AutoScroll", ui->cbMainAutoScroll->isChecked());
+    settings->setValue("Playback/AutoLoop", ui->cbPlaybackLoop->isChecked());
+    settings->setValue("Main/SaveRestorePositions", ui->cbRestorePositions->isChecked());
+    settings->setValue("Main/ValidateComm", ui->cbValidate->isChecked());
+    settings->setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
+
+    settings->sync();
+}

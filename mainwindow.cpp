@@ -38,6 +38,11 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    //These things are used by QSettings to set up setting storage
+    QCoreApplication::setOrganizationName("EVTV");
+    QCoreApplication::setOrganizationDomain("evtv.me");
+    QCoreApplication::setApplicationName("SavvyCAN");
+
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
@@ -102,6 +107,7 @@ MainWindow::MainWindow(QWidget *parent) :
     frameSenderWindow = NULL;
     dbcMainEditor = NULL;
     comparatorWindow = NULL;
+    settingsDialog = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
 
@@ -131,6 +137,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
     connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
     connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
+    connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -159,6 +166,7 @@ MainWindow::~MainWindow()
 {
     serialWorkerThread.quit();
     serialWorkerThread.wait();
+    //delete worker;
 
     if (graphingWindow)
     {
@@ -200,6 +208,12 @@ MainWindow::~MainWindow()
     {
         dbcMainEditor->close();
         delete dbcMainEditor;
+    }
+
+    if (settingsDialog)
+    {
+        settingsDialog->close();
+        delete settingsDialog;
     }
 
     delete ui;
@@ -585,6 +599,12 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
     QString str = tr("Connected to GVRET ") + QString::number(build);
     if (swCAN == 1) str += "(SW)";
     lbStatusConnected.setText(str);
+}
+
+void MainWindow::showSettingsDialog()
+{
+    if (!settingsDialog) settingsDialog = new MainSettingsDialog();
+    settingsDialog->show();
 }
 
 void MainWindow::showGraphingWindow()
