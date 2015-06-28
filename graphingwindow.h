@@ -59,6 +59,9 @@ private:
     bool needScaleSetup; //do we need to set x,y graphing extents?s
 
     void showParamsDialog(int idx);
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // GRAPHINGWINDOW_H

@@ -3,12 +3,15 @@
 
 #include <QMenu>
 #include <QMessageBox>
+#include <QSettings>
 
 DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMainEditor)
 {
     ui->setupUi(this);
+
+    readSettings();
 
     dbcHandler = handler;
 
@@ -61,6 +64,32 @@ DBCMainEditor::~DBCMainEditor()
 {
     delete ui;
     delete sigEditor;
+}
+
+void DBCMainEditor::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void DBCMainEditor::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("DBCMainEditor/WindowSize", QSize(1103, 571)).toSize());
+        move(settings.value("DBCMainEditor/WindowPos", QPoint(50, 50)).toPoint());
+    }
+}
+
+void DBCMainEditor::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("DBCMainEditor/WindowSize", size());
+        settings.setValue("DBCMainEditor/WindowPos", pos());
+    }
 }
 
 void DBCMainEditor::onCustomMenuNode(QPoint point)

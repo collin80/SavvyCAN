@@ -10,6 +10,8 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
 {
     ui->setupUi(this);
 
+    readSettings();
+
     modelFrames = frames;
 
     ui->graphingView->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
@@ -71,6 +73,32 @@ void GraphingWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     ui->graphingView->replot();
+}
+
+void GraphingWindow::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void GraphingWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("Graphing/WindowSize", QSize(800, 600)).toSize());
+        move(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint());
+    }
+}
+
+void GraphingWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("Graphing/WindowSize", size());
+        settings.setValue("Graphing/WindowPos", pos());
+    }
 }
 
 void GraphingWindow::updatedFrames(int numFrames)

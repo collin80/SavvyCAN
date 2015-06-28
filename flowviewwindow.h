@@ -54,6 +54,9 @@ private:
     void removeAllGraphs();
     void createGraph(int);
     void updateGraphLocation();
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // FLOWVIEWWINDOW_H

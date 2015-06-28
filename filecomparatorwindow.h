@@ -41,6 +41,9 @@ private:
     QString secondFilename;
 
     void calculateDetails();
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // FILECOMPARATORWINDOW_H

@@ -30,6 +30,9 @@ private:
     const QVector<CANFrame> *modelFrames;
 
     void refreshIDList();
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // FRAMEINFOWINDOW_H

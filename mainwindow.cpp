@@ -43,6 +43,8 @@ MainWindow::MainWindow(QWidget *parent) :
     QCoreApplication::setOrganizationDomain("evtv.me");
     QCoreApplication::setApplicationName("SavvyCAN");
 
+    readSettings();
+
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
@@ -224,7 +226,29 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    writeSettings();
     exitApp();
+}
+
+void MainWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("Main/WindowSize", QSize(800, 572)).toSize());
+        move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
+    }
+}
+
+void MainWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("Main/WindowSize", size());
+        settings.setValue("Main/WindowPos", pos());
+    }
 }
 
 void MainWindow::gridClicked(QModelIndex idx)

@@ -72,6 +72,9 @@ private:
     void updateFrameLabel();
     void updatePosition(bool forward);
     void fillIDHash(SequenceItem &item);
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // FRAMEPLAYBACKWINDOW_H

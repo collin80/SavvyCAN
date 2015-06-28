@@ -1,11 +1,15 @@
 #include "filecomparatorwindow.h"
 #include "ui_filecomparatorwindow.h"
 
+#include <QSettings>
+
 FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FileComparatorWindow)
 {
     ui->setupUi(this);
+
+    readSettings();
 
     connect(ui->btnFirstFile, SIGNAL(clicked(bool)), this, SLOT(loadFirstFile()));
     connect(ui->btnSecondFile, SIGNAL(clicked(bool)), this, SLOT(loadSecondFile()));
@@ -18,6 +22,32 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
 FileComparatorWindow::~FileComparatorWindow()
 {
     delete ui;
+}
+
+void FileComparatorWindow::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void FileComparatorWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("FileComparator/WindowSize", QSize(720, 631)).toSize());
+        move(settings.value("FileComparator/WindowPos", QPoint(50, 50)).toPoint());
+    }
+}
+
+void FileComparatorWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("FileComparator/WindowSize", size());
+        settings.setValue("FileComparator/WindowPos", pos());
+    }
 }
 
 void FileComparatorWindow::loadFirstFile()

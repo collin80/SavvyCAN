@@ -8,6 +8,9 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui(new Ui::FrameInfoWindow)
 {
     ui->setupUi(this);
+
+    readSettings();
+
     modelFrames = frames;
 
     connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(updateDetailsWindow(QString)));
@@ -28,6 +31,32 @@ void FrameInfoWindow::showEvent(QShowEvent* event)
 FrameInfoWindow::~FrameInfoWindow()
 {
     delete ui;
+}
+
+void FrameInfoWindow::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void FrameInfoWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("FrameInfo/WindowSize", QSize(794, 494)).toSize());
+        move(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint());
+    }
+}
+
+void FrameInfoWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("FrameInfo/WindowSize", size());
+        settings.setValue("FrameInfo/WindowPos", pos());
+    }
 }
 
 //remember, negative numbers are special -1 = all frames deleted, -2 = totally new set of frames.

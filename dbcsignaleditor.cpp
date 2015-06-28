@@ -1,12 +1,16 @@
 #include "dbcsignaleditor.h"
 #include "ui_dbcsignaleditor.h"
 #include <QDebug>
+#include <QSettings>
 
 DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCSignalEditor)
 {
     ui->setupUi(this);
+
+    readSettings();
+
     dbcHandler = handler;
     dbcMessage = NULL;
 
@@ -36,6 +40,33 @@ DBCSignalEditor::~DBCSignalEditor()
 {
     delete ui;
 }
+
+void DBCSignalEditor::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void DBCSignalEditor::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("DBCSignalEditor/WindowSize", QSize(800, 572)).toSize());
+        move(settings.value("DBCSignalEditor/WindowPos", QPoint(100, 100)).toPoint());
+    }
+}
+
+void DBCSignalEditor::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("DBCSignalEditor/WindowSize", size());
+        settings.setValue("DBCSignalEditor/WindowPos", pos());
+    }
+}
+
 
 void DBCSignalEditor::setMessageRef(DBC_MESSAGE *msg)
 {

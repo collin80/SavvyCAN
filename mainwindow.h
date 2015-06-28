@@ -113,6 +113,8 @@ private:
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // MAINWINDOW_H

@@ -30,6 +30,10 @@ private:
     void refreshSignalsList();
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);
+
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // DBCSIGNALEDITOR_H

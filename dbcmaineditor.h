@@ -38,6 +38,10 @@ private:
     void refreshNodesTable();
     void refreshMessagesTable(const DBC_NODE *node);
     void showEvent(QShowEvent* event);
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
+
 };
 
 #endif // DBCMAINEDITOR_H

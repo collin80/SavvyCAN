@@ -2,6 +2,7 @@
 #include "ui_frameplaybackwindow.h"
 #include <QDebug>
 #include <QFileDialog>
+#include <QSettings>
 
 /*
  * Notes about new functionality:
@@ -21,6 +22,8 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
     ui(new Ui::FramePlaybackWindow)
 {
     ui->setupUi(this);
+
+    readSettings();
 
     modelFrames = frames;
     serialWorker = worker;
@@ -79,6 +82,32 @@ FramePlaybackWindow::~FramePlaybackWindow()
 
     playbackTimer->stop();
     delete playbackTimer;
+}
+
+void FramePlaybackWindow::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void FramePlaybackWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("Playback/WindowSize", QSize(742, 606)).toSize());
+        move(settings.value("Playback/WindowPos", QPoint(50, 50)).toPoint());
+    }
+}
+
+void FramePlaybackWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("Playback/WindowSize", size());
+        settings.setValue("Playback/WindowPos", pos());
+    }
 }
 
 void FramePlaybackWindow::refreshIDList()

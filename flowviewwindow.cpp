@@ -12,6 +12,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
 {
     ui->setupUi(this);
 
+    readSettings();
+
     modelFrames = frames;
 
     playbackTimer = new QTimer();
@@ -97,6 +99,32 @@ FlowViewWindow::~FlowViewWindow()
 
     playbackTimer->stop();
     delete playbackTimer;
+}
+
+void FlowViewWindow::closeEvent(QCloseEvent *event)
+{
+    writeSettings();
+}
+
+void FlowViewWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("FlowView/WindowSize", QSize(1078, 621)).toSize());
+        move(settings.value("FlowView/WindowPos", QPoint(50, 50)).toPoint());
+    }
+}
+
+void FlowViewWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("FlowView/WindowSize", size());
+        settings.setValue("FlowView/WindowPos", pos());
+    }
 }
 
 void FlowViewWindow::contextMenuRequestFlow(QPoint pos)
