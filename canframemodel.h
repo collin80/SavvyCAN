@@ -5,6 +5,7 @@
 #include <QList>
 #include <QVector>
 #include <QDebug>
+#include <QMutex>
 #include "can_structs.h"
 #include "dbchandler.h"
 
