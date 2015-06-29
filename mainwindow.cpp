@@ -43,14 +43,14 @@ MainWindow::MainWindow(QWidget *parent) :
     QCoreApplication::setOrganizationDomain("evtv.me");
     QCoreApplication::setApplicationName("SavvyCAN");
 
-    readSettings();
-
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
 
     model = new CANFrameModel();
     ui->canFramesView->setModel(model);
+
+    readSettings();
 
     QStringList headers;
     headers << "Timestamp" << "ID" << "Ext" << "Bus" << "Len" << "Data";
@@ -242,6 +242,7 @@ void MainWindow::readSettings()
     {
         ui->cbAutoScroll->setChecked(true);
     }
+    model->setHexMode(settings.value("Main/UseHex", true).toBool());
 }
 
 void MainWindow::writeSettings()

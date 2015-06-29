@@ -20,6 +20,16 @@ CANFrameModel::CANFrameModel(QObject *parent)
     timeOffset = 0;
 }
 
+void CANFrameModel::setHexMode(bool mode)
+{
+    if (useHexMode != mode)
+    {
+        this->beginResetModel();
+        useHexMode = mode;
+        this->endResetModel();
+    }
+}
+
 void CANFrameModel::setDBCHandler(DBCHandler *handler)
 {
     dbcHandler = handler;
@@ -104,7 +114,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QString::number(thisFrame.timestamp);
             break;
         case 1: //id
-            return QString::number(thisFrame.ID, 16).toUpper().rightJustified(2,'0');
+            if (useHexMode)
+                return QString::number(thisFrame.ID, 16).toUpper().rightJustified(2,'0');
+            else
+                return QString::number(thisFrame.ID).rightJustified(3,'0');
             break;
         case 2: //ext
             return QString::number(thisFrame.extended);
@@ -118,7 +131,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case 5: //data
             for (int i = 0; i < thisFrame.len; i++)
             {
-                tempString.append(QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2,'0'));
+                if (useHexMode) tempString.append(QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2,'0'));
+                    else tempString.append(QString::number(thisFrame.data[i]).rightJustified(3,'0'));
                 tempString.append(" ");
             }
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it

@@ -30,6 +30,7 @@ public:
     void setDBCHandler(DBCHandler *);
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
+    void setHexMode(bool);
     void normalizeTiming();
     void recalcOverwrite();
     void insertFrames(const QVector<CANFrame> &newFrames);
@@ -42,6 +43,7 @@ private:
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
+    bool useHexMode;
     uint64_t timeOffset;
 };
 
