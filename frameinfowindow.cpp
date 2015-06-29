@@ -272,6 +272,12 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     else
     {
     }
+
+    QSettings settings;
+    if (settings.value("InfoCompare/AutoExpand", false).toBool())
+    {
+        ui->treeDetails->expandAll();
+    }
 }
 
 void FrameInfoWindow::refreshIDList()

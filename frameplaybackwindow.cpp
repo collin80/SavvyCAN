@@ -97,6 +97,11 @@ void FramePlaybackWindow::readSettings()
         resize(settings.value("Playback/WindowSize", QSize(742, 606)).toSize());
         move(settings.value("Playback/WindowPos", QPoint(50, 50)).toPoint());
     }
+    if (settings.value("Playback/AutoLoop", false).toBool())
+    {
+        ui->cbLoop->setChecked(true);
+    }
+    ui->spinPlaySpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
 }
 
 void FramePlaybackWindow::writeSettings()

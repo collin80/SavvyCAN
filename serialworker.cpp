@@ -3,9 +3,10 @@
 #include <QSerialPort>
 #include <QDebug>
 #include <QTimer>
+#include <QSettings>
 
 SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(parent)
-{
+{    
     serial = NULL;
     rx_state = IDLE;
     rx_step = 0;
@@ -16,6 +17,8 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     elapsedTime = NULL;
     framesPerSec = 0;
     capturing = true;
+
+    readSettings();
 }
 
 SerialWorker::~SerialWorker()
@@ -32,6 +35,17 @@ SerialWorker::~SerialWorker()
         delete serial;
     }
     if (ticker != NULL) ticker->stop();
+}
+
+void SerialWorker::readSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/ValidateComm", true).toBool())
+    {
+        doValidation = true;
+    }
+    else doValidation = false;
 }
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
@@ -64,9 +78,10 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append(0xF1); //another command to the GVRET
     output.append(0x07); //request device information
     serial->write(output);
-    connected = false;
+    if (doValidation) connected = false;
+        else connected = true;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-    QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
+    if (doValidation) QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
     if (ticker == NULL)
     {
         ticker = new QTimer;

@@ -243,6 +243,12 @@ void FileComparatorWindow::calculateDetails()
     ui->treeDetails->setSortingEnabled(true);
     ui->treeDetails->sortByColumn(0, Qt::AscendingOrder);
 
+    QSettings settings;
+    if (settings.value("InfoCompare/AutoExpand", false).toBool())
+    {
+        ui->treeDetails->expandAll();
+    }
+
 }
 
 void FileComparatorWindow::saveDetails()

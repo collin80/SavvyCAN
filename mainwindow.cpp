@@ -238,6 +238,10 @@ void MainWindow::readSettings()
         resize(settings.value("Main/WindowSize", QSize(800, 572)).toSize());
         move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
     }
+    if (settings.value("Main/AutoScroll", false).toBool())
+    {
+        ui->cbAutoScroll->setChecked(true);
+    }
 }
 
 void MainWindow::writeSettings()

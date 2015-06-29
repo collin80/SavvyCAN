@@ -56,6 +56,7 @@ private:
     bool quit;
     bool connected;
     bool capturing;
+    bool doValidation;
     QSerialPort *serial;
     CANFrameModel *canModel;
     QTimer *ticker;
@@ -71,6 +72,7 @@ private:
     int deviceSingleWireMode;
 
     void procRXChar(unsigned char);
+    void readSettings();
 };
 
 #endif // SERIALTHREAD_H

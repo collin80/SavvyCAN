@@ -37,7 +37,7 @@
       <item>
        <widget class="QCheckBox" name="cbValidate">
         <property name="text">
-         <string>Validate GVRET connection</string>
+         <string>Require validation of GVRET connection</string>
         </property>
        </widget>
       </item>
