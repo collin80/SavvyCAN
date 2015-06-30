@@ -21,6 +21,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const;
     int columnCount(const QModelIndex &) const;
+    int totalFrameCount();
 
     void addFrame(CANFrame &, bool);
     void sendRefresh();
@@ -31,19 +32,27 @@ public:
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
     void setHexMode(bool);
+    void setFilterState(int ID, bool state);
+    void setSecondsMode(bool);
     void normalizeTiming();
     void recalcOverwrite();
     void insertFrames(const QVector<CANFrame> &newFrames);
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
+    const QMap<int, bool> *getFiltersReference() const; //this neither
 
+signals:
+    void updatedFiltersList();
 
 private:
     QVector<CANFrame> frames;
+    QVector<CANFrame> filteredFrames;
+    QMap<int, bool> filters;
     DBCHandler *dbcHandler;
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
     bool useHexMode;
+    bool timeSeconds;
     uint64_t timeOffset;
 };
 

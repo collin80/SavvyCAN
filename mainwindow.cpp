@@ -38,6 +38,8 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    useHex = true;
+
     //These things are used by QSettings to set up setting storage
     QCoreApplication::setOrganizationName("EVTV");
     QCoreApplication::setOrganizationDomain("evtv.me");
@@ -140,6 +142,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
     connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
     connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
+    connect(model, SIGNAL(updatedFiltersList()), this, SLOT(updateFilterList()));
+    connect(ui->listFilters, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(filterListItemChanged(QListWidgetItem*)));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -242,7 +246,9 @@ void MainWindow::readSettings()
     {
         ui->cbAutoScroll->setChecked(true);
     }
-    model->setHexMode(settings.value("Main/UseHex", true).toBool());
+    useHex = settings.value("Main/UseHex", true).toBool();
+    model->setHexMode(useHex);
+    model->setSecondsMode(settings.value("Main/TimeSeconds", false).toBool());
 }
 
 void MainWindow::writeSettings()
@@ -275,6 +281,41 @@ void MainWindow::interpretToggled(bool state)
 void MainWindow::overwriteToggled(bool state)
 {
     model->setOverwriteMode(state);
+}
+
+void MainWindow::updateFilterList()
+{
+    if (model == NULL) return;
+    const QMap<int, bool> *filters = model->getFiltersReference();
+    if (filters == NULL) return;
+
+    ui->listFilters->clear();
+
+    if (filters->isEmpty()) return;
+
+    QMap<int, bool>::const_iterator filterIter;
+    for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
+    {
+        QListWidgetItem *thisItem = new QListWidgetItem();
+        if (useHex) thisItem->setText(QString::number(filterIter.key(), 16).toUpper().rightJustified(4,'0'));
+            else thisItem->setText(QString::number(filterIter.key()));
+        thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
+        if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
+        else thisItem->setCheckState(Qt::Unchecked);
+        ui->listFilters->addItem(thisItem);
+    }
+}
+
+void MainWindow::filterListItemChanged(QListWidgetItem *item)
+{
+    //qDebug() << item->text();
+    int ID;
+    bool isSet = false;
+    if (useHex) ID = item->text().toInt(NULL, 16);
+        else ID = item->text().toInt();
+    if (item->checkState() == Qt::Checked) isSet = true;
+
+    model->setFilterState(ID, isSet);
 }
 
 //most of the work is handled elsewhere. Need only to update the # of frames

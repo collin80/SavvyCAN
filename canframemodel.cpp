@@ -2,6 +2,11 @@
 
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
+    return filteredFrames.count();
+}
+
+int CANFrameModel::totalFrameCount()
+{
     return frames.count();
 }
 
@@ -14,9 +19,12 @@ CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
     frames.reserve(10000000); //yes, I'm preallocating 10 million entries in this list. I don't think anyone will exceed this.
+    filteredFrames.reserve(10000000);
     dbcHandler = NULL;
     interpretFrames = false;
     overwriteDups = false;
+    useHexMode = true;
+    timeSeconds = false;
     timeOffset = 0;
 }
 
@@ -26,6 +34,16 @@ void CANFrameModel::setHexMode(bool mode)
     {
         this->beginResetModel();
         useHexMode = mode;
+        this->endResetModel();
+    }
+}
+
+void CANFrameModel::setSecondsMode(bool mode)
+{
+    if (timeSeconds != mode)
+    {
+        this->beginResetModel();
+        timeSeconds = mode;
         this->endResetModel();
     }
 }
@@ -49,12 +67,16 @@ void CANFrameModel::setInterpetMode(bool mode)
 
 void CANFrameModel::normalizeTiming()
 {
-    if (frames.count() == 0) return;
-    this->beginResetModel();
+    if (frames.count() == 0) return;    
     timeOffset = frames[0].timestamp;
     for (int i = 0; i < frames.count(); i++)
     {
         frames[i].timestamp -= timeOffset;
+    }
+    this->beginResetModel();
+    for (int i = 0; i < filteredFrames.count(); i++)
+    {
+        filteredFrames[i].timestamp -= timeOffset;
     }
     this->endResetModel();
 }
@@ -62,6 +84,13 @@ void CANFrameModel::normalizeTiming()
 void CANFrameModel::setOverwriteMode(bool mode)
 {
     overwriteDups = mode;
+}
+
+void CANFrameModel::setFilterState(int ID, bool state)
+{
+    if (!filters.contains(ID)) return;
+    filters[ID] = state;
+    sendRefresh();
 }
 
 void CANFrameModel::recalcOverwrite()
@@ -93,6 +122,16 @@ void CANFrameModel::recalcOverwrite()
 
     while (frames.count() > lastUnique) frames.removeLast();
 
+    filteredFrames.clear();
+
+    for (int i = 0; i < frames.count(); i++)
+    {
+        if (filters[frames[i].ID])
+        {
+            filteredFrames.append(frames[i]);
+        }
+    }
+
     endResetModel();
 }
 
@@ -102,16 +141,16 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() >= frames.count())
+    if (index.row() >= filteredFrames.count())
         return QVariant();
 
     if (role == Qt::DisplayRole) {
-        CANFrame thisFrame = frames.at(index.row());
+        CANFrame thisFrame = filteredFrames.at(index.row());
         switch (index.column())
         {
         case 0: //timestamp
-
-            return QString::number(thisFrame.timestamp);
+            if (!timeSeconds) return QString::number(thisFrame.timestamp);
+            else return QString::number(thisFrame.timestamp / 1000000.0f);
             break;
         case 1: //id
             if (useHexMode)
@@ -199,11 +238,23 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 {
     mutex.lock();
     frame.timestamp -= timeOffset;
-    if (!overwriteDups)
+
+    //if this ID isn't found in the filters list then add it and show it by default
+    if (!filters.contains(frame.ID))
     {
-        if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
-        frames.append(frame);
-        if (autoRefresh) endInsertRows();
+        filters.insert(frame.ID, true);
+        emit updatedFiltersList();
+    }
+
+    if (!overwriteDups)
+    {        
+        frames.append(frame);        
+        if (filters[frame.ID])
+        {
+            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
+            filteredFrames.append(frame);
+            if (autoRefresh) endInsertRows();
+        }
     }
     else
     {
@@ -211,27 +262,50 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         for (int i = 0; i < frames.count(); i++)
         {
             if (frames[i].ID == frame.ID)
-            {
-                if (autoRefresh) beginResetModel();
-                frames.replace(i, frame);
-                if (autoRefresh) endResetModel();
+            {                
+                frames.replace(i, frame);                
                 found = true;
                 break;
             }
         }
         if (!found)
-        {
-            if (autoRefresh) beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + 1);
+        {            
             frames.append(frame);
-            if (autoRefresh) endInsertRows();
+            if (filters[frame.ID])
+            {
+                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
+                filteredFrames.append(frame);
+                if (autoRefresh) endInsertRows();
+            }
+        }
+        else
+        {
+            for (int j = 0; j < filteredFrames.count(); j++)
+            {
+                if (filteredFrames[j].ID == frame.ID)
+                {
+                    if (autoRefresh) beginResetModel();
+                    filteredFrames.replace(j, frame);
+                    if (autoRefresh) endResetModel();
+                }
+            }
         }
     }
+
     mutex.unlock();
 }
 
 void CANFrameModel::sendRefresh()
 {
     beginResetModel();
+    filteredFrames.clear();
+    for (int i = 0; i < frames.count(); i++)
+    {
+        if (filters[frames[i].ID])
+        {
+            filteredFrames.append(frames[i]);
+        }
+    }
     endResetModel();
 }
 
@@ -255,9 +329,10 @@ void CANFrameModel::sendBulkRefresh(int num)
 
     if (!overwriteDups)
     {
-        if (num > frames.count()) num = frames.count();
+        if (num > filteredFrames.count()) num = filteredFrames.count();
         beginInsertRows(QModelIndex(), frames.count() - num, frames.count() - 1);
         endInsertRows();
+
     }
     else
     {
@@ -270,8 +345,12 @@ void CANFrameModel::clearFrames()
     mutex.lock();
     this->beginResetModel();
     frames.clear();
+    filteredFrames.clear();
+    filters.clear();
     this->endResetModel();
     mutex.unlock();
+
+    emit updatedFiltersList();
 }
 
 /*
@@ -280,12 +359,24 @@ void CANFrameModel::clearFrames()
  * allows for a mass import of frames into the model
  */
 void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
-{
-    beginInsertRows(QModelIndex(), frames.count() + 1, frames.count() + newFrames.count());
+{    
+    int insertedFiltered = 0;
     for (int i = 0; i < newFrames.count(); i++)
     {
         frames.append(newFrames[i]);
+        if (!filters.contains(newFrames[i].ID))
+        {
+            filters.insert(newFrames[i].ID, true);
+            emit updatedFiltersList();
+        }
+        if (filters[newFrames[i].ID])
+        {
+            insertedFiltered++;
+            filteredFrames.append(newFrames[i]);
+        }
     }
+
+    beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
     endInsertRows();
 }
 
@@ -299,4 +390,9 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
 const QVector<CANFrame>* CANFrameModel::getListReference() const
 {
     return &frames;
+}
+
+const QMap<int, bool>* CANFrameModel::getFiltersReference() const
+{
+    return &filters;
 }

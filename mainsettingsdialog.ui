@@ -41,6 +41,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="cbTimeSeconds">
+        <property name="text">
+         <string>Display time in seconds</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>

@@ -20,6 +20,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbRestorePositions->setChecked(settings->value("Main/SaveRestorePositions", true).toBool());
     ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
+    ui->cbTimeSeconds->setChecked(settings->value("Main/TimeSeconds", false).toBool());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -31,6 +32,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbRestorePositions, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbValidate, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinPlaybackSpeed, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
+    connect(ui->cbTimeSeconds, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -55,6 +57,7 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/SaveRestorePositions", ui->cbRestorePositions->isChecked());
     settings->setValue("Main/ValidateComm", ui->cbValidate->isChecked());
     settings->setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
+    settings->setValue("Main/TimeSeconds", ui->cbTimeSeconds->isChecked());
 
     settings->sync();
 }

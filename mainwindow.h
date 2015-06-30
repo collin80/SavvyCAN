@@ -61,6 +61,8 @@ private slots:
     void showDBCEditor();
     void toggleCapture();
     void normalizeTiming();
+    void updateFilterList();
+    void filterListItemChanged(QListWidgetItem *item);
 
 public slots:
     void gotFrames(int, int);
@@ -88,6 +90,7 @@ private:
     QThread serialWorkerThread;
     SerialWorker *worker;
     QByteArray inputBuffer;
+    bool useHex;
     bool allowCapture;
     bool bDirty; //have frames been added or subtracted since the last save/load?
 

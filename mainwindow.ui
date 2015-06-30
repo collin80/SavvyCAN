@@ -236,6 +236,35 @@
         </property>
        </widget>
       </item>
+      <item alignment="Qt::AlignHCenter">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Frame Filtering:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QListWidget" name="listFilters">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>160</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>175</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
@@ -273,7 +302,11 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_Log_File"/>
+    <addaction name="actionSave_Filtered_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoad_Filter_Definition"/>
+    <addaction name="actionSave_Filter_Definition"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_DBC_File"/>
     <addaction name="actionEdit_Messages_Signals"/>
@@ -326,7 +359,7 @@
   </action>
   <action name="actionOpen_Log_File">
    <property name="text">
-    <string>Open Log File</string>
+    <string>Load Log File</string>
    </property>
   </action>
   <action name="actionSave_Log_File">
@@ -372,6 +405,21 @@
   <action name="actionPreferences">
    <property name="text">
     <string>Preferences</string>
+   </property>
+  </action>
+  <action name="actionSave_Filtered_Log_File">
+   <property name="text">
+    <string>Save Filtered Log File</string>
+   </property>
+  </action>
+  <action name="actionLoad_Filter_Definition">
+   <property name="text">
+    <string>Load Filter Definition</string>
+   </property>
+  </action>
+  <action name="actionSave_Filter_Definition">
+   <property name="text">
+    <string>Save Filter Definition</string>
    </property>
   </action>
  </widget>
