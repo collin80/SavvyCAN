@@ -35,8 +35,11 @@ public:
 private slots:
     void handleLoadFile();
     void handleSaveFile();
+    void handleSaveFilteredFile();
     void handleLoadDBC();
     void handleSaveDBC();
+    void handleSaveFilters();
+    void handleLoadFilters();
     void connButtonPress();
     void showGraphingWindow();
     void showFrameDataAnalysis();

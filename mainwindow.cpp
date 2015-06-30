@@ -123,6 +123,9 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
     connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
     connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
+    connect(ui->actionSave_Filtered_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilteredFile()));
+    connect(ui->actionLoad_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleLoadFilters()));
+    connect(ui->actionSave_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilters()));
     connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
     connect(ui->btnBaudSet, SIGNAL(clicked(bool)), this, SLOT(changeBaudRates()));
     connect(ui->actionFlow_View, SIGNAL(triggered(bool)), this, SLOT(showFlowViewWindow()));
@@ -448,6 +451,83 @@ void MainWindow::handleSaveFile()
             loadedFileName = fileList[fileList.length() - 1];
             updateFileStatus();
         }
+    }
+}
+
+void MainWindow::handleSaveFilteredFile()
+{
+    QString filename;
+    QFileDialog dialog(this);
+    bool result = false;
+
+    QStringList filters;
+    filters.append(QString(tr("CRTD Logs (*.txt)")));
+    filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
+    filters.append(QString(tr("BusMaster Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.log)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        const QVector<CANFrame> *frames = model->getFilteredListReference();
+        filename = dialog.selectedFiles()[0];
+        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::saveCRTDFile(filename, frames);
+        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::saveNativeCSVFile(filename, frames);
+        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::saveGenericCSVFile(filename, frames);
+        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::saveLogFile(filename, frames);
+        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::saveMicrochipFile(filename, frames);
+        if (result)
+        {
+            QStringList fileList = filename.split('/');
+            loadedFileName = fileList[fileList.length() - 1];
+            updateFileStatus();
+        }
+    }
+}
+
+void MainWindow::handleSaveFilters()
+{
+    QString filename;
+    QFileDialog dialog(this);
+    bool result = false;
+
+    QStringList filters;
+    filters.append(QString(tr("Filter list (*.ftl)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (dialog.selectedNameFilter() == filters[0]) model->saveFilterFile(filename);
+    }
+}
+
+void MainWindow::handleLoadFilters()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Filter List (*.ftl)")));
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        //right now there is only one file type that can be loaded here so just do it.
+        model->loadFilterFile(filename);
     }
 }
 

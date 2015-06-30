@@ -1,5 +1,7 @@
 #include "canframemodel.h"
 
+#include <QFile>
+
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
     return filteredFrames.count();
@@ -380,6 +382,53 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     endInsertRows();
 }
 
+void CANFrameModel::loadFilterFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int ID;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+        return;
+
+    filters.clear();
+
+    while (!inFile->atEnd()) {
+        line = inFile->readLine().simplified();
+        if (line.length() > 2)
+        {
+            QList<QByteArray> tokens = line.split(',');
+            ID = tokens[0].toInt(NULL, 16);
+            if (tokens[1].toUpper() == "T") filters.insert(ID, true);
+                else filters.insert(ID, false);
+        }
+    }
+    inFile->close();
+
+    sendRefresh();
+
+    emit updatedFiltersList();
+}
+
+void CANFrameModel::saveFilterFile(QString filename)
+{
+    QFile *outFile = new QFile(filename);
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+
+    QMap<int, bool>::const_iterator it;
+    for (it = filters.begin(); it != filters.end(); ++it)
+    {
+        outFile->write(QString::number(it.key(), 16).toUtf8());
+        outFile->putChar(',');
+        if (it.value()) outFile->putChar('T');
+            else outFile->putChar('F');
+        outFile->write("\n");
+    }
+    outFile->close();
+}
+
 /*
  *This used to not be const correct but it is now. So, there's little harm in
  * allowing external code to peek at our frames. There's just no touching.
@@ -390,6 +439,11 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
 const QVector<CANFrame>* CANFrameModel::getListReference() const
 {
     return &frames;
+}
+
+const QVector<CANFrame>* CANFrameModel::getFilteredListReference() const
+{
+    return &filteredFrames;
 }
 
 const QMap<int, bool>* CANFrameModel::getFiltersReference() const

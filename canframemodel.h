@@ -34,10 +34,13 @@ public:
     void setHexMode(bool);
     void setFilterState(int ID, bool state);
     void setSecondsMode(bool);
+    void loadFilterFile(QString filename);
+    void saveFilterFile(QString filename);
     void normalizeTiming();
     void recalcOverwrite();
     void insertFrames(const QVector<CANFrame> &newFrames);
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
+    const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
 
 signals:
