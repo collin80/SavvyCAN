@@ -23,6 +23,12 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
 {
     ui->setupUi(this);
 
+    ui->comboCANBus->addItem(tr("None"));
+    ui->comboCANBus->addItem(tr("0"));
+    ui->comboCANBus->addItem(tr("1"));
+    ui->comboCANBus->addItem(tr("Both"));
+    ui->comboCANBus->addItem(tr("From File"));
+
     readSettings();
 
     modelFrames = frames;
@@ -36,12 +42,6 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
     whichBusSend = 0; //0 = no bus, 1 = bus 0, 2 = bus 1, 4 = from file - Bitfield so you can 'or' them.
     currentSeqItem = NULL;
     currentSeqNum = -1;
-
-    ui->comboCANBus->addItem(tr("None"));
-    ui->comboCANBus->addItem(tr("0"));
-    ui->comboCANBus->addItem(tr("1"));
-    ui->comboCANBus->addItem(tr("Both"));
-    ui->comboCANBus->addItem(tr("From File"));
 
     updateFrameLabel();
 
@@ -102,6 +102,7 @@ void FramePlaybackWindow::readSettings()
         ui->cbLoop->setChecked(true);
     }
     ui->spinPlaySpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
+    ui->comboCANBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
 }
 
 void FramePlaybackWindow::writeSettings()

@@ -306,7 +306,7 @@ void MainWindow::updateFilterList()
             else thisItem->setText(QString::number(filterIter.key()));
         thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
         if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
-        else thisItem->setCheckState(Qt::Unchecked);
+            else thisItem->setCheckState(Qt::Unchecked);
         ui->listFilters->addItem(thisItem);
     }
 }

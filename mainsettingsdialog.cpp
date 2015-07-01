@@ -7,6 +7,12 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    ui->comboSendingBus->addItem(tr("None"));
+    ui->comboSendingBus->addItem(tr("0"));
+    ui->comboSendingBus->addItem(tr("1"));
+    ui->comboSendingBus->addItem(tr("Both"));
+    ui->comboSendingBus->addItem(tr("From File"));
+
     settings = new QSettings();
 
     //update the GUI with all the settings we have stored giving things
@@ -21,6 +27,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
     ui->cbTimeSeconds->setChecked(settings->value("Main/TimeSeconds", false).toBool());
+    ui->comboSendingBus->setCurrentIndex(settings->value("Playback/SendingBus", 4).toInt());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -33,6 +40,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbValidate, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinPlaybackSpeed, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbTimeSeconds, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -58,6 +66,7 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/ValidateComm", ui->cbValidate->isChecked());
     settings->setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
     settings->setValue("Main/TimeSeconds", ui->cbTimeSeconds->isChecked());
+    settings->setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
 
     settings->sync();
 }
