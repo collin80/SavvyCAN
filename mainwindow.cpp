@@ -102,7 +102,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::startFrameCapturing, worker, &SerialWorker::startFrameCapture);
     connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
     serialWorkerThread.start();
-    serialWorkerThread.setPriority(QThread::TimeCriticalPriority);
+    serialWorkerThread.setPriority(QThread::HighPriority);
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -292,6 +292,8 @@ void MainWindow::updateFilterList()
     const QMap<int, bool> *filters = model->getFiltersReference();
     if (filters == NULL) return;
 
+    qDebug() << "updateFilterList called on MainWindow";
+
     ui->listFilters->clear();
 
     if (filters->isEmpty()) return;
@@ -333,6 +335,8 @@ void MainWindow::gotFrames(int FPS, int framesSinceLastUpdate)
         bDirty = true;
         emit framesUpdated(framesSinceLastUpdate); //anyone care that frames were updated?
     }
+
+    if (model->needsFilterRefresh()) updateFilterList();
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)

@@ -28,6 +28,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     useHexMode = true;
     timeSeconds = false;
     timeOffset = 0;
+    needFilterRefresh = false;
 }
 
 void CANFrameModel::setHexMode(bool mode)
@@ -245,7 +246,7 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
     if (!filters.contains(frame.ID))
     {
         filters.insert(frame.ID, true);
-        emit updatedFiltersList();
+        needFilterRefresh = true;
     }
 
     if (!overwriteDups)
@@ -369,7 +370,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
         if (!filters.contains(newFrames[i].ID))
         {
             filters.insert(newFrames[i].ID, true);
-            emit updatedFiltersList();
+            needFilterRefresh = true;
         }
         if (filters[newFrames[i].ID])
         {
@@ -380,6 +381,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
 
     beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
     endInsertRows();
+    if (needFilterRefresh) emit updatedFiltersList();
 }
 
 void CANFrameModel::loadFilterFile(QString filename)
@@ -427,6 +429,13 @@ void CANFrameModel::saveFilterFile(QString filename)
         outFile->write("\n");
     }
     outFile->close();
+}
+
+bool CANFrameModel::needsFilterRefresh()
+{
+    bool temp = needFilterRefresh;
+    needFilterRefresh = false;
+    return temp;
 }
 
 /*
