@@ -720,6 +720,10 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
 void MainWindow::connectionFailed()
 {
     lbStatusConnected.setText(tr("Failed to connect!"));
+
+    QMessageBox msgBox;
+    msgBox.setText("Connection to the GVRET firmware failed.\nYou might have an old version of GVRET\nor may have chosen the wrong serial port.");
+    msgBox.exec();
 }
 
 void MainWindow::updateFileStatus()
@@ -753,6 +757,15 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
     QString str = tr("Connected to GVRET ") + QString::number(build);
     if (swCAN == 1) str += "(SW)";
     lbStatusConnected.setText(str);
+
+    if (build < CURRENT_GVRET_VER)
+    {
+        QMessageBox msgBox;
+        msgBox.setText("It appears that you are not running\nan up-to-date version of GVRET\n\nYour version: "
+                       + QString::number(build) +"\nCurrent Version: " + QString::number(CURRENT_GVRET_VER)
+                       + "\n\nPlease upgrade your firmware version.\nOtherwise, you may experience difficulties.");
+        msgBox.exec();
+    }
 }
 
 void MainWindow::showSettingsDialog()
