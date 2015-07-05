@@ -27,7 +27,9 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphingView->xAxis->setLabel("Time Axis");
     ui->graphingView->yAxis->setLabel("Value Axis");
     ui->graphingView->xAxis->setNumberFormat("f");
-    ui->graphingView->xAxis->setNumberPrecision(0);
+    if (secondsMode) ui->graphingView->xAxis->setNumberPrecision(6);
+        else ui->graphingView->xAxis->setNumberPrecision(0);
+
     ui->graphingView->legend->setVisible(true);
     QFont legendFont = font();
     legendFont.setPointSize(10);
@@ -89,6 +91,7 @@ void GraphingWindow::readSettings()
         resize(settings.value("Graphing/WindowSize", QSize(800, 600)).toSize());
         move(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint());
     }
+    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
 }
 
 void GraphingWindow::writeSettings()
@@ -401,7 +404,14 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             {
                 tempVal = tempVal - 256;
             }
-            x[j] = frameCache[j].timestamp;
+            if (secondsMode)
+            {
+                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+            }
+            else
+            {
+                x[j] = frameCache[j].timestamp;
+            }
             y[j] = (tempVal + params.bias) * params.scale;
             if (y[j] < yminval) yminval = y[j];
             if (y[j] > ymaxval) ymaxval = y[j];
@@ -434,7 +444,16 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
 
             tempValue = (float)tempValInt;
-            x[j] = frameCache[j].timestamp;
+
+            if (secondsMode)
+            {
+                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+            }
+            else
+            {
+                x[j] = frameCache[j].timestamp;
+            }
+
             y[j] = (tempValue + params.bias) * params.scale;
             if (y[j] < yminval) yminval = y[j];
             if (y[j] > ymaxval) ymaxval = y[j];
@@ -465,7 +484,16 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
 
             tempValue = (float)tempValInt;
-            x[j] = frameCache[j].timestamp;
+
+            if (secondsMode)
+            {
+                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+            }
+            else
+            {
+                x[j] = frameCache[j].timestamp;
+            }
+
             y[j] = (tempValue + params.bias) * params.scale;
             if (y[j] < yminval) yminval = y[j];
             if (y[j] > ymaxval) ymaxval = y[j];
