@@ -72,6 +72,7 @@ GraphingWindow::~GraphingWindow()
 void GraphingWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
+    readSettings();
     ui->graphingView->replot();
 }
 

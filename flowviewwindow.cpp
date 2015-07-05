@@ -83,6 +83,9 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
 void FlowViewWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
+
+    readSettings();
+
     refreshIDList();
     if (ui->listFrameID->count() > 0)
     {
@@ -124,6 +127,8 @@ void FlowViewWindow::readSettings()
     {
         ui->cbTimeGraph->setChecked(true);
     }
+
+    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
 }
 
 void FlowViewWindow::writeSettings()
@@ -260,7 +265,13 @@ void FlowViewWindow::createGraph(int byteNum)
 
         if (graphByTime)
         {
-            x[j] = frameCache[j].timestamp;
+            if (secondsMode){
+                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+            }
+            else
+            {
+                x[j] = frameCache[j].timestamp;
+            }
         }
         else
         {
@@ -487,11 +498,22 @@ void FlowViewWindow::updateGraphLocation()
     if (end >= frameCache.count()) end = frameCache.count() - 1;
     if (ui->cbTimeGraph->isChecked())
     {
-        ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
-        ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
-        ui->graphView->xAxis->setSubTickCount(0);
-        ui->graphView->xAxis->setNumberFormat("f");
-        ui->graphView->xAxis->setNumberPrecision(0);
+        if (secondsMode)
+        {
+            ui->graphView->xAxis->setRange(frameCache[start].timestamp / 1000000.0, frameCache[end].timestamp / 1000000.0);
+            ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3000000.0);
+            ui->graphView->xAxis->setSubTickCount(0);
+            ui->graphView->xAxis->setNumberFormat("f");
+            ui->graphView->xAxis->setNumberPrecision(6);
+        }
+        else
+        {
+            ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
+            ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
+            ui->graphView->xAxis->setSubTickCount(0);
+            ui->graphView->xAxis->setNumberFormat("f");
+            ui->graphView->xAxis->setNumberPrecision(0);
+        }
     }
     else
     {

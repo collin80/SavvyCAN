@@ -71,7 +71,8 @@ private:
     void refreshIDList();
     void updateFrameLabel();
     void updatePosition(bool forward);
-    void fillIDHash(SequenceItem &item);
+    void fillIDHash(SequenceItem &item);    
+    void showEvent(QShowEvent *);
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();

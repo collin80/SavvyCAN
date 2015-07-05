@@ -30,6 +30,7 @@ class SerialWorker : public QObject
 public:
     SerialWorker(CANFrameModel *model, QObject *parent = 0);
     ~SerialWorker();
+    void readSettings();
 
 signals: //we emit signals
     void error(const QString &);
@@ -72,7 +73,6 @@ private:
     int deviceSingleWireMode;
 
     void procRXChar(unsigned char);
-    void readSettings();
 };
 
 #endif // SERIALTHREAD_H

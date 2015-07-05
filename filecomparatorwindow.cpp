@@ -9,8 +9,6 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    readSettings();
-
     connect(ui->btnFirstFile, SIGNAL(clicked(bool)), this, SLOT(loadFirstFile()));
     connect(ui->btnSecondFile, SIGNAL(clicked(bool)), this, SLOT(loadSecondFile()));
     connect(ui->btnSaveDetails, SIGNAL(clicked(bool)), this, SLOT(saveDetails()));
@@ -22,6 +20,11 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
 FileComparatorWindow::~FileComparatorWindow()
 {
     delete ui;
+}
+
+void FileComparatorWindow::showEvent(QShowEvent *)
+{
+    readSettings();
 }
 
 void FileComparatorWindow::closeEvent(QCloseEvent *event)

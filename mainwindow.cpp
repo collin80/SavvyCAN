@@ -101,6 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::closeSerialPort, worker, &SerialWorker::closeSerialPort, Qt::QueuedConnection);
     connect(this, &MainWindow::startFrameCapturing, worker, &SerialWorker::startFrameCapture);
     connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
+    connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
     serialWorkerThread.start();
     serialWorkerThread.setPriority(QThread::HighPriority);
 
@@ -237,6 +238,12 @@ void MainWindow::closeEvent(QCloseEvent *event)
     exitApp();
 }
 
+void MainWindow::updateSettings()
+{
+    readUpdateableSettings();
+    emit settingsUpdated();
+}
+
 void MainWindow::readSettings()
 {
     QSettings settings;
@@ -249,6 +256,12 @@ void MainWindow::readSettings()
     {
         ui->cbAutoScroll->setChecked(true);
     }
+    readUpdateableSettings();
+}
+
+void MainWindow::readUpdateableSettings()
+{
+    QSettings settings;
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
     model->setSecondsMode(settings.value("Main/TimeSeconds", false).toBool());
@@ -770,7 +783,11 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
 
 void MainWindow::showSettingsDialog()
 {
-    if (!settingsDialog) settingsDialog = new MainSettingsDialog();
+    if (!settingsDialog)
+    {
+        settingsDialog = new MainSettingsDialog();
+        connect(settingsDialog, SIGNAL(finished(int)), this, SLOT(updateSettings()));
+    }
     settingsDialog->show();
 }
 

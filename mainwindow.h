@@ -69,6 +69,7 @@ private slots:
 
 public slots:
     void gotFrames(int, int);
+    void updateSettings();
 
 
 signals:
@@ -81,6 +82,7 @@ signals:
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
     void framesUpdated(int numFrames); //something has updated the frame list
+    void settingsUpdated();
 
 private:
     Ui::MainWindow *ui;
@@ -120,6 +122,7 @@ private:
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);
     void readSettings();
+    void readUpdateableSettings();
     void writeSettings();
 };
 

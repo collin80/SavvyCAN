@@ -46,6 +46,7 @@ private:
     bool playbackActive;
     bool playbackForward;
     static const QColor graphColors[8];
+    bool secondsMode;
 
     void refreshIDList();
     void updateFrameLabel();

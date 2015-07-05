@@ -41,6 +41,7 @@ private:
     QString secondFilename;
 
     void calculateDetails();
+    void showEvent(QShowEvent *);
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();

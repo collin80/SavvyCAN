@@ -20,6 +20,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 void FrameInfoWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
+    readSettings();
     refreshIDList();
     if (ui->listFrameID->count() > 0)
     {

@@ -84,6 +84,11 @@ FramePlaybackWindow::~FramePlaybackWindow()
     delete playbackTimer;
 }
 
+void FramePlaybackWindow::showEvent(QShowEvent *)
+{
+    readSettings();
+}
+
 void FramePlaybackWindow::closeEvent(QCloseEvent *event)
 {
     writeSettings();
