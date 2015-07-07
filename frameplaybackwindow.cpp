@@ -108,6 +108,7 @@ void FramePlaybackWindow::readSettings()
     }
     ui->spinPlaySpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
     ui->comboCANBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
+    whichBusSend = ui->comboCANBus->currentIndex();
 }
 
 void FramePlaybackWindow::writeSettings()
