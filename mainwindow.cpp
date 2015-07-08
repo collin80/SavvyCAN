@@ -399,7 +399,7 @@ void MainWindow::handleLoadFile()
     filters.append(QString(tr("GVRET Logs (*.csv)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.can)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -446,7 +446,7 @@ void MainWindow::handleSaveFile()
     filters.append(QString(tr("GVRET Logs (*.csv)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.can)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);

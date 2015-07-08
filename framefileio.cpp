@@ -16,7 +16,7 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
     filters.append(QString(tr("GVRET Logs (*.csv)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.log)")));
+    filters.append(QString(tr("Microchip Log (*.can)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -273,9 +273,33 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
     return true;
 }
 
+//4f5,ff 34 23 45 24 e4
 bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* frames)
 {
-    return false;
+    QFile *outFile = new QFile(filename);
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    outFile->write("ID,Data Bytes");
+    outFile->write("\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        outFile->putChar(44);
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
+        }
+
+        outFile->write("\n");
+
+    }
+    outFile->close();
+    return true;
 }
 
 //busmaster log file
@@ -347,7 +371,52 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
 
 bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 {
-    return false;
+    QFile *outFile = new QFile(filename);
+    QDateTime timestamp, tempStamp;
+
+    timestamp = QDateTime::currentDateTime();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    outFile->write("***BUSMASTER Ver 2.4.0***\n");
+    outFile->write("***PROTOCOL CAN***\n");
+    outFile->write("***NOTE: PLEASE DO NOT EDIT THIS DOCUMENT***\n");
+    outFile->write("***[START LOGGING SESSION]***\n");
+    outFile->write("***START DATE AND TIME ");
+    outFile->write(timestamp.toString("d:M:yyyy h:m:s:z").toUtf8());
+    outFile->write("***\n");
+    outFile->write("***HEX***\n");
+    outFile->write("***SYSTEM MODE***\n");
+    outFile->write("***START CHANNEL BAUD RATE***\n");
+    outFile->write("***CHANNEL 1 - Kvaser - Kvaser Leaf Light HS #0 (Channel 0), Serial Number- 0, Firmware- 0x00000037 0x00020000 - 500000 bps***\n");
+    outFile->write("***END CHANNEL BAUD RATE***\n");
+    outFile->write("***START DATABASE FILES (DBF/DBC)***\n");
+    outFile->write("***END OF DATABASE FILES (DBF/DBC)***\n");
+    outFile->write("***<Time><Tx/Rx><Channel><CAN ID><Type><DLC><DataBytes>***\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        tempStamp = timestamp.addMSecs(frames->at(c).timestamp / 1000);
+        outFile->write(tempStamp.toString("h:m:s:z").toUtf8());
+        outFile->write(" Rx ");
+        outFile->write(QString::number(frames->at(c).bus).toUtf8() + " ");
+        outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        if (frames->at(c).extended) outFile->write(" x ");
+            else outFile->write(" s ");
+        outFile->write(QString::number(frames->at(c).len).toUtf8() + " ");
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
+        }
+
+        outFile->write("\n");
+
+    }
+    outFile->close();
+    return true;
 }
 
 //log file from microchip tool
@@ -370,7 +439,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
         return false;
 
-    line = inFile->readLine(); //read out the header first and discard it.
+    //line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
         line = inFile->readLine();
@@ -403,7 +472,52 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
+/*
+1247;RX;0xC2;8;0x5C;0x87;0x00;0x00;0x01;0x00;0x00;0x1C
+1218;RX;0x236;1;0x00;0x00;0x00;0x00;0x00;0x00;0x00;0xF0
+
+tokens:
+0 = timestamp in ms
+1 = direction (RX, TX)
+2 = ID (in hex with 0x prefix)
+3 = data length
+4-x = data bytes in hex with 0x prefix
+*/
 bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* frames)
 {
-    return false;
+    QFile *outFile = new QFile(filename);
+    QDateTime timestamp, tempStamp;
+
+    timestamp = QDateTime::currentDateTime();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    outFile->write("//---------------------------------\n");
+    outFile->write("Microchip Technology Inc.\n");
+    outFile->write("CAN BUS Analyzer\n");
+    outFile->write("SavvyCAN Exporter\n");
+    outFile->write("Logging Started: ");
+    outFile->write(timestamp.toString("d/M/yyyy h:m:s").toUtf8());
+    outFile->write("\n");
+    outFile->write("//---------------------------------\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        outFile->write(QString::number((int)(frames->at(c).timestamp / 1000)).toUtf8());
+        outFile->write(";RX;");
+        outFile->write("0x" + QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
+        outFile->write(QString::number(frames->at(c).len).toUtf8() + ";");
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write("0x" + QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(';');
+        }
+
+        outFile->write("\n");
+
+    }
+    outFile->close();
+    return true;
 }
