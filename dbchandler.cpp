@@ -309,7 +309,7 @@ void DBCHandler::saveDBCFile(QString filename)
     for (int x = 0; x < dbc_nodes.count(); x++)
     {
         DBC_NODE node = dbc_nodes[x];
-        if (node.name.compare("Vector_XXX", Qt::CaseInsensitive) != 0)
+        if (node.name.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
         {
             nodesOutput.append(node.name + " ");
             if (node.comment.length() > 0)

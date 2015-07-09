@@ -118,7 +118,7 @@ void DBCMainEditor::deleteCurrentNode()
 {
     int thisRow = ui->NodesTable->currentRow();
     QString nodeName = ui->NodesTable->item(thisRow, 0)->text();
-    if (nodeName.length() > 0 && nodeName.compare("Vector_XXX", Qt::CaseInsensitive) != 0)
+    if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
     {
         ui->NodesTable->removeRow(thisRow);
         dbcHandler->dbc_nodes.removeAt(thisRow);
@@ -375,10 +375,10 @@ void DBCMainEditor::refreshNodesTable()
 
     int rowIdx;
 
-    if (dbcHandler->findNodeByName("Vector_XXX") == NULL)
+    if (dbcHandler->findNodeByName("Vector__XXX") == NULL)
     {
         DBC_NODE newNode;
-        newNode.name = "Vector_XXX";
+        newNode.name = "Vector__XXX";
         newNode.comment = "Default node if no other node is specified";
         dbcHandler->dbc_nodes.append(newNode);
     }
