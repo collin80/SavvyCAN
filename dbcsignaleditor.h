@@ -21,6 +21,11 @@ public:
 private slots:
     void clickSignalList(int);
     void bitfieldClicked(int x, int y);
+    void onCustomMenuSignals(QPoint);
+    void onCustomMenuValues(QPoint);
+    void addNewSignal();
+    void deleteCurrentSignal();
+    void deleteCurrentValue();
 
 private:
     Ui::DBCSignalEditor *ui;

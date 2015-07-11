@@ -1,6 +1,8 @@
 #include "dbcsignaleditor.h"
 #include "ui_dbcsignaleditor.h"
+#include <QDateTime>
 #include <QDebug>
+#include <QMenu>
 #include <QSettings>
 
 DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
@@ -10,6 +12,8 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     ui->setupUi(this);
 
     readSettings();
+
+    qsrand(QDateTime::currentMSecsSinceEpoch());
 
     dbcHandler = handler;
     dbcMessage = NULL;
@@ -36,6 +40,11 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
 
     connect(ui->signalsList, SIGNAL(currentRowChanged(int)), this, SLOT(clickSignalList(int)));
     connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->signalsList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuSignals(QPoint)));
+    ui->signalsList->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->valuesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuValues(QPoint)));
+    ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);
+
 
     //now with 100% more lambda expressions just to make it interesting (and shorter, and easier...)
     connect(ui->cbIntelFormat, &QCheckBox::toggled,
@@ -134,6 +143,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
                 //ui->signalsList->currentItem()->setText(currentSignal->name);
             });
 
+
 }
 
 DBCSignalEditor::~DBCSignalEditor()
@@ -187,6 +197,71 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
     }
 }
 
+void DBCSignalEditor::onCustomMenuSignals(QPoint point)
+{
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    menu->addAction(tr("Add a new signal"), this, SLOT(addNewSignal()));
+    menu->addAction(tr("Delete currently selected signal"), this, SLOT(deleteCurrentSignal()));
+
+    menu->popup(ui->signalsList->mapToGlobal(point));
+}
+
+void DBCSignalEditor::onCustomMenuValues(QPoint point)
+{
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    menu->addAction(tr("Delete currently selected value"), this, SLOT(deleteCurrentValue()));
+
+    menu->popup(ui->valuesTable->mapToGlobal(point));
+}
+
+void DBCSignalEditor::addNewSignal()
+{
+    int num = qrand() % 70000;
+    QString newName = "SIGNAL" + QString::number(num);
+    DBC_SIGNAL newSig;
+    newSig.name = newName;
+    newSig.bias = 0.0;
+    newSig.factor = 0.0;
+    newSig.intelByteOrder = true;
+    newSig.max = 0.0;
+    newSig.min = 0.0;
+    newSig.receiver = &dbcHandler->dbc_nodes[0];
+    newSig.signalSize = 1;
+    newSig.startBit = 0;
+    newSig.valType = UNSIGNED_INT;
+    ui->signalsList->addItem(newName);
+    dbcMessage->msgSignals.append(newSig);
+}
+
+void DBCSignalEditor::deleteCurrentSignal()
+{
+    int currIdx = ui->signalsList->currentRow();
+    if (currIdx > -1)
+    {
+        delete(ui->signalsList->item(currIdx));
+        dbcMessage->msgSignals.removeAt(currIdx);
+        currentSignal = NULL;
+        currIdx = ui->signalsList->currentRow();
+        if (currIdx > -1) currentSignal = &dbcMessage->msgSignals[currIdx];
+        fillSignalForm(currentSignal);
+        fillValueTable(currentSignal);
+    }
+}
+
+void DBCSignalEditor::deleteCurrentValue()
+{
+    int currIdx = ui->valuesTable->currentRow();
+    if (currIdx > -1)
+    {
+        ui->valuesTable->removeRow(currIdx);
+        currentSignal->valList.removeAt(currIdx);
+    }
+}
+
 void DBCSignalEditor::refreshSignalsList()
 {
     ui->signalsList->clear();
@@ -200,6 +275,24 @@ void DBCSignalEditor::refreshSignalsList()
 void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
     unsigned char bitpattern[8];
+
+    if (sig == NULL)
+    {
+        ui->txtName->setText("");
+        ui->txtBias->setText("");
+        ui->txtBitLength->setText("");
+        ui->txtComment->setText("");
+        ui->txtMaxVal->setText("");
+        ui->txtMinVal->setText("");
+        ui->txtScale->setText("");
+        ui->txtUnitName->setText("");
+        memset(bitpattern, 0, 8); //clear it out
+        ui->bitfield->setReference(bitpattern, false);
+        ui->bitfield->updateData(bitpattern, true);
+        ui->comboReceiver->setCurrentIndex(0);
+        ui->comboType->setCurrentIndex(0);
+        return;
+    }
 
     ui->txtName->setText(sig->name);
     ui->txtBias->setText(QString::number(sig->bias));
@@ -274,6 +367,9 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
     int rowIdx;
     ui->valuesTable->clearContents();
     ui->valuesTable->setRowCount(0);
+
+    if (sig == NULL) return;
+
     for (int i = 0; i < sig->valList.count(); i++)
     {
         QTableWidgetItem *val = new QTableWidgetItem(QString::number(sig->valList[i].value));
