@@ -73,4 +73,5 @@ FORMS    += mainwindow.ui \
 DISTFILES +=
 
 RESOURCES += \
-    icons.qrc
+    icons.qrc \
+    images.qrc

@@ -13,6 +13,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
 
     dbcHandler = handler;
     dbcMessage = NULL;
+    currentSignal = NULL;
 
     QStringList headers2;
     headers2 << "Value" << "Text";
@@ -22,7 +23,8 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     ui->valuesTable->setHorizontalHeaderLabels(headers2);
     ui->valuesTable->horizontalHeader()->setStretchLastSection(true);
 
-    ui->comboType->addItem("INTEGER");
+    ui->comboType->addItem("UNSIGNED INTEGER");
+    ui->comboType->addItem("SIGNED INTEGER");
     ui->comboType->addItem("SINGLE PRECISION");
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
@@ -34,6 +36,104 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
 
     connect(ui->signalsList, SIGNAL(currentRowChanged(int)), this, SLOT(clickSignalList(int)));
     connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+
+    //now with 100% more lambda expressions just to make it interesting (and shorter, and easier...)
+    connect(ui->cbIntelFormat, &QCheckBox::toggled,
+            [=]()
+            {
+                currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
+            });
+
+    connect(ui->comboReceiver, &QComboBox::currentTextChanged,
+            [=]()
+            {
+                currentSignal->receiver = dbcHandler->findNodeByName(ui->comboReceiver->currentText());
+            });
+    connect(ui->comboType, &QComboBox::currentTextChanged,
+            [=]()
+            {
+                switch (ui->comboType->currentIndex())
+                {
+                case 0:
+                    currentSignal->valType = UNSIGNED_INT;
+                    break;
+                case 1:
+                    currentSignal->valType = SIGNED_INT;
+                    break;
+                case 2:
+                    currentSignal->valType = SP_FLOAT;
+                    break;
+                case 3:
+                    currentSignal->valType = DP_FLOAT;
+                    break;
+                case 4:
+                    currentSignal->valType = STRING;
+                    break;
+                }
+            });
+    connect(ui->txtBias, &QLineEdit::editingFinished,
+            [=]()
+            {
+                double temp;
+                bool result;
+                temp = ui->txtBias->text().toDouble();
+                if (result) currentSignal->bias = temp;
+            });
+
+    connect(ui->txtMaxVal, &QLineEdit::editingFinished,
+            [=]()
+            {
+                double temp;
+                bool result;
+                temp = ui->txtMaxVal->text().toDouble();
+                if (result) currentSignal->max = temp;
+            });
+
+    connect(ui->txtMinVal, &QLineEdit::editingFinished,
+            [=]()
+            {
+                double temp;
+                bool result;
+                temp = ui->txtMinVal->text().toDouble();
+                if (result) currentSignal->min = temp;
+            });
+    connect(ui->txtScale, &QLineEdit::editingFinished,
+            [=]()
+            {
+                double temp;
+                bool result;
+                temp = ui->txtScale->text().toDouble();
+                if (result) currentSignal->factor = temp;
+            });
+    connect(ui->txtComment, &QLineEdit::editingFinished,
+            [=]()
+            {
+                currentSignal->comment = ui->txtComment->text();
+            });
+
+    connect(ui->txtUnitName, &QLineEdit::editingFinished,
+            [=]()
+            {
+                currentSignal->unitName = ui->txtUnitName->text();
+            });
+    connect(ui->txtBitLength, &QLineEdit::editingFinished,
+            [=]()
+            {
+                int temp;
+                temp = ui->txtBitLength->text().toInt();
+                if (temp < 0) return;
+                if (temp > 63) return;
+                currentSignal->signalSize = temp;
+                fillSignalForm(currentSignal);
+            });
+    connect(ui->txtName, &QLineEdit::editingFinished,
+            [=]()
+            {
+                currentSignal->name = ui->txtName->text();
+                //need to update the list too.
+                //ui->signalsList->currentItem()->setText(currentSignal->name);
+            });
+
 }
 
 DBCSignalEditor::~DBCSignalEditor()
@@ -78,10 +178,12 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
     QDialog::showEvent(event);
 
     refreshSignalsList();
+    currentSignal = NULL;
     if (dbcMessage->msgSignals.count() > 0)
     {
-        fillSignalForm(&dbcMessage->msgSignals[0]);
-        fillValueTable(&dbcMessage->msgSignals[0]);
+        currentSignal = &dbcMessage->msgSignals[0];
+        fillSignalForm(currentSignal);
+        fillValueTable(currentSignal);
     }
 }
 
@@ -141,17 +243,19 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     switch (sig->valType)
     {
     case UNSIGNED_INT:
-    case SIGNED_INT:
         ui->comboType->setCurrentIndex(0);
         break;
-    case SP_FLOAT:
+    case SIGNED_INT:
         ui->comboType->setCurrentIndex(1);
         break;
-    case DP_FLOAT:
+    case SP_FLOAT:
         ui->comboType->setCurrentIndex(2);
         break;
-    case STRING:
+    case DP_FLOAT:
         ui->comboType->setCurrentIndex(3);
+        break;
+    case STRING:
+        ui->comboType->setCurrentIndex(4);
         break;
     }
 
@@ -187,6 +291,7 @@ void DBCSignalEditor::clickSignalList(int row)
     //qDebug() << ui->signalsList->item(row)->text();
     DBC_SIGNAL *thisSig = dbcHandler->findSignalByName(dbcMessage, ui->signalsList->item(row)->text());
     if (thisSig == NULL) return;
+    currentSignal = thisSig;
     fillSignalForm(thisSig);
     fillValueTable(thisSig);
 
@@ -195,8 +300,7 @@ void DBCSignalEditor::clickSignalList(int row)
 void DBCSignalEditor::bitfieldClicked(int x, int y)
 {
     int bit = (x) + (y * 8);
-    DBC_SIGNAL *thisSig = dbcHandler->findSignalByIdx(dbcMessage, ui->signalsList->currentRow());
-    if (thisSig == NULL) return;
-    thisSig->startBit = bit;
-    fillSignalForm(thisSig);
+    if (currentSignal == NULL) return;
+    currentSignal->startBit = bit;
+    fillSignalForm(currentSignal);
 }

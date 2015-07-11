@@ -26,6 +26,7 @@ private:
     Ui::DBCSignalEditor *ui;
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
+    DBC_SIGNAL *currentSignal;
 
     void refreshSignalsList();
     void fillSignalForm(DBC_SIGNAL *sig);
