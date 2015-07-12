@@ -10,6 +10,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
+CONFIG += c++11
+
 TARGET = SavvyCAN
 TEMPLATE = app
 
