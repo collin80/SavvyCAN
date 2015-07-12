@@ -21,6 +21,7 @@ public:
 private slots:
     void clickSignalList(int);
     void bitfieldClicked(int x, int y);
+    void onValuesCellChanged(int row,int col);
     void onCustomMenuSignals(QPoint);
     void onCustomMenuValues(QPoint);
     void addNewSignal();
@@ -32,6 +33,7 @@ private:
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
     DBC_SIGNAL *currentSignal;
+    bool inhibitCellChanged;
 
     void refreshSignalsList();
     void fillSignalForm(DBC_SIGNAL *sig);

@@ -44,7 +44,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     ui->signalsList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->valuesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuValues(QPoint)));
     ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);
-
+    connect(ui->valuesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onValuesCellChanged(int,int)));
 
     //now with 100% more lambda expressions just to make it interesting (and shorter, and easier...)
     connect(ui->cbIntelFormat, &QCheckBox::toggled,
@@ -140,7 +140,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             {
                 currentSignal->name = ui->txtName->text();
                 //need to update the list too.
-                //ui->signalsList->currentItem()->setText(currentSignal->name);
+                ui->signalsList->currentItem()->setText(currentSignal->name);
             });
 
 
@@ -190,10 +190,40 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
     refreshSignalsList();
     currentSignal = NULL;
     if (dbcMessage->msgSignals.count() > 0)
-    {
+    {        
         currentSignal = &dbcMessage->msgSignals[0];
         fillSignalForm(currentSignal);
         fillValueTable(currentSignal);
+    }
+}
+
+void DBCSignalEditor::onValuesCellChanged(int row,int col)
+{
+    if (inhibitCellChanged) return;
+    if (row == ui->valuesTable->rowCount() - 1)
+    {
+        DBC_VAL newVal;
+        newVal.value = 0;
+        newVal.descript = "No Description";
+        currentSignal->valList.append(newVal);
+        qDebug() << "Created new entry in value list";
+
+        //QTableWidgetItem *widgetVal = new QTableWidgetItem(QString::number(newVal.value));
+        //ui->valuesTable->setItem(row, 0, widgetVal);
+        //QTableWidgetItem *widgetDesc = new QTableWidgetItem(newVal.descript);
+        //ui->valuesTable->setItem(row, 1, widgetDesc);
+
+        //add the blank at the end again
+        ui->valuesTable->insertRow(ui->valuesTable->rowCount());
+    }
+
+    if (col == 0)
+    {
+        currentSignal->valList[row].value = ui->valuesTable->item(row, col)->text().toInt();
+    }
+    else if (col == 1)
+    {
+        currentSignal->valList[row].descript = ui->valuesTable->item(row, col)->text();
     }
 }
 
@@ -365,10 +395,16 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 {
     int rowIdx;
+
+    inhibitCellChanged = true;
+
     ui->valuesTable->clearContents();
     ui->valuesTable->setRowCount(0);
 
-    if (sig == NULL) return;
+    if (sig == NULL) {
+        inhibitCellChanged = false;
+        return;
+    }
 
     for (int i = 0; i < sig->valList.count(); i++)
     {
@@ -379,6 +415,11 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
         ui->valuesTable->setItem(rowIdx, 0, val);
         ui->valuesTable->setItem(rowIdx, 1, desc);
     }
+
+    //Add a blank row at the end to allow for adding records easily
+    ui->valuesTable->insertRow(ui->valuesTable->rowCount());
+
+    inhibitCellChanged = false;
 }
 
 void DBCSignalEditor::clickSignalList(int row)

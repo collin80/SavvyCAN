@@ -872,7 +872,7 @@ void MainWindow::showDBCEditor()
 {
     if (!dbcMainEditor)
     {
-        dbcMainEditor = new DBCMainEditor(dbcHandler);
+        dbcMainEditor = new DBCMainEditor(dbcHandler, model->getListReference());
     }
     dbcMainEditor->show();
 }

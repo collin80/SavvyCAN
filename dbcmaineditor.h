@@ -15,7 +15,7 @@ class DBCMainEditor : public QDialog
     Q_OBJECT
 
 public:
-    explicit DBCMainEditor(DBCHandler *handler, QWidget *parent = 0);
+    explicit DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~DBCMainEditor();
 
 private slots:
@@ -31,6 +31,7 @@ private slots:
 private:
     Ui::DBCMainEditor *ui;
     DBCHandler *dbcHandler;
+    const QVector<CANFrame> *referenceFrames;
     DBCSignalEditor *sigEditor;
     int currRow;
     bool inhibitCellChanged;

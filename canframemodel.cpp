@@ -184,6 +184,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 if (msg != NULL)
                 {
                     tempString.append("\r\n");
+                    tempString.append(msg->name + " " + msg->comment + "\r\n");
                     for (int j = 0; j < msg->msgSignals.length(); j++)
                     {
 

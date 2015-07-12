@@ -5,7 +5,7 @@
 #include <QMessageBox>
 #include <QSettings>
 
-DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
+DBCMainEditor::DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMainEditor)
 {
@@ -14,6 +14,7 @@ DBCMainEditor::DBCMainEditor(DBCHandler *handler, QWidget *parent) :
     readSettings();
 
     dbcHandler = handler;
+    referenceFrames = frames;
 
     QStringList headers;
     headers << "Node Name" << "Comment";
@@ -208,16 +209,16 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
     QString msgName;
     int msgLen;
     QString msgComment;
+    DBC_MESSAGE newMsg;
     DBC_NODE *node = dbcHandler->findNodeByIdx(ui->NodesTable->currentRow());
     if (node == NULL) dbcHandler->findNodeByIdx(0);
 
     switch(col)
     {
     case 0: //msg id
-        msgID = ui->MessagesTable->item(row, col)->text().toInt(NULL, 16);
+        msgID = ui->MessagesTable->item(row, col)->text().toInt(NULL, 16);        
         if (row == ui->MessagesTable->rowCount() - 1) //new record
-        {
-            DBC_MESSAGE newMsg;
+        {            
             if (dbcHandler->findMsgByID(msgID) != NULL)
             {
                 QMessageBox msg;
@@ -229,6 +230,15 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             newMsg.ID = msgID;
             newMsg.name = "";
             newMsg.sender = node;
+            newMsg.len = 0;
+            for (int i = 0; i < referenceFrames->length(); i++)
+            {
+                if (referenceFrames->at(i).ID == msgID)
+                {
+                    newMsg.len = referenceFrames->at(i).len;
+                    break;
+                }
+            }
             dbcHandler->dbc_messages.append(newMsg);
         }
         else //editing an existing record
@@ -239,6 +249,8 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         inhibitCellChanged = true;
         replacement = new QTableWidgetItem(QString::number(msgID, 16));
         ui->MessagesTable->setItem(row, col, replacement);
+        replacement = new QTableWidgetItem(QString::number(newMsg.len));
+        ui->MessagesTable->setItem(row, 2, replacement);
         inhibitCellChanged = false;
         break;
 
@@ -246,8 +258,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         msgName = ui->MessagesTable->item(row, col)->text().simplified().replace(' ', '_');
         if (msgName.length() == 0) return;
         if (row == ui->MessagesTable->rowCount() - 1) //new record
-        {
-            DBC_MESSAGE newMsg;
+        {            
             if (dbcHandler->findMsgByName(msgName) != NULL)
             {
                 QMessageBox msg;
