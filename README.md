@@ -6,6 +6,8 @@ A QT5 based cross platform tool which can be used to load, save, and capture can
 This tool is designed to help with visualization, reverse engineering, debugging, and
 capturing of canbus frames.
 
+Really requires at a resolution of at least 1024x768. Fully multi-monitor capable.
+
 Currently canbus capture requires a CANDue board from EVTV:
 (http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23)
 
