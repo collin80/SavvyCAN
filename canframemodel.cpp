@@ -96,6 +96,16 @@ void CANFrameModel::setFilterState(int ID, bool state)
     sendRefresh();
 }
 
+void CANFrameModel::setAllFilters(bool state)
+{
+    QMap<int, bool>::iterator it;
+    for (it = filters.begin(); it != filters.end(); ++it)
+    {
+        it.value() = state;
+    }
+    sendRefresh();
+}
+
 void CANFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
@@ -301,6 +311,7 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 
 void CANFrameModel::sendRefresh()
 {
+    qDebug() << "Sending mass refresh";
     beginResetModel();
     filteredFrames.clear();
     for (int i = 0; i < frames.count(); i++)

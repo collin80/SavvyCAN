@@ -115,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
     settingsDialog = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
+    inhibitFilterUpdate = false;
 
     model->setDBCHandler(dbcHandler);
 
@@ -148,6 +149,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
     connect(model, SIGNAL(updatedFiltersList()), this, SLOT(updateFilterList()));
     connect(ui->listFilters, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(filterListItemChanged(QListWidgetItem*)));
+    connect(ui->btnFilterAll, SIGNAL(clicked(bool)), this, SLOT(filterSetAll()));
+    connect(ui->btnFilterNone, SIGNAL(clicked(bool)), this, SLOT(filterClearAll()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -249,7 +252,7 @@ void MainWindow::readSettings()
     QSettings settings;
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
-        resize(settings.value("Main/WindowSize", QSize(800, 572)).toSize());
+        resize(settings.value("Main/WindowSize", QSize(800, 682)).toSize());
         move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
     }
     if (settings.value("Main/AutoScroll", false).toBool())
@@ -265,6 +268,7 @@ void MainWindow::readUpdateableSettings()
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
     model->setSecondsMode(settings.value("Main/TimeSeconds", false).toBool());
+    useFiltered = settings.value("Main/UseFiltered", false).toBool();
 }
 
 void MainWindow::writeSettings()
@@ -326,6 +330,7 @@ void MainWindow::updateFilterList()
 
 void MainWindow::filterListItemChanged(QListWidgetItem *item)
 {
+    if (inhibitFilterUpdate) return;
     //qDebug() << item->text();
     int ID;
     bool isSet = false;
@@ -334,6 +339,28 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);
+}
+
+void MainWindow::filterSetAll()
+{
+    inhibitFilterUpdate = true;
+    for (int i = 0; i < ui->listFilters->count(); i++)
+    {
+        ui->listFilters->item(i)->setCheckState(Qt::Checked);
+    }
+    inhibitFilterUpdate = false;
+    model->setAllFilters(true);
+}
+
+void MainWindow::filterClearAll()
+{
+    inhibitFilterUpdate = true;
+    for (int i = 0; i < ui->listFilters->count(); i++)
+    {
+        ui->listFilters->item(i)->setCheckState(Qt::Unchecked);
+    }
+    inhibitFilterUpdate = false;
+    model->setAllFilters(false);
 }
 
 //most of the work is handled elsewhere. Need only to update the # of frames
@@ -791,9 +818,12 @@ void MainWindow::showSettingsDialog()
     settingsDialog->show();
 }
 
+//always gets unfiltered list. You ask for the graphs so there is no need to send filtered frames
 void MainWindow::showGraphingWindow()
 {
-    if (!graphingWindow) graphingWindow = new GraphingWindow(model->getListReference());
+    if (!graphingWindow) {
+        graphingWindow = new GraphingWindow(model->getListReference());
+    }
     graphingWindow->show();
 }
 
@@ -802,14 +832,23 @@ void MainWindow::showFrameDataAnalysis()
     //only create an instance of the object if we dont have one. Otherwise just display the existing one.
     if (!frameInfoWindow)
     {
-        frameInfoWindow = new FrameInfoWindow(model->getListReference());
+        if (!useFiltered)
+            frameInfoWindow = new FrameInfoWindow(model->getListReference());
+        else
+            frameInfoWindow = new FrameInfoWindow(model->getFilteredListReference());
     }
     frameInfoWindow->show();
 }
 
 void MainWindow::showFrameSenderWindow()
 {
-    if (!frameSenderWindow) frameSenderWindow = new FrameSenderWindow(model->getListReference());
+    if (!frameSenderWindow)
+    {
+        if (!useFiltered)
+            frameSenderWindow = new FrameSenderWindow(model->getListReference());
+        else
+            frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
+    }
     frameSenderWindow->show();
 }
 
@@ -817,9 +856,10 @@ void MainWindow::showPlaybackWindow()
 {
     if (!playbackWindow)
     {
-        playbackWindow = new FramePlaybackWindow(model->getListReference(), worker);
-        //connect signal to signal to pass the signal through to whoever is handling the slot
-        //connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), this, SIGNAL(sendCANFrame(const CANFrame*,int)));
+        if (!useFiltered)
+            playbackWindow = new FramePlaybackWindow(model->getListReference(), worker);
+        else
+            playbackWindow = new FramePlaybackWindow(model->getFilteredListReference(), worker);
     }
     playbackWindow->show();
 }
@@ -863,11 +903,16 @@ void MainWindow::showFlowViewWindow()
 {
     if (!flowViewWindow)
     {
-        flowViewWindow = new FlowViewWindow(model->getListReference());
+        if (!useFiltered)
+            flowViewWindow = new FlowViewWindow(model->getListReference());
+        else
+            flowViewWindow = new FlowViewWindow(model->getFilteredListReference());
     }
     flowViewWindow->show();
 }
 
+
+//this one always gets the unfiltered list intentionally.
 void MainWindow::showDBCEditor()
 {
     if (!dbcMainEditor)

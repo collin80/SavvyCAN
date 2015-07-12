@@ -33,6 +33,7 @@ public:
     void setOverwriteMode(bool);
     void setHexMode(bool);
     void setFilterState(int ID, bool state);
+    void setAllFilters(bool state);
     void setSecondsMode(bool);
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);

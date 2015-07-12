@@ -66,6 +66,8 @@ private slots:
     void normalizeTiming();
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
+    void filterSetAll();
+    void filterClearAll();
 
 public slots:
     void gotFrames(int, int);
@@ -95,9 +97,11 @@ private:
     QThread serialWorkerThread;
     SerialWorker *worker;
     QByteArray inputBuffer;
+    bool inhibitFilterUpdate;
     bool useHex;
     bool allowCapture;
     bool bDirty; //have frames been added or subtracted since the last save/load?
+    bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
 
     //References to other windows we can display
     GraphingWindow *graphingWindow;

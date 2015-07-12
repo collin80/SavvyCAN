@@ -48,6 +48,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="cbUseFiltered">
+        <property name="text">
+         <string>Use filtered frames in sub-windows</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
