@@ -16,9 +16,14 @@ within the collin80 repos.
 
 It should, however, be noted that use of a capture device is not required to make use
 of this program. It can load and save in several formats:
+
 1. BusMaster log file
+
 2. Microchip log file
+
 3. CRTD format (OVMS log file format from Mark Webb-Johnson)
+
 4. GVRET native format
+
 5. Generic CSV file (ID,D0 D1 D2 D3 D4 D5 D6 D7)
 
