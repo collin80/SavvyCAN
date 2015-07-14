@@ -289,10 +289,15 @@ void GraphingWindow::editSelectedGraph()
 
 void GraphingWindow::removeAllGraphs()
 {
-  ui->graphingView->clearGraphs();
-  graphParams.clear();
-  needScaleSetup = true;
-  ui->graphingView->replot();
+    QMessageBox::StandardButton confirmDialog;
+    confirmDialog = QMessageBox::question(this, "Really?", "Remove all graphs?",
+                                  QMessageBox::Yes|QMessageBox::No);
+    if (confirmDialog == QMessageBox::Yes) {
+        ui->graphingView->clearGraphs();
+        graphParams.clear();
+        needScaleSetup = true;
+        ui->graphingView->replot();
+    }
 }
 
 void GraphingWindow::contextMenuRequest(QPoint pos)
@@ -310,7 +315,9 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
   }
   else  // general context menu on graphs requested
   {
-    menu->addAction(tr("Save Graphs to File"), this, SLOT(saveGraphs()));
+    menu->addAction(tr("Save graph image to file"), this, SLOT(saveGraphs()));
+    menu->addAction(tr("Save graph definitions to file"), this, SLOT(saveDefinitions()));
+    menu->addAction(tr("Load graph definitions from file"), this, SLOT(loadDefinitions()));
     menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
     {
@@ -346,6 +353,107 @@ void GraphingWindow::saveGraphs()
         if (dialog.selectedNameFilter() == filters[0]) ui->graphingView->savePdf(filename, true, 0, 0);
         if (dialog.selectedNameFilter() == filters[1]) ui->graphingView->savePng(filename, 0, 0);
         if (dialog.selectedNameFilter() == filters[2]) ui->graphingView->saveJpg(filename, 0, 0);
+    }
+}
+
+void GraphingWindow::saveDefinitions()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Graph definition (*.gdf)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        QFile *outFile = new QFile(filename);
+
+        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            return;
+
+        QList<GraphParams>::iterator iter;
+        for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
+        {
+            outFile->write(QString::number(iter->ID, 16).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->mask, 16).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->startByte).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->endByte).toUtf8());
+            outFile->putChar(',');
+            if (iter->isSigned) outFile->putChar('Y');
+                else outFile->putChar('N');
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->bias).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->scale).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->stride).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->color.red()).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->color.green()).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->color.blue()).toUtf8());
+            outFile->write("\n");
+        }
+        outFile->close();
+    }
+}
+
+void GraphingWindow::loadDefinitions()
+{
+    QString filename;
+    QFileDialog dialog;
+
+    QStringList filters;
+    filters.append(QString(tr("Graph definition (*.gdf)")));
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        QFile *inFile = new QFile(filename);
+        QByteArray line;
+
+        if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+
+        while (!inFile->atEnd()) {
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                GraphParams gp;
+                QList<QByteArray> tokens = line.split(',');
+
+                gp.ID = tokens[0].toInt(NULL, 16);
+                gp.mask = tokens[1].toULongLong(NULL, 16);
+                qDebug() << gp.mask;
+                gp.startByte = tokens[2].toInt();
+                gp.endByte = tokens[3].toInt();
+                if (tokens[4] == "Y") gp.isSigned = true;
+                    else gp.isSigned = false;
+                gp.bias = tokens[5].toFloat();
+                gp.scale = tokens[6].toFloat();
+                gp.stride = tokens[7].toInt();
+                gp.color.setRed(tokens[8].toInt());
+                gp.color.setGreen(tokens[9].toInt());
+                gp.color.setBlue(tokens[10].toInt());
+                createGraph(gp, true);
+            }
+        }
+        inFile->close();
     }
 }
 
