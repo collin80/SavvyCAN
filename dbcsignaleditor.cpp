@@ -51,6 +51,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             [=]()
             {
                 currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
+                fillSignalForm(currentSignal);
             });
 
     connect(ui->comboReceiver, &QComboBox::currentTextChanged,
@@ -255,7 +256,7 @@ void DBCSignalEditor::addNewSignal()
     DBC_SIGNAL newSig;
     newSig.name = newName;
     newSig.bias = 0.0;
-    newSig.factor = 0.0;
+    newSig.factor = 1.0;
     newSig.intelByteOrder = true;
     newSig.max = 0.0;
     newSig.min = 0.0;

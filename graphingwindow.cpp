@@ -426,14 +426,20 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         int tempValInt;
         int numBytes = (params.endByte - params.startByte) + 1;
         int shiftRef = 1 << (numBytes * 8);
+        uint64_t maskShifter;
+        uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
         {
             tempValInt = 0;
             int expon = 1;
+            maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
-                tempValInt += (frameCache[j * params.stride].data[params.endByte - c] * expon);
+                tempByte = frameCache[j * params.stride].data[params.endByte - c];
+                tempByte &= maskShifter;
+                tempValInt += (tempByte * expon);
                 expon *= 256;
+                maskShifter = maskShifter >> 8;
             }
 
             tempValInt &= params.mask;
@@ -467,14 +473,20 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         int tempValInt;
         int numBytes = (params.startByte - params.endByte) + 1;
         int shiftRef = 1 << (numBytes * 8);
+        uint64_t maskShifter;
+        uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
         {
             tempValInt = 0;
             int expon = 1;
+            maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
-                tempValInt += frameCache[j * params.stride].data[params.endByte + c] * expon;
+                tempByte = frameCache[j * params.stride].data[params.endByte + c];
+                tempByte &= maskShifter;
+                tempValInt += tempByte * expon;
                 expon *= 256;
+                maskShifter = maskShifter >> 8;
             }
             tempValInt &= params.mask;
 
