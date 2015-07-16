@@ -564,6 +564,7 @@ void MainWindow::handleSaveFilters()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -627,6 +628,7 @@ void MainWindow::handleSaveDBC()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -650,6 +652,7 @@ void MainWindow::handleSaveDecoded()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {
