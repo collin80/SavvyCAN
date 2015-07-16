@@ -479,16 +479,32 @@ void MainWindow::handleSaveFile()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        const QVector<CANFrame> *frames = model->getListReference();
+        const QVector<CANFrame> *frames = model->getListReference();        
         filename = dialog.selectedFiles()[0];
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::saveCRTDFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::saveNativeCSVFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::saveGenericCSVFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::saveLogFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::saveMicrochipFile(filename, frames);
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            result = FrameFileIO::saveCRTDFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            result = FrameFileIO::saveNativeCSVFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[2])
+        {
+            result = FrameFileIO::saveGenericCSVFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[3])
+        {
+            result = FrameFileIO::saveLogFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[4])
+        {
+            result = FrameFileIO::saveMicrochipFile(filename, frames);
+        }
         if (result)
         {
             QStringList fileList = filename.split('/');
@@ -515,6 +531,7 @@ void MainWindow::handleSaveFilteredFile()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {
