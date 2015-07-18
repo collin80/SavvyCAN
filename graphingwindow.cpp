@@ -483,7 +483,7 @@ void GraphingWindow::addNewGraph()
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
-    int tempVal;
+    long long tempVal; //64 bit temp value.
     float yminval=10000000.0, ymaxval = -1000000.0;
     float xminval=10000000000.0, xmaxval = -10000000000.0;
 
@@ -531,15 +531,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     else if (params.endByte > params.startByte) //big endian
     {
         float tempValue;
-        int tempValInt;
+        long long tempValInt;
         int numBytes = (params.endByte - params.startByte) + 1;
-        int shiftRef = 1 << (numBytes * 8);
+        long long shiftRef = 1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
         {
             tempValInt = 0;
-            int expon = 1;
+            long long expon = 1;
             maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
@@ -578,15 +578,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     else //little endian
     {
         float tempValue;
-        int tempValInt;
+        long long tempValInt;
         int numBytes = (params.startByte - params.endByte) + 1;
-        int shiftRef = 1 << (numBytes * 8);
+        long long shiftRef = 1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
         {
             tempValInt = 0;
-            int expon = 1;
+            long long expon = 1;
             maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {

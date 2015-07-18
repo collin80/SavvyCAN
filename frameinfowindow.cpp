@@ -134,6 +134,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         ui->treeDetails->clear();
 
+        if (frameCache.count() == 0) return;
+
         baseNode = new QTreeWidgetItem();
         baseNode->setText(0, QString("ID: 0x") + newID );
 

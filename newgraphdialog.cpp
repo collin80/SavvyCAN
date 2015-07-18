@@ -89,7 +89,7 @@ void NewGraphDialog::getParams(GraphParams &params)
 
     //now catch stupidity and bring it to defaults
     if (params.mask == 0) params.mask = 0xFFFFFFFF;
-    if (fabs(params.scale) < 0.0001f) params.scale = 1.0f;
+    if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
     if (params.stride < 1) params.stride = 1;
 
 }
