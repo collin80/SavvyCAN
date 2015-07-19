@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=SavvyCAN
+GenericName=CANBus reverse engineering tool
+Comment=Facilitates reverse engineering of canbus captures
+Exec=FULLPATH/SavvyCAN
+Icon=FULLPATH/icon/SavvyIcon.png
+Terminal=false
+Categories=Development;Electronics;IDE;
+MimeType=text/x-application
+Keywords=embedded electronics;electronics;canbus;reverse engineering;
+Name[en_US]=SavvyCAN

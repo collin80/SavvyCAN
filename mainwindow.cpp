@@ -252,7 +252,7 @@ void MainWindow::readSettings()
     QSettings settings;
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
-        resize(settings.value("Main/WindowSize", QSize(800, 682)).toSize());
+        resize(settings.value("Main/WindowSize", QSize(800, 750)).toSize());
         move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
     }
     if (settings.value("Main/AutoScroll", false).toBool())
