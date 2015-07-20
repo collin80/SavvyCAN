@@ -554,9 +554,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             tempValInt &= params.mask;
 
-            if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
+            long long twocompPoint = params.mask;
+            if (shiftRef < twocompPoint) twocompPoint = shiftRef;
+            if (params.isSigned && tempValInt > ((twocompPoint / 2) - 1))
             {
-                tempValInt = tempValInt - shiftRef;
+                tempValInt = tempValInt - twocompPoint;
             }
 
             tempValue = (float)tempValInt;
@@ -600,9 +602,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
             tempValInt &= params.mask;
 
-            if (params.isSigned && tempValInt > ((shiftRef / 2) - 1))
+            long long twocompPoint = params.mask;
+            if (shiftRef < twocompPoint) twocompPoint = shiftRef;
+            if (params.isSigned && tempValInt > ((twocompPoint / 2) - 1))
             {
-                tempValInt = tempValInt - shiftRef;
+                tempValInt = tempValInt - twocompPoint;
             }
 
             tempValue = (float)tempValInt;
