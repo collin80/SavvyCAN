@@ -86,7 +86,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             {
                 double temp;
                 bool result;
-                temp = ui->txtBias->text().toDouble();
+                temp = ui->txtBias->text().toDouble(&result);
                 if (result) currentSignal->bias = temp;
             });
 
@@ -95,7 +95,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             {
                 double temp;
                 bool result;
-                temp = ui->txtMaxVal->text().toDouble();
+                temp = ui->txtMaxVal->text().toDouble(&result);
                 if (result) currentSignal->max = temp;
             });
 
@@ -104,7 +104,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             {
                 double temp;
                 bool result;
-                temp = ui->txtMinVal->text().toDouble();
+                temp = ui->txtMinVal->text().toDouble(&result);
                 if (result) currentSignal->min = temp;
             });
     connect(ui->txtScale, &QLineEdit::editingFinished,
@@ -112,7 +112,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             {
                 double temp;
                 bool result;
-                temp = ui->txtScale->text().toDouble();
+                temp = ui->txtScale->text().toDouble(&result);
                 if (result) currentSignal->factor = temp;
             });
     connect(ui->txtComment, &QLineEdit::editingFinished,
@@ -352,10 +352,10 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         endBit = 63;
     }
 
-    bitpattern[startBit / 8] |= 1 << (startBit % 8);
+    //bitpattern[startBit / 8] |= 1 << (startBit % 8);
     ui->bitfield->setReference(bitpattern, false);
 
-    for (int y = startBit + 1; y <= endBit; y++)
+    for (int y = startBit; y <= endBit; y++)
     {
         int byt = y / 8;
         bitpattern[byt] |= 1 << (y % 8);

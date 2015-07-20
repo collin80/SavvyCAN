@@ -337,19 +337,21 @@ void DBCHandler::saveDBCFile(QString filename)
             switch (sig.valType)
             {
             case UNSIGNED_INT:
-                msgOutput.append("0+");
+                if (sig.intelByteOrder) msgOutput.append("0+");
+                else msgOutput.append("1+");
                 break;
             case SIGNED_INT:
-                msgOutput.append("0-");
+                if (sig.intelByteOrder) msgOutput.append("0-");
+                else msgOutput.append("1-");
                 break;
             case SP_FLOAT:
-                msgOutput.append("1-");
-                break;
-            case DP_FLOAT:
                 msgOutput.append("2-");
                 break;
-            case STRING:
+            case DP_FLOAT:
                 msgOutput.append("3-");
+                break;
+            case STRING:
+                msgOutput.append("4-");
                 break;
             default:
                 msgOutput.append("0-");
