@@ -340,7 +340,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     startBit = sig->startBit;
     startByte = startBit / 8;
     bitWithinByteStart = startBit % 8;
-    if (sig->intelByteOrder)
+    if (!sig->intelByteOrder)
     {
         bitWithinByteStart = 7 - bitWithinByteStart;
         startBit = (startByte * 8) + bitWithinByteStart;

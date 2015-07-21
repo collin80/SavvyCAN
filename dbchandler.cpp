@@ -519,7 +519,7 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
     startBit = sig.startBit;
     startByte = startBit / 8;
     bitWithinByteStart = startBit % 8;
-    if (sig.intelByteOrder)
+    if (!sig.intelByteOrder)
     {
         bitWithinByteStart = 7 - bitWithinByteStart;
         startBit = (startByte * 8) + bitWithinByteStart;
@@ -539,7 +539,7 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
     bitsToGo = sig.signalSize - 1;
 
     multiplier = 1;
-    if (sig.intelByteOrder)
+    if (!sig.intelByteOrder)
     {
         for (int y = startByte; y < endByte; y++) multiplier *= 256;
     }
@@ -563,7 +563,7 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
         result += processByte(frame.data[b], sBit, eBit) * multiplier;
 
         //add to multiplier
-        if (!sig.intelByteOrder)
+        if (sig.intelByteOrder)
             multiplier = multiplier << 8;
         else
             multiplier = multiplier >> 8;
