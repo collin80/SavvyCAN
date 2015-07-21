@@ -204,6 +204,8 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
 {
     if (inhibitCellChanged) return;
 
+    qDebug() << "Editing row: " << row << " col: " << col;
+
     QTableWidgetItem *replacement = NULL;
     int msgID;
     QString msgName;
@@ -211,12 +213,21 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
     QString msgComment;
     DBC_MESSAGE newMsg;
     DBC_NODE *node = dbcHandler->findNodeByIdx(ui->NodesTable->currentRow());
-    if (node == NULL) dbcHandler->findNodeByIdx(0);
+    DBC_MESSAGE *msg;
+    if (node == NULL)
+    {
+        qDebug() << "No node set?!? This is bad!";
+        return;
+        //dbcHandler->findNodeByIdx(0);
+    }
+
+    msgID = ui->MessagesTable->item(row, 0)->text().toInt(NULL, 16);
+    qDebug() << "Msg ID of edited: " << msgID;
+    msg = dbcHandler->findMsgByID(msgID);
 
     switch(col)
     {
     case 0: //msg id
-        msgID = ui->MessagesTable->item(row, col)->text().toInt(NULL, 16);        
         if (row == ui->MessagesTable->rowCount() - 1) //new record
         {            
             if (dbcHandler->findMsgByID(msgID) != NULL)
@@ -242,9 +253,8 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             dbcHandler->dbc_messages.append(newMsg);
         }
         else //editing an existing record
-        {
-            DBC_MESSAGE *msg = dbcHandler->findMsgByIdx(row);
-            msg->ID = msgID;
+        {            
+            if (msg != NULL) msg->ID = msgID;
         }
         inhibitCellChanged = true;
         replacement = new QTableWidgetItem(QString::number(msgID, 16));
@@ -274,8 +284,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         }
         else
         {
-            DBC_MESSAGE *msg = dbcHandler->findMsgByIdx(row);
-            msg->name = msgName;
+            if (msg != NULL) msg->name = msgName;
         }
         inhibitCellChanged = true;
         replacement = new QTableWidgetItem(msgName);
@@ -298,8 +307,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         }
         else //editing an existing record
         {
-            DBC_MESSAGE *msg = dbcHandler->findMsgByIdx(row);
-            msg->len = msgLen;
+            if (msg != NULL) msg->len = msgLen;
         }
         inhibitCellChanged = true;
         replacement = new QTableWidgetItem(QString::number(msgLen, 16));
@@ -323,8 +331,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         }
         else //editing an existing record
         {
-            DBC_MESSAGE *msg = dbcHandler->findMsgByIdx(row);
-            msg->comment = msgComment;
+            if (msg != NULL) msg->comment = msgComment;
         }
         inhibitCellChanged = true;
         replacement = new QTableWidgetItem(msgComment);
