@@ -2,6 +2,7 @@
 #include "ui_frameplaybackwindow.h"
 #include <QDebug>
 #include <QFileDialog>
+#include <QMenu>
 #include <QSettings>
 
 /*
@@ -64,6 +65,9 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
     connect(ui->tblSequence, SIGNAL(cellPressed(int,int)), this, SLOT(seqTableCellClicked(int,int)));
     connect(ui->tblSequence, SIGNAL(cellChanged(int,int)), this, SLOT(seqTableCellChanged(int,int)));
 
+    ui->listID->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->listID, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuFilters(QPoint)));
+
     playbackTimer->setInterval(ui->spinPlaySpeed->value()); //set the timer to the default value of the control
 
     connect(this, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)), Qt::QueuedConnection);
@@ -119,6 +123,114 @@ void FramePlaybackWindow::writeSettings()
     {
         settings.setValue("Playback/WindowSize", size());
         settings.setValue("Playback/WindowPos", pos());
+    }
+}
+
+void FramePlaybackWindow::contextMenuFilters(QPoint pos)
+{
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    menu->addAction(tr("Save filter definition to file"), this, SLOT(saveFilters()));
+    menu->addAction(tr("Load filter definition from file"), this, SLOT(loadFilters()));
+    menu->popup(ui->listID->mapToGlobal(pos));
+}
+
+void FramePlaybackWindow::saveFilters()
+{
+    QString filename;
+    QFileDialog dialog(this);
+    bool result = false;
+
+    QStringList filters;
+    filters.append(QString(tr("Filter list (*.ftl)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setOption(QFileDialog::DontUseNativeDialog);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            QFile *outFile = new QFile(filename);
+
+            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+                return;
+
+            for (int c = 0; c < ui->listID->count(); c++)
+            {
+                outFile->write(QString::number(ui->listID->item(c)->text().toInt(NULL, 16), 16).toUtf8());
+                outFile->putChar(',');
+                if (ui->listID->item(c)->checkState() == Qt::Checked) outFile->putChar('T');
+                else outFile->putChar('F');
+                outFile->write("\n");
+            }
+
+            outFile->close();
+        }
+    }
+
+}
+
+void FramePlaybackWindow::loadFilters()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Filter List (*.ftl)")));
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        //right now there is only one file type that can be loaded here so just do it.
+        QFile *inFile = new QFile(filename);
+        QByteArray line;
+        int ID;
+        bool checked = false;
+
+        if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+
+        btnSelectNoneClick();
+
+        while (!inFile->atEnd()) {
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(',');
+                ID = tokens[0].toInt(NULL, 16);
+                if (tokens[1].toUpper() == "T") checked = true;
+                    else checked = false;
+                if (checked)
+                {
+                    QHash<int,bool>::iterator it;
+                    for (it = currentSeqItem->idFilters.begin(); it != currentSeqItem->idFilters.end(); ++it)
+                    {
+                        if (it.key() == ID)
+                        {
+                            it.value() = true;
+                        }
+                    }
+                    for (int c = 0; c < ui->listID->count(); c++)
+                    {
+                        QListWidgetItem *item = ui->listID->item(c);
+                        if (item->text().toInt(NULL, 16) == ID)
+                        {
+                            item->setCheckState(Qt::Checked);
+                        }
+                    }
+                }
+            }
+        }
+        inFile->close();
     }
 }
 
@@ -289,6 +401,10 @@ void FramePlaybackWindow::btnLoadLive()
     item.maxLoops = 1;
     item.data = QVector<CANFrame>(*modelFrames); //create a copy of the current frames from the main view
     fillIDHash(item);
+    if (ui->tblSequence->currentRow() == -1)
+    {
+        ui->tblSequence->setCurrentCell(0,0);
+    }
     seqItems.append(item);
     int row = ui->tblSequence->rowCount();
     ui->tblSequence->insertRow(row);
@@ -300,6 +416,7 @@ void FramePlaybackWindow::btnLoadLive()
         currentSeqItem = &seqItems[0];
     }
     updateFrameLabel();
+    btnStopClick();
 }
 
 void FramePlaybackWindow::btnBackOneClick()

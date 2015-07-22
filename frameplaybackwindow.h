@@ -49,6 +49,9 @@ private slots:
     void btnLoadLive();
     void seqTableCellClicked(int row, int col);
     void seqTableCellChanged(int row, int col);
+    void contextMenuFilters(QPoint);
+    void saveFilters();
+    void loadFilters();
 
 signals:
     void sendCANFrame(const CANFrame *, int);
