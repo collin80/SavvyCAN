@@ -345,7 +345,6 @@ void GraphingWindow::saveGraphs()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
-    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -369,7 +368,6 @@ void GraphingWindow::saveDefinitions()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
-    dialog.setOption(QFileDialog::DontUseNativeDialog);
 
     if (dialog.exec() == QDialog::Accepted)
     {

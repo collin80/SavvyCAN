@@ -226,7 +226,10 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
 
         for (int temp = 0; temp < 8; temp++)
         {
-            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            if (temp < frames->at(c).len)
+                outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            else
+                outFile->write("00");
             outFile->putChar(44);
         }
 
