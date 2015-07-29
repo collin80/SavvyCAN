@@ -17,6 +17,8 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     elapsedTime = NULL;
     framesPerSec = 0;
     capturing = true;
+    gotValidated = true;
+    isAutoRestart = false;
 
     readSettings();
 }
@@ -50,6 +52,10 @@ void SerialWorker::readSettings()
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
 {
+    QSettings settings;
+
+    currentPort = port;
+
     if (serial != NULL)
     {
         if (serial->isOpen())
@@ -61,7 +67,7 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
         delete serial;
     }
 
-    serial = new QSerialPort(*port);
+    serial = new QSerialPort(*port);    
 
     qDebug() << "Serial port name is " << port->portName();
     serial->setBaudRate(serial->Baud115200);
@@ -77,6 +83,17 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append(0x06); //request canbus stats from the board
     output.append(0xF1); //another command to the GVRET
     output.append(0x07); //request device information
+    output.append(0xF1);
+    output.append(0x08); //setting singlewire mode
+    if (settings.value("Main/SingleWireMode", false).toBool())
+    {
+        output.append(0x10); //signal that we do want single wire mode
+    }
+    else
+    {
+        output.append(0xFF); //signal we don't want single wire mode
+    }
+
     serial->write(output);
     if (doValidation) connected = false;
         else connected = true;
@@ -211,6 +228,11 @@ void SerialWorker::procRXChar(unsigned char c)
         case 7: //get device info
             rx_state = GET_DEVICE_INFO;
             rx_step = 0;
+            break;
+        case 9:
+            gotValidated = true;
+            qDebug() << "Got validated";
+            rx_state = IDLE;
             break;
         }
         break;
@@ -365,11 +387,40 @@ void SerialWorker::procRXChar(unsigned char c)
 void SerialWorker::handleTick()
 {
     //qDebug() << "Tick!";
+
+    if (!gotValidated)
+    {
+        if (serial->isOpen()) //if it's still false we have a problem...
+        {
+            qDebug() << "Comm validation failed. ";
+            closeSerialPort(); //start by stopping everything.
+            QTimer::singleShot(500, this, SLOT(handleReconnect()));
+            return;
+        }
+    }
+
     framesPerSec += gotFrames * 1000 / elapsedTime->elapsed() - (framesPerSec / 4);
     elapsedTime->restart();
     emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
     canModel->sendBulkRefresh(gotFrames);
-    gotFrames = 0;
+    gotFrames = 0;    
+    if (doValidation) sendCommValidation();
+}
+
+void SerialWorker::handleReconnect()
+{
+    qDebug() << "Automatically reopening the connection";
+    setSerialPort(currentPort); //then go back through the re-init
+}
+
+void SerialWorker::sendCommValidation()
+{
+    QByteArray output;
+
+    gotValidated = false;
+    output.append(0xF1); //another command to the GVRET
+    output.append(0x09); //request a reply to get validation
+    serial->write(output);
 }
 
 //totally shuts down the whole thing

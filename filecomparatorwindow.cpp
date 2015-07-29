@@ -116,8 +116,14 @@ void FileComparatorWindow::calculateDetails()
             //it would be possible to implement a constructor for FrameData
             //that sets the bitmap and values to zero. That would be cleaner and better.
             newData->bitmap = 0;
-            //C++ arrays take the form of a single memory block so zap the whole block at once
-            memset(newData->values, 0, 256 * 8);
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 256; y++)
+                {
+                    newData->values[x][y] = 0;
+                }
+            }
+            //memset(newData->values, 0, 256 * 8);
             for (int y = 0; y < frame.len; y++)
             {
                 newData->values[y][frame.data[y]] = 1;
@@ -144,7 +150,14 @@ void FileComparatorWindow::calculateDetails()
             newData->ID = frame.ID;
             newData->dataLen = frame.len;
             newData->bitmap = 0;
-            memset(newData->values, 0, 256 * 8);
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 256; y++)
+                {
+                    newData->values[x][y] = 0;
+                }
+            }
+            //memset(newData->values, 0, 256 * 8);
             for (int y = 0; y < frame.len; y++)
             {
                 newData->values[y][frame.data[y]] = 1;
@@ -185,7 +198,7 @@ void FileComparatorWindow::calculateDetails()
             sharedItem->addChild(bitmapBaseSecond);
 
             //first up, which bits were set in one file but not the other
-            for (int b = 0; b < 64; b++)
+            for (int b = 0; b < (8 * first.dataLen); b++)
             {
                 detail = new QTreeWidgetItem();
                 detail->setText(0, QString::number(b) + " (" + QString::number(b / 8) + ":" + QString::number(b % 8) + ")");
@@ -251,7 +264,6 @@ void FileComparatorWindow::calculateDetails()
     {
         ui->treeDetails->expandAll();
     }
-
 }
 
 void FileComparatorWindow::saveDetails()

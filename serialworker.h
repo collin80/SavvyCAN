@@ -20,7 +20,8 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
     SET_DIG_OUTPUTS,
     SETUP_CANBUS,
     GET_CANBUS_PARAMS,
-    GET_DEVICE_INFO
+    GET_DEVICE_INFO,
+    SET_SINGLEWIRE_MODE
 };
 
 class SerialWorker : public QObject
@@ -43,6 +44,7 @@ private slots: //we receive things in slots
     void readSerialData();    
     void connectionTimeout();
     void handleTick();
+    void handleReconnect();
 
 public slots:
     void setSerialPort(QSerialPortInfo*);
@@ -58,7 +60,10 @@ private:
     bool connected;
     bool capturing;
     bool doValidation;
+    bool gotValidated;
+    bool isAutoRestart;
     QSerialPort *serial;
+    QSerialPortInfo *currentPort;
     CANFrameModel *canModel;
     QTimer *ticker;
     QTime *elapsedTime;
@@ -73,6 +78,7 @@ private:
     int deviceSingleWireMode;
 
     void procRXChar(unsigned char);
+    void sendCommValidation();
 };
 
 #endif // SERIALTHREAD_H
