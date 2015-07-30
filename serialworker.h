@@ -50,6 +50,7 @@ public slots:
     void setSerialPort(QSerialPortInfo*);
     void closeSerialPort();
     void sendFrame(const CANFrame *, int);
+    void sendFrameBatch(const QList<CANFrame> *);
     void updateBaudRates(int, int);
     void stopFrameCapture();
     void startFrameCapture(); //only need to call this if previously stopped. Otherwise it's the default

@@ -70,11 +70,11 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     serial = new QSerialPort(*port);    
 
     qDebug() << "Serial port name is " << port->portName();
-    serial->setBaudRate(serial->Baud115200);
+    serial->setBaudRate(10000000); //more speed! probably does nothing for USB serial
     serial->setDataBits(serial->Data8);
-    serial->setFlowControl(serial->HardwareControl);
+    serial->setFlowControl(serial->HardwareControl); //this is important though
     serial->open(QIODevice::ReadWrite);
-    serial->setDataTerminalReady(true);
+    serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
     serial->setRequestToSend(true);
     QByteArray output;
     output.append(0xE7); //this puts the device into binary comm mode
@@ -85,6 +85,8 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append(0x07); //request device information
     output.append(0xF1);
     output.append(0x08); //setting singlewire mode
+    output.append(0xF1); //yet another command
+    output.append(0x09); //comm validation command
     if (settings.value("Main/SingleWireMode", false).toBool())
     {
         output.append(0x10); //signal that we do want single wire mode
@@ -122,6 +124,7 @@ void SerialWorker::connectionTimeout()
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
         ticker->stop();
+        closeSerialPort(); //make sure it's properly closed anyway
         emit connectionFailure();
     }
 }
@@ -169,6 +172,14 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     if (!serial->isOpen()) return;
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
+}
+
+//a simple way for another thread to pass us a bunch of frames to send.
+//Don't get carried away here. The GVRET firmware only has finite
+//buffers and besides, the other end will get buried in traffic.
+void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
+{
+    for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i), frames->at(i).bus);
 }
 
 void SerialWorker::updateBaudRates(int Speed1, int Speed2)

@@ -55,11 +55,13 @@ private slots:
 
 signals:
     void sendCANFrame(const CANFrame *, int);
+    void sendFrameBatch(const QList<CANFrame> *);
 
 private:
     Ui::FramePlaybackWindow *ui;
     QList<int> foundID;
     QList<CANFrame> frameCache;
+    QList<CANFrame> sendingBuffer;
     const QVector<CANFrame> *modelFrames;
     int currentPosition;
     QTimer *playbackTimer;

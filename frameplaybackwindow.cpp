@@ -71,6 +71,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
     playbackTimer->setInterval(ui->spinPlaySpeed->value()); //set the timer to the default value of the control
 
     connect(this, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)), Qt::QueuedConnection);
+    connect(this, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)), Qt::QueuedConnection);
 
     QStringList headers;
     headers << "Source" << "Loops";
@@ -520,7 +521,8 @@ void FramePlaybackWindow::btnSelectNoneClick()
 }
 
 void FramePlaybackWindow::timerTriggered()
-{
+{    
+    sendingBuffer.clear();
     for (int count = 0; count < ui->spinBurstSpeed->value(); count++)
     {
         if (!playbackActive)
@@ -537,6 +539,7 @@ void FramePlaybackWindow::timerTriggered()
             updatePosition(false);
         }
     }
+    emit sendFrameBatch(&sendingBuffer);
 }
 
 void FramePlaybackWindow::updatePosition(bool forward)
@@ -606,13 +609,26 @@ void FramePlaybackWindow::updatePosition(bool forward)
     }
 
     //only send frame out if its ID is checked in the list. Otherwise discard it.
-    const CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
+    CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
+    int originalBus = thisFrame->bus;
     if (currentSeqItem->idFilters.find(thisFrame->ID).value())
     {
         //index 0 is none, 1 is Bus 0, 2 is bus 1, 3 is both, 4 is from file
-        if (whichBusSend & 1) emit sendCANFrame(thisFrame, 0);
-        if (whichBusSend & 2) emit sendCANFrame(thisFrame, 1);
-        if (whichBusSend & 4) emit sendCANFrame(thisFrame, thisFrame->bus);
+        if (whichBusSend & 4)
+        {
+            sendingBuffer.append(*thisFrame);
+        }
+        if (whichBusSend & 1)
+        {
+            thisFrame->bus = 0;
+            sendingBuffer.append(*thisFrame);
+        }
+        if (whichBusSend & 2)
+        {
+            thisFrame->bus = 1;
+            sendingBuffer.append(*thisFrame);
+        }
+        thisFrame->bus = originalBus;
         updateFrameLabel();
     }
 
