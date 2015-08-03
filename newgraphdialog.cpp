@@ -17,7 +17,8 @@ NewGraphDialog::NewGraphDialog(QWidget *parent) :
     qsrand((uint)time.msec());
 
     QPalette p = ui->colorSwatch->palette();
-    p.setColor(QPalette::Button, QColor(qrand() % 255,qrand() % 255,qrand() % 255));
+    //using 160 instead of 255 so that colors are always at least a little dark
+    p.setColor(QPalette::Button, QColor(qrand() % 160,qrand() % 160,qrand() % 160));
     ui->colorSwatch->setPalette(p);
 
 }
