@@ -22,6 +22,7 @@ public:
     int stride;
     QColor color;
     QCPGraph *ref;
+    QString graphName;
 };
 
 class GraphingWindow : public QDialog

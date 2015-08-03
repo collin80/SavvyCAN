@@ -168,6 +168,20 @@ void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem 
     if (ok)
     {
       plItem->plottable()->setName(newName);
+
+      if (ui->graphingView->selectedGraphs().size() > 0)
+      {
+          int idx = -1;
+          for (int i = 0; i < graphParams.count(); i++)
+          {
+              if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+              {
+                  graphParams[i].graphName = newName;
+                  break;
+              }
+          }
+      }
+
       ui->graphingView->replot();
     }
   }
@@ -403,6 +417,8 @@ void GraphingWindow::saveDefinitions()
             outFile->write(QString::number(iter->color.green()).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->color.blue()).toUtf8());
+            outFile->putChar(',');
+            outFile->write(iter->graphName.toUtf8());
             outFile->write("\n");
         }
         outFile->close();
@@ -450,6 +466,10 @@ void GraphingWindow::loadDefinitions()
                 gp.color.setRed(tokens[8].toInt());
                 gp.color.setGreen(tokens[9].toInt());
                 gp.color.setBlue(tokens[10].toInt());
+                if (tokens.length() > 11)
+                    gp.graphName = tokens[11];
+                else
+                    gp.graphName = QString();
                 createGraph(gp, true);
             }
         }
@@ -553,8 +573,9 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             tempValInt &= params.mask;
 
             long long twocompPoint = params.mask;
-            if (shiftRef < twocompPoint) twocompPoint = shiftRef;
-            if (params.isSigned && tempValInt > ((twocompPoint / 2) - 1))
+            if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
+            qDebug() << "two comp point: " << twocompPoint;
+            if (params.isSigned && tempValInt > ((twocompPoint / 2)))
             {
                 tempValInt = tempValInt - twocompPoint;
             }
@@ -601,8 +622,9 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             tempValInt &= params.mask;
 
             long long twocompPoint = params.mask;
-            if (shiftRef < twocompPoint) twocompPoint = shiftRef;
-            if (params.isSigned && tempValInt > ((twocompPoint / 2) - 1))
+            if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
+            qDebug() << "two comp point: " << twocompPoint;
+            if (params.isSigned && tempValInt > ((twocompPoint / 2)))
             {
                 tempValInt = tempValInt - twocompPoint;
             }
@@ -639,9 +661,12 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
     ui->graphingView->graph()->setSelectedPen(selectedPen);
 
-    QString gName = "0x"+ QString::number(params.ID, 16) + ":" + QString::number(params.startByte);
-    if ((params.endByte != -1) && (params.endByte != params.startByte)) gName += "-" + QString::number(params.endByte);
-    ui->graphingView->graph()->setName(gName);
+    if (params.graphName == NULL || params.graphName.length() == 0)
+    {
+        params.graphName = QString("0x") + QString::number(params.ID, 16) + ":" + QString::number(params.startByte);
+        if ((params.endByte != -1) && (params.endByte != params.startByte)) params.graphName += "-" + QString::number(params.endByte);
+    }
+    ui->graphingView->graph()->setName(params.graphName);
 
     ui->graphingView->graph()->setData(x,y);
     ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
