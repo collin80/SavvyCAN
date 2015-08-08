@@ -81,9 +81,9 @@ void FileComparatorWindow::calculateDetails()
 {
     QHash<int, FrameData> firstFileIDs;
     QHash<int, FrameData> secondFileIDs;
-    uint64_t shiftBase = 1; //stupid hack to ensure that 64 bit shifting is used.
     QTreeWidgetItem *firstOnlyBase, *secondOnlyBase, *sharedBase, *bitmapBaseFirst, *bitmapBaseSecond;
     QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesFirst, *valuesSecond;
+    uint64_t tmp;
 
     int idx = 0;
 
@@ -105,7 +105,10 @@ void FileComparatorWindow::calculateDetails()
             for (int y = 0; y < frame.len; y++)
             {
                 firstFileIDs[frame.ID].values[y][frame.data[y]]++;
-                firstFileIDs[frame.ID].bitmap |= frame.data[y] << (8 * y);
+                tmp = frame.data[y];
+                tmp = tmp << (8 * y);
+                firstFileIDs[frame.ID].bitmap |= tmp;
+                qDebug() << "bitmap: " << QString::number(firstFileIDs[frame.ID].bitmap, 16);
             }
         }
         else //never seen this ID before so add one
@@ -127,11 +130,14 @@ void FileComparatorWindow::calculateDetails()
             for (int y = 0; y < frame.len; y++)
             {
                 newData->values[y][frame.data[y]] = 1;
-                newData->bitmap |= frame.data[y] << (8 * y);
+                tmp = frame.data[y];
+                tmp = tmp << (8 * y);
+                newData->bitmap |= tmp;
+                qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
             firstFileIDs.insert(frame.ID, *newData);
         }        
-    }
+    }    
 
     for (int x = 0; x < secondFileFrames.count(); x++)
     {
@@ -141,7 +147,10 @@ void FileComparatorWindow::calculateDetails()
             for (int y = 0; y < frame.len; y++)
             {
                 secondFileIDs[frame.ID].values[y][frame.data[y]]++;
-                secondFileIDs[frame.ID].bitmap |= frame.data[y] << (8 * y);
+                tmp = frame.data[y];
+                tmp = tmp << (8 * y);
+                secondFileIDs[frame.ID].bitmap |= tmp;
+                qDebug() << "bitmap: " << QString::number(secondFileIDs[frame.ID].bitmap, 16);
             }
         }
         else //never seen this ID before so add one
@@ -161,7 +170,10 @@ void FileComparatorWindow::calculateDetails()
             for (int y = 0; y < frame.len; y++)
             {
                 newData->values[y][frame.data[y]] = 1;
-                newData->bitmap |= frame.data[y] << (8 * y);
+                tmp = frame.data[y];
+                tmp = tmp << (8 * y);
+                newData->bitmap |= tmp;
+                qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
             secondFileIDs.insert(frame.ID, *newData);
         }
@@ -197,19 +209,27 @@ void FileComparatorWindow::calculateDetails()
             sharedItem->addChild(bitmapBaseFirst);
             sharedItem->addChild(bitmapBaseSecond);
 
+            uint64_t firstBits = first.bitmap;
+            uint64_t secondBits = second.bitmap;
+
+            //qDebug() << "ID: " << first.ID;
+
             //first up, which bits were set in one file but not the other
             for (int b = 0; b < (8 * first.dataLen); b++)
             {
                 detail = new QTreeWidgetItem();
                 detail->setText(0, QString::number(b) + " (" + QString::number(b / 8) + ":" + QString::number(b % 8) + ")");
-                if ( (first.bitmap & (shiftBase<<b)) && !(second.bitmap & (shiftBase<<b)) )
+                if ( (firstBits & 1) && !(secondBits & 1) )
                 {
                     bitmapBaseFirst->addChild(detail);
                 }
-                if ( !(first.bitmap & (shiftBase<<b)) && (second.bitmap & (shiftBase<<b)) )
+                else if ( !(firstBits & 1) && (secondBits & 1) )
                 {
                     bitmapBaseSecond->addChild(detail);
                 }
+                qDebug() << b << "  " << QString::number(firstBits, 16) << "  " << QString::number(secondBits, 16);
+                firstBits = firstBits >> 1;
+                secondBits = secondBits >> 1;
             }
 
             for (int i = 0; i < qMax(first.dataLen, second.dataLen); i++)
@@ -227,11 +247,11 @@ void FileComparatorWindow::calculateDetails()
                 {
                     detail = new QTreeWidgetItem();
                     detail->setText(0, Utility::formatHexNum(j));
-                    if (first.values[i][j] > 0 && second.values[i][j] == 0)
+                    if ((first.values[i][j] > 0) && (second.values[i][j] == 0) )
                     {
                         valuesFirst->addChild(detail);
                     }
-                    if (second.values[i][j] > 0 && first.values[i][j] == 0)
+                    if ((second.values[i][j] > 0) && (first.values[i][j] == 0) )
                     {
                         valuesSecond->addChild(detail);
                     }
@@ -256,8 +276,8 @@ void FileComparatorWindow::calculateDetails()
     ui->treeDetails->addTopLevelItem(secondOnlyBase);
     ui->treeDetails->addTopLevelItem(sharedBase);
 
-    ui->treeDetails->setSortingEnabled(true);
-    ui->treeDetails->sortByColumn(0, Qt::AscendingOrder);
+    //ui->treeDetails->setSortingEnabled(true);
+    //ui->treeDetails->sortByColumn(0, Qt::AscendingOrder);
 
     QSettings settings;
     if (settings.value("InfoCompare/AutoExpand", false).toBool())

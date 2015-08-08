@@ -70,10 +70,13 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     serial = new QSerialPort(*port);    
 
     qDebug() << "Serial port name is " << port->portName();
-    serial->setBaudRate(10000000); //more speed! probably does nothing for USB serial
+    //serial->setBaudRate(10000000); //more speed! probably does nothing for USB serial
     serial->setDataBits(serial->Data8);
     serial->setFlowControl(serial->HardwareControl); //this is important though
-    serial->open(QIODevice::ReadWrite);
+    if (!serial->open(QIODevice::ReadWrite))
+    {
+        qDebug() << serial->errorString();
+    }
     serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
     serial->setRequestToSend(true);
     QByteArray output;

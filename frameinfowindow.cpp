@@ -210,7 +210,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 dataHistogram[dat][c]++; //add one to count for this
                 for (int l = 0; l < 8; l++)
                 {
-                    int bit =  dat & (1 << l);
+                    int bit = dat & (1 << l);
                     if (bit == (1 << l))
                     {
                         bitfieldHistogram[c * 8 + l]++;
@@ -260,7 +260,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         dataBase = new QTreeWidgetItem();
         dataBase->setText(0, tr("Bitfield Histogram"));
-        for (int c = 0; c < 64; c++)
+        for (int c = 0; c < 8 * maxLen; c++)
         {
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
