@@ -169,6 +169,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //default height of an item in the table. Need to do this in case
     //of scaling or font differences between different computers.
     CANFrame temp;
+    temp.bus = 0;
+    temp.ID = 0x100;
+    temp.len = 0;
     model->addFrame(temp, true);
     normalRowHeight = ui->canFramesView->rowHeight(0);
     qDebug() << "normal row height = " << normalRowHeight;

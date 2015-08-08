@@ -20,7 +20,10 @@ void DBCHandler::loadDBCFile(QString filename)
     qDebug() << "DBC File: " << filename;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
         return;
+    }
 
     qDebug() << "Starting DBC load";
     dbc_nodes.clear();
@@ -256,6 +259,7 @@ void DBCHandler::loadDBCFile(QString filename)
 */
     }
     inFile->close();
+    delete inFile;
 }
 
 /*Yes, this is really hard to follow and all of the sections are mixed up in code
@@ -267,7 +271,10 @@ void DBCHandler::saveDBCFile(QString filename)
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
         return;
+    }
 
     //right now it outputs a standard hard coded boilerplate
     outFile->write("VERSION \"\"\n");
@@ -386,6 +393,7 @@ void DBCHandler::saveDBCFile(QString filename)
     outFile->write(valuesOutput.toUtf8());
 
     outFile->close();
+    delete outFile;
 }
 
 

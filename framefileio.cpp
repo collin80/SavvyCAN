@@ -71,7 +71,10 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
         return false;
+    }
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -114,6 +117,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
         }
     }
     inFile->close();
+    delete inFile;
     return true;
 }
 
@@ -122,7 +126,10 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
     QFile *outFile = new QFile(filename);
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
         return false;
+    }
 
     //write in float format with 6 digits after the decimal point
     outFile->write(QString::number(frames->at(0).timestamp / 1000000.0, 'f', 6).toUtf8() + tr(" CXX GVRET-PC Reverse Engineering Tool Output V").toUtf8() + QString::number(VERSION).toUtf8());
@@ -149,6 +156,7 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
         outFile->write("\n");
     }
     outFile->close();
+    delete outFile;
 
     return true;
 }
@@ -162,7 +170,10 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
     long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
         return false;
+    }
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -194,6 +205,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
         }
     }
     inFile->close();
+    delete inFile;
     return true;
 }
 
@@ -202,7 +214,10 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
     QFile *outFile = new QFile(filename);
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
         return false;
+    }
 
     outFile->write("Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
     outFile->write("\n");
@@ -237,6 +252,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
 
     }
     outFile->close();
+    delete outFile;
     return true;
 }
 
@@ -248,7 +264,10 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
     long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
         return false;
+    }
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -273,6 +292,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
         }
     }
     inFile->close();
+    delete inFile;
     return true;
 }
 
@@ -282,7 +302,10 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
     QFile *outFile = new QFile(filename);
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
         return false;
+    }
 
     outFile->write("ID,Data Bytes");
     outFile->write("\n");
@@ -302,6 +325,7 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
 
     }
     outFile->close();
+    delete outFile;
     return true;
 }
 
@@ -345,7 +369,10 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
     uint64_t timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
         return false;
+    }
 
     line = inFile->readLine(); //read out the header first and discard it.
 
@@ -369,6 +396,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
         frames->append(thisFrame);
     }
     inFile->close();
+    delete inFile;
     return true;
 }
 
@@ -380,7 +408,10 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
     timestamp = QDateTime::currentDateTime();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
         return false;
+    }
 
     outFile->write("***BUSMASTER Ver 2.4.0***\n");
     outFile->write("***PROTOCOL CAN***\n");
@@ -419,6 +450,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 
     }
     outFile->close();
+    delete outFile;
     return true;
 }
 
@@ -440,7 +472,10 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     long long timeStamp = Utility::GetTimeMS();
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
         return false;
+    }
 
     //line = inFile->readLine(); //read out the header first and discard it.
 
@@ -472,6 +507,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
         }
     }
     inFile->close();
+    delete inFile;
     return true;
 }
 
@@ -494,7 +530,10 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
     timestamp = QDateTime::currentDateTime();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
         return false;
+    }
 
     outFile->write("//---------------------------------\n");
     outFile->write("Microchip Technology Inc.\n");
@@ -522,5 +561,6 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
 
     }
     outFile->close();
+    delete outFile;
     return true;
 }
