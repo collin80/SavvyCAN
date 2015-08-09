@@ -481,9 +481,12 @@ void GraphingWindow::loadDefinitions()
 void GraphingWindow::showParamsDialog(int idx = -1)
 {
     NewGraphDialog *thisDialog = new NewGraphDialog(dbcHandler);
-    QString oldName;
-    if (idx > -1) oldName = graphParams[idx].graphName;
-    if (idx > -1) thisDialog->setParams(graphParams[idx]);
+
+    if (idx > -1)
+    {
+        thisDialog->setParams(graphParams[idx]);
+    }
+
     if (thisDialog->exec() == QDialog::Accepted)
     {
         if (idx > -1) //if there was an existing graph then delete it
@@ -494,7 +497,6 @@ void GraphingWindow::showParamsDialog(int idx = -1)
         //create a new graph with the returned parameters.
         GraphParams params;
         thisDialog->getParams(params);
-        params.graphName = oldName;
         createGraph(params);
     }
     delete thisDialog;

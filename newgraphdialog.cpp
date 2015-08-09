@@ -57,8 +57,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->txtScale->setText(QString::number(params.scale));
     ui->txtStride->setText(QString::number(params.stride));
     ui->cbSigned->setChecked(params.isSigned);
-
-    graphName = params.graphName;
+    ui->txtName->setText(params.graphName);
 
     if (params.endByte > -1)
     {
@@ -100,7 +99,7 @@ void NewGraphDialog::getParams(GraphParams &params)
     if (params.mask == 0) params.mask = 0xFFFFFFFF;
     if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
     if (params.stride < 1) params.stride = 1;
-    params.graphName = graphName;
+    params.graphName = ui->txtName->text();
 }
 
 void NewGraphDialog::loadMessages()

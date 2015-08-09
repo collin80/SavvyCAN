@@ -29,7 +29,6 @@ private slots:
 private:
     Ui::NewGraphDialog *ui;
     DBCHandler *dbcHandler;
-    QString graphName;
 };
 
 #endif // NEWGRAPHDIALOG_H
