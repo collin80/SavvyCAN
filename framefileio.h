@@ -5,6 +5,7 @@
 
 #include "config.h"
 #include <Qt>
+#include <QApplication>
 #include <QObject>
 #include <QVector>
 #include <QFile>

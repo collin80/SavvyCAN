@@ -4,7 +4,7 @@
 #include "mainwindow.h"
 #include <QDebug>
 
-GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+GraphingWindow::GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
 {
@@ -13,6 +13,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     readSettings();
 
     modelFrames = frames;
+    dbcHandler = handler;
 
     ui->graphingView->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);
@@ -479,7 +480,9 @@ void GraphingWindow::loadDefinitions()
 
 void GraphingWindow::showParamsDialog(int idx = -1)
 {
-    NewGraphDialog *thisDialog = new NewGraphDialog();
+    NewGraphDialog *thisDialog = new NewGraphDialog(dbcHandler);
+    QString oldName;
+    if (idx > -1) oldName = graphParams[idx].graphName;
     if (idx > -1) thisDialog->setParams(graphParams[idx]);
     if (thisDialog->exec() == QDialog::Accepted)
     {
@@ -491,6 +494,7 @@ void GraphingWindow::showParamsDialog(int idx = -1)
         //create a new graph with the returned parameters.
         GraphParams params;
         thisDialog->getParams(params);
+        params.graphName = oldName;
         createGraph(params);
     }
     delete thisDialog;
@@ -540,12 +544,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             {
                 x[j] = frameCache[j].timestamp;
             }
-            y[j] = (tempVal + params.bias) * params.scale;
+            y[j] = (tempVal * params.scale) + params.bias;
             if (y[j] < yminval) yminval = y[j];
             if (y[j] > ymaxval) ymaxval = y[j];
             if (x[j] < xminval) xminval = x[j];
             if (x[j] > xmaxval) xmaxval = x[j];
-
         }
     }
     else if (params.endByte > params.startByte) //big endian
@@ -591,7 +594,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
                 x[j] = frameCache[j].timestamp;
             }
 
-            y[j] = (tempValue + params.bias) * params.scale;
+            y[j] = (tempValue * params.scale) + params.bias;
             if (y[j] < yminval) yminval = y[j];
             if (y[j] > ymaxval) ymaxval = y[j];
             if (x[j] < xminval) xminval = x[j];
@@ -640,7 +643,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
                 x[j] = frameCache[j].timestamp;
             }
 
-            y[j] = (tempValue + params.bias) * params.scale;
+            y[j] = (tempValue * params.scale) + params.bias;
             if (y[j] < yminval) yminval = y[j];
             if (y[j] > ymaxval) ymaxval = y[j];
             if (x[j] < xminval) xminval = x[j];

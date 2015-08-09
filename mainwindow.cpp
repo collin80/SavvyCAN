@@ -443,11 +443,24 @@ void MainWindow::handleLoadFile()
 
         QVector<CANFrame> tempFrames;
 
+        QProgressDialog progress(this);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setLabelText("Loading file...");
+        progress.setCancelButton(0);
+        progress.setRange(0,0);
+        progress.setMinimumDuration(0);
+        progress.show();
+
+        qApp->processEvents();
+
         if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
+
+        progress.cancel();
+
         if (result)
         {
             model->insertFrames(tempFrames);
@@ -840,7 +853,7 @@ void MainWindow::showSettingsDialog()
 void MainWindow::showGraphingWindow()
 {
     if (!graphingWindow) {
-        graphingWindow = new GraphingWindow(model->getListReference());
+        graphingWindow = new GraphingWindow(dbcHandler, model->getListReference());
     }
     graphingWindow->show();
 }

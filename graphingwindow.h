@@ -3,6 +3,7 @@
 
 #include "qcustomplot.h"
 #include "can_structs.h"
+#include "dbchandler.h"
 
 #include <QDialog>
 
@@ -30,7 +31,7 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(const QVector<CANFrame> *, QWidget *parent = 0);
+    explicit GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
     void showEvent(QShowEvent*);
 
@@ -55,6 +56,7 @@ private slots:
 
 private:
     Ui::GraphingWindow *ui;
+    DBCHandler *dbcHandler;
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
     QList<GraphParams> graphParams;

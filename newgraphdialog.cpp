@@ -3,11 +3,13 @@
 #include <QColorDialog>
 #include "utility.h"
 
-NewGraphDialog::NewGraphDialog(QWidget *parent) :
+NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::NewGraphDialog)
 {
     ui->setupUi(this);
+
+    dbcHandler = handler;
 
     connect(ui->colorSwatch, SIGNAL(clicked(bool)), this, SLOT(colorSwatchClick()));
     connect(ui->btnAddGraph, SIGNAL(clicked(bool)), this, SLOT(addButtonClicked()));
@@ -21,6 +23,10 @@ NewGraphDialog::NewGraphDialog(QWidget *parent) :
     p.setColor(QPalette::Button, QColor(qrand() % 160,qrand() % 160,qrand() % 160));
     ui->colorSwatch->setPalette(p);
 
+    connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
+    connect(ui->cbSignals, SIGNAL(currentIndexChanged(int)), this, SLOT(fillFormFromSignal(int)));
+
+    loadMessages();
 }
 
 NewGraphDialog::~NewGraphDialog()
@@ -51,6 +57,8 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->txtScale->setText(QString::number(params.scale));
     ui->txtStride->setText(QString::number(params.stride));
     ui->cbSigned->setChecked(params.isSigned);
+
+    graphName = params.graphName;
 
     if (params.endByte > -1)
     {
@@ -92,5 +100,66 @@ void NewGraphDialog::getParams(GraphParams &params)
     if (params.mask == 0) params.mask = 0xFFFFFFFF;
     if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
     if (params.stride < 1) params.stride = 1;
+    params.graphName = graphName;
+}
 
+void NewGraphDialog::loadMessages()
+{
+    ui->cbMessages->clear();
+    if (dbcHandler == NULL) return;
+    for (int x = 0; x < dbcHandler->dbc_messages.count(); x++)
+    {
+        ui->cbMessages->addItem(dbcHandler->dbc_messages[x].name);
+    }
+}
+
+void NewGraphDialog::loadSignals(int idx)
+{
+    //messages were placed into the list in the same order as they exist
+    //in the data structure so it should have been possible to just
+    //look it up based on index but by name is probably safer and this operation
+    //is not time critical at all.
+    DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
+
+    if (msg == NULL) return;
+    ui->cbSignals->clear();
+    for (int x = 0; x < msg->msgSignals.count(); x++)
+    {
+        ui->cbSignals->addItem(msg->msgSignals[x].name);
+    }
+}
+
+void NewGraphDialog::fillFormFromSignal(int idx)
+{
+    GraphParams params;
+    DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
+
+    if (msg == NULL) return;
+
+    DBC_SIGNAL *sig = dbcHandler->findSignalByName(msg, ui->cbSignals->currentText());
+
+    if (sig == NULL) return;
+
+    params.graphName = sig->name;
+    params.ID = msg->ID;
+    params.bias = sig->bias;
+    params.scale = sig->factor;
+    params.stride = 1;
+    params.mask = (1 << (sig->signalSize)) - 1;
+    params.color = ui->colorSwatch->palette().color(QPalette::Button);
+    if (sig->intelByteOrder)
+    {
+        //for this ordering the byte order is reserved and starting byte
+        //will be the higher value
+        params.endByte = sig->startBit / 8;
+        params.startByte = (sig->startBit + sig->signalSize - 1) / 8;
+    }
+    else
+    {
+        //for this ordering it goes in normal numerical order
+        params.startByte = sig->startBit / 8;
+        params.endByte = (sig->startBit + sig->signalSize - 1) / 8;
+    }
+
+    setParams(params);
 }

@@ -69,6 +69,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    int lineCounter = 0;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -79,6 +80,12 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
         line = inFile->readLine().simplified();
         if (line.length() > 2)
         {
@@ -124,6 +131,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
 bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
+    int lineCounter = 0;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -137,6 +145,13 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
 
     for (int c = 0; c < frames->count(); c++)
     {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         outFile->write(QString::number(frames->at(c).timestamp / 1000000.0, 'f', 6).toUtf8());
         outFile->putChar(' ');
         if (frames->at(c).extended)
@@ -168,6 +183,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     QByteArray line;
     long long timeStamp = Utility::GetTimeMS();
+    int lineCounter = 0;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -178,6 +194,13 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         line = inFile->readLine();
         if (line.length() > 2)
         {
@@ -212,6 +235,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
 bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
+    int lineCounter = 0;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -224,6 +248,13 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
 
     for (int c = 0; c < frames->count(); c++)
     {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         outFile->write(QString::number(frames->at(c).timestamp).toUtf8());
         outFile->putChar(44);
 
@@ -262,6 +293,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
     CANFrame thisFrame;
     QByteArray line;
     long long timeStamp = Utility::GetTimeMS();
+    int lineCounter = 0;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -272,6 +304,13 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         line = inFile->readLine();
         if (line.length() > 2)
         {
@@ -300,6 +339,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
 bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
+    int lineCounter = 0;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -312,6 +352,13 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
 
     for (int c = 0; c < frames->count(); c++)
     {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(44);
 
@@ -367,6 +414,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     QByteArray line;
     uint64_t timeStamp = Utility::GetTimeMS();
+    int lineCounter = 0;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -377,6 +425,13 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
     line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         line = inFile->readLine();
         if (line.startsWith("***")) continue;
         if (line.length() > 1)
@@ -404,6 +459,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
     QDateTime timestamp, tempStamp;
+    int lineCounter = 0;
 
     timestamp = QDateTime::currentDateTime();
 
@@ -431,6 +487,13 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 
     for (int c = 0; c < frames->count(); c++)
     {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         tempStamp = timestamp.addMSecs(frames->at(c).timestamp / 1000);
         outFile->write(tempStamp.toString("h:m:s:z").toUtf8());
         outFile->write(" Rx ");
@@ -470,6 +533,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
     bool inComment = false;
     long long timeStamp = Utility::GetTimeMS();
+    int lineCounter = 0;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -480,6 +544,13 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     //line = inFile->readLine(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         line = inFile->readLine();
         if (line.length() > 2)
         {
@@ -526,6 +597,7 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
 {
     QFile *outFile = new QFile(filename);
     QDateTime timestamp, tempStamp;
+    int lineCounter = 0;
 
     timestamp = QDateTime::currentDateTime();
 
@@ -546,6 +618,13 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
 
     for (int c = 0; c < frames->count(); c++)
     {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
         outFile->write(QString::number((int)(frames->at(c).timestamp / 1000)).toUtf8());
         outFile->write(";RX;");
         outFile->write("0x" + QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
