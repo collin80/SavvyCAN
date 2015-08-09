@@ -1,5 +1,7 @@
 #include "framefileio.h"
 
+#include <QProgressDialog>
+
 FrameFileIO::FrameFileIO()
 {
 
@@ -26,11 +28,24 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
     {
         filename = dialog.selectedFiles()[0];
 
+        QProgressDialog progress(qApp->activeWindow());
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setLabelText("Loading file...");
+        progress.setCancelButton(0);
+        progress.setRange(0,0);
+        progress.setMinimumDuration(0);
+        progress.show();
+
+        qApp->processEvents();
+
         if (dialog.selectedNameFilter() == filters[0]) result = loadCRTDFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[1]) result = loadNativeCSVFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[2]) result = loadGenericCSVFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
+
+        progress.cancel();
+
         if (result)
         {
             QStringList fileList = filename.split('/');

@@ -500,6 +500,17 @@ void MainWindow::handleSaveFile()
     {
         const QVector<CANFrame> *frames = model->getListReference();        
         filename = dialog.selectedFiles()[0];
+
+        QProgressDialog progress(this);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setLabelText("Saving file...");
+        progress.setCancelButton(0);
+        progress.setRange(0,0);
+        progress.setMinimumDuration(0);
+        progress.show();
+
+        qApp->processEvents();
+
         if (dialog.selectedNameFilter() == filters[0])
         {
             result = FrameFileIO::saveCRTDFile(filename, frames);
@@ -520,6 +531,9 @@ void MainWindow::handleSaveFile()
         {
             result = FrameFileIO::saveMicrochipFile(filename, frames);
         }
+
+        progress.cancel();
+
         if (result)
         {
             QStringList fileList = filename.split('/');
@@ -551,11 +565,25 @@ void MainWindow::handleSaveFilteredFile()
     {
         const QVector<CANFrame> *frames = model->getFilteredListReference();
         filename = dialog.selectedFiles()[0];
+
+        QProgressDialog progress(this);
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setLabelText("Saving filtered file...");
+        progress.setCancelButton(0);
+        progress.setRange(0,0);
+        progress.setMinimumDuration(0);
+        progress.show();
+
+        qApp->processEvents();
+
         if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::saveCRTDFile(filename, frames);
         if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::saveNativeCSVFile(filename, frames);
         if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::saveGenericCSVFile(filename, frames);
         if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::saveLogFile(filename, frames);
         if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::saveMicrochipFile(filename, frames);
+
+        progress.cancel();
+
         if (result)
         {
             QStringList fileList = filename.split('/');
