@@ -9,12 +9,13 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    connect(ui->btnFirstFile, SIGNAL(clicked(bool)), this, SLOT(loadFirstFile()));
-    connect(ui->btnSecondFile, SIGNAL(clicked(bool)), this, SLOT(loadSecondFile()));
+    connect(ui->btnInterestedFile, SIGNAL(clicked(bool)), this, SLOT(loadInterestedFile()));
+    connect(ui->btnLoadRefFile, SIGNAL(clicked(bool)), this, SLOT(loadReferenceFile()));
     connect(ui->btnSaveDetails, SIGNAL(clicked(bool)), this, SLOT(saveDetails()));
+    connect(ui->btnClear, SIGNAL(clicked(bool)), this, SLOT(clearReference()));
 
     ui->lblFirstFile->setText("");
-    ui->lblSecondFile->setText("");
+    ui->lblRefFrames->setText("0");
 }
 
 FileComparatorWindow::~FileComparatorWindow()
@@ -53,62 +54,70 @@ void FileComparatorWindow::writeSettings()
     }
 }
 
-void FileComparatorWindow::loadFirstFile()
+void FileComparatorWindow::loadInterestedFile()
 {
-    firstFileFrames.clear();
-    QString result = FrameFileIO::loadFrameFile(&firstFileFrames);
+    interestedFrames.clear();
+    QString result = FrameFileIO::loadFrameFile(&interestedFrames);
     if (result.length() > 0)
     {
         ui->lblFirstFile->setText(result);
-        firstFilename = result;
-        if (firstFileFrames.count() > 0 && secondFileFrames.count() > 0) calculateDetails();
+        interestedFilename = result;
+        if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
 }
 
-void FileComparatorWindow::loadSecondFile()
+void FileComparatorWindow::loadReferenceFile()
 {
-    secondFileFrames.clear();
-    QString result = FrameFileIO::loadFrameFile(&secondFileFrames);
+    //secondFileFrames.clear();
+    QString result = FrameFileIO::loadFrameFile(&referenceFrames);
     if (result.length() > 0)
     {
-        ui->lblSecondFile->setText(result);
-        secondFilename = result;
-        if (firstFileFrames.count() > 0 && secondFileFrames.count() > 0) calculateDetails();
+        ui->lblRefFrames->setText(QString::number(referenceFrames.length()));
+        if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
+}
+
+void FileComparatorWindow::clearReference()
+{
+    referenceFrames.clear();
+    ui->treeDetails->clear();
 }
 
 void FileComparatorWindow::calculateDetails()
 {
-    QHash<int, FrameData> firstFileIDs;
-    QHash<int, FrameData> secondFileIDs;
-    QTreeWidgetItem *firstOnlyBase, *secondOnlyBase, *sharedBase, *bitmapBaseFirst, *bitmapBaseSecond;
-    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesFirst, *valuesSecond;
+    QMap<int, FrameData> interestedIDs;
+    QMap<int, FrameData> referenceIDs;
+    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference;
+    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference;
     uint64_t tmp;
 
-    int idx = 0;
+    bool uniqueInterested = ui->ckUniqueToInterested->isChecked();
 
     ui->treeDetails->clear();
 
-    firstOnlyBase = new QTreeWidgetItem();
-    firstOnlyBase->setText(0,"IDs found only in " + firstFilename);
-    secondOnlyBase = new QTreeWidgetItem();
-    secondOnlyBase->setText(0, "IDs found only in " + secondFilename);
+    interestedOnlyBase = new QTreeWidgetItem();
+    interestedOnlyBase->setText(0,"IDs found only in " + interestedFilename);
+    if (!uniqueInterested)
+    {
+        referenceOnlyBase = new QTreeWidgetItem();
+        referenceOnlyBase->setText(0, "IDs found only in reference frames");
+    }
     sharedBase = new QTreeWidgetItem();
-    sharedBase->setText(0,"IDs found in both files");
+    sharedBase->setText(0,"IDs found in both places");
 
     //first we have to fill out the data structures to get ready to do the report
-    for (int x = 0; x < firstFileFrames.count(); x++)
+    for (int x = 0; x < interestedFrames.count(); x++)
     {
-        CANFrame frame = firstFileFrames.at(x);
-        if (firstFileIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
+        CANFrame frame = interestedFrames.at(x);
+        if (interestedIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
         {
             for (int y = 0; y < frame.len; y++)
             {
-                firstFileIDs[frame.ID].values[y][frame.data[y]]++;
+                interestedIDs[frame.ID].values[y][frame.data[y]]++;
                 tmp = frame.data[y];
                 tmp = tmp << (8 * y);
-                firstFileIDs[frame.ID].bitmap |= tmp;
-                qDebug() << "bitmap: " << QString::number(firstFileIDs[frame.ID].bitmap, 16);
+                interestedIDs[frame.ID].bitmap |= tmp;
+                //qDebug() << "bitmap: " << QString::number(interestedIDs[frame.ID].bitmap, 16);
             }
         }
         else //never seen this ID before so add one
@@ -133,24 +142,24 @@ void FileComparatorWindow::calculateDetails()
                 tmp = frame.data[y];
                 tmp = tmp << (8 * y);
                 newData->bitmap |= tmp;
-                qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
+                //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
-            firstFileIDs.insert(frame.ID, *newData);
+            interestedIDs.insert(frame.ID, *newData);
         }        
     }    
 
-    for (int x = 0; x < secondFileFrames.count(); x++)
+    for (int x = 0; x < referenceFrames.count(); x++)
     {
-        CANFrame frame = secondFileFrames.at(x);
-        if (secondFileIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
+        CANFrame frame = referenceFrames.at(x);
+        if (referenceIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
         {
             for (int y = 0; y < frame.len; y++)
             {
-                secondFileIDs[frame.ID].values[y][frame.data[y]]++;
+                referenceIDs[frame.ID].values[y][frame.data[y]]++;
                 tmp = frame.data[y];
                 tmp = tmp << (8 * y);
-                secondFileIDs[frame.ID].bitmap |= tmp;
-                qDebug() << "bitmap: " << QString::number(secondFileIDs[frame.ID].bitmap, 16);
+                referenceIDs[frame.ID].bitmap |= tmp;
+                //qDebug() << "bitmap: " << QString::number(referenceIDs[frame.ID].bitmap, 16);
             }
         }
         else //never seen this ID before so add one
@@ -173,107 +182,118 @@ void FileComparatorWindow::calculateDetails()
                 tmp = frame.data[y];
                 tmp = tmp << (8 * y);
                 newData->bitmap |= tmp;
-                qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
+                //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
-            secondFileIDs.insert(frame.ID, *newData);
+            referenceIDs.insert(frame.ID, *newData);
         }
     }
 
     //now we iterate through the IDs within both files and see which are unique to one file and which
     //are shared
-    QHash<int, FrameData>::iterator i;
-    for (i = firstFileIDs.begin(); i != firstFileIDs.end(); ++i)
+    bool interestedHadUnique = false;
+    QMap<int, FrameData>::iterator i;
+    for (i = interestedIDs.begin(); i != interestedIDs.end(); ++i)
     {
         int keyone = i.key();
-        if (!secondFileIDs.contains(keyone))
+        if (!referenceIDs.contains(keyone))
         {
             valuesBase = new QTreeWidgetItem();
             valuesBase->setText(0, QString::number(keyone, 16));
-            firstOnlyBase->addChild(valuesBase);
+            interestedOnlyBase->addChild(valuesBase);
         }
         else //ID was in both files
         {
+            interestedHadUnique = false;
             sharedItem = new QTreeWidgetItem();
-            sharedItem->setText(0, Utility::formatHexNum(keyone));
-            sharedBase->addChild(sharedItem);
+            sharedItem->setText(0, Utility::formatHexNum(keyone));            
             //if the ID was in both files then we can use the data accumulated above in bitmap
             //and values to figure out what has changed between the two files
 
-            FrameData first = firstFileIDs[keyone];
-            FrameData second = secondFileIDs[keyone];
+            FrameData interested = interestedIDs[keyone];
+            FrameData reference = referenceIDs[keyone];
 
-            bitmapBaseFirst = new QTreeWidgetItem();
-            bitmapBaseFirst->setText(0, "Bits set only in " + firstFilename);
-            bitmapBaseSecond = new QTreeWidgetItem();
-            bitmapBaseSecond->setText(0, "Bits set only in " + secondFilename);
-            sharedItem->addChild(bitmapBaseFirst);
-            sharedItem->addChild(bitmapBaseSecond);
+            bitmapBaseInterested = new QTreeWidgetItem();
+            bitmapBaseInterested->setText(0, "Bits set only in " + interestedFilename);
+            if (!uniqueInterested)
+            {
+                bitmapBaseReference = new QTreeWidgetItem();
+                bitmapBaseReference->setText(0, "Bits set only in reference frames");
+            }
+            sharedItem->addChild(bitmapBaseInterested);
+            sharedItem->addChild(bitmapBaseReference);
 
-            uint64_t firstBits = first.bitmap;
-            uint64_t secondBits = second.bitmap;
-
-            //qDebug() << "ID: " << first.ID;
+            uint64_t interestedBits = interested.bitmap;
+            uint64_t referenceBits = reference.bitmap;
 
             //first up, which bits were set in one file but not the other
-            for (int b = 0; b < (8 * first.dataLen); b++)
+            for (int b = 0; b < (8 * interested.dataLen); b++)
             {
                 detail = new QTreeWidgetItem();
                 detail->setText(0, QString::number(b) + " (" + QString::number(b / 8) + ":" + QString::number(b % 8) + ")");
-                if ( (firstBits & 1) && !(secondBits & 1) )
+                if ( (interestedBits & 1) && !(referenceBits & 1) )
                 {
-                    bitmapBaseFirst->addChild(detail);
+                    bitmapBaseInterested->addChild(detail);
+                    interestedHadUnique = true;
                 }
-                else if ( !(firstBits & 1) && (secondBits & 1) )
+                else if ( !(interestedBits & 1) && (referenceBits & 1) )
                 {
-                    bitmapBaseSecond->addChild(detail);
+                    if (!uniqueInterested) bitmapBaseReference->addChild(detail);
                 }
-                qDebug() << b << "  " << QString::number(firstBits, 16) << "  " << QString::number(secondBits, 16);
-                firstBits = firstBits >> 1;
-                secondBits = secondBits >> 1;
+                //qDebug() << b << "  " << QString::number(interestedBits, 16) << "  " << QString::number(referenceBits, 16);
+                interestedBits = interestedBits >> 1;
+                referenceBits = referenceBits >> 1;
             }
 
-            for (int i = 0; i < qMax(first.dataLen, second.dataLen); i++)
+            for (int i = 0; i < qMax(interested.dataLen, reference.dataLen); i++)
             {
                 valuesBase = new QTreeWidgetItem();
                 valuesBase->setText(0, "Byte " + QString::number(i));
                 sharedItem->addChild(valuesBase);
-                valuesFirst = new QTreeWidgetItem();
-                valuesFirst->setText(0, "Values found only in " + firstFilename);
-                valuesSecond = new QTreeWidgetItem();
-                valuesSecond->setText(0, "Values found only in " + secondFilename);
-                valuesBase->addChild(valuesFirst);
-                valuesBase->addChild(valuesSecond);
+                valuesInterested = new QTreeWidgetItem();
+                valuesInterested->setText(0, "Values found only in " + interestedFilename);
+                if (!uniqueInterested)
+                {
+                    valuesReference = new QTreeWidgetItem();
+                    valuesReference->setText(0, "Values found only in reference frames");
+                }
+                valuesBase->addChild(valuesInterested);
+                if (!uniqueInterested) valuesBase->addChild(valuesReference);
                 for (int j = 0; j < 256; j++)
                 {
                     detail = new QTreeWidgetItem();
                     detail->setText(0, Utility::formatHexNum(j));
-                    if ((first.values[i][j] > 0) && (second.values[i][j] == 0) )
+                    if ((interested.values[i][j] > 0) && (reference.values[i][j] == 0) )
                     {
-                        valuesFirst->addChild(detail);
+                        valuesInterested->addChild(detail);
+                        interestedHadUnique = true;
                     }
-                    if ((second.values[i][j] > 0) && (first.values[i][j] == 0) )
+                    if ((reference.values[i][j] > 0) && (interested.values[i][j] == 0) )
                     {
-                        valuesSecond->addChild(detail);
+                        if (!uniqueInterested) valuesReference->addChild(detail);
                     }
                 }
+            }
+            if (interestedHadUnique || !uniqueInterested) sharedBase->addChild(sharedItem);
+        }
+    }
+
+    if (!uniqueInterested)
+    {
+        QMap<int, FrameData>::iterator itwo;
+        for (itwo = referenceIDs.begin(); itwo != referenceIDs.end(); ++itwo)
+        {
+            int keytwo = itwo.key();
+            if (!interestedIDs.contains(keytwo))
+            {
+                valuesBase = new QTreeWidgetItem();
+                valuesBase->setText(0, Utility::formatHexNum(keytwo));
+                referenceOnlyBase->addChild(valuesBase);
             }
         }
     }
 
-    QHash<int, FrameData>::iterator itwo;
-    for (itwo = secondFileIDs.begin(); itwo != secondFileIDs.end(); ++itwo)
-    {
-        int keytwo = itwo.key();
-        if (!firstFileIDs.contains(keytwo))
-        {
-            valuesBase = new QTreeWidgetItem();
-            valuesBase->setText(0, Utility::formatHexNum(keytwo));
-            secondOnlyBase->addChild(valuesBase);
-        }
-    }
-
-    ui->treeDetails->addTopLevelItem(firstOnlyBase);
-    ui->treeDetails->addTopLevelItem(secondOnlyBase);
+    ui->treeDetails->addTopLevelItem(interestedOnlyBase);
+    if (!uniqueInterested) ui->treeDetails->addTopLevelItem(referenceOnlyBase);
     ui->treeDetails->addTopLevelItem(sharedBase);
 
     //ui->treeDetails->setSortingEnabled(true);

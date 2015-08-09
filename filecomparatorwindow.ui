@@ -21,7 +21,7 @@
        <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>First File:</string>
+          <string>File of interest:</string>
          </property>
         </widget>
        </item>
@@ -33,7 +33,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnFirstFile">
+        <widget class="QPushButton" name="btnInterestedFile">
          <property name="text">
           <string>Load New File</string>
          </property>
@@ -46,27 +46,45 @@
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Second File:</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Loaded reference frames:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="lblSecondFile">
+        <widget class="QLabel" name="lblRefFrames">
          <property name="text">
           <string>TextLabel</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnSecondFile">
-         <property name="text">
-          <string>Load New File</string>
-         </property>
-        </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QPushButton" name="btnLoadRefFile">
+           <property name="text">
+            <string>Load A File</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnClear">
+           <property name="text">
+            <string>Clear Frames</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="ckUniqueToInterested">
+     <property name="text">
+      <string>Show only unique data for interested file</string>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QTreeWidget" name="treeDetails">

@@ -29,16 +29,16 @@ public:
     ~FileComparatorWindow();
 
 private slots:
-    void loadFirstFile();
-    void loadSecondFile();
+    void loadInterestedFile();
+    void loadReferenceFile();
+    void clearReference();
     void saveDetails();
 
 private:
     Ui::FileComparatorWindow *ui;
-    QVector<CANFrame> firstFileFrames;
-    QVector<CANFrame> secondFileFrames;
-    QString firstFilename;
-    QString secondFilename;
+    QVector<CANFrame> interestedFrames;
+    QVector<CANFrame> referenceFrames;
+    QString interestedFilename;
 
     void calculateDetails();
     void showEvent(QShowEvent *);
