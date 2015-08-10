@@ -145,6 +145,8 @@ void NewGraphDialog::fillFormFromSignal(int idx)
     params.scale = sig->factor;
     params.stride = 1;
     params.mask = (1 << (sig->signalSize)) - 1;
+    if (sig->valType == SIGNED_INT) params.isSigned = true;
+    else params.isSigned = false;
     params.color = ui->colorSwatch->palette().color(QPalette::Button);
     if (sig->intelByteOrder)
     {
