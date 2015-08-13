@@ -322,6 +322,7 @@ void FileComparatorWindow::saveDetails()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".txt";
         QFile *outFile = new QFile(filename);
 
         if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))

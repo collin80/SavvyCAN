@@ -153,6 +153,7 @@ void FramePlaybackWindow::saveFilters()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".ftl";
         if (dialog.selectedNameFilter() == filters[0])
         {
             QFile *outFile = new QFile(filename);

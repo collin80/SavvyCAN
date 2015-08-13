@@ -512,22 +512,27 @@ void MainWindow::handleSaveFile()
 
         if (dialog.selectedNameFilter() == filters[0])
         {
+            if (!filename.contains('.')) filename += ".txt";
             result = FrameFileIO::saveCRTDFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[1])
         {
+            if (!filename.contains('.')) filename += ".csv";
             result = FrameFileIO::saveNativeCSVFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[2])
         {
+            if (!filename.contains('.')) filename += ".csv";
             result = FrameFileIO::saveGenericCSVFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[3])
         {
+            if (!filename.contains('.')) filename += ".log";
             result = FrameFileIO::saveLogFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[4])
         {
+            if (!filename.contains('.')) filename += ".log";
             result = FrameFileIO::saveMicrochipFile(filename, frames);
         }
 
@@ -575,11 +580,31 @@ void MainWindow::handleSaveFilteredFile()
 
         qApp->processEvents();
 
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::saveCRTDFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::saveNativeCSVFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::saveGenericCSVFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::saveLogFile(filename, frames);
-        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::saveMicrochipFile(filename, frames);
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".txt";
+            result = FrameFileIO::saveCRTDFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = FrameFileIO::saveNativeCSVFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[2])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = FrameFileIO::saveGenericCSVFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[3])
+        {
+            if (!filename.contains('.')) filename += ".log";
+            result = FrameFileIO::saveLogFile(filename, frames);
+        }
+        if (dialog.selectedNameFilter() == filters[4])
+        {
+            if (!filename.contains('.')) filename += ".log";
+            result = FrameFileIO::saveMicrochipFile(filename, frames);
+        }
 
         progress.cancel();
 
@@ -609,6 +634,7 @@ void MainWindow::handleSaveFilters()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".ftl";
         if (dialog.selectedNameFilter() == filters[0]) model->saveFilterFile(filename);
     }
 }
@@ -672,6 +698,7 @@ void MainWindow::handleSaveDBC()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".dbc";
         dbcHandler->saveDBCFile(filename);
         QStringList fileList = filename.split('/');
         lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
@@ -695,6 +722,7 @@ void MainWindow::handleSaveDecoded()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".txt";
         saveDecodedTextFile(filename);
     }
 }

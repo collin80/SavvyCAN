@@ -181,9 +181,21 @@ void FlowViewWindow::saveFileGraph()
     {
         filename = dialog.selectedFiles()[0];
 
-        if (dialog.selectedNameFilter() == filters[0]) ui->graphView->savePdf(filename, true, 0, 0);
-        if (dialog.selectedNameFilter() == filters[1]) ui->graphView->savePng(filename, 1024, 768);
-        if (dialog.selectedNameFilter() == filters[2]) ui->graphView->saveJpg(filename, 1024, 768);
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".pdf";
+            ui->graphView->savePdf(filename, true, 0, 0);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".png";
+            ui->graphView->savePng(filename, 1024, 768);
+        }
+        if (dialog.selectedNameFilter() == filters[2])
+        {
+            if (!filename.contains('.')) filename += ".jpg";
+            ui->graphView->saveJpg(filename, 1024, 768);
+        }
     }
 }
 
@@ -205,8 +217,16 @@ void FlowViewWindow::saveFileFlow()
     {
         filename = dialog.selectedFiles()[0];
 
-        if (dialog.selectedNameFilter() == filters[0]) ui->flowView->saveImage(filename, 1024, 768);
-        if (dialog.selectedNameFilter() == filters[1]) ui->flowView->saveImage(filename, 1024, 768);
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".png";
+            ui->flowView->saveImage(filename, 1024, 768);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".jpg";
+            ui->flowView->saveImage(filename, 1024, 768);
+        }
     }
 }
 

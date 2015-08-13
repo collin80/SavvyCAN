@@ -365,9 +365,21 @@ void GraphingWindow::saveGraphs()
     {
         filename = dialog.selectedFiles()[0];
 
-        if (dialog.selectedNameFilter() == filters[0]) ui->graphingView->savePdf(filename, true, 0, 0);
-        if (dialog.selectedNameFilter() == filters[1]) ui->graphingView->savePng(filename, 0, 0);
-        if (dialog.selectedNameFilter() == filters[2]) ui->graphingView->saveJpg(filename, 0, 0);
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".pdf";
+            ui->graphingView->savePdf(filename, true, 0, 0);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".png";
+            ui->graphingView->savePng(filename, 0, 0);
+        }
+        if (dialog.selectedNameFilter() == filters[2])
+        {
+            if (!filename.contains('.')) filename += ".jpg";
+            ui->graphingView->saveJpg(filename, 0, 0);
+        }
     }
 }
 
@@ -387,6 +399,7 @@ void GraphingWindow::saveDefinitions()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".gdf";
 
         QFile *outFile = new QFile(filename);
 
