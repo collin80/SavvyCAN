@@ -5,6 +5,7 @@
 #include <QDebug>
 #include "dbchandler.h"
 #include "dbcsignaleditor.h"
+#include "utility.h"
 
 namespace Ui {
 class DBCMainEditor;

@@ -50,6 +50,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->cbIntelFormat, &QCheckBox::toggled,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
                 fillSignalForm(currentSignal);
             });
@@ -57,11 +58,13 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->comboReceiver, &QComboBox::currentTextChanged,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 currentSignal->receiver = dbcHandler->findNodeByName(ui->comboReceiver->currentText());
             });
     connect(ui->comboType, &QComboBox::currentTextChanged,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 switch (ui->comboType->currentIndex())
                 {
                 case 0:
@@ -84,6 +87,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtBias, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 double temp;
                 bool result;
                 temp = ui->txtBias->text().toDouble(&result);
@@ -93,6 +97,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtMaxVal, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 double temp;
                 bool result;
                 temp = ui->txtMaxVal->text().toDouble(&result);
@@ -102,6 +107,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtMinVal, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 double temp;
                 bool result;
                 temp = ui->txtMinVal->text().toDouble(&result);
@@ -110,6 +116,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtScale, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 double temp;
                 bool result;
                 temp = ui->txtScale->text().toDouble(&result);
@@ -118,19 +125,22 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtComment, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 currentSignal->comment = ui->txtComment->text();
             });
 
     connect(ui->txtUnitName, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 currentSignal->unitName = ui->txtUnitName->text();
             });
     connect(ui->txtBitLength, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 int temp;
-                temp = ui->txtBitLength->text().toInt();
+                temp = Utility::ParseStringToNum(ui->txtBitLength->text());
                 if (temp < 0) return;
                 if (temp > 63) return;
                 currentSignal->signalSize = temp;
@@ -139,12 +149,11 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtName, &QLineEdit::editingFinished,
             [=]()
             {
+                if (currentSignal == NULL) return;
                 currentSignal->name = ui->txtName->text();
                 //need to update the list too.
                 ui->signalsList->currentItem()->setText(currentSignal->name);
             });
-
-
 }
 
 DBCSignalEditor::~DBCSignalEditor()
@@ -220,7 +229,7 @@ void DBCSignalEditor::onValuesCellChanged(int row,int col)
 
     if (col == 0)
     {
-        currentSignal->valList[row].value = ui->valuesTable->item(row, col)->text().toInt();
+        currentSignal->valList[row].value = Utility::ParseStringToNum(ui->valuesTable->item(row, col)->text());
     }
     else if (col == 1)
     {
@@ -409,7 +418,7 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 
     for (int i = 0; i < sig->valList.count(); i++)
     {
-        QTableWidgetItem *val = new QTableWidgetItem(QString::number(sig->valList[i].value));
+        QTableWidgetItem *val = new QTableWidgetItem(Utility::formatNumber(sig->valList[i].value));
         QTableWidgetItem *desc = new QTableWidgetItem(sig->valList[i].descript);
         rowIdx = ui->valuesTable->rowCount();
         ui->valuesTable->insertRow(rowIdx);

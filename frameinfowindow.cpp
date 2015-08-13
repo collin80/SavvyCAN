@@ -114,7 +114,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int bitfieldHistogram[64];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *numBase, *tempItem;
 
-    targettedID = newID.toInt(NULL, 16);
+    targettedID = Utility::ParseStringToNum(newID);
 
     if (modelFrames->count() == 0) return;
 
@@ -137,7 +137,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         if (frameCache.count() == 0) return;
 
         baseNode = new QTreeWidgetItem();
-        baseNode->setText(0, QString("ID: 0x") + newID );
+        baseNode->setText(0, QString("ID: ") + newID );
 
         if (frameCache[0].extended) //if these frames seem to be extended then try for J1939 decoding
         {
@@ -160,23 +160,23 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             {
                 jid.dest = jid.ps;
                 tempItem = new QTreeWidgetItem();
-                tempItem->setText(0, tr("Destination ID: 0x") + QString::number(jid.dest,16));
+                tempItem->setText(0, tr("Destination ID: ") + Utility::formatNumber(jid.dest));
                 baseNode->addChild(tempItem);
             }
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("SRC: 0x") + QString::number(jid.src,16));
+            tempItem->setText(0, tr("SRC: ") + Utility::formatNumber(jid.src));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PGN: ") + QString::number(jid.pgn,10));
+            tempItem->setText(0, tr("PGN: ") + Utility::formatNumber(jid.pgn));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PF: 0x") + QString::number(jid.pf,16));
+            tempItem->setText(0, tr("PF: ") + Utility::formatNumber(jid.pf));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PS: 0x") + QString::number(jid.ps,16));
+            tempItem->setText(0, tr("PS: ") + Utility::formatNumber(jid.ps));
             baseNode->addChild(tempItem);
         }
 
@@ -242,7 +242,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             dataBase->setText(0, tr("Data Byte ") + QString::number(c));
             baseNode->addChild(dataBase);
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("Range: ") + QString::number(minData[c]) + tr(" to ") + QString::number(maxData[c]));
+            tempItem->setText(0, tr("Range: ") + Utility::formatNumber(minData[c]) + tr(" to ") + Utility::formatNumber(maxData[c]));
             dataBase->addChild(tempItem);
             histBase->setText(0, tr("Histogram"));
             dataBase->addChild(histBase);
@@ -292,7 +292,7 @@ void FrameInfoWindow::refreshIDList()
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            ui->listFrameID->addItem(QString::number(id, 16).toUpper().rightJustified(4,'0'));
+            ui->listFrameID->addItem(Utility::formatNumber(id));
         }
     }
     //default is to sort in ascending order

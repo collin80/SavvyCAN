@@ -220,7 +220,7 @@ void FileComparatorWindow::calculateDetails()
                 bitmapBaseReference->setText(0, "Bits set only in reference frames");
             }
             sharedItem->addChild(bitmapBaseInterested);
-            sharedItem->addChild(bitmapBaseReference);
+            if (!uniqueInterested) sharedItem->addChild(bitmapBaseReference);
 
             uint64_t interestedBits = interested.bitmap;
             uint64_t referenceBits = reference.bitmap;

@@ -270,6 +270,7 @@ void MainWindow::readUpdateableSettings()
     QSettings settings;
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
+    Utility::decimalMode = !useHex;
     model->setSecondsMode(settings.value("Main/TimeSeconds", false).toBool());
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
 }
@@ -322,8 +323,7 @@ void MainWindow::updateFilterList()
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
         QListWidgetItem *thisItem = new QListWidgetItem();
-        if (useHex) thisItem->setText(QString::number(filterIter.key(), 16).toUpper().rightJustified(4,'0'));
-            else thisItem->setText(QString::number(filterIter.key()));
+        thisItem->setText(Utility::formatNumber(filterIter.key()));
         thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
         if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
             else thisItem->setCheckState(Qt::Unchecked);
@@ -337,8 +337,7 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
     //qDebug() << item->text();
     int ID;
     bool isSet = false;
-    if (useHex) ID = item->text().toInt(NULL, 16);
-        else ID = item->text().toInt();
+    ID = Utility::ParseStringToNum(item->text());
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);
@@ -717,7 +716,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         CANFrame thisFrame = frames->at(c);
         QString builderString;
         builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
-        builderString += tr("    ID: 0x") + QString::number(thisFrame.ID, 16).toUpper().rightJustified(8, '0');
+        builderString += tr("    ID: ") + Utility::formatNumber(thisFrame.ID);
         if (thisFrame.extended) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
         builderString += tr("Bus: ") + QString::number(thisFrame.bus);
@@ -727,7 +726,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         builderString = tr("Data Bytes: ");
         for (int temp = 0; temp < thisFrame.len; temp++)
         {
-            builderString += QString::number(thisFrame.data[temp], 16).toUpper().rightJustified(2, '0') + " ";
+            builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
         }
         builderString += "\n";
         outFile->write(builderString.toUtf8());

@@ -1,6 +1,7 @@
 #include "canframemodel.h"
 
 #include <QFile>
+#include "utility.h"
 
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
@@ -37,6 +38,7 @@ void CANFrameModel::setHexMode(bool mode)
     {
         this->beginResetModel();
         useHexMode = mode;
+        Utility::decimalMode = !useHexMode;
         this->endResetModel();
     }
 }
@@ -165,11 +167,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             if (!timeSeconds) return QString::number(thisFrame.timestamp);
             else return QString::number(thisFrame.timestamp / 1000000.0f);
             break;
-        case 1: //id
-            if (useHexMode)
-                return QString::number(thisFrame.ID, 16).toUpper().rightJustified(2,'0');
-            else
-                return QString::number(thisFrame.ID).rightJustified(3,'0');
+        case 1: //id            
+            return Utility::formatNumber(thisFrame.ID);
             break;
         case 2: //ext
             return QString::number(thisFrame.extended);
@@ -183,8 +182,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case 5: //data
             for (int i = 0; i < thisFrame.len; i++)
             {
-                if (useHexMode) tempString.append(QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2,'0'));
-                    else tempString.append(QString::number(thisFrame.data[i]).rightJustified(3,'0'));
+                tempString.append(Utility::formatNumber(thisFrame.data[i]));
                 tempString.append(" ");
             }
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it

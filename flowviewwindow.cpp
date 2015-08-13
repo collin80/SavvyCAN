@@ -303,7 +303,7 @@ void FlowViewWindow::refreshIDList()
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            QListWidgetItem* item = new QListWidgetItem(QString::number(id, 16).toUpper().rightJustified(4,'0'), ui->listFrameID);
+            QListWidgetItem* item = new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
         }
     }
     //default is to sort in ascending order
@@ -318,7 +318,7 @@ void FlowViewWindow::updateFrameLabel()
 void FlowViewWindow::changeID(QString newID)
 {
     //parse the ID and then load up the frame cache with just messages with that ID.
-    int id = newID.toInt(NULL, 16);
+    int id = Utility::ParseStringToNum(newID);
     frameCache.clear();
 
     if (modelFrames->count() == 0) return;
@@ -440,23 +440,24 @@ void FlowViewWindow::timerTriggered()
 
 void FlowViewWindow::updateDataView()
 {
-    ui->txtCurr1->setText(QString::number(currBytes[0], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr2->setText(QString::number(currBytes[1], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr3->setText(QString::number(currBytes[2], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr4->setText(QString::number(currBytes[3], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr5->setText(QString::number(currBytes[4], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr6->setText(QString::number(currBytes[5], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr7->setText(QString::number(currBytes[6], 16).toUpper().rightJustified(2, '0'));
-    ui->txtCurr8->setText(QString::number(currBytes[7], 16).toUpper().rightJustified(2, '0'));
 
-    ui->txtRef1->setText(QString::number(refBytes[0], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef2->setText(QString::number(refBytes[1], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef3->setText(QString::number(refBytes[2], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef4->setText(QString::number(refBytes[3], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef5->setText(QString::number(refBytes[4], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef6->setText(QString::number(refBytes[5], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef7->setText(QString::number(refBytes[6], 16).toUpper().rightJustified(2, '0'));
-    ui->txtRef8->setText(QString::number(refBytes[7], 16).toUpper().rightJustified(2, '0'));
+    ui->txtCurr1->setText(Utility::formatNumber(currBytes[0]));
+    ui->txtCurr2->setText(Utility::formatNumber(currBytes[1]));
+    ui->txtCurr3->setText(Utility::formatNumber(currBytes[2]));
+    ui->txtCurr4->setText(Utility::formatNumber(currBytes[3]));
+    ui->txtCurr5->setText(Utility::formatNumber(currBytes[4]));
+    ui->txtCurr6->setText(Utility::formatNumber(currBytes[5]));
+    ui->txtCurr7->setText(Utility::formatNumber(currBytes[6]));
+    ui->txtCurr8->setText(Utility::formatNumber(currBytes[7]));
+
+    ui->txtRef1->setText(Utility::formatNumber(refBytes[0]));
+    ui->txtRef2->setText(Utility::formatNumber(refBytes[1]));
+    ui->txtRef3->setText(Utility::formatNumber(refBytes[2]));
+    ui->txtRef4->setText(Utility::formatNumber(refBytes[3]));
+    ui->txtRef5->setText(Utility::formatNumber(refBytes[4]));
+    ui->txtRef6->setText(Utility::formatNumber(refBytes[5]));
+    ui->txtRef7->setText(Utility::formatNumber(refBytes[6]));
+    ui->txtRef8->setText(Utility::formatNumber(refBytes[7]));
 
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);

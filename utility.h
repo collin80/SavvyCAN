@@ -1,6 +1,8 @@
 #ifndef UTILITY_H
 #define UTILITY_H
 
+#include <Qt>
+#include <stdint.h>
 #include <QByteArray>
 #include <QDateTime>
 
@@ -9,12 +11,15 @@
 class Utility
 {
 public:
+
+    static bool decimalMode;
+
     static int ParseStringToNum(QByteArray input)
     {
         int temp = 0;
 
         input = input.toUpper();
-        if (input.startsWith("0X")) //hex number
+        if (input.startsWith("0X") || input.startsWith("X")) //hex number
         {
             temp = input.right(input.size() - 2).toInt(NULL, 16);
         }
@@ -47,14 +52,25 @@ public:
 
     //prints hex numbers in uppercase with 0's filling out the number depending
     //on the size needed. Promotes hex numbers to either 2, 4, or 8 digits
-    static QString formatHexNum(int input)
+    static QString formatHexNum(uint64_t input)
     {
         if (input < 256)
-            return QString::number(input, 16).toUpper().rightJustified(2,'0');
+            return "0x" + QString::number(input, 16).toUpper().rightJustified(2,'0');
         if (input < 65536)
-            return QString::number(input, 16).toUpper().rightJustified(4,'0');
+            return "0x" + QString::number(input, 16).toUpper().rightJustified(4,'0');
+        if (input < 4294967296)
+            return "0x" + QString::number(input, 16).toUpper().rightJustified(8,'0');
+        return "0x" + QString::number(input, 16).toUpper().rightJustified(16,'0');
+    }
 
-        return QString::number(input, 16).toUpper().rightJustified(8,'0');
+    //uses decimalMode to see if it should show value as decimal or hex
+    static QString formatNumber(uint64_t value)
+    {
+        if (decimalMode)
+        {
+            return QString::number(value, 10);
+        }
+        else return formatHexNum(value);
     }
 };
 

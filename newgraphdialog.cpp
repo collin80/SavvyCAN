@@ -51,9 +51,9 @@ void NewGraphDialog::colorSwatchClick()
 
 void NewGraphDialog::setParams(GraphParams &params)
 {
-    ui->txtID->setText("0x" + QString::number(params.ID, 16).toUpper());
+    ui->txtID->setText(Utility::formatNumber(params.ID));
     ui->txtBias->setText(QString::number(params.bias));
-    ui->txtMask->setText("0x" + QString::number(params.mask, 16).toUpper().left(10));
+    ui->txtMask->setText(Utility::formatNumber(params.mask));
     ui->txtScale->setText(QString::number(params.scale));
     ui->txtStride->setText(QString::number(params.stride));
     ui->cbSigned->setChecked(params.isSigned);

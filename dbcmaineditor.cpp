@@ -221,7 +221,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         //dbcHandler->findNodeByIdx(0);
     }
 
-    msgID = ui->MessagesTable->item(row, 0)->text().toInt(NULL, 16);
+    msgID = Utility::ParseStringToNum(ui->MessagesTable->item(row, 0)->text());
     qDebug() << "Msg ID of edited: " << msgID;
     msg = dbcHandler->findMsgByID(msgID);
 
@@ -257,7 +257,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             if (msg != NULL) msg->ID = msgID;
         }
         inhibitCellChanged = true;
-        replacement = new QTableWidgetItem(QString::number(msgID, 16));
+        replacement = new QTableWidgetItem(Utility::formatNumber(msgID));
         ui->MessagesTable->setItem(row, col, replacement);
         replacement = new QTableWidgetItem(QString::number(newMsg.len));
         ui->MessagesTable->setItem(row, 2, replacement);
@@ -375,7 +375,7 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
     if (col == 3) //3 is the signals field. If clicked we go to the signals dialog
     {
         QString idString = ui->MessagesTable->item(row, 0)->text();
-        DBC_MESSAGE *message = dbcHandler->findMsgByID(idString.toInt(NULL, 16));
+        DBC_MESSAGE *message = dbcHandler->findMsgByID(Utility::ParseStringToNum(idString));
         sigEditor->setMessageRef(message);
         sigEditor->exec(); //blocks this window from being active until we're done
         //now update the displayed # of signals
@@ -433,7 +433,7 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
             if (msg.sender == node)
             {
                 //many of these are simplistic first versions just to test functionality.
-                QTableWidgetItem *msgID = new QTableWidgetItem(QString::number(msg.ID, 16));
+                QTableWidgetItem *msgID = new QTableWidgetItem(Utility::formatNumber(msg.ID));
                 QTableWidgetItem *msgName = new QTableWidgetItem(msg.name);
                 QTableWidgetItem *msgLen = new QTableWidgetItem(QString::number(msg.len));
                 QTableWidgetItem *msgSignals = new QTableWidgetItem(QString::number(msg.msgSignals.count()));

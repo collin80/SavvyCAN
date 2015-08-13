@@ -247,7 +247,7 @@ void FramePlaybackWindow::refreshIDList()
     QHash<int, bool>::Iterator filterIter;
     for (filterIter = currentSeqItem->idFilters.begin(); filterIter != currentSeqItem->idFilters.end(); ++filterIter)
     {
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatHexNum(filterIter.key()), ui->listID);
+        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(filterIter.key()), ui->listID);
         listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
         if (filterIter.value()) listItem->setCheckState(Qt::Checked);
         else listItem->setCheckState(Qt::Unchecked);
@@ -292,7 +292,7 @@ void FramePlaybackWindow::seqTableCellChanged(int row,int col)
 {
     if (col == 1) //don't save any changes to the first column (0)
     {
-        seqItems[row].maxLoops = ui->tblSequence->item(row, col)->text().toInt();
+        seqItems[row].maxLoops = Utility::ParseStringToNum(ui->tblSequence->item(row, col)->text());
         if (seqItems[row].maxLoops < 1) seqItems[row].maxLoops = 1;
     }
 }
@@ -496,7 +496,7 @@ void FramePlaybackWindow::changeSendingBus(int newIdx)
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
 {
     qDebug() << "Changed ID filter";
-    int ID = item->text().toInt(NULL, 16);
+    int ID = Utility::ParseStringToNum(item->text());
     currentSeqItem->idFilters[ID] = item->checkState();
 }
 
@@ -506,7 +506,7 @@ void FramePlaybackWindow::btnSelectAllClick()
     {
         QListWidgetItem *item = ui->listID->item(i);
         item->setCheckState(Qt::Checked);
-        currentSeqItem->idFilters[item->text().toInt(NULL, 16)] = true;
+        currentSeqItem->idFilters[Utility::ParseStringToNum(item->text())] = true;
     }
 }
 
@@ -516,7 +516,7 @@ void FramePlaybackWindow::btnSelectNoneClick()
     {
         QListWidgetItem *item = ui->listID->item(i);
         item->setCheckState(Qt::Unchecked);
-        currentSeqItem->idFilters[item->text().toInt(NULL, 16)] = false;
+        currentSeqItem->idFilters[Utility::ParseStringToNum(item->text())] = false;
     }
 }
 
