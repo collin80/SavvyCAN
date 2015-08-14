@@ -240,6 +240,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
     exitApp();
 }
@@ -621,7 +622,6 @@ void MainWindow::handleSaveFilters()
 {
     QString filename;
     QFileDialog dialog(this);
-    bool result = false;
 
     QStringList filters;
     filters.append(QString(tr("Filter list (*.ftl)")));
@@ -934,6 +934,8 @@ void MainWindow::showFrameSenderWindow()
             frameSenderWindow = new FrameSenderWindow(model->getListReference());
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
+
+        connect(frameSenderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
     }
     frameSenderWindow->show();
 }
@@ -982,6 +984,7 @@ void MainWindow::exitApp()
     if (flowViewWindow) flowViewWindow->close();
     if (frameSenderWindow) frameSenderWindow->close();
     if (dbcMainEditor) dbcMainEditor->close();
+    if (comparatorWindow) comparatorWindow->close();
     this->close();
 }
 

@@ -30,6 +30,7 @@ void FileComparatorWindow::showEvent(QShowEvent *)
 
 void FileComparatorWindow::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 

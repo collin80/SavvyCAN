@@ -114,6 +114,7 @@ void NewGraphDialog::loadMessages()
 
 void NewGraphDialog::loadSignals(int idx)
 {
+    Q_UNUSED(idx);
     //messages were placed into the list in the same order as they exist
     //in the data structure so it should have been possible to just
     //look it up based on index but by name is probably safer and this operation
@@ -130,6 +131,7 @@ void NewGraphDialog::loadSignals(int idx)
 
 void NewGraphDialog::fillFormFromSignal(int idx)
 {
+    Q_UNUSED(idx);
     GraphParams params;
     DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
 

@@ -80,23 +80,23 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
     serial->setRequestToSend(true);
     QByteArray output;
-    output.append(0xE7); //this puts the device into binary comm mode
-    output.append(0xE7);
-    output.append(0xF1); //signal we want to issue a command
-    output.append(0x06); //request canbus stats from the board
-    output.append(0xF1); //another command to the GVRET
-    output.append(0x07); //request device information
-    output.append(0xF1);
-    output.append(0x08); //setting singlewire mode
-    output.append(0xF1); //yet another command
-    output.append(0x09); //comm validation command
+    output.append((char)0xE7); //this puts the device into binary comm mode
+    output.append((char)0xE7);
+    output.append((char)0xF1); //signal we want to issue a command
+    output.append((char)0x06); //request canbus stats from the board
+    output.append((char)0xF1); //another command to the GVRET
+    output.append((char)0x07); //request device information
+    output.append((char)0xF1);
+    output.append((char)0x08); //setting singlewire mode
+    output.append((char)0xF1); //yet another command
+    output.append((char)0x09); //comm validation command
     if (settings.value("Main/SingleWireMode", false).toBool())
     {
-        output.append(0x10); //signal that we do want single wire mode
+        output.append((char)0x10); //signal that we do want single wire mode
     }
     else
     {
-        output.append(0xFF); //signal we don't want single wire mode
+        output.append((char)0xFF); //signal we don't want single wire mode
     }
 
     serial->write(output);
@@ -157,7 +157,7 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     ID = frame->ID;
     if (frame->extended) ID |= 1 << 31;
 
-    buffer[0] = 0xF1; //start of a command over serial
+    buffer[0] = (char)0xF1; //start of a command over serial
     buffer[1] = 0; //command ID for sending a CANBUS frame
     buffer[2] = (unsigned char)(ID & 0xFF); //four bytes of ID LSB first
     buffer[3] = (unsigned char)(ID >> 8);
@@ -189,7 +189,7 @@ void SerialWorker::updateBaudRates(int Speed1, int Speed2)
 {
     QByteArray buffer;
     qDebug() << "Got signal to update bauds. 1: " << Speed1 <<" 2: " << Speed2;
-    buffer[0] = 0xF1; //start of a command over serial
+    buffer[0] = (char)0xF1; //start of a command over serial
     buffer[1] = 5; //setup canbus
     buffer[2] = (unsigned char)(Speed1 & 0xFF); //four bytes of ID LSB first
     buffer[3] = (unsigned char)(Speed1 >> 8);
@@ -432,8 +432,8 @@ void SerialWorker::sendCommValidation()
     QByteArray output;
 
     gotValidated = false;
-    output.append(0xF1); //another command to the GVRET
-    output.append(0x09); //request a reply to get validation
+    output.append((char)0xF1); //another command to the GVRET
+    output.append((char)0x09); //request a reply to get validation
     serial->write(output);
 }
 

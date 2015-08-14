@@ -69,6 +69,7 @@ DBCMainEditor::~DBCMainEditor()
 
 void DBCMainEditor::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 

@@ -163,6 +163,7 @@ DBCSignalEditor::~DBCSignalEditor()
 
 void DBCSignalEditor::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 

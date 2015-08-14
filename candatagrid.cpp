@@ -41,6 +41,7 @@ void CANDataGrid::mousePressEvent(QMouseEvent *event)
 
 void CANDataGrid::paintEvent(QPaintEvent *event)
 {
+    Q_UNUSED(event);
     int x, y;
     unsigned char prevByte, thisByte;
     bool thisBit, prevBit;
@@ -140,6 +141,8 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 
 void CANDataGrid::saveImage(QString filename, int width, int height)
 {
+    Q_UNUSED(width); //currently unused but I want to use them in the future
+    Q_UNUSED(height);
     //can't quite do the below commented out stuff
     //it works but doesn't scale the image into that pixmap. Need to
     //figure out how to draw the size of the pixmap

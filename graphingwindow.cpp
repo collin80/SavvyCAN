@@ -81,6 +81,7 @@ void GraphingWindow::showEvent(QShowEvent* event)
 
 void GraphingWindow::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 
@@ -172,7 +173,6 @@ void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem 
 
       if (ui->graphingView->selectedGraphs().size() > 0)
       {
-          int idx = -1;
           for (int i = 0; i < graphParams.count(); i++)
           {
               if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())

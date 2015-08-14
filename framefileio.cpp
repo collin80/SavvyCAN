@@ -108,7 +108,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
             int multiplier;
             int idxOfDecimal = tokens[0].indexOf('.');
             if (idxOfDecimal > -1) {
-                int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
+                //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
                 //the result of the above is the # of digits after the decimal.
                 //This program deals in microsecond so turn the value into microseconds
                 multiplier = 1000000; //turn the decimal into full microseconds

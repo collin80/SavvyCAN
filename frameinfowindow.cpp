@@ -36,6 +36,7 @@ FrameInfoWindow::~FrameInfoWindow()
 
 void FrameInfoWindow::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 
@@ -105,14 +106,14 @@ void FrameInfoWindow::updatedFrames(int numFrames)
 
 void FrameInfoWindow::updateDetailsWindow(QString newID)
 {
-    int idx, numFrames, targettedID;
+    int targettedID;
     int minLen, maxLen, thisLen;
     int avgInterval;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
     int bitfieldHistogram[64];
-    QTreeWidgetItem *baseNode, *dataBase, *histBase, *numBase, *tempItem;
+    QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
     targettedID = Utility::ParseStringToNum(newID);
 

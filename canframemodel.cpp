@@ -5,6 +5,7 @@
 
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
+    Q_UNUSED(parent);
     return filteredFrames.count();
 }
 
@@ -15,6 +16,7 @@ int CANFrameModel::totalFrameCount()
 
 int CANFrameModel::columnCount(const QModelIndex &index) const
 {
+    Q_UNUSED(index);
     return 6;
 }
 
@@ -244,6 +246,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 
     else
         return QString::number(section + 1);
+
+    return QVariant();
 }
 
 void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)

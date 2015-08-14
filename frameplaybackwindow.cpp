@@ -85,6 +85,8 @@ FramePlaybackWindow::~FramePlaybackWindow()
 {
     delete ui;
 
+    disconnect(serialWorker);
+
     playbackTimer->stop();
     delete playbackTimer;
 }
@@ -96,6 +98,7 @@ void FramePlaybackWindow::showEvent(QShowEvent *)
 
 void FramePlaybackWindow::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 
@@ -140,7 +143,6 @@ void FramePlaybackWindow::saveFilters()
 {
     QString filename;
     QFileDialog dialog(this);
-    bool result = false;
 
     QStringList filters;
     filters.append(QString(tr("Filter list (*.ftl)")));
@@ -237,8 +239,6 @@ void FramePlaybackWindow::loadFilters()
 
 void FramePlaybackWindow::refreshIDList()
 {
-    int id;    
-
     if (currentSeqNum < 0 || currentSeqItem == NULL) return;
 
     ui->tblSequence->setCurrentCell(currentSeqNum, 0);
@@ -484,7 +484,7 @@ void FramePlaybackWindow::changePlaybackSpeed(int newSpeed)
 
 void FramePlaybackWindow::changeLooping(bool check)
 {
-
+    Q_UNUSED(check);
 }
 
 void FramePlaybackWindow::changeSendingBus(int newIdx)

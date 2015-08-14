@@ -55,6 +55,7 @@ MainSettingsDialog::~MainSettingsDialog()
 
 void MainSettingsDialog::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     settings->sync();
 }
 

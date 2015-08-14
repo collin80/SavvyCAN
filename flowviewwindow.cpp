@@ -106,6 +106,7 @@ FlowViewWindow::~FlowViewWindow()
 
 void FlowViewWindow::closeEvent(QCloseEvent *event)
 {
+    Q_UNUSED(event);
     writeSettings();
 }
 
@@ -323,7 +324,7 @@ void FlowViewWindow::refreshIDList()
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            QListWidgetItem* item = new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
+            //QListWidgetItem* item = new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
         }
     }
     //default is to sort in ascending order
@@ -430,7 +431,7 @@ void FlowViewWindow::changePlaybackSpeed(int newSpeed)
 
 void FlowViewWindow::changeLooping(bool check)
 {
-
+    Q_UNUSED(check);
 }
 
 void FlowViewWindow::timerTriggered()
