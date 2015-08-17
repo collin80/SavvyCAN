@@ -114,6 +114,7 @@ void FrameSenderWindow::updatedFrames(int numFrames)
         //run through the supposedly new frames in order
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
+            thisFrame = modelFrames->at(i);
             if (!frameCache.contains(thisFrame.ID))
             {
                 frameCache.insert(thisFrame.ID, thisFrame);
@@ -131,19 +132,21 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
 {
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
-        if (sendingData[sd].triggers.count() == 0) continue;
+        if (sendingData[sd].triggers.count() == 0) continue;        
         for (int trig = 0; trig < sendingData[sd].triggers.count(); trig++)
         {
-            Trigger thisTrigger = sendingData[sd].triggers[trig];
-            if (thisTrigger.ID > 0 && thisTrigger.ID == frame->ID)
+            Trigger *thisTrigger = &sendingData[sd].triggers[trig];
+            qDebug() << "Trigger ID: " << thisTrigger->ID;
+            qDebug() << "Frame ID: " << frame->ID;
+            if (thisTrigger->ID > 0 && thisTrigger->ID == frame->ID)
             {
-                if (thisTrigger.bus == frame->bus || thisTrigger.bus == -1)
+                if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
                 {
-                    if (thisTrigger.currCount < thisTrigger.maxCount)
+                    if (thisTrigger->currCount < thisTrigger->maxCount)
                     {
-                        if (thisTrigger.milliseconds == 0) //immediate reply
+                        if (thisTrigger->milliseconds == 0) //immediate reply
                         {
-                            thisTrigger.currCount++;
+                            thisTrigger->currCount++;
                             sendingData[sd].count++;
                             doModifiers(sd);
                             updateGridRow(sd);
@@ -151,7 +154,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
                         }
                         else //delayed sending frame
                         {
-                            thisTrigger.readyCount = true;
+                            thisTrigger->readyCount = true;
                         }
                     }
                 }
