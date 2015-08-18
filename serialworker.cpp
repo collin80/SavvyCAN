@@ -440,6 +440,7 @@ void SerialWorker::sendCommValidation()
 //totally shuts down the whole thing
 void SerialWorker::closeSerialPort()
 {
+    if (serial == NULL) return;
     if (serial->isOpen())
     {
         serial->clear();

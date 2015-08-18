@@ -109,9 +109,19 @@ void GraphingWindow::writeSettings()
 
 void GraphingWindow::updatedFrames(int numFrames)
 {
+    CANFrame thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
-        removeAllGraphs();
+        //removeAllGraphs();
+        //now instead of removing the graphs regenerate them which will blank them out but leave them there in case
+        //more traffic that matches comes in or someone otherwise loads more data
+        ui->graphingView->clearGraphs(); //temporarily remove the graphs from the graph view
+        for (int i = 0; i < graphParams.count(); i++)
+        {
+            createGraph(graphParams[i], false); //regenerate each one
+        }
+        ui->graphingView->replot(); //now, redisplay them all
+
     }
     else if (numFrames == -2) //all new set of frames. Reset
     {
@@ -127,6 +137,18 @@ void GraphingWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+        {
+            thisFrame = modelFrames->at(i);
+            for (int j = 0; j < graphParams.count(); j++)
+            {
+                if (graphParams[j].ID == thisFrame.ID)
+                {
+                    appendToGraph(graphParams[j], thisFrame);
+                }
+            }
+        }
+        ui->graphingView->replot();
     }
 }
 
@@ -520,11 +542,121 @@ void GraphingWindow::addNewGraph()
     showParamsDialog(-1);
 }
 
+void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
+{
+    long long tempVal; //64 bit temp value.
+    if (params.endByte == -1  || params.startByte == params.endByte)
+    {
+        tempVal = (frame.data[params.startByte] & params.mask);
+        if (params.isSigned && tempVal > 127)
+        {
+            tempVal = tempVal - 256;
+        }
+        if (secondsMode)
+        {
+            params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
+        }
+        else
+        {
+            params.x.append(frame.timestamp - params.xbias);
+        }
+        params.y.append((tempVal * params.scale) + params.bias);
+    }
+    else if (params.endByte > params.startByte) //big endian
+    {
+        float tempValue;
+        long long tempValInt;
+        int numBytes = (params.endByte - params.startByte) + 1;
+        long long shiftRef = 1 << (numBytes * 8);
+        uint64_t maskShifter;
+        uint8_t tempByte;
+        tempValInt = 0;
+        long long expon = 1;
+        maskShifter = params.mask;
+        for (int c = 0; c < numBytes; c++)
+        {
+            tempByte = frame.data[params.endByte - c];
+            tempByte &= maskShifter;
+            tempValInt += (tempByte * expon);
+            expon *= 256;
+            maskShifter = maskShifter >> 8;
+        }
+
+        tempValInt &= params.mask;
+
+        long long twocompPoint = params.mask;
+        if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
+        //qDebug() << "two comp point: " << twocompPoint;
+        if (params.isSigned && tempValInt > ((twocompPoint / 2)))
+        {
+            tempValInt = tempValInt - twocompPoint;
+        }
+
+        tempValue = (float)tempValInt;
+
+        if (secondsMode)
+        {
+            params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
+        }
+        else
+        {
+            params.x.append(frame.timestamp - params.xbias);
+        }
+
+        params.y.append((tempValue * params.scale) + params.bias);
+    }
+    else //little endian
+    {
+        float tempValue;
+        long long tempValInt;
+        int numBytes = (params.startByte - params.endByte) + 1;
+        long long shiftRef = 1 << (numBytes * 8);
+        uint64_t maskShifter;
+        uint8_t tempByte;
+        tempValInt = 0;
+        long long expon = 1;
+        maskShifter = params.mask;
+        for (int c = 0; c < numBytes; c++)
+        {
+            tempByte = frame.data[params.endByte + c];
+            tempByte &= maskShifter;
+            tempValInt += tempByte * expon;
+            expon *= 256;
+            maskShifter = maskShifter >> 8;
+        }
+        tempValInt &= params.mask;
+
+        long long twocompPoint = params.mask;
+        if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
+        //qDebug() << "two comp point: " << twocompPoint;
+        if (params.isSigned && tempValInt > ((twocompPoint / 2)))
+        {
+            tempValInt = tempValInt - twocompPoint;
+        }
+
+        tempValue = (float)tempValInt;
+
+        if (secondsMode)
+        {
+            params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
+        }
+        else
+        {
+            params.x.append(frame.timestamp - params.xbias);
+        }
+
+        params.y.append((tempValue * params.scale) + params.bias);
+    }
+
+    params.ref->setData(params.x,params.y);
+}
+
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
     long long tempVal; //64 bit temp value.
     float yminval=10000000.0, ymaxval = -1000000.0;
     float xminval=10000000000.0, xmaxval = -10000000000.0;
+    GraphParams *refParam = &params;
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start byte: " << params.startByte;
@@ -540,7 +672,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     int numEntries = frameCache.count() / params.stride;
 
-    QVector<double> x(numEntries), y(numEntries);
+    params.x.reserve(numEntries);
+    params.y.reserve(numEntries);
+    params.x.fill(0, numEntries);
+    params.y.fill(0, numEntries);
 
     if (params.endByte == -1  || params.startByte == params.endByte)
     {
@@ -553,17 +688,17 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
             if (secondsMode)
             {
-                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
             }
             else
             {
-                x[j] = frameCache[j].timestamp;
+                params.x[j] = frameCache[j].timestamp;
             }
-            y[j] = (tempVal * params.scale) + params.bias;
-            if (y[j] < yminval) yminval = y[j];
-            if (y[j] > ymaxval) ymaxval = y[j];
-            if (x[j] < xminval) xminval = x[j];
-            if (x[j] > xmaxval) xmaxval = x[j];
+            params.y[j] = (tempVal * params.scale) + params.bias;
+            if (params.y[j] < yminval) yminval = params.y[j];
+            if (params.y[j] > ymaxval) ymaxval = params.y[j];
+            if (params.x[j] < xminval) xminval = params.x[j];
+            if (params.x[j] > xmaxval) xmaxval = params.x[j];
         }
     }
     else if (params.endByte > params.startByte) //big endian
@@ -592,7 +727,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             long long twocompPoint = params.mask;
             if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-            qDebug() << "two comp point: " << twocompPoint;
+            //qDebug() << "two comp point: " << twocompPoint;
             if (params.isSigned && tempValInt > ((twocompPoint / 2)))
             {
                 tempValInt = tempValInt - twocompPoint;
@@ -602,18 +737,18 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             if (secondsMode)
             {
-                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
             }
             else
             {
-                x[j] = frameCache[j].timestamp;
+                params.x[j] = frameCache[j].timestamp;
             }
 
-            y[j] = (tempValue * params.scale) + params.bias;
-            if (y[j] < yminval) yminval = y[j];
-            if (y[j] > ymaxval) ymaxval = y[j];
-            if (x[j] < xminval) xminval = x[j];
-            if (x[j] > xmaxval) xmaxval = x[j];
+            params.y[j] = (tempValue * params.scale) + params.bias;
+            if (params.y[j] < yminval) yminval = params.y[j];
+            if (params.y[j] > ymaxval) ymaxval = params.y[j];
+            if (params.x[j] < xminval) xminval = params.x[j];
+            if (params.x[j] > xmaxval) xmaxval = params.x[j];
         }
     }
     else //little endian
@@ -641,7 +776,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             long long twocompPoint = params.mask;
             if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-            qDebug() << "two comp point: " << twocompPoint;
+            //qDebug() << "two comp point: " << twocompPoint;
             if (params.isSigned && tempValInt > ((twocompPoint / 2)))
             {
                 tempValInt = tempValInt - twocompPoint;
@@ -651,31 +786,36 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             if (secondsMode)
             {
-                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
             }
             else
             {
-                x[j] = frameCache[j].timestamp;
+                params.x[j] = frameCache[j].timestamp;
             }
 
-            y[j] = (tempValue * params.scale) + params.bias;
-            if (y[j] < yminval) yminval = y[j];
-            if (y[j] > ymaxval) ymaxval = y[j];
-            if (x[j] < xminval) xminval = x[j];
-            if (x[j] > xmaxval) xmaxval = x[j];
+            params.y[j] = (tempValue * params.scale) + params.bias;
+            if (params.y[j] < yminval) yminval = params.y[j];
+            if (params.y[j] > ymaxval) ymaxval = params.y[j];
+            if (params.x[j] < xminval) xminval = params.x[j];
+            if (params.x[j] > xmaxval) xmaxval = params.x[j];
         }
     }
 
-    for (int ct = 0; ct < x.count(); ct++)
+    for (int ct = 0; ct < params.x.count(); ct++)
     {
-        x[ct] -= xminval;
+        params.x[ct] -= xminval;
     }
+    params.xbias = xminval;
     xmaxval -= xminval;
     xminval = 0;
 
     ui->graphingView->addGraph();
     params.ref = ui->graphingView->graph();
-    if (createGraphParam) graphParams.append(params);
+    if (createGraphParam)
+    {
+        graphParams.append(params);
+        refParam = &graphParams.last();
+    }
     ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
     ui->graphingView->graph()->setSelectedPen(selectedPen);
 
@@ -686,12 +826,17 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     }
     ui->graphingView->graph()->setName(params.graphName);
 
-    ui->graphingView->graph()->setData(x,y);
+    ui->graphingView->graph()->setData(refParam->x,refParam->y);
     ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
     QPen graphPen;
     graphPen.setColor(params.color);
     graphPen.setWidth(1);
     ui->graphingView->graph()->setPen(graphPen);
+
+    qDebug() << "xmin: " << xminval;
+    qDebug() << "xmax: " << xmaxval;
+    qDebug() << "ymin: " << yminval;
+    qDebug() << "ymax: " << ymaxval;
 
     if (needScaleSetup)
     {

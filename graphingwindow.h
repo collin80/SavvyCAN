@@ -24,6 +24,9 @@ public:
     QColor color;
     QCPGraph *ref;
     QString graphName;
+    //the below stuff is used for internal purposes only
+    QVector<double> x, y;
+    double xbias;
 };
 
 class GraphingWindow : public QDialog
@@ -51,6 +54,7 @@ private slots:
     void loadDefinitions();
     void addNewGraph();
     void createGraph(GraphParams &params, bool createGraphParam = true);
+    void appendToGraph(GraphParams &params, CANFrame &frame);
     void editSelectedGraph();
     void updatedFrames(int);
 
