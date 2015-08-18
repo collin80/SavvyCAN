@@ -375,7 +375,7 @@ void FrameSenderWindow::doModifiers(int idx)
 
     if (sendData->modifiers.count() == 0) return; //if no modifiers just leave right now
 
-    qDebug() << "Doin' dem mods son";
+    qDebug() << "Executing mods";
 
     for (int i = 0; i < sendData->modifiers.count(); i++)
     {
@@ -465,14 +465,19 @@ void FrameSenderWindow::processModifierText(int line)
 {
     qDebug() << "processModifierText";
     QString modString;
-    int numOps;
+    bool firstOp = true;
+    bool abort = false;
 
     //Example line:
-    //d0 = D0 + 1,d1 = id:0x200:d3 + id:0x200:d4 AND 0xF0
+    //d0 = D0 + 1,d1 = id:0x200:d3 + id:0x200:d4 AND 0xF0 - Original version
+    //D0=D0+1,D1=ID:0x200:D3+ID:0x200:D4&0xF0
     //This is certainly much harder to parse than the trigger definitions.
     //the left side of the = has to be D0 to D7. After that there is a string of
-    //data that for ease of parsing will require spaces between tokens
-    modString = ui->tableSender->item(line, 6)->text().toUpper();
+    //data. Spaces used to be required but no longer are. This makes parsing harder but data entry easier
+
+    //yeah, lots of operations on this one line but it's for a good cause. Removes the convenience English versions of the
+    //logical operators and replaces them with the math equivs. Also uppercases and removes all superfluous whitespace
+    modString = ui->tableSender->item(line, 6)->text().toUpper().trimmed().replace("AND", "&").replace("XOR", "^").replace("OR", "|").replace(" ", "");
     if (modString != "")
     {
         QStringList mods = modString.split(',');
@@ -482,56 +487,54 @@ void FrameSenderWindow::processModifierText(int line)
         {
             Modifier thisMod;
             thisMod.destByte = 0;
-            //now split by space to extract tokens
-            QStringList modToks = mods[i].split(' ');
-            if (modToks.length() >= 5) //any valid modifier that this code can process has at least 5 tokens (D0 = D0 + 1)
+
+            QString leftSide = Utility::grabAlphaNumeric(mods[i]);
+            if (leftSide.startsWith("D") && leftSide.length() == 2)
             {
-                //valid token assignment will have a data byte as the first token and = as the second
-                if (modToks[0].length() == 2 && modToks[0].startsWith('D'))
+                thisMod.destByte = leftSide.right(1).toInt();
+                thisMod.operations.clear();
+            }
+            else continue;
+            if (!(Utility::grabOperation(mods[i]) == "=")) continue;
+            abort = false;
+            while (!abort)
+            {
+                QString token = Utility::grabAlphaNumeric(mods[i]);
+                ModifierOp thisOp;
+                if (firstOp)
                 {
-                    numOps = ((modToks.length() - 5) / 2) + 1;
-                    thisMod.operations.clear();
-                    thisMod.operations.reserve(numOps);
-                    thisMod.destByte = modToks[0].right(modToks[0].length() - 1).toInt();
-                    //Now start at token 2 and extract all operations. All ops past the first one
-                    //use the implicit shadow register as the first operand.The contents of the shadow
-                    //register are what is copied to the destination byte at the end.
-                    //each op is of the form <first> <op> <second>. first and second could have more subtokens
-                    int currToken = 2;
-                    QStringList firstToks, secondToks;
-                    for (int j = 0; j < numOps; j++)
+                    parseOperandString(token.split(":"), thisOp.first);
+                    firstOp = false;
+                }
+                else
+                {
+                    thisOp.first.ID = -1; //shadow register
+                }
+                if (mods[i].length() == 0) //if this thing had no actual operation or second operand then fake it
+                {
+                    abort = true;
+                    thisOp.operation = ADDITION;
+                    thisOp.second.ID = 0;
+                    thisOp.second.databyte = 0;
+                    thisMod.operations.append(thisOp);
+                }
+                else //otherwise try to grab them
+                {
+                    QString operation = Utility::grabOperation(mods[i]);
+                    if (operation == "")
                     {
-                        ModifierOp thisOp;
-                        if (j == 0)
-                        {
-                            firstToks = modToks[currToken++].toUpper().split(':');
-                            parseOperandString(firstToks, thisOp.first);
-                        }
-                        else
-                        {
-                            thisOp.first.ID = -1;
-                        }
-                        thisOp.operation = parseOperation(modToks[currToken++].toUpper());
-                        secondToks = modToks[currToken++].toUpper().split(':');
+                        abort = true;
+                    }
+                    else
+                    {
+                        thisOp.operation = parseOperation(operation);
+                        QString secondOp = Utility::grabAlphaNumeric(mods[i]);
                         thisOp.second.bus = sendingData[line].bus;
                         thisOp.second.ID = sendingData[line].ID;
-                        parseOperandString(secondToks, thisOp.second);
+                        parseOperandString(secondOp.split(":"), thisOp.second);
                         thisMod.operations.append(thisOp);
                     }
                 }
-            }
-            else
-            {
-               QStringList firstToks;
-               numOps = 1;
-               thisMod.destByte = modToks[0].right(modToks[0].length() - 1).toInt();
-               ModifierOp thisOp;
-               thisOp.operation = ADDITION;
-               thisOp.second.ID = 0;
-               thisOp.second.databyte = 0;
-               firstToks = modToks[2].toUpper().split(':');
-               parseOperandString(firstToks, thisOp.first);
-               thisMod.operations.append(thisOp);
             }
 
             sendingData[line].modifiers.append(thisMod);
@@ -546,9 +549,10 @@ void FrameSenderWindow::processTriggerText(int line)
     QString trigger;
 
     //Example line:
-    //id=0x200 5ms 10x bus0,1000ms
+    //id0x200 5ms 10x bus0,1000ms
     //trigger has two levels of syntactic parsing. First you split by comma to get each
     //actual trigger. Then you split by spaces to get the tokens within each trigger
+    //trigger = ui->tableSender->item(line, 5)->text().toUpper().trimmed().replace(" ", "");
     trigger = ui->tableSender->item(line, 5)->text().toUpper();
     if (trigger != "")
     {
@@ -571,7 +575,7 @@ void FrameSenderWindow::processTriggerText(int line)
             for (int x = 0; x < trigToks.length(); x++)
             {
                 QString tok = trigToks.at(x);
-                if (tok.left(3) == "ID=")
+                if (tok.left(2) == "ID")
                 {
                     thisTrigger.ID = Utility::ParseStringToNum(tok.right(tok.length() - 3));
                     if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 10000000;

@@ -72,6 +72,37 @@ public:
         }
         else return formatHexNum(value);
     }
+
+    //parses the input string to grab as much of it as possible while staying alpha numeric
+    static QString grabAlphaNumeric(QString &input)
+    {
+        QString builder;
+        QChar thisChar;
+        for (int i = 0; i < input.length(); i++)
+        {
+            thisChar = input[i];
+            if (thisChar.isLetterOrNumber() || thisChar == ':') builder.append(input[i]);
+            else
+            {
+                input = input.right(input.length() - i);
+                return builder;
+            }
+        }
+        return builder;
+    }
+
+    static QString grabOperation(QString &input)
+    {
+        QString builder;
+        QChar thisChar = input[0];
+
+        if (thisChar == '+' || thisChar == '-' || thisChar == '*' || thisChar == '/' || thisChar == '^' || thisChar == '&' || thisChar == '|' || thisChar == "=")
+        {
+            input = input.right(input.length() - 1);
+            builder = thisChar;
+        }
+        return builder;
+    }
 };
 
 #endif // UTILITY_H
