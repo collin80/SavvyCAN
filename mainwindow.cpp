@@ -9,19 +9,10 @@
 #include "serialworker.h"
 
 /*
-This first order of business is to attempt to gain feature parity (roughly) with GVRET-PC so  that this
-can replace it as a cross platform solution.
-
-Here are things yet to do
-- Ability to use programmatic frame sending interface (only I use it and it's complicated but helpful)
-
 Things that were planned for the GVRET-PC project but never completed.
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
 Range state - Find things that range like accelerator pedal inputs, road speed, tach, etc
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
-
-
-Things currently broken or in need of attention: (push these over to github issues as soon as you can)
 */
 
 QString MainWindow::loadedFileName = "";

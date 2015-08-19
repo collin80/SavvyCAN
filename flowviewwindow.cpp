@@ -324,7 +324,7 @@ void FlowViewWindow::refreshIDList()
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            //QListWidgetItem* item = new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
+            QListWidgetItem* item = new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
         }
     }
     //default is to sort in ascending order
