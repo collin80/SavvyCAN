@@ -96,7 +96,7 @@ public:
         QString builder;
         QChar thisChar = input[0];
 
-        if (thisChar == '+' || thisChar == '-' || thisChar == '*' || thisChar == '/' || thisChar == '^' || thisChar == '&' || thisChar == '|' || thisChar == "=")
+        if (thisChar == '+' || thisChar == '-' || thisChar == '*' || thisChar == '/' || thisChar == '^' || thisChar == '&' || thisChar == '|' || thisChar == '=')
         {
             input = input.right(input.length() - 1);
             builder = thisChar;
