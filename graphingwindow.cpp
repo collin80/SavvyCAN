@@ -521,6 +521,7 @@ void GraphingWindow::showParamsDialog(int idx = -1)
     {
         thisDialog->setParams(graphParams[idx]);
     }
+    else thisDialog->clearParams();
 
     if (thisDialog->exec() == QDialog::Accepted)
     {

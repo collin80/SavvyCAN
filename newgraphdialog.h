@@ -18,6 +18,7 @@ public:
     ~NewGraphDialog();
     void getParams(GraphParams &);
     void setParams(GraphParams &);
+    void clearParams();
 
 private slots:
     void addButtonClicked();

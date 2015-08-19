@@ -49,6 +49,18 @@ void NewGraphDialog::colorSwatchClick()
 
 }
 
+void NewGraphDialog::clearParams()
+{
+    ui->txtID->clear();
+    ui->txtBias->clear();
+    ui->txtMask->clear();
+    ui->txtScale->clear();
+    ui->txtStride->clear();
+    ui->txtName->clear();
+    ui->txtData->clear();
+
+}
+
 void NewGraphDialog::setParams(GraphParams &params)
 {
     ui->txtID->setText(Utility::formatNumber(params.ID));
