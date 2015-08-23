@@ -126,6 +126,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoad_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadDBC()));
     connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
     connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
+    connect(ui->canFramesView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(gridDoubleClicked(QModelIndex)));
     connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
     connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
     connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
@@ -263,7 +264,8 @@ void MainWindow::readUpdateableSettings()
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
     Utility::decimalMode = !useHex;
-    model->setSecondsMode(settings.value("Main/TimeSeconds", false).toBool());
+    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+    model->setSecondsMode(secondsMode);
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
 }
 
@@ -287,6 +289,13 @@ void MainWindow::gridClicked(QModelIndex idx)
     else {
         ui->canFramesView->resizeRowToContents(idx.row());
     }
+}
+
+void MainWindow::gridDoubleClicked(QModelIndex idx)
+{
+    //grab ID and timestamp and send them away
+    CANFrame frame = model->getListReference()->at(idx.row());
+    emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);
 }
 
 void MainWindow::interpretToggled(bool state)
@@ -383,6 +392,17 @@ void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
     }
 }
 
+//A sub-window is sending us a center on timestamp and ID signal
+//try to find the relevant frame in the list and focus on it.
+void MainWindow::gotCenterTimeID(int32_t ID, double timestamp)
+{
+    int idx = model->getIndexFromTimeID(ID, timestamp);
+    if (idx > -1)
+    {
+        ui->canFramesView->selectRow(idx);
+    }
+}
+
 void MainWindow::clearFrames()
 {
     ui->canFramesView->scrollToTop();
@@ -397,6 +417,7 @@ void MainWindow::clearFrames()
 void MainWindow::normalizeTiming()
 {
     model->normalizeTiming();
+    emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
 }
 
 void MainWindow::changeBaudRates()
@@ -900,6 +921,14 @@ void MainWindow::showGraphingWindow()
 {
     if (!graphingWindow) {
         graphingWindow = new GraphingWindow(dbcHandler, model->getListReference());
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+    }
+
+    if (flowViewWindow) //connect the two external windows together
+    {
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
     graphingWindow->show();
 }
@@ -987,10 +1016,18 @@ void MainWindow::showFlowViewWindow()
             flowViewWindow = new FlowViewWindow(model->getListReference());
         else
             flowViewWindow = new FlowViewWindow(model->getFilteredListReference());
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
+
+    if (graphingWindow)
+    {
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+    }
+
     flowViewWindow->show();
 }
-
 
 //this one always gets the unfiltered list intentionally.
 void MainWindow::showDBCEditor()

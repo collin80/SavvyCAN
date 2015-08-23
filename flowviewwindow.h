@@ -2,6 +2,7 @@
 #define FLOWVIEWWINDOW_H
 
 #include <QDialog>
+#include "qcustomplot.h"
 #include "can_structs.h"
 
 namespace Ui {
@@ -33,6 +34,11 @@ private slots:
     void contextMenuRequestGraph(QPoint pos);
     void saveFileFlow();
     void saveFileGraph();
+    void plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event);
+    void gotCenterTimeID(int32_t ID, double timestamp);
+
+signals:
+    void sendCenterTimeID(int32_t ID, double timestamp);
 
 private:
     Ui::FlowViewWindow *ui;

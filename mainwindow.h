@@ -59,6 +59,7 @@ private slots:
     void gotDeviceInfo(int, int);
     void connectionSucceeded(int, int);
     void gridClicked(QModelIndex);
+    void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
     void showDBCEditor();
@@ -72,7 +73,7 @@ private slots:
 public slots:
     void gotFrames(int, int);
     void updateSettings();
-
+    void gotCenterTimeID(int32_t ID, double timestamp);
 
 signals:
     void sendSerialPort(QSerialPortInfo *port);
@@ -85,6 +86,7 @@ signals:
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
     void framesUpdated(int numFrames); //something has updated the frame list
     void settingsUpdated();
+    void sendCenterTimeID(int32_t ID, double timestamp);
 
 private:
     Ui::MainWindow *ui;
@@ -100,6 +102,7 @@ private:
     bool inhibitFilterUpdate;
     bool useHex;
     bool allowCapture;
+    bool secondsMode;
     bool bDirty; //have frames been added or subtracted since the last save/load?
     bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
 

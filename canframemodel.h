@@ -41,6 +41,7 @@ public:
     void recalcOverwrite();
     bool needsFilterRefresh();
     void insertFrames(const QVector<CANFrame> &newFrames);
+    int getIndexFromTimeID(int ID, double timestamp);
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
     const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither

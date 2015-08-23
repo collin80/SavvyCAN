@@ -42,6 +42,7 @@ private slots:
     void titleDoubleClick(QMouseEvent *event, QCPPlotTitle *title);
     void axisLabelDoubleClick(QCPAxis* axis, QCPAxis::SelectablePart part);
     void legendDoubleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
+    void plottableDoubleClick(QCPAbstractPlottable* plottable,QMouseEvent* event);
     void selectionChanged();
     void mousePress();
     void mouseWheel();
@@ -57,6 +58,10 @@ private slots:
     void appendToGraph(GraphParams &params, CANFrame &frame);
     void editSelectedGraph();
     void updatedFrames(int);
+    void gotCenterTimeID(int32_t ID, double timestamp);
+
+signals:
+    void sendCenterTimeID(int32_t ID, double timestamp);
 
 private:
     Ui::GraphingWindow *ui;

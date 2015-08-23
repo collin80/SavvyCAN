@@ -67,7 +67,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->spinPlayback, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     connect(ui->cbLoopPlayback, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(changeID(QString)));
-    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
+    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));    
+    connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
@@ -140,6 +141,58 @@ void FlowViewWindow::writeSettings()
     {
         settings.setValue("FlowView/WindowSize", size());
         settings.setValue("FlowView/WindowPos", pos());
+    }
+}
+
+void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event)
+{
+    int id = 0;
+    //apply transforms to get the X axis value where we double clicked
+    double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
+    if (frameCache.count() > 0) id = frameCache[0].ID;
+    if (secondsMode) emit sendCenterTimeID(id, coord);
+    else emit sendCenterTimeID(id, coord / 1000000.0);
+}
+
+void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
+{
+    if (secondsMode) timestamp *= 1000000.0; //frames always store timestamp in microseconds
+
+    qDebug() << "timestamp: " << timestamp;
+
+    changeID(QString::number(ID)); //to be sure we're focused on the proper ID
+
+    for (int j = 0; j < ui->listFrameID->count(); j++)
+    {
+        int thisNum = Utility::ParseStringToNum(ui->listFrameID->item(j)->text());
+        if (thisNum == ID)
+        {
+            ui->listFrameID->setCurrentRow(j);
+            break;
+        }
+    }
+
+    int bestIdx = -1;
+    for (int i = 0; i < frameCache.count(); i++)
+    {
+        if (frameCache[i].timestamp > timestamp)
+        {
+            bestIdx = i - 1;
+            break;
+        }
+    }
+    qDebug() << "Best index " << bestIdx;
+    if (bestIdx > -1)
+    {
+        currentPosition = bestIdx;
+        if (ui->cbAutoRef->isChecked())
+        {
+            memcpy(refBytes, currBytes, 8);
+        }
+
+        memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+
+        updateDataView();
     }
 }
 

@@ -45,6 +45,7 @@ GraphingWindow::GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *fra
     connect(ui->graphingView, SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
     //connect up the mouse controls
     connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(ui->graphingView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
     connect(ui->graphingView, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
 
     // make bottom and left axes transfer their ranges to top and right axes:
@@ -150,6 +151,32 @@ void GraphingWindow::updatedFrames(int numFrames)
         }
         ui->graphingView->replot();
     }
+}
+
+void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event)
+{
+    int id = 0;
+    //apply transforms to get the X axis value where we double clicked
+    double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
+    id = plottable->property("id").toInt();
+    if (secondsMode) emit sendCenterTimeID(id, coord);
+    else emit sendCenterTimeID(id, coord / 1000000.0);
+}
+
+void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
+{
+    //its problematic to try to highlight a graph since we get the ID
+    //and timestamp not the signal in question so there is no real way
+    //to know which graph. But, if that changes here is a stub
+    //for (int i = 0; i < graphParams.count(); i++)
+    //{
+    //}
+
+    QCPRange range = ui->graphingView->xAxis->range();
+    double offset = range.size() / 2.0;
+    if (!secondsMode) timestamp *= 1000000.0; //timestamp is always in seconds when being passed so convert if necessary
+    ui->graphingView->xAxis->setRange(timestamp - offset, timestamp + offset);
+    ui->graphingView->replot();
 }
 
 void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
@@ -802,6 +829,9 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         }
     }
 
+    params.xbias = 0;
+
+    /*
     for (int ct = 0; ct < params.x.count(); ct++)
     {
         params.x[ct] -= xminval;
@@ -809,9 +839,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     params.xbias = xminval;
     xmaxval -= xminval;
     xminval = 0;
+    */
 
     ui->graphingView->addGraph();
-    params.ref = ui->graphingView->graph();
+    params.ref = ui->graphingView->graph();    
     if (createGraphParam)
     {
         graphParams.append(params);
@@ -826,6 +857,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         if ((params.endByte != -1) && (params.endByte != params.startByte)) params.graphName += "-" + QString::number(params.endByte);
     }
     ui->graphingView->graph()->setName(params.graphName);
+    ui->graphingView->graph()->setProperty("id", params.ID);
 
     ui->graphingView->graph()->setData(refParam->x,refParam->y);
     ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines

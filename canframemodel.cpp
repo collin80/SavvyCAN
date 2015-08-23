@@ -398,6 +398,21 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     if (needFilterRefresh) emit updatedFiltersList();
 }
 
+int CANFrameModel::getIndexFromTimeID(int ID, double timestamp)
+{
+    int bestIndex = -1;
+    uint64_t intTimeStamp = timestamp * 1000000l;
+    for (int i = 0; i < frames.count(); i++)
+    {
+        if ((frames[i].ID == ID))
+        {
+            if (frames[i].timestamp <= intTimeStamp) bestIndex = i;
+            else break; //drop out of loop as soon as we pass the proper timestamp
+        }
+    }
+    return bestIndex;
+}
+
 void CANFrameModel::loadFilterFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
