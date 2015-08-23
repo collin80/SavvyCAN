@@ -196,7 +196,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="cbCapture">
+      <widget class="QCheckBox" name="cbSync">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -204,7 +204,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Realtime Capture</string>
+        <string>Synchronize windows</string>
        </property>
       </widget>
      </item>

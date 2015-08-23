@@ -561,8 +561,9 @@ void FlowViewWindow::updatePosition(bool forward)
         memcpy(refBytes, currBytes, 8);
     }
 
-    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+    memcpy(currBytes, frameCache.at(currentPosition).data, 8);    
 
+    if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
 }
 
 void FlowViewWindow::updateGraphLocation()
