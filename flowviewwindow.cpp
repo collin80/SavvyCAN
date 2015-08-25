@@ -156,9 +156,11 @@ void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMous
 
 void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
 {
-    if (secondsMode) timestamp *= 1000000.0; //frames always store timestamp in microseconds
+    uint64_t t_stamp;
 
-    qDebug() << "timestamp: " << timestamp;
+    t_stamp = timestamp * 1000000l;
+
+    qDebug() << "timestamp: " << t_stamp;
 
     changeID(QString::number(ID)); //to be sure we're focused on the proper ID
 
@@ -175,7 +177,7 @@ void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
     int bestIdx = -1;
     for (int i = 0; i < frameCache.count(); i++)
     {
-        if (frameCache[i].timestamp > timestamp)
+        if (frameCache[i].timestamp > t_stamp)
         {
             bestIdx = i - 1;
             break;
@@ -286,6 +288,7 @@ void FlowViewWindow::saveFileFlow()
 
 void FlowViewWindow::updatedFrames(int numFrames)
 {
+    CANFrame thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
         ui->listFrameID->clear();
@@ -313,6 +316,26 @@ void FlowViewWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        int refID = frameCache[0].ID;
+        bool needRefresh = false;
+        for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+        {
+            thisFrame = modelFrames->at(i);
+            if (thisFrame.ID == refID)
+            {
+                frameCache.append(thisFrame);
+                if (ui->cbLiveMode->checkState() == Qt::Checked)
+                {
+                    currentPosition = frameCache.count() - 1;
+                    needRefresh = true;
+                }
+            }
+        }
+        if (needRefresh)
+        {
+            updateDataView();
+            if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
+        }
     }
 }
 
@@ -489,7 +512,7 @@ void FlowViewWindow::changeLooping(bool check)
 
 void FlowViewWindow::timerTriggered()
 {
-    if (!playbackActive)
+    if (!playbackActive || (ui->cbLiveMode->checkState() == Qt::Checked))
     {
         playbackTimer->stop();
         return;
