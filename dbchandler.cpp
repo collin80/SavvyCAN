@@ -87,11 +87,11 @@ void DBCHandler::loadDBCFile(QString filename)
                 }
                 switch (val)
                 {
-                case 0:
-                    sig.intelByteOrder = true;
-                    break;
-                case 1:
+                case 0: //big endian mode
                     sig.intelByteOrder = false;
+                    break;
+                case 1: //little endian mode
+                    sig.intelByteOrder = true;
                     break;
                 case 2:
                     sig.valType = SP_FLOAT;
@@ -344,12 +344,12 @@ void DBCHandler::saveDBCFile(QString filename)
             switch (sig.valType)
             {
             case UNSIGNED_INT:
-                if (sig.intelByteOrder) msgOutput.append("0+");
-                else msgOutput.append("1+");
+                if (sig.intelByteOrder) msgOutput.append("1+");
+                else msgOutput.append("0+");
                 break;
             case SIGNED_INT:
-                if (sig.intelByteOrder) msgOutput.append("0-");
-                else msgOutput.append("1-");
+                if (sig.intelByteOrder) msgOutput.append("1-");
+                else msgOutput.append("0-");
                 break;
             case SP_FLOAT:
                 msgOutput.append("2-");
