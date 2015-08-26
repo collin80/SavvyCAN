@@ -502,85 +502,77 @@ void DBCHandler::listDebugging()
 }
 
 
-//Vector uses a special format for bit ordering. It pretends that the bits are numbered
-//0 to 63 in ascending order of bits as if a 64 bit integer were stored lowest first
-//and highest bit last.
-//0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31    Vector bit ordering
-//7 6 5 4 3 2 1 0 7 6 5  4  3  2  1  0  7  6  5  4  3  2  1  0  7  6  5  4  3  2  1  0     Normal bitwise ordering within bytes
-//0 1 2 3 4 5 6 7 0 1 2  3  4  5  6  7  0  1  2  3  4  5  6  7  0  1  2  3  4  5  6  7     Reversed bit order used by Vector
-//0               1                     2                       3                          Byte ordering (same either way)
-//A 16 bit integer would be stored Low first high second for intel format and high first, low second for motorola
+/*
+ The way that the DBC file format works is kind of weird... For intel format signals you count up
+from the start bit to the end bit which is (startbit + signallength - 1). At each point
+bits are numbered in a sawtooth manner. What that means is that the very first bit is 0 and you count up
+from there all of the way to 63 with each byte being 8 bits so bit 0 is the lowest bit in the first byte
+and 8 is the lowest bit in the next byte up. The whole thing looks like this:
+                 Bits
+      7  6  5  4  3  2  1  0
 
-//For intel format invert the starting bit within a byte.
-//Otherwise, iterate over the bytes that it encompasses
-//For intel format this works nicely as it means you can just go through the list getting higher and higher
-//values for each bit as you go.
-//For motorola it is backwards but only partially. For each byte you can go through and it's higher as you go
-//but, at each byte boundary the next byte is lower than the multiplier for the last.
+  0   7  6  5  4  3  2  1  0
+b 1   15 14 13 12 11 10 9  8
+y 2   23 22 21 20 19 18 17 16
+t 3   31 30 29 28 27 26 25 24
+e 4   39 38 37 36 35 34 33 32
+s 5   47 46 45 44 43 42 41 40
+  6   55 54 53 52 51 50 49 48
+  7   63 62 61 60 59 58 57 56
+
+  For intel format you start at the start bit and keep counting up. If you have a signal size of 8
+  and start at bit 12 then the bits are 12, 13, 14, 15, 16, 17, 18, 19 which spans across two bytes.
+  In this format each bit is worth twice as much as the last and you just keep counting up.
+  Bit 12 is worth 1, 13 is worth 2, 14 is worth 4, etc all of the way to bit 19 is worth 128.
+
+  Motorola format turns most everything on its head. You count backward from the start bit but
+  only within the current byte. If you are about to exit the current byte you go one higher and then keep
+  going backward as before. Using the same example as for intel, start bit of 12 and a signal length of 8.
+  So, the bits are 12, 11, 10, 9, 8, 23, 22, 21. Yes, that's confusing. They now go in reverse value order too.
+  Bit 12 is worth 128, 11 is worth 64, etc until bit 21 is worth 1.
+*/
+
 QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
 {
-    int startBit, endBit, startByte, endByte, bitWithinByteStart, bitWithinByteEnd;
-    int result = 0;
-    int multiplier;
-    int bitsToGo;
 
-    startBit = sig.startBit;
-    startByte = startBit / 8;
-    bitWithinByteStart = startBit % 8;
-    if (!sig.intelByteOrder)
-    {
-        bitWithinByteStart = 7 - bitWithinByteStart;
-        startBit = (startByte * 8) + bitWithinByteStart;
-    }
-
+    int64_t result = 0;
+    int bit;
+    int sigSize;
     if (sig.valType == STRING)
     {
         QString buildString;
+        int startByte = sig.signalSize / 8;
         int bytes = sig.signalSize / 8;
         for (int x = 0; x < bytes; x++) buildString.append(frame.data[startByte + x]);
         return buildString;
     }
 
-    endBit = startBit + sig.signalSize - 1;
-    endByte = endBit / 8;
-    bitWithinByteEnd = endBit % 8;
-    bitsToGo = sig.signalSize - 1;
+    sigSize = sig.signalSize;
 
-    multiplier = 1;
-    if (!sig.intelByteOrder)
+    if (sig.intelByteOrder)
     {
-        for (int y = startByte; y < endByte; y++) multiplier *= 256;
+        bit = sig.startBit;
+        for (int bitpos = 0; bitpos < sigSize; bitpos++)
+        {
+            if (frame.data[bit / 8] & (1 << (bit % 8)))
+                result += (1ULL << bitpos);
+
+            bit++;
+        }
     }
-
-    //qDebug() << "Signal Name: " << sig.name;
-    //qDebug() << "Intel Order: " << sig.intelByteOrder;
-    //qDebug() << "start byte: " << startByte;
-    //qDebug() << "End Byte: " << endByte;
-
-    int sBit, eBit;
-    sBit = bitWithinByteStart;
-    eBit = sBit + bitsToGo;
-    if (eBit > 7) eBit = 7;
-    bitsToGo -= (eBit - sBit + 1);
-    for (int b = startByte; b <= endByte; b++)
+    else //motorola / big endian mode
     {
-        //qDebug() << "Byte: " << frame.data[b];
-        //qDebug() << "S: " << sBit;
-        //qDebug() << "E: " << eBit;
-        //process this byte
-        result += processByte(frame.data[b], sBit, eBit) * multiplier;
+        bit = sig.startBit;
+        for (int bitpos = 0; bitpos < sigSize; bitpos++)
+        {
+            if (frame.data[bit / 8] & (1 << (bit % 8)))
+                result += (1ULL << (sigSize - bitpos));
 
-        //add to multiplier
-        if (sig.intelByteOrder)
-            multiplier = multiplier << 8;
-        else
-            multiplier = multiplier >> 8;
+            if ((bit % 8) == 0)
+                bit += 15;
+            else bit--;
 
-        //Prepare sBit and eBit for next byte
-        sBit = 0; //fresh byte so we start at the beginning now
-        eBit = sBit + bitsToGo;
-        if (eBit > 7) eBit = 7;
-        bitsToGo -= (eBit - sBit + 1);
+        }
     }
 
     if (sig.valType == SIGNED_INT)
@@ -612,8 +604,6 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
 
     double endResult = ((double)result * sig.factor) + sig.bias;
     result = (int) endResult;
-
-    //qDebug() << "Result: " << result;
 
     QString outputString;
 
