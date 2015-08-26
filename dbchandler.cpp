@@ -566,7 +566,7 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
         for (int bitpos = 0; bitpos < sigSize; bitpos++)
         {
             if (frame.data[bit / 8] & (1 << (bit % 8)))
-                result += (1ULL << (sigSize - bitpos));
+                result += (1ULL << (sigSize - bitpos - 1));
 
             if ((bit % 8) == 0)
                 bit += 15;
