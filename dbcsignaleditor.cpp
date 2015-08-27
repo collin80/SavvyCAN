@@ -345,33 +345,41 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     ui->txtUnitName->setText(sig->unitName);
 
     memset(bitpattern, 0, 8); //clear it out first.
-    int startBit, endBit, startByte, bitWithinByteStart;
+
+    int startBit, endBit;
 
     startBit = sig->startBit;
-    startByte = startBit / 8;
-    bitWithinByteStart = startBit % 8;
-    if (!sig->intelByteOrder)
-    {
-        bitWithinByteStart = 7 - bitWithinByteStart;
-        startBit = (startByte * 8) + bitWithinByteStart;
-    }
 
-    endBit = startBit + sig->signalSize - 1;
-    if (endBit > 63)
-    {
-        endBit = 63;
-    }
-
-    //bitpattern[startBit / 8] |= 1 << (startBit % 8);
+    bitpattern[startBit / 8] |= 1 << (startBit % 8); //make the start bit a different color to set it apart
     ui->bitfield->setReference(bitpattern, false);
 
-    for (int y = startBit; y <= endBit; y++)
+    if (sig->intelByteOrder)
     {
-        int byt = y / 8;
-        bitpattern[byt] |= 1 << (y % 8);
-    }    
-    ui->bitfield->updateData(bitpattern, true);
+        endBit = startBit + sig->signalSize - 1;
+        if (startBit < 0) startBit = 0;
+        if (endBit > 63) endBit = 63;
+        for (int y = startBit; y <= endBit; y++)
+        {
+            int byt = y / 8;
+            bitpattern[byt] |= 1 << (y % 8);
+        }
+    }
+    else //big endian / motorola format
+    {
+        //much more irritating than the intel version...
+        int size = sig->signalSize;
+        while (size > 0)
+        {
+            int byt = startBit / 8;
+            bitpattern[byt] |= 1 << (startBit % 8);
+            size--;
+            if ((startBit % 8) == 0) startBit += 15;
+            else startBit--;
+        }
+    }
 
+
+    ui->bitfield->updateData(bitpattern, true);
     ui->cbIntelFormat->setChecked(sig->intelByteOrder);
 
     switch (sig->valType)
@@ -447,7 +455,7 @@ void DBCSignalEditor::clickSignalList(int row)
 
 void DBCSignalEditor::bitfieldClicked(int x, int y)
 {
-    int bit = (x) + (y * 8);
+    int bit = (7 - x) + (y * 8);
     if (currentSignal == NULL) return;
     currentSignal->startBit = bit;
     fillSignalForm(currentSignal);

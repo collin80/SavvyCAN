@@ -69,9 +69,11 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     //the next left most column has "0 1 2 3 4 5 6 7" written down along the grid
 
     painter.setPen(QPen(Qt::black));
-    QFont theFont;
-    theFont.setPixelSize(qMin(xSector, ySector) - 10);
-    painter.setFont(theFont);
+    QFont mainFont;
+    mainFont.setPixelSize(qMin(xSector, ySector) - 10);
+    painter.setFont(mainFont);
+    QFont smallFont;
+    smallFont.setPixelSize(qMin(xSector, ySector) - 15);
 
     painter.drawText(QRect(viewport.left(), viewport.top(), xSpan, ySector), Qt::AlignCenter, tr("BITS"));
 
@@ -94,6 +96,9 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     //compared to the old. Bits that are not set in either are white, bits set in both are black
     //bits that used to be set but now are unset are red, bits that used to be unset but now are set
     //are green
+
+    painter.setPen(QPen(Qt::gray));
+    //painter.setFont(smallFont);
 
     for (y = 0; y < 8; y++)
     {
@@ -131,6 +136,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 
             //painter.fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
             painter.drawRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector);
+            painter.drawText(viewport.left() + (x+2) * xSector + (xSector / 3), viewport.top() + (y + 3) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
         }
     }
     upperLeft.setX(viewport.left() + 2 * xSector);
