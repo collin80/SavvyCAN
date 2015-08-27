@@ -15,7 +15,7 @@ void DBCHandler::loadDBCFile(QString filename)
     QString line;
     QRegularExpression regex;
     QRegularExpressionMatch match;
-    DBC_MESSAGE *currentMessage;
+    DBC_MESSAGE *currentMessage = NULL;
 
     qDebug() << "DBC File: " << filename;
 

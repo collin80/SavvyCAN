@@ -88,8 +88,8 @@ void FileComparatorWindow::calculateDetails()
 {
     QMap<int, FrameData> interestedIDs;
     QMap<int, FrameData> referenceIDs;
-    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference;
-    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference;
+    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = NULL, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = NULL;
+    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = NULL;
     uint64_t tmp;
 
     bool uniqueInterested = ui->ckUniqueToInterested->isChecked();

@@ -395,6 +395,19 @@ void SerialWorker::procRXChar(unsigned char c)
         }
         rx_step++;
         break;
+    case TIME_SYNC:
+        rx_state = IDLE;
+        break;
+    case SET_DIG_OUTPUTS:
+        rx_state = IDLE;
+        break;
+    case SETUP_CANBUS:
+        rx_state = IDLE;
+        break;
+    case SET_SINGLEWIRE_MODE:
+        rx_state = IDLE;
+        break;
+
     }
 }
 

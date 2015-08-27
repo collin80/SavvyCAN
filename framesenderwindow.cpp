@@ -391,27 +391,30 @@ void FrameSenderWindow::doModifiers(int idx)
             second = fetchOperand(idx, op.second);
             switch (op.operation)
             {
-                case ADDITION:
-                    shadowReg = first + second;
-                    break;
-                case AND:
-                    shadowReg = first & second;
-                    break;
-                case DIVISION:
-                    shadowReg = first / second;
-                    break;
-                case MULTIPLICATION:
-                    shadowReg = first * second;
-                    break;
-                case OR:
-                    shadowReg = first | second;
-                    break;
-                case SUBTRACTION:
-                    shadowReg = first - second;
-                    break;
-                case XOR:
-                    shadowReg = first ^ second;
-                    break;
+            case ADDITION:
+                shadowReg = first + second;
+                break;
+            case AND:
+                shadowReg = first & second;
+                break;
+            case DIVISION:
+                shadowReg = first / second;
+                break;
+            case MULTIPLICATION:
+                shadowReg = first * second;
+                break;
+            case OR:
+                shadowReg = first | second;
+                break;
+            case SUBTRACTION:
+                shadowReg = first - second;
+                break;
+            case XOR:
+                shadowReg = first ^ second;
+                break;
+            case NOT:
+                shadowReg = !shadowReg;
+                break;
             }
         }
         //Finally, drop the result into the proper data byte
