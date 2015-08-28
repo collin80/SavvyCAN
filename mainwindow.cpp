@@ -10,9 +10,13 @@
 
 /*
 Things that were planned for the GVRET-PC project but never completed.
+
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
+
 Range state - Find things that range like accelerator pedal inputs, road speed, tach, etc
+
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
+or, try to find things that appear to be multi-byte integers
 */
 
 QString MainWindow::loadedFileName = "";
@@ -104,6 +108,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcMainEditor = NULL;
     comparatorWindow = NULL;
     settingsDialog = NULL;
+    discreteStateWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -222,6 +227,12 @@ MainWindow::~MainWindow()
     {
         settingsDialog->close();
         delete settingsDialog;
+    }
+
+    if (discreteStateWindow)
+    {
+        discreteStateWindow->close();
+        delete discreteStateWindow;
     }
 
     delete ui;
@@ -983,7 +994,11 @@ void MainWindow::showComparisonWindow()
 
 void MainWindow::showSingleMultiWindow()
 {
-    //not done yet
+    if (!discreteStateWindow)
+    {
+        discreteStateWindow = new DiscreteStateWindow(model->getListReference());
+    }
+    discreteStateWindow->show();
 }
 
 void MainWindow::showRangeWindow()

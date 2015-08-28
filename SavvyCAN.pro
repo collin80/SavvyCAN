@@ -34,7 +34,8 @@ SOURCES += main.cpp\
     dbcsignaleditor.cpp \
     framefileio.cpp \
     filecomparatorwindow.cpp \
-    mainsettingsdialog.cpp
+    mainsettingsdialog.cpp \
+    discretestatewindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -57,7 +58,8 @@ HEADERS  += mainwindow.h \
     framefileio.h \
     config.h \
     filecomparatorwindow.h \
-    mainsettingsdialog.h
+    mainsettingsdialog.h \
+    discretestatewindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -70,7 +72,8 @@ FORMS    += mainwindow.ui \
     dbcmaineditor.ui \
     dbcsignaleditor.ui \
     filecomparatorwindow.ui \
-    mainsettingsdialog.ui
+    mainsettingsdialog.ui \
+    discretestatewindow.ui
 
 DISTFILES +=
 

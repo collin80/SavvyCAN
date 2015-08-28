@@ -17,6 +17,7 @@
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 #include "mainsettingsdialog.h"
+#include "discretestatewindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -115,6 +116,7 @@ private:
     DBCMainEditor *dbcMainEditor;
     FileComparatorWindow *comparatorWindow;
     MainSettingsDialog *settingsDialog;
+    DiscreteStateWindow *discreteStateWindow;
 
     //various private storage
     QLabel lbStatusConnected;

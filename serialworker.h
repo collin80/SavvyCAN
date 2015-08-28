@@ -9,6 +9,8 @@
 #include "can_structs.h"
 #include "canframemodel.h"
 
+namespace SERIALSTATE {
+
 enum STATE //keep this enum synchronized with the Arduino firmware project
 {
     IDLE,
@@ -24,6 +26,9 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
     SET_SINGLEWIRE_MODE
 };
 
+}
+
+using namespace SERIALSTATE;
 class SerialWorker : public QObject
 {
     Q_OBJECT
