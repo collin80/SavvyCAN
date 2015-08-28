@@ -217,7 +217,7 @@ void DBCHandler::loadDBCFile(QString filename)
                         DBC_VAL val;
                         while (tokenString.length() > 2)
                         {
-                            regex.setPattern("(\\d+) \\\"(.*?)\\\" (.*)");
+                            regex.setPattern("(\\d+) \\\"(.*?)\\\"(.*)");
                             match = regex.match(tokenString);
                             if (match.hasMatch())
                             {
@@ -225,7 +225,9 @@ void DBCHandler::loadDBCFile(QString filename)
                                 val.descript = match.captured(2);
                                 //qDebug() << "sig val " << val.value << " desc " <<val.descript;
                                 sig->valList.append(val);
-                                tokenString = tokenString.right(tokenString.length() - match.captured(1).length() - match.captured(2).length() - 4);
+                                int rightSize = tokenString.length() - match.captured(1).length() - match.captured(2).length() - 4;
+                                if (rightSize > 0) tokenString = tokenString.right(rightSize);
+                                else tokenString = "";
                                 //qDebug() << "New token string: " << tokenString;
                             }
                             else tokenString = "";
