@@ -18,6 +18,7 @@
 #include "dbcmaineditor.h"
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
+#include "discretestatewindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -118,6 +119,7 @@ private:
     DBCMainEditor *dbcMainEditor;
     FileComparatorWindow *comparatorWindow;
     MainSettingsDialog *settingsDialog;
+    DiscreteStateWindow *discreteStateWindow;
     FirmwareUploaderWindow *firmwareUploaderWindow;
 
     //various private storage

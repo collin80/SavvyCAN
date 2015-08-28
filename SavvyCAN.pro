@@ -35,7 +35,8 @@ SOURCES += main.cpp\
     framefileio.cpp \
     filecomparatorwindow.cpp \
     mainsettingsdialog.cpp \
-    firmwareuploaderwindow.cpp
+    firmwareuploaderwindow.cpp \
+    discretestatewindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -59,7 +60,8 @@ HEADERS  += mainwindow.h \
     config.h \
     filecomparatorwindow.h \
     mainsettingsdialog.h \
-    firmwareuploaderwindow.h
+    firmwareuploaderwindow.h \
+    discretestatewindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -73,7 +75,8 @@ FORMS    += mainwindow.ui \
     dbcsignaleditor.ui \
     filecomparatorwindow.ui \
     mainsettingsdialog.ui \
-    firmwareuploaderwindow.ui
+    firmwareuploaderwindow.ui \
+    discretestatewindow.ui
 
 DISTFILES +=
 
