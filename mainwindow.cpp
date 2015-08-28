@@ -104,6 +104,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcMainEditor = NULL;
     comparatorWindow = NULL;
     settingsDialog = NULL;
+    firmwareUploaderWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -143,6 +144,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->listFilters, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(filterListItemChanged(QListWidgetItem*)));
     connect(ui->btnFilterAll, SIGNAL(clicked(bool)), this, SLOT(filterSetAll()));
     connect(ui->btnFilterNone, SIGNAL(clicked(bool)), this, SLOT(filterClearAll()));
+    connect(ui->actionFirmware_Uploader, SIGNAL(triggered(bool)), this, SLOT(showFirmwareUploaderWindow()));
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -906,6 +908,11 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
     }
 }
 
+void MainWindow::setTargettedID(int id)
+{
+    worker->targetFrameID(id);
+}
+
 void MainWindow::showSettingsDialog()
 {
     if (!settingsDialog)
@@ -970,6 +977,17 @@ void MainWindow::showPlaybackWindow()
             playbackWindow = new FramePlaybackWindow(model->getFilteredListReference(), worker);
     }
     playbackWindow->show();
+}
+
+void MainWindow::showFirmwareUploaderWindow()
+{
+    if (!firmwareUploaderWindow)
+    {
+        firmwareUploaderWindow = new FirmwareUploaderWindow(model->getListReference());
+        connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(worker, SIGNAL(gotTargettedFrame(int)), firmwareUploaderWindow, SLOT(gotTargettedFrame(int)));
+    }
+    firmwareUploaderWindow->show();
 }
 
 void MainWindow::showComparisonWindow()

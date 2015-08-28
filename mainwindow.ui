@@ -293,7 +293,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
@@ -314,6 +314,7 @@
     </property>
     <addaction name="action_Playback"/>
     <addaction name="action_Custom"/>
+    <addaction name="actionFirmware_Uploader"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -438,6 +439,11 @@
   <action name="actionSave_Filter_Definition">
    <property name="text">
     <string>Save Filter Definition</string>
+   </property>
+  </action>
+  <action name="actionFirmware_Uploader">
+   <property name="text">
+    <string>Firmware Uploader</string>
    </property>
   </action>
  </widget>

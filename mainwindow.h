@@ -17,6 +17,7 @@
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 #include "mainsettingsdialog.h"
+#include "firmwareuploaderwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -30,6 +31,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
     static MainWindow *getReference();
+    void setTargettedID(int);
     ~MainWindow();
 
 private slots:
@@ -52,6 +54,7 @@ private slots:
     void showFuzzyScopeWindow();
     void showComparisonWindow();
     void showSettingsDialog();
+    void showFirmwareUploaderWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -115,6 +118,7 @@ private:
     DBCMainEditor *dbcMainEditor;
     FileComparatorWindow *comparatorWindow;
     MainSettingsDialog *settingsDialog;
+    FirmwareUploaderWindow *firmwareUploaderWindow;
 
     //various private storage
     QLabel lbStatusConnected;

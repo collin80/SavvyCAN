@@ -32,6 +32,7 @@ public:
     SerialWorker(CANFrameModel *model, QObject *parent = 0);
     ~SerialWorker();
     void readSettings();
+    void targetFrameID(int);
 
 signals: //we emit signals
     void error(const QString &);
@@ -39,6 +40,7 @@ signals: //we emit signals
     void connectionSuccess(int, int);
     void connectionFailure();
     void deviceInfo(int, int);
+    void gotTargettedFrame(int);
 
 private slots: //we receive things in slots
     void readSerialData();    
@@ -70,6 +72,7 @@ private:
     QTime *elapsedTime;
     int framesPerSec;
     int gotFrames;
+    int targetID;
     STATE rx_state;
     int rx_step;
     CANFrame *buildFrame;

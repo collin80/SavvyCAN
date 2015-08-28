@@ -19,6 +19,7 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     capturing = true;
     gotValidated = true;
     isAutoRestart = false;
+    targetID = -1;
 
     readSettings();
 }
@@ -245,7 +246,7 @@ void SerialWorker::procRXChar(unsigned char c)
             break;
         case 9:
             gotValidated = true;
-            qDebug() << "Got validated";
+            //qDebug() << "Got validated";
             rx_state = IDLE;
             break;
         }
@@ -302,6 +303,7 @@ void SerialWorker::procRXChar(unsigned char c)
                 {
                     canModel->addFrame(*buildFrame, false);
                     gotFrames++;
+                    if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
                 }
             }
             break;
@@ -477,3 +479,7 @@ void SerialWorker::startFrameCapture()
     capturing = true;
 }
 
+void SerialWorker::targetFrameID(int target)
+{
+    targetID = target;
+}
