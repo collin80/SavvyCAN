@@ -49,6 +49,7 @@ void SerialWorker::readSettings()
         doValidation = true;
     }
     else doValidation = false;
+    //doValidation=false;
 }
 
 void SerialWorker::setSerialPort(QSerialPortInfo *port)
@@ -83,14 +84,15 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     QByteArray output;
     output.append((char)0xE7); //this puts the device into binary comm mode
     output.append((char)0xE7);
+
     output.append((char)0xF1); //signal we want to issue a command
     output.append((char)0x06); //request canbus stats from the board
+
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x07); //request device information
+
     output.append((char)0xF1);
     output.append((char)0x08); //setting singlewire mode
-    output.append((char)0xF1); //yet another command
-    output.append((char)0x09); //comm validation command
     if (settings.value("Main/SingleWireMode", false).toBool())
     {
         output.append((char)0x10); //signal that we do want single wire mode
@@ -99,6 +101,9 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     {
         output.append((char)0xFF); //signal we don't want single wire mode
     }
+
+    output.append((char)0xF1); //yet another command
+    output.append((char)0x09); //comm validation command
 
     serial->write(output);
     if (doValidation) connected = false;
