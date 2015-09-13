@@ -10,7 +10,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     QDialog(parent),
     ui(new Ui::FlowViewWindow)
 {
-    ui->setupUi(this);
+    ui->setupUi(this);    
 
     readSettings();
 
@@ -79,6 +79,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 
+    installEventFilter(this);
 }
 
 void FlowViewWindow::showEvent(QShowEvent* event)
@@ -141,6 +142,36 @@ void FlowViewWindow::writeSettings()
     {
         settings.setValue("FlowView/WindowSize", size());
         settings.setValue("FlowView/WindowPos", pos());
+    }
+}
+
+/*
+ * Keyboard shortcuts to allow for quick work without needing to move around a mouse.
+ * E = resume or pause playback
+ * Q = go back one frame
+ * W = go forward one frame
+*/
+bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_E:
+            if (playbackActive) btnPauseClick();
+            else btnPlayClick();
+            break;
+        case Qt::Key_Q:
+            btnBackOneClick();
+            break;
+        case Qt::Key_W:
+            btnFwdOneClick();
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
     }
 }
 

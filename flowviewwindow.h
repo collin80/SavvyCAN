@@ -64,6 +64,7 @@ private:
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // FLOWVIEWWINDOW_H
