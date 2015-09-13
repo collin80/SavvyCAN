@@ -21,7 +21,8 @@ public:
         input = input.toUpper();
         if (input.startsWith("0X") || input.startsWith("X")) //hex number
         {
-            temp = input.right(input.size() - 2).toInt(NULL, 16);
+            if (input.length() < 3) temp = 0;
+            else temp = input.right(input.size() - 2).toInt(NULL, 16);
         }
         else if (input.startsWith("B")) //binary number
         {

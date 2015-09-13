@@ -36,6 +36,7 @@ private slots:
     void saveFileGraph();
     void plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event);
     void gotCenterTimeID(int32_t ID, double timestamp);
+    void updateTriggerValues();
 
 signals:
     void sendCenterTimeID(int32_t ID, double timestamp);
@@ -47,6 +48,7 @@ private:
     const QVector<CANFrame> *modelFrames;
     unsigned char refBytes[8];
     unsigned char currBytes[8];
+    int triggerValues[8];
     int currentPosition;
     QTimer *playbackTimer;
     bool playbackActive;

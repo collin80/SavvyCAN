@@ -24,6 +24,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     memset(refBytes, 0, 8);
     memset(currBytes, 0, 8);
+    memset(triggerValues, -1, sizeof(int) * 8);
 
     //ui->graphView->setInteractions();
 
@@ -69,6 +70,14 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(changeID(QString)));
     connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));    
     connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
+    connect(ui->txtTrigger0, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger1, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger2, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger3, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger4, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger5, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger6, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->txtTrigger7, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
@@ -157,14 +166,14 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         switch (keyEvent->key())
         {
-        case Qt::Key_E:
+        case Qt::Key_R:
             if (playbackActive) btnPauseClick();
             else btnPlayClick();
             break;
-        case Qt::Key_Q:
+        case Qt::Key_T:
             btnBackOneClick();
             break;
-        case Qt::Key_W:
+        case Qt::Key_Y:
             btnFwdOneClick();
             break;
         }
@@ -173,6 +182,18 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
         // standard event processing
         return QObject::eventFilter(obj, event);
     }
+}
+
+void FlowViewWindow::updateTriggerValues()
+{
+    triggerValues[0] = Utility::ParseStringToNum(ui->txtTrigger0->text());
+    triggerValues[1] = Utility::ParseStringToNum(ui->txtTrigger1->text());
+    triggerValues[2] = Utility::ParseStringToNum(ui->txtTrigger2->text());
+    triggerValues[3] = Utility::ParseStringToNum(ui->txtTrigger3->text());
+    triggerValues[4] = Utility::ParseStringToNum(ui->txtTrigger4->text());
+    triggerValues[5] = Utility::ParseStringToNum(ui->txtTrigger5->text());
+    triggerValues[6] = Utility::ParseStringToNum(ui->txtTrigger6->text());
+    triggerValues[7] = Utility::ParseStringToNum(ui->txtTrigger7->text());
 }
 
 void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event)
@@ -589,6 +610,16 @@ void FlowViewWindow::updateDataView()
 
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (currBytes[i] == triggerValues[i])
+        {
+            playbackActive = false;
+            playbackTimer->stop();
+            break; //once any trigger is hit we can stop looking
+        }
+    }
 
     updateGraphLocation();
 
