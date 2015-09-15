@@ -32,6 +32,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     timeSeconds = false;
     timeOffset = 0;
     needFilterRefresh = false;
+    lastUpdateNumFrames = 0;
 }
 
 void CANFrameModel::setHexMode(bool mode)
@@ -323,6 +324,7 @@ void CANFrameModel::sendRefresh()
             filteredFrames.append(frames[i]);
         }
     }
+    lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
 }
 
@@ -337,19 +339,22 @@ void CANFrameModel::sendRefresh(int pos)
 //have to send thousands of messages per second
 void CANFrameModel::sendBulkRefresh(int num)
 {
+    //yes, num was sent to us by the serial worker but we actually have a better idea
+    //of how many by tracking the number we last knew about as opposed to how many rows there
+    //are now.
+    num = filteredFrames.count() - lastUpdateNumFrames;
+    lastUpdateNumFrames += num; //done this way to avoid asking for filteredFrames.count() again
+
     //qDebug() << "Bulk refresh of " << num;
-    //the next three lines protect against a crash in case someone clicked clear frames
-    //in between the time we got some frames and the time this was called
-    //otherwise it's possible that the grid is in an odd state.
+
     if (num == 0) return;
-    if (frames.count() == 0) return;
+    if (filteredFrames.count() == 0) return;
 
     if (!overwriteDups)
-    {
+    {        
         if (num > filteredFrames.count()) num = filteredFrames.count();
-        beginInsertRows(QModelIndex(), frames.count() - num, frames.count() - 1);
+        beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
         endInsertRows();
-
     }
     else
     {
@@ -365,6 +370,7 @@ void CANFrameModel::clearFrames()
     filteredFrames.clear();
     filters.clear();
     this->endResetModel();
+    lastUpdateNumFrames = 0;
     mutex.unlock();
 
     emit updatedFiltersList();

@@ -61,6 +61,7 @@ private:
     bool timeSeconds;
     bool needFilterRefresh;
     uint64_t timeOffset;
+    int lastUpdateNumFrames;
 };
 
 
