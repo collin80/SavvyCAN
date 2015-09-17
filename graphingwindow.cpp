@@ -467,19 +467,74 @@ void GraphingWindow::saveSpreadsheet()
         */
 
         QList<GraphParams>::iterator iter;
-        int graphNum = 0;
+        double xMin = 1000000000, xMax=-1000000000;
+        int maxCount = 0;
+        int numGraphs = 0;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
         {
-            for (int j = 0; j < iter->x.count(); j++)
+            if (iter->x[0] < xMin) xMin = iter->x[0];
+            if (iter->x[iter->x.count() - 1] > xMax) xMax = iter->x[iter->x.count() - 1];
+            if (maxCount < iter->x.count()) maxCount = iter->x.count();
+            numGraphs++;
+        }
+        qDebug() << "xMin: " << xMin;
+        qDebug() << "xMax: " << xMax;
+        qDebug() << "MaxCount: " << maxCount;
+        //The idea now is to iterate from xMin to xMax slicing all graphs up into MaxCount slices.
+        //But, actually, don't visit actual xMin or xMax, inset from there by one slice. Then, if
+        //a given graph doesn't exist there use the value from the nearest place that does exist.
+        double xSize = xMax - xMin;
+        double sliceSize = xSize / ((double)maxCount);
+        double equivValue = sliceSize / 100.0;
+        double currentX;
+        double value;
+        QList<int> indices;
+        indices.reserve(numGraphs);
+        for (int zero = 0; zero < numGraphs; zero++) indices[zero] = 0;
+
+        for (int j = 1; j < (maxCount - 1); j++)
+        {
+            currentX = xMin + (j * sliceSize);
+            outFile->write(QString::number(currentX).toUtf8());
+            for (int k = 0; k < graphParams.count(); k++)
             {
-                outFile->write(QString::number(iter->x[j]).toUtf8());
+                value = 0.0;
+                //five possibilities.
+                //1: we're at the beginning for this graph but the slice is before this graph even starts
+                if (indices[k] == 0 && graphParams[k].x[indices[k]] > currentX)
+                {
+                    value = graphParams[k].y[indices[k]];
+                }
+                //2: The opposite, we're at the end of this graph but the slices keep going
+                else if (indices[k] == (graphParams[k].x.count() - 1) && graphParams[k].x[indices[k]] < currentX)
+                {
+                    value = graphParams[k].y[indices[k]];
+                }
+                //3: the slice is right near the current value we're at for this graph
+                else if (fabs(graphParams[k].x[indices[k]] - currentX) < equivValue)
+                {
+                    value = graphParams[k].y[indices[k]];
+                }
+                //4: the slice is right next to the next value for this graph
+                else if (fabs(graphParams[k].x[indices[k] + 1] - currentX) < equivValue)
+                {
+                    value = graphParams[k].y[indices[k] + 1];
+                }
+                //5: it's somewhere in between two values for this graph
+                //the two values will be indices[k] and indices[k] + 1
+                else
+                {
+                    double span = graphParams[k].x[indices[k] + 1] - graphParams[k].x[indices[k]];
+                    double progress = (currentX - graphParams[k].x[indices[k]]) / span;
+                    value = Utility::Lerp(graphParams[k].y[indices[k]], graphParams[k].y[indices[k] + 1], progress);
+                }
+
+                if (currentX >= graphParams[k].x[indices[k] + 1]) indices[k]++;
+
                 outFile->putChar(',');
-                outFile->write(QString::number(graphNum).toUtf8());
-                outFile->putChar(',');
-                outFile->write(QString::number(iter->y[j]).toUtf8());
-                outFile->write("\n");
+                outFile->write(QString::number(value).toUtf8());
             }
-            graphNum++;
+            outFile->write("\n");
         }
 
         outFile->close();
