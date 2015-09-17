@@ -382,6 +382,7 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     menu->addAction(tr("Save graph image to file"), this, SLOT(saveGraphs()));
     menu->addAction(tr("Save graph definitions to file"), this, SLOT(saveDefinitions()));
     menu->addAction(tr("Load graph definitions from file"), this, SLOT(loadDefinitions()));
+    menu->addAction(tr("Save spreadsheet of data"), this, SLOT(saveSpreadsheet()));
     menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
     {
@@ -430,6 +431,60 @@ void GraphingWindow::saveGraphs()
             ui->graphingView->saveJpg(filename, 0, 0);
         }
     }
+}
+
+void GraphingWindow::saveSpreadsheet()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Spreadsheet (*.csv)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".csv";
+
+        QFile *outFile = new QFile(filename);
+
+        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            return;
+
+        /*
+         * save some data
+         * The problem here is that we've got X number of graphs that all have different
+         * timestamps but a spreadsheet would be best if each graph were taken at the same slice
+         * such that you have a list of slices with the value of each graph at that slice.
+         *
+         * But, for now export each graph in turn with the proper timestamp for each piece of data
+         * and a reference for which graph it came from. This is better than nothing.
+        */
+
+        QList<GraphParams>::iterator iter;
+        int graphNum = 0;
+        for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
+        {
+            for (int j = 0; j < iter->x.count(); j++)
+            {
+                outFile->write(QString::number(iter->x[j]).toUtf8());
+                outFile->putChar(',');
+                outFile->write(QString::number(graphNum).toUtf8());
+                outFile->putChar(',');
+                outFile->write(QString::number(iter->y[j]).toUtf8());
+                outFile->write("\n");
+            }
+            graphNum++;
+        }
+
+        outFile->close();
+    }
+
 }
 
 void GraphingWindow::saveDefinitions()
