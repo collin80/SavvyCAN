@@ -491,7 +491,7 @@ void GraphingWindow::saveSpreadsheet()
         QList<int> indices;
         indices.reserve(numGraphs);
 
-        outFile->write("TimeStamp,");
+        outFile->write("TimeStamp");
         for (int zero = 0; zero < numGraphs; zero++)
         {
             indices.append(0);
