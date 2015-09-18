@@ -490,7 +490,15 @@ void GraphingWindow::saveSpreadsheet()
         double value;
         QList<int> indices;
         indices.reserve(numGraphs);
-        for (int zero = 0; zero < numGraphs; zero++) indices[zero] = 0;
+
+        outFile->write("TimeStamp,");
+        for (int zero = 0; zero < numGraphs; zero++)
+        {
+            indices.append(0);
+            outFile->putChar(',');
+            outFile->write(graphParams[zero].graphName.toUtf8());
+        }
+        outFile->write("\n");
 
         for (int j = 1; j < (maxCount - 1); j++)
         {
