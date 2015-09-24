@@ -373,8 +373,9 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
             int byt = startBit / 8;
             bitpattern[byt] |= 1 << (startBit % 8);
             size--;
-            if ((startBit % 8) == 0) startBit += 15;
+            if ((startBit % 8) == 0) startBit += 15;            
             else startBit--;
+            if (startBit > 63) startBit = 63;
         }
     }
 

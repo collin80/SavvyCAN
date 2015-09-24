@@ -382,6 +382,7 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     menu->addAction(tr("Save graph image to file"), this, SLOT(saveGraphs()));
     menu->addAction(tr("Save graph definitions to file"), this, SLOT(saveDefinitions()));
     menu->addAction(tr("Load graph definitions from file"), this, SLOT(loadDefinitions()));
+    menu->addAction(tr("Save spreadsheet of data"), this, SLOT(saveSpreadsheet()));
     menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
     {
@@ -430,6 +431,123 @@ void GraphingWindow::saveGraphs()
             ui->graphingView->saveJpg(filename, 0, 0);
         }
     }
+}
+
+void GraphingWindow::saveSpreadsheet()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Spreadsheet (*.csv)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".csv";
+
+        QFile *outFile = new QFile(filename);
+
+        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            return;
+
+        /*
+         * save some data
+         * The problem here is that we've got X number of graphs that all have different
+         * timestamps but a spreadsheet would be best if each graph were taken at the same slice
+         * such that you have a list of slices with the value of each graph at that slice.
+         *
+         * But, for now export each graph in turn with the proper timestamp for each piece of data
+         * and a reference for which graph it came from. This is better than nothing.
+        */
+
+        QList<GraphParams>::iterator iter;
+        double xMin = 1000000000, xMax=-1000000000;
+        int maxCount = 0;
+        int numGraphs = 0;
+        for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
+        {
+            if (iter->x[0] < xMin) xMin = iter->x[0];
+            if (iter->x[iter->x.count() - 1] > xMax) xMax = iter->x[iter->x.count() - 1];
+            if (maxCount < iter->x.count()) maxCount = iter->x.count();
+            numGraphs++;
+        }
+        qDebug() << "xMin: " << xMin;
+        qDebug() << "xMax: " << xMax;
+        qDebug() << "MaxCount: " << maxCount;
+        //The idea now is to iterate from xMin to xMax slicing all graphs up into MaxCount slices.
+        //But, actually, don't visit actual xMin or xMax, inset from there by one slice. Then, if
+        //a given graph doesn't exist there use the value from the nearest place that does exist.
+        double xSize = xMax - xMin;
+        double sliceSize = xSize / ((double)maxCount);
+        double equivValue = sliceSize / 100.0;
+        double currentX;
+        double value;
+        QList<int> indices;
+        indices.reserve(numGraphs);
+
+        outFile->write("TimeStamp");
+        for (int zero = 0; zero < numGraphs; zero++)
+        {
+            indices.append(0);
+            outFile->putChar(',');
+            outFile->write(graphParams[zero].graphName.toUtf8());
+        }
+        outFile->write("\n");
+
+        for (int j = 1; j < (maxCount - 1); j++)
+        {
+            currentX = xMin + (j * sliceSize);
+            outFile->write(QString::number(currentX).toUtf8());
+            for (int k = 0; k < graphParams.count(); k++)
+            {
+                value = 0.0;
+                //five possibilities.
+                //1: we're at the beginning for this graph but the slice is before this graph even starts
+                if (indices[k] == 0 && graphParams[k].x[indices[k]] > currentX)
+                {
+                    value = graphParams[k].y[indices[k]];
+                }
+                //2: The opposite, we're at the end of this graph but the slices keep going
+                else if (indices[k] == (graphParams[k].x.count() - 1) && graphParams[k].x[indices[k]] < currentX)
+                {
+                    value = graphParams[k].y[indices[k]];
+                }
+                //3: the slice is right near the current value we're at for this graph
+                else if (fabs(graphParams[k].x[indices[k]] - currentX) < equivValue)
+                {
+                    value = graphParams[k].y[indices[k]];
+                }
+                //4: the slice is right next to the next value for this graph
+                else if (fabs(graphParams[k].x[indices[k] + 1] - currentX) < equivValue)
+                {
+                    value = graphParams[k].y[indices[k] + 1];
+                }
+                //5: it's somewhere in between two values for this graph
+                //the two values will be indices[k] and indices[k] + 1
+                else
+                {
+                    double span = graphParams[k].x[indices[k] + 1] - graphParams[k].x[indices[k]];
+                    double progress = (currentX - graphParams[k].x[indices[k]]) / span;
+                    value = Utility::Lerp(graphParams[k].y[indices[k]], graphParams[k].y[indices[k] + 1], progress);
+                }
+
+                if (currentX >= graphParams[k].x[indices[k] + 1]) indices[k]++;
+
+                outFile->putChar(',');
+                outFile->write(QString::number(value).toUtf8());
+            }
+            outFile->write("\n");
+        }
+
+        outFile->close();
+    }
+
 }
 
 void GraphingWindow::saveDefinitions()

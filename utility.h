@@ -104,6 +104,12 @@ public:
         }
         return builder;
     }
+
+    //simple linear interpolation between value1 and value2. sample point is 0.0 to 1.0
+    static double Lerp(double value1, double value2, double samplePoint)
+    {
+        return (value1 * (1.0 - samplePoint)) + (value2 * samplePoint);
+    }
 };
 
 #endif // UTILITY_H

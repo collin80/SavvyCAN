@@ -51,6 +51,7 @@ private slots:
     void contextMenuRequest(QPoint pos);
     void moveLegend();
     void saveGraphs();
+    void saveSpreadsheet();
     void saveDefinitions();
     void loadDefinitions();
     void addNewGraph();
