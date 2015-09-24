@@ -1,0 +1,77 @@
+VERSION ""
+
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    CAT_DEF_
+    CAT_
+    FILTER
+    BA_DEF_DEF_
+    EV_DATA_
+    ENVVAR_DATA_
+    SGTYPE_
+    SGTYPE_VAL_
+    BA_DEF_SGTYPE_
+    BA_SGTYPE_
+    SIG_TYPE_REF_
+    VAL_TABLE_
+    SIG_GROUP_
+    SIG_VALTYPE_
+    SIGTYPE_VALTYPE_
+    BO_TX_BU_
+    BA_DEF_REL_
+    BA_REL_
+    BA_DEF_DEF_REL_
+    BU_SG_REL_
+    BU_EV_REL_
+    BU_BO_REL_
+    SG_MUL_VAL_
+
+BS_: 
+BU_: EVTVBMS GEVCU INVERTER 
+BO_ 1542 BMS_STATUS: 8 EVTVBMS
+    SG_ PACKVOLTS : 0|16@1+ (0.01,0) [0|0] "V" Vector__XXX
+    SG_ PACKAMPS : 16|16@1- (0.01,0) [0|0] "A" Vector__XXX
+    SG_ STATEOFCHARGE : 39|8@0+ (0.392,0) [0|0] "%" Vector__XXX
+    SG_ LOWVOLT : 47|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ HIGHVOLT : 46|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ LOWTEMP : 45|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ HIGHTEMP : 44|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ IMBALANCE : 43|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ DISCHARGE_OK : 42|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ CHARGE_OK : 41|1@1+ (1,0) [0|0] "" Vector__XXX
+    SG_ FAULTED : 40|1@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1543 BMS_QUADVOLTS: 8 EVTVBMS
+    SG_ QUAD1 : 0|16@1+ (0.01,0) [0|0] "V" Vector__XXX
+    SG_ QUAD2 : 16|16@1+ (0.01,0) [0|0] "V" Vector__XXX
+    SG_ QUAD3 : 32|16@1+ (0.01,0) [0|0] "V" Vector__XXX
+    SG_ QUAD4 : 48|16@1+ (0.01,0) [0|0] "V" Vector__XXX
+
+BO_ 1544 BMS_CELLVOLTS: 8 EVTVBMS
+    SG_ AVGVOLT1 : 0|16@1+ (0.001,0) [0|0] "V" Vector__XXX
+    SG_ AVGVOLT2 : 16|16@1+ (0.001,0) [0|0] "V" Vector__XXX
+    SG_ AVGVOLT3 : 32|16@1+ (0.001,0) [0|0] "V" Vector__XXX
+    SG_ AVGVOLT4 : 48|16@1+ (0.001,0) [0|0] "V" Vector__XXX
+
+BO_ 516 INVERTER_CTRL: 8 GEVCU
+    SG_ ENABLED : 9|2@0+ (1,0) [0|0] "" Vector__XXX
+    SG_ DIRECTION : 11|2@0+ (1,0) [0|0] "" Vector__XXX
+    SG_ TORQUECMD : 16|16@1+ (0.1,-3212.8) [0|0] "" Vector__XXX
+
+BO_ 521 SYS_STATUS: 8 INVERTER
+    SG_ ACTUAL_TORQUE : 0|16@1+ (0.1,-3212.8) [0|0] "Nm" Vector__XXX
+    SG_ DCVOLTS : 16|16@1+ (0.1,-3212.8) [0|0] "V" Vector__XXX
+    SG_ DCAMPS : 32|16@1+ (0.1,-3212.8) [0|0] "A" Vector__XXX
+    SG_ SHAFT_SPEED : 48|16@1+ (0.5,-16064) [0|0] "RPM" Vector__XXX
+
+BO_ 1545 BMS_TEMPS: 8 EVTVBMS
+    SG_ TEMP1 : 0|16@1+ (0.1,0) [0|0] "C" Vector__XXX
+    SG_ TEMP2 : 16|16@1+ (0.1,0) [0|0] "C" Vector__XXX
+    SG_ TEMP3 : 32|16@1+ (0.1,0) [0|0] "C" Vector__XXX
+    SG_ TEMP4 : 48|16@1+ (0.1,0) [0|0] "C" Vector__XXX
+
