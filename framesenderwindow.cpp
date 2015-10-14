@@ -412,9 +412,8 @@ void FrameSenderWindow::doModifiers(int idx)
             case XOR:
                 shadowReg = first ^ second;
                 break;
-            case NOT:
-                shadowReg = !shadowReg;
-                break;
+            case MOD:
+                shadowReg = first % second;
             }
         }
         //Finally, drop the result into the proper data byte
@@ -427,18 +426,21 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
     CANFrame *tempFrame = NULL;
     if (op.ID == 0) //numeric constant
     {
-        return op.databyte;
+        if (op.notOper) return ~op.databyte;
+        else return op.databyte;
     }
     else if (op.ID == -2)
     {
-        return sendingData.at(idx).data[op.databyte];
+        if (op.notOper) return ~sendingData.at(idx).data[op.databyte];
+        else return sendingData.at(idx).data[op.databyte];
     }
     else //look up external data byte
     {
         tempFrame = lookupFrame(op.ID, op.bus);
         if (tempFrame != NULL)
         {
-            return tempFrame->data[op.databyte];
+            if (op.notOper) return ~tempFrame->data[op.databyte];
+            else return tempFrame->data[op.databyte];
         }
         else return 0;
     }
@@ -497,15 +499,30 @@ void FrameSenderWindow::processModifierText(int line)
                 thisMod.destByte = leftSide.right(1).toInt();
                 thisMod.operations.clear();
             }
-            else continue;
-            if (!(Utility::grabOperation(mods[i]) == "=")) continue;
+            else
+            {
+                qDebug() << "Something wrong with lefthand val";
+                continue;
+            }
+            if (!(Utility::grabOperation(mods[i]) == "="))
+            {
+                qDebug() << "Err: No = after lefthand val";
+                continue;
+            }
             abort = false;
             while (!abort)
             {
                 QString token = Utility::grabAlphaNumeric(mods[i]);
-                ModifierOp thisOp;
+                ModifierOp thisOp;                              
+
                 if (firstOp)
                 {
+                    if (token[0] == '~')
+                    {
+                        thisOp.first.notOper = true;
+                        token = token.remove(0, 1); //remove the ~ character
+                    }
+                    else thisOp.first.notOper = false;
                     parseOperandString(token.split(":"), thisOp.first);
                     firstOp = false;
                 }
@@ -519,6 +536,7 @@ void FrameSenderWindow::processModifierText(int line)
                     thisOp.operation = ADDITION;
                     thisOp.second.ID = 0;
                     thisOp.second.databyte = 0;
+                    thisOp.second.notOper = false;
                     thisMod.operations.append(thisOp);
                 }
                 else //otherwise try to grab them
@@ -532,6 +550,12 @@ void FrameSenderWindow::processModifierText(int line)
                     {
                         thisOp.operation = parseOperation(operation);
                         QString secondOp = Utility::grabAlphaNumeric(mods[i]);
+                        if (mods[i][0] == '~')
+                        {
+                            thisOp.second.notOper = true;
+                            mods[i] = mods[i].remove(0, 1); //remove the ~ character
+                        }
+                        else thisOp.second.notOper = false;
                         thisOp.second.bus = sendingData[line].bus;
                         thisOp.second.ID = sendingData[line].ID;
                         parseOperandString(secondOp.split(":"), thisOp.second);
@@ -661,11 +685,9 @@ ModifierOperationType FrameSenderWindow::parseOperation(QString op)
     if (op == "*") return MULTIPLICATION;
     if (op == "/") return DIVISION;
     if (op == "&") return AND;
-    if (op == "AND") return AND;
     if (op == "|") return OR;
-    if (op == "OR") return OR;
     if (op == "^") return XOR;
-    if (op == "XOR") return XOR;
+    if (op == "%") return MOD;
     return ADDITION;
 }
 
