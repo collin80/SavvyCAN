@@ -30,6 +30,7 @@ public:
     int ID;
     int bus;
     int databyte;
+    bool notOper; //should a bitwise NOT be applied to this prior to doing the actual calculation?
 };
 
 //list of operations that can be done between the two operands
@@ -42,7 +43,7 @@ enum ModifierOperationType
     AND,
     OR,
     XOR,
-    NOT
+    MOD
 };
 
 //A single modifier operation

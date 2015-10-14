@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include <QByteArray>
 #include <QDateTime>
-
-
+#include <QDebug>
 
 class Utility
 {
@@ -82,13 +81,17 @@ public:
         for (int i = 0; i < input.length(); i++)
         {
             thisChar = input[i];
-            if (thisChar.isLetterOrNumber() || thisChar == ':') builder.append(input[i]);
+            if (thisChar.isLetterOrNumber() || thisChar == ':' || thisChar == '~') builder.append(input[i]);
             else
             {
-                input = input.right(input.length() - i);
+                //qDebug() << "i: "<< i << " len: " << input.length();
+                if (i < (input.length() - 1)) input = input.right(input.length() - i);
+                else input = "";
                 return builder;
             }
         }
+        //qDebug() << "Reached end of string in grabAlphaNumeric";
+        input = "";
         return builder;
     }
 
@@ -97,7 +100,7 @@ public:
         QString builder;
         QChar thisChar = input[0];
 
-        if (thisChar == '+' || thisChar == '-' || thisChar == '*' || thisChar == '/' || thisChar == '^' || thisChar == '&' || thisChar == '|' || thisChar == '=')
+        if (thisChar == '+' || thisChar == '-' || thisChar == '*' || thisChar == '/' || thisChar == '^' || thisChar == '&' || thisChar == '|' || thisChar == '=' || thisChar == '%')
         {
             input = input.right(input.length() - 1);
             builder = thisChar;
