@@ -69,7 +69,7 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
         delete serial;
     }
 
-    serial = new QSerialPort(*port);    
+    serial = new QSerialPort(*port);
 
     qDebug() << "Serial port name is " << port->portName();
     //serial->setBaudRate(10000000); //more speed! probably does nothing for USB serial

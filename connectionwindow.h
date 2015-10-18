@@ -33,10 +33,13 @@ public:
     ConnectionType::ConnectionType getConnectionType();
 
 signals:
-    void updateConnectionSettings();
+    void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 public slots:
     void setSpeeds(int speed0, int speed1);
+
+private slots:
+    void handleOKButton();
 
 private:
     Ui::ConnectionWindow *ui;

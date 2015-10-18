@@ -24,6 +24,8 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbSpeed1->addItem(tr("500000"));
     ui->cbSpeed1->addItem(tr("1000000"));
     ui->cbSpeed1->addItem(tr("33333"));
+
+    connect(ui->btnOK, SIGNAL(clicked(bool)), this, SLOT(handleOKButton()));
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -38,6 +40,19 @@ void ConnectionWindow::showEvent(QShowEvent* event)
     if (ui->rbGVRET->isChecked()) getSerialPorts();
     if (ui->rbKvaser->isChecked()) getKvaserPorts();
     if (ui->rbSocketCAN->isChecked()) getSocketcanPorts();
+}
+
+void ConnectionWindow::handleOKButton()
+{
+    QString conn;
+
+    if (ui->rbGVRET->isChecked()) conn = "GVRET";
+    if (ui->rbKvaser->isChecked()) conn = "KVASER";
+    if (ui->rbSocketCAN->isChecked()) conn = "SOCKETCAN";
+
+    emit updateConnectionSettings(conn, getPortName(), getSpeed0(), getSpeed1());
+
+    this->close();
 }
 
 void ConnectionWindow::getSerialPorts()
