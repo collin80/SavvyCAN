@@ -76,6 +76,7 @@ GraphingWindow::~GraphingWindow()
 void GraphingWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
+    installEventFilter(this);
     readSettings();
     ui->graphingView->replot();
 }
@@ -83,6 +84,7 @@ void GraphingWindow::showEvent(QShowEvent* event)
 void GraphingWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
 }
 
@@ -306,6 +308,90 @@ void GraphingWindow::mouseWheel()
     ui->graphingView->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
 }
 
+bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_Plus:
+            zoomIn();
+            break;
+        case Qt::Key_Minus:
+            zoomOut();
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+}
+
+void GraphingWindow::resetView()
+{
+    double yminval=10000000.0, ymaxval = -1000000.0;
+    double xminval=10000000000.0, xmaxval = -10000000000.0;
+    for (int i = 0; i < graphParams.count(); i++)
+    {
+        for (int j = 0; j < graphParams[i].x.count(); j++)
+        {
+            if (graphParams[i].x[j] < xminval) xminval = graphParams[i].x[j];
+            if (graphParams[i].x[j] > xmaxval) xmaxval = graphParams[i].x[j];
+            if (graphParams[i].y[j] < yminval) yminval = graphParams[i].y[j];
+            if (graphParams[i].y[j] > ymaxval) ymaxval = graphParams[i].y[j];
+        }
+    }
+
+    ui->graphingView->xAxis->setRange(xminval, xmaxval);
+    ui->graphingView->yAxis->setRange(yminval, ymaxval);
+    ui->graphingView->axisRect()->setupFullAxesBox();
+
+    ui->graphingView->replot();
+}
+
+void GraphingWindow::zoomIn()
+{
+    QCPRange xrange = ui->graphingView->xAxis->range();
+    QCPRange yrange = ui->graphingView->yAxis->range();
+    if (ui->graphingView->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+    {
+        ui->graphingView->xAxis->scaleRange(0.666, xrange.center());
+    }
+
+    else if (ui->graphingView->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+    {
+        ui->graphingView->yAxis->scaleRange(0.666, yrange.center());
+    }
+    else
+    {
+        ui->graphingView->xAxis->scaleRange(0.666, xrange.center());
+        ui->graphingView->yAxis->scaleRange(0.666, yrange.center());
+    }
+    ui->graphingView->replot();
+}
+
+void GraphingWindow::zoomOut()
+{
+    QCPRange xrange = ui->graphingView->xAxis->range();
+    QCPRange yrange = ui->graphingView->yAxis->range();
+    if (ui->graphingView->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+    {
+        ui->graphingView->xAxis->scaleRange(1.5, xrange.center());
+    }
+
+    else if (ui->graphingView->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+    {
+        ui->graphingView->yAxis->scaleRange(1.5, yrange.center());
+    }
+    else
+    {
+        ui->graphingView->xAxis->scaleRange(1.5, xrange.center());
+        ui->graphingView->yAxis->scaleRange(1.5, yrange.center());
+    }
+    ui->graphingView->replot();
+}
+
 void GraphingWindow::removeSelectedGraph()
 {
   if (ui->graphingView->selectedGraphs().size() > 0)
@@ -386,11 +472,19 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
     {
+        menu->addSeparator();
         menu->addAction(tr("Edit selected graph"), this, SLOT(editSelectedGraph()));
         menu->addAction(tr("Remove selected graph"), this, SLOT(removeSelectedGraph()));
     }
     if (ui->graphingView->graphCount() > 0)
+    {
+        menu->addSeparator();
         menu->addAction(tr("Remove all graphs"), this, SLOT(removeAllGraphs()));
+    }
+    menu->addSeparator();
+    menu->addAction(tr("Reset View"), this, SLOT(resetView()));
+    menu->addAction(tr("Zoom In"), this, SLOT(zoomIn()));
+    menu->addAction(tr("Zoom Out"), this, SLOT(zoomOut()));
   }
 
   menu->popup(ui->graphingView->mapToGlobal(pos));
