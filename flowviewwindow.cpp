@@ -87,13 +87,13 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
 
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
-
-    installEventFilter(this);
 }
 
 void FlowViewWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
+
+    installEventFilter(this);
 
     readSettings();
 
@@ -109,6 +109,8 @@ void FlowViewWindow::showEvent(QShowEvent* event)
 
 FlowViewWindow::~FlowViewWindow()
 {
+    removeEventFilter(this);
+
     delete ui;
 
     playbackTimer->stop();

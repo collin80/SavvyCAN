@@ -60,6 +60,9 @@ private slots:
     void editSelectedGraph();
     void updatedFrames(int);
     void gotCenterTimeID(int32_t ID, double timestamp);
+    void resetView();
+    void zoomIn();
+    void zoomOut();
 
 signals:
     void sendCenterTimeID(int32_t ID, double timestamp);
@@ -78,6 +81,7 @@ private:
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // GRAPHINGWINDOW_H
