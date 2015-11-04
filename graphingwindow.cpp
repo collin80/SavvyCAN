@@ -65,6 +65,8 @@ GraphingWindow::GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *fra
     selectedPen.setWidth(1);
     selectedPen.setColor(Qt::blue);
 
+    ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
+
     needScaleSetup = true;
 }
 
@@ -322,6 +324,18 @@ bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
             break;
         }
         return true;
+    } else if (event->type() == QEvent::TouchBegin)
+    {
+        qDebug() << "Touch begin";
+    } else if (event->type() == QEvent::TouchCancel)
+    {
+        qDebug() << "Touch cancel";
+    } else if (event->type() == QEvent::TouchEnd)
+    {
+        qDebug() << "Touch End";
+    } else if (event->type() == QEvent::TouchUpdate)
+    {
+        qDebug() << "Touch Update";
     } else {
         // standard event processing
         return QObject::eventFilter(obj, event);
