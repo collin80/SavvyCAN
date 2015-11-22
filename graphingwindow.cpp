@@ -960,7 +960,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         float tempValue;
         int64_t tempValInt;
         int numBytes = (params.endByte - params.startByte) + 1;
-        int64_t shiftRef = 1 << (numBytes * 8);
+        int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
@@ -1010,7 +1010,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         float tempValue;
         int64_t tempValInt;
         int numBytes = (params.startByte - params.endByte) + 1;
-        int64_t shiftRef = 1 << (numBytes * 8);
+        int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
