@@ -14,10 +14,10 @@ class GraphingWindow;
 class GraphParams
 {
 public:
-    int32_t ID;
+    uint32_t ID;
     int startByte, endByte;
     bool isSigned;
-    int32_t mask;
+    uint64_t mask;
     float bias;
     float scale;
     int stride;
