@@ -798,7 +798,7 @@ void GraphingWindow::addNewGraph()
 
 void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 {
-    long long tempVal; //64 bit temp value.
+    int64_t tempVal; //64 bit temp value.
     if (params.endByte == -1  || params.startByte == params.endByte)
     {
         tempVal = (frame.data[params.startByte] & params.mask);
@@ -819,13 +819,13 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
     else if (params.endByte > params.startByte) //big endian
     {
         float tempValue;
-        long long tempValInt;
+        int64_t tempValInt;
         int numBytes = (params.endByte - params.startByte) + 1;
-        long long shiftRef = 1 << (numBytes * 8);
+        int64_t shiftRef = 1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         tempValInt = 0;
-        long long expon = 1;
+        int64_t expon = 1;
         maskShifter = params.mask;
         for (int c = 0; c < numBytes; c++)
         {
@@ -838,7 +838,7 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 
         tempValInt &= params.mask;
 
-        long long twocompPoint = params.mask;
+        int64_t twocompPoint = params.mask;
         if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
         //qDebug() << "two comp point: " << twocompPoint;
         if (params.isSigned && tempValInt > ((twocompPoint / 2)))
@@ -862,13 +862,13 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
     else //little endian
     {
         float tempValue;
-        long long tempValInt;
+        int64_t tempValInt;
         int numBytes = (params.startByte - params.endByte) + 1;
-        long long shiftRef = 1 << (numBytes * 8);
+        int64_t shiftRef = 1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         tempValInt = 0;
-        long long expon = 1;
+        int64_t expon = 1;
         maskShifter = params.mask;
         for (int c = 0; c < numBytes; c++)
         {
@@ -880,7 +880,7 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
         }
         tempValInt &= params.mask;
 
-        long long twocompPoint = params.mask;
+        int64_t twocompPoint = params.mask;
         if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
         //qDebug() << "two comp point: " << twocompPoint;
         if (params.isSigned && tempValInt > ((twocompPoint / 2)))
@@ -907,7 +907,7 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
-    long long tempVal; //64 bit temp value.
+    int64_t tempVal; //64 bit temp value.
     float yminval=10000000.0, ymaxval = -1000000.0;
     float xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
@@ -958,15 +958,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     else if (params.endByte > params.startByte) //big endian
     {
         float tempValue;
-        long long tempValInt;
+        int64_t tempValInt;
         int numBytes = (params.endByte - params.startByte) + 1;
-        long long shiftRef = 1 << (numBytes * 8);
+        int64_t shiftRef = 1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
         {
             tempValInt = 0;
-            long long expon = 1;
+            int64_t expon = 1;
             maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
@@ -979,7 +979,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             tempValInt &= params.mask;
 
-            long long twocompPoint = params.mask;
+            int64_t twocompPoint = params.mask;
             if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
             //qDebug() << "two comp point: " << twocompPoint;
             if (params.isSigned && tempValInt > ((twocompPoint / 2)))
@@ -1008,15 +1008,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     else //little endian
     {
         float tempValue;
-        long long tempValInt;
+        int64_t tempValInt;
         int numBytes = (params.startByte - params.endByte) + 1;
-        long long shiftRef = 1 << (numBytes * 8);
+        int64_t shiftRef = 1 << (numBytes * 8);
         uint64_t maskShifter;
         uint8_t tempByte;
         for (int j = 0; j < numEntries; j++)
         {
             tempValInt = 0;
-            long long expon = 1;
+            int64_t expon = 1;
             maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
@@ -1028,7 +1028,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
             tempValInt &= params.mask;
 
-            long long twocompPoint = params.mask;
+            int64_t twocompPoint = params.mask;
             if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
             //qDebug() << "two comp point: " << twocompPoint;
             if (params.isSigned && tempValInt > ((twocompPoint / 2)))

@@ -13,33 +13,33 @@ public:
 
     static bool decimalMode;
 
-    static int ParseStringToNum(QByteArray input)
+    static uint64_t ParseStringToNum(QByteArray input)
     {
-        int temp = 0;
+        uint64_t temp = 0;
 
         input = input.toUpper();
         if (input.startsWith("0X") || input.startsWith("X")) //hex number
         {
             if (input.length() < 3) temp = 0;
-            else temp = input.right(input.size() - 2).toInt(NULL, 16);
+            else temp = input.right(input.size() - 2).toLongLong(NULL, 16);
         }
         else if (input.startsWith("B")) //binary number
         {
             input = input.right(input.size() - 1); //remove the B
             for (int i = 0; i < input.length(); i++)
             {
-                if (input[i] == '1') temp += 1 << (input.length() - i - 1);
+                if (input[i] == '1') temp += (uint64_t)1 << (input.length() - i - 1);
             }
         }
         else //decimal number
         {
-            temp = input.toInt();
+            temp = input.toLongLong();
         }
 
         return temp;
     }
 
-    static int ParseStringToNum(QString input)
+    static uint64_t ParseStringToNum(QString input)
     {
         return ParseStringToNum(input.toUtf8());
     }
