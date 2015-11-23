@@ -300,10 +300,7 @@
     <property name="title">
      <string>RE Tools</string>
     </property>
-    <addaction name="actionSingle_Multi_State"/>
-    <addaction name="actionRange_State"/>
     <addaction name="actionFlow_View"/>
-    <addaction name="actionFuzzy_Scope"/>
     <addaction name="actionGraph_Dta"/>
     <addaction name="actionFrame_Data_Analysis"/>
     <addaction name="actionFile_Comparison"/>
@@ -314,7 +311,6 @@
     </property>
     <addaction name="action_Playback"/>
     <addaction name="action_Custom"/>
-    <addaction name="actionFirmware_Uploader"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
