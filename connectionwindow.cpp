@@ -1,5 +1,6 @@
 #include "connectionwindow.h"
 #include "ui_connectionwindow.h"
+#include <QtNetwork/QNetworkInterface>
 
 ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QDialog(parent),
@@ -7,7 +8,8 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    getSerialPorts();
+    //getSerialPorts();
+    getSocketcanPorts();
 
     ui->cbSpeed0->addItem(tr("<Default>"));
     ui->cbSpeed0->addItem(tr("Disabled"));
@@ -24,6 +26,14 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbSpeed1->addItem(tr("500000"));
     ui->cbSpeed1->addItem(tr("1000000"));
     ui->cbSpeed1->addItem(tr("33333"));
+
+#ifdef Q_OS_LINUX
+    ui->rbSocketCAN->setEnabled(true);
+#endif
+
+#ifdef Q_OS_WIN
+    ui->rbKvaser->setEnabled(true);
+#endif
 
     connect(ui->btnOK, SIGNAL(clicked(bool)), this, SLOT(handleOKButton()));
 }
@@ -73,7 +83,20 @@ void ConnectionWindow::getKvaserPorts()
 
 void ConnectionWindow::getSocketcanPorts()
 {
+    QList<QNetworkInterface> interfaces = QNetworkInterface::allInterfaces();
+    QString interfaceName;
 
+    ui->cbPort->clear();
+
+    foreach (QNetworkInterface interface, interfaces)
+    {
+        interfaceName = interface.name().toLower();
+        qDebug() << "Interface: " << interface.name();
+        if (interfaceName.contains("can"))
+        {
+            ui->cbPort->addItem(interfaceName);
+        }
+    }
 }
 
 void ConnectionWindow::setSpeeds(int speed0, int speed1)
