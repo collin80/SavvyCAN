@@ -455,6 +455,7 @@ void MainWindow::handleLoadFile()
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -483,6 +484,7 @@ void MainWindow::handleLoadFile()
         if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[5]) result = FrameFileIO::loadTraceFile(filename, &tempFrames);
 
         progress.cancel();
 
@@ -515,6 +517,7 @@ void MainWindow::handleSaveFile()
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -562,6 +565,12 @@ void MainWindow::handleSaveFile()
             result = FrameFileIO::saveMicrochipFile(filename, frames);
         }
 
+        if (dialog.selectedNameFilter() == filters[5])
+        {
+            if (!filename.contains('.')) filename += ".trace";
+            result = FrameFileIO::saveTraceFile(filename, frames);
+        }
+
         progress.cancel();
 
         if (result)
@@ -585,6 +594,7 @@ void MainWindow::handleSaveFilteredFile()
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.log)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -630,6 +640,12 @@ void MainWindow::handleSaveFilteredFile()
         {
             if (!filename.contains('.')) filename += ".log";
             result = FrameFileIO::saveMicrochipFile(filename, frames);
+        }
+
+        if (dialog.selectedNameFilter() == filters[5])
+        {
+            if (!filename.contains('.')) filename += ".trace";
+            result = FrameFileIO::saveTraceFile(filename, frames);
         }
 
         progress.cancel();

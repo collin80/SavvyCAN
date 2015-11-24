@@ -19,6 +19,7 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
+    filters.append(QString(tr("Vector trace files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -43,6 +44,7 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
         if (dialog.selectedNameFilter() == filters[2]) result = loadGenericCSVFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[5]) result = loadTraceFile(filename, frameCache);
 
         progress.cancel();
 
@@ -649,6 +651,185 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
         {
             outFile->write("0x" + QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(';');
+        }
+
+        outFile->write("\n");
+
+    }
+    outFile->close();
+    delete outFile;
+    return true;
+}
+
+
+/*
+;  CAN Logger trace file
+;  Device Serial Number :
+;  Start Time : Tue, Nov 17, 2015 :: 11:19:59
+;
+;  Column description :
+;  ~~~~~~~~~~~~~~~~~~~~~
+;
+;   + Message Number
+;   |
+;   |     	     + Time Stamp (ms)
+;   |     	     |
+;   |     	     |      	    + Message ID (hex)
+;   |     	     |      	    |
+;   |     	     |      	    |   	+ Data Length Code
+;   |     	     |      	    |   	|
+;   |     	     |      	    |   	|	 + Data Bytes (hex)
+;   |     	     |      	    |   	|	 |
+;---+-----	-----+------	----+---	+	-+ -- -- -- -- -- -- --
+         0	00:00:00:0008	00000268	8	55 00 84 03 A8 0D 38 00
+         1	00:00:00:0021	0000000E	8	1F D3 3F FF 08 FF E0 CB
+
+It appears that all lines that start in a semicolon are comments
+The rest of the lines need the whitespace stripped from beginning and end
+and then it appears to be tab delimited. The first field is a sequence number
+and irrelevant. The second field is a funky timestamp, then message id, etc as
+shown in the file comments. The bytes seem to be space delimited and in hex
+*/
+
+bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    long long timeStamp = 0;
+    int lineCounter = 0;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        line = inFile->readLine();
+        line = line.trimmed();
+        if (line.length() > 2)
+        {
+            if (line.startsWith(";"))
+            {
+                // a comment. Ignore it.
+            }
+            else
+            {
+                QList<QByteArray> tokens = line.split('\t');
+
+                QList<QByteArray> timestampToks = tokens[1].split(':');
+
+                timeStamp = timestampToks[0].toInt() * 1000000ul * 60 * 60;
+                timeStamp += timestampToks[1].toInt() * 1000000ul * 60;
+                timeStamp += timestampToks[2].toInt() * 1000000ul;
+                timeStamp += timestampToks[3].toInt() * 100;
+
+                thisFrame.timestamp = timeStamp;
+
+                thisFrame.ID = tokens[2].toLong(NULL, 16);
+                if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
+                else thisFrame.extended = true;
+                thisFrame.bus = 0;
+                thisFrame.len = tokens[3].toInt();
+
+                QList<QByteArray> dataToks = tokens[4].split(' ');
+                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)dataToks[d].toInt(NULL, 16);
+                frames->append(thisFrame);
+            }
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return true;
+}
+
+bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * frames)
+{
+    QFile *outFile = new QFile(filename);
+    QDateTime timestamp;
+    int lineCounter = 0;
+    uint64_t tempTime;
+    int tempTimePiece;
+
+    timestamp = QDateTime::currentDateTime();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+
+    outFile->write(";  SavvyCAN CAN Logger trace file\n");
+    outFile->write(";  Device Serial Number : 0000 \n");
+    outFile->write(";  Start Time : ");
+    outFile->write(timestamp.toString("ddd, MMM dd, yyyy :: h:m:s\n").toUtf8());
+    outFile->write(";\n");
+    outFile->write(";  Column description :\n");
+    outFile->write(";  ~~~~~~~~~~~~~~~~~~~~~\n");
+    outFile->write(";\n");
+    outFile->write(";   + Message Number\n");
+    outFile->write(";   |\n");
+    outFile->write(";   |     	     + Time Stamp (ms)\n");
+    outFile->write(";   |     	     |\n");
+    outFile->write(";   |     	     |      	    + Message ID (hex)\n");
+    outFile->write(";   |     	     |      	    |\n");
+    outFile->write(";   |     	     |      	    |   	+ Data Length Code\n");
+    outFile->write(";   |     	     |      	    |   	|\n");
+    outFile->write(";   |     	     |      	    |   	|	 + Data Bytes (hex)\n");
+    outFile->write(";   |     	     |      	    |   	|	 |\n");
+    outFile->write(";---+-----	-----+------	----+---	+	-+ -- -- -- -- -- -- --\n");
+
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if ((lineCounter % 100) == 0)
+        {
+            qApp->processEvents();
+            //lineCounter = 0;
+        }
+
+
+         //1F D3 3F FF 08 FF E0 CB
+        outFile->write(QString::number(lineCounter).rightJustified(10, ' ').toUtf8());
+        outFile->write("\t");
+
+        tempTime = frames->at(c).timestamp;
+        tempTimePiece = tempTime / 1000000ul / 60 / 60;
+        tempTime -= tempTimePiece * 1000000ul * 60 * 60;
+        outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
+        outFile->write(":");
+
+        tempTimePiece = tempTime / 1000000ul / 60;
+        tempTime -= tempTimePiece * 1000000ul * 60;
+        outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
+        outFile->write(":");
+
+        tempTimePiece = tempTime / 1000000ul;
+        tempTime -= tempTimePiece * 1000000ul;
+        outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
+        outFile->write(":");
+
+        tempTimePiece = tempTime / 100;
+        outFile->write(QString::number(tempTimePiece).rightJustified(4, '0').toUtf8());
+        outFile->write("\t");
+
+        outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + "\t");
+
+        outFile->write(QString::number(frames->at(c).len).toUtf8() + "\t");
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
         }
 
         outFile->write("\n");
