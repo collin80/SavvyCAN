@@ -251,25 +251,27 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
+void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
 {
     mutex.lock();
-    frame.timestamp -= timeOffset;
+    CANFrame tempFrame;
+    tempFrame = frame;
+    tempFrame.timestamp -= timeOffset;
 
     //if this ID isn't found in the filters list then add it and show it by default
-    if (!filters.contains(frame.ID))
+    if (!filters.contains(tempFrame.ID))
     {
-        filters.insert(frame.ID, true);
+        filters.insert(tempFrame.ID, true);
         needFilterRefresh = true;
     }
 
     if (!overwriteDups)
     {        
-        frames.append(frame);        
-        if (filters[frame.ID])
+        frames.append(tempFrame);
+        if (filters[tempFrame.ID])
         {
             if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
-            filteredFrames.append(frame);
+            filteredFrames.append(tempFrame);
             if (autoRefresh) endInsertRows();
         }
     }
@@ -278,20 +280,20 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         bool found = false;
         for (int i = 0; i < frames.count(); i++)
         {
-            if (frames[i].ID == frame.ID)
+            if (frames[i].ID == tempFrame.ID)
             {                
-                frames.replace(i, frame);                
+                frames.replace(i, tempFrame);
                 found = true;
                 break;
             }
         }
         if (!found)
         {            
-            frames.append(frame);
-            if (filters[frame.ID])
+            frames.append(tempFrame);
+            if (filters[tempFrame.ID])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
-                filteredFrames.append(frame);
+                filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
         }
@@ -299,10 +301,10 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
-                if (filteredFrames[j].ID == frame.ID)
+                if (filteredFrames[j].ID == tempFrame.ID)
                 {
                     if (autoRefresh) beginResetModel();
-                    filteredFrames.replace(j, frame);
+                    filteredFrames.replace(j, tempFrame);
                     if (autoRefresh) endResetModel();
                 }
             }

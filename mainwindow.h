@@ -19,6 +19,7 @@
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
 #include "discretestatewindow.h"
+#include "scriptingwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -56,6 +57,7 @@ private slots:
     void showComparisonWindow();
     void showSettingsDialog();
     void showFirmwareUploaderWindow();
+    void showScriptingWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -121,6 +123,7 @@ private:
     MainSettingsDialog *settingsDialog;
     DiscreteStateWindow *discreteStateWindow;
     FirmwareUploaderWindow *firmwareUploaderWindow;
+    ScriptingWindow *scriptingWindow;
 
     //various private storage
     QLabel lbStatusConnected;

@@ -40,6 +40,19 @@ SerialWorker::~SerialWorker()
     if (ticker != NULL) ticker->stop();
 }
 
+void SerialWorker::run()
+{
+    ticker = new QTimer;
+    connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
+
+    elapsedTime = new QTime;
+    elapsedTime->start();
+
+    ticker->setInterval(250); //tick four times per second
+    ticker->setSingleShot(false); //keep ticking
+    ticker->start();
+}
+
 void SerialWorker::readSettings()
 {
     QSettings settings;
@@ -110,19 +123,6 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
         else connected = true;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
     if (doValidation) QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
-    if (ticker == NULL)
-    {
-        ticker = new QTimer;
-        connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
-    }
-    if (elapsedTime == NULL)
-    {
-        elapsedTime = new QTime;
-        elapsedTime->start();
-    }
-    ticker->setInterval(250); //tick four times per second
-    ticker->setSingleShot(false); //keep ticking
-    ticker->start();
 }
 
 void SerialWorker::connectionTimeout()
@@ -158,6 +158,10 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 
     //qDebug() << "Sending out frame with id " << frame->ID;
 
+    //show our sent frames in the list too. This happens even if we're not connected.
+    canModel->addFrame(*frame, false);
+    gotFrames++;
+
     if (!connected) return;
 
     ID = frame->ID;
@@ -181,10 +185,6 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     if (!serial->isOpen()) return;
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
-
-    //show our sent frames in the list too.
-    canModel->addFrame(frame, false);
-    gotFrames++;
 }
 
 //a simple way for another thread to pass us a bunch of frames to send.
@@ -426,14 +426,17 @@ void SerialWorker::handleTick()
 {
     //qDebug() << "Tick!";
 
-    if (!gotValidated)
+    if (connected)
     {
-        if (serial->isOpen()) //if it's still false we have a problem...
+        if (!gotValidated)
         {
-            qDebug() << "Comm validation failed. ";
-            closeSerialPort(); //start by stopping everything.
-            QTimer::singleShot(500, this, SLOT(handleReconnect()));
-            return;
+            if (serial->isOpen()) //if it's still false we have a problem...
+            {
+                qDebug() << "Comm validation failed. ";
+                closeSerialPort(); //start by stopping everything.
+                QTimer::singleShot(500, this, SLOT(handleReconnect()));
+                return;
+            }
         }
     }
 
@@ -442,7 +445,7 @@ void SerialWorker::handleTick()
     emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
     canModel->sendBulkRefresh(gotFrames);
     gotFrames = 0;    
-    if (doValidation) sendCommValidation();
+    if (doValidation && connected) sendCommValidation();
 }
 
 void SerialWorker::handleReconnect()

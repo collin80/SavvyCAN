@@ -799,7 +799,7 @@
      <item>
       <widget class="QGroupBox" name="groupBox_4">
        <property name="title">
-        <string>Trigger Values</string>
+        <string>Data Seek Values</string>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_10">
         <item>

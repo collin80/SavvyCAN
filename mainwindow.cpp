@@ -86,6 +86,7 @@ MainWindow::MainWindow(QWidget *parent) :
     worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(&serialWorkerThread, SIGNAL(started()), worker, SLOT(run())); //setup timers within the proper thread
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
     connect(worker, &SerialWorker::frameUpdateTick, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
@@ -98,7 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
     connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
     serialWorkerThread.start();
-    serialWorkerThread.setPriority(QThread::HighPriority);
+    serialWorkerThread.setPriority(QThread::HighPriority);    
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -110,6 +111,7 @@ MainWindow::MainWindow(QWidget *parent) :
     settingsDialog = NULL;
     firmwareUploaderWindow = NULL;
     discreteStateWindow = NULL;
+    scriptingWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -143,6 +145,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
     connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
     connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
+    connect(ui->actionScripting_INterface, SIGNAL(triggered(bool)), this, SLOT(showScriptingWindow()));
     connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
     connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
     connect(model, SIGNAL(updatedFiltersList()), this, SLOT(updateFilterList()));
@@ -235,6 +238,12 @@ MainWindow::~MainWindow()
     {
         discreteStateWindow->close();
         delete discreteStateWindow;
+    }
+
+    if (scriptingWindow)
+    {
+        scriptingWindow->close();
+        delete scriptingWindow;
     }
 
     delete ui;
@@ -1033,6 +1042,15 @@ void MainWindow::showSingleMultiWindow()
         discreteStateWindow = new DiscreteStateWindow(model->getListReference());
     }
     discreteStateWindow->show();
+}
+
+void MainWindow::showScriptingWindow()
+{
+    if (!scriptingWindow)
+    {
+        scriptingWindow = new ScriptingWindow(model->getListReference());
+    }
+    scriptingWindow->show();
 }
 
 void MainWindow::showRangeWindow()

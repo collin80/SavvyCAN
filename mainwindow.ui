@@ -293,7 +293,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
@@ -311,6 +311,7 @@
     </property>
     <addaction name="action_Playback"/>
     <addaction name="action_Custom"/>
+    <addaction name="actionScripting_INterface"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -440,6 +441,11 @@
   <action name="actionFirmware_Uploader">
    <property name="text">
     <string>Firmware Uploader</string>
+   </property>
+  </action>
+  <action name="actionScripting_INterface">
+   <property name="text">
+    <string>Scripting Interface</string>
    </property>
   </action>
  </widget>

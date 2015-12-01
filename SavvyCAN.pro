@@ -6,8 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport
-
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
 CONFIG += c++11
@@ -36,7 +35,10 @@ SOURCES += main.cpp\
     filecomparatorwindow.cpp \
     mainsettingsdialog.cpp \
     firmwareuploaderwindow.cpp \
-    discretestatewindow.cpp
+    discretestatewindow.cpp \
+    scriptingwindow.cpp \
+    scriptcontainer.cpp \
+    canfilter.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -61,7 +63,10 @@ HEADERS  += mainwindow.h \
     filecomparatorwindow.h \
     mainsettingsdialog.h \
     firmwareuploaderwindow.h \
-    discretestatewindow.h
+    discretestatewindow.h \
+    scriptingwindow.h \
+    scriptcontainer.h \
+    canfilter.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -76,7 +81,8 @@ FORMS    += mainwindow.ui \
     filecomparatorwindow.ui \
     mainsettingsdialog.ui \
     firmwareuploaderwindow.ui \
-    discretestatewindow.ui
+    discretestatewindow.ui \
+    scriptingwindow.ui
 
 DISTFILES +=
 
