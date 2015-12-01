@@ -181,6 +181,10 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     if (!serial->isOpen()) return;
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
+
+    //show our sent frames in the list too.
+    canModel->addFrame(frame, false);
+    gotFrames++;
 }
 
 //a simple way for another thread to pass us a bunch of frames to send.
