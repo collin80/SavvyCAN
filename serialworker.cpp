@@ -155,11 +155,13 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     QByteArray buffer;
     int c;
     int ID;
+    CANFrame tempFrame = *frame;
+    tempFrame.isReceived = false;
 
     //qDebug() << "Sending out frame with id " << frame->ID;
 
-    //show our sent frames in the list too. This happens even if we're not connected.
-    canModel->addFrame(*frame, false);
+    //show our sent frames in the list too. This happens even if we're not connected.    
+    canModel->addFrame(tempFrame, false);
     gotFrames++;
 
     if (!connected) return;
@@ -310,6 +312,7 @@ void SerialWorker::procRXChar(unsigned char c)
                 //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
                 if (capturing)
                 {
+                    buildFrame->isReceived = true;
                     canModel->addFrame(*buildFrame, false);
                     gotFrames++;
                     if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
@@ -445,7 +448,7 @@ void SerialWorker::handleTick()
     emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
     canModel->sendBulkRefresh(gotFrames);
     gotFrames = 0;    
-    if (doValidation && connected) sendCommValidation();
+    if (doValidation && serial) sendCommValidation();
 }
 
 void SerialWorker::handleReconnect()

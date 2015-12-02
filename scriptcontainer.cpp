@@ -58,8 +58,14 @@ void ScriptContainer::setErrorWidget(QListWidget *list)
 
 void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
 {
+    uint32_t idVal = id.toUInt();
+    uint32_t maskVal = mask.toUInt();
+    int busVal = bus.toInt();
     qDebug() << "Called set filter";
-    qDebug() << id.toInt() << "*" << mask.toInt() << "*" << bus.toInt();
+    qDebug() << idVal << "*" << maskVal << "*" << busVal;
+    CANFilter filter;
+    filter.setFilter(idVal, maskVal, busVal);
+    filters.append(filter);
 }
 
 void ScriptContainer::setTickInterval(QJSValue interval)
@@ -77,11 +83,24 @@ void ScriptContainer::setTickInterval(QJSValue interval)
 void ScriptContainer::clearFilters()
 {
     qDebug() << "Called clear filters";
+    filters.clear();
 }
 
 void ScriptContainer::sendFrame(QJSValue id, QJSValue length, QJSValue data)
 {
     qDebug() << "called send frame";
+}
+
+void ScriptContainer::gotFrame(const CANFrame &frame)
+{
+    for (int i = 0; i < filters.length(); i++)
+    {
+        if (filters[i].checkFilter(frame.ID, frame.bus))
+        {
+
+            return; //as soon as one filter matches we jump out
+        }
+    }
 }
 
 void ScriptContainer::tick()

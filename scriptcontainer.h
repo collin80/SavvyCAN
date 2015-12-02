@@ -1,6 +1,9 @@
 #ifndef SCRIPTCONTAINER_H
 #define SCRIPTCONTAINER_H
 
+#include "can_structs.h"
+#include "canfilter.h"
+
 #include <QJSEngine>
 #include <QTimer>
 #include <qlistwidget.h>
@@ -11,6 +14,8 @@ class ScriptContainer : public QObject
 
 public:
     ScriptContainer();
+    void gotFrame(const CANFrame &frame);
+
     QString fileName;
     QString filePath;
     QString scriptText;
@@ -34,6 +39,7 @@ private:
     QJSValue tickFunction;
     QTimer timer;
     QListWidget *errorWidget;
+    QList<CANFilter> filters;
 };
 
 #endif // SCRIPTCONTAINER_H

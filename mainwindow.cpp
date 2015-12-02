@@ -49,15 +49,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    QStringList headers;
-    headers << "Timestamp" << "ID" << "Ext" << "Bus" << "Len" << "Data";
-    //model->setHorizontalHeaderLabels(headers);
     ui->canFramesView->setColumnWidth(0, 110);
     ui->canFramesView->setColumnWidth(1, 70);
     ui->canFramesView->setColumnWidth(2, 40);
     ui->canFramesView->setColumnWidth(3, 40);
     ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 275);
+    ui->canFramesView->setColumnWidth(5, 40);
+    ui->canFramesView->setColumnWidth(6, 275);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
@@ -500,7 +498,6 @@ void MainWindow::handleLoadFile()
         if (result)
         {
             model->insertFrames(tempFrames);
-
             QStringList fileList = filename.split('/');
             loadedFileName = fileList[fileList.length() - 1];
 
