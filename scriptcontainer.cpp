@@ -86,18 +86,39 @@ void ScriptContainer::clearFilters()
     filters.clear();
 }
 
-void ScriptContainer::sendFrame(QJSValue id, QJSValue length, QJSValue data)
+void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
 {
-    qDebug() << "called send frame";
+    CANFrame frame;
+    frame.extended = false;
+    frame.ID = id.toInt();
+    frame.len = length.toInt();
+    if (frame.len < 0) frame.len = 0;
+    if (frame.len > 8) frame.len = 8;
+
+    for (int i = 0; i < frame.len; i++)
+    {
+        frame.data[i] = (uint8_t)data.property(0).toInt();
+    }
+
+    frame.bus = bus.toInt();
+    if (frame.bus < 0) frame.bus = 0;
+    if (frame.bus > 1) frame.bus = 1;
+
+    if (frame.ID > 0x7FF) frame.extended = true;
+
+    emit sendCANFrame(&frame, frame.bus);
 }
 
 void ScriptContainer::gotFrame(const CANFrame &frame)
 {
+    if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     for (int i = 0; i < filters.length(); i++)
     {
         if (filters[i].checkFilter(frame.ID, frame.bus))
         {
-
+            QJSValueList args;
+            args << frame.bus << frame.ID << frame.len << frame.data;
+            gotFrameFunction.call(args);
             return; //as soon as one filter matches we jump out
         }
     }

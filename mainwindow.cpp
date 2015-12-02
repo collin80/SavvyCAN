@@ -84,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent) :
     worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
-    connect(&serialWorkerThread, SIGNAL(started()), worker, SLOT(run())); //setup timers within the proper thread
+    connect(&serialWorkerThread, &QThread::started, worker, &SerialWorker::run); //setup timers within the proper thread
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
     connect(worker, &SerialWorker::frameUpdateTick, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
@@ -995,7 +995,7 @@ void MainWindow::showFrameSenderWindow()
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
 
-        connect(frameSenderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -1046,6 +1046,7 @@ void MainWindow::showScriptingWindow()
     if (!scriptingWindow)
     {
         scriptingWindow = new ScriptingWindow(model->getListReference());
+        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
     }
     scriptingWindow->show();
 }

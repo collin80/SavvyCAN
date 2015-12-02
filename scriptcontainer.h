@@ -26,10 +26,13 @@ public slots:
     void setFilter(QJSValue id, QJSValue mask, QJSValue bus);
     void setTickInterval(QJSValue interval);
     void clearFilters();
-    void sendFrame(QJSValue id, QJSValue length, QJSValue data);
+    void sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data);
 
 private slots:
     void tick();
+
+signals:
+    void sendCANFrame(const CANFrame *, int);
 
 private:
     QJSEngine scriptEngine;

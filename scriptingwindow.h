@@ -27,9 +27,12 @@ private slots:
     void saveScript();
     void revertScript();
     void recompileScript();
+    void updatedFrames(int);
 
 public slots:
 
+signals:
+    void sendCANFrame(const CANFrame *, int);
 
 private:
     Ui::ScriptingWindow *ui;

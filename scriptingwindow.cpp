@@ -4,6 +4,8 @@
 #include <QFile>
 #include <QFileDialog>
 
+#include "mainwindow.h"
+
 ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ScriptingWindow)
@@ -12,20 +14,37 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     modelFrames = frames;
 
-    connect(ui->btnLoadScript, SIGNAL(pressed()), this, SLOT(loadNewScript()));
-    connect(ui->btnNewScript, SIGNAL(pressed()), this, SLOT(createNewScript()));
-    connect(ui->btnRecompile, SIGNAL(pressed()), this, SLOT(recompileScript()));
-    connect(ui->btnRemoveScript, SIGNAL(pressed()), this, SLOT(deleteCurrentScript()));
-    connect(ui->btnRevertScript, SIGNAL(pressed()), this, SLOT(revertScript()));
-    connect(ui->btnSaveScript, SIGNAL(pressed()), this, SLOT(saveScript()));
-
-    currentScript = new ScriptContainer();
-    currentScript->setErrorWidget(ui->listErrors);
+    connect(ui->btnLoadScript, &QAbstractButton::pressed, this, &ScriptingWindow::loadNewScript);
+    connect(ui->btnNewScript, &QAbstractButton::pressed, this, &ScriptingWindow::createNewScript);
+    connect(ui->btnRecompile, &QAbstractButton::pressed, this, &ScriptingWindow::recompileScript);
+    connect(ui->btnRemoveScript, &QAbstractButton::pressed, this, &ScriptingWindow::deleteCurrentScript);
+    connect(ui->btnRevertScript, &QAbstractButton::pressed, this, &ScriptingWindow::revertScript);
+    connect(ui->btnSaveScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveScript);
+    connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ScriptingWindow::updatedFrames);
 }
 
 ScriptingWindow::~ScriptingWindow()
 {
     delete ui;
+}
+
+void ScriptingWindow::updatedFrames(int numFrames)
+{
+    CANFrame thisFrame;
+    //-1 means all frames deleted and -2 means a full refresh, neither of which we care about here.
+    if (numFrames > 0)
+    {
+        //for every new frame pass it on to each script container. The container will determine if it needs to actually
+        //notify the script and do that if applicable.
+        for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+        {
+            thisFrame = modelFrames->at(i);
+            for (int j = 0; j < scripts.length(); j++)
+            {
+                scripts[j]->gotFrame(thisFrame);
+            }
+        }
+    }
 }
 
 void ScriptingWindow::loadNewScript()
@@ -63,6 +82,7 @@ void ScriptingWindow::loadNewScript()
                 container->scriptText = contents;
                 container->setErrorWidget(ui->listErrors);
                 container->compileScript();
+                connect(container, &ScriptContainer::sendCANFrame, this, &ScriptingWindow::sendCANFrame);
                 scripts.append(container);
                 currentScript = container;
                 ui->txtScriptSource->setText(container->scriptText);
@@ -82,6 +102,7 @@ void ScriptingWindow::createNewScript()
     container->filePath = QString();
     container->scriptText = QString();
     container->setErrorWidget(ui->listErrors);
+    connect(container, &ScriptContainer::sendCANFrame, this, &ScriptingWindow::sendCANFrame);
     scripts.append(container);
     ui->listLoadedScripts->addItem(container->fileName);
     currentScript = container;

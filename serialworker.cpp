@@ -164,6 +164,8 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     canModel->addFrame(tempFrame, false);
     gotFrames++;
 
+    if (serial == NULL) return;
+    if (!serial->isOpen()) return;
     if (!connected) return;
 
     ID = frame->ID;
@@ -183,8 +185,6 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     }
     buffer[8 + frame->len] = 0;
 
-    if (serial == NULL) return;
-    if (!serial->isOpen()) return;
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
 }
@@ -193,7 +193,7 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 //Don't get carried away here. The GVRET firmware only has finite
 //buffers and besides, the other end will get buried in traffic.
 void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
-{
+{    
     for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i), frames->at(i).bus);
 }
 
