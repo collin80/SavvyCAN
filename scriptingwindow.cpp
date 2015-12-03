@@ -12,6 +12,8 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
 {
     ui->setupUi(this);
 
+    readSettings();
+
     modelFrames = frames;
 
     connect(ui->btnLoadScript, &QAbstractButton::pressed, this, &ScriptingWindow::loadNewScript);
@@ -46,6 +48,38 @@ void ScriptingWindow::updatedFrames(int numFrames)
             }
         }
     }
+}
+
+void ScriptingWindow::closeEvent(QCloseEvent *event)
+{
+    Q_UNUSED(event);
+    writeSettings();
+}
+
+void ScriptingWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("ScriptingWindow/WindowSize", QSize(860, 650)).toSize());
+        move(settings.value("ScriptingWindow/WindowPos", QPoint(100, 100)).toPoint());
+    }
+}
+
+void ScriptingWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("ScriptingWindow/WindowSize", size());
+        settings.setValue("ScriptingWindow/WindowPos", pos());
+    }
+}
+
+void ScriptingWindow::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
 }
 
 void ScriptingWindow::loadNewScript()

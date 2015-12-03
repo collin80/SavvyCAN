@@ -17,6 +17,7 @@ class ScriptingWindow : public QDialog
 
 public:
     explicit ScriptingWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    void showEvent(QShowEvent*);
     ~ScriptingWindow();
 
 private slots:
@@ -35,8 +36,11 @@ signals:
     void sendCANFrame(const CANFrame *, int);
 
 private:
-    Ui::ScriptingWindow *ui;
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 
+    Ui::ScriptingWindow *ui;
     QList<ScriptContainer *> scripts;
     ScriptContainer *currentScript;
     const QVector<CANFrame> *modelFrames;
