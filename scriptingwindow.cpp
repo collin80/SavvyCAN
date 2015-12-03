@@ -34,6 +34,7 @@ void ScriptingWindow::updatedFrames(int numFrames)
     //-1 means all frames deleted and -2 means a full refresh, neither of which we care about here.
     if (numFrames > 0)
     {
+        qDebug() << "Got frames into script window: " << numFrames;
         //for every new frame pass it on to each script container. The container will determine if it needs to actually
         //notify the script and do that if applicable.
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)

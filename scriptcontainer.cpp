@@ -15,9 +15,11 @@ ScriptContainer::ScriptContainer()
 void ScriptContainer::compileScript()
 {
     QJSValue result = scriptEngine.evaluate(scriptText, fileName);
+
+    errorWidget->clear();
+
     if (result.isError() && errorWidget)
-    {
-        errorWidget->clear();
+    {        
         errorWidget->addItem("SCRIPT EXCEPTION!");
         errorWidget->addItem("Line: " + result.property("lineNumber").toString());
         errorWidget->addItem(result.property("message").toString());
@@ -95,9 +97,11 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     if (frame.len < 0) frame.len = 0;
     if (frame.len > 8) frame.len = 8;
 
+    if (!data.isArray()) qDebug() << "data isn't an array";
+
     for (int i = 0; i < frame.len; i++)
     {
-        frame.data[i] = (uint8_t)data.property(0).toInt();
+        frame.data[i] = (uint8_t)data.property(i).toInt();
     }
 
     frame.bus = bus.toInt();
@@ -106,18 +110,23 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
 
     if (frame.ID > 0x7FF) frame.extended = true;
 
+    //qDebug() << "Sending frame from script";
     emit sendCANFrame(&frame, frame.bus);
 }
 
 void ScriptContainer::gotFrame(const CANFrame &frame)
 {
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
+    //qDebug() << "Got frame in script interface";
     for (int i = 0; i < filters.length(); i++)
     {
         if (filters[i].checkFilter(frame.ID, frame.bus))
         {
             QJSValueList args;
-            args << frame.bus << frame.ID << frame.len << frame.data;
+            args << frame.bus << frame.ID << frame.len;
+            QJSValue dataBytes = scriptEngine.newArray(frame.len);
+            for (int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
+            args.append(dataBytes);
             gotFrameFunction.call(args);
             return; //as soon as one filter matches we jump out
         }
@@ -128,7 +137,7 @@ void ScriptContainer::tick()
 {
     if (tickFunction.isCallable())
     {
-        qDebug() << "Calling tick function";
+        //qDebug() << "Calling tick function";
         QJSValue res = tickFunction.call();
         if (res.isError())
         {
