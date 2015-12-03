@@ -3,6 +3,7 @@
 
 #include <QFile>
 #include <QFileDialog>
+#include <Qsci/qscilexerjavascript.h>
 
 #include "mainwindow.h"
 
@@ -23,6 +24,8 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(ui->btnRevertScript, &QAbstractButton::pressed, this, &ScriptingWindow::revertScript);
     connect(ui->btnSaveScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveScript);
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ScriptingWindow::updatedFrames);
+
+    ui->txtScriptSource->setLexer(new QsciLexerJavaScript(ui->txtScriptSource));
 }
 
 ScriptingWindow::~ScriptingWindow()
@@ -181,7 +184,7 @@ void ScriptingWindow::saveScript()
                 delete outFile;
                 return;
             }
-            outFile->write(ui->txtScriptSource->toPlainText().toUtf8());
+            outFile->write(ui->txtScriptSource->text().toUtf8());
             outFile->close();
             delete outFile;
         }
@@ -195,6 +198,6 @@ void ScriptingWindow::revertScript()
 
 void ScriptingWindow::recompileScript()
 {
-    currentScript->scriptText = ui->txtScriptSource->toPlainText();
+    currentScript->scriptText = ui->txtScriptSource->text();
     currentScript->compileScript();
 }
