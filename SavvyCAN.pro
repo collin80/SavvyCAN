@@ -38,7 +38,8 @@ SOURCES += main.cpp\
     discretestatewindow.cpp \
     scriptingwindow.cpp \
     scriptcontainer.cpp \
-    canfilter.cpp
+    canfilter.cpp \
+    rangestatewindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -66,7 +67,8 @@ HEADERS  += mainwindow.h \
     discretestatewindow.h \
     scriptingwindow.h \
     scriptcontainer.h \
-    canfilter.h
+    canfilter.h \
+    rangestatewindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -82,7 +84,8 @@ FORMS    += mainwindow.ui \
     mainsettingsdialog.ui \
     firmwareuploaderwindow.ui \
     discretestatewindow.ui \
-    scriptingwindow.ui
+    scriptingwindow.ui \
+    rangestatewindow.ui
 
 DISTFILES +=
 

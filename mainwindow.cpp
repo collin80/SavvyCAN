@@ -110,47 +110,48 @@ MainWindow::MainWindow(QWidget *parent) :
     firmwareUploaderWindow = NULL;
     discreteStateWindow = NULL;
     scriptingWindow = NULL;
+    rangeWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
 
     model->setDBCHandler(dbcHandler);
 
-    connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
-    connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
-    connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
-    connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
-    connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
-    connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
-    connect(ui->actionSave_Filtered_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilteredFile()));
-    connect(ui->actionLoad_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleLoadFilters()));
-    connect(ui->actionSave_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilters()));
-    connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
-    connect(ui->btnBaudSet, SIGNAL(clicked(bool)), this, SLOT(changeBaudRates()));
-    connect(ui->actionFlow_View, SIGNAL(triggered(bool)), this, SLOT(showFlowViewWindow()));
-    connect(ui->action_Custom, SIGNAL(triggered(bool)), this, SLOT(showFrameSenderWindow()));
-    connect(ui->actionLoad_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadDBC()));
-    connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
-    connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
-    connect(ui->canFramesView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(gridDoubleClicked(QModelIndex)));
-    connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
-    connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
-    connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
-    connect(ui->btnCaptureToggle, SIGNAL(clicked(bool)), this, SLOT(toggleCapture()));
-    connect(ui->actionExit_Application, SIGNAL(triggered(bool)), this, SLOT(exitApp()));
-    connect(ui->actionFuzzy_Scope, SIGNAL(triggered(bool)), this, SLOT(showFuzzyScopeWindow()));
-    connect(ui->actionRange_State, SIGNAL(triggered(bool)), this, SLOT(showRangeWindow()));
-    connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
-    connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
-    connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
-    connect(ui->actionScripting_INterface, SIGNAL(triggered(bool)), this, SLOT(showScriptingWindow()));
-    connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
-    connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
-    connect(model, SIGNAL(updatedFiltersList()), this, SLOT(updateFilterList()));
-    connect(ui->listFilters, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(filterListItemChanged(QListWidgetItem*)));
-    connect(ui->btnFilterAll, SIGNAL(clicked(bool)), this, SLOT(filterSetAll()));
-    connect(ui->btnFilterNone, SIGNAL(clicked(bool)), this, SLOT(filterClearAll()));
-    connect(ui->actionFirmware_Uploader, SIGNAL(triggered(bool)), this, SLOT(showFirmwareUploaderWindow()));
+    connect(ui->btnConnect, &QAbstractButton::clicked, this, &MainWindow::connButtonPress);
+    connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
+    connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
+    connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
+    connect(ui->btnClearFrames, &QAbstractButton::clicked, this, &MainWindow::clearFrames);
+    connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
+    connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
+    connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
+    connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
+    connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
+    connect(ui->btnBaudSet, &QAbstractButton::clicked, this, &MainWindow::changeBaudRates);
+    connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
+    connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
+    connect(ui->actionLoad_DBC_File, &QAction::triggered, this, &MainWindow::handleLoadDBC);
+    connect(ui->actionSave_DBC_File, &QAction::triggered, this, &MainWindow::handleSaveDBC);
+    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
+    connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
+    connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->actionEdit_Messages_Signals, &QAction::triggered, this, &MainWindow::showDBCEditor);
+    connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
+    connect(ui->actionExit_Application, &QAction::triggered, this, &MainWindow::exitApp);
+    connect(ui->actionFuzzy_Scope, &QAction::triggered, this, &MainWindow::showFuzzyScopeWindow);
+    connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
+    connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
+    connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
+    connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
+    connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
+    connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
+    connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
+    connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
+    connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
+    connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
+    connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
+    connect(ui->actionFirmware_Uploader, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -242,6 +243,12 @@ MainWindow::~MainWindow()
     {
         scriptingWindow->close();
         delete scriptingWindow;
+    }
+
+    if (rangeWindow)
+    {
+        rangeWindow->close();
+        delete rangeWindow;
     }
 
     delete ui;
@@ -1053,7 +1060,11 @@ void MainWindow::showScriptingWindow()
 
 void MainWindow::showRangeWindow()
 {
-    //not done yet
+    if (!rangeWindow)
+    {
+        rangeWindow = new RangeStateWindow(model->getListReference());
+    }
+    rangeWindow->show();
 }
 
 void MainWindow::showFuzzyScopeWindow()

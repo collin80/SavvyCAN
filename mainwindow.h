@@ -20,6 +20,7 @@
 #include "firmwareuploaderwindow.h"
 #include "discretestatewindow.h"
 #include "scriptingwindow.h"
+#include "rangestatewindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -124,6 +125,7 @@ private:
     DiscreteStateWindow *discreteStateWindow;
     FirmwareUploaderWindow *firmwareUploaderWindow;
     ScriptingWindow *scriptingWindow;
+    RangeStateWindow *rangeWindow;
 
     //various private storage
     QLabel lbStatusConnected;

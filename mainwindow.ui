@@ -304,6 +304,8 @@
     <addaction name="actionGraph_Dta"/>
     <addaction name="actionFrame_Data_Analysis"/>
     <addaction name="actionFile_Comparison"/>
+    <addaction name="actionRange_State_2"/>
+    <addaction name="actionSingle_Multi_State_2"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -446,6 +448,16 @@
   <action name="actionScripting_INterface">
    <property name="text">
     <string>Scripting Interface</string>
+   </property>
+  </action>
+  <action name="actionRange_State_2">
+   <property name="text">
+    <string>Range State</string>
+   </property>
+  </action>
+  <action name="actionSingle_Multi_State_2">
+   <property name="text">
+    <string>Single/Multi State</string>
    </property>
   </action>
  </widget>
