@@ -20,11 +20,13 @@ public:
 private slots:
     void updatedFrames(int);
     void recalcButton();
+    void clickedSignalList(int idx);
 
 private:
     Ui::RangeStateWindow *ui;
     const QVector<CANFrame> *modelFrames;
     QVector<CANFrame> frameCache;
+    QList<int64_t> foundSignals;
     QHash<int, bool> idFilters;
 
     void refreshFilterList();
@@ -32,7 +34,7 @@ private:
     void readSettings();
     void writeSettings();
     void signalsFactory();
-    void processSignal(int startBit, int bitLength, int sensitivity, bool bigEndian, bool isSigned);
+    bool processSignal(int startBit, int bitLength, int sensitivity, bool bigEndian, bool isSigned);
     void createGraph(QVector<int> values);
 };
 

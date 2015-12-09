@@ -73,6 +73,7 @@ RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *par
 
     connect(ui->btnRecalc, &QAbstractButton::clicked, this, &RangeStateWindow::recalcButton);
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+    connect(ui->listCandidates, &QListWidget::currentRowChanged, this, &RangeStateWindow::clickedSignalList);
 }
 
 RangeStateWindow::~RangeStateWindow()
@@ -172,6 +173,7 @@ void RangeStateWindow::recalcButton()
     int id;
 
     ui->listCandidates->clear();
+    foundSignals.clear();
 
     for (iter = idFilters.begin(); iter != idFilters.end(); ++iter)
     {
@@ -232,7 +234,7 @@ void RangeStateWindow::signalsFactory()
 /*
  * Given the signal we generate the relevant data and figure out whether this signal seems to be a smooth range signal
 */
-void RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivity, bool bigEndian, bool isSigned)
+bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivity, bool bigEndian, bool isSigned)
 {
     qDebug() << "S:" << startBit << " B:" << bitLength << " X:" << sensitivity << " E:" << bigEndian;
 
@@ -259,6 +261,8 @@ void RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
     }
 
     qDebug() << "Min: " << lowestValue << " Max: " << highestValue;
+
+    if (lowestValue == highestValue) return false; //a signal that never changes is worthless and not a range signal
 
     //multiplier is calculated such that the range of the signal is scaled down to the value of sensitivity.
     //so, if we have a sensitivity of 50 then the range is scaled so that it is 50
@@ -294,17 +298,42 @@ void RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
     {
         if (abs(diff1[i]) > comparisonValue) overValues++;
     }
-    if (overValues > (numFrames / 5000)) isGood = false;
+    if (overValues > (numFrames / (100 * sensitivity))) isGood = false;
     qDebug() << "Is this signal good: " << isGood << " Num overs: " << overValues;
     if (isGood)
     {
-        createGraph(scaledVals);
-        //qDebug() << "Graphing";
+        //createGraph(scaledVals);
         QString temp;
-        temp = "ID: " + QString::number(frameCache.at(0).ID, 16) + " startBit: " + QString::number(startBit) + "  len: " + QString::number(bitLength) + "BigEndian: " + QString::number(bigEndian) + " Signed: " + QString::number(isSigned);
-        ui->listCandidates->addItem(temp);
-    }
+        temp = "ID: " + QString::number(frameCache.at(0).ID, 16) + " startBit: " + QString::number(startBit) + "  len: " + QString::number(bitLength);
+        int64_t foundSig;
+        foundSig = frameCache.at(0).ID;
+        foundSig += (int64_t)startBit << 32;
+        foundSig += (int64_t)bitLength << 40;
 
+        if (isSigned)
+        {
+            temp += " Signed";
+            foundSig += (int64_t)1 << 48;
+        }
+        else
+        {
+            temp += " Unsigned";
+        }
+
+        if (bigEndian)
+        {
+            temp += " BigEndian";
+            foundSig += (int64_t)1 << 49;
+        }
+        else
+        {
+            temp += " LittleEndian";
+        }
+
+        ui->listCandidates->addItem(temp);
+        foundSignals.append(foundSig);
+    }
+    return isGood;
 }
 
 //graphs the vector such that the X axis is just the index into the vector and Y is perfectly graphed within the window
@@ -344,6 +373,10 @@ void RangeStateWindow::createGraph(QVector<int> values)
     if (ymax < 0) ymax * 0.8;
     else ymax *= 1.2;
 
+    if (fabs(ymin) < 0.01) ymin -= (ymax / 60.0);
+    if (fabs(ymax) < 0.01) ymax -= (ymin / 60.0);
+
+    qDebug() << "YFm: " << ymin << " YFM: " << ymax;
 
     ui->graphSignal->addGraph();
     ui->graphSignal->graph()->setName("Graph");
@@ -356,4 +389,36 @@ void RangeStateWindow::createGraph(QVector<int> values)
     ui->graphSignal->xAxis->setRange(0, numEntries);
     ui->graphSignal->yAxis->setRange(ymin, ymax);
     ui->graphSignal->replot();
+}
+
+void RangeStateWindow::clickedSignalList(int idx)
+{
+    if (idx == -1) return; //just in case...
+
+    int id, startBit, bitLength;
+    bool isSigned = false, isBigEndian = false;
+    int64_t valu;
+
+    valu = foundSignals.at(idx);
+    id = valu & 0xFFFFFFFFULL;
+    startBit = (valu >> 32) & 0xFF;
+    bitLength = (valu >> 40) & 0xFF;
+    if (valu & (1LL << 48)) isSigned = true;
+    if (valu & (1LL << 49)) isBigEndian = true;
+
+    qDebug() << "I:" << id << " sb:" << startBit << " len:" << bitLength << " signed:" << isSigned << " big:" << isBigEndian;
+
+    frameCache.clear();
+    frameCache.reserve(modelFrames->count()); //block allocate more than enough space
+
+    for (int j = 0; j < modelFrames->count(); j++)
+    {
+        if (modelFrames->at(j).ID == id) frameCache.append(modelFrames->at(j));
+    }
+
+    int numFrames = frameCache.count();
+    QVector<int> values;
+    values.reserve(numFrames);
+    for (int i = 0; i < numFrames; i++) values.append((int)((Utility::processIntegerSignal(frameCache.at(i).data, startBit, bitLength, !isBigEndian, isSigned))));
+    createGraph(values);
 }
