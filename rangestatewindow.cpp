@@ -192,6 +192,8 @@ void RangeStateWindow::recalcButton()
             signalsFactory();
         }
     }
+
+    qDebug() << "Found " << foundSignals.count() << " signals total.";
 }
 
 /*
@@ -236,7 +238,8 @@ void RangeStateWindow::signalsFactory()
 */
 bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivity, bool bigEndian, bool isSigned)
 {
-    qDebug() << "S:" << startBit << " B:" << bitLength << " X:" << sensitivity << " E:" << bigEndian;
+    qDebug() << "";
+    qDebug() << "S:" << startBit << " B:" << bitLength << " Sens:" << sensitivity << " Big E:" << bigEndian << " Signed: " << isSigned;
 
     QVector<int> scaledVals;
     QVector<int> diff1;
@@ -291,14 +294,16 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
     //now the differences are all stored so let's go through and see if they seem to suggest a ramping sort of signal or not.
     //for a first test lets let through any signal where the acceleration values are all much smaller than the signal range
     bool isGood = true;
-    int comparisonValue = abs(sensitivity / 10);
+    int comparisonValue = Utility::Lerp(sensitivity / 5, sensitivity / 40, (sensitivity - 10) / 240.0);
     qDebug() << "range: " << sensitivity << " comparisonvalue: " << comparisonValue;
     int overValues = 0;
     for (i = 0; i < diff2.count(); i++)
     {
         if (abs(diff1[i]) > comparisonValue) overValues++;
     }
-    if (overValues > (numFrames / (100 * sensitivity))) isGood = false;
+    int maxOvers = Utility::Lerp(4, numFrames / 50.0, 1.0 - ((sensitivity -10) / 240.0));
+    qDebug() << "Max Overs: " << maxOvers;
+    if (overValues > maxOvers) isGood = false;
     qDebug() << "Is this signal good: " << isGood << " Num overs: " << overValues;
     if (isGood)
     {
