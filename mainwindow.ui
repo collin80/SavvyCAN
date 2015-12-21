@@ -355,6 +355,8 @@
   <action name="actionConnect">
    <property name="text">
     <string>Connect</string>
+    </property>
+  </action>
   <action name="actionScripting_INterface">
    <property name="text">
     <string>Scripting Interface</string>

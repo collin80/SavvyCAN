@@ -109,7 +109,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
     connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
-    connect(ui->btnBaudSet, &QAbstractButton::clicked, this, &MainWindow::changeBaudRates);
     connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
     connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
     connect(ui->actionLoad_DBC_File, &QAction::triggered, this, &MainWindow::handleLoadDBC);
