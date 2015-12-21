@@ -61,26 +61,6 @@ MainWindow::MainWindow(QWidget *parent) :
     //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
     //ui->canFramesView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-    ports = QSerialPortInfo::availablePorts();
-
-    for (int i = 0; i < ports.count(); i++)
-    {
-        ui->cbSerialPorts->addItem(ports[i].portName());
-    }
-
-    ui->cbSpeed1->addItem(tr("Disabled"));
-    ui->cbSpeed1->addItem(tr("125000"));
-    ui->cbSpeed1->addItem(tr("250000"));
-    ui->cbSpeed1->addItem(tr("500000"));
-    ui->cbSpeed1->addItem(tr("1000000"));
-    ui->cbSpeed1->addItem(tr("33333"));
-    ui->cbSpeed2->addItem(tr("Disabled"));
-    ui->cbSpeed2->addItem(tr("125000"));
-    ui->cbSpeed2->addItem(tr("250000"));
-    ui->cbSpeed2->addItem(tr("500000"));
-    ui->cbSpeed2->addItem(tr("1000000"));
-    ui->cbSpeed2->addItem(tr("33333"));
-
     worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
@@ -109,6 +89,7 @@ MainWindow::MainWindow(QWidget *parent) :
     settingsDialog = NULL;
     firmwareUploaderWindow = NULL;
     discreteStateWindow = NULL;
+    connectionWindow = NULL;
     scriptingWindow = NULL;
     rangeWindow = NULL;
     dbcHandler = new DBCHandler;
@@ -117,7 +98,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     model->setDBCHandler(dbcHandler);
 
-    connect(ui->btnConnect, &QAbstractButton::clicked, this, &MainWindow::connButtonPress);
+    connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
+    connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connButtonPress()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
@@ -239,6 +221,12 @@ MainWindow::~MainWindow()
         delete discreteStateWindow;
     }
 
+    if (connectionWindow)
+    {
+        connectionWindow->close();
+        delete connectionWindow;
+    }
+   
     if (scriptingWindow)
     {
         scriptingWindow->close();
@@ -304,6 +292,56 @@ void MainWindow::writeSettings()
     {
         settings.setValue("Main/WindowSize", size());
         settings.setValue("Main/WindowPos", pos());
+    }
+}
+
+void MainWindow::updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1)
+{
+    connType = connectionType;
+    portName = port;
+
+    canSpeed0 = speed0;
+    canSpeed1 = speed1;
+    if (isConnected)
+    {
+        emit updateBaudRates(speed0, speed1);
+    }
+}
+
+void MainWindow::connButtonPress()
+{
+    if (!isConnected)
+    {
+        if (connType == "GVRET")
+        {
+            QList<QSerialPortInfo> ports;
+            ports = QSerialPortInfo::availablePorts();
+
+            for (int i = 0; i < ports.count(); i++)
+            {
+                if (ports[i].portName() == portName)
+                {
+                    portInfo = ports[i];
+                    emit sendSerialPort(&portInfo);
+                    lbStatusConnected.setText(tr("Attempting to connect to port ") + portName);
+                }
+            }
+        }
+        else if (connType == "KVASER")
+        {
+
+        }
+        else if (connType == "SOCKETCAN")
+        {
+
+        }
+    }
+    else
+    {
+        emit closeSerialPort();
+        isConnected = false;
+        lbStatusConnected.setText(tr("Not Connected"));
+        ui->actionConnect->setText(tr("Connect"));
     }
 }
 
@@ -451,8 +489,8 @@ void MainWindow::changeBaudRates()
 {
     int Speed1 = 0, Speed2 = 0;
 
-    Speed1 = ui->cbSpeed1->currentText().toInt();
-    Speed2 = ui->cbSpeed2->currentText().toInt();
+    //Speed1 = ui->cbSpeed1->currentText().toInt();
+    //Speed2 = ui->cbSpeed2->currentText().toInt();
 
     emit updateBaudRates(Speed1, Speed2);
 }
@@ -833,29 +871,6 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     outFile->close();
 }
 
-void MainWindow::connButtonPress()
-{
-    if (!isConnected)
-    {
-        for (int x = 0; x < ports.count(); x++)
-        {
-            if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
-            {
-                emit sendSerialPort(&ports[x]);
-                lbStatusConnected.setText(tr("Attempting to connect to port ") + ports[x].portName());
-                return;
-            }
-        }
-    }
-    else
-    {
-        emit closeSerialPort();
-        isConnected = false;
-        lbStatusConnected.setText(tr("Not Connected"));
-        ui->btnConnect->setText(tr("Connect to GVRET"));
-    }
-}
-
 void MainWindow::toggleCapture()
 {
     allowCapture = !allowCapture;
@@ -876,7 +891,7 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
     lbStatusConnected.setText(tr("Connected to GVRET"));
     //finally, find the baud rate in the list of rates or
     //add it to the bottom if needed (that'll be weird though...
-
+/*
     int idx = ui->cbSpeed1->findText(QString::number(baud0));
     if (idx > -1) ui->cbSpeed1->setCurrentIndex(idx);
     else
@@ -892,8 +907,9 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->addItem(QString::number(baud1));
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
+    */
     //ui->btnConnect->setEnabled(false);
-    ui->btnConnect->setText(tr("Disconnect from GVRET"));
+    ui->actionConnect->setText(tr("Disconnect"));
     isConnected = true;
 }
 
@@ -1081,6 +1097,7 @@ void MainWindow::exitApp()
     if (frameSenderWindow) frameSenderWindow->close();
     if (dbcMainEditor) dbcMainEditor->close();
     if (comparatorWindow) comparatorWindow->close();
+    if (connectionWindow) connectionWindow->close();
     this->close();
 }
 
@@ -1113,4 +1130,14 @@ void MainWindow::showDBCEditor()
         dbcMainEditor = new DBCMainEditor(dbcHandler, model->getListReference());
     }
     dbcMainEditor->show();
+}
+
+void MainWindow::showConnectionSettingsWindow()
+{
+    if (!connectionWindow)
+    {
+        connectionWindow = new ConnectionWindow();
+        connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+    }
+    connectionWindow->show();
 }

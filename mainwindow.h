@@ -19,6 +19,7 @@
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
 #include "discretestatewindow.h"
+#include "connectionwindow.h"
 #include "scriptingwindow.h"
 #include "rangestatewindow.h"
 
@@ -58,7 +59,11 @@ private slots:
     void showComparisonWindow();
     void showSettingsDialog();
     void showFirmwareUploaderWindow();
+<<<<<<< HEAD
+    void showConnectionSettingsWindow();
+=======
     void showScriptingWindow();
+>>>>>>> WIP2
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -81,6 +86,7 @@ public slots:
     void gotFrames(int, int);
     void updateSettings();
     void gotCenterTimeID(int32_t ID, double timestamp);
+    void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 signals:
     void sendSerialPort(QSerialPortInfo *port);
@@ -101,8 +107,7 @@ private:
 
     //canbus related data
     CANFrameModel *model;
-    DBCHandler *dbcHandler;
-    QList<QSerialPortInfo> ports;
+    DBCHandler *dbcHandler;    
     QThread serialWorkerThread;
     SerialWorker *worker;
     QByteArray inputBuffer;
@@ -124,8 +129,12 @@ private:
     MainSettingsDialog *settingsDialog;
     DiscreteStateWindow *discreteStateWindow;
     FirmwareUploaderWindow *firmwareUploaderWindow;
+<<<<<<< HEAD
+    ConnectionWindow *connectionWindow;
+=======
     ScriptingWindow *scriptingWindow;
     RangeStateWindow *rangeWindow;
+>>>>>>> WIP2
 
     //various private storage
     QLabel lbStatusConnected;
@@ -133,6 +142,9 @@ private:
     QLabel lbStatusDatabase;
     int normalRowHeight;
     bool isConnected;
+    QSerialPortInfo portInfo;
+    QString connType, portName;
+    int canSpeed0, canSpeed1;
 
     //private methods
     void saveDecodedTextFile(QString);
