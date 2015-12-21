@@ -204,13 +204,12 @@
     <property name="title">
      <string>RE Tools</string>
     </property>
-    <addaction name="actionSingle_Multi_State"/>
-    <addaction name="actionRange_State"/>
     <addaction name="actionFlow_View"/>
-    <addaction name="actionFuzzy_Scope"/>
     <addaction name="actionGraph_Dta"/>
     <addaction name="actionFrame_Data_Analysis"/>
     <addaction name="actionFile_Comparison"/>
+    <addaction name="actionRange_State_2"/>
+    <addaction name="actionSingle_Multi_State_2"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -218,7 +217,7 @@
     </property>
     <addaction name="action_Playback"/>
     <addaction name="action_Custom"/>
-    <addaction name="actionFirmware_Uploader"/>
+    <addaction name="actionScripting_INterface"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -261,16 +260,6 @@
   <action name="action_Custom">
    <property name="text">
     <string>Custom</string>
-   </property>
-  </action>
-  <action name="actionSingle_Multi_State">
-   <property name="text">
-    <string>Single / Multi State</string>
-   </property>
-  </action>
-  <action name="actionRange_State">
-   <property name="text">
-    <string>Range State</string>
    </property>
   </action>
   <action name="actionFlow_View">
@@ -366,6 +355,19 @@
   <action name="actionConnect">
    <property name="text">
     <string>Connect</string>
+  <action name="actionScripting_INterface">
+   <property name="text">
+    <string>Scripting Interface</string>
+   </property>
+  </action>
+  <action name="actionRange_State_2">
+   <property name="text">
+    <string>Range State</string>
+   </property>
+  </action>
+  <action name="actionSingle_Multi_State_2">
+   <property name="text">
+    <string>Single/Multi State</string>
    </property>
   </action>
  </widget>

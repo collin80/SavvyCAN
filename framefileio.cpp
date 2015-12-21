@@ -19,6 +19,7 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
+    filters.append(QString(tr("Vector trace files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -43,6 +44,7 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
         if (dialog.selectedNameFilter() == filters[2]) result = loadGenericCSVFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[5]) result = loadTraceFile(filename, frameCache);
 
         progress.cancel();
 
@@ -92,7 +94,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
         return false;
     }
 
-    line = inFile->readLine(); //read out the header first and discard it.
+    line = inFile->readLine().toUpper(); //read out the header first and discard it.
 
     while (!inFile->atEnd()) {
         lineCounter++;
@@ -119,11 +121,14 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
             }
             //qDebug() << "decimal places " << decimalPlaces;
             thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * multiplier);
-            if (tokens[1] == "R11" || tokens[1] == "R29")
+            char firstChar = tokens[1].left(1)[0];
+            if (firstChar == 'R' || firstChar == 'T')
             {
                 thisFrame.ID = tokens[2].toInt(NULL, 16);
-                if (tokens[1] == "R29") thisFrame.extended = true;
+                if (tokens[1] == "R29" || tokens[1] == "T29") thisFrame.extended = true;
                 else thisFrame.extended = false;
+                if (firstChar == 'T') thisFrame.isReceived = false;
+                else thisFrame.isReceived = true;
                 thisFrame.bus = 0;
                 thisFrame.len = tokens.length() - 3;
                 for (int d = 0; d < thisFrame.len; d++)
@@ -169,11 +174,15 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
 
         outFile->write(QString::number(frames->at(c).timestamp / 1000000.0, 'f', 6).toUtf8());
         outFile->putChar(' ');
+
+        if (frames->at(c).isReceived) outFile->putChar('R');
+        else outFile->putChar('T');
+
         if (frames->at(c).extended)
         {
-            outFile->write("R29 ");
+            outFile->write("29 ");
         }
-        else outFile->write("R11 ");
+        else outFile->write("11 ");
         outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(' ');
 
@@ -197,6 +206,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    int fileVersion = 1;
     long long timeStamp = Utility::GetTimeMS();
     int lineCounter = 0;
 
@@ -206,7 +216,8 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
         return false;
     }
 
-    line = inFile->readLine(); //read out the header first and discard it.
+    line = inFile->readLine().toUpper(); //read out the header first and discard it.
+    if (line.at(23) == 'D') fileVersion = 2; //Dir is found starting at position 23 if this is a V2 file
 
     while (!inFile->atEnd()) {
         lineCounter++;
@@ -234,11 +245,27 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
             thisFrame.ID = tokens[1].toInt(NULL, 16);
             if (tokens[2].toUpper().contains("TRUE")) thisFrame.extended = 1;
             else thisFrame.extended = 0;
-            thisFrame.bus = tokens[3].toInt();
-            thisFrame.len = tokens[4].toInt();
-            for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
-            for (int d = 0; d < thisFrame.len; d++)
-                thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
+
+            if (fileVersion == 1)
+            {
+                thisFrame.isReceived = true;
+                thisFrame.bus = tokens[3].toInt();
+                thisFrame.len = tokens[4].toInt();
+                for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
+                for (int d = 0; d < thisFrame.len; d++)
+                    thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
+            }
+            else if (fileVersion == 2)
+            {
+                if (tokens[3].at(0) == 'R') thisFrame.isReceived = true;
+                else thisFrame.isReceived = false;
+                thisFrame.bus = tokens[4].toInt();
+                thisFrame.len = tokens[5].toInt();
+                for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
+                for (int d = 0; d < thisFrame.len; d++)
+                    thisFrame.data[d] = tokens[6 + d].toInt(NULL, 16);
+            }
+
             frames->append(thisFrame);
         }
     }
@@ -258,7 +285,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
         return false;
     }
 
-    outFile->write("Time Stamp,ID,Extended,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
+    outFile->write("Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
     outFile->write("\n");
 
     for (int c = 0; c < frames->count(); c++)
@@ -278,6 +305,9 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
 
         if (frames->at(c).extended) outFile->write("true,");
         else outFile->write("false,");
+
+        if (frames->at(c).isReceived) outFile->write("Rx,");
+        else outFile->write("Tx,");
 
         outFile->write(QString::number(frames->at(c).bus).toUtf8());
         outFile->putChar(44);
@@ -447,7 +477,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
 
-        line = inFile->readLine();
+        line = inFile->readLine().toUpper();
         if (line.startsWith("***")) continue;
         if (line.length() > 1)
         {
@@ -456,6 +486,8 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
             timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
                       + (timeToks[2].toInt() * (1000ul * 1000ul)) + (timeToks[3].toInt() * 100ul);
             thisFrame.timestamp = timeStamp;
+            if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
+            else thisFrame.isReceived = false;
             thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
             if (tokens[4] == "s") thisFrame.extended = false;
             else thisFrame.extended = true;
@@ -511,7 +543,8 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 
         tempStamp = timestamp.addMSecs(frames->at(c).timestamp / 1000);
         outFile->write(tempStamp.toString("h:m:s:z").toUtf8());
-        outFile->write(" Rx ");
+        if (frames->at(c).isReceived) outFile->write(" Rx ");
+        else outFile->write(" Tx ");
         outFile->write(QString::number(frames->at(c).bus).toUtf8() + " ");
         outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
         if (frames->at(c).extended) outFile->write(" x ");
@@ -547,7 +580,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     QByteArray line;
     bool inComment = false;
-    long long timeStamp = Utility::GetTimeMS();
+    long long timeStamp;
     int lineCounter = 0;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -578,9 +611,10 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
                 if (!inComment)
                 {
                     QList<QByteArray> tokens = line.split(';');
-                    timeStamp += 5;
+                    timeStamp = tokens[0].toInt() * 1000;
                     thisFrame.timestamp = timeStamp;
-
+                    if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
+                    else thisFrame.isReceived = false;
                     thisFrame.ID = Utility::ParseStringToNum(tokens[2]);
                     if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
                     else thisFrame.extended = true;
@@ -641,7 +675,8 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
         }
 
         outFile->write(QString::number((int)(frames->at(c).timestamp / 1000)).toUtf8());
-        outFile->write(";RX;");
+        if (frames->at(c).isReceived) outFile->write(";RX;");
+        else outFile->write(";TX;");
         outFile->write("0x" + QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
         outFile->write(QString::number(frames->at(c).len).toUtf8() + ";");
 
@@ -649,6 +684,185 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
         {
             outFile->write("0x" + QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(';');
+        }
+
+        outFile->write("\n");
+
+    }
+    outFile->close();
+    delete outFile;
+    return true;
+}
+
+
+/*
+;  CAN Logger trace file
+;  Device Serial Number :
+;  Start Time : Tue, Nov 17, 2015 :: 11:19:59
+;
+;  Column description :
+;  ~~~~~~~~~~~~~~~~~~~~~
+;
+;   + Message Number
+;   |
+;   |     	     + Time Stamp (ms)
+;   |     	     |
+;   |     	     |      	    + Message ID (hex)
+;   |     	     |      	    |
+;   |     	     |      	    |   	+ Data Length Code
+;   |     	     |      	    |   	|
+;   |     	     |      	    |   	|	 + Data Bytes (hex)
+;   |     	     |      	    |   	|	 |
+;---+-----	-----+------	----+---	+	-+ -- -- -- -- -- -- --
+         0	00:00:00:0008	00000268	8	55 00 84 03 A8 0D 38 00
+         1	00:00:00:0021	0000000E	8	1F D3 3F FF 08 FF E0 CB
+
+It appears that all lines that start in a semicolon are comments
+The rest of the lines need the whitespace stripped from beginning and end
+and then it appears to be tab delimited. The first field is a sequence number
+and irrelevant. The second field is a funky timestamp, then message id, etc as
+shown in the file comments. The bytes seem to be space delimited and in hex
+*/
+
+bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    long long timeStamp = 0;
+    int lineCounter = 0;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        line = inFile->readLine();
+        line = line.trimmed();
+        if (line.length() > 2)
+        {
+            if (line.startsWith(";"))
+            {
+                // a comment. Ignore it.
+            }
+            else
+            {
+                QList<QByteArray> tokens = line.split('\t');
+
+                QList<QByteArray> timestampToks = tokens[1].split(':');
+
+                timeStamp = timestampToks[0].toInt() * 1000000ul * 60 * 60;
+                timeStamp += timestampToks[1].toInt() * 1000000ul * 60;
+                timeStamp += timestampToks[2].toInt() * 1000000ul;
+                timeStamp += timestampToks[3].toInt() * 100;
+
+                thisFrame.timestamp = timeStamp;
+
+                thisFrame.ID = tokens[2].toLong(NULL, 16);
+                if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
+                else thisFrame.extended = true;
+                thisFrame.bus = 0;
+                thisFrame.len = tokens[3].toInt();
+
+                QList<QByteArray> dataToks = tokens[4].split(' ');
+                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)dataToks[d].toInt(NULL, 16);
+                frames->append(thisFrame);
+            }
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return true;
+}
+
+bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * frames)
+{
+    QFile *outFile = new QFile(filename);
+    QDateTime timestamp;
+    int lineCounter = 0;
+    uint64_t tempTime;
+    int tempTimePiece;
+
+    timestamp = QDateTime::currentDateTime();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+
+    outFile->write(";  SavvyCAN CAN Logger trace file\n");
+    outFile->write(";  Device Serial Number : 0000 \n");
+    outFile->write(";  Start Time : ");
+    outFile->write(timestamp.toString("ddd, MMM dd, yyyy :: h:m:s\n").toUtf8());
+    outFile->write(";\n");
+    outFile->write(";  Column description :\n");
+    outFile->write(";  ~~~~~~~~~~~~~~~~~~~~~\n");
+    outFile->write(";\n");
+    outFile->write(";   + Message Number\n");
+    outFile->write(";   |\n");
+    outFile->write(";   |     	     + Time Stamp (ms)\n");
+    outFile->write(";   |     	     |\n");
+    outFile->write(";   |     	     |      	    + Message ID (hex)\n");
+    outFile->write(";   |     	     |      	    |\n");
+    outFile->write(";   |     	     |      	    |   	+ Data Length Code\n");
+    outFile->write(";   |     	     |      	    |   	|\n");
+    outFile->write(";   |     	     |      	    |   	|	 + Data Bytes (hex)\n");
+    outFile->write(";   |     	     |      	    |   	|	 |\n");
+    outFile->write(";---+-----	-----+------	----+---	+	-+ -- -- -- -- -- -- --\n");
+
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if ((lineCounter % 100) == 0)
+        {
+            qApp->processEvents();
+            //lineCounter = 0;
+        }
+
+
+         //1F D3 3F FF 08 FF E0 CB
+        outFile->write(QString::number(lineCounter).rightJustified(10, ' ').toUtf8());
+        outFile->write("\t");
+
+        tempTime = frames->at(c).timestamp;
+        tempTimePiece = tempTime / 1000000ul / 60 / 60;
+        tempTime -= tempTimePiece * 1000000ul * 60 * 60;
+        outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
+        outFile->write(":");
+
+        tempTimePiece = tempTime / 1000000ul / 60;
+        tempTime -= tempTimePiece * 1000000ul * 60;
+        outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
+        outFile->write(":");
+
+        tempTimePiece = tempTime / 1000000ul;
+        tempTime -= tempTimePiece * 1000000ul;
+        outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
+        outFile->write(":");
+
+        tempTimePiece = tempTime / 100;
+        outFile->write(QString::number(tempTimePiece).rightJustified(4, '0').toUtf8());
+        outFile->write("\t");
+
+        outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + "\t");
+
+        outFile->write(QString::number(frames->at(c).len).toUtf8() + "\t");
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
         }
 
         outFile->write("\n");

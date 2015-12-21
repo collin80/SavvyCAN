@@ -17,7 +17,7 @@ int CANFrameModel::totalFrameCount()
 int CANFrameModel::columnCount(const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    return 6;
+    return 7;
 }
 
 CANFrameModel::CANFrameModel(QObject *parent)
@@ -159,7 +159,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() >= filteredFrames.count())
+    if (index.row() >= (filteredFrames.count()))
         return QVariant();
 
     if (role == Qt::DisplayRole) {
@@ -168,7 +168,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         {
         case 0: //timestamp
             if (!timeSeconds) return QString::number(thisFrame.timestamp);
-            else return QString::number(thisFrame.timestamp / 1000000.0f);
+            else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
             break;
         case 1: //id            
             return Utility::formatNumber(thisFrame.ID);
@@ -176,13 +176,17 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case 2: //ext
             return QString::number(thisFrame.extended);
             break;
-        case 3: //bus
+        case 3: //direction
+            if (thisFrame.isReceived) return QString(tr("Rx"));
+            else return QString(tr("Tx"));
+            break;
+        case 4: //bus
             return QString::number(thisFrame.bus);
             break;
-        case 4: //len
+        case 5: //len
             return QString::number(thisFrame.len);
             break;
-        case 5: //data
+        case 6: //data
             for (int i = 0; i < thisFrame.len; i++)
             {
                 tempString.append(Utility::formatNumber(thisFrame.data[i]));
@@ -234,12 +238,15 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
             return QString(tr("Ext"));
             break;
         case 3:
-            return QString(tr("Bus"));
+            return QString(tr("Dir"));
             break;
         case 4:
-            return QString(tr("Len"));
+            return QString(tr("Bus"));
             break;
         case 5:
+            return QString(tr("Len"));
+            break;
+        case 6:
             return QString(tr("Data"));
             break;
         }
@@ -251,25 +258,27 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
+void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
 {
     mutex.lock();
-    frame.timestamp -= timeOffset;
+    CANFrame tempFrame;
+    tempFrame = frame;
+    tempFrame.timestamp -= timeOffset;
 
     //if this ID isn't found in the filters list then add it and show it by default
-    if (!filters.contains(frame.ID))
+    if (!filters.contains(tempFrame.ID))
     {
-        filters.insert(frame.ID, true);
+        filters.insert(tempFrame.ID, true);
         needFilterRefresh = true;
     }
 
     if (!overwriteDups)
     {        
-        frames.append(frame);        
-        if (filters[frame.ID])
+        frames.append(tempFrame);
+        if (filters[tempFrame.ID])
         {
             if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
-            filteredFrames.append(frame);
+            filteredFrames.append(tempFrame);
             if (autoRefresh) endInsertRows();
         }
     }
@@ -278,20 +287,20 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         bool found = false;
         for (int i = 0; i < frames.count(); i++)
         {
-            if (frames[i].ID == frame.ID)
+            if (frames[i].ID == tempFrame.ID)
             {                
-                frames.replace(i, frame);                
+                frames.replace(i, tempFrame);
                 found = true;
                 break;
             }
         }
         if (!found)
         {            
-            frames.append(frame);
-            if (filters[frame.ID])
+            frames.append(tempFrame);
+            if (filters[tempFrame.ID])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
-                filteredFrames.append(frame);
+                filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
         }
@@ -299,10 +308,10 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
-                if (filteredFrames[j].ID == frame.ID)
+                if (filteredFrames[j].ID == tempFrame.ID)
                 {
                     if (autoRefresh) beginResetModel();
-                    filteredFrames.replace(j, frame);
+                    filteredFrames.replace(j, tempFrame);
                     if (autoRefresh) endResetModel();
                 }
             }
@@ -383,6 +392,11 @@ void CANFrameModel::clearFrames()
  */
 void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
 {    
+    //not resetting the model here because the serial worker automatically does a bulk refresh every 1/4 second
+    //and that refresh will cause the view to update. If you do both it usually ends up thinking you have
+    //double the number of frames.
+    //beginResetModel();
+    mutex.lock();
     int insertedFiltered = 0;
     for (int i = 0; i < newFrames.count(); i++)
     {
@@ -398,9 +412,10 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
             filteredFrames.append(newFrames[i]);
         }
     }
-
-    beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
-    endInsertRows();
+    mutex.unlock();
+    //endResetModel();
+    //beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
+    //endInsertRows();
     if (needFilterRefresh) emit updatedFiltersList();
 }
 

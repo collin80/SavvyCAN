@@ -49,15 +49,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    QStringList headers;
-    headers << "Timestamp" << "ID" << "Ext" << "Bus" << "Len" << "Data";
-    //model->setHorizontalHeaderLabels(headers);
     ui->canFramesView->setColumnWidth(0, 110);
     ui->canFramesView->setColumnWidth(1, 70);
     ui->canFramesView->setColumnWidth(2, 40);
     ui->canFramesView->setColumnWidth(3, 40);
     ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 275);
+    ui->canFramesView->setColumnWidth(5, 40);
+    ui->canFramesView->setColumnWidth(6, 275);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
@@ -66,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent) :
     worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(&serialWorkerThread, &QThread::started, worker, &SerialWorker::run); //setup timers within the proper thread
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
     connect(worker, &SerialWorker::frameUpdateTick, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
@@ -78,7 +77,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
     connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
     serialWorkerThread.start();
-    serialWorkerThread.setPriority(QThread::HighPriority);
+    serialWorkerThread.setPriority(QThread::HighPriority);    
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -91,46 +90,50 @@ MainWindow::MainWindow(QWidget *parent) :
     firmwareUploaderWindow = NULL;
     discreteStateWindow = NULL;
     connectionWindow = NULL;
+    scriptingWindow = NULL;
+    rangeWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
 
     model->setDBCHandler(dbcHandler);
 
-    connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
-    connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
-    connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
-    connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
-    connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
-    connect(ui->actionSave_Filtered_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilteredFile()));
-    connect(ui->actionLoad_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleLoadFilters()));
-    connect(ui->actionSave_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilters()));
-    connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
-    connect(ui->actionFlow_View, SIGNAL(triggered(bool)), this, SLOT(showFlowViewWindow()));
-    connect(ui->action_Custom, SIGNAL(triggered(bool)), this, SLOT(showFrameSenderWindow()));
-    connect(ui->actionLoad_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadDBC()));
-    connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
-    connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
-    connect(ui->canFramesView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(gridDoubleClicked(QModelIndex)));
-    connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
-    connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
-    connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
-    connect(ui->btnCaptureToggle, SIGNAL(clicked(bool)), this, SLOT(toggleCapture()));
-    connect(ui->actionExit_Application, SIGNAL(triggered(bool)), this, SLOT(exitApp()));
-    connect(ui->actionFuzzy_Scope, SIGNAL(triggered(bool)), this, SLOT(showFuzzyScopeWindow()));
-    connect(ui->actionRange_State, SIGNAL(triggered(bool)), this, SLOT(showRangeWindow()));
-    connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
-    connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
-    connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
-    connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
-    connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
-    connect(model, SIGNAL(updatedFiltersList()), this, SLOT(updateFilterList()));
-    connect(ui->listFilters, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(filterListItemChanged(QListWidgetItem*)));
-    connect(ui->btnFilterAll, SIGNAL(clicked(bool)), this, SLOT(filterSetAll()));
-    connect(ui->btnFilterNone, SIGNAL(clicked(bool)), this, SLOT(filterClearAll()));
-    connect(ui->actionFirmware_Uploader, SIGNAL(triggered(bool)), this, SLOT(showFirmwareUploaderWindow()));
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connButtonPress()));
+    connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
+    connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
+    connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
+    connect(ui->btnClearFrames, &QAbstractButton::clicked, this, &MainWindow::clearFrames);
+    connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
+    connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
+    connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
+    connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
+    connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
+    connect(ui->btnBaudSet, &QAbstractButton::clicked, this, &MainWindow::changeBaudRates);
+    connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
+    connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
+    connect(ui->actionLoad_DBC_File, &QAction::triggered, this, &MainWindow::handleLoadDBC);
+    connect(ui->actionSave_DBC_File, &QAction::triggered, this, &MainWindow::handleSaveDBC);
+    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
+    connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
+    connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->actionEdit_Messages_Signals, &QAction::triggered, this, &MainWindow::showDBCEditor);
+    connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
+    connect(ui->actionExit_Application, &QAction::triggered, this, &MainWindow::exitApp);
+    connect(ui->actionFuzzy_Scope, &QAction::triggered, this, &MainWindow::showFuzzyScopeWindow);
+    connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
+    connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
+    connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
+    connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
+    connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
+    connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
+    connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
+    connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
+    connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
+    connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
+    connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
+    connect(ui->actionFirmware_Uploader, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -222,6 +225,18 @@ MainWindow::~MainWindow()
     {
         connectionWindow->close();
         delete connectionWindow;
+    }
+   
+    if (scriptingWindow)
+    {
+        scriptingWindow->close();
+        delete scriptingWindow;
+    }
+
+    if (rangeWindow)
+    {
+        rangeWindow->close();
+        delete rangeWindow;
     }
 
     delete ui;
@@ -492,6 +507,7 @@ void MainWindow::handleLoadFile()
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -520,13 +536,13 @@ void MainWindow::handleLoadFile()
         if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[5]) result = FrameFileIO::loadTraceFile(filename, &tempFrames);
 
         progress.cancel();
 
         if (result)
         {
             model->insertFrames(tempFrames);
-
             QStringList fileList = filename.split('/');
             loadedFileName = fileList[fileList.length() - 1];
 
@@ -552,6 +568,7 @@ void MainWindow::handleSaveFile()
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -599,6 +616,12 @@ void MainWindow::handleSaveFile()
             result = FrameFileIO::saveMicrochipFile(filename, frames);
         }
 
+        if (dialog.selectedNameFilter() == filters[5])
+        {
+            if (!filename.contains('.')) filename += ".trace";
+            result = FrameFileIO::saveTraceFile(filename, frames);
+        }
+
         progress.cancel();
 
         if (result)
@@ -622,6 +645,7 @@ void MainWindow::handleSaveFilteredFile()
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.log)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -667,6 +691,12 @@ void MainWindow::handleSaveFilteredFile()
         {
             if (!filename.contains('.')) filename += ".log";
             result = FrameFileIO::saveMicrochipFile(filename, frames);
+        }
+
+        if (dialog.selectedNameFilter() == filters[5])
+        {
+            if (!filename.contains('.')) filename += ".trace";
+            result = FrameFileIO::saveTraceFile(filename, frames);
         }
 
         progress.cancel();
@@ -988,7 +1018,7 @@ void MainWindow::showFrameSenderWindow()
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
 
-        connect(frameSenderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -1034,9 +1064,23 @@ void MainWindow::showSingleMultiWindow()
     discreteStateWindow->show();
 }
 
+void MainWindow::showScriptingWindow()
+{
+    if (!scriptingWindow)
+    {
+        scriptingWindow = new ScriptingWindow(model->getListReference());
+        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
+    }
+    scriptingWindow->show();
+}
+
 void MainWindow::showRangeWindow()
 {
-    //not done yet
+    if (!rangeWindow)
+    {
+        rangeWindow = new RangeStateWindow(model->getListReference());
+    }
+    rangeWindow->show();
 }
 
 void MainWindow::showFuzzyScopeWindow()

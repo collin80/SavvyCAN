@@ -388,6 +388,7 @@ void FramePlaybackWindow::btnLoadFile()
                 currentSeqNum = 0;
                 currentSeqItem = &seqItems[0];
             }
+            refreshIDList();
             updateFrameLabel();
         }
     }
@@ -416,6 +417,7 @@ void FramePlaybackWindow::btnLoadLive()
         currentSeqNum = 0;
         currentSeqItem = &seqItems[0];
     }
+    refreshIDList();
     updateFrameLabel();
     btnStopClick();
 }

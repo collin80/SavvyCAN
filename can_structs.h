@@ -9,6 +9,7 @@ public:
     int ID;
     int bus;
     bool extended;
+    bool isReceived; //did we receive this or send it?
     int len;
     unsigned char data[8];
     uint64_t timestamp;
