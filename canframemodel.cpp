@@ -323,18 +323,23 @@ void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
 
 void CANFrameModel::sendRefresh()
 {
+    mutex.lock();
     qDebug() << "Sending mass refresh";
+    QVector<CANFrame> tempContainer;
     beginResetModel();
-    filteredFrames.clear();
-    for (int i = 0; i < frames.count(); i++)
+    int count = frames.count();
+    for (int i = 0; i < count; i++)
     {
         if (filters[frames[i].ID])
         {
-            filteredFrames.append(frames[i]);
+            tempContainer.append(frames[i]);
         }
     }
+    filteredFrames.clear();
+    filteredFrames = tempContainer;
     lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
+    mutex.unlock();
 }
 
 void CANFrameModel::sendRefresh(int pos)
@@ -359,6 +364,8 @@ void CANFrameModel::sendBulkRefresh(int num)
     if (num == 0) return;
     if (filteredFrames.count() == 0) return;
 
+    mutex.lock();
+
     if (!overwriteDups)
     {        
         if (num > filteredFrames.count()) num = filteredFrames.count();
@@ -369,6 +376,7 @@ void CANFrameModel::sendBulkRefresh(int num)
     {
         sendRefresh();
     }
+    mutex.unlock();
 }
 
 void CANFrameModel::clearFrames()

@@ -13,8 +13,6 @@ Things that were planned for the GVRET-PC project but never completed.
 
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
 
-Range state - Find things that range like accelerator pedal inputs, road speed, tach, etc
-
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
 */
@@ -321,6 +319,7 @@ void MainWindow::connButtonPress()
                 if (ports[i].portName() == portName)
                 {
                     portInfo = ports[i];
+                    //need to create some way to send single wire mode to serial port code
                     emit sendSerialPort(&portInfo);
                     lbStatusConnected.setText(tr("Attempting to connect to port ") + portName);
                 }
@@ -907,6 +906,7 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
     */
+    connectionWindow->setSpeeds(baud0, baud1);
     //ui->btnConnect->setEnabled(false);
     ui->actionConnect->setText(tr("Disconnect"));
     isConnected = true;
@@ -961,6 +961,9 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
                        + "\n\nPlease upgrade your firmware version.\nOtherwise, you may experience difficulties.");
         msgBox.exec();
     }
+
+    if (swCAN == 1) connectionWindow->setCAN1SWMode(true);
+    else connectionWindow->setCAN1SWMode(false);
 }
 
 void MainWindow::setTargettedID(int id)

@@ -103,6 +103,8 @@ void ConnectionWindow::setSpeeds(int speed0, int speed1)
 {
     bool found = false;
 
+    qDebug() << speed0 << "X" << speed1;
+
     for (int i = 0; i < ui->cbSpeed0->count(); i++)
     {
         if (ui->cbSpeed0->itemText(i).toInt() == speed0)
@@ -183,4 +185,15 @@ ConnectionType::ConnectionType ConnectionWindow::getConnectionType()
     if (ui->rbGVRET->isChecked()) return ConnectionType::GVRET_SERIAL;
     if (ui->rbKvaser->isChecked()) return ConnectionType::KVASER;
     if (ui->rbSocketCAN->isChecked()) return ConnectionType::SOCKETCAN;
+}
+
+void ConnectionWindow::setCAN1SWMode(bool mode)
+{
+    ui->ckSingleWire->setChecked(mode);
+}
+
+bool ConnectionWindow::getCAN1SWMode()
+{
+    if (ui->ckSingleWire->checkState() == Qt::Checked) return true;
+    return false;
 }

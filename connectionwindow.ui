@@ -97,6 +97,13 @@
     </layout>
    </item>
    <item>
+    <widget class="QCheckBox" name="ckSingleWire">
+     <property name="text">
+      <string>Set CAN1 to Single Wire Mode</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="btnOK">
      <property name="text">
       <string>Update Settings</string>
