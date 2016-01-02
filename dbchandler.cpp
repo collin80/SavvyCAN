@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QMessageBox>
 #include "utility.h"
 
 DBCHandler::DBCHandler(QObject *parent) : QObject(parent)
@@ -17,6 +18,7 @@ void DBCHandler::loadDBCFile(QString filename)
     QRegularExpression regex;
     QRegularExpressionMatch match;
     DBC_MESSAGE *currentMessage = NULL;
+    int numSigFaults = 0, numMsgFaults = 0;
 
     qDebug() << "DBC File: " << filename;
 
@@ -37,9 +39,9 @@ void DBCHandler::loadDBCFile(QString filename)
 
     while (!inFile->atEnd()) {
         line = QString(inFile->readLine().simplified());
-        if (line.startsWith("BO_ "))
+        if (line.startsWith("BO_ ")) //defines a message
         {
-            //qDebug() << "Found a BO line";
+            qDebug() << "Found a BO line";
             regex.setPattern("^BO\\_ (\\w+) (\\w+) *: (\\w+) (\\w+)");
             match = regex.match(line);
             //captured 1 = the ID in decimal
@@ -56,11 +58,12 @@ void DBCHandler::loadDBCFile(QString filename)
                 dbc_messages.append(msg);
                 currentMessage = &dbc_messages.last();
             }
+            else numMsgFaults++;
         }
-        if (line.startsWith("SG_ "))
+        if (line.startsWith("SG_ ")) //defines a signal
         {
-            //qDebug() << "Found a SG line";
-            regex.setPattern("^SG\\_ (\\w+) : (\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            qDebug() << "Found a SG line";
+            regex.setPattern("^SG\\_ (\\w+) ?: ?(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
             match = regex.match(line);
             //captured 1 is the signal name
             //captured 2 is the starting bit
@@ -117,10 +120,11 @@ void DBCHandler::loadDBCFile(QString filename)
                 else sig.receiver = findNodeByName(match.captured(11));
                 currentMessage->msgSignals.append(sig);
             }
+            else numSigFaults++;
         }
-        if (line.startsWith("BU_:"))
+        if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
         {
-            //qDebug() << "Found a BU line";
+            qDebug() << "Found a BU line";
             regex.setPattern("^BU\\_\\:(.*)");
             match = regex.match(line);
             //captured 1 = a list of node names separated by spaces. No idea how many yet
@@ -142,7 +146,7 @@ void DBCHandler::loadDBCFile(QString filename)
         }
         if (line.startsWith("CM_ SG_ "))
         {
-            //qDebug() << "Found an SG comment line";
+            qDebug() << "Found an SG comment line";
             regex.setPattern("^CM\\_ SG\\_ *(\\w+) *(\\w+) *\\\"(.*)\\\";");
             match = regex.match(line);
             //captured 1 is the ID to match against to get to the message
@@ -164,7 +168,7 @@ void DBCHandler::loadDBCFile(QString filename)
         }
         if (line.startsWith("CM_ BO_ "))
         {
-            //qDebug() << "Found a BO comment line";
+            qDebug() << "Found a BO comment line";
             regex.setPattern("^CM\\_ BO\\_ *(\\w+) *\\\"(.*)\\\";");
             match = regex.match(line);
             //captured 1 is the ID to match against to get to the message
@@ -181,7 +185,7 @@ void DBCHandler::loadDBCFile(QString filename)
         }
         if (line.startsWith("CM_ BU_ "))
         {
-            //qDebug() << "Found a BU comment line";
+            qDebug() << "Found a BU comment line";
             regex.setPattern("^CM\\_ BU\\_ *(\\w+) *\\\"(.*)\\\";");
             match = regex.match(line);
             //captured 1 is the Node name
@@ -199,7 +203,7 @@ void DBCHandler::loadDBCFile(QString filename)
         //VAL_ (1090) (VCUPresentParkLightOC) (1 "Error present" 0 "Error not present") ;
         if (line.startsWith("VAL_ "))
         {
-            //qDebug() << "Found a value definition line";
+            qDebug() << "Found a value definition line";
             regex.setPattern("^VAL\\_ (\\w+) (\\w+) (.*);");
             match = regex.match(line);
             //captured 1 is the ID to match against
@@ -260,6 +264,16 @@ void DBCHandler::loadDBCFile(QString filename)
 
         }
 */
+    }
+    if (numSigFaults > 0 || numMsgFaults > 0)
+    {
+        QMessageBox msgBox;
+        QString msg = "DBC file loaded with errors!\n";
+        msg += "Number of faulty message entries: " + QString::number(numMsgFaults) + "\n";
+        msg += "Number of faulty signal entries: " + QString::number(numSigFaults) + "\n\n";
+        msg += "Faulty entries have not been loaded.";
+        msgBox.setText(msg);
+        msgBox.exec();
     }
     inFile->close();
     delete inFile;
