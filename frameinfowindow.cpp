@@ -113,6 +113,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int maxData[8];
     int dataHistogram[256][8];
     int bitfieldHistogram[64];
+    uint8_t changedBits[8];
+    uint8_t referenceBits[8];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
     targettedID = Utility::ParseStringToNum(newID);
@@ -196,6 +198,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
         for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
 
+        for (int c = 0; c < 8; c++)
+        {
+            changedBits[c] = 0;
+            referenceBits[c] = frameCache.at(0).data[c];
+            qDebug() << referenceBits[c];
+        }
+
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
@@ -217,6 +226,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                         bitfieldHistogram[c * 8 + l]++;
                     }
                 }
+                changedBits[c] |= referenceBits[c] ^ dat;
             }
         }
 
@@ -242,6 +252,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
             dataBase->setText(0, tr("Data Byte ") + QString::number(c));
             baseNode->addChild(dataBase);
+
+            tempItem = new QTreeWidgetItem();
+            QString builder;
+            builder = tr("Changed bits: 0x") + QString::number(changedBits[c], 16) + "  (" + Utility::formatByteAsBinary(changedBits[c]) + ")";
+            tempItem->setText(0, builder);
+            dataBase->addChild(tempItem);
+
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, tr("Range: ") + Utility::formatNumber(minData[c]) + tr(" to ") + Utility::formatNumber(maxData[c]));
             dataBase->addChild(tempItem);
@@ -253,7 +270,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 if (dataHistogram[d][c] > 0)
                 {
                     tempItem = new QTreeWidgetItem();
-                    tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +": " + QString::number(dataHistogram[d][c]));
+                    tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +" (" + Utility::formatByteAsBinary(d) +") -> " + QString::number(dataHistogram[d][c]));
                     histBase->addChild(tempItem);
                 }
             }            

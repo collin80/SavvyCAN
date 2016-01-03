@@ -73,6 +73,17 @@ public:
         else return formatHexNum(value);
     }
 
+    static QString formatByteAsBinary(uint8_t value)
+    {
+        QString output;
+        for (int b = 7; b >= 0; b--)
+        {
+            if (value & (1 << b)) output += "1";
+            else output += "0";
+        }
+        return output;
+    }
+
     //parses the input string to grab as much of it as possible while staying alpha numeric
     static QString grabAlphaNumeric(QString &input)
     {

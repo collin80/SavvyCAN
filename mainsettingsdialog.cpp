@@ -29,7 +29,6 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbTimeSeconds->setChecked(settings->value("Main/TimeSeconds", false).toBool());
     ui->comboSendingBus->setCurrentIndex(settings->value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings->value("Main/UseFiltered", false).toBool());
-    ui->cbSingleWire->setChecked(settings->value("Main/SingleWireMode", false).toBool());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -44,7 +43,6 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbTimeSeconds, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
-    connect(ui->cbSingleWire, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -73,7 +71,6 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/TimeSeconds", ui->cbTimeSeconds->isChecked());
     settings->setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings->setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
-    settings->setValue("Main/SingleWireMode", ui->cbSingleWire->isChecked());
 
     settings->sync();
 }
