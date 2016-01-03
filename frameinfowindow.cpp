@@ -13,8 +13,10 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     modelFrames = frames;
 
-    connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(updateDetailsWindow(QString)));
-    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+    connect(ui->listFrameID, &QListWidget::currentTextChanged, this, &FrameInfoWindow::updateDetailsWindow);
+    connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
+    connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
+
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -230,7 +232,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             }
         }
 
-        avgInterval = avgInterval / (frameCache.count() - 1);
+        if (frameCache.count() > 1)
+            avgInterval = avgInterval / (frameCache.count() - 1);
+        else avgInterval = 0;
 
         tempItem = new QTreeWidgetItem();
 
@@ -317,3 +321,55 @@ void FrameInfoWindow::refreshIDList()
     ui->listFrameID->sortItems();
     ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
 }
+
+void FrameInfoWindow::saveDetails()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Text File (*.txt)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".txt";
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            QFile *outFile = new QFile(filename);
+
+            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                delete outFile;
+                return;
+            }
+
+            //go through all IDs, recalculate the data, and then save it to file
+            for (int i = 0; i < ui->listFrameID->count(); i++)
+            {
+                updateDetailsWindow(ui->listFrameID->item(i)->text());
+                dumpNode(ui->treeDetails->invisibleRootItem(), outFile, 0);
+                outFile->write("\n\n");
+            }
+
+            outFile->close();
+            delete outFile;
+        }
+    }
+}
+
+void FrameInfoWindow::dumpNode(QTreeWidgetItem* item, QFile *file, int indent)
+{
+    for (int i = 0; i < indent; i++) file->write("\t");
+    file->write(item->text(0).toUtf8());
+    file->write("\n");
+    for( int i = 0; i < item->childCount(); ++i )
+        dumpNode( item->child(i), file, indent + 1 );
+}
+
+
