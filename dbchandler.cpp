@@ -62,10 +62,42 @@ void DBCHandler::loadDBCFile(QString filename)
         }
         if (line.startsWith("SG_ ")) //defines a signal
         {
+            int offset = 0;
+            bool isMultiplexor = false;
+            bool isMultiplexed = false;
+            DBC_SIGNAL sig;
+
             qDebug() << "Found a SG line";
-            regex.setPattern("^SG\\_ (\\w+) ?: ?(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *(\\w+) *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+
             match = regex.match(line);
+            if (match.hasMatch())
+            {
+                qDebug() << "Multiplexor signal";
+                isMultiplexor = true;
+                sig.isMultiplexor = true;
+            }
+            else
+            {
+                regex.setPattern("^SG\\_ *(\\w+) *m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                match = regex.match(line);
+                if (match.hasMatch())
+                {
+                    qDebug() << "Multiplexed signal";
+                    isMultiplexed = true;
+                    sig.isMultiplexed = true;
+                    sig.multiplexValue = match.captured(2).toInt();
+                    offset = 1;
+                }
+                else
+                {
+                    regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                    match = regex.match(line);
+                }
+            }
+
             //captured 1 is the signal name
+            //captured 2 would be multiplex value if this is a multiplex signal. Then offset the rest of these by 1
             //captured 2 is the starting bit
             //captured 3 is the length in bits
             //captured 4 is the byte order / value type
@@ -78,15 +110,14 @@ void DBCHandler::loadDBCFile(QString filename)
             //captured 11 is the receiving node
 
             if (match.hasMatch())
-            {
-                DBC_SIGNAL sig;
+            {                
                 sig.name = match.captured(1);
-                sig.startBit = match.captured(2).toInt();
-                sig.signalSize = match.captured(3).toInt();
-                int val = match.captured(4).toInt();
+                sig.startBit = match.captured(2 + offset).toInt();
+                sig.signalSize = match.captured(3 + offset).toInt();
+                int val = match.captured(4 + offset).toInt();
                 if (val < 2)
                 {
-                    if (match.captured(5) == "+") sig.valType = UNSIGNED_INT;
+                    if (match.captured(5 + offset) == "+") sig.valType = UNSIGNED_INT;
                     else sig.valType = SIGNED_INT;
                 }
                 switch (val)
@@ -107,18 +138,19 @@ void DBCHandler::loadDBCFile(QString filename)
                     sig.valType = STRING;
                     break;
                 }
-                sig.factor = match.captured(6).toDouble();
-                sig.bias = match.captured(7).toDouble();
-                sig.min = match.captured(8).toDouble();
-                sig.max = match.captured(9).toDouble();
-                sig.unitName = match.captured(10);
-                if (match.captured(11).contains(','))
+                sig.factor = match.captured(6 + offset).toDouble();
+                sig.bias = match.captured(7 + offset).toDouble();
+                sig.min = match.captured(8 + offset).toDouble();
+                sig.max = match.captured(9 + offset).toDouble();
+                sig.unitName = match.captured(10 + offset);
+                if (match.captured(11 + offset).contains(','))
                 {
                     QString tmp = match.captured(11).split(',')[0];
                     sig.receiver = findNodeByName(tmp);
                 }
-                else sig.receiver = findNodeByName(match.captured(11));
+                else sig.receiver = findNodeByName(match.captured(11 + offset));
                 currentMessage->msgSignals.append(sig);
+                if (isMultiplexor) currentMessage->multiplexorSignal = &currentMessage->msgSignals.last();
             }
             else numSigFaults++;
         }
@@ -357,7 +389,16 @@ void DBCHandler::saveDBCFile(QString filename)
         for (int s = 0; s < msg.msgSignals.count(); s++)
         {
             DBC_SIGNAL sig = msg.msgSignals[s];
-            msgOutput.append("    SG_ " + sig.name + " : " + QString::number(sig.startBit) + "|" + QString::number(sig.signalSize) + "@");
+            msgOutput.append("   SG_ " + sig.name);
+
+            if (sig.isMultiplexor) msgOutput.append(" M");
+            if (sig.isMultiplexed)
+            {
+                msgOutput.append(" m" + QString::number(sig.multiplexValue));
+            }
+
+            msgOutput.append(" : " + QString::number(sig.startBit) + "|" + QString::number(sig.signalSize) + "@");
+
             switch (sig.valType)
             {
             case UNSIGNED_INT:
@@ -554,6 +595,8 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
 
     int64_t result = 0;
     bool isSigned = false;
+    double endResult;
+
     if (sig.valType == STRING)
     {
         QString buildString;
@@ -564,10 +607,29 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
     }   
 
     if (sig.valType == SIGNED_INT) isSigned = true;
-    result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
-
-    double endResult = ((double)result * sig.factor) + sig.bias;
-    result = (int) endResult;
+    if (sig.valType == SIGNED_INT || sig.valType == UNSIGNED_INT)
+    {
+        result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
+        endResult = ((double)result * sig.factor) + sig.bias;
+        result = (int64_t)endResult;
+    }
+    else if (sig.valType == SP_FLOAT)
+    {
+        //The theory here is that we force the integer signal code to treat this as
+        //a 32 bit unsigned integer. This integer is then cast into a float in such a way
+        //that the bytes that make up the integer are instead treated as having made up
+        //a 32 bit single precision float. That's evil incarnate but it is very fast and small
+        //in terms of new code.
+        result = Utility::processIntegerSignal(frame.data, sig.startBit, 32, false, false);
+        endResult = (*((float *)(&result)) * sig.factor) + sig.bias;
+    }
+    else //double precision float
+    {
+        //like the above, this is rotten and evil and wrong in so many ways. Force
+        //calculation of a 64 bit integer and then cast it into a double.
+        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
+        endResult = (*((double *)(&result)) * sig.factor) + sig.bias;
+    }
 
     QString outputString;
 
@@ -581,11 +643,33 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
         }
     }
     else //otherwise display the actual number and unit (if it exists)
-    {
+    {              
        outputString += QString::number(endResult) + sig.unitName;
     }
 
     return outputString;
+}
+
+//Works quite a bit like the above version but this one is cut down and only will return int32_t which is perfect for
+//uses like calculating a multiplexor value or if you know you are going to get an integer returned
+//from a signal and you want to use it as-is and not have to convert back from a string. Use with caution though
+//as this basically assumes the signal is an integer. If it isn't you get -1 back.
+int32_t processSignalInt(const CANFrame &frame, const DBC_SIGNAL &sig)
+{
+    int32_t result = 0;
+    bool isSigned = false;
+    if (sig.valType == STRING || sig.valType == SP_FLOAT  || sig.valType == DP_FLOAT)
+    {
+        return -1; //I warned you!
+    }
+
+    if (sig.valType == SIGNED_INT) isSigned = true;
+    result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
+
+    double endResult = ((double)result * sig.factor) + sig.bias;
+    result = (int32_t)endResult;
+
+    return result;
 }
 
 //given a byte it will reverse the bit order in that byte

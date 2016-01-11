@@ -39,6 +39,7 @@ private:
     void refreshSignalsList();
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);
+    void generateUsedBits();
 
     void closeEvent(QCloseEvent *event);
     void readSettings();

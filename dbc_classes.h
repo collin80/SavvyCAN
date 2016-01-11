@@ -61,6 +61,9 @@ public:
     int startBit;
     int signalSize;
     bool intelByteOrder; //true is obviously little endian. False is big endian
+    bool isMultiplexor;
+    bool isMultiplexed;
+    int multiplexValue;
     DBC_SIG_VAL_TYPE valType;
     double factor;
     double bias;
@@ -83,6 +86,7 @@ public:
     DBC_NODE *sender;
     QList<DBC_ATTRIBUTE> attributes;
     QList<DBC_SIGNAL> msgSignals;
+    DBC_SIGNAL* multiplexorSignal;
 };
 
 

@@ -15,6 +15,8 @@ Single / Multi state - The goal is to find bits that change based on toggles or 
 
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
+
+Change dbc editor to be able to do multiplexed signals
 */
 
 QString MainWindow::loadedFileName = "";
@@ -820,7 +822,7 @@ void MainWindow::handleSaveDecoded()
 void MainWindow::saveDecodedTextFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    const QVector<CANFrame> *frames = model->getListReference();
+    const QVector<CANFrame> *frames = model->getFilteredListReference();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
