@@ -181,6 +181,8 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
                 {
                     currentSignal->isMultiplexed = true;
                     currentSignal->isMultiplexor = false;
+                    //if the set multiplexor for the message was this signal then clear it
+                    if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = NULL;
                 }
             });
 
@@ -189,8 +191,12 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             {
                 if (state) //signal is now set as a multiplexed signal
                 {
+                    //don't allow this signal to be a multiplexor if there is already one for this message.
+                    //if (dbcMessage->multiplexorSignal != currentSignal && dbcMessage->multiplexorSignal != NULL) return; //I spoke too soon above...
                     currentSignal->isMultiplexed = false;
                     currentSignal->isMultiplexor = true;
+                    //we just set that this is the multiplexor so update the message to show that as well.
+                    dbcMessage->multiplexorSignal = currentSignal;
                 }
             });
 
@@ -201,6 +207,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
                 {
                     currentSignal->isMultiplexed = false;
                     currentSignal->isMultiplexor = false;
+                    if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = NULL;
                 }
             });
 }
@@ -326,6 +333,7 @@ void DBCSignalEditor::addNewSignal()
     newSig.isMultiplexed = false;
     newSig.isMultiplexor = false;
     newSig.multiplexValue = 0;
+    newSig.parentMessage = dbcMessage;
     ui->signalsList->addItem(newName);
     dbcMessage->msgSignals.append(newSig);
     if (dbcMessage->msgSignals.count() == 1) clickSignalList(0);
@@ -406,6 +414,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     ui->rbMultiplexed->setChecked(sig->isMultiplexed);
     ui->rbMultiplexor->setChecked(sig->isMultiplexor);
     ui->rbNotMulti->setChecked( !(sig->isMultiplexor | sig->isMultiplexed) );
+    qDebug() << sig->isMultiplexor << "*" << sig->isMultiplexed;
 
     memset(bitpattern, 0, 8); //clear it out first.
 

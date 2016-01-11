@@ -67,6 +67,10 @@ void DBCHandler::loadDBCFile(QString filename)
             bool isMultiplexed = false;
             DBC_SIGNAL sig;
 
+            sig.multiplexValue = 0;
+            sig.isMultiplexed = false;
+            sig.isMultiplexor = false;
+
             qDebug() << "Found a SG line";
             regex.setPattern("^SG\\_ *(\\w+) *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
@@ -93,6 +97,8 @@ void DBCHandler::loadDBCFile(QString filename)
                 {
                     regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                     match = regex.match(line);
+                    sig.isMultiplexed = false;
+                    sig.isMultiplexor = false;
                 }
             }
 
@@ -149,6 +155,7 @@ void DBCHandler::loadDBCFile(QString filename)
                     sig.receiver = findNodeByName(tmp);
                 }
                 else sig.receiver = findNodeByName(match.captured(11 + offset));
+                sig.parentMessage = currentMessage;
                 currentMessage->msgSignals.append(sig);
                 if (isMultiplexor) currentMessage->multiplexorSignal = &currentMessage->msgSignals.last();
             }
@@ -606,6 +613,18 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
         return buildString;
     }   
 
+    //if this is a multiplexed signal then we have to see if it is even found in the current message
+    if (sig.isMultiplexed)
+    {
+        if (sig.parentMessage->multiplexorSignal != NULL)
+        {
+           int val;
+           if (!processSignalInt(frame, *sig.parentMessage->multiplexorSignal, val)) return "";
+           if (val != sig.multiplexValue) return ""; //signal not found in this message
+        }
+        else return "";
+    }
+
     if (sig.valType == SIGNED_INT) isSigned = true;
     if (sig.valType == SIGNED_INT || sig.valType == UNSIGNED_INT)
     {
@@ -653,14 +672,28 @@ QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
 //Works quite a bit like the above version but this one is cut down and only will return int32_t which is perfect for
 //uses like calculating a multiplexor value or if you know you are going to get an integer returned
 //from a signal and you want to use it as-is and not have to convert back from a string. Use with caution though
-//as this basically assumes the signal is an integer. If it isn't you get -1 back.
-int32_t processSignalInt(const CANFrame &frame, const DBC_SIGNAL &sig)
+//as this basically assumes the signal is an integer.
+//The call syntax is different from the more generic processSignal. Instead of returning the value we return
+//true or false to show whether the function succeeded. The variable to fill out is passed by reference.
+bool DBCHandler::processSignalInt(const CANFrame &frame, const DBC_SIGNAL &sig, int32_t &outValue)
 {
     int32_t result = 0;
     bool isSigned = false;
     if (sig.valType == STRING || sig.valType == SP_FLOAT  || sig.valType == DP_FLOAT)
     {
-        return -1; //I warned you!
+        return false;
+    }
+
+    //if this is a multiplexed signal then we have to see if it is even found in the current message
+    if (sig.isMultiplexed)
+    {
+        if (sig.parentMessage->multiplexorSignal != NULL)
+        {
+           int val;
+           if (!processSignalInt(frame, *sig.parentMessage->multiplexorSignal, val)) return false;
+           if (val != sig.multiplexValue) return false; //signal not found in this message
+        }
+        else return false;
     }
 
     if (sig.valType == SIGNED_INT) isSigned = true;
@@ -669,7 +702,65 @@ int32_t processSignalInt(const CANFrame &frame, const DBC_SIGNAL &sig)
     double endResult = ((double)result * sig.factor) + sig.bias;
     result = (int32_t)endResult;
 
-    return result;
+    outValue = result;
+    return true;
+}
+
+
+//Another cut down version that will only return double precision data. This can be used on any of the types
+//except STRING. Useful for when you know you'll need floating point data and don't want to incur a conversion
+//back and forth to double or float. Such a use is the graphing window.
+//Similar syntax to processSignalInt but with double instead.
+bool DBCHandler::processSignalDouble(const CANFrame &frame, const DBC_SIGNAL &sig, double &outValue)
+{
+    int64_t result = 0;
+    bool isSigned = false;
+    double endResult;
+
+    if (sig.valType == STRING)
+    {
+        return false;
+    }
+
+    //if this is a multiplexed signal then we have to see if it is even found in the current message
+    if (sig.isMultiplexed)
+    {
+        if (sig.parentMessage->multiplexorSignal != NULL)
+        {
+           int val;
+           if (!processSignalInt(frame, *sig.parentMessage->multiplexorSignal, val)) return false;
+           if (val != sig.multiplexValue) return false; //signal not found in this message
+        }
+        else return false;
+    }
+
+    if (sig.valType == SIGNED_INT) isSigned = true;
+    if (sig.valType == SIGNED_INT || sig.valType == UNSIGNED_INT)
+    {
+        result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
+        endResult = ((double)result * sig.factor) + sig.bias;
+        result = (int64_t)endResult;
+    }
+    else if (sig.valType == SP_FLOAT)
+    {
+        //The theory here is that we force the integer signal code to treat this as
+        //a 32 bit unsigned integer. This integer is then cast into a float in such a way
+        //that the bytes that make up the integer are instead treated as having made up
+        //a 32 bit single precision float. That's evil incarnate but it is very fast and small
+        //in terms of new code.
+        result = Utility::processIntegerSignal(frame.data, sig.startBit, 32, false, false);
+        endResult = (*((float *)(&result)) * sig.factor) + sig.bias;
+    }
+    else //double precision float
+    {
+        //like the above, this is rotten and evil and wrong in so many ways. Force
+        //calculation of a 64 bit integer and then cast it into a double.
+        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
+        endResult = (*((double *)(&result)) * sig.factor) + sig.bias;
+    }
+
+    outValue = endResult;
+    return true;
 }
 
 //given a byte it will reverse the bit order in that byte

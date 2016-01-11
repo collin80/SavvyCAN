@@ -54,6 +54,8 @@ public:
     QList<DBC_ATTRIBUTE> attributes;
 };
 
+class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
+
 class DBC_SIGNAL
 {
 public:
@@ -70,6 +72,7 @@ public:
     double min;
     double max;
     DBC_NODE *receiver;
+    DBC_MESSAGE *parentMessage;
     QString unitName;
     QString comment;
     QList<DBC_ATTRIBUTE> attributes;
