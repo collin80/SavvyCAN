@@ -686,21 +686,31 @@ void GraphingWindow::saveDefinitions()
         {
             outFile->write(QString::number(iter->ID, 16).toUtf8());
             outFile->putChar(',');
-            outFile->write(QString::number(iter->mask, 16).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->startByte).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->endByte).toUtf8());
-            outFile->putChar(',');
-            if (iter->isSigned) outFile->putChar('Y');
-                else outFile->putChar('N');
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->bias).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->scale).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->stride).toUtf8());
-            outFile->putChar(',');
+            if (iter->isDBCSignal)
+            {
+                outFile->putChar('S');
+                outFile->putChar(',');
+                outFile->write(iter->signal->name.toUtf8());
+                outFile->putChar(',');
+            }
+            else
+            {
+                outFile->write(QString::number(iter->mask, 16).toUtf8());
+                outFile->putChar(',');
+                outFile->write(QString::number(iter->startByte).toUtf8());
+                outFile->putChar(',');
+                outFile->write(QString::number(iter->endByte).toUtf8());
+                outFile->putChar(',');
+                if (iter->isSigned) outFile->putChar('Y');
+                    else outFile->putChar('N');
+                outFile->putChar(',');
+                outFile->write(QString::number(iter->bias).toUtf8());
+                outFile->putChar(',');
+                outFile->write(QString::number(iter->scale).toUtf8());
+                outFile->putChar(',');
+                outFile->write(QString::number(iter->stride).toUtf8());
+                outFile->putChar(',');
+            }
             outFile->write(QString::number(iter->color.red()).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->color.green()).toUtf8());
@@ -741,24 +751,49 @@ void GraphingWindow::loadDefinitions()
             {
                 GraphParams gp;
                 QList<QByteArray> tokens = line.split(',');
+                gp.isDBCSignal = false;
 
                 gp.ID = tokens[0].toInt(NULL, 16);
-                gp.mask = tokens[1].toULongLong(NULL, 16);
-                qDebug() << gp.mask;
-                gp.startByte = tokens[2].toInt();
-                gp.endByte = tokens[3].toInt();
-                if (tokens[4] == "Y") gp.isSigned = true;
-                    else gp.isSigned = false;
-                gp.bias = tokens[5].toFloat();
-                gp.scale = tokens[6].toFloat();
-                gp.stride = tokens[7].toInt();
-                gp.color.setRed(tokens[8].toInt());
-                gp.color.setGreen(tokens[9].toInt());
-                gp.color.setBlue(tokens[10].toInt());
-                if (tokens.length() > 11)
-                    gp.graphName = tokens[11];
+                if (tokens[1] == "S")
+                {
+                    gp.isDBCSignal = true;
+                    //tokens[2] is the signal name. Need to use the message ID and this name to look it up
+                    DBC_MESSAGE *msg = dbcHandler->findMsgByID(gp.ID);
+                    if (msg != NULL)
+                    {
+                        gp.signal = dbcHandler->findSignalByName(msg, tokens[2]);
+                    }
+                    else gp.signal = NULL;
+                }
                 else
-                    gp.graphName = QString();
+                {
+                    gp.mask = tokens[1].toULongLong(NULL, 16);
+                    qDebug() << gp.mask;
+                    gp.startByte = tokens[2].toInt();
+                    gp.endByte = tokens[3].toInt();
+                    if (tokens[4] == "Y") gp.isSigned = true;
+                        else gp.isSigned = false;
+                    gp.bias = tokens[5].toFloat();
+                    gp.scale = tokens[6].toFloat();
+                    gp.stride = tokens[7].toInt();
+                }
+                if (!gp.isDBCSignal)
+                {
+                    gp.color.setRed(tokens[8].toInt());
+                    gp.color.setGreen(tokens[9].toInt());
+                    gp.color.setBlue(tokens[10].toInt());
+                    if (tokens.length() > 11)
+                        gp.graphName = tokens[11];
+                    else
+                        gp.graphName = QString();
+                }
+                else
+                {
+                    gp.color.setRed(tokens[3].toInt());
+                    gp.color.setGreen(tokens[4].toInt());
+                    gp.color.setBlue(tokens[5].toInt());
+                    gp.graphName = tokens[6];
+                }
                 createGraph(gp, true);
             }
         }
@@ -801,7 +836,21 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
     int64_t tempVal; //64 bit temp value.
     if (params.isDBCSignal)
     {
-
+        double tempValue;
+        //if the given signal was found and successfully processed in this frame then add it to the graph
+        if (dbcHandler->processSignalDouble(frame, *params.signal, tempValue))
+        {
+            //qDebug() << "tempValue: " << tempValue;
+            if (secondsMode)
+            {
+                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
+            }
+            else
+            {
+                params.x.append(frame.timestamp - params.xbias);
+            }
+            params.y.append(tempValue);
+         }
     }
     else
     {
