@@ -24,7 +24,9 @@ public:
     QColor color;
     QCPGraph *ref;
     QString graphName;
-    //the below stuff is used for internal purposes only
+    bool isDBCSignal; //is this graph actually a DBC signal? If so the below pointer should be filled out
+    DBC_SIGNAL *signal;
+    //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;
 };

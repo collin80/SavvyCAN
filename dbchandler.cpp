@@ -739,7 +739,7 @@ bool DBCHandler::processSignalDouble(const CANFrame &frame, const DBC_SIGNAL &si
     {
         result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
         endResult = ((double)result * sig.factor) + sig.bias;
-        result = (int64_t)endResult;
+        result = (int64_t)endResult;        
     }
     else if (sig.valType == SP_FLOAT)
     {

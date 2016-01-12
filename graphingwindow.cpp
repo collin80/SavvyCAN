@@ -799,178 +799,43 @@ void GraphingWindow::addNewGraph()
 void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 {
     int64_t tempVal; //64 bit temp value.
-    if (params.endByte == -1  || params.startByte == params.endByte)
+    if (params.isDBCSignal)
     {
-        tempVal = (frame.data[params.startByte] & params.mask);
-        if (params.isSigned && tempVal > 127)
-        {
-            tempVal = tempVal - 256;
-        }
-        if (secondsMode)
-        {
-            params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-        }
-        else
-        {
-            params.x.append(frame.timestamp - params.xbias);
-        }
-        params.y.append((tempVal * params.scale) + params.bias);
+
     }
-    else if (params.endByte > params.startByte) //big endian
+    else
     {
-        float tempValue;
-        int64_t tempValInt;
-        int numBytes = (params.endByte - params.startByte) + 1;
-        int64_t shiftRef = 1 << (numBytes * 8);
-        uint64_t maskShifter;
-        uint8_t tempByte;
-        tempValInt = 0;
-        int64_t expon = 1;
-        maskShifter = params.mask;
-        for (int c = 0; c < numBytes; c++)
+        if (params.endByte == -1  || params.startByte == params.endByte)
         {
-            tempByte = frame.data[params.endByte - c];
-            tempByte &= maskShifter;
-            tempValInt += (tempByte * expon);
-            expon *= 256;
-            maskShifter = maskShifter >> 8;
-        }
-
-        tempValInt &= params.mask;
-
-        int64_t twocompPoint = params.mask;
-        if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-        //qDebug() << "two comp point: " << twocompPoint;
-        if (params.isSigned && tempValInt > ((twocompPoint / 2)))
-        {
-            tempValInt = tempValInt - twocompPoint;
-        }
-
-        tempValue = (float)tempValInt;
-
-        if (secondsMode)
-        {
-            params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-        }
-        else
-        {
-            params.x.append(frame.timestamp - params.xbias);
-        }
-
-        params.y.append((tempValue * params.scale) + params.bias);
-    }
-    else //little endian
-    {
-        float tempValue;
-        int64_t tempValInt;
-        int numBytes = (params.startByte - params.endByte) + 1;
-        int64_t shiftRef = 1 << (numBytes * 8);
-        uint64_t maskShifter;
-        uint8_t tempByte;
-        tempValInt = 0;
-        int64_t expon = 1;
-        maskShifter = params.mask;
-        for (int c = 0; c < numBytes; c++)
-        {
-            tempByte = frame.data[params.endByte + c];
-            tempByte &= maskShifter;
-            tempValInt += tempByte * expon;
-            expon *= 256;
-            maskShifter = maskShifter >> 8;
-        }
-        tempValInt &= params.mask;
-
-        int64_t twocompPoint = params.mask;
-        if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-        //qDebug() << "two comp point: " << twocompPoint;
-        if (params.isSigned && tempValInt > ((twocompPoint / 2)))
-        {
-            tempValInt = tempValInt - twocompPoint;
-        }
-
-        tempValue = (float)tempValInt;
-
-        if (secondsMode)
-        {
-            params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-        }
-        else
-        {
-            params.x.append(frame.timestamp - params.xbias);
-        }
-
-        params.y.append((tempValue * params.scale) + params.bias);
-    }
-
-    params.ref->setData(params.x,params.y);
-}
-
-void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
-{
-    int64_t tempVal; //64 bit temp value.
-    float yminval=10000000.0, ymaxval = -1000000.0;
-    float xminval=10000000000.0, xmaxval = -10000000000.0;
-    GraphParams *refParam = &params;
-
-    qDebug() << "New Graph ID: " << params.ID;
-    qDebug() << "Start byte: " << params.startByte;
-    qDebug() << "End Byte: " << params.endByte;
-    qDebug() << "Mask: " << params.mask;
-
-    frameCache.clear();
-    for (int i = 0; i < modelFrames->count(); i++)
-    {
-        CANFrame thisFrame = modelFrames->at(i);
-        if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
-    }
-
-    int numEntries = frameCache.count() / params.stride;
-
-    params.x.reserve(numEntries);
-    params.y.reserve(numEntries);
-    params.x.fill(0, numEntries);
-    params.y.fill(0, numEntries);
-
-    if (params.endByte == -1  || params.startByte == params.endByte)
-    {
-        for (int j = 0; j < numEntries; j++)
-        {
-            tempVal = (frameCache[j * params.stride].data[params.startByte] & params.mask);
+            tempVal = (frame.data[params.startByte] & params.mask);
             if (params.isSigned && tempVal > 127)
             {
                 tempVal = tempVal - 256;
             }
             if (secondsMode)
             {
-                params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
             }
             else
             {
-                params.x[j] = frameCache[j].timestamp;
+                params.x.append(frame.timestamp - params.xbias);
             }
-            params.y[j] = (tempVal * params.scale) + params.bias;
-            if (params.y[j] < yminval) yminval = params.y[j];
-            if (params.y[j] > ymaxval) ymaxval = params.y[j];
-            if (params.x[j] < xminval) xminval = params.x[j];
-            if (params.x[j] > xmaxval) xmaxval = params.x[j];
+            params.y.append((tempVal * params.scale) + params.bias);
         }
-    }
-    else if (params.endByte > params.startByte) //big endian
-    {
-        float tempValue;
-        int64_t tempValInt;
-        int numBytes = (params.endByte - params.startByte) + 1;
-        int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
-        uint64_t maskShifter;
-        uint8_t tempByte;
-        for (int j = 0; j < numEntries; j++)
+        else if (params.endByte > params.startByte) //big endian
         {
+            float tempValue;
+            int64_t tempValInt;
+            int numBytes = (params.endByte - params.startByte) + 1;
+            int64_t shiftRef = 1 << (numBytes * 8);
+            uint64_t maskShifter;
+            uint8_t tempByte;
             tempValInt = 0;
             int64_t expon = 1;
             maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
-                tempByte = frameCache[j * params.stride].data[params.endByte - c];
+                tempByte = frame.data[params.endByte - c];
                 tempByte &= maskShifter;
                 tempValInt += (tempByte * expon);
                 expon *= 256;
@@ -991,36 +856,29 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             if (secondsMode)
             {
-                params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
             }
             else
             {
-                params.x[j] = frameCache[j].timestamp;
+                params.x.append(frame.timestamp - params.xbias);
             }
 
-            params.y[j] = (tempValue * params.scale) + params.bias;
-            if (params.y[j] < yminval) yminval = params.y[j];
-            if (params.y[j] > ymaxval) ymaxval = params.y[j];
-            if (params.x[j] < xminval) xminval = params.x[j];
-            if (params.x[j] > xmaxval) xmaxval = params.x[j];
+            params.y.append((tempValue * params.scale) + params.bias);
         }
-    }
-    else //little endian
-    {
-        float tempValue;
-        int64_t tempValInt;
-        int numBytes = (params.startByte - params.endByte) + 1;
-        int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
-        uint64_t maskShifter;
-        uint8_t tempByte;
-        for (int j = 0; j < numEntries; j++)
+        else //little endian
         {
+            float tempValue;
+            int64_t tempValInt;
+            int numBytes = (params.startByte - params.endByte) + 1;
+            int64_t shiftRef = 1 << (numBytes * 8);
+            uint64_t maskShifter;
+            uint8_t tempByte;
             tempValInt = 0;
             int64_t expon = 1;
             maskShifter = params.mask;
             for (int c = 0; c < numBytes; c++)
             {
-                tempByte = frameCache[j * params.stride].data[params.endByte + c];
+                tempByte = frame.data[params.endByte + c];
                 tempByte &= maskShifter;
                 tempValInt += tempByte * expon;
                 expon *= 256;
@@ -1040,32 +898,213 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
             if (secondsMode)
             {
-                params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
             }
             else
             {
-                params.x[j] = frameCache[j].timestamp;
+                params.x.append(frame.timestamp - params.xbias);
             }
 
-            params.y[j] = (tempValue * params.scale) + params.bias;
-            if (params.y[j] < yminval) yminval = params.y[j];
-            if (params.y[j] > ymaxval) ymaxval = params.y[j];
-            if (params.x[j] < xminval) xminval = params.x[j];
-            if (params.x[j] > xmaxval) xmaxval = params.x[j];
+            params.y.append((tempValue * params.scale) + params.bias);
+        }
+    }
+
+    params.ref->setData(params.x,params.y);
+}
+
+void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
+{
+    int64_t tempVal; //64 bit temp value.
+    float yminval=10000000.0, ymaxval = -1000000.0;
+    float xminval=10000000000.0, xmaxval = -10000000000.0;
+    GraphParams *refParam = &params;
+
+    if (params.isDBCSignal)
+    {
+        qDebug() << "New signal graph: " << params.signal->name <<" in ID:" << params.ID;
+    }
+    else
+    {
+        qDebug() << "New Graph ID: " << params.ID;
+        qDebug() << "Start byte: " << params.startByte;
+        qDebug() << "End Byte: " << params.endByte;
+        qDebug() << "Mask: " << params.mask;
+    }
+
+    frameCache.clear();
+    for (int i = 0; i < modelFrames->count(); i++)
+    {
+        CANFrame thisFrame = modelFrames->at(i);
+        if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
+    }
+
+    int numEntries = frameCache.count() / params.stride;
+
+    params.x.reserve(numEntries);
+    params.y.reserve(numEntries);
+    params.x.fill(0, numEntries);
+    params.y.fill(0, numEntries);
+
+    if (params.isDBCSignal)
+    {
+        double tempValue;
+        int l = 0;
+        for (int j = 0; j < numEntries; j++)
+        {
+            //if the given signal was found and successfully processed in this frame then add it to the graph
+            if (dbcHandler->processSignalDouble(frameCache[j], *params.signal, tempValue))
+            {
+                //qDebug() << "tempValue: " << tempValue;
+                if (secondsMode)
+                {
+                    params.x[l] = (double)(frameCache[j].timestamp) / 1000000.0;
+                }
+                else
+                {
+                    params.x[l] = frameCache[j].timestamp;
+                }
+                params.y[l] = tempValue;
+                if (params.y[l] < yminval) yminval = params.y[l];
+                if (params.y[l] > ymaxval) ymaxval = params.y[l];
+                if (params.x[l] < xminval) xminval = params.x[l];
+                if (params.x[l] > xmaxval) xmaxval = params.x[l];
+                l++;
+            }
+        }
+        params.x.resize(l);
+        params.y.resize(l);
+        params.x.squeeze();
+        params.y.squeeze();
+    }
+    else
+    {
+
+        if (params.endByte == -1  || params.startByte == params.endByte)
+        {
+            for (int j = 0; j < numEntries; j++)
+            {
+                tempVal = (frameCache[j * params.stride].data[params.startByte] & params.mask);
+                if (params.isSigned && tempVal > 127)
+                {
+                    tempVal = tempVal - 256;
+                }
+                if (secondsMode)
+                {
+                    params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                }
+                else
+                {
+                    params.x[j] = frameCache[j].timestamp;
+                }
+                params.y[j] = (tempVal * params.scale) + params.bias;
+                if (params.y[j] < yminval) yminval = params.y[j];
+                if (params.y[j] > ymaxval) ymaxval = params.y[j];
+                if (params.x[j] < xminval) xminval = params.x[j];
+                if (params.x[j] > xmaxval) xmaxval = params.x[j];
+            }
+        }
+        else if (params.endByte > params.startByte) //big endian
+        {
+            float tempValue;
+            int64_t tempValInt;
+            int numBytes = (params.endByte - params.startByte) + 1;
+            int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
+            uint64_t maskShifter;
+            uint8_t tempByte;
+            for (int j = 0; j < numEntries; j++)
+            {
+                tempValInt = 0;
+                int64_t expon = 1;
+                maskShifter = params.mask;
+                for (int c = 0; c < numBytes; c++)
+                {
+                    tempByte = frameCache[j * params.stride].data[params.endByte - c];
+                    tempByte &= maskShifter;
+                    tempValInt += (tempByte * expon);
+                    expon *= 256;
+                    maskShifter = maskShifter >> 8;
+                }
+
+                tempValInt &= params.mask;
+
+                int64_t twocompPoint = params.mask;
+                if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
+                //qDebug() << "two comp point: " << twocompPoint;
+                if (params.isSigned && tempValInt > ((twocompPoint / 2)))
+                {
+                    tempValInt = tempValInt - twocompPoint;
+                }
+
+                tempValue = (float)tempValInt;
+
+                if (secondsMode)
+                {
+                    params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                }
+                else
+                {
+                    params.x[j] = frameCache[j].timestamp;
+                }
+
+                params.y[j] = (tempValue * params.scale) + params.bias;
+                if (params.y[j] < yminval) yminval = params.y[j];
+                if (params.y[j] > ymaxval) ymaxval = params.y[j];
+                if (params.x[j] < xminval) xminval = params.x[j];
+                if (params.x[j] > xmaxval) xmaxval = params.x[j];
+            }
+        }
+        else //little endian
+        {
+            float tempValue;
+            int64_t tempValInt;
+            int numBytes = (params.startByte - params.endByte) + 1;
+            int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
+            uint64_t maskShifter;
+            uint8_t tempByte;
+            for (int j = 0; j < numEntries; j++)
+            {
+                tempValInt = 0;
+                int64_t expon = 1;
+                maskShifter = params.mask;
+                for (int c = 0; c < numBytes; c++)
+                {
+                    tempByte = frameCache[j * params.stride].data[params.endByte + c];
+                    tempByte &= maskShifter;
+                    tempValInt += tempByte * expon;
+                    expon *= 256;
+                    maskShifter = maskShifter >> 8;
+                }
+                tempValInt &= params.mask;
+
+                int64_t twocompPoint = params.mask;
+                if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
+                //qDebug() << "two comp point: " << twocompPoint;
+                if (params.isSigned && tempValInt > ((twocompPoint / 2)))
+                {
+                    tempValInt = tempValInt - twocompPoint;
+                }
+
+                tempValue = (float)tempValInt;
+
+                if (secondsMode)
+                {
+                    params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                }
+                else
+                {
+                    params.x[j] = frameCache[j].timestamp;
+                }
+
+                params.y[j] = (tempValue * params.scale) + params.bias;
+                if (params.y[j] < yminval) yminval = params.y[j];
+                if (params.y[j] > ymaxval) ymaxval = params.y[j];
+                if (params.x[j] < xminval) xminval = params.x[j];
+                if (params.x[j] > xmaxval) xmaxval = params.x[j];
+            }
         }
     }
 
     params.xbias = 0;
-
-    /*
-    for (int ct = 0; ct < params.x.count(); ct++)
-    {
-        params.x[ct] -= xminval;
-    }
-    params.xbias = xminval;
-    xmaxval -= xminval;
-    xminval = 0;
-    */
 
     ui->graphingView->addGraph();
     params.ref = ui->graphingView->graph();    

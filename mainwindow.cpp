@@ -9,14 +9,17 @@
 #include "serialworker.h"
 
 /*
-Things that were planned for the GVRET-PC project but never completed.
+Some notes on things I'd like to put into the program but haven't put on github (yet)
 
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
 
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
 
-Change dbc editor to be able to do multiplexed signals
+Make the graphing window use signals either exclusively or as an option for each signal graphed
+Allow multiple DBC files to be loaded in the program and also allow them to be associated with a bus
+Allow scripts to read/write signals from DBC files
+allow scripts to load DBC files in support of the script
 */
 
 QString MainWindow::loadedFileName = "";
