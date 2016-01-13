@@ -76,8 +76,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     }
     else
     {
-        setStandardActive(true);
-        ui->txtID->setText(Utility::formatNumber(params.ID));
+        setStandardActive(true);        
         ui->txtBias->setText(QString::number(params.bias));
         ui->txtMask->setText(Utility::formatNumber(params.mask));
         ui->txtScale->setText(QString::number(params.scale));
@@ -94,6 +93,7 @@ void NewGraphDialog::setParams(GraphParams &params)
         }
     }
 
+    ui->txtID->setText(Utility::formatNumber(params.ID));
     ui->txtName->setText(params.graphName);
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
@@ -108,10 +108,8 @@ void NewGraphDialog::getParams(GraphParams &params)
 
     if (params.isDBCSignal)
     {
-        DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
-        if (msg != NULL)
-            params.signal = dbcHandler->findSignalByName(msg, ui->cbSignals->currentText());
-        params.ID = params.signal->parentMessage->ID;
+        params.signal = ui->cbSignals->currentText();
+        params.ID = Utility::ParseStringToNum(ui->txtID->text());
         params.bias = 0;
         params.isSigned = false;
         params.mask = 0;
@@ -127,7 +125,7 @@ void NewGraphDialog::getParams(GraphParams &params)
         params.mask = Utility::ParseStringToNum(ui->txtMask->text());
         params.scale = ui->txtScale->text().toFloat();
         params.stride = Utility::ParseStringToNum(ui->txtStride->text());
-        params.signal = NULL;
+        params.signal = "";
 
         QStringList values = ui->txtData->text().split('-');
         params.startByte = -1;
@@ -188,7 +186,7 @@ void NewGraphDialog::fillFormFromSignal(int idx)
     if (sig == NULL) return;
 
     params.graphName = sig->name;
-    //params.ID = msg->ID;
+    params.ID = msg->ID;
     //params.bias = sig->bias;
     //params.scale = sig->factor;
     //params.stride = 1;

@@ -690,7 +690,7 @@ void GraphingWindow::saveDefinitions()
             {
                 outFile->putChar('S');
                 outFile->putChar(',');
-                outFile->write(iter->signal->name.toUtf8());
+                outFile->write(iter->signal.toUtf8());
                 outFile->putChar(',');
             }
             else
@@ -728,6 +728,7 @@ void GraphingWindow::loadDefinitions()
 {
     QString filename;
     QFileDialog dialog;
+    bool dbcMissing = false;
 
     QStringList filters;
     filters.append(QString(tr("Graph definition (*.gdf)")));
@@ -761,9 +762,15 @@ void GraphingWindow::loadDefinitions()
                     DBC_MESSAGE *msg = dbcHandler->findMsgByID(gp.ID);
                     if (msg != NULL)
                     {
-                        gp.signal = dbcHandler->findSignalByName(msg, tokens[2]);
+                        DBC_SIGNAL *sig = dbcHandler->findSignalByName(msg, tokens[2]);
+                        if (sig == NULL) dbcMissing = true;
+                        gp.signal = tokens[2];
                     }
-                    else gp.signal = NULL;
+                    else
+                    {
+                        gp.signal = "";
+                        dbcMissing = true;
+                    }
                 }
                 else
                 {
@@ -798,6 +805,12 @@ void GraphingWindow::loadDefinitions()
             }
         }
         inFile->close();
+        if (dbcMissing)
+        {
+            QMessageBox msg;
+            msg.setText("One or more graphs could not be loaded\r\nbecause the signal could not be found.\r\nPerhaps you forgot to load\r\nthe DBC file?");
+            msg.exec();
+        }
     }
 }
 
@@ -837,8 +850,12 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
     if (params.isDBCSignal)
     {
         double tempValue;
+        DBC_MESSAGE *msg = dbcHandler->findMsgByID(params.ID);
+        DBC_SIGNAL *sig = NULL;
+        if (msg) sig = dbcHandler->findSignalByName(msg, params.signal);
+        if (sig == NULL) return;
         //if the given signal was found and successfully processed in this frame then add it to the graph
-        if (dbcHandler->processSignalDouble(frame, *params.signal, tempValue))
+        if (dbcHandler->processSignalDouble(frame, *sig, tempValue))
         {
             //qDebug() << "tempValue: " << tempValue;
             if (secondsMode)
@@ -967,10 +984,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     float yminval=10000000.0, ymaxval = -1000000.0;
     float xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
+    DBC_MESSAGE *msg = NULL;
+    DBC_SIGNAL *sig = NULL;
 
     if (params.isDBCSignal)
     {
-        qDebug() << "New signal graph: " << params.signal->name <<" in ID:" << params.ID;
+        msg = dbcHandler->findMsgByID(params.ID);
+        if (msg) sig = dbcHandler->findSignalByName(msg, params.signal);
+        if (sig == NULL) return;
+        qDebug() << "New signal graph: " << params.signal <<" in ID:" << params.ID;
     }
     else
     {
@@ -1001,7 +1023,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         for (int j = 0; j < numEntries; j++)
         {
             //if the given signal was found and successfully processed in this frame then add it to the graph
-            if (dbcHandler->processSignalDouble(frameCache[j], *params.signal, tempValue))
+            if (dbcHandler->processSignalDouble(frameCache[j], *sig, tempValue))
             {
                 //qDebug() << "tempValue: " << tempValue;
                 if (secondsMode)
