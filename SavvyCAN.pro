@@ -42,7 +42,8 @@ SOURCES += main.cpp\
     scriptcontainer.cpp \
     canfilter.cpp \
     rangestatewindow.cpp \
-    dbc_classes.cpp
+    dbc_classes.cpp \
+    dbcloadsavewindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -72,7 +73,8 @@ HEADERS  += mainwindow.h \
     scriptingwindow.h \
     scriptcontainer.h \
     canfilter.h \
-    rangestatewindow.h
+    rangestatewindow.h \
+    dbcloadsavewindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -90,7 +92,8 @@ FORMS    += mainwindow.ui \
     discretestatewindow.ui \
     connectionwindow.ui \
     scriptingwindow.ui \
-    rangestatewindow.ui
+    rangestatewindow.ui \
+    dbcloadsavewindow.ui
 
 DISTFILES +=
 

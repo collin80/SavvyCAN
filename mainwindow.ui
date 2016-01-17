@@ -230,9 +230,7 @@
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
     <addaction name="separator"/>
-    <addaction name="actionLoad_DBC_File"/>
-    <addaction name="actionEdit_Messages_Signals"/>
-    <addaction name="actionSave_DBC_File"/>
+    <addaction name="actionDBC_File_Manager"/>
     <addaction name="actionSave_Decoded_Frames"/>
     <addaction name="separator"/>
     <addaction name="actionPreferences"/>
@@ -355,7 +353,7 @@
   <action name="actionConnect">
    <property name="text">
     <string>Connect</string>
-    </property>
+   </property>
   </action>
   <action name="actionScripting_INterface">
    <property name="text">
@@ -370,6 +368,11 @@
   <action name="actionSingle_Multi_State_2">
    <property name="text">
     <string>Single/Multi State</string>
+   </property>
+  </action>
+  <action name="actionDBC_File_Manager">
+   <property name="text">
+    <string>DBC File Manager</string>
    </property>
   </action>
  </widget>

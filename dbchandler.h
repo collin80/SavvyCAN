@@ -77,7 +77,7 @@ class DBCHandler: public QObject
 {
     Q_OBJECT
 public:
-    void loadDBCFile(int);
+    DBCFile* loadDBCFile(int);
     void saveDBCFile(int);
     void removeDBCFile(int);
     void removeAllFiles();

@@ -735,7 +735,7 @@ void DBCHandler::saveDBCFile(int idx)
 //Otherwise add a new one. Well, always add a new one.
 //If a valid index is passed we'll remove that one and then commence
 //adding. Otherwise, just go straight to adding.
-void DBCHandler::loadDBCFile(int idx)
+DBCFile* DBCHandler::loadDBCFile(int idx)
 {
    if (idx > -1 && idx < loadedFiles.count()) removeDBCFile(idx);
 
@@ -757,6 +757,7 @@ void DBCHandler::loadDBCFile(int idx)
         newFile.loadFile(filename);
         loadedFiles.append(newFile);
     }
+    return &loadedFiles.last();
 }
 
 void DBCHandler::removeDBCFile(int idx)

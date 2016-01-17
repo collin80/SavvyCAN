@@ -94,6 +94,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connectionWindow = NULL;
     scriptingWindow = NULL;
     rangeWindow = NULL;
+    dbcFileWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -113,13 +114,10 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
     connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
     connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
-    connect(ui->actionLoad_DBC_File, &QAction::triggered, this, &MainWindow::handleLoadDBC);
-    connect(ui->actionSave_DBC_File, &QAction::triggered, this, &MainWindow::handleSaveDBC);
     connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
     connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
-    connect(ui->actionEdit_Messages_Signals, &QAction::triggered, this, &MainWindow::showDBCEditor);
     connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
     connect(ui->actionExit_Application, &QAction::triggered, this, &MainWindow::exitApp);
     connect(ui->actionFuzzy_Scope, &QAction::triggered, this, &MainWindow::showFuzzyScopeWindow);
@@ -135,6 +133,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
     connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
     connect(ui->actionFirmware_Uploader, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
+    connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -240,10 +239,34 @@ MainWindow::~MainWindow()
         delete rangeWindow;
     }
 
+    if (dbcFileWindow)
+    {
+        dbcFileWindow->close();
+        delete dbcFileWindow;
+    }
+
     delete ui;
     delete dbcHandler;
     model->clearFrames();
     delete model;
+}
+
+void MainWindow::exitApp()
+{
+    if (graphingWindow) graphingWindow->close();
+    if (frameInfoWindow) frameInfoWindow->close();
+    if (playbackWindow) playbackWindow->close();
+    if (flowViewWindow) flowViewWindow->close();
+    if (frameSenderWindow) frameSenderWindow->close();
+    if (dbcMainEditor) dbcMainEditor->close();
+    if (comparatorWindow) comparatorWindow->close();
+    if (connectionWindow) connectionWindow->close();
+    if (settingsDialog) settingsDialog->close();
+    if (discreteStateWindow) discreteStateWindow->close();
+    if (scriptingWindow) scriptingWindow->close();
+    if (rangeWindow) rangeWindow->close();
+    if (dbcFileWindow) dbcFileWindow->close();
+    this->close();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -753,18 +776,7 @@ void MainWindow::handleLoadFilters()
     }
 }
 
-void MainWindow::handleLoadDBC()
-{
-    dbcHandler->loadDBCFile(-1);
-
-        //lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
-}
-
-void MainWindow::handleSaveDBC()
-{
-        dbcHandler->saveDBCFile(0);
-        //lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
-}
+//lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 
 void MainWindow::handleSaveDecoded()
 {
@@ -1064,19 +1076,6 @@ void MainWindow::showFuzzyScopeWindow()
     //not done yet
 }
 
-void MainWindow::exitApp()
-{
-    if (graphingWindow) graphingWindow->close();
-    if (frameInfoWindow) frameInfoWindow->close();
-    if (playbackWindow) playbackWindow->close();
-    if (flowViewWindow) flowViewWindow->close();
-    if (frameSenderWindow) frameSenderWindow->close();
-    if (dbcMainEditor) dbcMainEditor->close();
-    if (comparatorWindow) comparatorWindow->close();
-    if (connectionWindow) connectionWindow->close();
-    this->close();
-}
-
 void MainWindow::showFlowViewWindow()
 {
     if (!flowViewWindow)
@@ -1098,14 +1097,13 @@ void MainWindow::showFlowViewWindow()
     flowViewWindow->show();
 }
 
-//this one always gets the unfiltered list intentionally.
-void MainWindow::showDBCEditor()
+void MainWindow::showDBCFileWindow()
 {
-    if (!dbcMainEditor)
+    if (!dbcFileWindow)
     {
-        dbcMainEditor = new DBCMainEditor(dbcHandler, model->getListReference());
+        dbcFileWindow = new DBCLoadSaveWindow(dbcHandler, model->getListReference());
     }
-    dbcMainEditor->show();
+    dbcFileWindow->show();
 }
 
 void MainWindow::showConnectionSettingsWindow()

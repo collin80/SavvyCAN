@@ -17,6 +17,7 @@ public:
     explicit DBCSignalEditor(DBCHandler *handler, QWidget *parent = 0);
     void setMessageRef(DBC_MESSAGE *msg);
     void showEvent(QShowEvent*);
+    void setFileIdx(int idx);
     ~DBCSignalEditor();
 
 private slots:
@@ -34,6 +35,7 @@ private:
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
     DBC_SIGNAL *currentSignal;
+    DBCFile *dbcFile;
     bool inhibitCellChanged;
 
     void refreshSignalsList();

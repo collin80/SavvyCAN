@@ -22,6 +22,7 @@
 #include "connectionwindow.h"
 #include "scriptingwindow.h"
 #include "rangestatewindow.h"
+#include "dbcloadsavewindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -42,8 +43,6 @@ private slots:
     void handleLoadFile();
     void handleSaveFile();
     void handleSaveFilteredFile();
-    void handleLoadDBC();
-    void handleSaveDBC();
     void handleSaveFilters();
     void handleLoadFilters();
     void connButtonPress();
@@ -61,6 +60,7 @@ private slots:
     void showFirmwareUploaderWindow();
     void showConnectionSettingsWindow();
     void showScriptingWindow();
+    void showDBCFileWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -71,7 +71,6 @@ private slots:
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
-    void showDBCEditor();
     void toggleCapture();
     void normalizeTiming();
     void updateFilterList();
@@ -129,6 +128,7 @@ private:
     ConnectionWindow *connectionWindow;
     ScriptingWindow *scriptingWindow;
     RangeStateWindow *rangeWindow;
+    DBCLoadSaveWindow *dbcFileWindow;
 
     //various private storage
     QLabel lbStatusConnected;

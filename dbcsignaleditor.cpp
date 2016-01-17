@@ -33,11 +33,6 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
 
-    for (int x = 0; x < dbcHandler->getFileByIdx(0)->dbc_nodes.count(); x++)
-    {
-        ui->comboReceiver->addItem(dbcHandler->getFileByIdx(0)->dbc_nodes[x].name);
-    }
-
     connect(ui->signalsList, SIGNAL(currentRowChanged(int)), this, SLOT(clickSignalList(int)));
     connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
     connect(ui->signalsList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuSignals(QPoint)));
@@ -61,7 +56,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             [=]()
             {
                 if (currentSignal == NULL) return;
-                currentSignal->receiver = dbcHandler->getFileByIdx(0)->findNodeByName(ui->comboReceiver->currentText());
+                currentSignal->receiver = dbcFile->findNodeByName(ui->comboReceiver->currentText());
             });
     connect(ui->comboType, &QComboBox::currentTextChanged,
             [=]()
@@ -223,6 +218,17 @@ void DBCSignalEditor::closeEvent(QCloseEvent *event)
     writeSettings();
 }
 
+void DBCSignalEditor::setFileIdx(int idx)
+{
+    if (idx < 0 || idx > dbcHandler->getFileCount() - 1) return;
+    dbcFile = dbcHandler->getFileByIdx(idx);
+
+    for (int x = 0; x < dbcFile->dbc_nodes.count(); x++)
+    {
+        ui->comboReceiver->addItem(dbcFile->dbc_nodes[x].name);
+    }
+}
+
 void DBCSignalEditor::readSettings()
 {
     QSettings settings;
@@ -326,7 +332,7 @@ void DBCSignalEditor::addNewSignal()
     newSig.intelByteOrder = true;
     newSig.max = 0.0;
     newSig.min = 0.0;
-    newSig.receiver = dbcHandler->getFileByIdx(0)->findNodeByIdx(0);
+    newSig.receiver = dbcFile->findNodeByIdx(0);
     newSig.signalSize = 1;
     newSig.startBit = 0;
     newSig.valType = UNSIGNED_INT;
