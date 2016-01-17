@@ -4,23 +4,261 @@
 #include <QRegularExpression>
 #include <QDebug>
 #include <QMessageBox>
+#include <QFileDialog>
 #include "utility.h"
 
-DBCHandler::DBCHandler(QObject *parent) : QObject(parent)
+DBC_SIGNAL* DBCSignalHandler::findSignalByIdx(int idx)
 {
+    if (sigs.count() == 0) return NULL;
+    if (idx < 0) return NULL;
+    if (idx >= sigs.count()) return NULL;
 
+    return &sigs[idx];
 }
 
-void DBCHandler::loadDBCFile(QString filename)
+DBC_SIGNAL* DBCSignalHandler::findSignalByName(QString name)
 {
-    QFile *inFile = new QFile(filename);
+    if (sigs.count() == 0) return NULL;
+    for (int i = 0; i < sigs.count(); i++)
+    {
+        if (sigs[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &sigs[i];
+        }
+    }
+    return NULL;
+}
+
+bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
+{
+    sigs.append(sig);
+    return true;
+}
+
+bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
+{
+    //if (sigs.removeAll(*sig) > 0) return true;
+    return false;
+}
+
+bool DBCSignalHandler::removeSignal(int idx)
+{
+    if (sigs.count() == 0) return false;
+    if (idx < 0) return false;
+    if (idx >= sigs.count()) return false;
+    sigs.removeAt(idx);
+    return true;
+}
+
+bool DBCSignalHandler::removeSignal(QString name)
+{
+    bool foundSome = false;
+    if (sigs.count() == 0) return false;
+    for (int i = sigs.count() - 1; i >= 0; i--)
+    {
+        if (sigs[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            sigs.removeAt(i);
+            foundSome = true;
+        }
+    }
+    return foundSome;
+}
+
+void DBCSignalHandler::removeAllSignals()
+{
+    sigs.clear();
+}
+
+int DBCSignalHandler::getCount()
+{
+    return sigs.count();
+}
+
+DBC_MESSAGE* DBCMessageHandler::findMsgByID(int id)
+{
+    if (messages.count() == 0) return NULL;
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].ID == id)
+        {
+            return &messages[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_MESSAGE* DBCMessageHandler::findMsgByIdx(int idx)
+{
+    if (messages.count() == 0) return NULL;
+    if (idx < 0) return NULL;
+    if (idx >= messages.count()) return NULL;
+    return &messages[idx];
+}
+
+DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
+{
+    if (messages.count() == 0) return NULL;
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &messages[i];
+        }
+    }
+    return NULL;
+}
+
+bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
+{
+    messages.append(msg);
+    return true;
+}
+
+bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
+{
+    //if (messages.removeAll(*msg) > 0) return true;
+    return false;
+}
+
+bool DBCMessageHandler::removeMessageByIndex(int idx)
+{
+    if (messages.count() == 0) return false;
+    if (idx < 0) return false;
+    if (idx >= messages.count()) return false;
+    messages.removeAt(idx);
+    return true;
+}
+
+bool DBCMessageHandler::removeMessage(int ID)
+{
+    bool foundSome = false;
+    if (messages.count() == 0) return false;
+    for (int i = messages.count() - 1; i >= 0; i--)
+    {
+        if (messages[i].ID == ID)
+        {
+            messages.removeAt(i);
+            foundSome = true;
+        }
+    }
+    return foundSome;
+}
+
+bool DBCMessageHandler::removeMessage(QString name)
+{
+    bool foundSome = false;
+    if (messages.count() == 0) return false;
+    for (int i = messages.count() - 1; i >= 0; i--)
+    {
+        if (messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            messages.removeAt(i);
+            foundSome = true;
+        }
+    }
+    return foundSome;
+}
+
+void DBCMessageHandler::removeAllMessages()
+{
+    messages.clear();
+}
+
+int DBCMessageHandler::getCount()
+{
+    return messages.count();
+}
+
+DBCFile::DBCFile()
+{
+    messageHandler = new DBCMessageHandler;
+}
+
+DBCFile::DBCFile(const DBCFile& cpy)
+{
+    messageHandler = new DBCMessageHandler;
+    for (int i = 0 ; i < cpy.messageHandler->getCount() ; i++)
+        messageHandler->addMessage(*cpy.messageHandler->findMsgByIdx(i));
+
+    fileName = cpy.fileName;
+    filePath = cpy.filePath;
+    assocBuses = cpy.assocBuses;
+    dbc_nodes.clear();
+    dbc_nodes.append(cpy.dbc_nodes);
+}
+
+DBCFile& DBCFile::operator=(const DBCFile& cpy)
+{
+    if (this != &cpy) // protect against invalid self-assignment
+    {
+        messageHandler = cpy.messageHandler;
+        fileName = cpy.fileName;
+        filePath = cpy.filePath;
+        assocBuses = cpy.assocBuses;
+        dbc_nodes.clear();
+        dbc_nodes.append(cpy.dbc_nodes);
+    }
+    return *this;
+}
+
+DBC_NODE* DBCFile::findNodeByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= dbc_nodes.count()) return NULL;
+    return &dbc_nodes[idx];
+}
+
+DBC_NODE* DBCFile::findNodeByName(QString name)
+{
+    if (dbc_nodes.length() == 0) return NULL;
+    for (int i = 0; i < dbc_nodes.length(); i++)
+    {
+        if (dbc_nodes[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &dbc_nodes[i];
+        }
+    }
+    return NULL;
+}
+
+QString DBCFile::getFullFilename()
+{
+    return filePath + fileName;
+}
+
+QString DBCFile::getFilename()
+{
+    return fileName;
+}
+
+QString DBCFile::getPath()
+{
+    return filePath;
+}
+
+int DBCFile::getAssocBus()
+{
+    return assocBuses;
+}
+
+void DBCFile::setAssocBus(int bus)
+{
+    if (bus < -1) return;
+    if (bus > 1) return;
+    assocBuses = bus;
+}
+
+void DBCFile::loadFile(QString fileName)
+{
+    QFile *inFile = new QFile(fileName);
     QString line;
     QRegularExpression regex;
     QRegularExpressionMatch match;
     DBC_MESSAGE *currentMessage = NULL;
     int numSigFaults = 0, numMsgFaults = 0;
 
-    qDebug() << "DBC File: " << filename;
+    qDebug() << "DBC File: " << fileName;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -30,7 +268,7 @@ void DBCHandler::loadDBCFile(QString filename)
 
     qDebug() << "Starting DBC load";
     dbc_nodes.clear();
-    dbc_messages.clear();
+    messageHandler->removeAllMessages();
 
     DBC_NODE falseNode;
     falseNode.name = "Vector__XXX";
@@ -55,8 +293,8 @@ void DBCHandler::loadDBCFile(QString filename)
                 msg.name = match.captured(2);
                 msg.len = match.captured(3).toInt();
                 msg.sender = findNodeByName(match.captured(4));
-                dbc_messages.append(msg);
-                currentMessage = &dbc_messages.last();
+                messageHandler->addMessage(msg);
+                currentMessage = messageHandler->findMsgByID(msg.ID);
             }
             else numMsgFaults++;
         }
@@ -116,7 +354,7 @@ void DBCHandler::loadDBCFile(QString filename)
             //captured 11 is the receiving node
 
             if (match.hasMatch())
-            {                
+            {
                 sig.name = match.captured(1);
                 sig.startBit = match.captured(2 + offset).toInt();
                 sig.signalSize = match.captured(3 + offset).toInt();
@@ -156,8 +394,8 @@ void DBCHandler::loadDBCFile(QString filename)
                 }
                 else sig.receiver = findNodeByName(match.captured(11 + offset));
                 sig.parentMessage = currentMessage;
-                currentMessage->msgSignals.append(sig);
-                if (isMultiplexor) currentMessage->multiplexorSignal = &currentMessage->msgSignals.last();
+                currentMessage->sigHandler->addSignal(sig);
+                if (isMultiplexor) currentMessage->multiplexorSignal = currentMessage->sigHandler->findSignalByName(sig.name);
             }
             else numSigFaults++;
         }
@@ -194,10 +432,10 @@ void DBCHandler::loadDBCFile(QString filename)
             if (match.hasMatch())
             {
                 //qDebug() << "Comment was: " << match.captured(3);
-                DBC_MESSAGE *msg = findMsgByID(match.captured(1).toInt());
+                DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
                 if (msg != NULL)
                 {
-                    DBC_SIGNAL *sig = findSignalByName(msg, match.captured(2));
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
                     if (sig != NULL)
                     {
                         sig->comment = match.captured(3);
@@ -215,7 +453,7 @@ void DBCHandler::loadDBCFile(QString filename)
             if (match.hasMatch())
             {
                 //qDebug() << "Comment was: " << match.captured(2);
-                DBC_MESSAGE *msg = findMsgByID(match.captured(1).toInt());
+                DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
                 if (msg != NULL)
                 {
                     msg->comment = match.captured(2);
@@ -251,10 +489,10 @@ void DBCHandler::loadDBCFile(QString filename)
             if (match.hasMatch())
             {
                 //qDebug() << "Data was: " << match.captured(3);
-                DBC_MESSAGE *msg = findMsgByID(match.captured(1).toInt());
+                DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
                 if (msg != NULL)
                 {
-                    DBC_SIGNAL *sig = findSignalByName(msg, match.captured(2));
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
                     if (sig != NULL)
                     {
                         QString tokenString = match.captured(3);
@@ -316,14 +554,15 @@ void DBCHandler::loadDBCFile(QString filename)
     }
     inFile->close();
     delete inFile;
+    QStringList fileList = fileName.split('/');
+    this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
+    filePath = fileName.left(fileName.length() - this->fileName.length());
+
 }
 
-/*Yes, this is really hard to follow and all of the sections are mixed up in code
- * believe it or not I think this is actually the easiest, simplest way to do it.
-*/
-void DBCHandler::saveDBCFile(QString filename)
+void DBCFile::saveFile(QString fileName)
 {
-    QFile *outFile = new QFile(filename);
+    QFile *outFile = new QFile(fileName);
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
@@ -384,36 +623,36 @@ void DBCHandler::saveDBCFile(QString filename)
     nodesOutput.append("\n");
     outFile->write(nodesOutput.toUtf8());
 
-    for (int x = 0; x < dbc_messages.count(); x++)
+    for (int x = 0; x < messageHandler->getCount(); x++)
     {
-        DBC_MESSAGE msg = dbc_messages[x];
-        msgOutput.append("BO_ " + QString::number(msg.ID) + " " + msg.name + ": " + QString::number(msg.len) +
-                         " " + msg.sender->name + "\n");
-        if (msg.comment.length() > 0)
+        DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+        msgOutput.append("BO_ " + QString::number(msg->ID) + " " + msg->name + ": " + QString::number(msg->len) +
+                         " " + msg->sender->name + "\n");
+        if (msg->comment.length() > 0)
         {
-            commentsOutput.append("CM_ BO_ " + QString::number(msg.ID) + " \"" + msg.comment + "\";\n");
+            commentsOutput.append("CM_ BO_ " + QString::number(msg->ID) + " \"" + msg->comment + "\";\n");
         }
-        for (int s = 0; s < msg.msgSignals.count(); s++)
+        for (int s = 0; s < msg->sigHandler->getCount(); s++)
         {
-            DBC_SIGNAL sig = msg.msgSignals[s];
-            msgOutput.append("   SG_ " + sig.name);
+            DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+            msgOutput.append("   SG_ " + sig->name);
 
-            if (sig.isMultiplexor) msgOutput.append(" M");
-            if (sig.isMultiplexed)
+            if (sig->isMultiplexor) msgOutput.append(" M");
+            if (sig->isMultiplexed)
             {
-                msgOutput.append(" m" + QString::number(sig.multiplexValue));
+                msgOutput.append(" m" + QString::number(sig->multiplexValue));
             }
 
-            msgOutput.append(" : " + QString::number(sig.startBit) + "|" + QString::number(sig.signalSize) + "@");
+            msgOutput.append(" : " + QString::number(sig->startBit) + "|" + QString::number(sig->signalSize) + "@");
 
-            switch (sig.valType)
+            switch (sig->valType)
             {
             case UNSIGNED_INT:
-                if (sig.intelByteOrder) msgOutput.append("1+");
+                if (sig->intelByteOrder) msgOutput.append("1+");
                 else msgOutput.append("0+");
                 break;
             case SIGNED_INT:
-                if (sig.intelByteOrder) msgOutput.append("1-");
+                if (sig->intelByteOrder) msgOutput.append("1-");
                 else msgOutput.append("0-");
                 break;
             case SP_FLOAT:
@@ -429,19 +668,19 @@ void DBCHandler::saveDBCFile(QString filename)
                 msgOutput.append("0-");
                 break;
             }
-            msgOutput.append(" (" + QString::number(sig.factor) + "," + QString::number(sig.bias) + ") [" +
-                             QString::number(sig.min) + "|" + QString::number(sig.max) + "] \"" + sig.unitName
-                             + "\" " + sig.receiver->name + "\n");
-            if (sig.comment.length() > 0)
+            msgOutput.append(" (" + QString::number(sig->factor) + "," + QString::number(sig->bias) + ") [" +
+                             QString::number(sig->min) + "|" + QString::number(sig->max) + "] \"" + sig->unitName
+                             + "\" " + sig->receiver->name + "\n");
+            if (sig->comment.length() > 0)
             {
-                commentsOutput.append("CM_ SG_ " + QString::number(msg.ID) + " " + sig.name + " \"" + sig.comment + "\";\n");
+                commentsOutput.append("CM_ SG_ " + QString::number(msg->ID) + " " + sig->name + " \"" + sig->comment + "\";\n");
             }
-            if (sig.valList.count() > 0)
+            if (sig->valList.count() > 0)
             {
-                valuesOutput.append("VAL_ " + QString::number(msg.ID) + " " + sig.name);
-                for (int v = 0; v < sig.valList.count(); v++)
+                valuesOutput.append("VAL_ " + QString::number(msg->ID) + " " + sig->name);
+                for (int v = 0; v < sig->valList.count(); v++)
                 {
-                    DBC_VAL val = sig.valList[v];
+                    DBC_VAL val = sig->valList[v];
                     valuesOutput.append(" " + QString::number(val.value) + " \"" + val.descript +"\"");
                 }
                 valuesOutput.append(";\n");
@@ -459,324 +698,132 @@ void DBCHandler::saveDBCFile(QString filename)
 
     outFile->close();
     delete outFile;
+
+    QStringList fileList = fileName.split('/');
+    this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
+    filePath = fileName.left(fileName.length() - this->fileName.length());
 }
 
-
-DBC_NODE *DBCHandler::findNodeByName(QString name)
+void DBCHandler::saveDBCFile(int idx)
 {
-    if (dbc_nodes.length() == 0) return NULL;
-    for (int i = 0; i < dbc_nodes.length(); i++)
+    if (loadedFiles.count() == 0) return;
+    if (idx < 0) return;
+    if (idx >= loadedFiles.count()) return;
+
+    QString filename;
+    QFileDialog dialog;
+
+    QStringList filters;
+    filters.append(QString(tr("DBC File (*.dbc)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.selectFile(loadedFiles[idx].getFullFilename());
+
+    if (dialog.exec() == QDialog::Accepted)
     {
-        if (dbc_nodes[i].name.compare(name, Qt::CaseInsensitive) == 0)
-        {
-            return &dbc_nodes[i];
-        }
-    }
-    return NULL;
-}
-
-DBC_NODE *DBCHandler::findNodeByIdx(int idx)
-{
-    if (idx < 0) return NULL;
-    if (idx >= dbc_nodes.count()) return NULL;
-    return &dbc_nodes[idx];
-}
-
-DBC_MESSAGE *DBCHandler::findMsgByID(int id)
-{
-    if (dbc_messages.length() == 0) return NULL;
-    for (int i = 0; i < dbc_messages.length(); i++)
-    {
-        if (dbc_messages[i].ID == id)
-        {
-            return &dbc_messages[i];
-        }
-    }
-    return NULL;
-}
-
-DBC_MESSAGE *DBCHandler::findMsgByIdx(int idx)
-{
-    if (dbc_messages.length() == 0) return NULL;
-    if (idx < 0) return NULL;
-    if (idx >= dbc_messages.count()) return NULL;
-    return &dbc_messages[idx];
-}
-
-DBC_MESSAGE *DBCHandler::findMsgByName(QString name)
-{
-    if (dbc_messages.length() == 0) return NULL;
-    for (int i = 0; i < dbc_messages.length(); i++)
-    {
-        if (dbc_messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
-        {
-            return &dbc_messages[i];
-        }
-    }
-    return NULL;
-}
-
-DBC_SIGNAL *DBCHandler::findSignalByName(DBC_MESSAGE *msg, QString name)
-{
-    if (msg == NULL) return NULL;
-    if (msg->msgSignals.length() == 0) return NULL;
-    for (int i = 0; i < msg->msgSignals.length(); i++)
-    {
-        if (msg->msgSignals[i].name.compare(name, Qt::CaseInsensitive) == 0)
-        {
-            return &msg->msgSignals[i];
-        }
-    }
-    return NULL;
-}
-
-DBC_SIGNAL *DBCHandler::findSignalByIdx(DBC_MESSAGE *msg, int idx)
-{
-    if (msg == NULL) return NULL;
-    if (msg->msgSignals.length() == 0) return NULL;
-    if (idx < 0) return NULL;
-    if (idx >= msg->msgSignals.count()) return NULL;
-    return &msg->msgSignals[idx];
-}
-
-//Dumps the messages, signals, values structs out in order to debugging console. Used only for debugging
-//not really meant for general consumption.
-void DBCHandler::listDebugging()
-{
-    for (int i = 0; i < dbc_messages.length(); i++)
-    {
-        DBC_MESSAGE msg = dbc_messages.at(i);
-        qDebug() << " ";
-        qDebug() << "Msg ID: " << msg.ID << " Name: " << msg.name;
-
-        for (int j = 0; j < msg.msgSignals.length(); j++)
-        {
-            DBC_SIGNAL sig;
-            sig = msg.msgSignals.at(j);
-            qDebug() << "    Signal Name: " << sig.name;
-            qDebug() << "    Start bit: " << sig.startBit;
-            qDebug() << "    Bit Length: " << sig.signalSize;
-            if (sig.valList.length() > 1) qDebug() << "      Values: ";
-            for (int k = 0; k < sig.valList.length(); k++)
-            {
-                DBC_VAL val = sig.valList.at(k);
-                qDebug() << "            " << val.value << " Description: " << val.descript;
-            }
-        }
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".dbc";
+        loadedFiles[idx].saveFile(filename);
     }
 }
 
+//the only reason to even bother sending the index is to see if
+//the user wants to replace an already loaded DBC.
+//Otherwise add a new one. Well, always add a new one.
+//If a valid index is passed we'll remove that one and then commence
+//adding. Otherwise, just go straight to adding.
+void DBCHandler::loadDBCFile(int idx)
+{
+   if (idx > -1 && idx < loadedFiles.count()) removeDBCFile(idx);
+
+    QString filename;
+    QFileDialog dialog;
+
+    QStringList filters;
+    filters.append(QString(tr("DBC File (*.dbc)")));
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        //right now there is only one file type that can be loaded here so just do it.
+        DBCFile newFile;
+        newFile.loadFile(filename);
+        loadedFiles.append(newFile);
+    }
+}
+
+void DBCHandler::removeDBCFile(int idx)
+{
+    if (loadedFiles.count() == 0) return;
+    if (idx < 0) return;
+    if (idx >= loadedFiles.count()) return;
+    loadedFiles.removeAt(idx);
+}
+
+void DBCHandler::removeAllFiles()
+{
+    loadedFiles.clear();
+}
+
+void DBCHandler::swapFiles(int pos1, int pos2)
+{
+    if (loadedFiles.count() < 2) return;
+    if (pos1 < 0) return;
+    if (pos1 >= loadedFiles.count()) return;
+    if (pos2 < 0) return;
+    if (pos2 >= loadedFiles.count()) return;
+
+    loadedFiles.swap(pos1, pos2);
+}
 
 /*
- The way that the DBC file format works is kind of weird... For intel format signals you count up
-from the start bit to the end bit which is (startbit + signallength - 1). At each point
-bits are numbered in a sawtooth manner. What that means is that the very first bit is 0 and you count up
-from there all of the way to 63 with each byte being 8 bits so bit 0 is the lowest bit in the first byte
-and 8 is the lowest bit in the next byte up. The whole thing looks like this:
-                 Bits
-      7  6  5  4  3  2  1  0
-
-  0   7  6  5  4  3  2  1  0
-b 1   15 14 13 12 11 10 9  8
-y 2   23 22 21 20 19 18 17 16
-t 3   31 30 29 28 27 26 25 24
-e 4   39 38 37 36 35 34 33 32
-s 5   47 46 45 44 43 42 41 40
-  6   55 54 53 52 51 50 49 48
-  7   63 62 61 60 59 58 57 56
-
-  For intel format you start at the start bit and keep counting up. If you have a signal size of 8
-  and start at bit 12 then the bits are 12, 13, 14, 15, 16, 17, 18, 19 which spans across two bytes.
-  In this format each bit is worth twice as much as the last and you just keep counting up.
-  Bit 12 is worth 1, 13 is worth 2, 14 is worth 4, etc all of the way to bit 19 is worth 128.
-
-  Motorola format turns most everything on its head. You count backward from the start bit but
-  only within the current byte. If you are about to exit the current byte you go one higher and then keep
-  going backward as before. Using the same example as for intel, start bit of 12 and a signal length of 8.
-  So, the bits are 12, 11, 10, 9, 8, 23, 22, 21. Yes, that's confusing. They now go in reverse value order too.
-  Bit 12 is worth 128, 11 is worth 64, etc until bit 21 is worth 1.
+ * Convenience function that encapsulates a whole lot of the details.
+ * You give it a canbus frame and it'll tell you whether there is a loaded DBC file that can
+ * interpret that frame for you.
+ * Returns NULL if there is no message definition that matches.
 */
-
-QString DBCHandler::processSignal(const CANFrame &frame, const DBC_SIGNAL &sig)
+DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
 {
-
-    int64_t result = 0;
-    bool isSigned = false;
-    double endResult;
-
-    if (sig.valType == STRING)
+    for(int i = 0; i < loadedFiles.count(); i++)
     {
-        QString buildString;
-        int startByte = sig.signalSize / 8;
-        int bytes = sig.signalSize / 8;
-        for (int x = 0; x < bytes; x++) buildString.append(frame.data[startByte + x]);
-        return buildString;
-    }   
-
-    //if this is a multiplexed signal then we have to see if it is even found in the current message
-    if (sig.isMultiplexed)
-    {
-        if (sig.parentMessage->multiplexorSignal != NULL)
+        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == loadedFiles[i].getAssocBus())
         {
-           int val;
-           if (!processSignalInt(frame, *sig.parentMessage->multiplexorSignal, val)) return "";
-           if (val != sig.multiplexValue) return ""; //signal not found in this message
-        }
-        else return "";
-    }
-
-    if (sig.valType == SIGNED_INT) isSigned = true;
-    if (sig.valType == SIGNED_INT || sig.valType == UNSIGNED_INT)
-    {
-        result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
-        endResult = ((double)result * sig.factor) + sig.bias;
-        result = (int64_t)endResult;
-    }
-    else if (sig.valType == SP_FLOAT)
-    {
-        //The theory here is that we force the integer signal code to treat this as
-        //a 32 bit unsigned integer. This integer is then cast into a float in such a way
-        //that the bytes that make up the integer are instead treated as having made up
-        //a 32 bit single precision float. That's evil incarnate but it is very fast and small
-        //in terms of new code.
-        result = Utility::processIntegerSignal(frame.data, sig.startBit, 32, false, false);
-        endResult = (*((float *)(&result)) * sig.factor) + sig.bias;
-    }
-    else //double precision float
-    {
-        //like the above, this is rotten and evil and wrong in so many ways. Force
-        //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
-        endResult = (*((double *)(&result)) * sig.factor) + sig.bias;
-    }
-
-    QString outputString;
-
-    outputString = sig.name + ": ";
-
-    if (sig.valList.count() > 0) //if this is a value list type then look it up and display the proper string
-    {
-        for (int x = 0; x < sig.valList.count(); x++)
-        {
-            if (sig.valList.at(x).value == result) outputString += sig.valList.at(x).descript;
+            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.ID);
+            if (msg != NULL) return msg;
         }
     }
-    else //otherwise display the actual number and unit (if it exists)
-    {              
-       outputString += QString::number(endResult) + sig.unitName;
-    }
-
-    return outputString;
+    return NULL;
 }
 
-//Works quite a bit like the above version but this one is cut down and only will return int32_t which is perfect for
-//uses like calculating a multiplexor value or if you know you are going to get an integer returned
-//from a signal and you want to use it as-is and not have to convert back from a string. Use with caution though
-//as this basically assumes the signal is an integer.
-//The call syntax is different from the more generic processSignal. Instead of returning the value we return
-//true or false to show whether the function succeeded. The variable to fill out is passed by reference.
-bool DBCHandler::processSignalInt(const CANFrame &frame, const DBC_SIGNAL &sig, int32_t &outValue)
+int DBCHandler::getFileCount()
 {
-    int32_t result = 0;
-    bool isSigned = false;
-    if (sig.valType == STRING || sig.valType == SP_FLOAT  || sig.valType == DP_FLOAT)
-    {
-        return false;
-    }
+    return loadedFiles.count();
+}
 
-    //if this is a multiplexed signal then we have to see if it is even found in the current message
-    if (sig.isMultiplexed)
+DBCFile* DBCHandler::getFileByIdx(int idx)
+{
+    if (loadedFiles.count() == 0) return NULL;
+    if (idx < 0) return NULL;
+    if (idx >= loadedFiles.count()) return NULL;
+    return &loadedFiles[idx];
+}
+
+DBCFile* DBCHandler::getFileByName(QString name)
+{
+    if (loadedFiles.count() == 0) return NULL;
+    for (int i = 0; i < loadedFiles.count(); i++)
     {
-        if (sig.parentMessage->multiplexorSignal != NULL)
+        if (loadedFiles[i].getFilename().compare(name, Qt::CaseInsensitive) == 0)
         {
-           int val;
-           if (!processSignalInt(frame, *sig.parentMessage->multiplexorSignal, val)) return false;
-           if (val != sig.multiplexValue) return false; //signal not found in this message
+            return &loadedFiles[i];
         }
-        else return false;
     }
-
-    if (sig.valType == SIGNED_INT) isSigned = true;
-    result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
-
-    double endResult = ((double)result * sig.factor) + sig.bias;
-    result = (int32_t)endResult;
-
-    outValue = result;
-    return true;
-}
-
-
-//Another cut down version that will only return double precision data. This can be used on any of the types
-//except STRING. Useful for when you know you'll need floating point data and don't want to incur a conversion
-//back and forth to double or float. Such a use is the graphing window.
-//Similar syntax to processSignalInt but with double instead.
-bool DBCHandler::processSignalDouble(const CANFrame &frame, const DBC_SIGNAL &sig, double &outValue)
-{
-    int64_t result = 0;
-    bool isSigned = false;
-    double endResult;
-
-    if (sig.valType == STRING)
-    {
-        return false;
-    }
-
-    //if this is a multiplexed signal then we have to see if it is even found in the current message
-    if (sig.isMultiplexed)
-    {
-        if (sig.parentMessage->multiplexorSignal != NULL)
-        {
-           int val;
-           if (!processSignalInt(frame, *sig.parentMessage->multiplexorSignal, val)) return false;
-           if (val != sig.multiplexValue) return false; //signal not found in this message
-        }
-        else return false;
-    }
-
-    if (sig.valType == SIGNED_INT) isSigned = true;
-    if (sig.valType == SIGNED_INT || sig.valType == UNSIGNED_INT)
-    {
-        result = Utility::processIntegerSignal(frame.data, sig.startBit, sig.signalSize, sig.intelByteOrder, isSigned);
-        endResult = ((double)result * sig.factor) + sig.bias;
-        result = (int64_t)endResult;        
-    }
-    else if (sig.valType == SP_FLOAT)
-    {
-        //The theory here is that we force the integer signal code to treat this as
-        //a 32 bit unsigned integer. This integer is then cast into a float in such a way
-        //that the bytes that make up the integer are instead treated as having made up
-        //a 32 bit single precision float. That's evil incarnate but it is very fast and small
-        //in terms of new code.
-        result = Utility::processIntegerSignal(frame.data, sig.startBit, 32, false, false);
-        endResult = (*((float *)(&result)) * sig.factor) + sig.bias;
-    }
-    else //double precision float
-    {
-        //like the above, this is rotten and evil and wrong in so many ways. Force
-        //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
-        endResult = (*((double *)(&result)) * sig.factor) + sig.bias;
-    }
-
-    outValue = endResult;
-    return true;
-}
-
-//given a byte it will reverse the bit order in that byte
-unsigned char DBCHandler::reverseBits(unsigned char b) {
-   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-   return b;
-}
-
-unsigned char DBCHandler::processByte(unsigned char input, int start, int end)
-{
-    unsigned char output = 0, size = end - start + 1;
-    //first knock it down so that bottom is is start
-    output = input >> start;
-    //then mask off all bits above the proper ending
-    output &= ((1 << size) - 1);
-    return output;
+    return NULL;
 }

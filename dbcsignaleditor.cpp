@@ -33,9 +33,9 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
 
-    for (int x = 0; x < dbcHandler->dbc_nodes.count(); x++)
+    for (int x = 0; x < dbcHandler->getFileByIdx(0)->dbc_nodes.count(); x++)
     {
-        ui->comboReceiver->addItem(dbcHandler->dbc_nodes[x].name);
+        ui->comboReceiver->addItem(dbcHandler->getFileByIdx(0)->dbc_nodes[x].name);
     }
 
     connect(ui->signalsList, SIGNAL(currentRowChanged(int)), this, SLOT(clickSignalList(int)));
@@ -61,7 +61,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             [=]()
             {
                 if (currentSignal == NULL) return;
-                currentSignal->receiver = dbcHandler->findNodeByName(ui->comboReceiver->currentText());
+                currentSignal->receiver = dbcHandler->getFileByIdx(0)->findNodeByName(ui->comboReceiver->currentText());
             });
     connect(ui->comboType, &QComboBox::currentTextChanged,
             [=]()
@@ -256,9 +256,9 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
 
     refreshSignalsList();
     currentSignal = NULL;
-    if (dbcMessage->msgSignals.count() > 0)
+    if (dbcMessage->sigHandler->getCount() > 0)
     {        
-        currentSignal = &dbcMessage->msgSignals[0];
+        currentSignal = dbcMessage->sigHandler->findSignalByIdx(0);
         fillSignalForm(currentSignal);
         fillValueTable(currentSignal);
     }
@@ -326,7 +326,7 @@ void DBCSignalEditor::addNewSignal()
     newSig.intelByteOrder = true;
     newSig.max = 0.0;
     newSig.min = 0.0;
-    newSig.receiver = &dbcHandler->dbc_nodes[0];
+    newSig.receiver = dbcHandler->getFileByIdx(0)->findNodeByIdx(0);
     newSig.signalSize = 1;
     newSig.startBit = 0;
     newSig.valType = UNSIGNED_INT;
@@ -335,8 +335,8 @@ void DBCSignalEditor::addNewSignal()
     newSig.multiplexValue = 0;
     newSig.parentMessage = dbcMessage;
     ui->signalsList->addItem(newName);
-    dbcMessage->msgSignals.append(newSig);
-    if (dbcMessage->msgSignals.count() == 1) clickSignalList(0);
+    dbcMessage->sigHandler->addSignal(newSig);
+    if (dbcMessage->sigHandler->getCount() == 1) clickSignalList(0);
 }
 
 void DBCSignalEditor::deleteCurrentSignal()
@@ -345,10 +345,10 @@ void DBCSignalEditor::deleteCurrentSignal()
     if (currIdx > -1)
     {
         delete(ui->signalsList->item(currIdx));
-        dbcMessage->msgSignals.removeAt(currIdx);
+        dbcMessage->sigHandler->removeSignal(currIdx);
         currentSignal = NULL;
         currIdx = ui->signalsList->currentRow();
-        if (currIdx > -1) currentSignal = &dbcMessage->msgSignals[currIdx];
+        if (currIdx > -1) currentSignal = dbcMessage->sigHandler->findSignalByIdx(currIdx);
         fillSignalForm(currentSignal);
         fillValueTable(currentSignal);
     }
@@ -367,10 +367,10 @@ void DBCSignalEditor::deleteCurrentValue()
 void DBCSignalEditor::refreshSignalsList()
 {
     ui->signalsList->clear();
-    for (int x = 0; x < dbcMessage->msgSignals.count(); x++)
+    for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
-        DBC_SIGNAL sig = dbcMessage->msgSignals.at(x);
-        ui->signalsList->addItem(sig.name);
+        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
+        ui->signalsList->addItem(sig->name);
     }
 }
 
@@ -518,12 +518,11 @@ void DBCSignalEditor::clickSignalList(int row)
     if (row < 0) return;
     //qDebug() << ui->signalsList->item(row)->text();
 
-    DBC_SIGNAL *thisSig = dbcHandler->findSignalByName(dbcMessage, ui->signalsList->item(row)->text());
+    DBC_SIGNAL *thisSig = dbcMessage->sigHandler->findSignalByName(ui->signalsList->item(row)->text());
     if (thisSig == NULL) return;
     currentSignal = thisSig;
     fillSignalForm(thisSig);
     fillValueTable(thisSig);
-
 }
 
 void DBCSignalEditor::bitfieldClicked(int x, int y)
@@ -546,15 +545,15 @@ void DBCSignalEditor::generateUsedBits()
     uint8_t usedBits[8] = {0,0,0,0,0,0,0,0};
     int startBit, endBit;
 
-    for (int x = 0; x < dbcMessage->msgSignals.count(); x++)
+    for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
-        DBC_SIGNAL sig = dbcMessage->msgSignals.at(x);
+        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
 
-        startBit = sig.startBit;
+        startBit = sig->startBit;
 
-        if (sig.intelByteOrder)
+        if (sig->intelByteOrder)
         {
-            endBit = startBit + sig.signalSize - 1;
+            endBit = startBit + sig->signalSize - 1;
             if (startBit < 0) startBit = 0;
             if (endBit > 63) endBit = 63;
             for (int y = startBit; y <= endBit; y++)
@@ -566,7 +565,7 @@ void DBCSignalEditor::generateUsedBits()
         else //big endian / motorola format
         {
             //much more irritating than the intel version...
-            int size = sig.signalSize;
+            int size = sig->signalSize;
             while (size > 0)
             {
                 int byt = startBit / 8;

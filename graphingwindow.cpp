@@ -759,10 +759,10 @@ void GraphingWindow::loadDefinitions()
                 {
                     gp.isDBCSignal = true;
                     //tokens[2] is the signal name. Need to use the message ID and this name to look it up
-                    DBC_MESSAGE *msg = dbcHandler->findMsgByID(gp.ID);
+                    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(gp.ID);
                     if (msg != NULL)
                     {
-                        DBC_SIGNAL *sig = dbcHandler->findSignalByName(msg, tokens[2]);
+                        DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(tokens[2]);
                         if (sig == NULL) dbcMissing = true;
                         gp.signal = tokens[2];
                     }
@@ -850,12 +850,12 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
     if (params.isDBCSignal)
     {
         double tempValue;
-        DBC_MESSAGE *msg = dbcHandler->findMsgByID(params.ID);
+        DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(params.ID);
         DBC_SIGNAL *sig = NULL;
-        if (msg) sig = dbcHandler->findSignalByName(msg, params.signal);
+        if (msg) sig = msg->sigHandler->findSignalByName(params.signal);
         if (sig == NULL) return;
         //if the given signal was found and successfully processed in this frame then add it to the graph
-        if (dbcHandler->processSignalDouble(frame, *sig, tempValue))
+        if (sig->processAsDouble(frame, tempValue))
         {
             //qDebug() << "tempValue: " << tempValue;
             if (secondsMode)
@@ -989,8 +989,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     if (params.isDBCSignal)
     {
-        msg = dbcHandler->findMsgByID(params.ID);
-        if (msg) sig = dbcHandler->findSignalByName(msg, params.signal);
+        msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(params.ID);
+        if (msg) sig = msg->sigHandler->findSignalByName(params.signal);
         if (sig == NULL) return;
         qDebug() << "New signal graph: " << params.signal <<" in ID:" << params.ID;
     }
@@ -1023,7 +1023,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         for (int j = 0; j < numEntries; j++)
         {
             //if the given signal was found and successfully processed in this frame then add it to the graph
-            if (dbcHandler->processSignalDouble(frameCache[j], *sig, tempValue))
+            if (sig->processAsDouble(frameCache[j], tempValue))
             {
                 //qDebug() << "tempValue: " << tempValue;
                 if (secondsMode)

@@ -41,7 +41,8 @@ SOURCES += main.cpp\
     scriptingwindow.cpp \
     scriptcontainer.cpp \
     canfilter.cpp \
-    rangestatewindow.cpp
+    rangestatewindow.cpp \
+    dbc_classes.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \

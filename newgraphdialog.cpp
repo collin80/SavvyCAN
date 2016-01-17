@@ -150,9 +150,9 @@ void NewGraphDialog::loadMessages()
 {
     ui->cbMessages->clear();
     if (dbcHandler == NULL) return;
-    for (int x = 0; x < dbcHandler->dbc_messages.count(); x++)
+    for (int x = 0; x < dbcHandler->getFileByIdx(0)->messageHandler->getCount(); x++)
     {
-        ui->cbMessages->addItem(dbcHandler->dbc_messages[x].name);
+        ui->cbMessages->addItem(dbcHandler->getFileByIdx(0)->messageHandler->findMsgByIdx(x)->name);
     }
 }
 
@@ -163,13 +163,13 @@ void NewGraphDialog::loadSignals(int idx)
     //in the data structure so it should have been possible to just
     //look it up based on index but by name is probably safer and this operation
     //is not time critical at all.
-    DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
+    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
 
     if (msg == NULL) return;
     ui->cbSignals->clear();
-    for (int x = 0; x < msg->msgSignals.count(); x++)
+    for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
-        ui->cbSignals->addItem(msg->msgSignals[x].name);
+        ui->cbSignals->addItem(msg->sigHandler->findSignalByIdx(x)->name);
     }
 }
 
@@ -177,11 +177,11 @@ void NewGraphDialog::fillFormFromSignal(int idx)
 {
     Q_UNUSED(idx);
     GraphParams params;
-    DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
+    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
 
     if (msg == NULL) return;
 
-    DBC_SIGNAL *sig = dbcHandler->findSignalByName(msg, ui->cbSignals->currentText());
+    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
 
     if (sig == NULL) return;
 

@@ -195,15 +195,15 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
             if (dbcHandler != NULL && interpretFrames)
             {
-                DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
+                DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != NULL)
                 {
                     tempString.append("\r\n");
                     tempString.append(msg->name + " " + msg->comment + "\r\n");
-                    for (int j = 0; j < msg->msgSignals.length(); j++)
+                    for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
-                        QString sigString = dbcHandler->processSignal(thisFrame, msg->msgSignals.at(j));
-                        if (sigString.length() > 1) //weeds out signals that don't actually exist in this message (due to multiplexing)
+                        QString sigString;
+                        if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, sigString))
                         {
                             tempString.append(sigString);
                             tempString.append("\r\n");

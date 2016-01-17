@@ -16,10 +16,9 @@ Single / Multi state - The goal is to find bits that change based on toggles or 
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
 
-Make the graphing window use signals either exclusively or as an option for each signal graphed
 Allow multiple DBC files to be loaded in the program and also allow them to be associated with a bus
 Allow scripts to read/write signals from DBC files
-allow scripts to load DBC files in support of the script
+allow scripts to load DBC files in support of the script - maybe the graphing system too.
 */
 
 QString MainWindow::loadedFileName = "";
@@ -756,49 +755,15 @@ void MainWindow::handleLoadFilters()
 
 void MainWindow::handleLoadDBC()
 {
-    QString filename;
-    QFileDialog dialog(this);
+    dbcHandler->loadDBCFile(-1);
 
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
-
-    dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        filename = dialog.selectedFiles()[0];
-        //right now there is only one file type that can be loaded here so just do it.
-        dbcHandler->loadDBCFile(filename);
-        //dbcHandler->listDebugging();
-        QStringList fileList = filename.split('/');
-        lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
-    }
+        //lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 }
 
 void MainWindow::handleSaveDBC()
 {
-    QString filename;
-    QFileDialog dialog(this);
-
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
-
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        filename = dialog.selectedFiles()[0];
-        if (!filename.contains('.')) filename += ".dbc";
-        dbcHandler->saveDBCFile(filename);
-        QStringList fileList = filename.split('/');
-        lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
-    }
-
+        dbcHandler->saveDBCFile(0);
+        //lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 }
 
 void MainWindow::handleSaveDecoded()
@@ -857,14 +822,18 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         builderString = "";
         if (dbcHandler != NULL)
         {
-            DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
+            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
             if (msg != NULL)
             {
-                for (int j = 0; j < msg->msgSignals.length(); j++)
+                for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
 
-                    builderString.append("\t" + dbcHandler->processSignal(thisFrame, msg->msgSignals.at(j)));
-                    builderString.append("\n");
+                    QString temp;
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, temp))
+                    {
+                        builderString.append("\t" + temp);
+                        builderString.append("\n");
+                    }
                 }
             }
             builderString.append("\n");
