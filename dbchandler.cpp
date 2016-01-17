@@ -557,6 +557,7 @@ void DBCFile::loadFile(QString fileName)
     QStringList fileList = fileName.split('/');
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
+    assocBuses = -1;
 
 }
 
