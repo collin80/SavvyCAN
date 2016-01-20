@@ -20,6 +20,8 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
     filters.append(QString(tr("Vector trace files (*.trace)")));
+    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
+    filters.append(QString(tr("CAN-DO Log (*.*)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -45,6 +47,8 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
         if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[5]) result = loadTraceFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[6]) result = loadIXXATFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[7]) result = loadCANDOFile(filename, frameCache);
 
         progress.cancel();
 
@@ -565,6 +569,219 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
     return true;
 }
 
+//"00:01:03.03","223","Std","","00 00 00 00 49 00 00 01 "
+bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    uint64_t timeStamp = Utility::GetTimeMS();
+    int lineCounter = 0;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    for (int i = 0; i < 7; i++) line = inFile->readLine(); //read out the header first and discard it.
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        line = inFile->readLine().toUpper();
+        if (line.length() > 1)
+        {
+            QList<QByteArray> tokens = line.split(',');
+            QString timePortion = unQuote(tokens[0]);
+            QStringList timeToks = timePortion.split(':');
+            timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
+                      + (timeToks[2].toDouble() * (1000.0 * 1000.0));
+            thisFrame.timestamp = timeStamp;
+            thisFrame.ID = unQuote(tokens[1]).toInt(NULL, 16);
+            if (unQuote(tokens[2]).toUpper().at(0) == 'S') thisFrame.extended = false;
+                else thisFrame.extended = true;
+
+            thisFrame.isReceived = true;
+            thisFrame.bus = 0;
+
+            QStringList dataToks = unQuote(tokens[4]).simplified().split(' ');
+            thisFrame.len = dataToks.length();
+            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
+        }
+        frames->append(thisFrame);
+    }
+    inFile->close();
+    delete inFile;
+    return true;
+}
+
+bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frames)
+{
+    QFile *outFile = new QFile(filename);
+    QDateTime timestamp, tempStamp;
+    int lineCounter = 0;
+
+    timestamp = QDateTime::currentDateTime();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+
+    outFile->write("ASCII Trace IXXAT SavvyCAN V" + QString::number(VERSION).toUtf8() + "\n");
+    outFile->write("Date: " + timestamp.toString("d:M:yyyy").toUtf8() + "\n");
+    outFile->write("Start time: " + timestamp.toString("h:m:s").toUtf8() + "\n");
+    timestamp.addMSecs((frames->last().timestamp - frames->first().timestamp) / 1000);
+    outFile->write("Stop time: " + timestamp.toString("h:m:s").toUtf8() + "\n");
+    outFile->write("Overruns: 0\n");
+    outFile->write("Baudrate: 500 kbit/s\n"); //could be a lie... this code has no way to know the baud rate (at the moment)
+    outFile->write("\"Time\",\"Identifier (hex)\",\"Format\",\"Flags\",\"Data (hex)\"\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        timestamp.setTime(QTime());
+
+        tempStamp = timestamp.addMSecs(frames->at(c).timestamp / 1000);
+        outFile->write("\"" + tempStamp.toString("h:m:s.").toUtf8() + tempStamp.toString("z").rightJustified(3, '0').toUtf8() + "\"");
+
+        outFile->write(",\"" + QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + "\"");
+        if (frames->at(c).extended) outFile->write(",\"Ext\"");
+            else outFile->write(",\"Std\"");
+        outFile->write(",\"\",\"");
+
+        for (int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
+        }
+
+        outFile->write("\"\n");
+
+    }
+    outFile->close();
+    delete outFile;
+    return true;
+}
+
+bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    int lineCounter = 0;
+    QByteArray data;
+    int timeOffset = 0;
+    uint64_t lastTimeStamp = 0;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+
+    //this file format is in static 12 byte blocks.
+    //Bytes 0 - 1 are a time stamp
+    //Bytes 2 - 3 are the data length (top 4 bits) then ID (bottom 11 bits)
+    //Bytes 4 - 11 are the data bytes (padded with FF for bytes not used)
+
+    data = inFile->read(12); //there is an initial frame at the beginning that is bogus. What is it for!?!
+
+    while (!inFile->atEnd())
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        data = inFile->read(12);
+        thisFrame.bus = 0;
+        thisFrame.isReceived = true;
+        thisFrame.extended = false; //format is incapable of extended frames
+        thisFrame.timestamp = ((unsigned char)data[0] * 256 + (unsigned char)data[1]) * 1000ul + timeOffset; //time stamp in file is ms but frame is in us.
+        if (thisFrame.timestamp < lastTimeStamp)
+        {
+            timeOffset += 65535000ul;
+        }
+        lastTimeStamp = thisFrame.timestamp;
+        thisFrame.ID = ((unsigned char)data[3] * 256 + (unsigned char)data[2]) & 0x7FF;
+        thisFrame.len = (unsigned char)data[3] >> 4;
+        for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)data[4 + d];
+        frames->append(thisFrame);
+    }
+
+    inFile->close();
+    delete inFile;
+    return true;
+}
+
+bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frames)
+{
+    QFile *outFile = new QFile(filename);
+    int lineCounter = 0;
+    QByteArray data;
+    CANFrame thisFrame;
+    int ms, id;
+
+    if (!outFile->open(QIODevice::WriteOnly))
+    {
+        delete outFile;
+        return false;
+    }
+
+    data.reserve(13);
+
+    //I have no idea what this initial frame is but all the real files have something here with ID = 7FF
+    //so here's a line like the real files have...
+    thisFrame = frames->at(0);
+    ms = (thisFrame.timestamp / 1000);
+    data[0] = (char)(ms >> 8);
+    data[1] = (char)(ms & 0xFF);
+    data[2] = 0xFF;
+    data[3] = 0xFF;
+    for (int l = 0; l < 8; l++) data[4 + l] = 0;
+    outFile->write(data);
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        for (int j = 0; j < 8; j++) data[4 + j] = 0xFF;
+
+        thisFrame = frames->at(c);
+
+        ms = (thisFrame.timestamp / 1000);
+        id = thisFrame.ID;
+        data[0] = (char)(ms >> 8);
+        data[1] = (char)(ms & 0xFF);
+        data[2] = (char)(id & 0xFF);
+        data[3] = (char)((id >> 8) + (thisFrame.len << 4));
+        for (int d = 0; d < thisFrame.len; d++) data[4 + d] = (char)thisFrame.data[d];
+        outFile->write(data);
+    }
+    outFile->close();
+    delete outFile;
+    return true;
+}
+
 //log file from microchip tool
 /*
 tokens:
@@ -871,4 +1088,9 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
     outFile->close();
     delete outFile;
     return true;
+}
+
+QString FrameFileIO::unQuote(QString inStr)
+{
+    return inStr.split('\"')[1];
 }

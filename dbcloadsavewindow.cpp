@@ -24,6 +24,8 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(DBCHandler *handler, const QVector<CANFrame
     connect(ui->btnMoveUp, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveUp);
     connect(ui->btnRemove, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::removeFile);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::saveFile);
+    connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
+    connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
 
     editorWindow = new DBCMainEditor(handler, frames);
 }
@@ -81,6 +83,16 @@ void DBCLoadSaveWindow::editFile()
 
     editorWindow->setFileIdx(idx);
     editorWindow->show();
+}
+
+void DBCLoadSaveWindow::cellChanged(int row, int col)
+{
+
+}
+
+void DBCLoadSaveWindow::cellDoubleClicked(int row, int col)
+{
+
 }
 
 void DBCLoadSaveWindow::swapTableRows(bool up)

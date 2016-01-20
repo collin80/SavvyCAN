@@ -533,6 +533,8 @@ void MainWindow::handleLoadFile()
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
     filters.append(QString(tr("Vector Trace Files (*.trace)")));
+    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
+    filters.append(QString(tr("CAN-DO Log (*.*)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -562,6 +564,8 @@ void MainWindow::handleLoadFile()
         if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[5]) result = FrameFileIO::loadTraceFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[6]) result = FrameFileIO::loadIXXATFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[7]) result = FrameFileIO::loadCANDOFile(filename, &tempFrames);
 
         progress.cancel();
 
@@ -594,6 +598,8 @@ void MainWindow::handleSaveFile()
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
     filters.append(QString(tr("Vector Trace Files (*.trace)")));
+    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
+    filters.append(QString(tr("CAN-DO Log (*.can)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -645,6 +651,18 @@ void MainWindow::handleSaveFile()
         {
             if (!filename.contains('.')) filename += ".trace";
             result = FrameFileIO::saveTraceFile(filename, frames);
+        }
+
+        if (dialog.selectedNameFilter() == filters[6])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = FrameFileIO::saveIXXATFile(filename, frames);
+        }
+
+        if (dialog.selectedNameFilter() == filters[7])
+        {
+            if (!filename.contains('.')) filename += ".can";
+            result = FrameFileIO::saveCANDOFile(filename, frames);
         }
 
         progress.cancel();
