@@ -7,21 +7,113 @@ FrameFileIO::FrameFileIO()
 
 }
 
-QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
+bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* frameCache)
+{
+    QString filename;
+    QFileDialog dialog(qApp->activeWindow());
+    bool result = false;
+
+    QStringList filters;
+    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
+    filters.append(QString(tr("CRTD Logs (*.txt *.TXT)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
+    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
+    filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
+    filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));
+    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
+    filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+
+        QProgressDialog progress(qApp->activeWindow());
+        progress.setWindowModality(Qt::WindowModal);
+        progress.setLabelText("Saving file...");
+        progress.setCancelButton(0);
+        progress.setRange(0,0);
+        progress.setMinimumDuration(0);
+        progress.show();
+
+        qApp->processEvents();
+
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = saveNativeCSVFile(filename, frameCache);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".txt";
+            result = saveCRTDFile(filename, frameCache);
+        }
+        if (dialog.selectedNameFilter() == filters[2])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = saveGenericCSVFile(filename, frameCache);
+        }
+        if (dialog.selectedNameFilter() == filters[3])
+        {
+            if (!filename.contains('.')) filename += ".log";
+            result = saveLogFile(filename, frameCache);
+        }
+        if (dialog.selectedNameFilter() == filters[4])
+        {
+            if (!filename.contains('.')) filename += ".log";
+            result = saveMicrochipFile(filename, frameCache);
+        }
+
+        if (dialog.selectedNameFilter() == filters[5])
+        {
+            if (!filename.contains('.')) filename += ".trace";
+            result = saveTraceFile(filename, frameCache);
+        }
+
+        if (dialog.selectedNameFilter() == filters[6])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = saveIXXATFile(filename, frameCache);
+        }
+
+        if (dialog.selectedNameFilter() == filters[7])
+        {
+            if (!filename.contains('.')) filename += ".can";
+            result = saveCANDOFile(filename, frameCache);
+        }
+
+        progress.cancel();
+
+        if (result)
+        {
+            QStringList fileList = filename.split('/');
+            fileName = fileList[fileList.length() - 1];
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
+bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache)
 {
     QString filename;
     QFileDialog dialog;
     bool result = false;
 
     QStringList filters;
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("CRTD Logs (*.txt)")));    
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.can)")));
-    filters.append(QString(tr("Vector trace files (*.trace)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
-    filters.append(QString(tr("CAN-DO Log (*.*)")));
+    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
+    filters.append(QString(tr("CRTD Logs (*.txt *.TXT)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
+    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
+    filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
+    filters.append(QString(tr("Vector trace files (*.trace *.TRACE)")));
+    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
+    filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -55,12 +147,12 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
         if (result)
         {
             QStringList fileList = filename.split('/');
-            filename = fileList[fileList.length() - 1];
-            return filename;
+            fileName = fileList[fileList.length() - 1];
+            return true;
         }
-        else return QString("");
+        else return false;
     }
-    return QString("");
+    return false;
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project

@@ -525,247 +525,42 @@ void MainWindow::changeBaudRates()
 void MainWindow::handleLoadFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
+    QVector<CANFrame> tempFrames;
 
-    QStringList filters;
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("CRTD Logs (*.txt)")));    
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.can)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
-    filters.append(QString(tr("CAN-DO Log (*.*)")));
-
-    dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::loadFrameFile(filename, &tempFrames))
     {
-        filename = dialog.selectedFiles()[0];
         ui->canFramesView->scrollToTop();
         model->clearFrames();
+        model->insertFrames(tempFrames);
+        loadedFileName = filename;
+        model->recalcOverwrite();
+        ui->lbNumFrames->setText(QString::number(model->rowCount()));
+        if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
-        QVector<CANFrame> tempFrames;
-
-        QProgressDialog progress(this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Loading file...");
-        progress.setCancelButton(0);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadNativeCSVFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadCRTDFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[5]) result = FrameFileIO::loadTraceFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[6]) result = FrameFileIO::loadIXXATFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[7]) result = FrameFileIO::loadCANDOFile(filename, &tempFrames);
-
-        progress.cancel();
-
-        if (result)
-        {
-            model->insertFrames(tempFrames);
-            QStringList fileList = filename.split('/');
-            loadedFileName = fileList[fileList.length() - 1];
-
-            model->recalcOverwrite();
-            ui->lbNumFrames->setText(QString::number(model->rowCount()));
-            if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
-
-            updateFileStatus();
-            emit framesUpdated(-2);
-        }
+        updateFileStatus();
+        emit framesUpdated(-2);
     }
 }
 
 void MainWindow::handleSaveFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
 
-    QStringList filters;
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.can)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
-    filters.append(QString(tr("CAN-DO Log (*.can)")));
-
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::saveFrameFile(filename, model->getListReference()))
     {
-        const QVector<CANFrame> *frames = model->getListReference();        
-        filename = dialog.selectedFiles()[0];
-
-        QProgressDialog progress(this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Saving file...");
-        progress.setCancelButton(0);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveNativeCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".txt";
-            result = FrameFileIO::saveCRTDFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveGenericCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[3])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveLogFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[4])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveMicrochipFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[5])
-        {
-            if (!filename.contains('.')) filename += ".trace";
-            result = FrameFileIO::saveTraceFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[6])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveIXXATFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[7])
-        {
-            if (!filename.contains('.')) filename += ".can";
-            result = FrameFileIO::saveCANDOFile(filename, frames);
-        }
-
-        progress.cancel();
-
-        if (result)
-        {
-            QStringList fileList = filename.split('/');
-            loadedFileName = fileList[fileList.length() - 1];
-            updateFileStatus();
-        }
+        loadedFileName = filename;
+        updateFileStatus();
     }
 }
 
 void MainWindow::handleSaveFilteredFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
 
-    QStringList filters;
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("CRTD Logs (*.txt)")));    
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.log)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
-    filters.append(QString(tr("CAN-DO Log (*.can)")));
-
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::saveFrameFile(filename, model->getFilteredListReference()))
     {
-        const QVector<CANFrame> *frames = model->getFilteredListReference();
-        filename = dialog.selectedFiles()[0];
-
-        QProgressDialog progress(this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Saving filtered file...");
-        progress.setCancelButton(0);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveNativeCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".txt";
-            result = FrameFileIO::saveCRTDFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveGenericCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[3])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveLogFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[4])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveMicrochipFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[5])
-        {
-            if (!filename.contains('.')) filename += ".trace";
-            result = FrameFileIO::saveTraceFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[6])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveIXXATFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[7])
-        {
-            if (!filename.contains('.')) filename += ".can";
-            result = FrameFileIO::saveCANDOFile(filename, frames);
-        }
-
-        progress.cancel();
-
-        if (result)
-        {
-            QStringList fileList = filename.split('/');
-            loadedFileName = fileList[fileList.length() - 1];
-            updateFileStatus();
-        }
+        loadedFileName = filename;
+        updateFileStatus();
     }
 }
 

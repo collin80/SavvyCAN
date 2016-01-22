@@ -38,7 +38,8 @@ public:
     static bool saveTraceFile(QString, const QVector<CANFrame>*);
     static bool saveIXXATFile(QString, const QVector<CANFrame>*);
     static bool saveCANDOFile(QString, const QVector<CANFrame>*);
-    static QString loadFrameFile(QVector<CANFrame>*);
+    static bool loadFrameFile(QString &, QVector<CANFrame>*);
+    static bool saveFrameFile(QString &, const QVector<CANFrame>*);
 
 private:
     static QString unQuote(QString);

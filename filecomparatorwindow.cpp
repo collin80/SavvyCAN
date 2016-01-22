@@ -58,11 +58,11 @@ void FileComparatorWindow::writeSettings()
 void FileComparatorWindow::loadInterestedFile()
 {
     interestedFrames.clear();
-    QString result = FrameFileIO::loadFrameFile(&interestedFrames);
-    if (result.length() > 0)
+    QString resultingFileName;
+    if (FrameFileIO::loadFrameFile(resultingFileName, &interestedFrames))
     {
-        ui->lblFirstFile->setText(result);
-        interestedFilename = result;
+        ui->lblFirstFile->setText(resultingFileName);
+        interestedFilename = resultingFileName;
         if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
 }
@@ -70,8 +70,8 @@ void FileComparatorWindow::loadInterestedFile()
 void FileComparatorWindow::loadReferenceFile()
 {
     //secondFileFrames.clear();
-    QString result = FrameFileIO::loadFrameFile(&referenceFrames);
-    if (result.length() > 0)
+    QString resultingFileName;
+    if (FrameFileIO::loadFrameFile(resultingFileName, &referenceFrames))
     {
         ui->lblRefFrames->setText(QString::number(referenceFrames.length()));
         if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
