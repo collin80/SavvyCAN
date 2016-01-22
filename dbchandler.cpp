@@ -731,6 +731,13 @@ void DBCHandler::saveDBCFile(int idx)
     }
 }
 
+int DBCHandler::createBlankFile()
+{
+    DBCFile newFile;
+    loadedFiles.append(newFile);
+    return loadedFiles.count();
+}
+
 //the only reason to even bother sending the index is to see if
 //the user wants to replace an already loaded DBC.
 //Otherwise add a new one. Well, always add a new one.

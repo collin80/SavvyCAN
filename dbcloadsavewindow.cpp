@@ -24,6 +24,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(DBCHandler *handler, const QVector<CANFrame
     connect(ui->btnMoveUp, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveUp);
     connect(ui->btnRemove, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::removeFile);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::saveFile);
+    connect(ui->btnNewDBC, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::newFile);
     connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
 
@@ -33,6 +34,15 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(DBCHandler *handler, const QVector<CANFrame
 DBCLoadSaveWindow::~DBCLoadSaveWindow()
 {
     delete ui;
+}
+
+void DBCLoadSaveWindow::newFile()
+{
+    int idx = dbcHandler->createBlankFile();
+    idx = ui->tableFiles->rowCount();
+    ui->tableFiles->insertRow(ui->tableFiles->rowCount());
+    ui->tableFiles->setItem(idx, 0, new QTableWidgetItem("UNNAMEDFILE"));
+    ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
 }
 
 void DBCLoadSaveWindow::loadFile()
@@ -49,6 +59,8 @@ void DBCLoadSaveWindow::saveFile()
     int idx = ui->tableFiles->currentRow();
     if (idx < 0) return;
     dbcHandler->saveDBCFile(idx);
+    //then update the list to show the new file name (if it changed)
+    ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(dbcHandler->getFileByIdx(idx)->getFullFilename()));
 }
 
 void DBCLoadSaveWindow::removeFile()
@@ -87,12 +99,21 @@ void DBCLoadSaveWindow::editFile()
 
 void DBCLoadSaveWindow::cellChanged(int row, int col)
 {
-
+    if (col == 1) //the bus column
+    {
+        DBCFile *file = dbcHandler->getFileByIdx(row);
+        int bus = ui->tableFiles->item(row, col)->text().toInt();
+        if (bus > -2 && bus < 2)
+        {
+            file->setAssocBus(bus);
+        }
+    }
 }
 
 void DBCLoadSaveWindow::cellDoubleClicked(int row, int col)
 {
-
+    editorWindow->setFileIdx(row);
+    editorWindow->show();
 }
 
 void DBCLoadSaveWindow::swapTableRows(bool up)

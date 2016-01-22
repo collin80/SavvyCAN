@@ -27,6 +27,7 @@ private slots:
     void editFile();
     void cellChanged(int row, int col);
     void cellDoubleClicked(int row, int col);
+    void newFile();
 
 private:
     Ui::DBCLoadSaveWindow *ui;
