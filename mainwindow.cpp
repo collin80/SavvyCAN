@@ -9,6 +9,8 @@
 #include "serialworker.h"
 
 /*
+Compile for all platforms and create release (remember to include QScintilla libs) and make Win32 binary.
+
 Some notes on things I'd like to put into the program but haven't put on github (yet)
 
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
@@ -527,8 +529,8 @@ void MainWindow::handleLoadFile()
     bool result = false;
 
     QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
     filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("CRTD Logs (*.txt)")));    
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
@@ -558,8 +560,8 @@ void MainWindow::handleLoadFile()
 
         qApp->processEvents();
 
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadNativeCSVFile(filename, &tempFrames);
+        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadCRTDFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
         if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
@@ -592,8 +594,8 @@ void MainWindow::handleSaveFile()
     bool result = false;
 
     QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
     filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("CRTD Logs (*.txt)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
@@ -623,13 +625,13 @@ void MainWindow::handleSaveFile()
 
         if (dialog.selectedNameFilter() == filters[0])
         {
-            if (!filename.contains('.')) filename += ".txt";
-            result = FrameFileIO::saveCRTDFile(filename, frames);
+            if (!filename.contains('.')) filename += ".csv";
+            result = FrameFileIO::saveNativeCSVFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[1])
         {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveNativeCSVFile(filename, frames);
+            if (!filename.contains('.')) filename += ".txt";
+            result = FrameFileIO::saveCRTDFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[2])
         {
@@ -683,12 +685,14 @@ void MainWindow::handleSaveFilteredFile()
     bool result = false;
 
     QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
     filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("CRTD Logs (*.txt)")));    
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.log)")));
     filters.append(QString(tr("Vector Trace Files (*.trace)")));
+    filters.append(QString(tr("IXXAT MiniLog (*.csv)")));
+    filters.append(QString(tr("CAN-DO Log (*.can)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -712,13 +716,13 @@ void MainWindow::handleSaveFilteredFile()
 
         if (dialog.selectedNameFilter() == filters[0])
         {
-            if (!filename.contains('.')) filename += ".txt";
-            result = FrameFileIO::saveCRTDFile(filename, frames);
+            if (!filename.contains('.')) filename += ".csv";
+            result = FrameFileIO::saveNativeCSVFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[1])
         {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveNativeCSVFile(filename, frames);
+            if (!filename.contains('.')) filename += ".txt";
+            result = FrameFileIO::saveCRTDFile(filename, frames);
         }
         if (dialog.selectedNameFilter() == filters[2])
         {
@@ -740,6 +744,18 @@ void MainWindow::handleSaveFilteredFile()
         {
             if (!filename.contains('.')) filename += ".trace";
             result = FrameFileIO::saveTraceFile(filename, frames);
+        }
+
+        if (dialog.selectedNameFilter() == filters[6])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = FrameFileIO::saveIXXATFile(filename, frames);
+        }
+
+        if (dialog.selectedNameFilter() == filters[7])
+        {
+            if (!filename.contains('.')) filename += ".can";
+            result = FrameFileIO::saveCANDOFile(filename, frames);
         }
 
         progress.cancel();

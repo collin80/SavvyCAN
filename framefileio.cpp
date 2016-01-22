@@ -14,8 +14,8 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
     bool result = false;
 
     QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
     filters.append(QString(tr("GVRET Logs (*.csv)")));
+    filters.append(QString(tr("CRTD Logs (*.txt)")));    
     filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
     filters.append(QString(tr("BusMaster Log (*.log)")));
     filters.append(QString(tr("Microchip Log (*.can)")));
@@ -41,8 +41,8 @@ QString FrameFileIO::loadFrameFile(QVector<CANFrame>* frameCache)
 
         qApp->processEvents();
 
-        if (dialog.selectedNameFilter() == filters[0]) result = loadCRTDFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[1]) result = loadNativeCSVFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[0]) result = loadNativeCSVFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[1]) result = loadCRTDFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[2]) result = loadGenericCSVFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
