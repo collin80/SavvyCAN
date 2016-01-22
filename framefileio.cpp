@@ -697,8 +697,6 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
     //Bytes 2 - 3 are the data length (top 4 bits) then ID (bottom 11 bits)
     //Bytes 4 - 11 are the data bytes (padded with FF for bytes not used)
 
-    data = inFile->read(12); //there is an initial frame at the beginning that is bogus. What is it for!?!
-
     while (!inFile->atEnd())
     {
         lineCounter++;
@@ -709,19 +707,27 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
         }
 
         data = inFile->read(12);
+
         thisFrame.bus = 0;
         thisFrame.isReceived = true;
         thisFrame.extended = false; //format is incapable of extended frames
-        thisFrame.timestamp = ((unsigned char)data[0] * 256 + (unsigned char)data[1]) * 1000ul + timeOffset; //time stamp in file is ms but frame is in us.
+
+        thisFrame.timestamp = 1000000ul * ((unsigned char)data[0] >> 2);
+        thisFrame.timestamp += (((data[0] & 3) << 8) + (unsigned char)data[1]) * 1000;
+        thisFrame.timestamp += timeOffset;
         if (thisFrame.timestamp < lastTimeStamp)
         {
-            timeOffset += 65535000ul;
+            timeOffset += 60000000ul;
         }
         lastTimeStamp = thisFrame.timestamp;
         thisFrame.ID = ((unsigned char)data[3] * 256 + (unsigned char)data[2]) & 0x7FF;
         thisFrame.len = (unsigned char)data[3] >> 4;
-        for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)data[4 + d];
-        frames->append(thisFrame);
+
+        if (thisFrame.len <= 8 && thisFrame.ID <= 0x7FF)
+        {
+            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)data[4 + d];
+            frames->append(thisFrame);
+        }
     }
 
     inFile->close();
@@ -745,11 +751,10 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
 
     data.reserve(13);
 
-    //I have no idea what this initial frame is but all the real files have something here with ID = 7FF
-    //so here's a line like the real files have...
+    //The initial frame in official files sets the global time but I don't care so it is set all zeros here.
     thisFrame = frames->at(0);
     ms = (thisFrame.timestamp / 1000);
-    data[0] = (char)(ms >> 8);
+    data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
     data[1] = (char)(ms & 0xFF);
     data[2] = 0xFF;
     data[3] = 0xFF;
@@ -764,18 +769,20 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
             qApp->processEvents();
             lineCounter = 0;
         }
-        for (int j = 0; j < 8; j++) data[4 + j] = 0xFF;
+        for (int j = 0; j < 8; j++) data[4 + j] = 0xFF;        
 
         thisFrame = frames->at(c);
-
-        ms = (thisFrame.timestamp / 1000);
-        id = thisFrame.ID;
-        data[0] = (char)(ms >> 8);
-        data[1] = (char)(ms & 0xFF);
-        data[2] = (char)(id & 0xFF);
-        data[3] = (char)((id >> 8) + (thisFrame.len << 4));
-        for (int d = 0; d < thisFrame.len; d++) data[4 + d] = (char)thisFrame.data[d];
-        outFile->write(data);
+        if (!thisFrame.extended)
+        {
+            ms = (thisFrame.timestamp / 1000);
+            id = thisFrame.ID & 0x7FF;
+            data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
+            data[1] = (char)(ms & 0xFF);
+            data[2] = (char)(id & 0xFF);
+            data[3] = (char)((id >> 8) + (thisFrame.len << 4));
+            for (int d = 0; d < thisFrame.len; d++) data[4 + d] = (char)thisFrame.data[d];
+            outFile->write(data);
+        }
     }
     outFile->close();
     delete outFile;

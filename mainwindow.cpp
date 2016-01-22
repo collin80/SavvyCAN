@@ -18,7 +18,7 @@ Single / Multi state - The goal is to find bits that change based on toggles or 
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
 
-Allow multiple DBC files to be loaded in the program and also allow them to be associated with a bus
+Finish coding up support for associating a DBC file with a specific bus
 Allow scripts to read/write signals from DBC files
 allow scripts to load DBC files in support of the script - maybe the graphing system too.
 */
