@@ -115,6 +115,8 @@ void CANFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
 
+    qDebug() << "recalcOverwrite called in model";
+
     int lastUnique = 0;
     bool found;
 
@@ -362,24 +364,24 @@ void CANFrameModel::sendBulkRefresh(int num)
     num = filteredFrames.count() - lastUpdateNumFrames;
     lastUpdateNumFrames += num; //done this way to avoid asking for filteredFrames.count() again
 
-    //qDebug() << "Bulk refresh of " << num;
-
-    if (num == 0) return;
+    if (num == 0 && !overwriteDups) return;
     if (filteredFrames.count() == 0) return;
 
-    mutex.lock();
+    qDebug() << "Bulk refresh of " << num;
 
     if (!overwriteDups)
     {        
+        mutex.lock();
         if (num > filteredFrames.count()) num = filteredFrames.count();
         beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
         endInsertRows();
+        mutex.unlock();
     }
     else
     {
-        sendRefresh();
-    }
-    mutex.unlock();
+        beginResetModel();
+        endResetModel();
+    }    
 }
 
 void CANFrameModel::clearFrames()

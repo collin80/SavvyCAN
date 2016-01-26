@@ -477,7 +477,8 @@ void SerialWorker::closeSerialPort()
         serial->close();
     }
     serial->disconnect();
-    ticker->stop();
+    //do not stop the ticker here. It always stays running now.
+    //ticker->stop();
     delete serial;
     serial = NULL;
 }
