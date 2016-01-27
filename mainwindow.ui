@@ -349,7 +349,7 @@
   </action>
   <action name="actionSetup">
    <property name="text">
-    <string>Configure Port</string>
+    <string>Set Port</string>
    </property>
   </action>
   <action name="actionConnect">
