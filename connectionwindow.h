@@ -4,6 +4,7 @@
 #include <QSerialPortInfo>
 #include <QDialog>
 #include <QDebug>
+#include <QSettings>
 
 namespace Ui {
 class ConnectionWindow;
@@ -46,6 +47,11 @@ private slots:
 private:
     Ui::ConnectionWindow *ui;
     QList<QSerialPortInfo> ports;
+    QSettings *settings;
+
+    ConnectionType::ConnectionType currentConnType;
+    QString currentPortName;
+    int currentSpeed1, currentSpeed2;
 
     void getSerialPorts();
     void getKvaserPorts();

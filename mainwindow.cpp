@@ -18,7 +18,6 @@ Single / Multi state - The goal is to find bits that change based on toggles or 
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
 
-Finish coding up support for associating a DBC file with a specific bus
 Allow scripts to read/write signals from DBC files
 allow scripts to load DBC files in support of the script - maybe the graphing system too.
 */
@@ -97,6 +96,8 @@ MainWindow::MainWindow(QWidget *parent) :
     scriptingWindow = NULL;
     rangeWindow = NULL;
     dbcFileWindow = NULL;
+    fuzzingWindow = NULL;
+    udsScanWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -136,6 +137,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
     connect(ui->actionFirmware_Uploader, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
+    connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
+    connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -161,6 +164,10 @@ MainWindow::MainWindow(QWidget *parent) :
     normalRowHeight = ui->canFramesView->rowHeight(0);
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
+
+    //Automatically create the connection window so it can be updated even if we never opened it.
+    connectionWindow = new ConnectionWindow();
+    connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
 }
 
 MainWindow::~MainWindow()
@@ -247,6 +254,18 @@ MainWindow::~MainWindow()
         delete dbcFileWindow;
     }
 
+    if (fuzzingWindow)
+    {
+        fuzzingWindow->close();
+        delete fuzzingWindow;
+    }
+
+    if (udsScanWindow)
+    {
+        udsScanWindow->close();
+        delete udsScanWindow;
+    }
+
     delete ui;
     delete dbcHandler;
     model->clearFrames();
@@ -268,6 +287,8 @@ void MainWindow::exitApp()
     if (scriptingWindow) scriptingWindow->close();
     if (rangeWindow) rangeWindow->close();
     if (dbcFileWindow) dbcFileWindow->close();
+    if (fuzzingWindow) fuzzingWindow->close();
+    if (udsScanWindow) udsScanWindow->close();
     this->close();
 }
 
@@ -296,6 +317,20 @@ void MainWindow::readSettings()
     {
         ui->cbAutoScroll->setChecked(true);
     }
+
+    int cType = settings.value("Main/DefaultConnectionType", 0).toInt();
+    if (cType == 0) connType = "GVRET";
+    if (cType == 1) connType = "KVASER";
+    if (cType == 2) connType = "SOCKETCAN";
+    portName = settings.value("Main/DefaultConnectionPort", "").toString();
+    canSpeed0 = -1;
+    canSpeed1 = -1;
+
+    qDebug() << connType;
+    qDebug() << portName;
+
+    //"Main/SingleWireMode"
+
     readUpdateableSettings();
 }
 
@@ -721,7 +756,7 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
     */
-    connectionWindow->setSpeeds(baud0, baud1);
+    if (connectionWindow) connectionWindow->setSpeeds(baud0, baud1);
     //ui->btnConnect->setEnabled(false);
     ui->actionConnect->setText(tr("Disconnect"));
     isConnected = true;
@@ -777,8 +812,11 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
         msgBox.exec();
     }
 
-    if (swCAN == 1) connectionWindow->setCAN1SWMode(true);
-    else connectionWindow->setCAN1SWMode(false);
+    if (connectionWindow)
+    {
+        if (swCAN == 1) connectionWindow->setCAN1SWMode(true);
+        else connectionWindow->setCAN1SWMode(false);
+    }
 }
 
 void MainWindow::setTargettedID(int id)
@@ -879,6 +917,24 @@ void MainWindow::showSingleMultiWindow()
         discreteStateWindow = new DiscreteStateWindow(model->getListReference());
     }
     discreteStateWindow->show();
+}
+
+void MainWindow::showFuzzingWindow()
+{
+    if (!fuzzingWindow)
+    {
+        fuzzingWindow = new FuzzingWindow(model->getListReference(), worker);
+    }
+    fuzzingWindow->show();
+}
+
+void MainWindow::showUDSScanWindow()
+{
+    if (!udsScanWindow)
+    {
+        udsScanWindow = new UDSScanWindow;
+    }
+    udsScanWindow->show();
 }
 
 void MainWindow::showScriptingWindow()

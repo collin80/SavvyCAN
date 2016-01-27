@@ -23,6 +23,8 @@
 #include "scriptingwindow.h"
 #include "rangestatewindow.h"
 #include "dbcloadsavewindow.h"
+#include "fuzzingwindow.h"
+#include "udsscanwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -61,6 +63,8 @@ private slots:
     void showConnectionSettingsWindow();
     void showScriptingWindow();
     void showDBCFileWindow();
+    void showFuzzingWindow();
+    void showUDSScanWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -129,6 +133,8 @@ private:
     ScriptingWindow *scriptingWindow;
     RangeStateWindow *rangeWindow;
     DBCLoadSaveWindow *dbcFileWindow;
+    FuzzingWindow *fuzzingWindow;
+    UDSScanWindow *udsScanWindow;
 
     //various private storage
     QLabel lbStatusConnected;

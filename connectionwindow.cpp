@@ -8,8 +8,20 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    //getSerialPorts();
-    getSocketcanPorts();
+    settings = new QSettings();
+
+    int temp = settings->value("Main/DefaultConnectionType", 0).toInt();
+
+    if (temp == 0) currentConnType = ConnectionType::GVRET_SERIAL;
+    if (temp == 1) currentConnType = ConnectionType::KVASER;
+    if (temp == 2) currentConnType = ConnectionType::SOCKETCAN;
+
+    currentPortName = settings->value("Main/DefaultConnectionPort", "").toString();
+
+    currentSpeed1 = -1;
+    currentSpeed2 = -1;    
+
+    ui->ckSingleWire->setChecked(settings->value("Main/SingleWireMode", false).toBool());
 
     ui->cbSpeed0->addItem(tr("<Default>"));
     ui->cbSpeed0->addItem(tr("Disabled"));
@@ -40,6 +52,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 
 ConnectionWindow::~ConnectionWindow()
 {
+    delete settings;
     delete ui;
 }
 
@@ -55,10 +68,36 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 void ConnectionWindow::handleOKButton()
 {
     QString conn;
+    int connType = 0;
 
-    if (ui->rbGVRET->isChecked()) conn = "GVRET";
-    if (ui->rbKvaser->isChecked()) conn = "KVASER";
-    if (ui->rbSocketCAN->isChecked()) conn = "SOCKETCAN";
+    if (ui->rbGVRET->isChecked())
+    {
+        conn = "GVRET";
+        connType = 0;
+        currentConnType = ConnectionType::GVRET_SERIAL;
+    }
+
+    if (ui->rbKvaser->isChecked())
+    {
+        conn = "KVASER";
+        connType = 1;
+        currentConnType = ConnectionType::KVASER;
+    }
+
+    if (ui->rbSocketCAN->isChecked())
+    {
+        conn = "SOCKETCAN";
+        connType = 2;
+        currentConnType = ConnectionType::SOCKETCAN;
+    }
+
+    currentPortName = getPortName();
+    currentSpeed1 = getSpeed0();
+    currentSpeed2 = getSpeed1();
+
+    settings->setValue("Main/DefaultConnectionPort", currentPortName);
+    settings->setValue("Main/DefaultConnectionType", connType);
+    settings->setValue("Main/SingleWireMode", ui->ckSingleWire->isChecked());
 
     emit updateConnectionSettings(conn, getPortName(), getSpeed0(), getSpeed1());
 
@@ -73,6 +112,7 @@ void ConnectionWindow::getSerialPorts()
     for (int i = 0; i < ports.count(); i++)
     {
         ui->cbPort->addItem(ports[i].portName());
+        if (currentPortName == ports[i].portName()) ui->cbPort->setCurrentIndex(i);
     }
 }
 

@@ -218,6 +218,8 @@
     <addaction name="action_Playback"/>
     <addaction name="action_Custom"/>
     <addaction name="actionScripting_INterface"/>
+    <addaction name="actionFuzzing"/>
+    <addaction name="actionUDS_Scanner"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -347,7 +349,7 @@
   </action>
   <action name="actionSetup">
    <property name="text">
-    <string>Setup</string>
+    <string>Configure Port</string>
    </property>
   </action>
   <action name="actionConnect">
@@ -373,6 +375,16 @@
   <action name="actionDBC_File_Manager">
    <property name="text">
     <string>DBC File Manager</string>
+   </property>
+  </action>
+  <action name="actionFuzzing">
+   <property name="text">
+    <string>Fuzzing</string>
+   </property>
+  </action>
+  <action name="actionUDS_Scanner">
+   <property name="text">
+    <string>UDS Scanner</string>
    </property>
   </action>
  </widget>
