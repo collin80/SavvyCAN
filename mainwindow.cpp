@@ -923,7 +923,9 @@ void MainWindow::showFuzzingWindow()
 {
     if (!fuzzingWindow)
     {
-        fuzzingWindow = new FuzzingWindow(model->getListReference(), worker);
+        fuzzingWindow = new FuzzingWindow(model->getListReference());
+        connect(fuzzingWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
     }
     fuzzingWindow->show();
 }

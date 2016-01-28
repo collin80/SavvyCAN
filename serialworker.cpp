@@ -193,8 +193,10 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 //Don't get carried away here. The GVRET firmware only has finite
 //buffers and besides, the other end will get buried in traffic.
 void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
-{    
+{
+    sendBulkMutex.lock();
     for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i), frames->at(i).bus);
+    sendBulkMutex.unlock();
 }
 
 void SerialWorker::updateBaudRates(int Speed1, int Speed2)

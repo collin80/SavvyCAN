@@ -76,6 +76,7 @@ private:
     CANFrameModel *canModel;
     QTimer *ticker;
     QTime *elapsedTime;
+    QMutex sendBulkMutex;
     int framesPerSec;
     int gotFrames;
     int targetID;

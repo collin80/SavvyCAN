@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Fuzzing Window</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,3,6">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,3,6,0,0">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -21,12 +21,19 @@
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>Interframe Timing</string>
+          <string>Interframe Timing (ms)</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QSpinBox" name="spinBox"/>
+        <widget class="QSpinBox" name="spinTiming">
+         <property name="maximum">
+          <number>10000</number>
+         </property>
+         <property name="value">
+          <number>10</number>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
@@ -40,7 +47,17 @@
         </widget>
        </item>
        <item>
-        <widget class="QSpinBox" name="spinBox_2"/>
+        <widget class="QSpinBox" name="spinBurst">
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>10</number>
+         </property>
+         <property name="value">
+          <number>1</number>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
@@ -53,18 +70,24 @@
        <property name="title">
         <string>ID Scanning</string>
        </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+       </property>
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QRadioButton" name="radioButton_2">
+         <widget class="QRadioButton" name="rbSequentialID">
           <property name="text">
            <string>Seqential</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton">
+         <widget class="QRadioButton" name="rbRandomID">
           <property name="text">
            <string>Random</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -78,14 +101,17 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QRadioButton" name="radioButton_3">
+         <widget class="QRadioButton" name="rbRangeIDSel">
           <property name="text">
            <string>Range of IDs</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton_4">
+         <widget class="QRadioButton" name="rbFilterIDSel">
           <property name="text">
            <string>Filter List</string>
           </property>
@@ -101,16 +127,19 @@
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_8">
         <item>
-         <widget class="QRadioButton" name="radioButton_5">
+         <widget class="QRadioButton" name="rbSequentialBits">
           <property name="text">
            <string>Sequential</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="radioButton_6">
+         <widget class="QRadioButton" name="rbRandomBits">
           <property name="text">
            <string>Random</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -137,7 +166,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit"/>
+           <widget class="QLineEdit" name="txtStartID"/>
           </item>
          </layout>
         </item>
@@ -151,7 +180,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_2"/>
+           <widget class="QLineEdit" name="txtEndID"/>
           </item>
          </layout>
         </item>
@@ -161,19 +190,19 @@
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <item>
-        <widget class="QListWidget" name="listWidget"/>
+        <widget class="QListWidget" name="listID"/>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_9">
          <item>
-          <widget class="QPushButton" name="pushButton">
+          <widget class="QPushButton" name="btnAllFilters">
            <property name="text">
             <string>All</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="pushButton_2">
+          <widget class="QPushButton" name="btnNoFilters">
            <property name="text">
             <string>None</string>
            </property>
@@ -192,6 +221,27 @@
        <width>0</width>
        <height>200</height>
       </size>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="btnStartStop">
+     <property name="text">
+      <string>Start Fuzzing</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lblNumFrames">
+     <property name="font">
+      <font>
+       <pointsize>11</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="text">
+      <string># of sent frames:</string>
      </property>
     </widget>
    </item>
