@@ -19,10 +19,19 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(fuzzTimer, &QTimer::timeout, this, &FuzzingWindow::timerTriggered);
     connect(ui->spinTiming, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     connect(ui->listID, &QListWidget::itemChanged, this, &FuzzingWindow::idListChanged);
+    connect(ui->spinBytes, SIGNAL(valueChanged(int)), this, SLOT(changedNumDataBytes(int)));
+    connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
 
     refreshIDList();
 
     currentlyFuzzing = false;
+
+    for (int j = 0; j < 64; j++) bitGrid[j] = 1;
+    redrawGrid();
+
+    ui->cbBuses->addItem(tr("0"));
+    ui->cbBuses->addItem(tr("1"));
+    ui->cbBuses->addItem(tr("Both"));
 }
 
 FuzzingWindow::~FuzzingWindow()
@@ -35,10 +44,32 @@ void FuzzingWindow::changePlaybackSpeed(int newSpeed)
     fuzzTimer->setInterval(newSpeed);
 }
 
+void FuzzingWindow::changedNumDataBytes(int newVal)
+{
+    qDebug() << "new num bytes: " << newVal;
+    int byt;
+    for (int i = 0; i < 64; i++)
+    {
+        byt = i / 8;
+        if (byt >= newVal)
+        {
+            bitGrid[i] = 3;
+        }
+        else
+        {
+            if (bitGrid[i] == 3) bitGrid[i] = 1;
+        }
+    }
+
+    redrawGrid();
+}
+
 void FuzzingWindow::timerTriggered()
 {
     CANFrame thisFrame;
     sendingBuffer.clear();
+    int buses = ui->cbBuses->currentIndex() + 1;
+    if (buses == 0) buses = 1;
     for (int count = 0; count < ui->spinBurst->value(); count++)
     {
         thisFrame.ID = currentID;
@@ -46,8 +77,18 @@ void FuzzingWindow::timerTriggered()
         if (currentID > 0x7FF) thisFrame.extended = true;
         else thisFrame.extended = false;
         thisFrame.bus = 0; //hard coded for now. TODO: do not hard code
-        thisFrame.len = 8;
-        sendingBuffer.append(thisFrame);
+        thisFrame.len = ui->spinBytes->value();
+        if (buses & 1)
+        {
+            thisFrame.bus = 0;
+            sendingBuffer.append(thisFrame);
+        }
+        if (buses & 2)
+        {
+            thisFrame.bus = 1;
+            sendingBuffer.append(thisFrame);
+        }
+
         calcNextID();
         calcNextBitPattern();
         numSentFrames++;
@@ -91,7 +132,8 @@ void FuzzingWindow::calcNextID()
         if (rangeIDSelect)
         {
             int range = endID - startID;
-            currentID = startID + qrand() % range;
+            if (range != 0) currentID = startID + qrand() % range;
+            else currentID = startID;
         }
         else //IDs by filter so pick a random selected ID from the filter list
         {
@@ -102,10 +144,28 @@ void FuzzingWindow::calcNextID()
 
 void FuzzingWindow::calcNextBitPattern()
 {
-    //simple, quick random data for now
-    for (int i = 0; i < 8; i++)
+    switch (bitSequenceType)
     {
-        currentBytes[i] = qrand() % 256;
+    case BitSequenceType::Random:
+        int thisBit;
+        for (int byt = 0; byt < ui->spinBytes->value(); byt++)
+        {
+            currentBytes[byt] = 0;
+            for (int bit = 0; bit < 8; bit++)
+            {
+                thisBit = bitGrid[byt * 8 + bit];
+                if (thisBit == 1)
+                {
+                    if ((qrand() % 2) == 1) currentBytes[byt] |= (1 << bit);
+                }
+                if (thisBit == 2) currentBytes[byt] |= (1 << bit);
+            }
+        }
+        break;
+    case BitSequenceType::Sequential:
+        break;
+    case BitSequenceType::Sweeping:
+        break;
     }
 }
 
@@ -127,7 +187,9 @@ void FuzzingWindow::toggleFuzzing()
 
         seqIDScan = ui->rbSequentialID->isChecked();
         rangeIDSelect = ui->rbRangeIDSel->isChecked();
-        seqBitSelect = ui->rbSequentialBits->isChecked();
+        if (ui->rbSequentialBits->isChecked()) bitSequenceType = BitSequenceType::Sequential;
+        if (ui->rbRandomBits->isChecked()) bitSequenceType = BitSequenceType::Random;
+        if (ui->rbSweep->isChecked()) bitSequenceType = BitSequenceType::Sweeping;
 
         numSentFrames = 0;
 
@@ -147,7 +209,8 @@ void FuzzingWindow::toggleFuzzing()
             if (rangeIDSelect)
             {
                 int range = endID - startID;
-                currentID = startID + qrand() % range;
+                if (range != 0) currentID = startID + qrand() % range;
+                else currentID = startID;
             }
             else //IDs by filter so pick a random selected ID from the filter list
             {
@@ -200,4 +263,63 @@ void FuzzingWindow::idListChanged(QListWidgetItem *item)
         qDebug() << "removing " << id << " from the list of selected ids";
         selectedIDs.removeOne(id);
     }
+}
+
+/*
+bitGrid stores the state of all 64 bits.
+The grid is capable of showing the following colors:
+White = not used (left as 0)
+Gray = past the end of the valid bits (because of # of data bytes requested)
+Green = fuzz it
+black = always keep it set to 1
+*/
+void FuzzingWindow::bitfieldClicked(int x, int y)
+{
+    qDebug() << "X: " << x << " Y: " << y;
+    int bit = (7 - x) + (y * 8);
+    if (bitGrid[bit] == 3) return; //naughty!
+    bitGrid[bit]++;
+    if (bitGrid[bit] > 2) bitGrid[bit] = 0;
+
+    redrawGrid();
+}
+
+void FuzzingWindow::redrawGrid()
+{
+    //now update the bits in the bitfield control
+    uint8_t refBytes[8];
+    uint8_t dataBytes[8];
+    uint8_t usedBytes[8];
+
+    for (int j = 0; j < 8; j++)
+    {
+        refBytes[j] = 0;
+        dataBytes[j] = 0;
+        usedBytes[j] = 0;
+    }
+
+    for (int i = 0; i < 64; i++)
+    {
+        int byt = i / 8;
+        int bit = i % 8;
+        switch (bitGrid[i])
+        {
+        case 0: //white, keep this bit off always
+            break;
+        case 1: //Green, fuzz this bit
+            dataBytes[byt] |= (1 << bit);
+            break;
+        case 2: //black, bit always set
+            dataBytes[byt] |= (1 << bit);
+            refBytes[byt] |= (1 << bit);
+            break;
+        case 3: //gray, this bit doesn't exist
+            usedBytes[byt] |= (1 << bit);
+            break;
+        }
+    }
+
+    ui->bitfield->setUsed(usedBytes, false);
+    ui->bitfield->setReference(refBytes, false);
+    ui->bitfield->updateData(dataBytes, true);
 }

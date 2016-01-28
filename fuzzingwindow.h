@@ -10,6 +10,16 @@ namespace Ui {
 class FuzzingWindow;
 }
 
+namespace BitSequenceType
+{
+    enum
+    {
+        Sequential,
+        Sweeping,
+        Random
+    };
+}
+
 class FuzzingWindow : public QDialog
 {
     Q_OBJECT
@@ -29,6 +39,8 @@ private slots:
     void setAllFilters();
     void toggleFuzzing();
     void idListChanged(QListWidgetItem *item);
+    void bitfieldClicked(int, int);
+    void changedNumDataBytes(int newVal);
 
 private:
     Ui::FuzzingWindow *ui;
@@ -38,7 +50,8 @@ private:
     QList<int> selectedIDs;
     QList<CANFrame> sendingBuffer;
     int startID, endID, currentID;
-    bool seqIDScan, rangeIDSelect, seqBitSelect;
+    bool seqIDScan, rangeIDSelect;
+    int bitSequenceType;
     bool currentlyFuzzing;
     uint8_t currentBytes[8];
     uint8_t bitGrid[64];
@@ -47,6 +60,7 @@ private:
     void refreshIDList();
     void calcNextID();
     void calcNextBitPattern();
+    void redrawGrid();
 };
 
 #endif // FUZZINGWINDOW_H
