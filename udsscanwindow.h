@@ -1,6 +1,8 @@
 #ifndef UDSSCANWINDOW_H
 #define UDSSCANWINDOW_H
 
+#include "can_structs.h"
+
 #include <QDialog>
 
 namespace Ui {
@@ -12,11 +14,19 @@ class UDSScanWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit UDSScanWindow(QWidget *parent = 0);
+    explicit UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~UDSScanWindow();
+
+signals:
+    void sendCANFrame(const CANFrame *, int);
+
+private slots:
+    void updatedFrames(int numFrames);
+    void scanUDS();
 
 private:
     Ui::UDSScanWindow *ui;
+    const QVector<CANFrame> *modelFrames;
 };
 
 #endif // UDSSCANWINDOW_H

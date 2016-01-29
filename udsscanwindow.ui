@@ -1,17 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>UDSScanWindow</class>
- <widget name="UDSScanWindow" class="QDialog">
+ <widget class="QDialog" name="UDSScanWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>742</width>
+    <height>527</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Dialog</string>
   </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Results</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QListWidget" name="listResults"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Buses to scan</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="cbBuses"/>
+   </item>
+   <item>
+    <widget class="QPushButton" name="btnScan">
+     <property name="text">
+      <string>Start Scan</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

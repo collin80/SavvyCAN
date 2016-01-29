@@ -934,7 +934,8 @@ void MainWindow::showUDSScanWindow()
 {
     if (!udsScanWindow)
     {
-        udsScanWindow = new UDSScanWindow;
+        udsScanWindow = new UDSScanWindow(model->getListReference());
+        connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
     }
     udsScanWindow->show();
 }
