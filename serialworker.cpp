@@ -435,6 +435,7 @@ void SerialWorker::handleTick()
     {
         if (!gotValidated)
         {
+            if (serial == NULL) return;
             if (serial->isOpen()) //if it's still false we have a problem...
             {
                 qDebug() << "Comm validation failed. ";

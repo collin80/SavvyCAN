@@ -36,13 +36,16 @@ void UDSScanWindow::scanUDS()
     sendingFrames.clear();
 
     CANFrame frame;
+    int startID, endID;
+    startID = Utility::ParseStringToNum(ui->txtStartID->text());
+    endID = Utility::ParseStringToNum(ui->txtEndID->text());
 
     int buses = ui->cbBuses->currentIndex();
     buses++;
     if (buses < 1) buses = 1;
     for (int typ = 1; typ < 5; typ++)
     {
-        for (int id = 0x7E0; id < 0x7E8; id++)
+        for (int id = startID; id < endID; id++)
         {
             frame.ID = id;
             frame.len = 8;
