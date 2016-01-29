@@ -131,6 +131,7 @@ void RangeStateWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if we need to update the filters list. Otherwise nothing to do - no recalc happens until the button is pressed
     {
+        if (numFrames > modelFrames->count()) return;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);

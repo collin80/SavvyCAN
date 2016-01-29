@@ -23,10 +23,16 @@ signals:
 private slots:
     void updatedFrames(int numFrames);
     void scanUDS();
+    void timeOut();
 
 private:
     Ui::UDSScanWindow *ui;
     const QVector<CANFrame> *modelFrames;
+    QTimer *waitTimer;
+    QList<CANFrame> sendingFrames;
+    int currIdx = 0;
+
+    void sendNextMsg();
 };
 
 #endif // UDSSCANWINDOW_H
