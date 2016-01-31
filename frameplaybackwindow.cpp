@@ -342,57 +342,33 @@ void FramePlaybackWindow::btnDeleteCurrSeq()
 void FramePlaybackWindow::btnLoadFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
     SequenceItem item;
 
-    QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.log)")));
-
-    dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::loadFrameFile(filename, &item.data))
     {
-        filename = dialog.selectedFiles()[0];
-
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, &item.data);
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, &item.data);
-        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &item.data);
-        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &item.data);
-        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &item.data);
-        if (result)
+        QStringList fileList = filename.split('/');
+        item.filename = fileList[fileList.length() - 1];
+        item.currentLoopCount = 0;
+        item.maxLoops = 1;
+        fillIDHash(item);
+        if (ui->tblSequence->currentRow() == -1)
         {
-            QStringList fileList = filename.split('/');
-            item.filename = fileList[fileList.length() - 1];
-            item.currentLoopCount = 0;
-            item.maxLoops = 1;
-            fillIDHash(item);
-            if (ui->tblSequence->currentRow() == -1)
-            {
-                ui->tblSequence->setCurrentCell(0,0);
-            }
-            seqItems.append(item);
-            int row = ui->tblSequence->rowCount();
-            ui->tblSequence->insertRow(row);
-            ui->tblSequence->setItem(row, 0, new QTableWidgetItem(item.filename));
-            ui->tblSequence->setItem(row, 1, new QTableWidgetItem(QString::number(item.maxLoops)));
-            qDebug() << currentSeqNum;
-            if (currentSeqNum == -1)
-            {
-                currentSeqNum = 0;
-                currentSeqItem = &seqItems[0];
-            }
-            refreshIDList();
-            updateFrameLabel();
+            ui->tblSequence->setCurrentCell(0,0);
         }
+        seqItems.append(item);
+        int row = ui->tblSequence->rowCount();
+        ui->tblSequence->insertRow(row);
+        ui->tblSequence->setItem(row, 0, new QTableWidgetItem(item.filename));
+        ui->tblSequence->setItem(row, 1, new QTableWidgetItem(QString::number(item.maxLoops)));
+        qDebug() << currentSeqNum;
+        if (currentSeqNum == -1)
+        {
+            currentSeqNum = 0;
+            currentSeqItem = &seqItems[0];
+        }
+        refreshIDList();
+        updateFrameLabel();
     }
-
 }
 
 void FramePlaybackWindow::btnLoadLive()
