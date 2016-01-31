@@ -22,6 +22,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
+    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -86,6 +87,12 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
             result = saveCANDOFile(filename, frameCache);
         }
 
+        if (dialog.selectedNameFilter() == filters[8])
+        {
+            if (!filename.contains('.')) filename += ".csv";
+            result = saveVehicleSpyFile(filename, frameCache);
+        }
+
         progress.cancel();
 
         if (result)
@@ -114,6 +121,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Vector trace files (*.trace *.TRACE)")));
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
+    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -141,6 +149,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[5]) result = loadTraceFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[6]) result = loadIXXATFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[7]) result = loadCANDOFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
 
         progress.cancel();
 
@@ -153,6 +162,72 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         else return false;
     }
     return false;
+}
+
+
+//2,2550.368293675,0.003818174999651092,67371008,F,F,HS CAN $119,HS CAN,,119,F,F,00,00,00,00,00,00,0D,8B,,,
+//Line,Abs Time(Sec),Rel Time (Sec),Status,Er,Tx,Description,Network,Node,Arb ID,Remote,Xtd,B1,B2,B3,B4,B5,B6,B7,B8,Value,Trigger,Signals
+// 0       1             2             3   4  5   6             7     8     9     10     11 12 13 14 15 16 17 18 19  20     21      22
+bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    bool pastHeader = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd() && !pastHeader)
+    {
+        line = inFile->readLine().simplified().toUpper();
+        if (line.startsWith("LINE")) lineCounter++;
+        if (lineCounter == 2) pastHeader = true;
+    }
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = inFile->readLine().simplified().toUpper();
+
+        QList<QByteArray> tokens = line.split(',');
+        thisFrame.bus = 0;
+        thisFrame.timestamp = tokens[1].toDouble() * 1000000.0;
+        if (tokens[5].startsWith("T")) thisFrame.isReceived = false;
+            else thisFrame.isReceived = true;
+        thisFrame.ID = tokens[9].toInt(NULL, 16);
+        if (tokens[11].startsWith("T")) thisFrame.extended = true;
+            else thisFrame.extended = false;
+
+        thisFrame.len = 0;
+        for (int i = 0; i < 8; i++)
+        {
+            if (tokens[12 + i].length() > 0)
+            {
+                thisFrame.data[i] = tokens[12 + i].toInt(NULL, 16);
+                thisFrame.len++;
+            }
+            else break;
+        }
+
+        frames->append(thisFrame);
+    }
+    inFile->close();
+    delete inFile;
+    return true;
+}
+
+bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CANFrame> *frames)
+{
+    return true;
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project

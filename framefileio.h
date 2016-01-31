@@ -30,6 +30,7 @@ public:
     static bool loadTraceFile(QString, QVector<CANFrame>*);
     static bool loadIXXATFile(QString, QVector<CANFrame>*);
     static bool loadCANDOFile(QString, QVector<CANFrame>*);
+    static bool loadVehicleSpyFile(QString, QVector<CANFrame>*);
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);    
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);
@@ -38,6 +39,7 @@ public:
     static bool saveTraceFile(QString, const QVector<CANFrame>*);
     static bool saveIXXATFile(QString, const QVector<CANFrame>*);
     static bool saveCANDOFile(QString, const QVector<CANFrame>*);
+    static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
     static bool loadFrameFile(QString &, QVector<CANFrame>*);
     static bool saveFrameFile(QString &, const QVector<CANFrame>*);
 
