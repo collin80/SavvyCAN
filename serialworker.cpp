@@ -132,7 +132,7 @@ void SerialWorker::connectionTimeout()
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
-        ticker->stop();
+        //ticker->stop();
         closeSerialPort(); //make sure it's properly closed anyway
         emit connectionFailure();
     }
@@ -433,13 +433,14 @@ void SerialWorker::handleTick()
 
     if (connected)
     {
-        if (!gotValidated)
+        if (!gotValidated && doValidation)
         {
             if (serial == NULL) return;
             if (serial->isOpen()) //if it's still false we have a problem...
             {
                 qDebug() << "Comm validation failed. ";
                 closeSerialPort(); //start by stopping everything.
+                //Then wait 500ms and restart the connection automatically
                 QTimer::singleShot(500, this, SLOT(handleReconnect()));
                 return;
             }
@@ -451,7 +452,7 @@ void SerialWorker::handleTick()
     emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
     canModel->sendBulkRefresh(gotFrames);
     gotFrames = 0;    
-    if (doValidation && serial) sendCommValidation();
+    if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 
 void SerialWorker::handleReconnect()
@@ -467,6 +468,10 @@ void SerialWorker::sendCommValidation()
     gotValidated = false;
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x09); //request a reply to get validation
+    //send it twice for good measure.
+    output.append((char)0xF1); //another command to the GVRET
+    output.append((char)0x09); //request a reply to get validation
+
     serial->write(output);
 }
 
