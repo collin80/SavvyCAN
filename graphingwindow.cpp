@@ -734,6 +734,9 @@ void GraphingWindow::loadDefinitions()
     QStringList filters;
     filters.append(QString(tr("Graph definition (*.gdf)")));
 
+    if (dbcHandler == NULL) return;
+    if (dbcHandler->getFileCount() == 0) dbcHandler->createBlankFile();
+
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);

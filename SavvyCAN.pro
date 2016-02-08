@@ -45,7 +45,8 @@ SOURCES += main.cpp\
     dbc_classes.cpp \
     dbcloadsavewindow.cpp \
     fuzzingwindow.cpp \
-    udsscanwindow.cpp
+    udsscanwindow.cpp \
+    can_structs.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \

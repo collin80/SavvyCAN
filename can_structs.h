@@ -1,9 +1,10 @@
 #ifndef CAN_STRUCTS_H
 #define CAN_STRUCTS_H
 
+#include <QVector>
 #include <stdint.h>
 
-struct CANFrame
+class CANFrame
 {
 public:
     int ID;
@@ -26,5 +27,19 @@ public:
     int priority;
     bool isBroadcast;
 };
+
+//the same as the CANFrame struct but with arbitrary data size.
+struct ISOTP_FRAME
+{
+public:
+    int ID;
+    int bus;
+    bool extended;
+    bool isReceived;
+    int len;
+    QVector<unsigned char> data;
+    uint64_t timestamp;
+};
+
 #endif // CAN_STRUCTS_H
 
