@@ -150,6 +150,7 @@ void NewGraphDialog::loadMessages()
 {
     ui->cbMessages->clear();
     if (dbcHandler == NULL) return;
+    if (dbcHandler->getFileCount() == 0) dbcHandler->createBlankFile();
     for (int x = 0; x < dbcHandler->getFileByIdx(0)->messageHandler->getCount(); x++)
     {
         ui->cbMessages->addItem(dbcHandler->getFileByIdx(0)->messageHandler->findMsgByIdx(x)->name);
