@@ -44,6 +44,7 @@ void DiscreteStateWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        if (numFrames > modelFrames->count()) return;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);

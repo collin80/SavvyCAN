@@ -109,7 +109,8 @@ void FrameSenderWindow::updatedFrames(int numFrames)
         buildFrameCache();
     }
     else //just got some new frames. See if they are relevant.
-    {
+    {        
+        if (numFrames > modelFrames->count()) return;
         qDebug() << "New frames in sender window";
         //run through the supposedly new frames in order
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)

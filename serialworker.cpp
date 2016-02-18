@@ -40,6 +40,19 @@ SerialWorker::~SerialWorker()
     if (ticker != NULL) ticker->stop();
 }
 
+void SerialWorker::run()
+{
+    ticker = new QTimer;
+    connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
+
+    elapsedTime = new QTime;
+    elapsedTime->start();
+
+    ticker->setInterval(250); //tick four times per second
+    ticker->setSingleShot(false); //keep ticking
+    ticker->start();
+}
+
 void SerialWorker::readSettings()
 {
     QSettings settings;
@@ -69,7 +82,7 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
         delete serial;
     }
 
-    serial = new QSerialPort(*port);    
+    serial = new QSerialPort(*port);
 
     qDebug() << "Serial port name is " << port->portName();
     //serial->setBaudRate(10000000); //more speed! probably does nothing for USB serial
@@ -110,19 +123,6 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
         else connected = true;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
     if (doValidation) QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
-    if (ticker == NULL)
-    {
-        ticker = new QTimer;
-        connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
-    }
-    if (elapsedTime == NULL)
-    {
-        elapsedTime = new QTime;
-        elapsedTime->start();
-    }
-    ticker->setInterval(250); //tick four times per second
-    ticker->setSingleShot(false); //keep ticking
-    ticker->start();
 }
 
 void SerialWorker::connectionTimeout()
@@ -132,7 +132,7 @@ void SerialWorker::connectionTimeout()
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
-        ticker->stop();
+        //ticker->stop();
         closeSerialPort(); //make sure it's properly closed anyway
         emit connectionFailure();
     }
@@ -155,9 +155,17 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     QByteArray buffer;
     int c;
     int ID;
+    CANFrame tempFrame = *frame;
+    tempFrame.isReceived = false;
 
     //qDebug() << "Sending out frame with id " << frame->ID;
 
+    //show our sent frames in the list too. This happens even if we're not connected.    
+    canModel->addFrame(tempFrame, false);
+    gotFrames++;
+
+    if (serial == NULL) return;
+    if (!serial->isOpen()) return;
     if (!connected) return;
 
     ID = frame->ID;
@@ -177,8 +185,6 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     }
     buffer[8 + frame->len] = 0;
 
-    if (serial == NULL) return;
-    if (!serial->isOpen()) return;
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
 }
@@ -188,7 +194,9 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 //buffers and besides, the other end will get buried in traffic.
 void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
 {
+    sendBulkMutex.lock();
     for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i), frames->at(i).bus);
+    sendBulkMutex.unlock();
 }
 
 void SerialWorker::updateBaudRates(int Speed1, int Speed2)
@@ -306,6 +314,7 @@ void SerialWorker::procRXChar(unsigned char c)
                 //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
                 if (capturing)
                 {
+                    buildFrame->isReceived = true;
                     canModel->addFrame(*buildFrame, false);
                     gotFrames++;
                     if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
@@ -422,14 +431,19 @@ void SerialWorker::handleTick()
 {
     //qDebug() << "Tick!";
 
-    if (!gotValidated)
+    if (connected)
     {
-        if (serial->isOpen()) //if it's still false we have a problem...
+        if (!gotValidated && doValidation)
         {
-            qDebug() << "Comm validation failed. ";
-            closeSerialPort(); //start by stopping everything.
-            QTimer::singleShot(500, this, SLOT(handleReconnect()));
-            return;
+            if (serial == NULL) return;
+            if (serial->isOpen()) //if it's still false we have a problem...
+            {
+                qDebug() << "Comm validation failed. ";
+                closeSerialPort(); //start by stopping everything.
+                //Then wait 500ms and restart the connection automatically
+                QTimer::singleShot(500, this, SLOT(handleReconnect()));
+                return;
+            }
         }
     }
 
@@ -438,7 +452,7 @@ void SerialWorker::handleTick()
     emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
     canModel->sendBulkRefresh(gotFrames);
     gotFrames = 0;    
-    if (doValidation) sendCommValidation();
+    if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 
 void SerialWorker::handleReconnect()
@@ -454,6 +468,10 @@ void SerialWorker::sendCommValidation()
     gotValidated = false;
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x09); //request a reply to get validation
+    //send it twice for good measure.
+    output.append((char)0xF1); //another command to the GVRET
+    output.append((char)0x09); //request a reply to get validation
+
     serial->write(output);
 }
 
@@ -467,7 +485,8 @@ void SerialWorker::closeSerialPort()
         serial->close();
     }
     serial->disconnect();
-    ticker->stop();
+    //do not stop the ticker here. It always stays running now.
+    //ticker->stop();
     delete serial;
     serial = NULL;
 }

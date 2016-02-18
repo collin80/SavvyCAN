@@ -23,7 +23,7 @@ public:
     int columnCount(const QModelIndex &) const;
     int totalFrameCount();
 
-    void addFrame(CANFrame &, bool);
+    void addFrame(const CANFrame &, bool);
     void sendRefresh();
     void sendRefresh(int);
     void sendBulkRefresh(int);

@@ -19,6 +19,12 @@
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
 #include "discretestatewindow.h"
+#include "connectionwindow.h"
+#include "scriptingwindow.h"
+#include "rangestatewindow.h"
+#include "dbcloadsavewindow.h"
+#include "fuzzingwindow.h"
+#include "udsscanwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -39,8 +45,6 @@ private slots:
     void handleLoadFile();
     void handleSaveFile();
     void handleSaveFilteredFile();
-    void handleLoadDBC();
-    void handleSaveDBC();
     void handleSaveFilters();
     void handleLoadFilters();
     void connButtonPress();
@@ -56,6 +60,11 @@ private slots:
     void showComparisonWindow();
     void showSettingsDialog();
     void showFirmwareUploaderWindow();
+    void showConnectionSettingsWindow();
+    void showScriptingWindow();
+    void showDBCFileWindow();
+    void showFuzzingWindow();
+    void showUDSScanWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -66,7 +75,6 @@ private slots:
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
-    void showDBCEditor();
     void toggleCapture();
     void normalizeTiming();
     void updateFilterList();
@@ -78,6 +86,7 @@ public slots:
     void gotFrames(int, int);
     void updateSettings();
     void gotCenterTimeID(int32_t ID, double timestamp);
+    void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 signals:
     void sendSerialPort(QSerialPortInfo *port);
@@ -98,8 +107,7 @@ private:
 
     //canbus related data
     CANFrameModel *model;
-    DBCHandler *dbcHandler;
-    QList<QSerialPortInfo> ports;
+    DBCHandler *dbcHandler;    
     QThread serialWorkerThread;
     SerialWorker *worker;
     QByteArray inputBuffer;
@@ -121,6 +129,12 @@ private:
     MainSettingsDialog *settingsDialog;
     DiscreteStateWindow *discreteStateWindow;
     FirmwareUploaderWindow *firmwareUploaderWindow;
+    ConnectionWindow *connectionWindow;
+    ScriptingWindow *scriptingWindow;
+    RangeStateWindow *rangeWindow;
+    DBCLoadSaveWindow *dbcFileWindow;
+    FuzzingWindow *fuzzingWindow;
+    UDSScanWindow *udsScanWindow;
 
     //various private storage
     QLabel lbStatusConnected;
@@ -128,6 +142,9 @@ private:
     QLabel lbStatusDatabase;
     int normalRowHeight;
     bool isConnected;
+    QSerialPortInfo portInfo;
+    QString connType, portName;
+    int canSpeed0, canSpeed1;
 
     //private methods
     void saveDecodedTextFile(QString);

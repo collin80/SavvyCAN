@@ -17,6 +17,7 @@ public:
     void paintEvent(QPaintEvent *event);
     void setReference(unsigned char *, bool);
     void updateData(unsigned char *, bool);
+    void setUsed(unsigned char *, bool);
     void saveImage(QString filename, int width, int height);
 
 protected:
@@ -29,6 +30,7 @@ private:
     Ui::CANDataGrid *ui;
     unsigned char refData[8];
     unsigned char data[8];
+    unsigned char usedData[8];
     QPoint upperLeft, gridSize;
 };
 

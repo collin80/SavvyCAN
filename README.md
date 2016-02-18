@@ -27,3 +27,13 @@ of this program. It can load and save in several formats:
 
 5. Generic CSV file (ID,D0 D1 D2 D3 D4 D5 D6 D7)
 
+Requires QScintilla library available at:
+
+https://www.riverbankcomputing.com/software/qscintilla/download
+
+Also uses QCustomPlot available at:
+
+http://www.qcustomplot.com/ 
+
+However, this source code is integrated into the source for SavvyCAN and one isn't required to download it separately.
+

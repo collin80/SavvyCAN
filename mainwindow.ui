@@ -47,102 +47,6 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item alignment="Qt::AlignHCenter">
-       <widget class="QLabel" name="label_3">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>Serial Port</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QComboBox" name="cbSerialPorts"/>
-      </item>
-      <item>
-       <widget class="QPushButton" name="btnConnect">
-        <property name="text">
-         <string>Connect To GVRET</string>
-        </property>
-       </widget>
-      </item>
-      <item alignment="Qt::AlignHCenter">
-       <widget class="QLabel" name="label_2">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>CANBus Speeds:</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
-        <property name="sizeConstraint">
-         <enum>QLayout::SetDefaultConstraint</enum>
-        </property>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_3">
-          <item>
-           <widget class="QLabel" name="label_5">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>First Bus:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="cbSpeed1"/>
-          </item>
-         </layout>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <property name="spacing">
-           <number>7</number>
-          </property>
-          <property name="sizeConstraint">
-           <enum>QLayout::SetDefaultConstraint</enum>
-          </property>
-          <item>
-           <widget class="QLabel" name="label_4">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Second Bus:</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QComboBox" name="cbSpeed2"/>
-          </item>
-         </layout>
-        </item>
-       </layout>
-      </item>
-      <item>
-       <widget class="QPushButton" name="btnBaudSet">
-        <property name="text">
-         <string>Set CANBUS Speeds</string>
-        </property>
-       </widget>
-      </item>
-      <item alignment="Qt::AlignHCenter">
        <widget class="QLabel" name="label">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -293,7 +197,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
@@ -304,6 +208,8 @@
     <addaction name="actionGraph_Dta"/>
     <addaction name="actionFrame_Data_Analysis"/>
     <addaction name="actionFile_Comparison"/>
+    <addaction name="actionRange_State_2"/>
+    <addaction name="actionSingle_Multi_State_2"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -311,6 +217,9 @@
     </property>
     <addaction name="action_Playback"/>
     <addaction name="action_Custom"/>
+    <addaction name="actionScripting_INterface"/>
+    <addaction name="actionFuzzing"/>
+    <addaction name="actionUDS_Scanner"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -323,18 +232,24 @@
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
     <addaction name="separator"/>
-    <addaction name="actionLoad_DBC_File"/>
-    <addaction name="actionEdit_Messages_Signals"/>
-    <addaction name="actionSave_DBC_File"/>
+    <addaction name="actionDBC_File_Manager"/>
     <addaction name="actionSave_Decoded_Frames"/>
     <addaction name="separator"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
     <addaction name="actionExit_Application"/>
    </widget>
+   <widget class="QMenu" name="menuConnection">
+    <property name="title">
+     <string>Connection</string>
+    </property>
+    <addaction name="actionSetup"/>
+    <addaction name="actionConnect"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_RE_Tools"/>
    <addaction name="menuSend_Frames"/>
+   <addaction name="menuConnection"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
   <action name="action_Playback">
@@ -345,16 +260,6 @@
   <action name="action_Custom">
    <property name="text">
     <string>Custom</string>
-   </property>
-  </action>
-  <action name="actionSingle_Multi_State">
-   <property name="text">
-    <string>Single / Multi State</string>
-   </property>
-  </action>
-  <action name="actionRange_State">
-   <property name="text">
-    <string>Range State</string>
    </property>
   </action>
   <action name="actionFlow_View">
@@ -440,6 +345,46 @@
   <action name="actionFirmware_Uploader">
    <property name="text">
     <string>Firmware Uploader</string>
+   </property>
+  </action>
+  <action name="actionSetup">
+   <property name="text">
+    <string>Set Port</string>
+   </property>
+  </action>
+  <action name="actionConnect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="actionScripting_INterface">
+   <property name="text">
+    <string>Scripting Interface</string>
+   </property>
+  </action>
+  <action name="actionRange_State_2">
+   <property name="text">
+    <string>Range State</string>
+   </property>
+  </action>
+  <action name="actionSingle_Multi_State_2">
+   <property name="text">
+    <string>Single/Multi State</string>
+   </property>
+  </action>
+  <action name="actionDBC_File_Manager">
+   <property name="text">
+    <string>DBC File Manager</string>
+   </property>
+  </action>
+  <action name="actionFuzzing">
+   <property name="text">
+    <string>Fuzzing</string>
+   </property>
+  </action>
+  <action name="actionUDS_Scanner">
+   <property name="text">
+    <string>UDS Scanner</string>
    </property>
   </action>
  </widget>

@@ -370,6 +370,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        if (numFrames > modelFrames->count()) return;
         int refID = frameCache[0].ID;
         bool needRefresh = false;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)

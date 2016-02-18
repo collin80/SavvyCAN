@@ -9,14 +9,17 @@
 #include "serialworker.h"
 
 /*
-Things that were planned for the GVRET-PC project but never completed.
+Compile for all platforms and create release (remember to include QScintilla libs) and make Win32 binary.
+
+Some notes on things I'd like to put into the program but haven't put on github (yet)
 
 Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
 
-Range state - Find things that range like accelerator pedal inputs, road speed, tach, etc
-
 fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
 or, try to find things that appear to be multi-byte integers
+
+Allow scripts to read/write signals from DBC files
+allow scripts to load DBC files in support of the script - maybe the graphing system too.
 */
 
 QString MainWindow::loadedFileName = "";
@@ -49,43 +52,22 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    QStringList headers;
-    headers << "Timestamp" << "ID" << "Ext" << "Bus" << "Len" << "Data";
-    //model->setHorizontalHeaderLabels(headers);
     ui->canFramesView->setColumnWidth(0, 110);
     ui->canFramesView->setColumnWidth(1, 70);
     ui->canFramesView->setColumnWidth(2, 40);
     ui->canFramesView->setColumnWidth(3, 40);
     ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 275);
+    ui->canFramesView->setColumnWidth(5, 40);
+    ui->canFramesView->setColumnWidth(6, 275);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
     //ui->canFramesView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
-    ports = QSerialPortInfo::availablePorts();
-
-    for (int i = 0; i < ports.count(); i++)
-    {
-        ui->cbSerialPorts->addItem(ports[i].portName());
-    }
-
-    ui->cbSpeed1->addItem(tr("Disabled"));
-    ui->cbSpeed1->addItem(tr("125000"));
-    ui->cbSpeed1->addItem(tr("250000"));
-    ui->cbSpeed1->addItem(tr("500000"));
-    ui->cbSpeed1->addItem(tr("1000000"));
-    ui->cbSpeed1->addItem(tr("33333"));
-    ui->cbSpeed2->addItem(tr("Disabled"));
-    ui->cbSpeed2->addItem(tr("125000"));
-    ui->cbSpeed2->addItem(tr("250000"));
-    ui->cbSpeed2->addItem(tr("500000"));
-    ui->cbSpeed2->addItem(tr("1000000"));
-    ui->cbSpeed2->addItem(tr("33333"));
-
     worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(&serialWorkerThread, &QThread::started, worker, &SerialWorker::run); //setup timers within the proper thread
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
     connect(worker, &SerialWorker::frameUpdateTick, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
@@ -98,7 +80,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
     connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
     serialWorkerThread.start();
-    serialWorkerThread.setPriority(QThread::HighPriority);
+    serialWorkerThread.setPriority(QThread::HighPriority);    
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -110,46 +92,53 @@ MainWindow::MainWindow(QWidget *parent) :
     settingsDialog = NULL;
     firmwareUploaderWindow = NULL;
     discreteStateWindow = NULL;
+    connectionWindow = NULL;
+    scriptingWindow = NULL;
+    rangeWindow = NULL;
+    dbcFileWindow = NULL;
+    fuzzingWindow = NULL;
+    udsScanWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
 
     model->setDBCHandler(dbcHandler);
 
-    connect(ui->btnConnect, SIGNAL(clicked(bool)), this, SLOT(connButtonPress()));
-    connect(ui->actionOpen_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadFile()));
-    connect(ui->actionGraph_Dta, SIGNAL(triggered(bool)), this, SLOT(showGraphingWindow()));
-    connect(ui->actionFrame_Data_Analysis, SIGNAL(triggered(bool)), this, SLOT(showFrameDataAnalysis()));
-    connect(ui->btnClearFrames, SIGNAL(clicked(bool)), this, SLOT(clearFrames()));
-    connect(ui->actionSave_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFile()));
-    connect(ui->actionSave_Filtered_Log_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilteredFile()));
-    connect(ui->actionLoad_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleLoadFilters()));
-    connect(ui->actionSave_Filter_Definition, SIGNAL(triggered(bool)), this, SLOT(handleSaveFilters()));
-    connect(ui->action_Playback, SIGNAL(triggered(bool)), this, SLOT(showPlaybackWindow()));
-    connect(ui->btnBaudSet, SIGNAL(clicked(bool)), this, SLOT(changeBaudRates()));
-    connect(ui->actionFlow_View, SIGNAL(triggered(bool)), this, SLOT(showFlowViewWindow()));
-    connect(ui->action_Custom, SIGNAL(triggered(bool)), this, SLOT(showFrameSenderWindow()));
-    connect(ui->actionLoad_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleLoadDBC()));
-    connect(ui->actionSave_DBC_File, SIGNAL(triggered(bool)), this, SLOT(handleSaveDBC()));
-    connect(ui->canFramesView, SIGNAL(clicked(QModelIndex)), this, SLOT(gridClicked(QModelIndex)));
-    connect(ui->canFramesView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(gridDoubleClicked(QModelIndex)));
-    connect(ui->cbInterpret, SIGNAL(toggled(bool)), this, SLOT(interpretToggled(bool)));
-    connect(ui->cbOverwrite, SIGNAL(toggled(bool)), this, SLOT(overwriteToggled(bool)));
-    connect(ui->actionEdit_Messages_Signals, SIGNAL(triggered(bool)), this, SLOT(showDBCEditor()));
-    connect(ui->btnCaptureToggle, SIGNAL(clicked(bool)), this, SLOT(toggleCapture()));
-    connect(ui->actionExit_Application, SIGNAL(triggered(bool)), this, SLOT(exitApp()));
-    connect(ui->actionFuzzy_Scope, SIGNAL(triggered(bool)), this, SLOT(showFuzzyScopeWindow()));
-    connect(ui->actionRange_State, SIGNAL(triggered(bool)), this, SLOT(showRangeWindow()));
-    connect(ui->actionSave_Decoded_Frames, SIGNAL(triggered(bool)), this, SLOT(handleSaveDecoded()));
-    connect(ui->actionSingle_Multi_State, SIGNAL(triggered(bool)), this, SLOT(showSingleMultiWindow()));
-    connect(ui->actionFile_Comparison, SIGNAL(triggered(bool)), this, SLOT(showComparisonWindow()));
-    connect(ui->btnNormalize, SIGNAL(clicked(bool)), this, SLOT(normalizeTiming()));
-    connect(ui->actionPreferences, SIGNAL(triggered(bool)), this, SLOT(showSettingsDialog()));
-    connect(model, SIGNAL(updatedFiltersList()), this, SLOT(updateFilterList()));
-    connect(ui->listFilters, SIGNAL(itemChanged(QListWidgetItem*)), this, SLOT(filterListItemChanged(QListWidgetItem*)));
-    connect(ui->btnFilterAll, SIGNAL(clicked(bool)), this, SLOT(filterSetAll()));
-    connect(ui->btnFilterNone, SIGNAL(clicked(bool)), this, SLOT(filterClearAll()));
-    connect(ui->actionFirmware_Uploader, SIGNAL(triggered(bool)), this, SLOT(showFirmwareUploaderWindow()));
+    connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
+    connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connButtonPress()));
+    connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
+    connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
+    connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
+    connect(ui->btnClearFrames, &QAbstractButton::clicked, this, &MainWindow::clearFrames);
+    connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
+    connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
+    connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
+    connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
+    connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
+    connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
+    connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
+    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
+    connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
+    connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
+    connect(ui->actionExit_Application, &QAction::triggered, this, &MainWindow::exitApp);
+    connect(ui->actionFuzzy_Scope, &QAction::triggered, this, &MainWindow::showFuzzyScopeWindow);
+    connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
+    connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
+    connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
+    connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
+    connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
+    connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
+    connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
+    connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
+    connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
+    connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
+    connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
+    connect(ui->actionFirmware_Uploader, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
+    connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
+    connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
+    connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -175,6 +164,10 @@ MainWindow::MainWindow(QWidget *parent) :
     normalRowHeight = ui->canFramesView->rowHeight(0);
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
+
+    //Automatically create the connection window so it can be updated even if we never opened it.
+    connectionWindow = new ConnectionWindow();
+    connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
 }
 
 MainWindow::~MainWindow()
@@ -237,10 +230,66 @@ MainWindow::~MainWindow()
         delete discreteStateWindow;
     }
 
+    if (connectionWindow)
+    {
+        connectionWindow->close();
+        delete connectionWindow;
+    }
+   
+    if (scriptingWindow)
+    {
+        scriptingWindow->close();
+        delete scriptingWindow;
+    }
+
+    if (rangeWindow)
+    {
+        rangeWindow->close();
+        delete rangeWindow;
+    }
+
+    if (dbcFileWindow)
+    {
+        dbcFileWindow->close();
+        delete dbcFileWindow;
+    }
+
+    if (fuzzingWindow)
+    {
+        fuzzingWindow->close();
+        delete fuzzingWindow;
+    }
+
+    if (udsScanWindow)
+    {
+        udsScanWindow->close();
+        delete udsScanWindow;
+    }
+
     delete ui;
     delete dbcHandler;
     model->clearFrames();
     delete model;
+}
+
+void MainWindow::exitApp()
+{
+    if (graphingWindow) graphingWindow->close();
+    if (frameInfoWindow) frameInfoWindow->close();
+    if (playbackWindow) playbackWindow->close();
+    if (flowViewWindow) flowViewWindow->close();
+    if (frameSenderWindow) frameSenderWindow->close();
+    if (dbcMainEditor) dbcMainEditor->close();
+    if (comparatorWindow) comparatorWindow->close();
+    if (connectionWindow) connectionWindow->close();
+    if (settingsDialog) settingsDialog->close();
+    if (discreteStateWindow) discreteStateWindow->close();
+    if (scriptingWindow) scriptingWindow->close();
+    if (rangeWindow) rangeWindow->close();
+    if (dbcFileWindow) dbcFileWindow->close();
+    if (fuzzingWindow) fuzzingWindow->close();
+    if (udsScanWindow) udsScanWindow->close();
+    this->close();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -268,6 +317,20 @@ void MainWindow::readSettings()
     {
         ui->cbAutoScroll->setChecked(true);
     }
+
+    int cType = settings.value("Main/DefaultConnectionType", 0).toInt();
+    if (cType == 0) connType = "GVRET";
+    if (cType == 1) connType = "KVASER";
+    if (cType == 2) connType = "SOCKETCAN";
+    portName = settings.value("Main/DefaultConnectionPort", "").toString();
+    canSpeed0 = -1;
+    canSpeed1 = -1;
+
+    qDebug() << connType;
+    qDebug() << portName;
+
+    //"Main/SingleWireMode"
+
     readUpdateableSettings();
 }
 
@@ -290,6 +353,57 @@ void MainWindow::writeSettings()
     {
         settings.setValue("Main/WindowSize", size());
         settings.setValue("Main/WindowPos", pos());
+    }
+}
+
+void MainWindow::updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1)
+{
+    connType = connectionType;
+    portName = port;
+
+    canSpeed0 = speed0;
+    canSpeed1 = speed1;
+    if (isConnected)
+    {
+        emit updateBaudRates(speed0, speed1);
+    }
+}
+
+void MainWindow::connButtonPress()
+{
+    if (!isConnected)
+    {
+        if (connType == "GVRET")
+        {
+            QList<QSerialPortInfo> ports;
+            ports = QSerialPortInfo::availablePorts();
+
+            for (int i = 0; i < ports.count(); i++)
+            {
+                if (ports[i].portName() == portName)
+                {
+                    portInfo = ports[i];
+                    //need to create some way to send single wire mode to serial port code
+                    emit sendSerialPort(&portInfo);
+                    lbStatusConnected.setText(tr("Attempting to connect to port ") + portName);
+                }
+            }
+        }
+        else if (connType == "KVASER")
+        {
+
+        }
+        else if (connType == "SOCKETCAN")
+        {
+
+        }
+    }
+    else
+    {
+        emit closeSerialPort();
+        isConnected = false;
+        lbStatusConnected.setText(tr("Not Connected"));
+        ui->actionConnect->setText(tr("Connect"));
     }
 }
 
@@ -437,8 +551,8 @@ void MainWindow::changeBaudRates()
 {
     int Speed1 = 0, Speed2 = 0;
 
-    Speed1 = ui->cbSpeed1->currentText().toInt();
-    Speed2 = ui->cbSpeed2->currentText().toInt();
+    //Speed1 = ui->cbSpeed1->currentText().toInt();
+    //Speed2 = ui->cbSpeed2->currentText().toInt();
 
     emit updateBaudRates(Speed1, Speed2);
 }
@@ -446,216 +560,42 @@ void MainWindow::changeBaudRates()
 void MainWindow::handleLoadFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
+    QVector<CANFrame> tempFrames;
 
-    QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.can)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace)")));
-
-    dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::loadFrameFile(filename, &tempFrames))
     {
-        filename = dialog.selectedFiles()[0];
         ui->canFramesView->scrollToTop();
         model->clearFrames();
+        model->insertFrames(tempFrames);
+        loadedFileName = filename;
+        model->recalcOverwrite();
+        ui->lbNumFrames->setText(QString::number(model->rowCount()));
+        if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
-        QVector<CANFrame> tempFrames;
-
-        QProgressDialog progress(this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Loading file...");
-        progress.setCancelButton(0);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0]) result = FrameFileIO::loadCRTDFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[1]) result = FrameFileIO::loadNativeCSVFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[2]) result = FrameFileIO::loadGenericCSVFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[3]) result = FrameFileIO::loadLogFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[4]) result = FrameFileIO::loadMicrochipFile(filename, &tempFrames);
-        if (dialog.selectedNameFilter() == filters[5]) result = FrameFileIO::loadTraceFile(filename, &tempFrames);
-
-        progress.cancel();
-
-        if (result)
-        {
-            model->insertFrames(tempFrames);
-
-            QStringList fileList = filename.split('/');
-            loadedFileName = fileList[fileList.length() - 1];
-
-            model->recalcOverwrite();
-            ui->lbNumFrames->setText(QString::number(model->rowCount()));
-            if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
-
-            updateFileStatus();
-            emit framesUpdated(-2);
-        }
+        updateFileStatus();
+        emit framesUpdated(-2);
     }
 }
 
 void MainWindow::handleSaveFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
 
-    QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.can)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace)")));
-
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::saveFrameFile(filename, model->getListReference()))
     {
-        const QVector<CANFrame> *frames = model->getListReference();        
-        filename = dialog.selectedFiles()[0];
-
-        QProgressDialog progress(this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Saving file...");
-        progress.setCancelButton(0);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".txt";
-            result = FrameFileIO::saveCRTDFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveNativeCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveGenericCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[3])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveLogFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[4])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveMicrochipFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[5])
-        {
-            if (!filename.contains('.')) filename += ".trace";
-            result = FrameFileIO::saveTraceFile(filename, frames);
-        }
-
-        progress.cancel();
-
-        if (result)
-        {
-            QStringList fileList = filename.split('/');
-            loadedFileName = fileList[fileList.length() - 1];
-            updateFileStatus();
-        }
+        loadedFileName = filename;
+        updateFileStatus();
     }
 }
 
 void MainWindow::handleSaveFilteredFile()
 {
     QString filename;
-    QFileDialog dialog(this);
-    bool result = false;
 
-    QStringList filters;
-    filters.append(QString(tr("CRTD Logs (*.txt)")));
-    filters.append(QString(tr("GVRET Logs (*.csv)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv)")));
-    filters.append(QString(tr("BusMaster Log (*.log)")));
-    filters.append(QString(tr("Microchip Log (*.log)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace)")));
-
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    if (dialog.exec() == QDialog::Accepted)
+    if (FrameFileIO::saveFrameFile(filename, model->getFilteredListReference()))
     {
-        const QVector<CANFrame> *frames = model->getFilteredListReference();
-        filename = dialog.selectedFiles()[0];
-
-        QProgressDialog progress(this);
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Saving filtered file...");
-        progress.setCancelButton(0);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".txt";
-            result = FrameFileIO::saveCRTDFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveNativeCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = FrameFileIO::saveGenericCSVFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[3])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveLogFile(filename, frames);
-        }
-        if (dialog.selectedNameFilter() == filters[4])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = FrameFileIO::saveMicrochipFile(filename, frames);
-        }
-
-        if (dialog.selectedNameFilter() == filters[5])
-        {
-            if (!filename.contains('.')) filename += ".trace";
-            result = FrameFileIO::saveTraceFile(filename, frames);
-        }
-
-        progress.cancel();
-
-        if (result)
-        {
-            QStringList fileList = filename.split('/');
-            loadedFileName = fileList[fileList.length() - 1];
-            updateFileStatus();
-        }
+        loadedFileName = filename;
+        updateFileStatus();
     }
 }
 
@@ -700,52 +640,7 @@ void MainWindow::handleLoadFilters()
     }
 }
 
-void MainWindow::handleLoadDBC()
-{
-    QString filename;
-    QFileDialog dialog(this);
-
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
-
-    dialog.setFileMode(QFileDialog::ExistingFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        filename = dialog.selectedFiles()[0];
-        //right now there is only one file type that can be loaded here so just do it.
-        dbcHandler->loadDBCFile(filename);
-        //dbcHandler->listDebugging();
-        QStringList fileList = filename.split('/');
-        lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
-    }
-}
-
-void MainWindow::handleSaveDBC()
-{
-    QString filename;
-    QFileDialog dialog(this);
-
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
-
-    dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
-    dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        filename = dialog.selectedFiles()[0];
-        if (!filename.contains('.')) filename += ".dbc";
-        dbcHandler->saveDBCFile(filename);
-        QStringList fileList = filename.split('/');
-        lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
-    }
-
-}
+//lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 
 void MainWindow::handleSaveDecoded()
 {
@@ -771,7 +666,7 @@ void MainWindow::handleSaveDecoded()
 void MainWindow::saveDecodedTextFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    const QVector<CANFrame> *frames = model->getListReference();
+    const QVector<CANFrame> *frames = model->getFilteredListReference();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
@@ -803,14 +698,18 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         builderString = "";
         if (dbcHandler != NULL)
         {
-            DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
+            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
             if (msg != NULL)
             {
-                for (int j = 0; j < msg->msgSignals.length(); j++)
+                for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
 
-                    builderString.append("\t" + dbcHandler->processSignal(thisFrame, msg->msgSignals.at(j)));
-                    builderString.append("\n");
+                    QString temp;
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, temp))
+                    {
+                        builderString.append("\t" + temp);
+                        builderString.append("\n");
+                    }
                 }
             }
             builderString.append("\n");
@@ -818,29 +717,6 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         }
     }
     outFile->close();
-}
-
-void MainWindow::connButtonPress()
-{
-    if (!isConnected)
-    {
-        for (int x = 0; x < ports.count(); x++)
-        {
-            if (ports.at(x).portName() == ui->cbSerialPorts->currentText())
-            {
-                emit sendSerialPort(&ports[x]);
-                lbStatusConnected.setText(tr("Attempting to connect to port ") + ports[x].portName());
-                return;
-            }
-        }
-    }
-    else
-    {
-        emit closeSerialPort();
-        isConnected = false;
-        lbStatusConnected.setText(tr("Not Connected"));
-        ui->btnConnect->setText(tr("Connect to GVRET"));
-    }
 }
 
 void MainWindow::toggleCapture()
@@ -863,7 +739,7 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
     lbStatusConnected.setText(tr("Connected to GVRET"));
     //finally, find the baud rate in the list of rates or
     //add it to the bottom if needed (that'll be weird though...
-
+/*
     int idx = ui->cbSpeed1->findText(QString::number(baud0));
     if (idx > -1) ui->cbSpeed1->setCurrentIndex(idx);
     else
@@ -879,8 +755,10 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->addItem(QString::number(baud1));
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
+    */
+    if (connectionWindow) connectionWindow->setSpeeds(baud0, baud1);
     //ui->btnConnect->setEnabled(false);
-    ui->btnConnect->setText(tr("Disconnect from GVRET"));
+    ui->actionConnect->setText(tr("Disconnect"));
     isConnected = true;
 }
 
@@ -932,6 +810,12 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
                        + QString::number(build) +"\nCurrent Version: " + QString::number(CURRENT_GVRET_VER)
                        + "\n\nPlease upgrade your firmware version.\nOtherwise, you may experience difficulties.");
         msgBox.exec();
+    }
+
+    if (connectionWindow)
+    {
+        if (swCAN == 1) connectionWindow->setCAN1SWMode(true);
+        else connectionWindow->setCAN1SWMode(false);
     }
 }
 
@@ -989,7 +873,7 @@ void MainWindow::showFrameSenderWindow()
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
 
-        connect(frameSenderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -1035,26 +919,49 @@ void MainWindow::showSingleMultiWindow()
     discreteStateWindow->show();
 }
 
+void MainWindow::showFuzzingWindow()
+{
+    if (!fuzzingWindow)
+    {
+        fuzzingWindow = new FuzzingWindow(model->getListReference());
+        connect(fuzzingWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
+    }
+    fuzzingWindow->show();
+}
+
+void MainWindow::showUDSScanWindow()
+{
+    if (!udsScanWindow)
+    {
+        udsScanWindow = new UDSScanWindow(model->getListReference());
+        connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+    }
+    udsScanWindow->show();
+}
+
+void MainWindow::showScriptingWindow()
+{
+    if (!scriptingWindow)
+    {
+        scriptingWindow = new ScriptingWindow(model->getListReference());
+        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
+    }
+    scriptingWindow->show();
+}
+
 void MainWindow::showRangeWindow()
 {
-    //not done yet
+    if (!rangeWindow)
+    {
+        rangeWindow = new RangeStateWindow(model->getListReference());
+    }
+    rangeWindow->show();
 }
 
 void MainWindow::showFuzzyScopeWindow()
 {
     //not done yet
-}
-
-void MainWindow::exitApp()
-{
-    if (graphingWindow) graphingWindow->close();
-    if (frameInfoWindow) frameInfoWindow->close();
-    if (playbackWindow) playbackWindow->close();
-    if (flowViewWindow) flowViewWindow->close();
-    if (frameSenderWindow) frameSenderWindow->close();
-    if (dbcMainEditor) dbcMainEditor->close();
-    if (comparatorWindow) comparatorWindow->close();
-    this->close();
 }
 
 void MainWindow::showFlowViewWindow()
@@ -1078,12 +985,21 @@ void MainWindow::showFlowViewWindow()
     flowViewWindow->show();
 }
 
-//this one always gets the unfiltered list intentionally.
-void MainWindow::showDBCEditor()
+void MainWindow::showDBCFileWindow()
 {
-    if (!dbcMainEditor)
+    if (!dbcFileWindow)
     {
-        dbcMainEditor = new DBCMainEditor(dbcHandler, model->getListReference());
+        dbcFileWindow = new DBCLoadSaveWindow(dbcHandler, model->getListReference());
     }
-    dbcMainEditor->show();
+    dbcFileWindow->show();
+}
+
+void MainWindow::showConnectionSettingsWindow()
+{
+    if (!connectionWindow)
+    {
+        connectionWindow = new ConnectionWindow();
+        connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+    }
+    connectionWindow->show();
 }

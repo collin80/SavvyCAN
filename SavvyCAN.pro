@@ -6,11 +6,11 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
-CONFIG += c++11
+CONFIG += c++11 qscintilla2
 
 TARGET = SavvyCAN
 TEMPLATE = app
@@ -36,7 +36,17 @@ SOURCES += main.cpp\
     filecomparatorwindow.cpp \
     mainsettingsdialog.cpp \
     firmwareuploaderwindow.cpp \
-    discretestatewindow.cpp
+    discretestatewindow.cpp \
+    connectionwindow.cpp \
+    scriptingwindow.cpp \
+    scriptcontainer.cpp \
+    canfilter.cpp \
+    rangestatewindow.cpp \
+    dbc_classes.cpp \
+    dbcloadsavewindow.cpp \
+    fuzzingwindow.cpp \
+    udsscanwindow.cpp \
+    can_structs.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -61,7 +71,15 @@ HEADERS  += mainwindow.h \
     filecomparatorwindow.h \
     mainsettingsdialog.h \
     firmwareuploaderwindow.h \
-    discretestatewindow.h
+    discretestatewindow.h \
+    connectionwindow.h \
+    scriptingwindow.h \
+    scriptcontainer.h \
+    canfilter.h \
+    rangestatewindow.h \
+    dbcloadsavewindow.h \
+    fuzzingwindow.h \
+    udsscanwindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -76,7 +94,13 @@ FORMS    += mainwindow.ui \
     filecomparatorwindow.ui \
     mainsettingsdialog.ui \
     firmwareuploaderwindow.ui \
-    discretestatewindow.ui
+    discretestatewindow.ui \
+    connectionwindow.ui \
+    scriptingwindow.ui \
+    rangestatewindow.ui \
+    dbcloadsavewindow.ui \
+    fuzzingwindow.ui \
+    udsscanwindow.ui
 
 DISTFILES +=
 

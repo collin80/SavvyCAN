@@ -28,13 +28,23 @@ public:
     static bool loadLogFile(QString, QVector<CANFrame>*);
     static bool loadMicrochipFile(QString, QVector<CANFrame>*);
     static bool loadTraceFile(QString, QVector<CANFrame>*);
-    static bool saveCRTDFile(QString, const QVector<CANFrame>*);
+    static bool loadIXXATFile(QString, QVector<CANFrame>*);
+    static bool loadCANDOFile(QString, QVector<CANFrame>*);
+    static bool loadVehicleSpyFile(QString, QVector<CANFrame>*);
+    static bool saveCRTDFile(QString, const QVector<CANFrame>*);    
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);
     static bool saveLogFile(QString, const QVector<CANFrame>*);
     static bool saveMicrochipFile(QString, const QVector<CANFrame>*);
     static bool saveTraceFile(QString, const QVector<CANFrame>*);
-    static QString loadFrameFile(QVector<CANFrame>*);
+    static bool saveIXXATFile(QString, const QVector<CANFrame>*);
+    static bool saveCANDOFile(QString, const QVector<CANFrame>*);
+    static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
+    static bool loadFrameFile(QString &, QVector<CANFrame>*);
+    static bool saveFrameFile(QString &, const QVector<CANFrame>*);
+
+private:
+    static QString unQuote(QString);
 };
 
 #endif // FRAMEFILEIO_H

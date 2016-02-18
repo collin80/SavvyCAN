@@ -13,8 +13,10 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     modelFrames = frames;
 
-    connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(updateDetailsWindow(QString)));
-    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+    connect(ui->listFrameID, &QListWidget::currentTextChanged, this, &FrameInfoWindow::updateDetailsWindow);
+    connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
+    connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
+
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -81,6 +83,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        if (numFrames > modelFrames->count()) return;
         int currID = ui->listFrameID->currentItem()->text().toInt(NULL, 16);
         bool foundID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
@@ -113,6 +116,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int maxData[8];
     int dataHistogram[256][8];
     int bitfieldHistogram[64];
+    uint8_t changedBits[8];
+    uint8_t referenceBits[8];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
     targettedID = Utility::ParseStringToNum(newID);
@@ -196,6 +201,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
         for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
 
+        for (int c = 0; c < 8; c++)
+        {
+            changedBits[c] = 0;
+            referenceBits[c] = frameCache.at(0).data[c];
+            qDebug() << referenceBits[c];
+        }
+
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
@@ -217,10 +229,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                         bitfieldHistogram[c * 8 + l]++;
                     }
                 }
+                changedBits[c] |= referenceBits[c] ^ dat;
             }
         }
 
-        avgInterval = avgInterval / (frameCache.count() - 1);
+        if (frameCache.count() > 1)
+            avgInterval = avgInterval / (frameCache.count() - 1);
+        else avgInterval = 0;
 
         tempItem = new QTreeWidgetItem();
 
@@ -242,6 +257,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
             dataBase->setText(0, tr("Data Byte ") + QString::number(c));
             baseNode->addChild(dataBase);
+
+            tempItem = new QTreeWidgetItem();
+            QString builder;
+            builder = tr("Changed bits: 0x") + QString::number(changedBits[c], 16) + "  (" + Utility::formatByteAsBinary(changedBits[c]) + ")";
+            tempItem->setText(0, builder);
+            dataBase->addChild(tempItem);
+
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, tr("Range: ") + Utility::formatNumber(minData[c]) + tr(" to ") + Utility::formatNumber(maxData[c]));
             dataBase->addChild(tempItem);
@@ -253,7 +275,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 if (dataHistogram[d][c] > 0)
                 {
                     tempItem = new QTreeWidgetItem();
-                    tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +": " + QString::number(dataHistogram[d][c]));
+                    tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +" (" + Utility::formatByteAsBinary(d) +") -> " + QString::number(dataHistogram[d][c]));
                     histBase->addChild(tempItem);
                 }
             }            
@@ -300,3 +322,55 @@ void FrameInfoWindow::refreshIDList()
     ui->listFrameID->sortItems();
     ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
 }
+
+void FrameInfoWindow::saveDetails()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Text File (*.txt)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".txt";
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            QFile *outFile = new QFile(filename);
+
+            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                delete outFile;
+                return;
+            }
+
+            //go through all IDs, recalculate the data, and then save it to file
+            for (int i = 0; i < ui->listFrameID->count(); i++)
+            {
+                updateDetailsWindow(ui->listFrameID->item(i)->text());
+                dumpNode(ui->treeDetails->invisibleRootItem(), outFile, 0);
+                outFile->write("\n\n");
+            }
+
+            outFile->close();
+            delete outFile;
+        }
+    }
+}
+
+void FrameInfoWindow::dumpNode(QTreeWidgetItem* item, QFile *file, int indent)
+{
+    for (int i = 0; i < indent; i++) file->write("\t");
+    file->write(item->text(0).toUtf8());
+    file->write("\n");
+    for( int i = 0; i < item->childCount(); ++i )
+        dumpNode( item->child(i), file, indent + 1 );
+}
+
+

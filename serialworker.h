@@ -54,6 +54,7 @@ private slots: //we receive things in slots
     void handleReconnect();
 
 public slots:
+    void run();
     void setSerialPort(QSerialPortInfo*);
     void closeSerialPort();
     void sendFrame(const CANFrame *, int);
@@ -75,6 +76,7 @@ private:
     CANFrameModel *canModel;
     QTimer *ticker;
     QTime *elapsedTime;
+    QMutex sendBulkMutex;
     int framesPerSec;
     int gotFrames;
     int targetID;

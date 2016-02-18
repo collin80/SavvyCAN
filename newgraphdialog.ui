@@ -7,13 +7,37 @@
     <x>0</x>
     <y>0</y>
     <width>492</width>
-    <height>309</height>
+    <height>340</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Graph Settings</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QRadioButton" name="rbStandardGraph">
+       <property name="text">
+        <string>Standard Graph</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="rbSignalGraph">
+       <property name="text">
+        <string>DBC Signal Graph</string>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
      <item>
