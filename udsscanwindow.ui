@@ -65,6 +65,26 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Reply Offset:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QSpinBox" name="spinReplyOffset">
+     <property name="minimum">
+      <number>-128</number>
+     </property>
+     <property name="maximum">
+      <number>128</number>
+     </property>
+     <property name="value">
+      <number>8</number>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Buses to scan</string>

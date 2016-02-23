@@ -11,7 +11,7 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     modelFrames = frames;
 
     waitTimer = new QTimer;
-    waitTimer->setInterval(500);
+    waitTimer->setInterval(300);
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
@@ -36,6 +36,7 @@ void UDSScanWindow::scanUDS()
     sendingFrames.clear();
 
     CANFrame frame;
+    int typ, id;
     int startID, endID;
     startID = Utility::ParseStringToNum(ui->txtStartID->text());
     endID = Utility::ParseStringToNum(ui->txtEndID->text());
@@ -43,9 +44,35 @@ void UDSScanWindow::scanUDS()
     int buses = ui->cbBuses->currentIndex();
     buses++;
     if (buses < 1) buses = 1;
-    for (int typ = 1; typ < 5; typ++)
+
+    //start out by sending tester present to every address to see if anyone replies
+    for (id = startID; id < endID; id++)
     {
-        for (int id = startID; id < endID; id++)
+        frame.ID = id;
+        frame.len = 8;
+        frame.extended = false;
+        frame.data[0] = 2;
+        frame.data[1] = 0x3E; //tester present
+        frame.data[2] = 0;
+        frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
+        frame.data[6] = 0;frame.data[7] = 0;
+
+        if (buses & 1)
+        {
+            frame.bus = 0;
+            sendingFrames.append(frame);
+        }
+        if (buses & 2)
+        {
+            frame.bus = 1;
+            sendingFrames.append(frame);
+        }
+    }
+
+    //then try asking for the various diagnostic session types
+    for (typ = 1; typ < 5; typ++)
+    {
+        for (id = startID; id <= endID; id++)
         {
             frame.ID = id;
             frame.len = 8;
@@ -92,13 +119,22 @@ void UDSScanWindow::updatedFrames(int numFrames)
         {
             thisFrame = modelFrames->at(i);
             id = thisFrame.ID;
-            if (id >= 0x7E8 && id <= 0x7EF)
+
+            id -= ui->spinReplyOffset->value(); //back to original ECU id
+            if (id == sendingFrames[currIdx].ID)
             {
-                id -= 8; //back to original ECU id
-                result = "ECU at bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " responds to mode "
-                        + QString::number(sendingFrames[currIdx].data[2]) + " with: " + QString::number(thisFrame.data[0], 16) + " "
-                        + QString::number(thisFrame.data[1], 16) + " " + QString::number(thisFrame.data[2], 16)
-                        + " " + QString::number(thisFrame.data[3], 16);
+                if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].data[1])
+                {
+                    result = "ECU at bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " responds to mode "
+                        + QString::number(sendingFrames[currIdx].data[1], 16)
+                        + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with affirmation.";
+                }
+                else if ( thisFrame.data[1] == 0x7F)
+                {
+                    result = "ECU at bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " responds to mode "
+                        + QString::number(sendingFrames[currIdx].data[1], 16)
+                        + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with an error.";
+                }
                 ui->listResults->addItem(result);
                 sendNextMsg();
             }
@@ -110,7 +146,7 @@ void UDSScanWindow::timeOut()
 {
     QString result;
     result = "ECU at bus " + QString::number(sendingFrames[currIdx].bus) + " ID: " + QString::number(sendingFrames[currIdx].ID, 16) + " did not respond to mode "
-            + QString::number(sendingFrames[currIdx].data[2]);
+             + QString::number(sendingFrames[currIdx].data[1], 16) + " " + QString::number(sendingFrames[currIdx].data[2], 16);
     ui->listResults->addItem(result);
 
     sendNextMsg();
