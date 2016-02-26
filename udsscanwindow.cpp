@@ -10,6 +10,8 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
 
     modelFrames = frames;
 
+    currentlyRunning = false;
+
     waitTimer = new QTimer;
     waitTimer->setInterval(300);
 
@@ -32,6 +34,14 @@ UDSScanWindow::~UDSScanWindow()
 
 void UDSScanWindow::scanUDS()
 {
+    if (currentlyRunning)
+    {
+        waitTimer->stop();
+        sendingFrames.clear();
+        currentlyRunning = false;
+        ui->btnScan->setText("Start Scan");
+    }
+
     ui->listResults->clear();
     sendingFrames.clear();
 
@@ -98,6 +108,8 @@ void UDSScanWindow::scanUDS()
 
     waitTimer->start();
     currIdx = -1;
+    currentlyRunning = true;
+    ui->btnScan->setText("Abort Scan");
     sendNextMsg();
 }
 
@@ -106,6 +118,9 @@ void UDSScanWindow::updatedFrames(int numFrames)
     CANFrame thisFrame;
     QString result;
     int id;
+    int offset = ui->spinReplyOffset->value();
+    bool gotReply = false;
+
     if (numFrames == -1) //all frames deleted. We don't care
     {
     }
@@ -118,25 +133,33 @@ void UDSScanWindow::updatedFrames(int numFrames)
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
-            id = thisFrame.ID;
+            id = thisFrame.ID;                                   
 
-            id -= ui->spinReplyOffset->value(); //back to original ECU id
-            if (id == sendingFrames[currIdx].ID)
+            if (id == (sendingFrames[currIdx].ID + offset) || ui->cbAllowAdaptiveOffset->isChecked())
             {
-                if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].data[1])
+                int temp = thisFrame.data[0] >> 4;
+                if (temp == 0 || temp == 1)
                 {
-                    result = "ECU at bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " responds to mode "
-                        + QString::number(sendingFrames[currIdx].data[1], 16)
-                        + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with affirmation.";
+                    if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].data[1])
+                    {
+                        result = "Request on bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " got response to mode "
+                            + QString::number(sendingFrames[currIdx].data[1], 16)
+                            + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with affirmation from ID " + QString::number(id, 16) +  ".";
+                        gotReply = true;
+                    }
+                    else if ( thisFrame.data[1] == 0x7F)
+                    {
+                        result = "Request on bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " got response to mode "
+                            + QString::number(sendingFrames[currIdx].data[1], 16)
+                            + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with an error from ID " + QString::number(id, 16) + ".";
+                        gotReply = true;
+                    }
+                    if (gotReply)
+                    {
+                        ui->listResults->addItem(result);
+                        sendNextMsg();
+                    }
                 }
-                else if ( thisFrame.data[1] == 0x7F)
-                {
-                    result = "ECU at bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " responds to mode "
-                        + QString::number(sendingFrames[currIdx].data[1], 16)
-                        + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with an error.";
-                }
-                ui->listResults->addItem(result);
-                sendNextMsg();
             }
         }
     }
@@ -145,7 +168,7 @@ void UDSScanWindow::updatedFrames(int numFrames)
 void UDSScanWindow::timeOut()
 {
     QString result;
-    result = "ECU at bus " + QString::number(sendingFrames[currIdx].bus) + " ID: " + QString::number(sendingFrames[currIdx].ID, 16) + " did not respond to mode "
+    result = "Request on bus " + QString::number(sendingFrames[currIdx].bus) + " ID: " + QString::number(sendingFrames[currIdx].ID, 16) + " got no response to mode "
              + QString::number(sendingFrames[currIdx].data[1], 16) + " " + QString::number(sendingFrames[currIdx].data[2], 16);
     ui->listResults->addItem(result);
 
@@ -162,5 +185,7 @@ void UDSScanWindow::sendNextMsg()
     else
     {
         waitTimer->stop();
+        ui->btnScan->setText("Start Scan");
+        currentlyRunning = false;
     }
 }
