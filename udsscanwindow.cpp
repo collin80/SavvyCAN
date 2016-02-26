@@ -121,7 +121,9 @@ void UDSScanWindow::updatedFrames(int numFrames)
             id = thisFrame.ID;
 
             id -= ui->spinReplyOffset->value(); //back to original ECU id
-            if (id == sendingFrames[currIdx].ID)
+            int numFrames = sendingFrames.length();
+
+            if (numFrames > 0 && numFrames > currIdx && id == sendingFrames[currIdx].ID)
             {
                 if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].data[1])
                 {
