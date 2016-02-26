@@ -48,6 +48,9 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 #endif
 
     connect(ui->btnOK, SIGNAL(clicked(bool)), this, SLOT(handleOKButton()));
+    connect(ui->rbGVRET, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
+    connect(ui->rbKvaser, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
+    connect(ui->rbSocketCAN, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -60,6 +63,11 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     qDebug() << "Show connectionwindow";
+    handleConnTypeChanged();
+}
+
+void ConnectionWindow::handleConnTypeChanged()
+{
     if (ui->rbGVRET->isChecked()) getSerialPorts();
     if (ui->rbKvaser->isChecked()) getKvaserPorts();
     if (ui->rbSocketCAN->isChecked()) getSocketcanPorts();

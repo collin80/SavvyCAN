@@ -43,6 +43,7 @@ public slots:
 
 private slots:
     void handleOKButton();
+    void handleConnTypeChanged();
 
 private:
     Ui::ConnectionWindow *ui;
