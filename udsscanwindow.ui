@@ -85,6 +85,13 @@
     </widget>
    </item>
    <item>
+    <widget class="QCheckBox" name="cbAllowAdaptiveOffset">
+     <property name="text">
+      <string>Allow adaptive reply offset</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Buses to scan</string>
