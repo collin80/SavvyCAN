@@ -22,6 +22,7 @@ signals:
 
 private slots:
     void updatedFrames(int numFrames);
+    void rapidFrames(int numFrames);
     void scanUDS();
     void timeOut();
 
