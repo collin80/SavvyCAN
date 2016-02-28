@@ -119,6 +119,7 @@ void UDSScanWindow::updatedFrames(int numFrames)
     QString result;
     int id;
     int offset = ui->spinReplyOffset->value();
+    CANFrame sentFrame;
     bool gotReply = false;
 
     if (numFrames == -1) //all frames deleted. We don't care
@@ -130,39 +131,59 @@ void UDSScanWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
         if (numFrames > modelFrames->count()) return;
+
+        int numSending = sendingFrames.length();
+        if (numSending == 0) return;
+        if (currIdx >= numSending) return;
+        sentFrame = sendingFrames[currIdx];
+
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
+            if (currIdx >= numSending) return;
             thisFrame = modelFrames->at(i);
             id = thisFrame.ID;                                   
 
-            int numFrames = sendingFrames.length();
-
-            if (numFrames > 0 && numFrames > currIdx && id == (sendingFrames[currIdx].ID + offset) || ui->cbAllowAdaptiveOffset->isChecked())
+            if ((id == (sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
             {
                 int temp = thisFrame.data[0] >> 4;
-                if (temp == 0 || temp == 1)
+                if (temp == 0) //single frame reply (maybe)
                 {
                     if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].data[1])
                     {
-                        result = "Request on bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " got response to mode "
-                            + QString::number(sendingFrames[currIdx].data[1], 16)
-                            + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with affirmation from ID " + QString::number(id, 16) +  ".";
+                        result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
+                            + QString::number(sentFrame.data[1], 16)
+                            + " " + QString::number(sentFrame.data[2], 16) + " with affirmation from ID " + QString::number(id, 16)
+                            + " on bus " + QString::number(thisFrame.bus) + ".";
                         gotReply = true;
                     }
                     else if ( thisFrame.data[1] == 0x7F)
                     {
-                        result = "Request on bus " + QString::number(thisFrame.bus) + " ID: " + QString::number(id, 16) + " got response to mode "
-                            + QString::number(sendingFrames[currIdx].data[1], 16)
-                            + " " + QString::number(sendingFrames[currIdx].data[2], 16) + " with an error from ID " + QString::number(id, 16) + ".";
+                        result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
+                            + QString::number(sentFrame.data[1], 16)
+                            + " " + QString::number(sentFrame.data[2], 16) + " with an error from ID " + QString::number(id, 16)
+                            + " on bus " + QString::number(thisFrame.bus) + ".";
                         gotReply = true;
                     }
-                    if (gotReply)
+                }
+
+                if (temp == 1) //start of a multiframe reply
+                {
+                    if (thisFrame.data[2] == 0x40 + sendingFrames[currIdx].data[1])
                     {
-                        ui->listResults->addItem(result);
-                        sendNextMsg();
+                        result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
+                            + QString::number(sentFrame.data[1], 16)
+                            + " " + QString::number(sentFrame.data[2], 16) + " with affirmation from ID " + QString::number(id, 16)
+                            + " on bus " + QString::number(thisFrame.bus) + ".";
+                        gotReply = true;
                     }
+                    //error replies are never multiframe so the check doesn't have to be done here.
                 }
             }
+        }
+        if (gotReply)
+        {
+            ui->listResults->addItem(result);
+            sendNextMsg();
         }
     }
 }
@@ -183,6 +204,7 @@ void UDSScanWindow::sendNextMsg()
     if (currIdx < sendingFrames.count())
     {
         emit sendCANFrame(&sendingFrames[currIdx], sendingFrames[currIdx].bus);
+        waitTimer->start();
     }
     else
     {
