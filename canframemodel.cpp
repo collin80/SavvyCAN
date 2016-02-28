@@ -6,7 +6,12 @@
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return filteredFrames.count();
+    if (filteredFrames.data()) return filteredFrames.count();
+
+     //just in case somehow data is invalid which I have seen before.
+    //But, this should not happen so issue a debugging message too
+    qDebug() << "Invalid data for filteredFrames. Returning 0.";
+    return 0;
 }
 
 int CANFrameModel::totalFrameCount()
@@ -341,7 +346,7 @@ void CANFrameModel::sendRefresh()
         }
     }
     filteredFrames.clear();
-    filteredFrames = tempContainer;
+    filteredFrames.append(tempContainer);
     lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
     mutex.unlock();

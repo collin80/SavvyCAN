@@ -12,10 +12,8 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     rx_step = 0;
     buildFrame = new CANFrame;
     canModel = model;
-    gotFrames = 0;
     ticker = NULL;
-    elapsedTime = NULL;
-    framesPerSec = 0;
+    framesRapid = 0;
     capturing = true;
     gotValidated = true;
     isAutoRestart = false;
@@ -44,9 +42,6 @@ void SerialWorker::run()
 {
     ticker = new QTimer;
     connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
-
-    elapsedTime = new QTime;
-    elapsedTime->start();
 
     ticker->setInterval(250); //tick four times per second
     ticker->setSingleShot(false); //keep ticking
@@ -148,6 +143,11 @@ void SerialWorker::readSerialData()
         c = data.at(i);
         procRXChar(c);
     }
+    if (framesRapid > 0)
+    {
+        emit frameUpdateRapid(framesRapid);
+        framesRapid = 0;
+    }
 }
 
 void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
@@ -162,7 +162,7 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 
     //show our sent frames in the list too. This happens even if we're not connected.    
     canModel->addFrame(tempFrame, false);
-    gotFrames++;
+    framesRapid++;
 
     if (serial == NULL) return;
     if (!serial->isOpen()) return;
@@ -315,8 +315,8 @@ void SerialWorker::procRXChar(unsigned char c)
                 if (capturing)
                 {
                     buildFrame->isReceived = true;
-                    canModel->addFrame(*buildFrame, false);
-                    gotFrames++;
+                    canModel->addFrame(*buildFrame, false);                    
+                    framesRapid++;
                     if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
                 }
             }
@@ -447,11 +447,6 @@ void SerialWorker::handleTick()
         }
     }
 
-    framesPerSec += gotFrames * 1000 / elapsedTime->elapsed() - (framesPerSec / 4);
-    elapsedTime->restart();
-    emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
-    canModel->sendBulkRefresh(gotFrames);
-    gotFrames = 0;    
     if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 
