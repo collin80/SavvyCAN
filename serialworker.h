@@ -85,6 +85,7 @@ private:
     bool can0Enabled, can1Enabled;
     int deviceBuildNum;
     int deviceSingleWireMode;
+    uint64_t txTimestampBasis;
 
     void procRXChar(unsigned char);
     void sendCommValidation();

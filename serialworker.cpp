@@ -19,6 +19,8 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     isAutoRestart = false;
     targetID = -1;
 
+    txTimestampBasis = QDateTime::currentMSecsSinceEpoch();
+
     readSettings();
 }
 
@@ -157,6 +159,7 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     int ID;
     CANFrame tempFrame = *frame;
     tempFrame.isReceived = false;
+    tempFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() - txTimestampBasis) * 1000);
 
     //qDebug() << "Sending out frame with id " << frame->ID;
 
