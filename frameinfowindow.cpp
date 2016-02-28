@@ -84,7 +84,9 @@ void FrameInfoWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
         if (numFrames > modelFrames->count()) return;
-        int currID = ui->listFrameID->currentItem()->text().toInt(NULL, 16);
+        int currID = 0;
+        if (ui->listFrameID->currentItem())
+            currID = ui->listFrameID->currentItem()->text().toInt(NULL, 16);
         bool foundID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
