@@ -71,6 +71,7 @@ private:
     bool doValidation;
     bool gotValidated;
     bool isAutoRestart;
+    bool continuousTimeSync;
     QSerialPort *serial;
     QSerialPortInfo *currentPort;
     CANFrameModel *canModel;
@@ -86,6 +87,7 @@ private:
     int deviceBuildNum;
     int deviceSingleWireMode;
     uint64_t txTimestampBasis;
+    uint32_t buildTimeBasis;
 
     void procRXChar(unsigned char);
     void sendCommValidation();

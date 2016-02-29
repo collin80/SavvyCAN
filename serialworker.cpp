@@ -115,6 +115,11 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append((char)0xF1); //yet another command
     output.append((char)0x09); //comm validation command
 
+    output.append((char)0xF1); //and another command
+    output.append((char)0x01); //Time Sync - Not implemented until 333 but we can try
+
+    continuousTimeSync = true;
+
     serial->write(output);
     if (doValidation) connected = false;
         else connected = true;
@@ -236,8 +241,9 @@ void SerialWorker::procRXChar(unsigned char c)
             rx_state = BUILD_CAN_FRAME;
             rx_step = 0;
             break;
-        case 1: //we don't accept time sync commands from the firmware
-            rx_state = IDLE;
+        case 1: //time sync
+            rx_state = TIME_SYNC;
+            rx_step = 0;
             break;
         case 2: //process a return reply for digital input states.
             rx_state = GET_DIG_INPUTS;
@@ -318,7 +324,9 @@ void SerialWorker::procRXChar(unsigned char c)
                 if (capturing)
                 {
                     buildFrame->isReceived = true;
-                    canModel->addFrame(*buildFrame, false);                    
+                    canModel->addFrame(*buildFrame, false);
+                    //take the time the frame came in and try to resync the time base.
+                    if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame->timestamp / 1000);
                     framesRapid++;
                     if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
                 }
@@ -327,6 +335,29 @@ void SerialWorker::procRXChar(unsigned char c)
         }
         rx_step++;
         break;
+    case TIME_SYNC: //gives a pretty good base guess for the proper timestamp. Can be refined when traffic starts to flow (if wanted)
+        switch (rx_step)
+        {
+        case 0:
+            buildTimeBasis = c;
+            break;
+        case 1:
+            buildTimeBasis += ((uint32_t)c << 8);
+            break;
+        case 2:
+            buildTimeBasis += ((uint32_t)c << 16);
+            break;
+        case 3:
+            buildTimeBasis += ((uint32_t)c << 24);
+            qDebug() << "GVRET firmware reports timestamp of " << buildTimeBasis;
+            txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - ((uint64_t)buildTimeBasis / (uint64_t)1000ull);
+            continuousTimeSync = false;
+            rx_state = IDLE;
+            break;
+        }
+        rx_step++;
+        break;
+
     case GET_ANALOG_INPUTS: //get 9 bytes - 2 per analog input plus checksum
         switch (rx_step)
         {
@@ -413,9 +444,6 @@ void SerialWorker::procRXChar(unsigned char c)
             break;
         }
         rx_step++;
-        break;
-    case TIME_SYNC:
-        rx_state = IDLE;
         break;
     case SET_DIG_OUTPUTS:
         rx_state = IDLE;
