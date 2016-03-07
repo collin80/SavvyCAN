@@ -98,6 +98,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcFileWindow = NULL;
     fuzzingWindow = NULL;
     udsScanWindow = NULL;
+    isoWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -140,6 +141,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
+    connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -274,6 +276,12 @@ MainWindow::~MainWindow()
         delete udsScanWindow;
     }
 
+    if (isoWindow)
+    {
+        isoWindow->close();
+        delete isoWindow;
+    }
+
     delete elapsedTime;
 
     delete ui;
@@ -299,6 +307,7 @@ void MainWindow::exitApp()
     if (dbcFileWindow) dbcFileWindow->close();
     if (fuzzingWindow) fuzzingWindow->close();
     if (udsScanWindow) udsScanWindow->close();
+    if (isoWindow) isoWindow->close();
     this->close();
 }
 
@@ -882,6 +891,18 @@ void MainWindow::showFrameDataAnalysis()
             frameInfoWindow = new FrameInfoWindow(model->getFilteredListReference());
     }
     frameInfoWindow->show();
+}
+
+void MainWindow::showISOInterpreterWindow()
+{
+    if (!isoWindow)
+    {
+        if (!useFiltered)
+            isoWindow = new ISOTP_InterpreterWindow(model->getListReference());
+        else
+            isoWindow = new ISOTP_InterpreterWindow(model->getFilteredListReference());
+    }
+    isoWindow->show();
 }
 
 void MainWindow::showFrameSenderWindow()

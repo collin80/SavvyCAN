@@ -210,6 +210,7 @@
     <addaction name="actionFile_Comparison"/>
     <addaction name="actionRange_State_2"/>
     <addaction name="actionSingle_Multi_State_2"/>
+    <addaction name="actionISO_TP_Decoder"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -385,6 +386,11 @@
   <action name="actionUDS_Scanner">
    <property name="text">
     <string>UDS Scanner</string>
+   </property>
+  </action>
+  <action name="actionISO_TP_Decoder">
+   <property name="text">
+    <string>ISO-TP Decoder</string>
    </property>
   </action>
  </widget>

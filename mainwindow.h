@@ -25,6 +25,7 @@
 #include "dbcloadsavewindow.h"
 #include "fuzzingwindow.h"
 #include "udsscanwindow.h"
+#include "isotp_interpreterwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -65,6 +66,7 @@ private slots:
     void showDBCFileWindow();
     void showFuzzingWindow();
     void showUDSScanWindow();
+    void showISOInterpreterWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -141,6 +143,7 @@ private:
     DBCLoadSaveWindow *dbcFileWindow;
     FuzzingWindow *fuzzingWindow;
     UDSScanWindow *udsScanWindow;
+    ISOTP_InterpreterWindow *isoWindow;
 
     //various private storage
     QLabel lbStatusConnected;

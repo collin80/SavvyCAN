@@ -46,7 +46,9 @@ SOURCES += main.cpp\
     dbcloadsavewindow.cpp \
     fuzzingwindow.cpp \
     udsscanwindow.cpp \
-    can_structs.cpp
+    can_structs.cpp \
+    isotp_interpreterwindow.cpp \
+    isotp_decoder.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -79,7 +81,9 @@ HEADERS  += mainwindow.h \
     rangestatewindow.h \
     dbcloadsavewindow.h \
     fuzzingwindow.h \
-    udsscanwindow.h
+    udsscanwindow.h \
+    isotp_interpreterwindow.h \
+    isotp_decoder.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -100,7 +104,8 @@ FORMS    += mainwindow.ui \
     rangestatewindow.ui \
     dbcloadsavewindow.ui \
     fuzzingwindow.ui \
-    udsscanwindow.ui
+    udsscanwindow.ui \
+    isotp_interpreterwindow.ui
 
 DISTFILES +=
 

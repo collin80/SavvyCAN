@@ -29,7 +29,7 @@ public:
 };
 
 //the same as the CANFrame struct but with arbitrary data size.
-struct ISOTP_FRAME
+struct ISOTP_MESSAGE
 {
 public:
     int ID;
