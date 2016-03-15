@@ -20,6 +20,8 @@ public:
 
 private slots:
     void newISOMessage(ISOTP_MESSAGE &msg);
+    void showDetailView();
+    void updatedFrames(int);
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;

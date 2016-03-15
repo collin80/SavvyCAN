@@ -11,8 +11,11 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
 
     decoder = new ISOTP_DECODER(modelFrames);
 
+    connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ISOTP_InterpreterWindow::updatedFrames);
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_DECODER::updatedFrames);
     connect(decoder, &ISOTP_DECODER::newISOMessage, this, &ISOTP_InterpreterWindow::newISOMessage);
+
+    connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
 
     QStringList headers;
     headers << "Timestamp" << "ID" << "Bus" << "Dir" << "Length" << "Data";
@@ -68,10 +71,64 @@ void ISOTP_InterpreterWindow::writeSettings()
     }
 }
 
+void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
+{
+    if (numFrames == -1) //all frames deleted. Kill the display
+    {
+        messages.clear();
+        ui->tableIsoFrames->clear();
+    }
+    else if (numFrames == -2) //all new set of frames. Reset
+    {
+        messages.clear();
+        ui->tableIsoFrames->clear();
+    }
+    else //just got some new frames. See if they are relevant.
+    {
+    }
+}
+
+void ISOTP_InterpreterWindow::showDetailView()
+{
+    QString buildString;
+    ISOTP_MESSAGE *msg;
+    int rowNum = ui->tableIsoFrames->currentRow();
+
+    ui->txtFrameDetails->clear();
+    if (rowNum == -1) return;
+
+    msg = &messages[rowNum];
+
+    if (msg->len != msg->data.length())
+    {
+        buildString.append("Message didn't have the correct number of bytes.\rExpected "
+                           + QString::number(msg->len) + " got "
+                           + QString::number(msg->data.length()) + "\r\r");
+    }
+
+    buildString.append(tr("Raw Payload: "));
+    for (int i = 0; i < messages[rowNum].data.count(); i++)
+    {
+        buildString.append(Utility::formatNumber(messages[rowNum].data[i]));
+        buildString.append(" ");
+    }
+    buildString.append("\r\r");
+
+    //if (ui->cb->isChecked())
+    //{
+
+    //}
+
+    ui->txtFrameDetails->setText(buildString);
+
+}
+
 void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE &msg)
 {
     int rowNum;
     QString tempString;
+
+    if ((msg.len != msg.data.count()) && !ui->cbShowIncomplete->isChecked()) return;
 
     messages.append(msg);
 
@@ -85,7 +142,7 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE &msg)
     else ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Tx"));
     ui->tableIsoFrames->setItem(rowNum, 4, new QTableWidgetItem(QString::number(msg.len)));
 
-    for (int i = 0; i < msg.data.length(); i++)
+    for (int i = 0; i < msg.data.count(); i++)
     {
         tempString.append(Utility::formatNumber(msg.data[i]));
         tempString.append(" ");

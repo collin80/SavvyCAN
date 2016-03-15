@@ -1,5 +1,36 @@
 #include "isotp_decoder.h"
 
+//in order descriptions based on the list above. But, just in order one after the other
+QString UDS_SERVICE_DESCRIPT[] =
+{
+    "Diagnostic session control",
+    "Reset ECU",
+    "Clear diagnostic trouble codes",
+    "Read diagnostic trouble codes",
+    "Read data by ID",
+    "Read data by address",
+    "Read scaling data by ID",
+    "Request security access",
+    "Communication control",
+    "Read data by ID periodically",
+    "Create dynamic data ID",
+    "Write data by ID",
+    "Input/Output control (force)",
+    "Call a service routine",
+    "Request data download (from client to server)",
+    "Request data upload (from server to client)",
+    "Transfer data",
+    "Request that data transfer cease",
+    "Request file transfer",
+    "Write data by address",
+    "Tester is present",
+    "Read or write comm timing parameters",
+    "Secured data transmission",
+    "Control DTC settings",
+    "Request start/stop transmission on event",
+    "Control comm link"
+};
+
 ISOTP_DECODER::ISOTP_DECODER(const QVector<CANFrame> *frames, QObject *parent)
     : QObject(parent)
 {
