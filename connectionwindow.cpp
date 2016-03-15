@@ -1,5 +1,6 @@
 #include "connectionwindow.h"
 #include "ui_connectionwindow.h"
+#include <QtNetwork/QNetworkInterface>
 
 ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QDialog(parent),
@@ -7,7 +8,20 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    getSerialPorts();
+    settings = new QSettings();
+
+    int temp = settings->value("Main/DefaultConnectionType", 0).toInt();
+
+    if (temp == 0) currentConnType = ConnectionType::GVRET_SERIAL;
+    if (temp == 1) currentConnType = ConnectionType::KVASER;
+    if (temp == 2) currentConnType = ConnectionType::SOCKETCAN;
+
+    currentPortName = settings->value("Main/DefaultConnectionPort", "").toString();
+
+    currentSpeed1 = -1;
+    currentSpeed2 = -1;    
+
+    ui->ckSingleWire->setChecked(settings->value("Main/SingleWireMode", false).toBool());
 
     ui->cbSpeed0->addItem(tr("<Default>"));
     ui->cbSpeed0->addItem(tr("Disabled"));
@@ -25,11 +39,23 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbSpeed1->addItem(tr("1000000"));
     ui->cbSpeed1->addItem(tr("33333"));
 
+#ifdef Q_OS_LINUX
+    ui->rbSocketCAN->setEnabled(true);
+#endif
+
+#ifdef Q_OS_WIN
+    ui->rbKvaser->setEnabled(true);
+#endif
+
     connect(ui->btnOK, SIGNAL(clicked(bool)), this, SLOT(handleOKButton()));
+    connect(ui->rbGVRET, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
+    connect(ui->rbKvaser, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
+    connect(ui->rbSocketCAN, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
 }
 
 ConnectionWindow::~ConnectionWindow()
 {
+    delete settings;
     delete ui;
 }
 
@@ -37,6 +63,11 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     qDebug() << "Show connectionwindow";
+    handleConnTypeChanged();
+}
+
+void ConnectionWindow::handleConnTypeChanged()
+{
     if (ui->rbGVRET->isChecked()) getSerialPorts();
     if (ui->rbKvaser->isChecked()) getKvaserPorts();
     if (ui->rbSocketCAN->isChecked()) getSocketcanPorts();
@@ -45,10 +76,36 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 void ConnectionWindow::handleOKButton()
 {
     QString conn;
+    int connType = 0;
 
-    if (ui->rbGVRET->isChecked()) conn = "GVRET";
-    if (ui->rbKvaser->isChecked()) conn = "KVASER";
-    if (ui->rbSocketCAN->isChecked()) conn = "SOCKETCAN";
+    if (ui->rbGVRET->isChecked())
+    {
+        conn = "GVRET";
+        connType = 0;
+        currentConnType = ConnectionType::GVRET_SERIAL;
+    }
+
+    if (ui->rbKvaser->isChecked())
+    {
+        conn = "KVASER";
+        connType = 1;
+        currentConnType = ConnectionType::KVASER;
+    }
+
+    if (ui->rbSocketCAN->isChecked())
+    {
+        conn = "SOCKETCAN";
+        connType = 2;
+        currentConnType = ConnectionType::SOCKETCAN;
+    }
+
+    currentPortName = getPortName();
+    currentSpeed1 = getSpeed0();
+    currentSpeed2 = getSpeed1();
+
+    settings->setValue("Main/DefaultConnectionPort", currentPortName);
+    settings->setValue("Main/DefaultConnectionType", connType);
+    settings->setValue("Main/SingleWireMode", ui->ckSingleWire->isChecked());
 
     emit updateConnectionSettings(conn, getPortName(), getSpeed0(), getSpeed1());
 
@@ -63,6 +120,7 @@ void ConnectionWindow::getSerialPorts()
     for (int i = 0; i < ports.count(); i++)
     {
         ui->cbPort->addItem(ports[i].portName());
+        if (currentPortName == ports[i].portName()) ui->cbPort->setCurrentIndex(i);
     }
 }
 
@@ -73,12 +131,27 @@ void ConnectionWindow::getKvaserPorts()
 
 void ConnectionWindow::getSocketcanPorts()
 {
+    QList<QNetworkInterface> interfaces = QNetworkInterface::allInterfaces();
+    QString interfaceName;
 
+    ui->cbPort->clear();
+
+    foreach (QNetworkInterface interface, interfaces)
+    {
+        interfaceName = interface.name().toLower();
+        qDebug() << "Interface: " << interface.name();
+        if (interfaceName.contains("can"))
+        {
+            ui->cbPort->addItem(interfaceName);
+        }
+    }
 }
 
 void ConnectionWindow::setSpeeds(int speed0, int speed1)
 {
     bool found = false;
+
+    qDebug() << speed0 << "X" << speed1;
 
     for (int i = 0; i < ui->cbSpeed0->count(); i++)
     {
@@ -160,4 +233,15 @@ ConnectionType::ConnectionType ConnectionWindow::getConnectionType()
     if (ui->rbGVRET->isChecked()) return ConnectionType::GVRET_SERIAL;
     if (ui->rbKvaser->isChecked()) return ConnectionType::KVASER;
     if (ui->rbSocketCAN->isChecked()) return ConnectionType::SOCKETCAN;
+}
+
+void ConnectionWindow::setCAN1SWMode(bool mode)
+{
+    ui->ckSingleWire->setChecked(mode);
+}
+
+bool ConnectionWindow::getCAN1SWMode()
+{
+    if (ui->ckSingleWire->checkState() == Qt::Checked) return true;
+    return false;
 }

@@ -20,6 +20,12 @@
 #include "firmwareuploaderwindow.h"
 #include "discretestatewindow.h"
 #include "connectionwindow.h"
+#include "scriptingwindow.h"
+#include "rangestatewindow.h"
+#include "dbcloadsavewindow.h"
+#include "fuzzingwindow.h"
+#include "udsscanwindow.h"
+#include "isotp_interpreterwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -40,8 +46,6 @@ private slots:
     void handleLoadFile();
     void handleSaveFile();
     void handleSaveFilteredFile();
-    void handleLoadDBC();
-    void handleSaveDBC();
     void handleSaveFilters();
     void handleLoadFilters();
     void connButtonPress();
@@ -58,6 +62,11 @@ private slots:
     void showSettingsDialog();
     void showFirmwareUploaderWindow();
     void showConnectionSettingsWindow();
+    void showScriptingWindow();
+    void showDBCFileWindow();
+    void showFuzzingWindow();
+    void showUDSScanWindow();
+    void showISOInterpreterWindow();
     void exitApp();
     void handleSaveDecoded();
     void changeBaudRates();
@@ -68,7 +77,7 @@ private slots:
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
-    void showDBCEditor();
+    void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
     void updateFilterList();
@@ -77,7 +86,7 @@ private slots:
     void filterClearAll();
 
 public slots:
-    void gotFrames(int, int);
+    void gotFrames(int);
     void updateSettings();
     void gotCenterTimeID(int32_t ID, double timestamp);
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
@@ -92,6 +101,7 @@ signals:
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
     void framesUpdated(int numFrames); //something has updated the frame list
+    void frameUpdateRapid(int numFrames);
     void settingsUpdated();
     void sendCenterTimeID(int32_t ID, double timestamp);
 
@@ -105,6 +115,10 @@ private:
     QThread serialWorkerThread;
     SerialWorker *worker;
     QByteArray inputBuffer;
+    QTimer updateTimer;
+    QTime *elapsedTime;
+    int framesPerSec;
+    int rxFrames;
     bool inhibitFilterUpdate;
     bool useHex;
     bool allowCapture;
@@ -124,6 +138,12 @@ private:
     DiscreteStateWindow *discreteStateWindow;
     FirmwareUploaderWindow *firmwareUploaderWindow;
     ConnectionWindow *connectionWindow;
+    ScriptingWindow *scriptingWindow;
+    RangeStateWindow *rangeWindow;
+    DBCLoadSaveWindow *dbcFileWindow;
+    FuzzingWindow *fuzzingWindow;
+    UDSScanWindow *udsScanWindow;
+    ISOTP_InterpreterWindow *isoWindow;
 
     //various private storage
     QLabel lbStatusConnected;

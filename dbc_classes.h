@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QStringList>
+#include "can_structs.h"
 
 /*classes to encapsulate data from a DBC file. Really, the stuff of interest
   are the nodes, messages, signals, attributes, and comments.
@@ -54,35 +55,50 @@ public:
     QList<DBC_ATTRIBUTE> attributes;
 };
 
+class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
+
 class DBC_SIGNAL
 {
-public:
+public: //TODO: this is sloppy. It shouldn't all be public!
     QString name;
     int startBit;
     int signalSize;
     bool intelByteOrder; //true is obviously little endian. False is big endian
+    bool isMultiplexor;
+    bool isMultiplexed;
+    int multiplexValue;
     DBC_SIG_VAL_TYPE valType;
     double factor;
     double bias;
     double min;
     double max;
-    DBC_NODE *receiver;
+    DBC_NODE *receiver; //it is fast to have a pointer but dangerous... Make sure to walk the whole tree and delete everything so nobody has stale references.
+    DBC_MESSAGE *parentMessage;
     QString unitName;
     QString comment;
     QList<DBC_ATTRIBUTE> attributes;
     QList<DBC_VAL> valList;
+
+    bool processAsText(const CANFrame &frame, QString &outString);
+    bool processAsInt(const CANFrame &frame, int32_t &outValue);
+    bool processAsDouble(const CANFrame &frame, double &outValue);
 };
+
+class DBCSignalHandler; //forward declaration to keep from having to include dbchandler.h in this file and thus create a loop
 
 class DBC_MESSAGE
 {
 public:
+    DBC_MESSAGE();
+
     int ID;
     QString name;
     QString comment;
     int len;
     DBC_NODE *sender;
     QList<DBC_ATTRIBUTE> attributes;
-    QList<DBC_SIGNAL> msgSignals;
+    DBCSignalHandler *sigHandler;
+    DBC_SIGNAL* multiplexorSignal;
 };
 
 

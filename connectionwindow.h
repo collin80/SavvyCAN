@@ -4,6 +4,7 @@
 #include <QSerialPortInfo>
 #include <QDialog>
 #include <QDebug>
+#include <QSettings>
 
 namespace Ui {
 class ConnectionWindow;
@@ -31,19 +32,27 @@ public:
     int getSpeed1();
     QString getPortName(); //name of port to connect to
     ConnectionType::ConnectionType getConnectionType();
+    bool getCAN1SWMode();
 
 signals:
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 public slots:
     void setSpeeds(int speed0, int speed1);
+    void setCAN1SWMode(bool mode);
 
 private slots:
     void handleOKButton();
+    void handleConnTypeChanged();
 
 private:
     Ui::ConnectionWindow *ui;
     QList<QSerialPortInfo> ports;
+    QSettings *settings;
+
+    ConnectionType::ConnectionType currentConnType;
+    QString currentPortName;
+    int currentSpeed1, currentSpeed2;
 
     void getSerialPorts();
     void getKvaserPorts();

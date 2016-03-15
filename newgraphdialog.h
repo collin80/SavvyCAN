@@ -26,6 +26,8 @@ private slots:
     void loadMessages();
     void loadSignals(int idx);
     void fillFormFromSignal(int idx);
+    void setSignalActive(bool);
+    void setStandardActive(bool);
 
 private:
     Ui::NewGraphDialog *ui;

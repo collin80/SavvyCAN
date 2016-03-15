@@ -12,14 +12,14 @@ SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(pare
     rx_step = 0;
     buildFrame = new CANFrame;
     canModel = model;
-    gotFrames = 0;
     ticker = NULL;
-    elapsedTime = NULL;
-    framesPerSec = 0;
+    framesRapid = 0;
     capturing = true;
     gotValidated = true;
     isAutoRestart = false;
     targetID = -1;
+
+    txTimestampBasis = QDateTime::currentMSecsSinceEpoch();
 
     readSettings();
 }
@@ -38,6 +38,16 @@ SerialWorker::~SerialWorker()
         delete serial;
     }
     if (ticker != NULL) ticker->stop();
+}
+
+void SerialWorker::run()
+{
+    ticker = new QTimer;
+    connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
+
+    ticker->setInterval(250); //tick four times per second
+    ticker->setSingleShot(false); //keep ticking
+    ticker->start();
 }
 
 void SerialWorker::readSettings()
@@ -105,24 +115,16 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     output.append((char)0xF1); //yet another command
     output.append((char)0x09); //comm validation command
 
+    output.append((char)0xF1); //and another command
+    output.append((char)0x01); //Time Sync - Not implemented until 333 but we can try
+
+    continuousTimeSync = true;
+
     serial->write(output);
     if (doValidation) connected = false;
         else connected = true;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
     if (doValidation) QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
-    if (ticker == NULL)
-    {
-        ticker = new QTimer;
-        connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
-    }
-    if (elapsedTime == NULL)
-    {
-        elapsedTime = new QTime;
-        elapsedTime->start();
-    }
-    ticker->setInterval(250); //tick four times per second
-    ticker->setSingleShot(false); //keep ticking
-    ticker->start();
 }
 
 void SerialWorker::connectionTimeout()
@@ -132,7 +134,7 @@ void SerialWorker::connectionTimeout()
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
-        ticker->stop();
+        //ticker->stop();
         closeSerialPort(); //make sure it's properly closed anyway
         emit connectionFailure();
     }
@@ -148,6 +150,11 @@ void SerialWorker::readSerialData()
         c = data.at(i);
         procRXChar(c);
     }
+    if (framesRapid > 0)
+    {
+        emit frameUpdateRapid(framesRapid);
+        framesRapid = 0;
+    }
 }
 
 void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
@@ -155,9 +162,18 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     QByteArray buffer;
     int c;
     int ID;
+    CANFrame tempFrame = *frame;
+    tempFrame.isReceived = false;
+    tempFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() - txTimestampBasis) * 1000);
 
     //qDebug() << "Sending out frame with id " << frame->ID;
 
+    //show our sent frames in the list too. This happens even if we're not connected.    
+    canModel->addFrame(tempFrame, false);
+    framesRapid++;
+
+    if (serial == NULL) return;
+    if (!serial->isOpen()) return;
     if (!connected) return;
 
     ID = frame->ID;
@@ -177,8 +193,6 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     }
     buffer[8 + frame->len] = 0;
 
-    if (serial == NULL) return;
-    if (!serial->isOpen()) return;
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
     serial->write(buffer);
 }
@@ -188,7 +202,9 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 //buffers and besides, the other end will get buried in traffic.
 void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
 {
+    sendBulkMutex.lock();
     for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i), frames->at(i).bus);
+    sendBulkMutex.unlock();
 }
 
 void SerialWorker::updateBaudRates(int Speed1, int Speed2)
@@ -225,8 +241,9 @@ void SerialWorker::procRXChar(unsigned char c)
             rx_state = BUILD_CAN_FRAME;
             rx_step = 0;
             break;
-        case 1: //we don't accept time sync commands from the firmware
-            rx_state = IDLE;
+        case 1: //time sync
+            rx_state = TIME_SYNC;
+            rx_step = 0;
             break;
         case 2: //process a return reply for digital input states.
             rx_state = GET_DIG_INPUTS;
@@ -306,8 +323,11 @@ void SerialWorker::procRXChar(unsigned char c)
                 //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
                 if (capturing)
                 {
+                    buildFrame->isReceived = true;
                     canModel->addFrame(*buildFrame, false);
-                    gotFrames++;
+                    //take the time the frame came in and try to resync the time base.
+                    if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame->timestamp / 1000);
+                    framesRapid++;
                     if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
                 }
             }
@@ -315,6 +335,29 @@ void SerialWorker::procRXChar(unsigned char c)
         }
         rx_step++;
         break;
+    case TIME_SYNC: //gives a pretty good base guess for the proper timestamp. Can be refined when traffic starts to flow (if wanted)
+        switch (rx_step)
+        {
+        case 0:
+            buildTimeBasis = c;
+            break;
+        case 1:
+            buildTimeBasis += ((uint32_t)c << 8);
+            break;
+        case 2:
+            buildTimeBasis += ((uint32_t)c << 16);
+            break;
+        case 3:
+            buildTimeBasis += ((uint32_t)c << 24);
+            qDebug() << "GVRET firmware reports timestamp of " << buildTimeBasis;
+            txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - ((uint64_t)buildTimeBasis / (uint64_t)1000ull);
+            continuousTimeSync = false;
+            rx_state = IDLE;
+            break;
+        }
+        rx_step++;
+        break;
+
     case GET_ANALOG_INPUTS: //get 9 bytes - 2 per analog input plus checksum
         switch (rx_step)
         {
@@ -402,9 +445,6 @@ void SerialWorker::procRXChar(unsigned char c)
         }
         rx_step++;
         break;
-    case TIME_SYNC:
-        rx_state = IDLE;
-        break;
     case SET_DIG_OUTPUTS:
         rx_state = IDLE;
         break;
@@ -422,23 +462,23 @@ void SerialWorker::handleTick()
 {
     //qDebug() << "Tick!";
 
-    if (!gotValidated)
+    if (connected)
     {
-        if (serial->isOpen()) //if it's still false we have a problem...
+        if (!gotValidated && doValidation)
         {
-            qDebug() << "Comm validation failed. ";
-            closeSerialPort(); //start by stopping everything.
-            QTimer::singleShot(500, this, SLOT(handleReconnect()));
-            return;
+            if (serial == NULL) return;
+            if (serial->isOpen()) //if it's still false we have a problem...
+            {
+                qDebug() << "Comm validation failed. ";
+                closeSerialPort(); //start by stopping everything.
+                //Then wait 500ms and restart the connection automatically
+                QTimer::singleShot(500, this, SLOT(handleReconnect()));
+                return;
+            }
         }
     }
 
-    framesPerSec += gotFrames * 1000 / elapsedTime->elapsed() - (framesPerSec / 4);
-    elapsedTime->restart();
-    emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
-    canModel->sendBulkRefresh(gotFrames);
-    gotFrames = 0;    
-    if (doValidation) sendCommValidation();
+    if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 
 void SerialWorker::handleReconnect()
@@ -454,6 +494,10 @@ void SerialWorker::sendCommValidation()
     gotValidated = false;
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x09); //request a reply to get validation
+    //send it twice for good measure.
+    output.append((char)0xF1); //another command to the GVRET
+    output.append((char)0x09); //request a reply to get validation
+
     serial->write(output);
 }
 
@@ -467,7 +511,8 @@ void SerialWorker::closeSerialPort()
         serial->close();
     }
     serial->disconnect();
-    ticker->stop();
+    //do not stop the ticker here. It always stays running now.
+    //ticker->stop();
     delete serial;
     serial = NULL;
 }

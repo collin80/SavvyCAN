@@ -2,7 +2,9 @@
 #define FRAMEINFOWINDOW_H
 
 #include <QDialog>
+#include <QFile>
 #include <QListWidget>
+#include <QTreeWidget>
 #include "can_structs.h"
 
 namespace Ui {
@@ -21,6 +23,7 @@ public:
 private slots:
     void updateDetailsWindow(QString);
     void updatedFrames(int);
+    void saveDetails();
 
 private:
     Ui::FrameInfoWindow *ui;
@@ -33,6 +36,7 @@ private:
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
+    void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);
 };
 
 #endif // FRAMEINFOWINDOW_H

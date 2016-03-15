@@ -18,6 +18,7 @@ class DBCMainEditor : public QDialog
 public:
     explicit DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~DBCMainEditor();
+    void setFileIdx(int idx);
 
 private slots:
     void onCellChangedNode(int,int);
@@ -35,6 +36,8 @@ private:
     const QVector<CANFrame> *referenceFrames;
     DBCSignalEditor *sigEditor;
     int currRow;
+    DBCFile *dbcFile;
+    int fileIdx;
     bool inhibitCellChanged;
 
     void refreshNodesTable();

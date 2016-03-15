@@ -109,7 +109,8 @@ void FrameSenderWindow::updatedFrames(int numFrames)
         buildFrameCache();
     }
     else //just got some new frames. See if they are relevant.
-    {
+    {        
+        if (numFrames > modelFrames->count()) return;
         qDebug() << "New frames in sender window";
         //run through the supposedly new frames in order
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
@@ -429,7 +430,7 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
         if (op.notOper) return ~op.databyte;
         else return op.databyte;
     }
-    else if (op.ID == -2)
+    else if (op.ID == -2) //fetch data from a data byte within the output frame
     {
         if (op.notOper) return ~sendingData.at(idx).data[op.databyte];
         else return sendingData.at(idx).data[op.databyte];
@@ -472,6 +473,8 @@ void FrameSenderWindow::processModifierText(int line)
     QString modString;
     bool firstOp = true;
     bool abort = false;
+    QString token;
+    ModifierOp thisOp;
 
     //Example line:
     //d0 = D0 + 1,d1 = id:0x200:d3 + id:0x200:d4 AND 0xF0 - Original version
@@ -492,6 +495,7 @@ void FrameSenderWindow::processModifierText(int line)
         {
             Modifier thisMod;
             thisMod.destByte = 0;
+            firstOp = true;
 
             QString leftSide = Utility::grabAlphaNumeric(mods[i]);
             if (leftSide.startsWith("D") && leftSide.length() == 2)
@@ -510,58 +514,50 @@ void FrameSenderWindow::processModifierText(int line)
                 continue;
             }
             abort = false;
+
+            token = Utility::grabAlphaNumeric(mods[i]);
+            if (token[0] == '~')
+            {
+                thisOp.first.notOper = true;
+                token = token.remove(0, 1); //remove the ~ character
+            }
+            else thisOp.first.notOper = false;
+            parseOperandString(token.split(":"), thisOp.first);
+
+            if (mods[i].length() < 2) {
+                abort = true;
+                thisOp.operation = ADDITION;
+                thisOp.second.ID = 0;
+                thisOp.second.databyte = 0;
+                thisOp.second.notOper = false;
+                thisMod.operations.append(thisOp);
+            }
+
             while (!abort)
             {
-                QString token = Utility::grabAlphaNumeric(mods[i]);
-                ModifierOp thisOp;                              
-
-                if (firstOp)
+                QString operation = Utility::grabOperation(mods[i]);
+                if (operation == "")
                 {
-                    if (token[0] == '~')
-                    {
-                        thisOp.first.notOper = true;
-                        token = token.remove(0, 1); //remove the ~ character
-                    }
-                    else thisOp.first.notOper = false;
-                    parseOperandString(token.split(":"), thisOp.first);
-                    firstOp = false;
+                    abort = true;
                 }
                 else
                 {
-                    thisOp.first.ID = -1; //shadow register
-                }
-                if (mods[i].length() == 0) //if this thing had no actual operation or second operand then fake it
-                {
-                    abort = true;
-                    thisOp.operation = ADDITION;
-                    thisOp.second.ID = 0;
-                    thisOp.second.databyte = 0;
-                    thisOp.second.notOper = false;
+                    thisOp.operation = parseOperation(operation);
+                    QString secondOp = Utility::grabAlphaNumeric(mods[i]);
+                    if (mods[i][0] == '~')
+                    {
+                        thisOp.second.notOper = true;
+                        mods[i] = mods[i].remove(0, 1); //remove the ~ character
+                    }
+                    else thisOp.second.notOper = false;
+                    thisOp.second.bus = sendingData[line].bus;
+                    thisOp.second.ID = sendingData[line].ID;
+                    parseOperandString(secondOp.split(":"), thisOp.second);
                     thisMod.operations.append(thisOp);
                 }
-                else //otherwise try to grab them
-                {
-                    QString operation = Utility::grabOperation(mods[i]);
-                    if (operation == "")
-                    {
-                        abort = true;
-                    }
-                    else
-                    {
-                        thisOp.operation = parseOperation(operation);
-                        QString secondOp = Utility::grabAlphaNumeric(mods[i]);
-                        if (mods[i][0] == '~')
-                        {
-                            thisOp.second.notOper = true;
-                            mods[i] = mods[i].remove(0, 1); //remove the ~ character
-                        }
-                        else thisOp.second.notOper = false;
-                        thisOp.second.bus = sendingData[line].bus;
-                        thisOp.second.ID = sendingData[line].ID;
-                        parseOperandString(secondOp.split(":"), thisOp.second);
-                        thisMod.operations.append(thisOp);
-                    }
-                }
+
+                thisOp.first.ID = -1; //shadow register
+                if (mods[i].length() < 2) abort = true;
             }
 
             sendingData[line].modifiers.append(thisMod);

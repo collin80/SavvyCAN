@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>884</width>
-    <height>791</height>
+    <height>915</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -118,7 +118,7 @@
           </property>
          </widget>
         </item>
-        <item row="12" column="0">
+        <item row="14" column="0">
          <widget class="QLabel" name="label_13">
           <property name="text">
            <string>Comment:</string>
@@ -153,8 +153,50 @@
         <item row="10" column="1">
          <widget class="QComboBox" name="comboReceiver"/>
         </item>
-        <item row="12" column="1">
+        <item row="14" column="1">
          <widget class="QLineEdit" name="txtComment"/>
+        </item>
+        <item row="12" column="0">
+         <widget class="QLabel" name="label_14">
+          <property name="text">
+           <string>Multiplexing</string>
+          </property>
+         </widget>
+        </item>
+        <item row="12" column="1">
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QRadioButton" name="rbNotMulti">
+            <property name="text">
+             <string>Not multiplexed</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="rbMultiplexed">
+            <property name="text">
+             <string>Multiplexed</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QRadioButton" name="rbMultiplexor">
+            <property name="text">
+             <string>Multiplexor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="13" column="0">
+         <widget class="QLabel" name="label_15">
+          <property name="text">
+           <string>Multiplex Value</string>
+          </property>
+         </widget>
+        </item>
+        <item row="13" column="1">
+         <widget class="QLineEdit" name="txtMultiplexValue"/>
         </item>
        </layout>
       </widget>

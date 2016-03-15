@@ -13,6 +13,7 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
 
     memset(data, 0, 8);
     memset(refData, 0, 8);
+    memset(usedData, 0, 8);
 }
 
 CANDataGrid::~CANDataGrid()
@@ -45,7 +46,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     int x, y;
     unsigned char prevByte, thisByte;
     bool thisBit, prevBit;
-    QBrush blackBrush, whiteBrush, redBrush, greenBrush;
+    QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
     QPainter painter(this);
 
     QRect viewport = painter.viewport();
@@ -60,6 +61,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     whiteBrush = QBrush(Qt::white);
     redBrush = QBrush(Qt::red);
     greenBrush = QBrush(Qt::green);
+    grayBrush = QBrush(QColor(230,230,230));
 
     //the whole thing is broken up into 100 chunks which are allocated as such:
     //The entirety of the upper row is taken up by "BITS"
@@ -109,7 +111,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
             thisBit = false;
             prevBit = false;
             if ((thisByte & (1 << (7-x))) == (1 << (7-x))) thisBit = true;
-            if ((prevByte & (1 << (7-x))) == (1 << (7-x))) prevBit = true;
+            if ((prevByte & (1 << (7-x))) == (1 << (7-x))) prevBit = true;            
 
             if (thisBit)
             {
@@ -130,7 +132,8 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
                 }
                 else
                 {
-                    painter.setBrush(whiteBrush);
+                    if ((usedData[y] & (1 << (7-x))) == (1 << (7-x))) painter.setBrush(grayBrush);
+                    else painter.setBrush(whiteBrush);
                 }
             }
 
@@ -178,5 +181,11 @@ void CANDataGrid::setReference(unsigned char *newRef, bool bUpdate = true)
 void CANDataGrid::updateData(unsigned char *newData, bool bUpdate = true)
 {
     memcpy(data, newData, 8); //on a 64 bit processor this is probably optimized to a single instruction
+    if (bUpdate) this->update();
+}
+
+void CANDataGrid::setUsed(unsigned char *newData, bool bUpdate = false)
+{
+    memcpy(usedData, newData, 8);
     if (bUpdate) this->update();
 }

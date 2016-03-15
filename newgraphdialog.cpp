@@ -25,6 +25,8 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
 
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
     connect(ui->cbSignals, SIGNAL(currentIndexChanged(int)), this, SLOT(fillFormFromSignal(int)));
+    connect(ui->rbSignalGraph, SIGNAL(toggled(bool)), this, SLOT(setSignalActive(bool)));
+    connect(ui->rbStandardGraph, SIGNAL(toggled(bool)), this, SLOT(setStandardActive(bool)));
 
     loadMessages();
 }
@@ -58,28 +60,41 @@ void NewGraphDialog::clearParams()
     ui->txtStride->clear();
     ui->txtName->clear();
     ui->txtData->clear();
+    ui->rbStandardGraph->setChecked(true);
+    setStandardActive(true);
 
 }
 
 void NewGraphDialog::setParams(GraphParams &params)
 {
-    ui->txtID->setText(Utility::formatNumber(params.ID));
-    ui->txtBias->setText(QString::number(params.bias));
-    ui->txtMask->setText(Utility::formatNumber(params.mask));
-    ui->txtScale->setText(QString::number(params.scale));
-    ui->txtStride->setText(QString::number(params.stride));
-    ui->cbSigned->setChecked(params.isSigned);
-    ui->txtName->setText(params.graphName);
-
-    if (params.endByte > -1)
+    if (params.isDBCSignal)
     {
-        ui->txtData->setText(QString::number(params.startByte) + "-" + QString::number(params.endByte));
+        clearParams();
+        setSignalActive(true);
+        //loadMessages();
+
     }
     else
     {
-        ui->txtData->setText(QString::number(params.startByte));
+        setStandardActive(true);        
+        ui->txtBias->setText(QString::number(params.bias));
+        ui->txtMask->setText(Utility::formatNumber(params.mask));
+        ui->txtScale->setText(QString::number(params.scale));
+        ui->txtStride->setText(QString::number(params.stride));
+        ui->cbSigned->setChecked(params.isSigned);
+
+        if (params.endByte > -1)
+        {
+            ui->txtData->setText(QString::number(params.startByte) + "-" + QString::number(params.endByte));
+        }
+        else
+        {
+            ui->txtData->setText(QString::number(params.startByte));
+        }
     }
 
+    ui->txtID->setText(Utility::formatNumber(params.ID));
+    ui->txtName->setText(params.graphName);
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
     ui->colorSwatch->setPalette(p);
@@ -87,40 +102,58 @@ void NewGraphDialog::setParams(GraphParams &params)
 
 void NewGraphDialog::getParams(GraphParams &params)
 {
-    params.ID = Utility::ParseStringToNum(ui->txtID->text());
-    params.bias = ui->txtBias->text().toFloat();
+    params.isDBCSignal = ui->rbSignalGraph->isChecked();
     params.color = ui->colorSwatch->palette().button().color();
-    params.isSigned = ui->cbSigned->isChecked();
-    params.mask = Utility::ParseStringToNum(ui->txtMask->text());
-    params.scale = ui->txtScale->text().toFloat();
-    params.stride = Utility::ParseStringToNum(ui->txtStride->text());
-
-    QStringList values = ui->txtData->text().split('-');
-    params.startByte = -1;
-    params.endByte = -1;
-    if (values.count() > 0)
-    {
-        params.startByte = values[0].toInt();
-        if (values.count() > 1)
-        {
-            params.endByte = values[1].toInt();
-        }
-    }
-
-    //now catch stupidity and bring it to defaults
-    if (params.mask == 0) params.mask = 0xFFFFFFFF;
-    if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
-    if (params.stride < 1) params.stride = 1;
     params.graphName = ui->txtName->text();
+
+    if (params.isDBCSignal)
+    {
+        params.signal = ui->cbSignals->currentText();
+        params.ID = Utility::ParseStringToNum(ui->txtID->text());
+        params.bias = 0;
+        params.isSigned = false;
+        params.mask = 0;
+        params.scale = 1;
+        params.bias = 0;
+        params.stride = 1;
+
+    }
+    else {
+        params.ID = Utility::ParseStringToNum(ui->txtID->text());
+        params.bias = ui->txtBias->text().toFloat();
+        params.isSigned = ui->cbSigned->isChecked();
+        params.mask = Utility::ParseStringToNum(ui->txtMask->text());
+        params.scale = ui->txtScale->text().toFloat();
+        params.stride = Utility::ParseStringToNum(ui->txtStride->text());
+        params.signal = "";
+
+        QStringList values = ui->txtData->text().split('-');
+        params.startByte = -1;
+        params.endByte = -1;
+        if (values.count() > 0)
+        {
+            params.startByte = values[0].toInt();
+            if (values.count() > 1)
+            {
+                params.endByte = values[1].toInt();
+            }
+        }
+
+        //now catch stupidity and bring it to defaults
+        if (params.mask == 0) params.mask = 0xFFFFFFFF;
+        if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
+        if (params.stride < 1) params.stride = 1;
+    }
 }
 
 void NewGraphDialog::loadMessages()
 {
     ui->cbMessages->clear();
     if (dbcHandler == NULL) return;
-    for (int x = 0; x < dbcHandler->dbc_messages.count(); x++)
+    if (dbcHandler->getFileCount() == 0) dbcHandler->createBlankFile();
+    for (int x = 0; x < dbcHandler->getFileByIdx(0)->messageHandler->getCount(); x++)
     {
-        ui->cbMessages->addItem(dbcHandler->dbc_messages[x].name);
+        ui->cbMessages->addItem(dbcHandler->getFileByIdx(0)->messageHandler->findMsgByIdx(x)->name);
     }
 }
 
@@ -131,13 +164,13 @@ void NewGraphDialog::loadSignals(int idx)
     //in the data structure so it should have been possible to just
     //look it up based on index but by name is probably safer and this operation
     //is not time critical at all.
-    DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
+    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
 
     if (msg == NULL) return;
     ui->cbSignals->clear();
-    for (int x = 0; x < msg->msgSignals.count(); x++)
+    for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
-        ui->cbSignals->addItem(msg->msgSignals[x].name);
+        ui->cbSignals->addItem(msg->sigHandler->findSignalByIdx(x)->name);
     }
 }
 
@@ -145,23 +178,24 @@ void NewGraphDialog::fillFormFromSignal(int idx)
 {
     Q_UNUSED(idx);
     GraphParams params;
-    DBC_MESSAGE *msg = dbcHandler->findMsgByName(ui->cbMessages->currentText());
+    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
 
     if (msg == NULL) return;
 
-    DBC_SIGNAL *sig = dbcHandler->findSignalByName(msg, ui->cbSignals->currentText());
+    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
 
     if (sig == NULL) return;
 
     params.graphName = sig->name;
     params.ID = msg->ID;
-    params.bias = sig->bias;
-    params.scale = sig->factor;
-    params.stride = 1;
-    params.mask = (1 << (sig->signalSize)) - 1;
-    if (sig->valType == SIGNED_INT) params.isSigned = true;
-    else params.isSigned = false;
+    //params.bias = sig->bias;
+    //params.scale = sig->factor;
+    //params.stride = 1;
+    //params.mask = (1 << (sig->signalSize)) - 1;
+    //if (sig->valType == SIGNED_INT) params.isSigned = true;
+    //else params.isSigned = false;
     params.color = ui->colorSwatch->palette().color(QPalette::Button);
+    /*
     if (sig->intelByteOrder)
     {
         //for this ordering the byte order is reserved and starting byte
@@ -175,6 +209,38 @@ void NewGraphDialog::fillFormFromSignal(int idx)
         params.startByte = sig->startBit / 8;
         params.endByte = (sig->startBit + sig->signalSize - 1) / 8;
     }
-
+    */
     setParams(params);
+}
+
+void NewGraphDialog::setSignalActive(bool state)
+{
+    if (!state) return;
+    ui->rbSignalGraph->setChecked(true);
+    ui->rbStandardGraph->setChecked(false);
+    ui->cbMessages->setEnabled(true);
+    ui->cbSignals->setEnabled(true);
+    ui->cbSigned->setEnabled(false);
+    ui->txtBias->setEnabled(false);
+    ui->txtData->setEnabled(false);
+    ui->txtID->setEnabled(false);
+    ui->txtMask->setEnabled(false);
+    ui->txtScale->setEnabled(false);
+    ui->txtStride->setEnabled(false);
+}
+
+void NewGraphDialog::setStandardActive(bool state)
+{
+    if (!state) return;
+    ui->rbStandardGraph->setChecked(true);
+    ui->rbSignalGraph->setChecked(false);
+    ui->cbMessages->setEnabled(false);
+    ui->cbSignals->setEnabled(false);
+    ui->cbSigned->setEnabled(true);
+    ui->txtBias->setEnabled(true);
+    ui->txtData->setEnabled(true);
+    ui->txtID->setEnabled(true);
+    ui->txtMask->setEnabled(true);
+    ui->txtScale->setEnabled(true);
+    ui->txtStride->setEnabled(true);
 }

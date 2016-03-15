@@ -6,7 +6,12 @@
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return filteredFrames.count();
+    if (filteredFrames.data()) return filteredFrames.count();
+
+     //just in case somehow data is invalid which I have seen before.
+    //But, this should not happen so issue a debugging message too
+    qDebug() << "Invalid data for filteredFrames. Returning 0.";
+    return 0;
 }
 
 int CANFrameModel::totalFrameCount()
@@ -17,7 +22,7 @@ int CANFrameModel::totalFrameCount()
 int CANFrameModel::columnCount(const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    return 6;
+    return 7;
 }
 
 CANFrameModel::CANFrameModel(QObject *parent)
@@ -115,6 +120,8 @@ void CANFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
 
+    qDebug() << "recalcOverwrite called in model";
+
     int lastUnique = 0;
     bool found;
 
@@ -159,7 +166,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() >= filteredFrames.count())
+    if (index.row() >= (filteredFrames.count()))
         return QVariant();
 
     if (role == Qt::DisplayRole) {
@@ -168,7 +175,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         {
         case 0: //timestamp
             if (!timeSeconds) return QString::number(thisFrame.timestamp);
-            else return QString::number(thisFrame.timestamp / 1000000.0f);
+            else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
             break;
         case 1: //id            
             return Utility::formatNumber(thisFrame.ID);
@@ -176,13 +183,17 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case 2: //ext
             return QString::number(thisFrame.extended);
             break;
-        case 3: //bus
+        case 3: //direction
+            if (thisFrame.isReceived) return QString(tr("Rx"));
+            else return QString(tr("Tx"));
+            break;
+        case 4: //bus
             return QString::number(thisFrame.bus);
             break;
-        case 4: //len
+        case 5: //len
             return QString::number(thisFrame.len);
             break;
-        case 5: //data
+        case 6: //data
             for (int i = 0; i < thisFrame.len; i++)
             {
                 tempString.append(Utility::formatNumber(thisFrame.data[i]));
@@ -191,16 +202,19 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
             if (dbcHandler != NULL && interpretFrames)
             {
-                DBC_MESSAGE *msg = dbcHandler->findMsgByID(thisFrame.ID);
+                DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != NULL)
                 {
                     tempString.append("\r\n");
                     tempString.append(msg->name + " " + msg->comment + "\r\n");
-                    for (int j = 0; j < msg->msgSignals.length(); j++)
+                    for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
-
-                        tempString.append(dbcHandler->processSignal(thisFrame, msg->msgSignals.at(j)));
-                        tempString.append("\r\n");
+                        QString sigString;
+                        if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, sigString))
+                        {
+                            tempString.append(sigString);
+                            tempString.append("\r\n");
+                        }
                     }
                 }
             }
@@ -234,12 +248,15 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
             return QString(tr("Ext"));
             break;
         case 3:
-            return QString(tr("Bus"));
+            return QString(tr("Dir"));
             break;
         case 4:
-            return QString(tr("Len"));
+            return QString(tr("Bus"));
             break;
         case 5:
+            return QString(tr("Len"));
+            break;
+        case 6:
             return QString(tr("Data"));
             break;
         }
@@ -251,25 +268,27 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
+void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
 {
     mutex.lock();
-    frame.timestamp -= timeOffset;
+    CANFrame tempFrame;
+    tempFrame = frame;
+    tempFrame.timestamp -= timeOffset;
 
     //if this ID isn't found in the filters list then add it and show it by default
-    if (!filters.contains(frame.ID))
+    if (!filters.contains(tempFrame.ID))
     {
-        filters.insert(frame.ID, true);
+        filters.insert(tempFrame.ID, true);
         needFilterRefresh = true;
     }
 
     if (!overwriteDups)
     {        
-        frames.append(frame);        
-        if (filters[frame.ID])
+        frames.append(tempFrame);
+        if (filters[tempFrame.ID])
         {
             if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
-            filteredFrames.append(frame);
+            filteredFrames.append(tempFrame);
             if (autoRefresh) endInsertRows();
         }
     }
@@ -278,20 +297,20 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         bool found = false;
         for (int i = 0; i < frames.count(); i++)
         {
-            if (frames[i].ID == frame.ID)
+            if (frames[i].ID == tempFrame.ID)
             {                
-                frames.replace(i, frame);                
+                frames.replace(i, tempFrame);
                 found = true;
                 break;
             }
         }
         if (!found)
         {            
-            frames.append(frame);
-            if (filters[frame.ID])
+            frames.append(tempFrame);
+            if (filters[tempFrame.ID])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
-                filteredFrames.append(frame);
+                filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
         }
@@ -299,10 +318,10 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
-                if (filteredFrames[j].ID == frame.ID)
+                if (filteredFrames[j].ID == tempFrame.ID)
                 {
                     if (autoRefresh) beginResetModel();
-                    filteredFrames.replace(j, frame);
+                    filteredFrames.replace(j, tempFrame);
                     if (autoRefresh) endResetModel();
                 }
             }
@@ -314,18 +333,23 @@ void CANFrameModel::addFrame(CANFrame &frame, bool autoRefresh = false)
 
 void CANFrameModel::sendRefresh()
 {
+    mutex.lock();
     qDebug() << "Sending mass refresh";
+    QVector<CANFrame> tempContainer;
     beginResetModel();
-    filteredFrames.clear();
-    for (int i = 0; i < frames.count(); i++)
+    int count = frames.count();
+    for (int i = 0; i < count; i++)
     {
         if (filters[frames[i].ID])
         {
-            filteredFrames.append(frames[i]);
+            tempContainer.append(frames[i]);
         }
     }
+    filteredFrames.clear();
+    filteredFrames.append(tempContainer);
     lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
+    mutex.unlock();
 }
 
 void CANFrameModel::sendRefresh(int pos)
@@ -343,23 +367,34 @@ void CANFrameModel::sendBulkRefresh(int num)
     //of how many by tracking the number we last knew about as opposed to how many rows there
     //are now.
     num = filteredFrames.count() - lastUpdateNumFrames;
+
+    if (num < 0) return;
+
+    //qDebug() << "Num: " << num;
+
+    if (num == 0 && !overwriteDups) return;
+    if (filteredFrames.count() == 0) return;
+
     lastUpdateNumFrames += num; //done this way to avoid asking for filteredFrames.count() again
 
-    //qDebug() << "Bulk refresh of " << num;
-
-    if (num == 0) return;
-    if (filteredFrames.count() == 0) return;
+    qDebug() << "Bulk refresh of " << num;
 
     if (!overwriteDups)
     {        
+        mutex.lock();
         if (num > filteredFrames.count()) num = filteredFrames.count();
-        beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
-        endInsertRows();
+        //qDebug() << "From " << (filteredFrames.count() - num) << " to " << (filteredFrames.count() - 1);
+        //beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
+        //endInsertRows();
+        beginResetModel();
+        endResetModel();
+        mutex.unlock();
     }
     else
     {
-        sendRefresh();
-    }
+        beginResetModel();
+        endResetModel();
+    }    
 }
 
 void CANFrameModel::clearFrames()
@@ -383,6 +418,11 @@ void CANFrameModel::clearFrames()
  */
 void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
 {    
+    //not resetting the model here because the serial worker automatically does a bulk refresh every 1/4 second
+    //and that refresh will cause the view to update. If you do both it usually ends up thinking you have
+    //double the number of frames.
+    //beginResetModel();
+    mutex.lock();
     int insertedFiltered = 0;
     for (int i = 0; i < newFrames.count(); i++)
     {
@@ -398,9 +438,10 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
             filteredFrames.append(newFrames[i]);
         }
     }
-
-    beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
-    endInsertRows();
+    mutex.unlock();
+    //endResetModel();
+    //beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
+    //endInsertRows();
     if (needFilterRefresh) emit updatedFiltersList();
 }
 

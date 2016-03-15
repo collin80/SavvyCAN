@@ -15,7 +15,8 @@ enum DiscreteWindowState
     IDLE,
     COUNTDOWN_SIGNAL,
     COUNTDOWN_WAITING,
-    GETTING_SIGNAL
+    GETTING_SIGNAL,
+    DONE
 };
 }
 
@@ -33,6 +34,7 @@ private slots:
     void updatedFrames(int);
     void handleStartButton();
     void handleTick();
+    void typeChanged();
 
 private:
     Ui::DiscreteStateWindow *ui;
@@ -46,7 +48,10 @@ private:
     int currToggleState;
     int numIterations;
     int currIteration;
+    bool isRealtime;
+    QHash<int, bool> idFilters;
 
+    void refreshFilterList();
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
