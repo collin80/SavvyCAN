@@ -8,6 +8,7 @@
 #include <QTimer>
 #include "can_structs.h"
 #include "canframemodel.h"
+#include "canconnection.h"
 
 namespace SERIALSTATE {
 
@@ -29,23 +30,14 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
 }
 
 using namespace SERIALSTATE;
-class SerialWorker : public QObject
+class SerialWorker : public CANConnection
 {
     Q_OBJECT
 
 public:
-    SerialWorker(CANFrameModel *model, QObject *parent = 0);
+    SerialWorker(CANFrameModel *, int);
     ~SerialWorker();
     void readSettings();
-    void targetFrameID(int);
-
-signals: //we emit signals
-    void error(const QString &);    
-    void frameUpdateRapid(int); //sent *much* more rapidly than the above signal - one param for # of frames
-    void connectionSuccess(int, int);
-    void connectionFailure();
-    void deviceInfo(int, int);
-    void gotTargettedFrame(int);
 
 private slots: //we receive things in slots
     void readSerialData();    
@@ -54,31 +46,26 @@ private slots: //we receive things in slots
     void handleReconnect();
 
 public slots:
-    void run();
+    void run() override;
     void setSerialPort(QSerialPortInfo*);
     void closeSerialPort();
-    void sendFrame(const CANFrame *, int);
-    void sendFrameBatch(const QList<CANFrame> *);
+    void sendFrame(const CANFrame *) override;
+    void sendFrameBatch(const QList<CANFrame> *) override;
     void updateBaudRates(int, int);
-    void stopFrameCapture();
-    void startFrameCapture(); //only need to call this if previously stopped. Otherwise it's the default
+    //void stopFrameCapture(int) override;
+    //void startFrameCapture(int)  override;
+    void updatePortName(QString) override; //string version of the port to connect to. This base doesnt know a thing about this value
 
-private:
-    QString portName;
-    bool quit;
-    bool connected;
-    bool capturing;
+private:    
     bool doValidation;
     bool gotValidated;
     bool isAutoRestart;
     bool continuousTimeSync;
     QSerialPort *serial;
     QSerialPortInfo *currentPort;
-    CANFrameModel *canModel;
     QTimer *ticker;    
     QMutex sendBulkMutex;        
     int framesRapid;
-    int targetID;
     STATE rx_state;
     int rx_step;
     CANFrame *buildFrame;

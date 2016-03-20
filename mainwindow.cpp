@@ -64,6 +64,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
     //ui->canFramesView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 
+    /*
     worker = new SerialWorker(model);
     worker->moveToThread(&serialWorkerThread);
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
@@ -81,6 +82,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
     serialWorkerThread.start();
     serialWorkerThread.setPriority(QThread::HighPriority);    
+    */
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -176,7 +178,7 @@ MainWindow::MainWindow(QWidget *parent) :
     model->clearFrames();
 
     //Automatically create the connection window so it can be updated even if we never opened it.
-    connectionWindow = new ConnectionWindow();
+    connectionWindow = new ConnectionWindow(model);
     connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
 }
 
@@ -384,45 +386,7 @@ void MainWindow::updateConnectionSettings(QString connectionType, QString port, 
     canSpeed1 = speed1;
     if (isConnected)
     {
-        emit updateBaudRates(speed0, speed1);
-    }
-}
-
-void MainWindow::connButtonPress()
-{
-    if (!isConnected)
-    {
-        if (connType == "GVRET")
-        {
-            QList<QSerialPortInfo> ports;
-            ports = QSerialPortInfo::availablePorts();
-
-            for (int i = 0; i < ports.count(); i++)
-            {
-                if (ports[i].portName() == portName)
-                {
-                    portInfo = ports[i];
-                    //need to create some way to send single wire mode to serial port code
-                    emit sendSerialPort(&portInfo);
-                    lbStatusConnected.setText(tr("Attempting to connect to port ") + portName);
-                }
-            }
-        }
-        else if (connType == "KVASER")
-        {
-
-        }
-        else if (connType == "SOCKETCAN")
-        {
-
-        }
-    }
-    else
-    {
-        emit closeSerialPort();
-        isConnected = false;
-        lbStatusConnected.setText(tr("Not Connected"));
-        ui->actionConnect->setText(tr("Connect"));
+        //emit updateBaudRates(speed0, speed1);
     }
 }
 
@@ -574,16 +538,6 @@ void MainWindow::normalizeTiming()
 {
     model->normalizeTiming();
     emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
-}
-
-void MainWindow::changeBaudRates()
-{
-    int Speed1 = 0, Speed2 = 0;
-
-    //Speed1 = ui->cbSpeed1->currentText().toInt();
-    //Speed2 = ui->cbSpeed2->currentText().toInt();
-
-    emit updateBaudRates(Speed1, Speed2);
 }
 
 void MainWindow::handleLoadFile()
@@ -785,7 +739,7 @@ void MainWindow::connectionSucceeded(int baud0, int baud1)
         ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
     }
     */
-    if (connectionWindow) connectionWindow->setSpeeds(baud0, baud1);
+    if (connectionWindow) connectionWindow->setSpeed(baud0);
     //ui->btnConnect->setEnabled(false);
     ui->actionConnect->setText(tr("Disconnect"));
     isConnected = true;
@@ -843,14 +797,9 @@ void MainWindow::gotDeviceInfo(int build, int swCAN)
 
     if (connectionWindow)
     {
-        if (swCAN == 1) connectionWindow->setCAN1SWMode(true);
-        else connectionWindow->setCAN1SWMode(false);
+        if (swCAN == 1) connectionWindow->setSWMode(true);
+        else connectionWindow->setSWMode(false);
     }
-}
-
-void MainWindow::setTargettedID(int id)
-{
-    worker->targetFrameID(id);
 }
 
 void MainWindow::showSettingsDialog()
@@ -1039,7 +988,7 @@ void MainWindow::showConnectionSettingsWindow()
 {
     if (!connectionWindow)
     {
-        connectionWindow = new ConnectionWindow();
+        connectionWindow = new ConnectionWindow(model);
         connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
     }
     connectionWindow->show();

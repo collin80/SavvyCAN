@@ -80,7 +80,7 @@ void FirmwareUploaderWindow::gotTargettedFrame(int frameLoc)
                     if ((frame.data[6] == ((token >> 16) & 0xFF)) && (frame.data[7] == ((token >> 24) & 0xFF)))
                     {
                         qDebug() << "starting firmware process";
-                        MainWindow::getReference()->setTargettedID(baseAddress + 0x20);
+                        //MainWindow::getReference()->setTargettedID(baseAddress + 0x20);
                         transferInProgress = true;
                         sendFirmwareChunk();
                     }
@@ -163,7 +163,7 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         bus = ui->spinBus->value();
         baseAddress = Utility::ParseStringToNum(ui->txtBaseAddr->text());
         qDebug() << "Base address: " + QString::number(baseAddress);
-        MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
+        //MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
         CANFrame *output = new CANFrame;
         output->extended = false;
         output->len = 8;
@@ -181,7 +181,7 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
     else //stop anything in process
     {
         ui->btnStartStop->setText("Start Upload");
-        MainWindow::getReference()->setTargettedID(-1);
+        //MainWindow::getReference()->setTargettedID(-1);
     }
 }
 

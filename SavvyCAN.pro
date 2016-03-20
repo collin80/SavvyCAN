@@ -48,7 +48,10 @@ SOURCES += main.cpp\
     udsscanwindow.cpp \
     can_structs.cpp \
     isotp_interpreterwindow.cpp \
-    isotp_decoder.cpp
+    isotp_decoder.cpp \
+    canconnectionmodel.cpp \
+    canconnection.cpp \
+    canconnectioncontainer.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -83,7 +86,10 @@ HEADERS  += mainwindow.h \
     fuzzingwindow.h \
     udsscanwindow.h \
     isotp_interpreterwindow.h \
-    isotp_decoder.h
+    isotp_decoder.h \
+    canconnectionmodel.h \
+    canconnection.h \
+    canconnectioncontainer.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \

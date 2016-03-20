@@ -1,10 +1,14 @@
 #ifndef CONNECTIONWINDOW_H
 #define CONNECTIONWINDOW_H
 
+#include "canconnectionmodel.h"
+
 #include <QSerialPortInfo>
 #include <QDialog>
 #include <QDebug>
 #include <QSettings>
+#include "canconnection.h"
+#include "serialworker.h"
 
 namespace Ui {
 class ConnectionWindow;
@@ -25,34 +29,36 @@ class ConnectionWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit ConnectionWindow(QWidget *parent = 0);
+    explicit ConnectionWindow(CANFrameModel *canModel, QWidget *parent = 0);
     ~ConnectionWindow();
     void showEvent(QShowEvent *);
-    int getSpeed0();
-    int getSpeed1();
+    int getSpeed();
     QString getPortName(); //name of port to connect to
     ConnectionType::ConnectionType getConnectionType();
-    bool getCAN1SWMode();
+    bool getSWMode();
 
 signals:
-    void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
+    void updateConnectionSettings(QString connectionType, QString port, int speed);
 
 public slots:
-    void setSpeeds(int speed0, int speed1);
-    void setCAN1SWMode(bool mode);
+    void setSpeed(int speed0);
+    void setSWMode(bool mode);
 
 private slots:
     void handleOKButton();
     void handleConnTypeChanged();
+    void handleConnSelectionChanged();
+    void handleRemoveConn();
+    void handleRevert();
+
 
 private:
     Ui::ConnectionWindow *ui;
     QList<QSerialPortInfo> ports;
     QSettings *settings;
+    CANConnectionModel *connModel;
+    CANFrameModel *canModel;
 
-    ConnectionType::ConnectionType currentConnType;
-    QString currentPortName;
-    int currentSpeed1, currentSpeed2;
 
     void getSerialPorts();
     void getKvaserPorts();

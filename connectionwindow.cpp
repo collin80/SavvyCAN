@@ -2,7 +2,7 @@
 #include "ui_connectionwindow.h"
 #include <QtNetwork/QNetworkInterface>
 
-ConnectionWindow::ConnectionWindow(QWidget *parent) :
+ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ConnectionWindow)
 {
@@ -10,34 +10,34 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 
     settings = new QSettings();
 
+    connModel = new CANConnectionModel();
+    ui->tableConnections->setModel(connModel);
+
+    canModel = cModel;
+
+    ui->tableConnections->setColumnWidth(0, 50);
+    ui->tableConnections->setColumnWidth(1, 110);
+    ui->tableConnections->setColumnWidth(2, 110);
+    ui->tableConnections->setColumnWidth(3, 150);
+    ui->tableConnections->setColumnWidth(4, 75);
+    ui->tableConnections->setColumnWidth(5, 75);
+    ui->tableConnections->setColumnWidth(6, 75);
+
     int temp = settings->value("Main/DefaultConnectionType", 0).toInt();
 
-    if (temp == 0) currentConnType = ConnectionType::GVRET_SERIAL;
-    if (temp == 1) currentConnType = ConnectionType::KVASER;
-    if (temp == 2) currentConnType = ConnectionType::SOCKETCAN;
+    //currentPortName = settings->value("Main/DefaultConnectionPort", "").toString();
 
-    currentPortName = settings->value("Main/DefaultConnectionPort", "").toString();
-
-    currentSpeed1 = -1;
-    currentSpeed2 = -1;    
+    //currentSpeed1 = -1;
 
     ui->ckSingleWire->setChecked(settings->value("Main/SingleWireMode", false).toBool());
 
-    ui->cbSpeed0->addItem(tr("<Default>"));
-    ui->cbSpeed0->addItem(tr("Disabled"));
-    ui->cbSpeed0->addItem(tr("125000"));
-    ui->cbSpeed0->addItem(tr("250000"));
-    ui->cbSpeed0->addItem(tr("500000"));
-    ui->cbSpeed0->addItem(tr("1000000"));
-    ui->cbSpeed0->addItem(tr("33333"));
-
-    ui->cbSpeed1->addItem(tr("<Default>"));
-    ui->cbSpeed1->addItem(tr("Disabled"));
-    ui->cbSpeed1->addItem(tr("125000"));
-    ui->cbSpeed1->addItem(tr("250000"));
-    ui->cbSpeed1->addItem(tr("500000"));
-    ui->cbSpeed1->addItem(tr("1000000"));
-    ui->cbSpeed1->addItem(tr("33333"));
+    ui->cbSpeed->addItem(tr("<Default>"));
+    ui->cbSpeed->addItem(tr("Disabled"));
+    ui->cbSpeed->addItem(tr("125000"));
+    ui->cbSpeed->addItem(tr("250000"));
+    ui->cbSpeed->addItem(tr("500000"));
+    ui->cbSpeed->addItem(tr("1000000"));
+    ui->cbSpeed->addItem(tr("33333"));
 
 #ifdef Q_OS_LINUX
     ui->rbSocketCAN->setEnabled(true);
@@ -47,10 +47,12 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->rbKvaser->setEnabled(true);
 #endif
 
-    connect(ui->btnOK, SIGNAL(clicked(bool)), this, SLOT(handleOKButton()));
-    connect(ui->rbGVRET, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
-    connect(ui->rbKvaser, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
-    connect(ui->rbSocketCAN, SIGNAL(toggled(bool)), this, SLOT(handleConnTypeChanged()));
+    connect(ui->btnOK, &QAbstractButton::clicked, this, &ConnectionWindow::handleOKButton);
+    connect(ui->rbGVRET, &QAbstractButton::toggled, this, &ConnectionWindow::handleConnTypeChanged);
+    connect(ui->rbKvaser, &QAbstractButton::toggled, this, &ConnectionWindow::handleConnTypeChanged);
+    connect(ui->rbSocketCAN, &QAbstractButton::toggled, this, &ConnectionWindow::handleConnTypeChanged);
+    connect(ui->btnRevert, &QPushButton::clicked, this, &ConnectionWindow::handleRevert);
+    connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ConnectionWindow::handleConnSelectionChanged);
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -78,6 +80,28 @@ void ConnectionWindow::handleOKButton()
     QString conn;
     int connType = 0;
 
+    if (ui->tableConnections->selectionModel()->currentIndex().row() >= 0)
+    {
+
+    }
+    else //new connection
+    {
+        if (ui->rbGVRET->isChecked())
+        {            
+            SerialWorker *serial = new SerialWorker(canModel, 0);
+            connModel->addConnection(serial);
+        }
+        else if (ui->rbKvaser->isChecked())
+        {
+
+        }
+        else if (ui->rbSocketCAN->isChecked())
+        {
+
+        }
+    }
+
+/*
     if (ui->rbGVRET->isChecked())
     {
         conn = "GVRET";
@@ -100,16 +124,29 @@ void ConnectionWindow::handleOKButton()
     }
 
     currentPortName = getPortName();
-    currentSpeed1 = getSpeed0();
-    currentSpeed2 = getSpeed1();
+    currentSpeed1 = getSpeed();
 
     settings->setValue("Main/DefaultConnectionPort", currentPortName);
     settings->setValue("Main/DefaultConnectionType", connType);
     settings->setValue("Main/SingleWireMode", ui->ckSingleWire->isChecked());
 
-    emit updateConnectionSettings(conn, getPortName(), getSpeed0(), getSpeed1());
+    emit updateConnectionSettings(conn, getPortName(), getSpeed());
 
     this->close();
+*/
+}
+
+void ConnectionWindow::handleConnSelectionChanged()
+{
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx == 0)
+    {
+        ui->btnOK->setText(tr("Create New Connection"));
+    }
+    else
+    {
+        ui->btnOK->setText(tr("Update Connection Settings"));
+    }
 }
 
 void ConnectionWindow::getSerialPorts()
@@ -120,7 +157,7 @@ void ConnectionWindow::getSerialPorts()
     for (int i = 0; i < ports.count(); i++)
     {
         ui->cbPort->addItem(ports[i].portName());
-        if (currentPortName == ports[i].portName()) ui->cbPort->setCurrentIndex(i);
+        //if (currentPortName == ports[i].portName()) ui->cbPort->setCurrentIndex(i);
     }
 }
 
@@ -147,47 +184,33 @@ void ConnectionWindow::getSocketcanPorts()
     }
 }
 
-void ConnectionWindow::setSpeeds(int speed0, int speed1)
+void ConnectionWindow::setSpeed(int speed0)
 {
     bool found = false;
 
-    qDebug() << speed0 << "X" << speed1;
+    qDebug() << speed0;
 
-    for (int i = 0; i < ui->cbSpeed0->count(); i++)
+    for (int i = 0; i < ui->cbSpeed->count(); i++)
     {
-        if (ui->cbSpeed0->itemText(i).toInt() == speed0)
+        if (ui->cbSpeed->itemText(i).toInt() == speed0)
         {
-            ui->cbSpeed0->setCurrentIndex(i);
+            ui->cbSpeed->setCurrentIndex(i);
             found = true;
         }
     }
     if (!found)
     {
-        ui->cbSpeed0->addItem(QString::number(speed0));
-        ui->cbSpeed0->setCurrentIndex(ui->cbSpeed0->count() - 1);
+        ui->cbSpeed->addItem(QString::number(speed0));
+        ui->cbSpeed->setCurrentIndex(ui->cbSpeed->count() - 1);
     }
 
-    found = false;
-    for (int i = 0; i < ui->cbSpeed1->count(); i++)
-    {
-        if (ui->cbSpeed1->itemText(i).toInt() == speed1)
-        {
-            ui->cbSpeed1->setCurrentIndex(i);
-            found = true;
-        }
-    }
-    if (!found)
-    {
-        ui->cbSpeed1->addItem(QString::number(speed1));
-        ui->cbSpeed1->setCurrentIndex(ui->cbSpeed1->count() - 1);
-    }
 }
 
 
 //-1 means leave it at whatever it booted up to. 0 means disable. Otherwise the actual rate we want.
-int ConnectionWindow::getSpeed0()
+int ConnectionWindow::getSpeed()
 {
-    switch (ui->cbSpeed0->currentIndex())
+    switch (ui->cbSpeed->currentIndex())
     {
     case -1:
         return -1;
@@ -199,26 +222,7 @@ int ConnectionWindow::getSpeed0()
         return 0;
         break;
     default:
-        return (ui->cbSpeed0->currentText().toInt());
-        break;
-    }
-}
-
-int ConnectionWindow::getSpeed1()
-{
-    switch (ui->cbSpeed1->currentIndex())
-    {
-    case -1:
-        return -1;
-        break;
-    case 0:
-        return -1;
-        break;
-    case 1:
-        return 0;
-        break;
-    default:
-        return (ui->cbSpeed1->currentText().toInt());
+        return (ui->cbSpeed->currentText().toInt());
         break;
     }
 }
@@ -235,13 +239,23 @@ ConnectionType::ConnectionType ConnectionWindow::getConnectionType()
     if (ui->rbSocketCAN->isChecked()) return ConnectionType::SOCKETCAN;
 }
 
-void ConnectionWindow::setCAN1SWMode(bool mode)
+void ConnectionWindow::setSWMode(bool mode)
 {
     ui->ckSingleWire->setChecked(mode);
 }
 
-bool ConnectionWindow::getCAN1SWMode()
+bool ConnectionWindow::getSWMode()
 {
     if (ui->ckSingleWire->checkState() == Qt::Checked) return true;
     return false;
+}
+
+void ConnectionWindow::handleRemoveConn()
+{
+
+}
+
+void ConnectionWindow::handleRevert()
+{
+
 }

@@ -5,19 +5,16 @@
 #include <QTimer>
 #include <QSettings>
 
-SerialWorker::SerialWorker(CANFrameModel *model, QObject *parent) : QObject(parent)
+SerialWorker::SerialWorker(CANFrameModel *model, int base) : CANConnection(model, base)
 {    
     serial = NULL;
     rx_state = IDLE;
     rx_step = 0;
     buildFrame = new CANFrame;
-    canModel = model;
     ticker = NULL;
     framesRapid = 0;
-    capturing = true;
     gotValidated = true;
     isAutoRestart = false;
-    targetID = -1;
 
     txTimestampBasis = QDateTime::currentMSecsSinceEpoch();
 
@@ -121,8 +118,8 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     continuousTimeSync = true;
 
     serial->write(output);
-    if (doValidation) connected = false;
-        else connected = true;
+    if (doValidation) isConnected = false;
+        else isConnected = true;
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
     if (doValidation) QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
 }
@@ -130,7 +127,7 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
 void SerialWorker::connectionTimeout()
 {
     //one second after trying to connect are we actually connected?
-    if (!connected) //no?
+    if (!isConnected) //no?
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
@@ -157,7 +154,7 @@ void SerialWorker::readSerialData()
     }
 }
 
-void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
+void SerialWorker::sendFrame(const CANFrame *frame)
 {
     QByteArray buffer;
     int c;
@@ -169,12 +166,12 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     //qDebug() << "Sending out frame with id " << frame->ID;
 
     //show our sent frames in the list too. This happens even if we're not connected.    
-    canModel->addFrame(tempFrame, false);
+    model->addFrame(tempFrame, false);
     framesRapid++;
 
     if (serial == NULL) return;
     if (!serial->isOpen()) return;
-    if (!connected) return;
+    if (!isConnected) return;
 
     ID = frame->ID;
     if (frame->extended) ID |= 1 << 31;
@@ -185,7 +182,7 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
     buffer[3] = (unsigned char)(ID >> 8);
     buffer[4] = (unsigned char)(ID >> 16);
     buffer[5] = (unsigned char)(ID >> 24);
-    buffer[6] = (unsigned char)(bus & 1);
+    buffer[6] = (unsigned char)((frame->bus - this->getBusBase()) & 1);
     buffer[7] = (unsigned char)frame->len;
     for (c = 0; c < frame->len; c++)
     {
@@ -203,7 +200,7 @@ void SerialWorker::sendFrame(const CANFrame *frame, int bus = 0)
 void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
 {
     sendBulkMutex.lock();
-    for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i), frames->at(i).bus);
+    for (int i = 0; i < frames->length(); i++) sendFrame(&frames->at(i));
     sendBulkMutex.unlock();
 }
 
@@ -321,15 +318,14 @@ void SerialWorker::procRXChar(unsigned char c)
                 rx_state = IDLE;
                 rx_step = 0;
                 //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
-                if (capturing)
-                {
+                //if (capturing)
+                //{
                     buildFrame->isReceived = true;
-                    canModel->addFrame(*buildFrame, false);
+                    model->addFrame(*buildFrame, false);
                     //take the time the frame came in and try to resync the time base.
                     if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame->timestamp / 1000);
-                    framesRapid++;
-                    if (buildFrame->ID == targetID) emit gotTargettedFrame(canModel->rowCount() - 1);
-                }
+                    framesRapid++;                    
+                //}
             }
             break;
         }
@@ -414,8 +410,8 @@ void SerialWorker::procRXChar(unsigned char c)
             qDebug() << "Baud 1 = " << can1Baud;
             if (!can1Enabled) can1Baud = 0;
             if (!can0Enabled) can0Baud = 0;
-            connected = true;
-            emit connectionSuccess(can0Baud, can1Baud);
+            isConnected = true;
+            emit connectionSuccess();
             break;
         }
         rx_step++;
@@ -462,7 +458,7 @@ void SerialWorker::handleTick()
 {
     //qDebug() << "Tick!";
 
-    if (connected)
+    if (isConnected)
     {
         if (!gotValidated && doValidation)
         {
@@ -517,6 +513,7 @@ void SerialWorker::closeSerialPort()
     serial = NULL;
 }
 
+/*
 void SerialWorker::stopFrameCapture()
 {
     qDebug() << "Stopping frame capture";
@@ -528,8 +525,24 @@ void SerialWorker::startFrameCapture()
     qDebug() << "Starting up frame capture";
     capturing = true;
 }
+*/
 
-void SerialWorker::targetFrameID(int target)
+void SerialWorker::updatePortName(QString portName)
 {
-    targetID = target;
+    QList<QSerialPortInfo> ports;
+
+    CANConnection::updatePortName(portName);
+
+    ports = QSerialPortInfo::availablePorts();
+
+    for (int i = 0; i < ports.count(); i++)
+    {
+        if (portName == ports[i].portName())
+        {
+            setSerialPort(&ports[i]);
+            return;
+        }
+    }
 }
+
+

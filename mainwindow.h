@@ -39,7 +39,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
     static MainWindow *getReference();
-    void setTargettedID(int);
     ~MainWindow();
 
 private slots:
@@ -48,7 +47,6 @@ private slots:
     void handleSaveFilteredFile();
     void handleSaveFilters();
     void handleLoadFilters();
-    void connButtonPress();
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
@@ -69,7 +67,6 @@ private slots:
     void showISOInterpreterWindow();
     void exitApp();
     void handleSaveDecoded();
-    void changeBaudRates();
     void connectionFailed();
     void gotDeviceInfo(int, int);
     void connectionSucceeded(int, int);
@@ -92,9 +89,6 @@ public slots:
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 signals:
-    void sendSerialPort(QSerialPortInfo *port);
-    void closeSerialPort();
-    void updateBaudRates(int, int);
     void sendCANFrame(const CANFrame *, int);
     void stopFrameCapturing();
     void startFrameCapturing();
