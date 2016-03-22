@@ -40,16 +40,27 @@ However, this source code is integrated into the source for SavvyCAN and one isn
 Instructions for compiling with Ubuntu:
 
 sudo apt-get install qt5-default qtdeclarative5-dev libqt5serialport5-dev libudev-dev
-[download and extract QScintilla (see above for link), assume it is extracted in QScintilla-gpl-2.9.1]
+
+download and extract QScintilla (see above for link), assume it is extracted in QScintilla-gpl-2.9.1
+
 cd ~/QScintilla-gpl-2.9.1/Qt4Qt5
+
 qmake qscintilla.pro
+
 make
+
 sudo make install
-[Optionally remove ~/QScintilla-gpl-2.9.1]
+
+Optionally remove ~/QScintilla-gpl-2.9.1
+
 cd ~
+
 git clone https://github.com/collin80/SavvyCAN.git
+
 cd SavvyCAN
+
 qmake
+
 make
 
 Now run SavvyCAN
