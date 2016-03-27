@@ -27,6 +27,7 @@ public:
     void addBus(CAN_Bus &bus);
     CAN_Bus* getBus(int bus);
     CANConnection* getConnection(int conn);
+    void refreshView();
 
 private:
     QList<CANConnectionContainer *> connections;

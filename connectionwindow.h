@@ -53,7 +53,7 @@ private slots:
     void handleConnSelectionChanged();
     void handleRemoveConn();
     void handleRevert();
-
+    void receiveBusStatus(int bus, int speed, int status);
 
 private:
     Ui::ConnectionWindow *ui;

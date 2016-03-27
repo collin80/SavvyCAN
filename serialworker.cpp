@@ -81,7 +81,6 @@ void SerialWorker::setSerialPort(QSerialPortInfo *port)
     serial = new QSerialPort(*port);
 
     qDebug() << "Serial port name is " << port->portName();
-    //serial->setBaudRate(10000000); //more speed! probably does nothing for USB serial
     serial->setDataBits(serial->Data8);
     serial->setFlowControl(serial->HardwareControl); //this is important though
     if (!serial->open(QIODevice::ReadWrite))
@@ -414,6 +413,8 @@ void SerialWorker::procRXChar(unsigned char c)
             if (!can0Enabled) can0Baud = 0;
             isConnected = true;
             emit connectionSuccess();
+            emit busStatus(busBase, can0Baud, can0Enabled?0x49:0x48); //say that we're updating baud rate and set enabled status
+            emit busStatus(busBase + 1, can1Baud, can1Enabled?0x49:0x48);
             break;
         }
         rx_step++;

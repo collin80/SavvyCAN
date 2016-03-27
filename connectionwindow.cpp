@@ -89,6 +89,7 @@ void ConnectionWindow::handleOKButton()
         if (ui->rbGVRET->isChecked())
         {            
             SerialWorker *serial = new SerialWorker(canModel, connModel->rowCount());
+            connect(serial, SIGNAL(busStatus(int,int,int)), this, SLOT(receiveBusStatus(int,int,int)));
             connModel->addConnection(serial);
 
             qDebug() << "Setup initial connection object";
@@ -136,40 +137,26 @@ void ConnectionWindow::handleOKButton()
 
         }
     }
+}
 
-/*
-    if (ui->rbGVRET->isChecked())
+void ConnectionWindow::receiveBusStatus(int bus, int speed, int status)
+{
+    qDebug() << "bus " << bus << " speed " << speed << " status " << status;
+    CAN_Bus *busRef = connModel->getBus(bus);
+    if (status & 40) busRef->setSpeed(speed);
+    if (status & 8) //update enabled status
     {
-        conn = "GVRET";
-        connType = 0;
-        currentConnType = ConnectionType::GVRET_SERIAL;
+        busRef->setEnabled((status & 1)?true:false);
     }
-
-    if (ui->rbKvaser->isChecked())
+    if (status & 0x10) //update single wire status
     {
-        conn = "KVASER";
-        connType = 1;
-        currentConnType = ConnectionType::KVASER;
+        busRef->setSingleWire((status & 2)?true:false);
     }
-
-    if (ui->rbSocketCAN->isChecked())
+    if (status & 0x20) //update listen only status
     {
-        conn = "SOCKETCAN";
-        connType = 2;
-        currentConnType = ConnectionType::SOCKETCAN;
+        busRef->setListenOnly((status & 4)?true:false);
     }
-
-    currentPortName = getPortName();
-    currentSpeed1 = getSpeed();
-
-    settings->setValue("Main/DefaultConnectionPort", currentPortName);
-    settings->setValue("Main/DefaultConnectionType", connType);
-    settings->setValue("Main/SingleWireMode", ui->ckSingleWire->isChecked());
-
-    emit updateConnectionSettings(conn, getPortName(), getSpeed());
-
-    this->close();
-*/
+    connModel->refreshView();
 }
 
 void ConnectionWindow::handleConnSelectionChanged()

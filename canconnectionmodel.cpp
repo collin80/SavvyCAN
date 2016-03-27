@@ -7,6 +7,12 @@ CANConnectionModel::CANConnectionModel(QObject *parent)
 {
 }
 
+void CANConnectionModel::refreshView()
+{
+    beginResetModel();
+    endResetModel();
+}
+
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (role != Qt::DisplayRole)
