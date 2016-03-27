@@ -656,6 +656,7 @@ void FlowViewWindow::updatePosition(bool forward)
 
 void FlowViewWindow::updateGraphLocation()
 {
+    if (frameCache.count() == 0) return;
     int start = currentPosition - 5;
     if (start < 0) start = 0;
     int end = currentPosition + 5;
