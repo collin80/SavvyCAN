@@ -3,7 +3,7 @@
 
 #include <QDialog>
 #include "can_structs.h"
-#include "isotp_decoder.h"
+#include "isotp_handler.h"
 
 namespace Ui {
 class ISOTP_InterpreterWindow;
@@ -25,7 +25,7 @@ private slots:
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;
-    ISOTP_DECODER *decoder;
+    ISOTP_HANDLER *decoder;
 
     const QVector<CANFrame> *modelFrames;
     QVector<ISOTP_MESSAGE> messages;

@@ -103,6 +103,7 @@ MainWindow::MainWindow(QWidget *parent) :
     bDirty = false;
     inhibitFilterUpdate = false;
     rxFrames = 0;
+    framesPerSec = 0;
 
     model->setDBCHandler(dbcHandler);
 

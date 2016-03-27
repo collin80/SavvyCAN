@@ -48,7 +48,7 @@ SOURCES += main.cpp\
     udsscanwindow.cpp \
     can_structs.cpp \
     isotp_interpreterwindow.cpp \
-    isotp_decoder.cpp
+    isotp_handler.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -83,7 +83,7 @@ HEADERS  += mainwindow.h \
     fuzzingwindow.h \
     udsscanwindow.h \
     isotp_interpreterwindow.h \
-    isotp_decoder.h
+    isotp_handler.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
