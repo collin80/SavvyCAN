@@ -191,6 +191,7 @@ void ConnectionWindow::getKvaserPorts()
 
 void ConnectionWindow::getSocketcanPorts()
 {
+#ifdef Q_OS_LINUX
     QList<QNetworkInterface> interfaces = QNetworkInterface::allInterfaces();
     QString interfaceName;
 
@@ -205,6 +206,7 @@ void ConnectionWindow::getSocketcanPorts()
             ui->cbPort->addItem(interfaceName);
         }
     }
+#endif
 }
 
 void ConnectionWindow::setSpeed(int speed0)

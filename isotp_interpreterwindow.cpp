@@ -9,11 +9,11 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     ui->setupUi(this);
     modelFrames = frames;
 
-    decoder = new ISOTP_DECODER(modelFrames);
+    decoder = new ISOTP_HANDLER(modelFrames);
 
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ISOTP_InterpreterWindow::updatedFrames);
-    connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_DECODER::updatedFrames);
-    connect(decoder, &ISOTP_DECODER::newISOMessage, this, &ISOTP_InterpreterWindow::newISOMessage);
+    connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_HANDLER::updatedFrames);
+    connect(decoder, &ISOTP_HANDLER::newISOMessage, this, &ISOTP_InterpreterWindow::newISOMessage);
 
     connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
 
