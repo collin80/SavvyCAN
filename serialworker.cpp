@@ -7,6 +7,7 @@
 
 SerialWorker::SerialWorker(CANFrameModel *model, int base) : CANConnection(model, base)
 {    
+    qDebug() << "Serial Worker constructor";
     serial = NULL;
     rx_state = IDLE;
     rx_step = 0;
@@ -39,6 +40,7 @@ SerialWorker::~SerialWorker()
 
 void SerialWorker::run()
 {
+    qDebug() << "Serial worker thread starting";
     ticker = new QTimer;
     connect(ticker, SIGNAL(timeout()), this, SLOT(handleTick()));
 
@@ -545,4 +547,20 @@ void SerialWorker::updatePortName(QString portName)
     }
 }
 
+int SerialWorker::getNumBuses()
+{
+    return 2;
+}
 
+QString SerialWorker::getConnTypeName()
+{
+    return QString("GVRET");
+}
+
+void SerialWorker::updateBusSettings(CAN_Bus *bus)
+{
+    int busNum = bus->busNum - busBase;
+    if (busNum < 0) return;
+    if (busNum >= numBuses) return;
+    qDebug() << "About to update bus " << busNum << " on GVRET";
+}

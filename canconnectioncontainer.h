@@ -2,16 +2,18 @@
 #define CANCONNECTIONCONTAINER_H
 
 #include "canconnection.h"
+#include <Qt>
 #include <QThread>
+#include "mainwindow.h"
 
-class CANConnectionContainer
+class CANConnectionContainer : public QObject
 {
+    Q_OBJECT
 public:
     CANConnectionContainer(CANConnection *conn);
     ~CANConnectionContainer();
 
     CANConnection* getRef();
-
 
 private:
     CANConnection *connection;

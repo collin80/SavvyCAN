@@ -245,7 +245,6 @@
      <string>Connection</string>
     </property>
     <addaction name="actionSetup"/>
-    <addaction name="actionConnect"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menu_RE_Tools"/>
@@ -350,7 +349,7 @@
   </action>
   <action name="actionSetup">
    <property name="text">
-    <string>Set Port</string>
+    <string>Open Connection WIndow</string>
    </property>
   </action>
   <action name="actionConnect">

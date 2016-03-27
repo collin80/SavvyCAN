@@ -27,6 +27,8 @@
 #include "udsscanwindow.h"
 #include "isotp_interpreterwindow.h"
 
+class ConnectionWindow;
+
 namespace Ui {
 class MainWindow;
 }

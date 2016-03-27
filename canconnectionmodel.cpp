@@ -1,3 +1,5 @@
+#include "canconnection.h"
+#include "canconnectioncontainer.h"
 #include "canconnectionmodel.h"
 
 CANConnectionModel::CANConnectionModel(QObject *parent)
@@ -71,10 +73,12 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
             return QString::number(bus.busNum);
             break;
         case 1: //type
-            if (conn) conn->getConnTypeName();
+            if (conn) return conn->getConnTypeName();
+            else qDebug() << "Tried to show connection type but connection was NULL";
             break;
         case 2: //port
-            if (conn) conn->getConnPortName();
+            if (conn) return conn->getConnPortName();
+            else qDebug() << "Tried to show connection port but connection was NULL";
             break;
         case 3: //speed
             return QString::number(bus.speed);
@@ -102,18 +106,29 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 void CANConnectionModel::addConnection(CANConnection *conn)
 {
     CAN_Bus bus;
-    beginResetModel();
     CANConnectionContainer *cont = new CANConnectionContainer(conn);
     connections.append(cont);
+}
 
-    int numBuses = conn->getNumBuses();
-    for (int i = 0; i < numBuses; i++)
-    {
-        bus.busNum = conn->getBusBase() + i;
-        buses.append(bus);
-    }
-
+void CANConnectionModel::addBus(CAN_Bus &bus)
+{
+    beginResetModel();
+    buses.append(bus);
     endResetModel();
+}
+
+CAN_Bus* CANConnectionModel::getBus(int bus)
+{
+    if (bus < 0) return NULL;
+    if (bus >= buses.count()) return NULL;
+    return &buses[bus];
+}
+
+CANConnection* CANConnectionModel::getConnection(int conn)
+{
+    if (conn < 0) return NULL;
+    if (conn >= connections.count()) return NULL;
+    return connections[conn]->getRef();
 }
 
 CAN_Bus* CANConnectionModel::findBusByNum(int bus)

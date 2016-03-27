@@ -38,6 +38,8 @@ public:
     SerialWorker(CANFrameModel *, int);
     ~SerialWorker();
     void readSettings();
+    int getNumBuses();
+    QString getConnTypeName() override;
 
 private slots: //we receive things in slots
     void readSerialData();    
@@ -55,6 +57,7 @@ public slots:
     //void stopFrameCapture(int) override;
     //void startFrameCapture(int)  override;
     void updatePortName(QString) override; //string version of the port to connect to. This base doesnt know a thing about this value
+    void updateBusSettings(CAN_Bus *bus) override;
 
 private:    
     bool doValidation;

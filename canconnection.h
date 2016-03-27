@@ -33,6 +33,11 @@ public:
     CANConnection *getConnection();
 };
 
+
+//Gentle reminder, CANConnection objects run in their own thread (each one, different thread)
+//so, for the love of God, do not try to access them directly.
+//Use the signal/slots system to do indirect calls.
+//Please and thank you.
 class CANConnection : public QObject
 {
     Q_OBJECT
@@ -41,7 +46,7 @@ public:
     CANConnection(CANFrameModel *, int);
     virtual int getNumBuses();
     int getBusBase();
-    QString getConnTypeName();
+    virtual QString getConnTypeName();
     QString getConnPortName();
 
 signals:
@@ -59,7 +64,7 @@ public slots:
     virtual void updatePortName(QString); //string version of the port to connect to. This base doesnt know a thing about this value
     virtual void stopFrameCapture(int); //pass bus number
     virtual void startFrameCapture(int); //pass bus number. Only if stopped. Defaults to started anyway
-    //virtual void updateBusSettings(int); //bus number that was updated.
+    virtual void updateBusSettings(CAN_Bus *bus); //reference to the bus that changed.
 
 protected:
     bool quit;

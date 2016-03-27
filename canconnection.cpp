@@ -126,3 +126,8 @@ void CANConnection::startFrameCapture(int bus)
 {
 
 }
+
+void CANConnection::updateBusSettings(CAN_Bus *bus)
+{
+
+}

@@ -109,7 +109,6 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setDBCHandler(dbcHandler);
 
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
-    connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connButtonPress()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);

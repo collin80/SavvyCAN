@@ -10,6 +10,8 @@
 #include "canconnection.h"
 #include "serialworker.h"
 
+class CANConnectionModel;
+
 namespace Ui {
 class ConnectionWindow;
 }
@@ -38,7 +40,8 @@ public:
     bool getSWMode();
 
 signals:
-    void updateConnectionSettings(QString connectionType, QString port, int speed);
+    void updateBusSettings(CAN_Bus *bus);
+    void updatePortName(QString port);
 
 public slots:
     void setSpeed(int speed0);

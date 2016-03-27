@@ -88,8 +88,44 @@ void ConnectionWindow::handleOKButton()
     {
         if (ui->rbGVRET->isChecked())
         {            
-            SerialWorker *serial = new SerialWorker(canModel, 0);
+            SerialWorker *serial = new SerialWorker(canModel, connModel->rowCount());
             connModel->addConnection(serial);
+
+            qDebug() << "Setup initial connection object";
+
+            CAN_Bus bus;
+            bus.active = true;
+            bus.busNum = serial->getBusBase();
+            bus.connection = serial;
+            bus.listenOnly = ui->ckListenOnly->isChecked();
+            bus.singleWire = ui->ckSingleWire->isChecked();
+
+            if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0; //default speed
+            else if (ui->cbSpeed->currentIndex() == 1)
+            {
+                bus.speed = 0;
+                bus.active = false;
+            }
+            else bus.speed = ui->cbSpeed->currentText().toInt();
+            connModel->addBus(bus);
+
+            int numBuses = serial->getNumBuses();
+            for (int i = 1; i < numBuses; i++)
+            {
+                bus.active = false;
+                bus.listenOnly = false;
+                bus.singleWire = false;
+                bus.speed = 250000;
+                bus.busNum = serial->getBusBase() + i;
+                bus.connection = serial;
+                connModel->addBus(bus);
+                qDebug() << "Added bus " << bus.busNum;
+            }            
+
+            //call through signal/slot interface without using connect
+            QMetaObject::invokeMethod(serial, "updatePortName",
+                                      Qt::QueuedConnection,
+                                      Q_ARG(QString, ui->cbPort->currentText()));
         }
         else if (ui->rbKvaser->isChecked())
         {

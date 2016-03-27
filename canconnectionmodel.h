@@ -6,6 +6,8 @@
 
 #include <QAbstractTableModel>
 
+class CANConnectionContainer;
+
 class CANConnectionModel : public QAbstractTableModel
 {
     Q_OBJECT
@@ -22,6 +24,9 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
     void addConnection(CANConnection *conn);
+    void addBus(CAN_Bus &bus);
+    CAN_Bus* getBus(int bus);
+    CANConnection* getConnection(int conn);
 
 private:
     QList<CANConnectionContainer *> connections;
