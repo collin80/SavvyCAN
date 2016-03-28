@@ -184,8 +184,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    serialWorkerThread.quit();
-    serialWorkerThread.wait();
+    //serialWorkerThread.quit();
+    //serialWorkerThread.wait();
     //delete worker;
 
     if (graphingWindow)
@@ -339,16 +339,16 @@ void MainWindow::readSettings()
         ui->cbAutoScroll->setChecked(true);
     }
 
+    /*
     int cType = settings.value("Main/DefaultConnectionType", 0).toInt();
     if (cType == 0) connType = "GVRET";
     if (cType == 1) connType = "KVASER";
     if (cType == 2) connType = "SOCKETCAN";
     portName = settings.value("Main/DefaultConnectionPort", "").toString();
-    canSpeed0 = -1;
-    canSpeed1 = -1;
+    */
 
-    qDebug() << connType;
-    qDebug() << portName;
+    //qDebug() << connType;
+    //qDebug() << portName;
 
     //"Main/SingleWireMode"
 
@@ -379,11 +379,11 @@ void MainWindow::writeSettings()
 
 void MainWindow::updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1)
 {
-    connType = connectionType;
-    portName = port;
+    //connType = connectionType;
+    //portName = port;
 
-    canSpeed0 = speed0;
-    canSpeed1 = speed1;
+    //canSpeed0 = speed0;
+    //canSpeed1 = speed1;
     if (isConnected)
     {
         //emit updateBaudRates(speed0, speed1);
@@ -863,7 +863,7 @@ void MainWindow::showFrameSenderWindow()
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
 
-        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
+        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, connectionWindow, &ConnectionWindow::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -873,9 +873,12 @@ void MainWindow::showPlaybackWindow()
     if (!playbackWindow)
     {
         if (!useFiltered)
-            playbackWindow = new FramePlaybackWindow(model->getListReference(), worker);
+            playbackWindow = new FramePlaybackWindow(model->getListReference());
         else
-            playbackWindow = new FramePlaybackWindow(model->getFilteredListReference(), worker);
+            playbackWindow = new FramePlaybackWindow(model->getFilteredListReference());
+
+        connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)), Qt::QueuedConnection);
+        connect(playbackWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), connectionWindow, SLOT(sendFrameBatch(const QList<CANFrame>*)), Qt::QueuedConnection);
     }
     playbackWindow->show();
 }
@@ -885,8 +888,8 @@ void MainWindow::showFirmwareUploaderWindow()
     if (!firmwareUploaderWindow)
     {
         firmwareUploaderWindow = new FirmwareUploaderWindow(model->getListReference());
-        connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
-        connect(worker, SIGNAL(gotTargettedFrame(int)), firmwareUploaderWindow, SLOT(gotTargettedFrame(int)));
+        connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
+        //connect(worker, SIGNAL(gotTargettedFrame(int)), firmwareUploaderWindow, SLOT(gotTargettedFrame(int)));
     }
     firmwareUploaderWindow->show();
 }
@@ -914,8 +917,8 @@ void MainWindow::showFuzzingWindow()
     if (!fuzzingWindow)
     {
         fuzzingWindow = new FuzzingWindow(model->getListReference());
-        connect(fuzzingWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
-        connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
+        connect(fuzzingWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
+        connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), connectionWindow, SLOT(sendFrameBatch(const QList<CANFrame>*)));
     }
     fuzzingWindow->show();
 }
@@ -925,7 +928,7 @@ void MainWindow::showUDSScanWindow()
     if (!udsScanWindow)
     {
         udsScanWindow = new UDSScanWindow(model->getListReference());
-        connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
     }
     udsScanWindow->show();
 }
@@ -935,7 +938,7 @@ void MainWindow::showScriptingWindow()
     if (!scriptingWindow)
     {
         scriptingWindow = new ScriptingWindow(model->getListReference());
-        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
+        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, connectionWindow, &ConnectionWindow::sendFrame);
     }
     scriptingWindow->show();
 }

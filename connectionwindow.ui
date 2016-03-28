@@ -34,6 +34,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnNewConn">
+       <property name="text">
+        <string>New Connection</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <layout class="QHBoxLayout" name="horizontalLayout_5">
        <item>
         <widget class="QPushButton" name="btnBusActivate">

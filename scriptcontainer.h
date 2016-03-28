@@ -32,7 +32,7 @@ private slots:
     void tick();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
 
 private:
     QJSEngine scriptEngine;

@@ -18,7 +18,7 @@ public:
     ~UDSScanWindow();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
 
 private slots:
     void updatedFrames(int numFrames);

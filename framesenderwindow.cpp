@@ -151,7 +151,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
                             sendingData[sd].count++;
                             doModifiers(sd);
                             updateGridRow(sd);
-                            sendCANFrame(&sendingData[sd], sendingData[sd].bus);
+                            sendCANFrame(&sendingData[sd]);
                         }
                         else //delayed sending frame
                         {
@@ -354,7 +354,7 @@ void FrameSenderWindow::handleTick()
                 doModifiers(i);
                 updateGridRow(i);
                 qDebug() << "About to try to send a frame";
-                emit sendCANFrame(&sendingData[i], sendingData[i].bus);
+                emit sendCANFrame(&sendingData[i]);
                 if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
             }
         }

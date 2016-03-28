@@ -564,4 +564,7 @@ void SerialWorker::updateBusSettings(CAN_Bus *bus)
     if (busNum < 0) return;
     if (busNum >= numBuses) return;
     qDebug() << "About to update bus " << busNum << " on GVRET";
+    if (busNum == 0) can0Baud = bus->getSpeed();
+    if (busNum == 1) can1Baud = bus->getSpeed();
+    updateBaudRates(can0Baud,can1Baud);
 }

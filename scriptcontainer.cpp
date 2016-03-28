@@ -111,7 +111,7 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     if (frame.ID > 0x7FF) frame.extended = true;
 
     //qDebug() << "Sending frame from script";
-    emit sendCANFrame(&frame, frame.bus);
+    emit sendCANFrame(&frame);
 }
 
 void ScriptContainer::gotFrame(const CANFrame &frame)

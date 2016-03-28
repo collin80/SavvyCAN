@@ -125,6 +125,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     int xorByte = 0;
     output->extended = false;
     output->len = 7;
+    output->bus = bus;
     output->ID = baseAddress + 0x16;
     output->data[0] = currentSendingPosition & 0xFF;
     output->data[1] = (currentSendingPosition >> 8) & 0xFF;
@@ -134,7 +135,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     output->data[5] = firmwareData[firmwareLocation++];
     for (int i = 0; i < 6; i++) xorByte = xorByte ^ output->data[i];
     output->data[6] = xorByte;    
-    sendCANFrame(output, bus);
+    sendCANFrame(output);
     timer->start();
 }
 
@@ -142,13 +143,14 @@ void FirmwareUploaderWindow::sendFirmwareEnding()
 {
     CANFrame *output = new CANFrame;
     output->extended = false;
+    output->bus = bus;
     output->len = 4;
     output->ID = baseAddress + 0x30;
     output->data[0] = 0xC0;
     output->data[1] = 0xDE;
     output->data[2] = 0xFA;
     output->data[3] = 0xDE;
-    sendCANFrame(output, bus);
+    sendCANFrame(output);
 }
 
 void FirmwareUploaderWindow::handleStartStopTransfer()
@@ -167,6 +169,7 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         CANFrame *output = new CANFrame;
         output->extended = false;
         output->len = 8;
+        output->bus = bus;
         output->ID = baseAddress;
         output->data[0] = 0xDE;
         output->data[1] = 0xAD;
@@ -176,7 +179,7 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         output->data[5] = (token >> 8) & 0xFF;
         output->data[6] = (token >> 16) & 0xFF;
         output->data[7] = (token >> 24) & 0xFF;
-        sendCANFrame(output, bus);
+        sendCANFrame(output);
     }
     else //stop anything in process
     {

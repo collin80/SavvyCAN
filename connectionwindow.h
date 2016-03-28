@@ -46,6 +46,8 @@ signals:
 public slots:
     void setSpeed(int speed0);
     void setSWMode(bool mode);
+    void sendFrame(const CANFrame *);
+    void sendFrameBatch(const QList<CANFrame> *);
 
 private slots:
     void handleOKButton();
@@ -53,6 +55,7 @@ private slots:
     void handleConnSelectionChanged();
     void handleRemoveConn();
     void handleRevert();
+    void handleNewConn();
     void receiveBusStatus(int bus, int speed, int status);
 
 private:

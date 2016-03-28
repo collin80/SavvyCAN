@@ -33,7 +33,7 @@ private slots:
 public slots:
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
 
 private:
     void closeEvent(QCloseEvent *event);

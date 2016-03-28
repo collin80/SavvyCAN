@@ -18,7 +18,7 @@
  *
 */
 
-FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent) :
+FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FramePlaybackWindow)
 {
@@ -33,7 +33,6 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
     readSettings();
 
     modelFrames = frames;
-    serialWorker = worker;
 
     playbackTimer = new QTimer();
 
@@ -70,9 +69,6 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
 
     playbackTimer->setInterval(ui->spinPlaySpeed->value()); //set the timer to the default value of the control
 
-    connect(this, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)), Qt::QueuedConnection);
-    connect(this, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)), Qt::QueuedConnection);
-
     QStringList headers;
     headers << "Source" << "Loops";
     ui->tblSequence->setColumnCount(2);
@@ -84,8 +80,6 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, Serial
 FramePlaybackWindow::~FramePlaybackWindow()
 {
     delete ui;
-
-    disconnect(serialWorker);
 
     playbackTimer->stop();
     delete playbackTimer;

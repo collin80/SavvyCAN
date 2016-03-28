@@ -20,7 +20,7 @@ public:
     ~FirmwareUploaderWindow();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
 
 public slots:
     void gotTargettedFrame(int frameLoc);

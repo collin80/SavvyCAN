@@ -108,8 +108,6 @@ private:
     //canbus related data
     CANFrameModel *model;
     DBCHandler *dbcHandler;    
-    QThread serialWorkerThread;
-    SerialWorker *worker;
     QByteArray inputBuffer;
     QTimer updateTimer;
     QTime *elapsedTime;
@@ -147,9 +145,6 @@ private:
     QLabel lbStatusDatabase;
     int normalRowHeight;
     bool isConnected;
-    QSerialPortInfo portInfo;
-    QString connType, portName;
-    int canSpeed0, canSpeed1;
 
     //private methods
     void saveDecodedTextFile(QString);

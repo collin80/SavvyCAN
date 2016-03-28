@@ -29,7 +29,7 @@ public:
     ~FuzzingWindow();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
     void sendFrameBatch(const QList<CANFrame> *);
 
 private slots:

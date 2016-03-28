@@ -27,7 +27,7 @@ class FramePlaybackWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FramePlaybackWindow(const QVector<CANFrame> *frames, SerialWorker *worker, QWidget *parent = 0);
+    explicit FramePlaybackWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FramePlaybackWindow();
 
 private slots:
@@ -54,7 +54,7 @@ private slots:
     void loadFilters();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
     void sendFrameBatch(const QList<CANFrame> *);
 
 private:
@@ -65,7 +65,6 @@ private:
     const QVector<CANFrame> *modelFrames;
     int currentPosition;
     QTimer *playbackTimer;
-    SerialWorker *serialWorker;
     bool playbackActive;
     bool playbackForward;
     int whichBusSend;

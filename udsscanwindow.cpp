@@ -210,7 +210,7 @@ void UDSScanWindow::sendNextMsg()
     currIdx++;
     if (currIdx < sendingFrames.count())
     {
-        emit sendCANFrame(&sendingFrames[currIdx], sendingFrames[currIdx].bus);
+        emit sendCANFrame(&sendingFrames[currIdx]);
         waitTimer->start();
     }
     else

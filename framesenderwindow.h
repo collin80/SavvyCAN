@@ -31,7 +31,7 @@ private slots:
     void updatedFrames(int);
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
 
 private:
     Ui::FrameSenderWindow *ui;
