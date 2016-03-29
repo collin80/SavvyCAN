@@ -74,6 +74,7 @@ private:
     CANFrame *buildFrame;
     int can0Baud, can1Baud;
     bool can0Enabled, can1Enabled;
+    bool can0ListenOnly, can1ListenOnly;
     int deviceBuildNum;
     int deviceSingleWireMode;
     uint64_t txTimestampBasis;

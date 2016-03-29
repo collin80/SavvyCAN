@@ -92,7 +92,7 @@ void ConnectionWindow::handleOKButton()
     QString conn;
     int connType = 0;
     int whichRow = ui->tableConnections->selectionModel()->currentIndex().row();
-    qDebug() << whichRow;
+    qDebug() << "OK pressed. Row " << whichRow;
 
     if (whichRow > -1)
     {
@@ -193,7 +193,7 @@ void ConnectionWindow::receiveBusStatus(int bus, int speed, int status)
 void ConnectionWindow::handleConnSelectionChanged()
 {
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
-    qDebug() << selIdx;
+    qDebug() << "Selection: " << selIdx;
     if (selIdx == -1)
     {
         ui->btnOK->setText(tr("Create New Connection"));
@@ -220,7 +220,7 @@ void ConnectionWindow::handleConnSelectionChanged()
         ui->ckSingleWire->setChecked(bus->isSingleWire());
         int speed = bus->getSpeed();
         setSpeed(speed);
-        connModel->refreshView();
+        //connModel->refreshView();
     }
 }
 
@@ -265,7 +265,7 @@ void ConnectionWindow::setSpeed(int speed0)
 {
     bool found = false;
 
-    qDebug() << speed0;
+    qDebug() << "Set Speed " << speed0;
 
     for (int i = 0; i < ui->cbSpeed->count(); i++)
     {

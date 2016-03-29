@@ -378,7 +378,8 @@ void SerialWorker::procRXChar(unsigned char c)
         switch (rx_step)
         {
         case 0:
-            can0Enabled = c;
+            can0Enabled = (c & 0xF);
+            can0ListenOnly = (c >> 4);
             break;
         case 1:
             can0Baud = c;
@@ -393,7 +394,9 @@ void SerialWorker::procRXChar(unsigned char c)
             can0Baud |= c << 24;
             break;
         case 5:
-            can1Enabled = c;
+            can1Enabled = (c & 0xF);
+            can1ListenOnly = (c >> 4);
+            deviceSingleWireMode = (c >> 6);
             break;
         case 6:
             can1Baud = c;
@@ -409,12 +412,27 @@ void SerialWorker::procRXChar(unsigned char c)
             rx_state = IDLE;
             qDebug() << "Baud 0 = " << can0Baud;
             qDebug() << "Baud 1 = " << can1Baud;
-            if (!can1Enabled) can1Baud = 0;
-            if (!can0Enabled) can0Baud = 0;
+
+            can0Baud &= 0x80000000;
+            if (can0Enabled) can0Baud &= 0x40000000;
+            if (can0ListenOnly) can0Baud &= 0x20000000;
+
+            can1Baud &= 0x80000000;
+            if (can1Enabled) can1Baud &= 0x40000000;
+            if (can1ListenOnly) can1Baud &= 0x20000000;
+            if (deviceSingleWireMode > 0) can1Baud &= 0x10000000;
+
             isConnected = true;
             emit connectionSuccess();
-            emit busStatus(busBase, can0Baud, can0Enabled?0x49:0x48); //say that we're updating baud rate and set enabled status
-            emit busStatus(busBase + 1, can1Baud, can1Enabled?0x49:0x48);
+            int can0Status = 0x78; //updating everything we can update
+            int can1Status = 0x78;
+            if (can0Enabled) can0Status +=1;
+            if (can0ListenOnly) can0Status += 4;
+            if (can1Enabled) can1Status += 1;
+            if (deviceSingleWireMode > 0) can1Status += 2;
+            if (can1ListenOnly) can1Status += 4;
+            emit busStatus(busBase, can0Baud, can0Status);
+            emit busStatus(busBase + 1, can1Baud, can1Status);
             break;
         }
         rx_step++;
@@ -564,7 +582,49 @@ void SerialWorker::updateBusSettings(CAN_Bus *bus)
     if (busNum < 0) return;
     if (busNum >= numBuses) return;
     qDebug() << "About to update bus " << busNum << " on GVRET";
-    if (busNum == 0) can0Baud = bus->getSpeed();
-    if (busNum == 1) can1Baud = bus->getSpeed();
+    if (busNum == 0)
+    {
+        can0Baud = bus->getSpeed();
+        can0Baud &= 0x80000000;
+        if (bus->isActive())
+        {
+            can0Baud &= 0x40000000;
+            can0Enabled = true;
+        }
+        else can0Enabled = false;
+
+        if (bus->isListenOnly())
+        {
+            can0Baud &= 0x20000000;
+            can0ListenOnly = true;
+        }
+        else can0ListenOnly = false;
+    }
+    if (busNum == 1)
+    {
+        can1Baud = bus->getSpeed();
+        can1Baud &= 0x80000000;
+        if (bus->isActive())
+        {
+            can1Baud &= 0x40000000;
+            can1Enabled = true;
+        }
+        else can1Enabled = false;
+
+        if (bus->isListenOnly())
+        {
+            can1Baud &= 0x20000000;
+            can1ListenOnly = true;
+        }
+        else can1ListenOnly = false;
+
+        if (bus->isSingleWire())
+        {
+            can1Baud &= 0x10000000;
+            deviceSingleWireMode = 1;
+        }
+        else deviceSingleWireMode = 0;
+    }
+
     updateBaudRates(can0Baud,can1Baud);
 }
