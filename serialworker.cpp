@@ -205,7 +205,7 @@ void SerialWorker::sendFrameBatch(const QList<CANFrame> *frames)
     sendBulkMutex.unlock();
 }
 
-void SerialWorker::updateBaudRates(int Speed1, int Speed2)
+void SerialWorker::updateBaudRates(unsigned int Speed1, unsigned int Speed2)
 {
     QByteArray buffer;
     qDebug() << "Got signal to update bauds. 1: " << Speed1 <<" 2: " << Speed2;
