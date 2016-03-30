@@ -56,7 +56,10 @@ private slots:
     void handleRemoveConn();
     void handleRevert();
     void handleNewConn();
+    void handleEnableAll();
+    void handleDisableAll();
     void receiveBusStatus(int bus, int speed, int status);
+    void connectionSuccess(CANConnection *conn);
 
 private:
     Ui::ConnectionWindow *ui;

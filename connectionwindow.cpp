@@ -58,6 +58,8 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     connect(ui->btnRevert, &QPushButton::clicked, this, &ConnectionWindow::handleRevert);
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ConnectionWindow::handleConnSelectionChanged);
     connect(ui->btnNewConn, &QPushButton::clicked, this, &ConnectionWindow::handleNewConn);
+    connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
+    connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -80,11 +82,53 @@ void ConnectionWindow::handleNewConn()
     handleConnSelectionChanged();
 }
 
+void ConnectionWindow::handleEnableAll()
+{
+
+}
+
+void ConnectionWindow::handleDisableAll()
+{
+
+}
+
 void ConnectionWindow::handleConnTypeChanged()
 {
     if (ui->rbGVRET->isChecked()) getSerialPorts();
     if (ui->rbKvaser->isChecked()) getKvaserPorts();
     if (ui->rbSocketCAN->isChecked()) getSocketcanPorts();
+}
+
+void ConnectionWindow::connectionSuccess(CANConnection *conn)
+{
+    CAN_Bus bus;
+    bus.active = true;
+    bus.busNum = conn->getBusBase();
+    bus.connection = conn;
+    bus.listenOnly = ui->ckListenOnly->isChecked();
+    bus.singleWire = ui->ckSingleWire->isChecked();
+
+    if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0; //default speed
+    else if (ui->cbSpeed->currentIndex() == 1)
+    {
+        bus.speed = 0;
+        bus.active = false;
+    }
+    else bus.speed = ui->cbSpeed->currentText().toInt();
+    connModel->addBus(bus);
+
+    int numBuses = conn->getNumBuses();
+    for (int i = 1; i < numBuses; i++)
+    {
+        bus.active = false;
+        bus.listenOnly = false;
+        bus.singleWire = false;
+        bus.speed = 250000;
+        bus.busNum = conn->getBusBase() + i;
+        bus.connection = conn;
+        connModel->addBus(bus);
+        qDebug() << "Added bus " << bus.busNum;
+    }
 }
 
 void ConnectionWindow::handleOKButton()
@@ -101,6 +145,7 @@ void ConnectionWindow::handleOKButton()
         CAN_Bus *bus = connModel->getBus(whichRow);
         bus->setListenOnly(ui->ckListenOnly->isChecked());
         bus->setSingleWire(ui->ckSingleWire->isChecked());
+        bus->setEnabled(ui->ckEnabled->isChecked());
         if (ui->cbSpeed->currentIndex() == 1)
         {
             bus->speed = 0;
@@ -109,11 +154,12 @@ void ConnectionWindow::handleOKButton()
         else if (ui->cbSpeed->currentIndex() > 1)
         {
             bus->setSpeed(ui->cbSpeed->currentText().toInt());
-        }
+        }        
         //call through signal/slot interface without using connect
         QMetaObject::invokeMethod(bus->connection, "updateBusSettings",
                                   Qt::QueuedConnection,
                                   Q_ARG(CAN_Bus *, bus));
+        connModel->refreshView();
     }
     else //new connection
     {
@@ -121,38 +167,10 @@ void ConnectionWindow::handleOKButton()
         {            
             SerialWorker *serial = new SerialWorker(canModel, connModel->rowCount());
             connect(serial, SIGNAL(busStatus(int,int,int)), this, SLOT(receiveBusStatus(int,int,int)));
+            connect(serial, SIGNAL(connectionSuccess(CANConnection*)), this, SLOT(connectionSuccess(CANConnection*)));
             connModel->addConnection(serial);
 
             qDebug() << "Setup initial connection object";
-
-            CAN_Bus bus;
-            bus.active = true;
-            bus.busNum = serial->getBusBase();
-            bus.connection = serial;
-            bus.listenOnly = ui->ckListenOnly->isChecked();
-            bus.singleWire = ui->ckSingleWire->isChecked();
-
-            if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0; //default speed
-            else if (ui->cbSpeed->currentIndex() == 1)
-            {
-                bus.speed = 0;
-                bus.active = false;
-            }
-            else bus.speed = ui->cbSpeed->currentText().toInt();
-            connModel->addBus(bus);
-
-            int numBuses = serial->getNumBuses();
-            for (int i = 1; i < numBuses; i++)
-            {
-                bus.active = false;
-                bus.listenOnly = false;
-                bus.singleWire = false;
-                bus.speed = 250000;
-                bus.busNum = serial->getBusBase() + i;
-                bus.connection = serial;
-                connModel->addBus(bus);
-                qDebug() << "Added bus " << bus.busNum;
-            }            
 
             //call through signal/slot interface without using connect
             QMetaObject::invokeMethod(serial, "updatePortName",
@@ -204,6 +222,7 @@ void ConnectionWindow::handleConnSelectionChanged()
         ui->cbPort->setCurrentIndex(0);
         ui->ckListenOnly->setChecked(false);
         ui->ckSingleWire->setChecked(false);
+        ui->ckEnabled->setChecked(true);
     }
     else
     {
@@ -218,9 +237,9 @@ void ConnectionWindow::handleConnSelectionChanged()
         if (bus->connection->getConnTypeName() == "SOCKETCAN") ui->rbSocketCAN->setChecked(true);
         ui->ckListenOnly->setChecked(bus->isListenOnly());
         ui->ckSingleWire->setChecked(bus->isSingleWire());
+        ui->ckEnabled->setChecked(bus->isActive());
         int speed = bus->getSpeed();
         setSpeed(speed);
-        //connModel->refreshView();
     }
 }
 

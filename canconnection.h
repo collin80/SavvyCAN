@@ -53,8 +53,8 @@ signals:
     void error(const QString &);
     void frameUpdateRapid(int);
     void frameUpdate(int);
-    void connectionSuccess();
-    void connectionFailure();
+    void connectionSuccess(CANConnection *);
+    void connectionFailure(CANConnection *);
     void deviceInfo(int, int); //First param = driver version (or version of whatever you want), second param a status byte
 
     //bus number, bus speed, status (bit 0 = enabled, 1 = single wire, 2 = listen only)
