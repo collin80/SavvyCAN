@@ -53,7 +53,7 @@ public slots:
     void closeSerialPort();
     void sendFrame(const CANFrame *) override;
     void sendFrameBatch(const QList<CANFrame> *) override;
-    void updateBaudRates(int, int);
+    void updateBaudRates(unsigned int, unsigned int);
     //void stopFrameCapture(int) override;
     //void startFrameCapture(int)  override;
     void updatePortName(QString) override; //string version of the port to connect to. This base doesnt know a thing about this value
