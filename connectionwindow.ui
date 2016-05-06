@@ -34,18 +34,11 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="btnNewConn">
-       <property name="text">
-        <string>New Connection</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <layout class="QHBoxLayout" name="horizontalLayout_5">
        <item>
-        <widget class="QPushButton" name="btnBusActivate">
+        <widget class="QPushButton" name="btnNewConn">
          <property name="text">
-          <string>Activate Selected Connection</string>
+          <string>New Connection</string>
          </property>
         </widget>
        </item>
@@ -149,6 +142,13 @@
       <widget class="QCheckBox" name="ckListenOnly">
        <property name="text">
         <string>Listen Only Mode</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="ckEnabled">
+       <property name="text">
+        <string>Enabled</string>
        </property>
       </widget>
      </item>

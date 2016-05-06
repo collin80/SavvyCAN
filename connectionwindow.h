@@ -54,6 +54,8 @@ private slots:
     void handleConnTypeChanged();
     void handleConnSelectionChanged();
     void handleRemoveConn();
+    void handleEnableAll();
+    void handleDisableAll();
     void handleRevert();
     void handleNewConn();
     void receiveBusStatus(int bus, int speed, int status);

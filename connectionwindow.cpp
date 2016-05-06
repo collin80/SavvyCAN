@@ -58,6 +58,9 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     connect(ui->btnRevert, &QPushButton::clicked, this, &ConnectionWindow::handleRevert);
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ConnectionWindow::handleConnSelectionChanged);
     connect(ui->btnNewConn, &QPushButton::clicked, this, &ConnectionWindow::handleNewConn);
+    connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
+    connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
+    connect(ui->btnRemoveBus, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -101,6 +104,7 @@ void ConnectionWindow::handleOKButton()
         CAN_Bus *bus = connModel->getBus(whichRow);
         bus->setListenOnly(ui->ckListenOnly->isChecked());
         bus->setSingleWire(ui->ckSingleWire->isChecked());
+        bus->setEnabled(ui->ckEnabled->isChecked());
         if (ui->cbSpeed->currentIndex() == 1)
         {
             bus->speed = 0;
@@ -126,7 +130,7 @@ void ConnectionWindow::handleOKButton()
             qDebug() << "Setup initial connection object";
 
             CAN_Bus bus;
-            bus.active = true;
+            bus.active = ui->ckEnabled->isChecked();
             bus.busNum = serial->getBusBase();
             bus.connection = serial;
             bus.listenOnly = ui->ckListenOnly->isChecked();
@@ -204,6 +208,7 @@ void ConnectionWindow::handleConnSelectionChanged()
         ui->cbPort->setCurrentIndex(0);
         ui->ckListenOnly->setChecked(false);
         ui->ckSingleWire->setChecked(false);
+        ui->ckEnabled->setChecked(true);
     }
     else
     {
@@ -211,13 +216,14 @@ void ConnectionWindow::handleConnSelectionChanged()
         ui->cbPort->setEnabled(false);
         ui->rbGVRET->setEnabled(false);
         ui->rbKvaser->setEnabled(false);
-        ui->rbSocketCAN->setEnabled(false);
+        ui->rbSocketCAN->setEnabled(false);        
         CAN_Bus *bus = connModel->getBus(selIdx);
         if (bus->connection->getConnTypeName() == "GVRET") ui->rbGVRET->setChecked(true);
         if (bus->connection->getConnTypeName() == "KVASER") ui->rbKvaser->setChecked(true);
         if (bus->connection->getConnTypeName() == "SOCKETCAN") ui->rbSocketCAN->setChecked(true);
         ui->ckListenOnly->setChecked(bus->isListenOnly());
         ui->ckSingleWire->setChecked(bus->isSingleWire());
+        ui->ckEnabled->setChecked(bus->isActive());
         int speed = bus->getSpeed();
         setSpeed(speed);
         //connModel->refreshView();
@@ -333,6 +339,16 @@ void ConnectionWindow::handleRemoveConn()
 }
 
 void ConnectionWindow::handleRevert()
+{
+
+}
+
+void ConnectionWindow::handleEnableAll()
+{
+
+}
+
+void ConnectionWindow::handleDisableAll()
 {
 
 }
