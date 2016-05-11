@@ -24,9 +24,13 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     ui->colorSwatch->setPalette(p);
 
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
-    connect(ui->cbSignals, SIGNAL(currentIndexChanged(int)), this, SLOT(fillFormFromSignal(int)));
-    connect(ui->rbSignalGraph, SIGNAL(toggled(bool)), this, SLOT(setSignalActive(bool)));
-    connect(ui->rbStandardGraph, SIGNAL(toggled(bool)), this, SLOT(setStandardActive(bool)));
+    connect(ui->gridData, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->txtDataLen, SIGNAL(textChanged(QString)), this, SLOT(handleDataLenUpdate()));
+    connect(ui->cbIntel, SIGNAL(toggled(bool)), this, SLOT(drawBitfield()));
+    connect(ui->btnCopySignal, SIGNAL(clicked(bool)), this, SLOT(copySignalToParamsUI()));
+
+    startBit = 0;
+    dataLen = 1;
 
     loadMessages();
 }
@@ -34,6 +38,12 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
 NewGraphDialog::~NewGraphDialog()
 {
     delete ui;
+}
+
+void NewGraphDialog::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+    loadMessages();
 }
 
 void NewGraphDialog::addButtonClicked()
@@ -59,91 +69,47 @@ void NewGraphDialog::clearParams()
     ui->txtScale->clear();
     ui->txtStride->clear();
     ui->txtName->clear();
-    ui->txtData->clear();
-    ui->rbStandardGraph->setChecked(true);
-    setStandardActive(true);
-
 }
 
 void NewGraphDialog::setParams(GraphParams &params)
 {
-    if (params.isDBCSignal)
-    {
-        clearParams();
-        setSignalActive(true);
-        //loadMessages();
+    ui->txtBias->setText(QString::number(params.bias));
+    ui->txtMask->setText(Utility::formatNumber(params.mask));
+    ui->txtScale->setText(QString::number(params.scale));
+    ui->txtStride->setText(QString::number(params.stride));
+    ui->cbSigned->setChecked(params.isSigned);
 
-    }
-    else
-    {
-        setStandardActive(true);        
-        ui->txtBias->setText(QString::number(params.bias));
-        ui->txtMask->setText(Utility::formatNumber(params.mask));
-        ui->txtScale->setText(QString::number(params.scale));
-        ui->txtStride->setText(QString::number(params.stride));
-        ui->cbSigned->setChecked(params.isSigned);
-
-        if (params.endByte > -1)
-        {
-            ui->txtData->setText(QString::number(params.startByte) + "-" + QString::number(params.endByte));
-        }
-        else
-        {
-            ui->txtData->setText(QString::number(params.startByte));
-        }
-    }
+    startBit = params.startBit;
+    dataLen = params.numBits;
 
     ui->txtID->setText(Utility::formatNumber(params.ID));
     ui->txtName->setText(params.graphName);
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
     ui->colorSwatch->setPalette(p);
+
+    drawBitfield();
 }
 
 void NewGraphDialog::getParams(GraphParams &params)
 {
-    params.isDBCSignal = ui->rbSignalGraph->isChecked();
     params.color = ui->colorSwatch->palette().button().color();
     params.graphName = ui->txtName->text();
 
-    if (params.isDBCSignal)
-    {
-        params.signal = ui->cbSignals->currentText();
-        params.ID = Utility::ParseStringToNum(ui->txtID->text());
-        params.bias = 0;
-        params.isSigned = false;
-        params.mask = 0;
-        params.scale = 1;
-        params.bias = 0;
-        params.stride = 1;
+    params.ID = Utility::ParseStringToNum(ui->txtID->text());
+    params.bias = ui->txtBias->text().toFloat();
+    params.isSigned = ui->cbSigned->isChecked();
+    params.mask = Utility::ParseStringToNum(ui->txtMask->text());
+    params.scale = ui->txtScale->text().toFloat();
+    params.stride = Utility::ParseStringToNum(ui->txtStride->text());
 
-    }
-    else {
-        params.ID = Utility::ParseStringToNum(ui->txtID->text());
-        params.bias = ui->txtBias->text().toFloat();
-        params.isSigned = ui->cbSigned->isChecked();
-        params.mask = Utility::ParseStringToNum(ui->txtMask->text());
-        params.scale = ui->txtScale->text().toFloat();
-        params.stride = Utility::ParseStringToNum(ui->txtStride->text());
-        params.signal = "";
+    params.startBit = startBit;
+    params.numBits = dataLen;
 
-        QStringList values = ui->txtData->text().split('-');
-        params.startByte = -1;
-        params.endByte = -1;
-        if (values.count() > 0)
-        {
-            params.startByte = values[0].toInt();
-            if (values.count() > 1)
-            {
-                params.endByte = values[1].toInt();
-            }
-        }
-
-        //now catch stupidity and bring it to defaults
-        if (params.mask == 0) params.mask = 0xFFFFFFFF;
-        if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
-        if (params.stride < 1) params.stride = 1;
-    }
+    //now catch stupidity and bring it to defaults
+    if (params.mask == 0) params.mask = 0xFFFFFFFF;
+    if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
+    if (params.stride < 1) params.stride = 1;
 }
 
 void NewGraphDialog::loadMessages()
@@ -174,73 +140,77 @@ void NewGraphDialog::loadSignals(int idx)
     }
 }
 
-void NewGraphDialog::fillFormFromSignal(int idx)
+void NewGraphDialog::bitfieldClicked(int x,int y)
 {
-    Q_UNUSED(idx);
-    GraphParams params;
+    int bit = (y * 8 + (7-x));
+    int res;
+
+    qDebug() << "Clicked bit: " << bit;
+    startBit = bit;
+    drawBitfield();
+}
+
+void NewGraphDialog::drawBitfield()
+{
+    int64_t bitField = 0;
+    int endBit, sBit;
+
+    bitField |= 1ull << (startBit); //make the start bit a different color to set it apart
+    ui->gridData->setReference((unsigned char *)&bitField, false);
+
+    if (ui->cbIntel->isChecked())
+    {
+        endBit = startBit + dataLen - 1;
+        if (startBit < 0) startBit = 0;
+        if (endBit > 63) endBit = 63;
+        for (int y = startBit; y <= endBit; y++)
+        {
+            bitField |= 1ull << y;
+        }
+    }
+    else //big endian / motorola format
+    {
+        //much more irritating than the intel version...
+        int size = dataLen;
+        sBit = startBit;
+        while (size > 0)
+        {
+            bitField |= 1ull << sBit;
+            size--;
+            if ((sBit % 8) == 0) sBit += 15;
+            else sBit--;
+            if (sBit > 63) sBit = 63;
+        }
+    }
+
+    ui->gridData->updateData((unsigned char *)&bitField, true);
+}
+
+void NewGraphDialog::handleDataLenUpdate()
+{
+    dataLen = ui->txtDataLen->text().toInt();
+    if (dataLen < 1) dataLen = 1;
+    if (dataLen > 63) dataLen = 63;
+    drawBitfield();
+}
+
+void NewGraphDialog::copySignalToParamsUI()
+{
     DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
-
-    if (msg == NULL) return;
-
+    if (!msg) return;
     DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
+    if (!sig) return;
 
-    if (sig == NULL) return;
-
-    params.graphName = sig->name;
-    params.ID = msg->ID;
-    //params.bias = sig->bias;
-    //params.scale = sig->factor;
-    //params.stride = 1;
-    //params.mask = (1 << (sig->signalSize)) - 1;
-    //if (sig->valType == SIGNED_INT) params.isSigned = true;
-    //else params.isSigned = false;
-    params.color = ui->colorSwatch->palette().color(QPalette::Button);
-    /*
-    if (sig->intelByteOrder)
-    {
-        //for this ordering the byte order is reserved and starting byte
-        //will be the higher value
-        params.endByte = sig->startBit / 8;
-        params.startByte = (sig->startBit + sig->signalSize - 1) / 8;
-    }
-    else
-    {
-        //for this ordering it goes in normal numerical order
-        params.startByte = sig->startBit / 8;
-        params.endByte = (sig->startBit + sig->signalSize - 1) / 8;
-    }
-    */
-    setParams(params);
-}
-
-void NewGraphDialog::setSignalActive(bool state)
-{
-    if (!state) return;
-    ui->rbSignalGraph->setChecked(true);
-    ui->rbStandardGraph->setChecked(false);
-    ui->cbMessages->setEnabled(true);
-    ui->cbSignals->setEnabled(true);
-    ui->cbSigned->setEnabled(false);
-    ui->txtBias->setEnabled(false);
-    ui->txtData->setEnabled(false);
-    ui->txtID->setEnabled(false);
-    ui->txtMask->setEnabled(false);
-    ui->txtScale->setEnabled(false);
-    ui->txtStride->setEnabled(false);
-}
-
-void NewGraphDialog::setStandardActive(bool state)
-{
-    if (!state) return;
-    ui->rbStandardGraph->setChecked(true);
-    ui->rbSignalGraph->setChecked(false);
-    ui->cbMessages->setEnabled(false);
-    ui->cbSignals->setEnabled(false);
-    ui->cbSigned->setEnabled(true);
-    ui->txtBias->setEnabled(true);
-    ui->txtData->setEnabled(true);
-    ui->txtID->setEnabled(true);
-    ui->txtMask->setEnabled(true);
-    ui->txtScale->setEnabled(true);
-    ui->txtStride->setEnabled(true);
+    startBit = sig->startBit;
+    ui->txtBias->setText(QString::number(sig->bias));
+    ui->txtDataLen->setText(QString::number(sig->signalSize));
+    ui->txtID->setText(Utility::formatNumber(msg->ID));
+    ui->txtMask->setText("0xFFFFFFFF");
+    ui->txtName->setText(sig->name);
+    ui->txtScale->setText(QString::number(sig->factor));
+    ui->txtStride->setText("1");
+    ui->cbIntel->setChecked(sig->intelByteOrder);
+    if (sig->valType == SIGNED_INT) ui->cbSigned->setChecked(true);
+        else ui->cbSigned->setChecked(false);
+    drawBitfield();
 }
