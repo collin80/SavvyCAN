@@ -78,6 +78,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->txtScale->setText(QString::number(params.scale));
     ui->txtStride->setText(QString::number(params.stride));
     ui->cbSigned->setChecked(params.isSigned);
+    ui->cbIntel->setChecked(params.intelFormat);
 
     startBit = params.startBit;
     dataLen = params.numBits;
@@ -99,6 +100,7 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.ID = Utility::ParseStringToNum(ui->txtID->text());
     params.bias = ui->txtBias->text().toFloat();
     params.isSigned = ui->cbSigned->isChecked();
+    params.intelFormat = ui->cbIntel->isChecked();
     params.mask = Utility::ParseStringToNum(ui->txtMask->text());
     params.scale = ui->txtScale->text().toFloat();
     params.stride = Utility::ParseStringToNum(ui->txtStride->text());

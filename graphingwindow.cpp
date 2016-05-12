@@ -859,7 +859,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     for (int j = 0; j < numEntries; j++)
     {
-        tempVal = Utility::processIntegerSignal(frameCache[j /** params.stride*/].data, sBit, bits, intelFormat, isSigned) & params.mask;
+        tempVal = Utility::processIntegerSignal(frameCache[j * params.stride].data, sBit, bits, intelFormat, isSigned); //& params.mask;
         //qDebug() << tempVal;
         if (secondsMode)
         {
