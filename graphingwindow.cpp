@@ -748,7 +748,7 @@ void GraphingWindow::loadDefinitions()
 
                 QList<QByteArray> tokens = line.split(',');
 
-                if (tokens[0] == "X")
+                if (tokens[0] == "X") //newest format based around signals
                 {
                     gp.ID = tokens[1].toInt(NULL, 16);
                     gp.mask = tokens[2].toULongLong(NULL, 16);
@@ -768,6 +768,119 @@ void GraphingWindow::loadDefinitions()
                     else
                         gp.graphName = QString();
                     createGraph(gp, true);
+                }
+                else //one of the two older formats then
+                {
+                    gp.ID = tokens[0].toInt(NULL, 16);
+                    if (tokens[1] == "S") //old signal based graph definition
+                    {
+                        //tokens[2] is the signal name. Need to use the message ID and this name to look it up
+                        DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(gp.ID);
+                        if (msg != NULL)
+                        {
+                            DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(tokens[2]);
+                            if (sig)
+                            {
+                                gp.mask = 0xFFFFFFFF;
+                                gp.bias = sig->bias;
+                                gp.color.setRed(tokens[3].toInt());
+                                gp.color.setGreen(tokens[4].toInt());
+                                gp.color.setBlue(tokens[5].toInt());
+                                gp.graphName = sig->name;
+                                gp.intelFormat = sig->intelByteOrder;
+                                if (sig->valType == SIGNED_INT) gp.isSigned = true;
+                                    else gp.isSigned = false;
+                                gp.numBits = sig->signalSize;
+                                gp.scale = sig->factor;
+                                gp.startBit = sig->startBit;
+                                gp.stride = 1;
+                                createGraph(gp, true);
+                            }
+                        }
+                    }
+                    else //old standard graph definition
+                    {
+                        //hard part - this all changed drastically
+                        //the difference between intel and motorola format is whether
+                        //start is larger than end byte or not.
+                        uint64_t oldMask = tokens[1].toULongLong(NULL, 16);
+                        int oldStart = tokens[2].toInt();
+                        int oldEnd = tokens[3].toInt();
+
+                        if (oldEnd > oldStart) //motorola / big endian - hell...
+                        {
+                            gp.intelFormat = false;
+                            //for now just naively use the entire bytes called for.
+                            gp.startBit = 8 * oldStart + 7;
+                            gp.numBits = (oldEnd - oldStart + 1) * 8;
+                        }
+                        else if (oldStart > oldEnd) //intel / little endian - easiest of multi-byte types
+                        {
+                            //have to find both ends. start bit is somewhere in oldEnd and last bit is somewhere in
+                            //oldStart.
+
+                            gp.intelFormat = true;
+
+                            //start by setting a safe default if nothing else pans out.
+                            gp.startBit = 8 * oldEnd;
+
+                            int numBytes = oldStart - oldEnd + 1;
+                            gp.numBits = numBytes * 8;
+
+                            for (int b = 0; b < 8; b++)
+                            {
+                                if (oldMask & (1 << b))
+                                {
+                                    gp.startBit = (8 * oldEnd) + b;
+                                    break;
+                                }
+                            }
+
+                            for (int c = 7; c >= 0; c--)
+                            {
+                                if ( oldMask & (1<<(((numBytes - 1) * 8) + c)) )
+                                {
+                                    gp.numBits -= (7-c);
+                                    break;
+                                }
+                            }
+                        }
+                        else //within a single byte - easier than the above two by a bit - always use intel format for this
+                        {
+                            gp.intelFormat = true;
+                            oldMask = oldMask & 0xFF; //only this part matters
+                            //for intel format we give startbit as the lowest bit number in the signal
+                            //we can find that by going backward from bit 0 to 7 and picking the first bit that is 1.
+                            //that's our start bit (+ 8*oldStart)
+                            //set default first in case the rest falls through
+                            gp.startBit = 8 * oldStart;
+                            gp.numBits = 8;
+                            for (int b = 0; b < 8; b++)
+                            {
+                                if (oldMask & (1 << b))
+                                {
+                                    gp.startBit = 8 * oldStart + b;
+                                    gp.numBits = 8 - b;
+                                    break;
+                                }
+                            }
+                        }
+
+                        //the rest is easy stuff
+                        if (tokens[4] == "Y") gp.isSigned = true;
+                            else gp.isSigned = false;
+                        gp.bias = tokens[5].toFloat();
+                        gp.scale = tokens[6].toFloat();
+                        gp.stride = tokens[7].toInt();
+                        gp.color.setRed(tokens[8].toInt());
+                        gp.color.setGreen(tokens[9].toInt());
+                        gp.color.setBlue(tokens[10].toInt());
+                        if (tokens.length() > 11)
+                            gp.graphName = tokens[11];
+                        else
+                            gp.graphName = QString();
+                        createGraph(gp, true);
+                    }
                 }
             }
         }
@@ -808,7 +921,7 @@ void GraphingWindow::addNewGraph()
 void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 {
     int64_t tempVal; //64 bit temp value.
-    tempVal = Utility::processIntegerSignal(frame.data, params.startBit, params.numBits, params.intelFormat, params.isSigned) & params.mask;
+    tempVal = Utility::processIntegerSignal(frame.data, params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
     if (secondsMode)
     {
         params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);

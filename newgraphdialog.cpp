@@ -82,7 +82,7 @@ void NewGraphDialog::setParams(GraphParams &params)
 
     startBit = params.startBit;
     dataLen = params.numBits;
-
+    ui->txtDataLen->setText(QString::number(dataLen));
     ui->txtID->setText(Utility::formatNumber(params.ID));
     ui->txtName->setText(params.graphName);
     QPalette p = ui->colorSwatch->palette();
