@@ -764,8 +764,11 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
         DBCFile newFile;
         newFile.loadFile(filename);
         loadedFiles.append(newFile);
+
+        return &loadedFiles.last();
     }
-    return &loadedFiles.last();
+
+    return NULL;
 }
 
 void DBCHandler::removeDBCFile(int idx)
