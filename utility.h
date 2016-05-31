@@ -178,7 +178,7 @@ public:
                  * actual signal. This extends the sign bits out so that the integer result reads as the proper negative
                  * value. We dont need to do any of this if the sign bit wasn't set.
                 */
-                int64_t signedMask = ~((1ULL << sigSize) - 1);
+                uint64_t signedMask = ~((1ULL << sigSize) - 1);
                 result = (-1LL & signedMask) | result;
             }
         }

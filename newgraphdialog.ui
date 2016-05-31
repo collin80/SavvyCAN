@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>492</width>
-    <height>340</height>
+    <width>681</width>
+    <height>640</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,31 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
-     <item>
-      <widget class="QRadioButton" name="rbStandardGraph">
-       <property name="text">
-        <string>Standard Graph</string>
-       </property>
-       <property name="checked">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QRadioButton" name="rbSignalGraph">
-       <property name="text">
-        <string>DBC Signal Graph</string>
-       </property>
-       <property name="checked">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="3,2">
      <item>
       <layout class="QFormLayout" name="formLayout">
        <item row="1" column="0">
@@ -55,28 +31,25 @@
        <item row="2" column="0">
         <widget class="QLabel" name="label_2">
          <property name="text">
-          <string>Data:</string>
+          <string>Start Bit:</string>
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
-        <widget class="QLineEdit" name="txtData"/>
-       </item>
-       <item row="3" column="0">
+       <item row="5" column="0">
         <widget class="QLabel" name="label_3">
          <property name="text">
           <string>Signed:</string>
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="5" column="1">
         <widget class="QCheckBox" name="cbSigned">
          <property name="text">
           <string/>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
+       <item row="6" column="0">
         <widget class="QLabel" name="label_4">
          <property name="frameShape">
           <enum>QFrame::NoFrame</enum>
@@ -86,47 +59,47 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="6" column="1">
         <widget class="QLineEdit" name="txtMask"/>
        </item>
-       <item row="5" column="0">
+       <item row="7" column="0">
         <widget class="QLabel" name="label_5">
          <property name="text">
           <string>Bias:</string>
          </property>
         </widget>
        </item>
-       <item row="5" column="1">
+       <item row="7" column="1">
         <widget class="QLineEdit" name="txtBias"/>
        </item>
-       <item row="6" column="0">
+       <item row="8" column="0">
         <widget class="QLabel" name="label_6">
          <property name="text">
           <string>Scale</string>
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="8" column="1">
         <widget class="QLineEdit" name="txtScale"/>
        </item>
-       <item row="7" column="0">
+       <item row="9" column="0">
         <widget class="QLabel" name="label_7">
          <property name="text">
           <string>Stride</string>
          </property>
         </widget>
        </item>
-       <item row="7" column="1">
+       <item row="9" column="1">
         <widget class="QLineEdit" name="txtStride"/>
        </item>
-       <item row="8" column="0">
+       <item row="10" column="0">
         <widget class="QLabel" name="label_8">
          <property name="text">
           <string>Color</string>
          </property>
         </widget>
        </item>
-       <item row="8" column="1">
+       <item row="10" column="1">
         <widget class="QPushButton" name="colorSwatch">
          <property name="autoFillBackground">
           <bool>true</bool>
@@ -139,7 +112,7 @@
          </property>
         </widget>
        </item>
-       <item row="9" column="1">
+       <item row="11" column="1">
         <widget class="QPushButton" name="btnAddGraph">
          <property name="text">
           <string>Add this graph</string>
@@ -155,6 +128,46 @@
        </item>
        <item row="0" column="1">
         <widget class="QLineEdit" name="txtName"/>
+       </item>
+       <item row="2" column="1">
+        <widget class="CANDataGrid" name="gridData" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>290</height>
+          </size>
+         </property>
+         <property name="baseSize">
+          <size>
+           <width>150</width>
+           <height>150</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>Intel Format</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QCheckBox" name="cbIntel">
+         <property name="text">
+          <string/>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>Data Len:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="txtDataLen"/>
        </item>
       </layout>
      </item>
@@ -214,12 +227,40 @@
        <item>
         <widget class="QComboBox" name="cbSignals"/>
        </item>
+       <item>
+        <widget class="QPushButton" name="btnCopySignal">
+         <property name="text">
+          <string>Copy Signal Parameters</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
       </layout>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CANDataGrid</class>
+   <extends>QWidget</extends>
+   <header>candatagrid.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

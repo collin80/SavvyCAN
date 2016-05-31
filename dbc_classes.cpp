@@ -180,6 +180,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;
     }
+    /*TODO: It should be noted that the below floating point has not even been tested. For shame! Test it!*/
     else if (valType == SP_FLOAT)
     {
         //The theory here is that we force the integer signal code to treat this as

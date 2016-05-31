@@ -685,33 +685,24 @@ void GraphingWindow::saveDefinitions()
         QList<GraphParams>::iterator iter;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
         {
+            outFile->write("X,");
             outFile->write(QString::number(iter->ID, 16).toUtf8());
             outFile->putChar(',');
-            if (iter->isDBCSignal)
-            {
-                outFile->putChar('S');
-                outFile->putChar(',');
-                outFile->write(iter->signal.toUtf8());
-                outFile->putChar(',');
-            }
-            else
-            {
-                outFile->write(QString::number(iter->mask, 16).toUtf8());
-                outFile->putChar(',');
-                outFile->write(QString::number(iter->startByte).toUtf8());
-                outFile->putChar(',');
-                outFile->write(QString::number(iter->endByte).toUtf8());
-                outFile->putChar(',');
-                if (iter->isSigned) outFile->putChar('Y');
-                    else outFile->putChar('N');
-                outFile->putChar(',');
-                outFile->write(QString::number(iter->bias).toUtf8());
-                outFile->putChar(',');
-                outFile->write(QString::number(iter->scale).toUtf8());
-                outFile->putChar(',');
-                outFile->write(QString::number(iter->stride).toUtf8());
-                outFile->putChar(',');
-            }
+            outFile->write(QString::number(iter->mask, 16).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->startBit).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->numBits).toUtf8());
+            outFile->putChar(',');
+            if (iter->isSigned) outFile->putChar('Y');
+                else outFile->putChar('N');
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->bias).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->scale).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->stride).toUtf8());
+            outFile->putChar(',');
             outFile->write(QString::number(iter->color.red()).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->color.green()).toUtf8());
@@ -729,7 +720,6 @@ void GraphingWindow::loadDefinitions()
 {
     QString filename;
     QFileDialog dialog;
-    bool dbcMissing = false;
 
     QStringList filters;
     filters.append(QString(tr("Graph definition (*.gdf)")));
@@ -755,66 +745,146 @@ void GraphingWindow::loadDefinitions()
             if (line.length() > 2)
             {
                 GraphParams gp;
-                QList<QByteArray> tokens = line.split(',');
-                gp.isDBCSignal = false;
 
-                gp.ID = tokens[0].toInt(NULL, 16);
-                if (tokens[1] == "S")
+                QList<QByteArray> tokens = line.split(',');
+
+                if (tokens[0] == "X") //newest format based around signals
                 {
-                    gp.isDBCSignal = true;
-                    //tokens[2] is the signal name. Need to use the message ID and this name to look it up
-                    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(gp.ID);
-                    if (msg != NULL)
-                    {
-                        DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(tokens[2]);
-                        if (sig == NULL) dbcMissing = true;
-                        gp.signal = tokens[2];
-                    }
-                    else
-                    {
-                        gp.signal = "";
-                        dbcMissing = true;
-                    }
-                }
-                else
-                {
-                    gp.mask = tokens[1].toULongLong(NULL, 16);
-                    qDebug() << gp.mask;
-                    gp.startByte = tokens[2].toInt();
-                    gp.endByte = tokens[3].toInt();
-                    if (tokens[4] == "Y") gp.isSigned = true;
+                    gp.ID = tokens[1].toInt(NULL, 16);
+                    gp.mask = tokens[2].toULongLong(NULL, 16);
+                    gp.startBit = tokens[3].toInt();
+                    gp.numBits = tokens[4].toInt();
+                    if (tokens[5] == "Y") gp.isSigned = true;
                         else gp.isSigned = false;
-                    gp.bias = tokens[5].toFloat();
-                    gp.scale = tokens[6].toFloat();
-                    gp.stride = tokens[7].toInt();
-                }
-                if (!gp.isDBCSignal)
-                {
-                    gp.color.setRed(tokens[8].toInt());
-                    gp.color.setGreen(tokens[9].toInt());
-                    gp.color.setBlue(tokens[10].toInt());
-                    if (tokens.length() > 11)
-                        gp.graphName = tokens[11];
+                    gp.bias = tokens[6].toFloat();
+                    gp.scale = tokens[7].toFloat();
+                    gp.stride = tokens[8].toInt();
+
+                    gp.color.setRed(tokens[9].toInt());
+                    gp.color.setGreen(tokens[10].toInt());
+                    gp.color.setBlue(tokens[11].toInt());
+                    if (tokens.length() > 12)
+                        gp.graphName = tokens[12];
                     else
                         gp.graphName = QString();
+                    createGraph(gp, true);
                 }
-                else
+                else //one of the two older formats then
                 {
-                    gp.color.setRed(tokens[3].toInt());
-                    gp.color.setGreen(tokens[4].toInt());
-                    gp.color.setBlue(tokens[5].toInt());
-                    gp.graphName = tokens[6];
+                    gp.ID = tokens[0].toInt(NULL, 16);
+                    if (tokens[1] == "S") //old signal based graph definition
+                    {
+                        //tokens[2] is the signal name. Need to use the message ID and this name to look it up
+                        DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(gp.ID);
+                        if (msg != NULL)
+                        {
+                            DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(tokens[2]);
+                            if (sig)
+                            {
+                                gp.mask = 0xFFFFFFFF;
+                                gp.bias = sig->bias;
+                                gp.color.setRed(tokens[3].toInt());
+                                gp.color.setGreen(tokens[4].toInt());
+                                gp.color.setBlue(tokens[5].toInt());
+                                gp.graphName = sig->name;
+                                gp.intelFormat = sig->intelByteOrder;
+                                if (sig->valType == SIGNED_INT) gp.isSigned = true;
+                                    else gp.isSigned = false;
+                                gp.numBits = sig->signalSize;
+                                gp.scale = sig->factor;
+                                gp.startBit = sig->startBit;
+                                gp.stride = 1;
+                                createGraph(gp, true);
+                            }
+                        }
+                    }
+                    else //old standard graph definition
+                    {
+                        //hard part - this all changed drastically
+                        //the difference between intel and motorola format is whether
+                        //start is larger than end byte or not.
+                        uint64_t oldMask = tokens[1].toULongLong(NULL, 16);
+                        int oldStart = tokens[2].toInt();
+                        int oldEnd = tokens[3].toInt();
+
+                        if (oldEnd > oldStart) //motorola / big endian - hell...
+                        {
+                            gp.intelFormat = false;
+                            //for now just naively use the entire bytes called for.
+                            gp.startBit = 8 * oldStart + 7;
+                            gp.numBits = (oldEnd - oldStart + 1) * 8;
+                        }
+                        else if (oldStart > oldEnd) //intel / little endian - easiest of multi-byte types
+                        {
+                            //have to find both ends. start bit is somewhere in oldEnd and last bit is somewhere in
+                            //oldStart.
+
+                            gp.intelFormat = true;
+
+                            //start by setting a safe default if nothing else pans out.
+                            gp.startBit = 8 * oldEnd;
+
+                            int numBytes = oldStart - oldEnd + 1;
+                            gp.numBits = numBytes * 8;
+
+                            for (int b = 0; b < 8; b++)
+                            {
+                                if (oldMask & (1 << b))
+                                {
+                                    gp.startBit = (8 * oldEnd) + b;
+                                    break;
+                                }
+                            }
+
+                            for (int c = 7; c >= 0; c--)
+                            {
+                                if ( oldMask & (1<<(((numBytes - 1) * 8) + c)) )
+                                {
+                                    gp.numBits -= (7-c);
+                                    break;
+                                }
+                            }
+                        }
+                        else //within a single byte - easier than the above two by a bit - always use intel format for this
+                        {
+                            gp.intelFormat = true;
+                            oldMask = oldMask & 0xFF; //only this part matters
+                            //for intel format we give startbit as the lowest bit number in the signal
+                            //we can find that by going backward from bit 0 to 7 and picking the first bit that is 1.
+                            //that's our start bit (+ 8*oldStart)
+                            //set default first in case the rest falls through
+                            gp.startBit = 8 * oldStart;
+                            gp.numBits = 8;
+                            for (int b = 0; b < 8; b++)
+                            {
+                                if (oldMask & (1 << b))
+                                {
+                                    gp.startBit = 8 * oldStart + b;
+                                    gp.numBits = 8 - b;
+                                    break;
+                                }
+                            }
+                        }
+
+                        //the rest is easy stuff
+                        if (tokens[4] == "Y") gp.isSigned = true;
+                            else gp.isSigned = false;
+                        gp.bias = tokens[5].toFloat();
+                        gp.scale = tokens[6].toFloat();
+                        gp.stride = tokens[7].toInt();
+                        gp.color.setRed(tokens[8].toInt());
+                        gp.color.setGreen(tokens[9].toInt());
+                        gp.color.setBlue(tokens[10].toInt());
+                        if (tokens.length() > 11)
+                            gp.graphName = tokens[11];
+                        else
+                            gp.graphName = QString();
+                        createGraph(gp, true);
+                    }
                 }
-                createGraph(gp, true);
             }
         }
         inFile->close();
-        if (dbcMissing)
-        {
-            QMessageBox msg;
-            msg.setText("One or more graphs could not be loaded\r\nbecause the signal could not be found.\r\nPerhaps you forgot to load\r\nthe DBC file?");
-            msg.exec();
-        }
     }
 }
 
@@ -851,133 +921,16 @@ void GraphingWindow::addNewGraph()
 void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 {
     int64_t tempVal; //64 bit temp value.
-    if (params.isDBCSignal)
+    tempVal = Utility::processIntegerSignal(frame.data, params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
+    if (secondsMode)
     {
-        double tempValue;
-        DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(params.ID);
-        DBC_SIGNAL *sig = NULL;
-        if (msg) sig = msg->sigHandler->findSignalByName(params.signal);
-        if (sig == NULL) return;
-        //if the given signal was found and successfully processed in this frame then add it to the graph
-        if (sig->processAsDouble(frame, tempValue))
-        {
-            //qDebug() << "tempValue: " << tempValue;
-            if (secondsMode)
-            {
-                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-            }
-            else
-            {
-                params.x.append(frame.timestamp - params.xbias);
-            }
-            params.y.append(tempValue);
-         }
+        params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
     }
     else
     {
-        if (params.endByte == -1  || params.startByte == params.endByte)
-        {
-            tempVal = (frame.data[params.startByte] & params.mask);
-            if (params.isSigned && tempVal > 127)
-            {
-                tempVal = tempVal - 256;
-            }
-            if (secondsMode)
-            {
-                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-            }
-            else
-            {
-                params.x.append(frame.timestamp - params.xbias);
-            }
-            params.y.append((tempVal * params.scale) + params.bias);
-        }
-        else if (params.endByte > params.startByte) //big endian
-        {
-            float tempValue;
-            int64_t tempValInt;
-            int numBytes = (params.endByte - params.startByte) + 1;
-            int64_t shiftRef = 1 << (numBytes * 8);
-            uint64_t maskShifter;
-            uint8_t tempByte;
-            tempValInt = 0;
-            int64_t expon = 1;
-            maskShifter = params.mask;
-            for (int c = 0; c < numBytes; c++)
-            {
-                tempByte = frame.data[params.endByte - c];
-                tempByte &= maskShifter;
-                tempValInt += (tempByte * expon);
-                expon *= 256;
-                maskShifter = maskShifter >> 8;
-            }
-
-            tempValInt &= params.mask;
-
-            int64_t twocompPoint = params.mask;
-            if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-            //qDebug() << "two comp point: " << twocompPoint;
-            if (params.isSigned && tempValInt > ((twocompPoint / 2)))
-            {
-                tempValInt = tempValInt - twocompPoint;
-            }
-
-            tempValue = (float)tempValInt;
-
-            if (secondsMode)
-            {
-                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-            }
-            else
-            {
-                params.x.append(frame.timestamp - params.xbias);
-            }
-
-            params.y.append((tempValue * params.scale) + params.bias);
-        }
-        else //little endian
-        {
-            float tempValue;
-            int64_t tempValInt;
-            int numBytes = (params.startByte - params.endByte) + 1;
-            int64_t shiftRef = 1 << (numBytes * 8);
-            uint64_t maskShifter;
-            uint8_t tempByte;
-            tempValInt = 0;
-            int64_t expon = 1;
-            maskShifter = params.mask;
-            for (int c = 0; c < numBytes; c++)
-            {
-                tempByte = frame.data[params.endByte + c];
-                tempByte &= maskShifter;
-                tempValInt += tempByte * expon;
-                expon *= 256;
-                maskShifter = maskShifter >> 8;
-            }
-            tempValInt &= params.mask;
-
-            int64_t twocompPoint = params.mask;
-            if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-            //qDebug() << "two comp point: " << twocompPoint;
-            if (params.isSigned && tempValInt > ((twocompPoint / 2)))
-            {
-                tempValInt = tempValInt - twocompPoint;
-            }
-
-            tempValue = (float)tempValInt;
-
-            if (secondsMode)
-            {
-                params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
-            }
-            else
-            {
-                params.x.append(frame.timestamp - params.xbias);
-            }
-
-            params.y.append((tempValue * params.scale) + params.bias);
-        }
+        params.x.append(frame.timestamp - params.xbias);
     }
+    params.y.append((tempVal * params.scale) + params.bias);
 
     params.ref->setData(params.x,params.y);
 }
@@ -988,23 +941,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     float yminval=10000000.0, ymaxval = -1000000.0;
     float xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
-    DBC_MESSAGE *msg = NULL;
-    DBC_SIGNAL *sig = NULL;
+    int sBit, bits;
+    bool intelFormat, isSigned;
 
-    if (params.isDBCSignal)
-    {
-        msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(params.ID);
-        if (msg) sig = msg->sigHandler->findSignalByName(params.signal);
-        if (sig == NULL) return;
-        qDebug() << "New signal graph: " << params.signal <<" in ID:" << params.ID;
-    }
-    else
-    {
-        qDebug() << "New Graph ID: " << params.ID;
-        qDebug() << "Start byte: " << params.startByte;
-        qDebug() << "End Byte: " << params.endByte;
-        qDebug() << "Mask: " << params.mask;
-    }
+    qDebug() << "New Graph ID: " << params.ID;
+    qDebug() << "Start bit: " << params.startBit;
+    qDebug() << "Data length: " << params.numBits;
+    qDebug() << "Intel Mode: " << params.intelFormat;
+    qDebug() << "Signed: " << params.isSigned;
+    qDebug() << "Mask: " << params.mask;
 
     frameCache.clear();
     for (int i = 0; i < modelFrames->count(); i++)
@@ -1020,163 +965,28 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     params.x.fill(0, numEntries);
     params.y.fill(0, numEntries);
 
-    if (params.isDBCSignal)
+    sBit = params.startBit;
+    bits = params.numBits;
+    intelFormat = params.intelFormat;
+    isSigned = params.isSigned;
+
+    for (int j = 0; j < numEntries; j++)
     {
-        double tempValue;
-        int l = 0;
-        for (int j = 0; j < numEntries; j++)
+        tempVal = Utility::processIntegerSignal(frameCache[j * params.stride].data, sBit, bits, intelFormat, isSigned); //& params.mask;
+        //qDebug() << tempVal;
+        if (secondsMode)
         {
-            //if the given signal was found and successfully processed in this frame then add it to the graph
-            if (sig->processAsDouble(frameCache[j], tempValue))
-            {
-                //qDebug() << "tempValue: " << tempValue;
-                if (secondsMode)
-                {
-                    params.x[l] = (double)(frameCache[j].timestamp) / 1000000.0;
-                }
-                else
-                {
-                    params.x[l] = frameCache[j].timestamp;
-                }
-                params.y[l] = tempValue;
-                if (params.y[l] < yminval) yminval = params.y[l];
-                if (params.y[l] > ymaxval) ymaxval = params.y[l];
-                if (params.x[l] < xminval) xminval = params.x[l];
-                if (params.x[l] > xmaxval) xmaxval = params.x[l];
-                l++;
-            }
+            params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
         }
-        params.x.resize(l);
-        params.y.resize(l);
-        params.x.squeeze();
-        params.y.squeeze();
-    }
-    else
-    {
-
-        if (params.endByte == -1  || params.startByte == params.endByte)
+        else
         {
-            for (int j = 0; j < numEntries; j++)
-            {
-                tempVal = (frameCache[j * params.stride].data[params.startByte] & params.mask);
-                if (params.isSigned && tempVal > 127)
-                {
-                    tempVal = tempVal - 256;
-                }
-                if (secondsMode)
-                {
-                    params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
-                }
-                else
-                {
-                    params.x[j] = frameCache[j].timestamp;
-                }
-                params.y[j] = (tempVal * params.scale) + params.bias;
-                if (params.y[j] < yminval) yminval = params.y[j];
-                if (params.y[j] > ymaxval) ymaxval = params.y[j];
-                if (params.x[j] < xminval) xminval = params.x[j];
-                if (params.x[j] > xmaxval) xmaxval = params.x[j];
-            }
+            params.x[j] = frameCache[j].timestamp;
         }
-        else if (params.endByte > params.startByte) //big endian
-        {
-            float tempValue;
-            int64_t tempValInt;
-            int numBytes = (params.endByte - params.startByte) + 1;
-            int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
-            uint64_t maskShifter;
-            uint8_t tempByte;
-            for (int j = 0; j < numEntries; j++)
-            {
-                tempValInt = 0;
-                int64_t expon = 1;
-                maskShifter = params.mask;
-                for (int c = 0; c < numBytes; c++)
-                {
-                    tempByte = frameCache[j * params.stride].data[params.endByte - c];
-                    tempByte &= maskShifter;
-                    tempValInt += (tempByte * expon);
-                    expon *= 256;
-                    maskShifter = maskShifter >> 8;
-                }
-
-                tempValInt &= params.mask;
-
-                int64_t twocompPoint = params.mask;
-                if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-                //qDebug() << "two comp point: " << twocompPoint;
-                if (params.isSigned && tempValInt > ((twocompPoint / 2)))
-                {
-                    tempValInt = tempValInt - twocompPoint;
-                }
-
-                tempValue = (float)tempValInt;
-
-                if (secondsMode)
-                {
-                    params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
-                }
-                else
-                {
-                    params.x[j] = frameCache[j].timestamp;
-                }
-
-                params.y[j] = (tempValue * params.scale) + params.bias;
-                if (params.y[j] < yminval) yminval = params.y[j];
-                if (params.y[j] > ymaxval) ymaxval = params.y[j];
-                if (params.x[j] < xminval) xminval = params.x[j];
-                if (params.x[j] > xmaxval) xmaxval = params.x[j];
-            }
-        }
-        else //little endian
-        {
-            float tempValue;
-            int64_t tempValInt;
-            int numBytes = (params.startByte - params.endByte) + 1;
-            int64_t shiftRef = (uint64_t)1 << (numBytes * 8);
-            uint64_t maskShifter;
-            uint8_t tempByte;
-            for (int j = 0; j < numEntries; j++)
-            {
-                tempValInt = 0;
-                int64_t expon = 1;
-                maskShifter = params.mask;
-                for (int c = 0; c < numBytes; c++)
-                {
-                    tempByte = frameCache[j * params.stride].data[params.endByte + c];
-                    tempByte &= maskShifter;
-                    tempValInt += tempByte * expon;
-                    expon *= 256;
-                    maskShifter = maskShifter >> 8;
-                }
-                tempValInt &= params.mask;
-
-                int64_t twocompPoint = params.mask;
-                if (shiftRef < twocompPoint || twocompPoint == -1) twocompPoint = shiftRef;
-                //qDebug() << "two comp point: " << twocompPoint;
-                if (params.isSigned && tempValInt > ((twocompPoint / 2)))
-                {
-                    tempValInt = tempValInt - twocompPoint;
-                }
-
-                tempValue = (float)tempValInt;
-
-                if (secondsMode)
-                {
-                    params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
-                }
-                else
-                {
-                    params.x[j] = frameCache[j].timestamp;
-                }
-
-                params.y[j] = (tempValue * params.scale) + params.bias;
-                if (params.y[j] < yminval) yminval = params.y[j];
-                if (params.y[j] > ymaxval) ymaxval = params.y[j];
-                if (params.x[j] < xminval) xminval = params.x[j];
-                if (params.x[j] > xmaxval) xmaxval = params.x[j];
-            }
-        }
+        params.y[j] = (tempVal * params.scale) + params.bias;
+        if (params.y[j] < yminval) yminval = params.y[j];
+        if (params.y[j] > ymaxval) ymaxval = params.y[j];
+        if (params.x[j] < xminval) xminval = params.x[j];
+        if (params.x[j] > xmaxval) xmaxval = params.x[j];
     }
 
     params.xbias = 0;
@@ -1193,8 +1003,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     if (params.graphName == NULL || params.graphName.length() == 0)
     {
-        params.graphName = QString("0x") + QString::number(params.ID, 16) + ":" + QString::number(params.startByte);
-        if ((params.endByte != -1) && (params.endByte != params.startByte)) params.graphName += "-" + QString::number(params.endByte);
+        params.graphName = QString("0x") + QString::number(params.ID, 16) + ":" + QString::number(params.startBit);
+        params.graphName += "-" + QString::number(params.numBits);
     }
     ui->graphingView->graph()->setName(params.graphName);
     ui->graphingView->graph()->setProperty("id", params.ID);
