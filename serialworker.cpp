@@ -478,18 +478,6 @@ void SerialWorker::handleTick()
         }
     }
 
-    int elapsed = elapsedTime->elapsed();
-    if(elapsed) {
-        framesPerSec += gotFrames * 1000 / elapsed - (framesPerSec / 4);
-        elapsedTime->restart();
-    }
-    else
-        framesPerSec = 0;
-
-    emit frameUpdateTick(framesPerSec / 4, gotFrames); //sends stats to interested parties
-    canModel->sendBulkRefresh(gotFrames);
-    gotFrames = 0;
-
     if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 
