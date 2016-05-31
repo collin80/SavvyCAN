@@ -478,8 +478,14 @@ void MainWindow::filterClearAll()
 
 void MainWindow::tickGUIUpdate()
 {
-    framesPerSec += rxFrames * 1000 / elapsedTime->elapsed() - (framesPerSec / 4);
-    elapsedTime->restart();
+    int elapsed = elapsedTime->elapsed();
+    if(elapsed) {
+        framesPerSec += rxFrames * 1000 / elapsed - (framesPerSec / 4);
+        elapsedTime->restart();
+    }
+    else
+        framesPerSec = 0;
+
     model->sendBulkRefresh(rxFrames);
 
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
