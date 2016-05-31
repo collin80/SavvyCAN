@@ -382,16 +382,19 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
 {
     if (col == 3) //3 is the signals field. If clicked we go to the signals dialog
     {
-        QString idString = ui->MessagesTable->item(row, 0)->text();
-        DBC_MESSAGE *message = dbcFile->messageHandler->findMsgByID(Utility::ParseStringToNum(idString));
-        sigEditor->setMessageRef(message);
-        sigEditor->setFileIdx(fileIdx);
-        sigEditor->exec(); //blocks this window from being active until we're done
-        //now update the displayed # of signals
-        inhibitCellChanged = true;        
-        QTableWidgetItem *replacement = new QTableWidgetItem(QString::number(message->sigHandler->getCount()));
-        ui->MessagesTable->setItem(row, col, replacement);
-        inhibitCellChanged = false;
+        QTableWidgetItem* msg = ui->MessagesTable->item(row, 0);
+        if(msg) {
+            QString idString = msg->text();
+            DBC_MESSAGE *message = dbcFile->messageHandler->findMsgByID(Utility::ParseStringToNum(idString));
+            sigEditor->setMessageRef(message);
+            sigEditor->setFileIdx(fileIdx);
+            sigEditor->exec(); //blocks this window from being active until we're done
+            //now update the displayed # of signals
+            inhibitCellChanged = true;
+            QTableWidgetItem *replacement = new QTableWidgetItem(QString::number(message->sigHandler->getCount()));
+            ui->MessagesTable->setItem(row, col, replacement);
+            inhibitCellChanged = false;
+        }
     }
 }
 
