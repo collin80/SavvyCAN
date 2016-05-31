@@ -3,6 +3,8 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 
+#include <iostream>
+
 FrameFileIO::FrameFileIO()
 {
 
@@ -123,6 +125,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
+    filters.append(QString(tr("Candump/Kayak (*.log *.LOG)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -151,6 +154,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[6]) result = loadIXXATFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[7]) result = loadCANDOFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[9]) result = loadCanDumpFile(filename, frameCache);
 
         progress.cancel();
 
@@ -1334,6 +1338,84 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
     delete outFile;
     return true;
 }
+
+/* (0.003800) vcan0 164#0000c01aa8000013 */
+bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    int pos = 0;
+    bool ret;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        line = inFile->readLine().toUpper();
+        if (line.length() > 1)
+        {
+            /* tokenize */
+            QList<QByteArray> tokens = line.split(' ');
+            if(tokens.count()<3) continue;
+
+            /* timestamp */
+            QRegExp timeExp("^\\((\\S+)\\)$");
+            ret = timeExp.exactMatch(tokens[0]);
+            if(!ret) continue;
+
+            thisFrame.timestamp = timeExp.cap(1).toDouble(&ret) * 1000000;
+            if(!ret) continue;
+            
+            /* ID & value */
+            QRegExp IdValExp("^(\\S+)#(\\S+)\n$");
+            qDebug() << tokens[2];
+            ret = IdValExp.exactMatch(tokens[2]);
+            if(!ret) continue;
+
+            /* ID */
+            qDebug() << IdValExp.cap(1);
+            thisFrame.ID = IdValExp.cap(1).toInt(&ret, 16);
+            if(!ret) continue;
+
+            QString val= IdValExp.cap(2);
+            QRegExp valExp("(\\S{2})");
+
+            /* val byte per byte */
+            pos = 0;
+            thisFrame.len = 0;
+            while ((pos = valExp.indexIn(val, pos)) != -1)
+            {
+                thisFrame.data[thisFrame.len] = valExp.cap(1).toInt(&ret, 16);
+                if(!ret) continue;
+
+                thisFrame.len++;
+                pos += valExp.matchedLength();
+            }
+
+            /*NB: should we make sure len <= 8? */
+            thisFrame.extended = false;
+            thisFrame.isReceived = true;
+            thisFrame.bus = 0;
+       }
+       frames->append(thisFrame);
+    }
+    inFile->close();
+    delete inFile;
+    return true;
+}
+
 
 QString FrameFileIO::unQuote(QString inStr)
 {

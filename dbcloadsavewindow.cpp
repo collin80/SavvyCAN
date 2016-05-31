@@ -48,10 +48,12 @@ void DBCLoadSaveWindow::newFile()
 void DBCLoadSaveWindow::loadFile()
 {
     DBCFile *file = dbcHandler->loadDBCFile(-1);
-    int idx = ui->tableFiles->rowCount();
-    ui->tableFiles->insertRow(ui->tableFiles->rowCount());
-    ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
-    ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
+    if(file) {
+        int idx = ui->tableFiles->rowCount();
+        ui->tableFiles->insertRow(ui->tableFiles->rowCount());
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
+        ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
+    }
 }
 
 void DBCLoadSaveWindow::saveFile()

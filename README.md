@@ -50,6 +50,36 @@ http://www.qcustomplot.com/
 
 However, this source code is integrated into the source for SavvyCAN and one isn't required to download it separately.
 
-The project now requires (yes, requires) at least QT 5.6.0 because of
-a dependency on QtSerialBus which is still an optional feature. You
-will need to download it when installing QT.
+This project will soon require 5.6.0 or higher because of an upcoming dependency on QSerialBus but currently
+should compile with QT 5.5
+
+Instructions for compiling with Ubuntu:
+
+sudo apt-get install qt5-default qtdeclarative5-dev libqt5serialport5-dev libudev-dev
+
+download and extract QScintilla (see above for link), assume it is extracted in QScintilla-gpl-2.9.1
+
+cd ~/QScintilla-gpl-2.9.1/Qt4Qt5
+
+qmake qscintilla.pro
+
+make
+
+sudo make install
+
+Optionally remove ~/QScintilla-gpl-2.9.1
+
+cd ~
+
+git clone https://github.com/collin80/SavvyCAN.git
+
+cd SavvyCAN
+
+qmake
+
+make
+
+Now run SavvyCAN
+
+./SavvyCAN
+

@@ -172,7 +172,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->rbMultiplexed, &QRadioButton::toggled,
             [=](bool state)
             {
-                if (state) //signal is now set as a multiplexed signal
+                if (state && currentSignal) //signal is now set as a multiplexed signal
                 {
                     currentSignal->isMultiplexed = true;
                     currentSignal->isMultiplexor = false;
@@ -184,7 +184,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->rbMultiplexor, &QRadioButton::toggled,
             [=](bool state)
             {
-                if (state) //signal is now set as a multiplexed signal
+                if (state && currentSignal) //signal is now set as a multiplexed signal
                 {
                     //don't allow this signal to be a multiplexor if there is already one for this message.
                     //if (dbcMessage->multiplexorSignal != currentSignal && dbcMessage->multiplexorSignal != NULL) return; //I spoke too soon above...
@@ -198,7 +198,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
     connect(ui->rbNotMulti, &QRadioButton::toggled,
             [=](bool state)
             {
-                if (state) //signal is now set as a multiplexed signal
+                if (state && currentSignal) //signal is now set as a multiplexed signal
                 {
                     currentSignal->isMultiplexed = false;
                     currentSignal->isMultiplexor = false;
@@ -260,19 +260,14 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
 
-    refreshSignalsList();
     currentSignal = NULL;
-    if (dbcMessage->sigHandler->getCount() > 0)
-    {        
-        currentSignal = dbcMessage->sigHandler->findSignalByIdx(0);
-        fillSignalForm(currentSignal);
-        fillValueTable(currentSignal);
-    }
+    refreshSignalsList();
 }
 
 void DBCSignalEditor::onValuesCellChanged(int row,int col)
 {
     if (inhibitCellChanged) return;
+
     if (row == ui->valuesTable->rowCount() - 1)
     {
         DBC_VAL newVal;
@@ -340,9 +335,14 @@ void DBCSignalEditor::addNewSignal()
     newSig.isMultiplexor = false;
     newSig.multiplexValue = 0;
     newSig.parentMessage = dbcMessage;
-    ui->signalsList->addItem(newName);
+
     dbcMessage->sigHandler->addSignal(newSig);
-    if (dbcMessage->sigHandler->getCount() == 1) clickSignalList(0);
+
+    /* add item at the end of the list and select it */
+    /* this will call clickSignalList */
+    ui->signalsList->addItem(newName);
+    ui->signalsList->setCurrentRow(ui->signalsList->count()-1);
+
 }
 
 void DBCSignalEditor::deleteCurrentSignal()
@@ -353,10 +353,6 @@ void DBCSignalEditor::deleteCurrentSignal()
         delete(ui->signalsList->item(currIdx));
         dbcMessage->sigHandler->removeSignal(currIdx);
         currentSignal = NULL;
-        currIdx = ui->signalsList->currentRow();
-        if (currIdx > -1) currentSignal = dbcMessage->sigHandler->findSignalByIdx(currIdx);
-        fillSignalForm(currentSignal);
-        fillValueTable(currentSignal);
     }
 }
 
@@ -373,21 +369,30 @@ void DBCSignalEditor::deleteCurrentValue()
 void DBCSignalEditor::refreshSignalsList()
 {
     ui->signalsList->clear();
+
+
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
         DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
         ui->signalsList->addItem(sig->name);
     }
+
+    if( ui->signalsList->count()>0 ) {
+        /* click first element */
+        ui->signalsList->setCurrentRow(0);
+    }
+    else
+        clickSignalList(-1);
 }
 
+/* fillSignalForm also handles group "enabled" state */
+/* WARNING: fillSignalForm can be called recursively since it is in the listener of cbIntelFormat */
 void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
     unsigned char bitpattern[8];
 
-    generateUsedBits();
-
-    if (sig == NULL)
-    {
+    if (sig == NULL) {
+        ui->groupBox->setEnabled(false);
         ui->txtName->setText("");
         ui->txtBias->setText("");
         ui->txtBitLength->setText("");
@@ -408,6 +413,10 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         return;
     }
 
+    /* we have a signal */
+    ui->groupBox->setEnabled(true);
+
+    generateUsedBits();
     ui->txtName->setText(sig->name);
     ui->txtBias->setText(QString::number(sig->bias));
     ui->txtBitLength->setText(QString::number(sig->signalSize));
@@ -489,6 +498,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     }
 }
 
+/* fillValueTable also handles "enabled" state */
 void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 {
     int rowIdx;
@@ -499,9 +509,12 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
     ui->valuesTable->setRowCount(0);
 
     if (sig == NULL) {
+        ui->valuesTable->setEnabled(false);
         inhibitCellChanged = false;
         return;
     }
+
+    ui->valuesTable->setEnabled(true);
 
     for (int i = 0; i < sig->valList.count(); i++)
     {
@@ -521,11 +534,9 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 
 void DBCSignalEditor::clickSignalList(int row)
 {
-    if (row < 0) return;
     //qDebug() << ui->signalsList->item(row)->text();
 
-    DBC_SIGNAL *thisSig = dbcMessage->sigHandler->findSignalByName(ui->signalsList->item(row)->text());
-    if (thisSig == NULL) return;
+    DBC_SIGNAL *thisSig = (row<0) ? NULL : dbcMessage->sigHandler->findSignalByName(ui->signalsList->item(row)->text());
     currentSignal = thisSig;
     fillSignalForm(thisSig);
     fillValueTable(thisSig);

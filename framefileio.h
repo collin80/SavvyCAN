@@ -42,6 +42,7 @@ public:
     static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
     static bool loadFrameFile(QString &, QVector<CANFrame>*);
     static bool saveFrameFile(QString &, const QVector<CANFrame>*);
+    static bool loadCanDumpFile(QString, QVector<CANFrame>*);
 
 private:
     static QString unQuote(QString);
