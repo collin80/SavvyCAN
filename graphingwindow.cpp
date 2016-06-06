@@ -142,6 +142,7 @@ void GraphingWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        bool appendedToGraph = false;
         if (numFrames > modelFrames->count()) return;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
@@ -151,10 +152,17 @@ void GraphingWindow::updatedFrames(int numFrames)
                 if (graphParams[j].ID == thisFrame.ID)
                 {
                     appendToGraph(graphParams[j], thisFrame);
+                    appendedToGraph = true;
                 }
             }
         }
-        ui->graphingView->replot();
+        if (appendedToGraph) {
+            for (int j = 0; j < graphParams.count(); j++)
+            {
+                graphParams[j].ref->setData(graphParams[j].x, graphParams[j].y);
+            }
+            ui->graphingView->replot();
+        }
     }
 }
 
@@ -931,8 +939,6 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
         params.x.append(frame.timestamp - params.xbias);
     }
     params.y.append((tempVal * params.scale) + params.bias);
-
-    params.ref->setData(params.x,params.y);
 }
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
