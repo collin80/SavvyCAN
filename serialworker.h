@@ -40,8 +40,8 @@ public:
     void targetFrameID(int);
 
 signals: //we emit signals
-    void error(const QString &);
-    void frameUpdateTick(int, int); //update interested parties about the # of frames that have come in
+    void error(const QString &);    
+    void frameUpdateRapid(int); //sent *much* more rapidly than the above signal - one param for # of frames
     void connectionSuccess(int, int);
     void connectionFailure();
     void deviceInfo(int, int);
@@ -71,14 +71,13 @@ private:
     bool doValidation;
     bool gotValidated;
     bool isAutoRestart;
+    bool continuousTimeSync;
     QSerialPort *serial;
     QSerialPortInfo *currentPort;
     CANFrameModel *canModel;
-    QTimer *ticker;
-    QTime *elapsedTime;
-    QMutex sendBulkMutex;
-    int framesPerSec;
-    int gotFrames;
+    QTimer *ticker;    
+    QMutex sendBulkMutex;        
+    int framesRapid;
     int targetID;
     STATE rx_state;
     int rx_step;
@@ -87,6 +86,8 @@ private:
     bool can0Enabled, can1Enabled;
     int deviceBuildNum;
     int deviceSingleWireMode;
+    uint64_t txTimestampBasis;
+    uint32_t buildTimeBasis;
 
     void procRXChar(unsigned char);
     void sendCommValidation();

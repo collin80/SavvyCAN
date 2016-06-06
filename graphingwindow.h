@@ -15,7 +15,8 @@ class GraphParams
 {
 public:
     uint32_t ID;
-    int startByte, endByte;
+    int startBit, numBits;
+    bool intelFormat;
     bool isSigned;
     uint64_t mask;
     float bias;
@@ -24,8 +25,6 @@ public:
     QColor color;
     QCPGraph *ref;
     QString graphName;
-    bool isDBCSignal; //is this graph actually a DBC signal? If so the below pointer should be filled out
-    QString signal;
     //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;

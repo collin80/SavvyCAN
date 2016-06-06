@@ -6,12 +6,23 @@
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return filteredFrames.count();
+    if (filteredFrames.data())
+    {
+        int rows = filteredFrames.count();
+        return rows;
+    }
+
+     //just in case somehow data is invalid which I have seen before.
+    //But, this should not happen so issue a debugging message too
+    qDebug() << "Invalid data for filteredFrames. Returning 0.";
+    return 0;
 }
 
 int CANFrameModel::totalFrameCount()
 {
-    return frames.count();
+    int count;
+    count = frames.count();
+    return count;
 }
 
 int CANFrameModel::columnCount(const QModelIndex &index) const
@@ -23,8 +34,8 @@ int CANFrameModel::columnCount(const QModelIndex &index) const
 CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
-    frames.reserve(10000000); //yes, I'm preallocating 10 million entries in this list. I don't think anyone will exceed this.
-    filteredFrames.reserve(10000000);
+    frames.reserve(50000000); //yes, preallocating a huge number of frames.
+    filteredFrames.reserve(50000000); //the goal is to prevent a reallocation from ever happening
     dbcHandler = NULL;
     interpretFrames = false;
     overwriteDups = false;
@@ -75,6 +86,7 @@ void CANFrameModel::setInterpetMode(bool mode)
 
 void CANFrameModel::normalizeTiming()
 {
+    mutex.lock();
     if (frames.count() == 0) return;    
     timeOffset = frames[0].timestamp;
     for (int i = 0; i < frames.count(); i++)
@@ -87,11 +99,14 @@ void CANFrameModel::normalizeTiming()
         filteredFrames[i].timestamp -= timeOffset;
     }
     this->endResetModel();
+    mutex.unlock();
 }
 
 void CANFrameModel::setOverwriteMode(bool mode)
 {
+    beginResetModel();
     overwriteDups = mode;
+    endResetModel();
 }
 
 void CANFrameModel::setFilterState(int ID, bool state)
@@ -120,6 +135,7 @@ void CANFrameModel::recalcOverwrite()
     int lastUnique = 0;
     bool found;
 
+    mutex.lock();
     beginResetModel();
     for (int i = 1; i < frames.count(); i++)
     {
@@ -143,6 +159,7 @@ void CANFrameModel::recalcOverwrite()
     while (frames.count() > lastUnique) frames.removeLast();
 
     filteredFrames.clear();
+    filteredFrames.reserve(50000000);
 
     for (int i = 0; i < frames.count(); i++)
     {
@@ -153,6 +170,7 @@ void CANFrameModel::recalcOverwrite()
     }
 
     endResetModel();
+    mutex.unlock();
 }
 
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
@@ -327,11 +345,9 @@ void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
 }
 
 void CANFrameModel::sendRefresh()
-{
-    mutex.lock();
+{    
     qDebug() << "Sending mass refresh";
-    QVector<CANFrame> tempContainer;
-    beginResetModel();
+    QVector<CANFrame> tempContainer;    
     int count = frames.count();
     for (int i = 0; i < count; i++)
     {
@@ -340,8 +356,11 @@ void CANFrameModel::sendRefresh()
             tempContainer.append(frames[i]);
         }
     }
+    mutex.lock();
+    beginResetModel();
     filteredFrames.clear();
-    filteredFrames = tempContainer;
+    filteredFrames.append(tempContainer);
+    filteredFrames.reserve(50000000);
     lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
     mutex.unlock();
@@ -376,14 +395,12 @@ void CANFrameModel::sendBulkRefresh(int num)
 
     if (!overwriteDups)
     {        
-        mutex.lock();
-        if (num > filteredFrames.count()) num = filteredFrames.count();
+        //if (num > filteredFrames.count()) num = filteredFrames.count();
         //qDebug() << "From " << (filteredFrames.count() - num) << " to " << (filteredFrames.count() - 1);
         //beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
         //endInsertRows();
         beginResetModel();
         endResetModel();
-        mutex.unlock();
     }
     else
     {
@@ -399,6 +416,8 @@ void CANFrameModel::clearFrames()
     frames.clear();
     filteredFrames.clear();
     filters.clear();
+    frames.reserve(50000000);
+    filteredFrames.reserve(50000000);
     this->endResetModel();
     lastUpdateNumFrames = 0;
     mutex.unlock();

@@ -158,9 +158,9 @@ void FlowViewWindow::writeSettings()
 
 /*
  * Keyboard shortcuts to allow for quick work without needing to move around a mouse.
- * E = resume or pause playback
- * Q = go back one frame
- * W = go forward one frame
+ * R = resume or pause playback
+ * T = go back one frame
+ * Y = go forward one frame
 */
 bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
 {
@@ -371,27 +371,64 @@ void FlowViewWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
         if (numFrames > modelFrames->count()) return;
-        int refID = frameCache[0].ID;
+        int refID;
+        if (frameCache.count() > 0) refID = frameCache[0].ID;
+            else refID = 0;
         bool needRefresh = false;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
+
+            if (!foundID.contains(thisFrame.ID))
+            {
+                foundID.append(thisFrame.ID);
+                QListWidgetItem* item = new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listFrameID);
+            }
+
             if (thisFrame.ID == refID)
             {
                 frameCache.append(thisFrame);
-                if (ui->cbLiveMode->checkState() == Qt::Checked)
+
+                for (int k = 0; k < 8; k++)
                 {
-                    currentPosition = frameCache.count() - 1;
+                    if (ui->cbTimeGraph->isChecked())
+                    {
+                        if (secondsMode){
+                            x[k].append((double)(thisFrame.timestamp) / 1000000.0);
+                        }
+                        else
+                        {
+                            x[k].append(thisFrame.timestamp);
+                        }
+                    }
+                    else
+                    {
+                        x[k].append(x[k].count());
+                    }
+                    y[k].append(thisFrame.data[k]);
                     needRefresh = true;
                 }
-            }
+            }            
+        }
+        if (ui->cbLiveMode->checkState() == Qt::Checked)
+        {
+            currentPosition = frameCache.count() - 1;
+            memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+            memcpy(refBytes, currBytes, 8);
+
         }
         if (needRefresh)
         {
-            updateDataView();
+            for (int k = 0; k < 8; k++)
+            {
+                graphRef[k]->setData(x[k], y[k]);
+            }
+            ui->graphView->replot();
+            updateDataView();            
             if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
         }
     }
+    updateFrameLabel();
 }
 
 void FlowViewWindow::removeAllGraphs()
@@ -409,7 +446,10 @@ void FlowViewWindow::createGraph(int byteNum)
 
     int numEntries = frameCache.count();
 
-    QVector<double> x(numEntries), y(numEntries);
+    x[byteNum].clear();
+    y[byteNum].clear();
+    x[byteNum].resize(numEntries);
+    y[byteNum].resize(numEntries);
 
     for (int j = 0; j < numEntries; j++)
     {
@@ -418,26 +458,26 @@ void FlowViewWindow::createGraph(int byteNum)
         if (graphByTime)
         {
             if (secondsMode){
-                x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                x[byteNum][j] = (double)(frameCache[j].timestamp) / 1000000.0;
             }
             else
             {
-                x[j] = frameCache[j].timestamp;
+                x[byteNum][j] = frameCache[j].timestamp;
             }
         }
         else
         {
-            x[j] = j;
+            x[byteNum][j] = j;
         }
 
-        y[j] = tempVal;
-        if (y[j] < minval) minval = y[j];
-        if (y[j] > maxval) maxval = y[j];
+        y[byteNum][j] = tempVal;
+        if (y[byteNum][j] < minval) minval = y[byteNum][j];
+        if (y[byteNum][j] > maxval) maxval = y[byteNum][j];
     }
 
-    ui->graphView->addGraph();
+    graphRef[byteNum] = ui->graphView->addGraph();
     ui->graphView->graph()->setName(QString("Graph %1").arg(ui->graphView->graphCount()-1));
-    ui->graphView->graph()->setData(x,y);
+    ui->graphView->graph()->setData(x[byteNum],y[byteNum]);
     ui->graphView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
     QPen graphPen;
     graphPen.setColor(graphColors[byteNum]);
@@ -656,6 +696,7 @@ void FlowViewWindow::updatePosition(bool forward)
 
 void FlowViewWindow::updateGraphLocation()
 {
+    if (frameCache.count() == 0) return;
     int start = currentPosition - 5;
     if (start < 0) start = 0;
     int end = currentPosition + 5;

@@ -69,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
     connect(&serialWorkerThread, &QThread::started, worker, &SerialWorker::run); //setup timers within the proper thread
     connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::frameUpdateTick, this, &MainWindow::gotFrames, Qt::QueuedConnection);
+    connect(worker, &SerialWorker::frameUpdateRapid, this, &MainWindow::gotFrames, Qt::QueuedConnection);
     connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
     connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
     connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
@@ -98,9 +98,12 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcFileWindow = NULL;
     fuzzingWindow = NULL;
     udsScanWindow = NULL;
+    isoWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
+    rxFrames = 0;
+    framesPerSec = 0;
 
     model->setDBCHandler(dbcHandler);
 
@@ -139,6 +142,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
+    connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -149,6 +153,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
+
+    connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
+    updateTimer.setInterval(250);
+    updateTimer.start();
+
+    elapsedTime = new QTime;
+    elapsedTime->start();
 
     isConnected = false;
     allowCapture = true;
@@ -266,6 +277,14 @@ MainWindow::~MainWindow()
         delete udsScanWindow;
     }
 
+    if (isoWindow)
+    {
+        isoWindow->close();
+        delete isoWindow;
+    }
+
+    delete elapsedTime;
+
     delete ui;
     delete dbcHandler;
     model->clearFrames();
@@ -289,6 +308,7 @@ void MainWindow::exitApp()
     if (dbcFileWindow) dbcFileWindow->close();
     if (fuzzingWindow) fuzzingWindow->close();
     if (udsScanWindow) udsScanWindow->close();
+    if (isoWindow) isoWindow->close();
     this->close();
 }
 
@@ -493,20 +513,36 @@ void MainWindow::filterClearAll()
     model->setAllFilters(false);
 }
 
-//most of the work is handled elsewhere. Need only to update the # of frames
-//and maybe auto scroll
-void MainWindow::gotFrames(int FPS, int framesSinceLastUpdate)
+void MainWindow::tickGUIUpdate()
 {
+    int elapsed = elapsedTime->elapsed();
+    if(elapsed) {
+        framesPerSec += rxFrames * 1000 / elapsed - (framesPerSec / 4);
+        elapsedTime->restart();
+    }
+    else
+        framesPerSec = 0;
+
+    model->sendBulkRefresh(rxFrames);
+
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
-    ui->lbFPS->setText(QString::number(FPS));
-    if (framesSinceLastUpdate > 0)
+    ui->lbFPS->setText(QString::number(framesPerSec / 4));
+    if (rxFrames > 0)
     {
         bDirty = true;
-        emit framesUpdated(framesSinceLastUpdate); //anyone care that frames were updated?
+        emit framesUpdated(rxFrames); //anyone care that frames were updated?
     }
 
     if (model->needsFilterRefresh()) updateFilterList();
+
+    rxFrames = 0;
+}
+
+void MainWindow::gotFrames(int framesSinceLastUpdate)
+{
+    rxFrames += framesSinceLastUpdate;
+    emit frameUpdateRapid(framesSinceLastUpdate);
 }
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
@@ -862,6 +898,18 @@ void MainWindow::showFrameDataAnalysis()
             frameInfoWindow = new FrameInfoWindow(model->getFilteredListReference());
     }
     frameInfoWindow->show();
+}
+
+void MainWindow::showISOInterpreterWindow()
+{
+    if (!isoWindow)
+    {
+        if (!useFiltered)
+            isoWindow = new ISOTP_InterpreterWindow(model->getListReference());
+        else
+            isoWindow = new ISOTP_InterpreterWindow(model->getFilteredListReference());
+    }
+    isoWindow->show();
 }
 
 void MainWindow::showFrameSenderWindow()

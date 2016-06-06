@@ -29,14 +29,15 @@ public:
 };
 
 //the same as the CANFrame struct but with arbitrary data size.
-struct ISOTP_FRAME
+struct ISOTP_MESSAGE
 {
 public:
     int ID;
     int bus;
     bool extended;
     bool isReceived;
-    int len;
+    int len; //# of bytes this message should have (as reported)
+    int actualSize; //# we actually got
     QVector<unsigned char> data;
     uint64_t timestamp;
 };

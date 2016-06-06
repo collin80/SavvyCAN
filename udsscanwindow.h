@@ -22,6 +22,7 @@ signals:
 
 private slots:
     void updatedFrames(int numFrames);
+    void rapidFrames(int numFrames);
     void scanUDS();
     void timeOut();
 
@@ -31,6 +32,7 @@ private:
     QTimer *waitTimer;
     QList<CANFrame> sendingFrames;
     int currIdx = 0;
+    bool currentlyRunning;
 
     void sendNextMsg();
 };

@@ -1,5 +1,6 @@
 #include "framefileio.h"
 
+#include <QMessageBox>
 #include <QProgressDialog>
 
 #include <iostream>
@@ -163,7 +164,13 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
             fileName = fileList[fileList.length() - 1];
             return true;
         }
-        else return false;
+        else
+        {
+            QMessageBox msgBox;
+            msgBox.setText("File load completed with errors.\r\nPerhaps you selected the wrong file type?");
+            msgBox.exec();
+            return false;
+        }
     }
     return false;
 }
@@ -179,6 +186,7 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
     QByteArray line;
     int lineCounter = 0;
     bool pastHeader = false;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -193,6 +201,8 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
         if (lineCounter == 2) pastHeader = true;
     }
 
+    if (inFile->atEnd()) foundErrors = true;
+
     while (!inFile->atEnd()) {
         lineCounter++;
         if (lineCounter > 100)
@@ -203,30 +213,33 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
         line = inFile->readLine().simplified().toUpper();
 
         QList<QByteArray> tokens = line.split(',');
-        thisFrame.bus = 0;
-        thisFrame.timestamp = tokens[1].toDouble() * 1000000.0;
-        if (tokens[5].startsWith("T")) thisFrame.isReceived = false;
-            else thisFrame.isReceived = true;
-        thisFrame.ID = tokens[9].toInt(NULL, 16);
-        if (tokens[11].startsWith("T")) thisFrame.extended = true;
-            else thisFrame.extended = false;
-
-        thisFrame.len = 0;
-        for (int i = 0; i < 8; i++)
+        if (tokens.length() > 20)
         {
-            if (tokens[12 + i].length() > 0)
-            {
-                thisFrame.data[i] = tokens[12 + i].toInt(NULL, 16);
-                thisFrame.len++;
-            }
-            else break;
-        }
+            thisFrame.bus = 0;
+            thisFrame.timestamp = tokens[1].toDouble() * 1000000.0;
+            if (tokens[5].startsWith("T")) thisFrame.isReceived = false;
+                else thisFrame.isReceived = true;
+            thisFrame.ID = tokens[9].toInt(NULL, 16);
+            if (tokens[11].startsWith("T")) thisFrame.extended = true;
+                else thisFrame.extended = false;
 
-        frames->append(thisFrame);
+            thisFrame.len = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                if (tokens[12 + i].length() > 0)
+                {
+                    thisFrame.data[i] = tokens[12 + i].toInt(NULL, 16);
+                    thisFrame.len++;
+                }
+                else break;
+            }
+            frames->append(thisFrame);
+        }
+        else foundErrors = true;
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CANFrame> *frames)
@@ -262,6 +275,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     QByteArray line;
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -283,44 +297,48 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
         {
             QList<QByteArray> tokens = line.split(' ');
             int multiplier;
-            int idxOfDecimal = tokens[0].indexOf('.');
-            if (idxOfDecimal > -1) {
-                //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
-                //the result of the above is the # of digits after the decimal.
-                //This program deals in microsecond so turn the value into microseconds
-                multiplier = 1000000; //turn the decimal into full microseconds
-            }
-            else
+            if (tokens.length() > 3)
             {
-                multiplier = 1; //special case. Assume no decimal means microseconds
-            }
-            //qDebug() << "decimal places " << decimalPlaces;
-            thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * multiplier);
-            char firstChar = tokens[1].left(1)[0];
-            if (firstChar == 'R' || firstChar == 'T')
-            {
-                thisFrame.ID = tokens[2].toInt(NULL, 16);
-                if (tokens[1] == "R29" || tokens[1] == "T29") thisFrame.extended = true;
-                else thisFrame.extended = false;
-                if (firstChar == 'T') thisFrame.isReceived = false;
-                else thisFrame.isReceived = true;
-                thisFrame.bus = 0;
-                thisFrame.len = tokens.length() - 3;
-                for (int d = 0; d < thisFrame.len; d++)
-                {
-                    if (tokens[d + 3] != "")
-                    {
-                        thisFrame.data[d] = tokens[d + 3].toInt(NULL, 16);
-                    }
-                    else thisFrame.data[d] = 0;
+                int idxOfDecimal = tokens[0].indexOf('.');
+                if (idxOfDecimal > -1) {
+                    //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
+                    //the result of the above is the # of digits after the decimal.
+                    //This program deals in microsecond so turn the value into microseconds
+                    multiplier = 1000000; //turn the decimal into full microseconds
                 }
-                frames->append(thisFrame);
+                else
+                {
+                    multiplier = 1; //special case. Assume no decimal means microseconds
+                }
+                //qDebug() << "decimal places " << decimalPlaces;
+                thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * multiplier);
+                char firstChar = tokens[1].left(1)[0];
+                if (firstChar == 'R' || firstChar == 'T')
+                {
+                    thisFrame.ID = tokens[2].toInt(NULL, 16);
+                    if (tokens[1] == "R29" || tokens[1] == "T29") thisFrame.extended = true;
+                        else thisFrame.extended = false;
+                    if (firstChar == 'T') thisFrame.isReceived = false;
+                        else thisFrame.isReceived = true;
+                    thisFrame.bus = 0;
+                    thisFrame.len = tokens.length() - 3;
+                    for (int d = 0; d < thisFrame.len; d++)
+                    {
+                        if (tokens[d + 3] != "")
+                        {
+                            thisFrame.data[d] = tokens[d + 3].toInt(NULL, 16);
+                        }
+                        else thisFrame.data[d] = 0;
+                    }
+                    frames->append(thisFrame);
+                }
             }
+            else foundErrors = true;
         }
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames)
@@ -384,6 +402,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
     int fileVersion = 1;
     long long timeStamp = Utility::GetTimeMS();
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -406,47 +425,52 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
-            if (tokens[0].length() > 3)
+            if (tokens.length() >= 6)
             {
-                long long temp = tokens[0].right(10).toLongLong();
-                thisFrame.timestamp = temp;
-            }
-            else
-            {
-                timeStamp += 5;
-                thisFrame.timestamp = timeStamp;
-            }
+                if (tokens[0].length() > 3)
+                {
+                    long long temp = tokens[0].right(10).toLongLong();
+                    thisFrame.timestamp = temp;
+                }
+                else
+                {
+                    timeStamp += 5;
+                    thisFrame.timestamp = timeStamp;
+                }
 
-            thisFrame.ID = tokens[1].toInt(NULL, 16);
-            if (tokens[2].toUpper().contains("TRUE")) thisFrame.extended = 1;
-            else thisFrame.extended = 0;
+                thisFrame.ID = tokens[1].toInt(NULL, 16);
+                if (tokens[2].toUpper().contains("TRUE")) thisFrame.extended = 1;
+                    else thisFrame.extended = 0;
 
-            if (fileVersion == 1)
-            {
-                thisFrame.isReceived = true;
-                thisFrame.bus = tokens[3].toInt();
-                thisFrame.len = tokens[4].toInt();
-                for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
-                for (int d = 0; d < thisFrame.len; d++)
-                    thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
-            }
-            else if (fileVersion == 2)
-            {
-                if (tokens[3].at(0) == 'R') thisFrame.isReceived = true;
-                else thisFrame.isReceived = false;
-                thisFrame.bus = tokens[4].toInt();
-                thisFrame.len = tokens[5].toInt();
-                for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
-                for (int d = 0; d < thisFrame.len; d++)
-                    thisFrame.data[d] = tokens[6 + d].toInt(NULL, 16);
-            }
+                if (fileVersion == 1)
+                {
+                    thisFrame.isReceived = true;
+                    thisFrame.bus = tokens[3].toInt();
+                    thisFrame.len = tokens[4].toInt();
+                    for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
+                    for (int d = 0; d < thisFrame.len; d++)
+                        thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
+                }
+                else if (fileVersion == 2)
+                {
+                    if (tokens[3].at(0) == 'R') thisFrame.isReceived = true;
+                    else thisFrame.isReceived = false;
+                    thisFrame.bus = tokens[4].toInt();
+                    thisFrame.len = tokens[5].toInt();
+                    if (thisFrame.len + 6 > tokens.length()) thisFrame.len = tokens.length() - 6;
+                    for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
+                    for (int d = 0; d < thisFrame.len; d++)
+                        thisFrame.data[d] = tokens[6 + d].toInt(NULL, 16);
+                }
 
-            frames->append(thisFrame);
+                frames->append(thisFrame);
+            }
+            else foundErrors = true;
         }
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* frames)
@@ -514,6 +538,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
     QByteArray line;
     long long timeStamp = Utility::GetTimeMS();
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -549,10 +574,11 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
 
             frames->append(thisFrame);
         }
+        else foundErrors = true;
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 //4f5,ff 34 23 45 24 e4
@@ -635,6 +661,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
     uint64_t timeStamp = Utility::GetTimeMS();
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -657,24 +684,30 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 1)
         {
             QList<QByteArray> tokens = line.split(' ');
-            QList<QByteArray> timeToks = tokens[0].split(':');
-            timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
+            if (tokens.length() >= 6)
+            {
+                QList<QByteArray> timeToks = tokens[0].split(':');
+                timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
                       + (timeToks[2].toInt() * (1000ul * 1000ul)) + (timeToks[3].toInt() * 100ul);
-            thisFrame.timestamp = timeStamp;
-            if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
-            else thisFrame.isReceived = false;
-            thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
-            if (tokens[4] == "s") thisFrame.extended = false;
-            else thisFrame.extended = true;
-            thisFrame.bus = tokens[2].toInt() - 1;
-            thisFrame.len = tokens[5].toInt();
-            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = tokens[d + 6].toInt(NULL, 16);
-        }
-        frames->append(thisFrame);
+                thisFrame.timestamp = timeStamp;
+                if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
+                    else thisFrame.isReceived = false;
+                thisFrame.ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
+                if (tokens[4] == "s") thisFrame.extended = false;
+                    else thisFrame.extended = true;
+                thisFrame.bus = tokens[2].toInt() - 1;
+                thisFrame.len = tokens[5].toInt();
+                if (thisFrame.len > 8) thisFrame.len = 8;
+                if (thisFrame.len < 0) thisFrame.len = 0;
+                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = tokens[d + 6].toInt(NULL, 16);
+                frames->append(thisFrame);
+            }
+            else foundErrors = true;
+        }        
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
@@ -748,6 +781,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
     uint64_t timeStamp = Utility::GetTimeMS();
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -769,27 +803,48 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 1)
         {
             QList<QByteArray> tokens = line.split(',');
-            QString timePortion = unQuote(tokens[0]);
-            QStringList timeToks = timePortion.split(':');
-            timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
+            if (line.length() >= 5)
+            {
+                QString timePortion = unQuote(tokens[0]);
+                QStringList timeToks = timePortion.split(':');
+                if (timeToks.length() >= 3)
+                {
+                    timeStamp = (timeToks[0].toInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toInt() * (1000ul * 1000ul * 60ul))
                       + (timeToks[2].toDouble() * (1000.0 * 1000.0));
-            thisFrame.timestamp = timeStamp;
-            thisFrame.ID = unQuote(tokens[1]).toInt(NULL, 16);
-            if (unQuote(tokens[2]).toUpper().at(0) == 'S') thisFrame.extended = false;
-                else thisFrame.extended = true;
+                }
+                else
+                {
+                    timeStamp = 0;
+                    foundErrors = true;
+                }
+                thisFrame.timestamp = timeStamp;
+                thisFrame.ID = unQuote(tokens[1]).toInt(NULL, 16);
+                QString tempStr = unQuote(tokens[2]).toUpper();
+                if (tempStr.length() > 0)
+                {
+                    if (tempStr.at(0) == 'S') thisFrame.extended = false;
+                        else thisFrame.extended = true;
+                }
+                else
+                {
+                    thisFrame.extended = false;
+                    foundErrors = true;
+                }
 
-            thisFrame.isReceived = true;
-            thisFrame.bus = 0;
+                thisFrame.isReceived = true;
+                thisFrame.bus = 0;
 
-            QStringList dataToks = unQuote(tokens[4]).simplified().split(' ');
-            thisFrame.len = dataToks.length();
-            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
+                QStringList dataToks = unQuote(tokens[4]).simplified().split(' ');
+                thisFrame.len = dataToks.length();
+                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
+                frames->append(thisFrame);
+            }
+            else foundErrors = true;
         }
-        frames->append(thisFrame);
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frames)
@@ -856,6 +911,7 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
     QByteArray data;
     int timeOffset = 0;
     uint64_t lastTimeStamp = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly))
     {
@@ -891,7 +947,7 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
             timeOffset += 60000000ul;
         }
         lastTimeStamp = thisFrame.timestamp;
-        thisFrame.ID = ((unsigned char)data[3] * 256 + (unsigned char)data[2]) & 0x7FF;
+        thisFrame.ID = (((unsigned char)data[3] & 0x0F) * 256 + (unsigned char)data[2]) & 0x7FF;
         thisFrame.len = (unsigned char)data[3] >> 4;
 
         if (thisFrame.len <= 8 && thisFrame.ID <= 0x7FF)
@@ -899,11 +955,12 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
             for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)data[4 + d];
             frames->append(thisFrame);
         }
+        else foundErrors = true;
     }
 
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frames)
@@ -977,6 +1034,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
     bool inComment = false;
     long long timeStamp;
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -1006,24 +1064,31 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
                 if (!inComment)
                 {
                     QList<QByteArray> tokens = line.split(';');
-                    timeStamp = tokens[0].toInt() * 1000;
-                    thisFrame.timestamp = timeStamp;
-                    if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
-                    else thisFrame.isReceived = false;
-                    thisFrame.ID = Utility::ParseStringToNum(tokens[2]);
-                    if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
-                    else thisFrame.extended = true;
-                    thisFrame.bus = 0;
-                    thisFrame.len = tokens[3].toInt();
-                    for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)Utility::ParseStringToNum(tokens[4 + d]);
-                    frames->append(thisFrame);
+                    if (tokens.length() >= 4)
+                    {
+                        timeStamp = tokens[0].toInt() * 1000;
+                        thisFrame.timestamp = timeStamp;
+                        if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
+                            else thisFrame.isReceived = false;
+                        thisFrame.ID = Utility::ParseStringToNum(tokens[2]);
+                        if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
+                            else thisFrame.extended = true;
+                        thisFrame.bus = 0;
+                        thisFrame.len = tokens[3].toInt();
+                        if (thisFrame.len > 8) thisFrame.len = 8;
+                        if (thisFrame.len < 0) thisFrame.len = 0;
+                        if (thisFrame.len + 4 > tokens.length()) thisFrame.len = tokens.length() - 4;
+                        for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)Utility::ParseStringToNum(tokens[4 + d]);
+                        frames->append(thisFrame);
+                    }
+                    else foundErrors = true;
                 }
             }
         }
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 /*
@@ -1126,6 +1191,7 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
     long long timeStamp = 0;
     int lineCounter = 0;
+    bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -1152,31 +1218,36 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
             else
             {
                 QList<QByteArray> tokens = line.split('\t');
+                if (tokens.length() > 3)
+                {
+                    QList<QByteArray> timestampToks = tokens[1].split(':');
 
-                QList<QByteArray> timestampToks = tokens[1].split(':');
+                    timeStamp = timestampToks[0].toInt() * 1000000ul * 60 * 60;
+                    timeStamp += timestampToks[1].toInt() * 1000000ul * 60;
+                    timeStamp += timestampToks[2].toInt() * 1000000ul;
+                    timeStamp += timestampToks[3].toInt() * 100;
 
-                timeStamp = timestampToks[0].toInt() * 1000000ul * 60 * 60;
-                timeStamp += timestampToks[1].toInt() * 1000000ul * 60;
-                timeStamp += timestampToks[2].toInt() * 1000000ul;
-                timeStamp += timestampToks[3].toInt() * 100;
+                    thisFrame.timestamp = timeStamp;
 
-                thisFrame.timestamp = timeStamp;
-
-                thisFrame.ID = tokens[2].toLong(NULL, 16);
-                if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
-                else thisFrame.extended = true;
-                thisFrame.bus = 0;
-                thisFrame.len = tokens[3].toInt();
-
-                QList<QByteArray> dataToks = tokens[4].split(' ');
-                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)dataToks[d].toInt(NULL, 16);
-                frames->append(thisFrame);
+                    thisFrame.ID = tokens[2].toLong(NULL, 16);
+                    if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
+                        else thisFrame.extended = true;
+                    thisFrame.bus = 0;
+                    thisFrame.len = tokens[3].toInt();
+                    if (thisFrame.len < 0) thisFrame.len = 0;
+                    if (thisFrame.len > 8) thisFrame.len = 8;
+                    QList<QByteArray> dataToks = tokens[4].split(' ');
+                    if (thisFrame.len > dataToks.length()) thisFrame.len = dataToks.length();
+                    for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)dataToks[d].toInt(NULL, 16);
+                    frames->append(thisFrame);
+                }
+                else foundErrors = true;
             }
         }
     }
     inFile->close();
     delete inFile;
-    return true;
+    return !foundErrors;
 }
 
 bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * frames)
@@ -1348,5 +1419,9 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
 
 QString FrameFileIO::unQuote(QString inStr)
 {
-    return inStr.split('\"')[1];
+    QStringList temp;
+    temp = inStr.split('\"');
+    if (temp.length() >= 3)
+        return temp[1];
+    return QString("");
 }
