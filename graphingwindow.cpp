@@ -837,7 +837,7 @@ void GraphingWindow::loadDefinitions()
 
                             for (int b = 0; b < 8; b++)
                             {
-                                if (oldMask & (1 << b))
+                                if (oldMask & (1ull << b))
                                 {
                                     gp.startBit = (8 * oldEnd) + b;
                                     break;
@@ -846,7 +846,7 @@ void GraphingWindow::loadDefinitions()
 
                             for (int c = 7; c >= 0; c--)
                             {
-                                if ( oldMask & (1<<(((numBytes - 1) * 8) + c)) )
+                                if ( oldMask & (1ull << (((numBytes - 1) * 8) + c)) )
                                 {
                                     gp.numBits -= (7-c);
                                     break;
@@ -865,7 +865,7 @@ void GraphingWindow::loadDefinitions()
                             gp.numBits = 8;
                             for (int b = 0; b < 8; b++)
                             {
-                                if (oldMask & (1 << b))
+                                if (oldMask & (1ull << b))
                                 {
                                     gp.startBit = 8 * oldStart + b;
                                     gp.numBits = 8 - b;

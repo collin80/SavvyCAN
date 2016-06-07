@@ -8,12 +8,15 @@ DeltaModel::DeltaModel(QObject *parent)
 QVariant DeltaModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     // FIXME: Implement me!
+    return QVariant();
 }
 
 int DeltaModel::rowCount(const QModelIndex &parent) const
 {
     if (!parent.isValid())
         return 0;
+
+    return 0;
 
     // FIXME: Implement me!
 }
@@ -22,6 +25,8 @@ int DeltaModel::columnCount(const QModelIndex &parent) const
 {
     if (!parent.isValid())
         return 0;
+
+    return 0;
 
     // FIXME: Implement me!
 }
