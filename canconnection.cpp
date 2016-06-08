@@ -1,74 +1,6 @@
 #include "canconnection.h"
 
-CAN_Bus::CAN_Bus()
-{
-    speed = 250000;
-    listenOnly = false;
-    singleWire = false;
-    active = false;
-    connection = NULL;
-    busNum = 0;
-}
 
-void CAN_Bus::setSpeed(int newSpeed)
-{
-    speed = newSpeed;
-}
-
-void CAN_Bus::setListenOnly(bool mode)
-{
-    listenOnly = mode;
-}
-
-void CAN_Bus::setSingleWire(bool mode)
-{
-    singleWire = mode;
-}
-
-void CAN_Bus::setEnabled(bool mode)
-{
-    active = mode;
-}
-
-void CAN_Bus::setConnection(CANConnection *conn)
-{
-    connection = conn;
-}
-
-void CAN_Bus::setBusNum(int num)
-{
-    busNum = num;
-}
-
-int CAN_Bus::getSpeed()
-{
-    return speed;
-}
-
-int CAN_Bus::getBusNum()
-{
-    return busNum;
-}
-
-bool CAN_Bus::isListenOnly()
-{
-    return listenOnly;
-}
-
-bool CAN_Bus::isSingleWire()
-{
-    return singleWire;
-}
-
-bool CAN_Bus::isActive()
-{
-    return active;
-}
-
-CANConnection* CAN_Bus::getConnection()
-{
-    return connection;
-}
 
 CANConnection::CANConnection(CANFrameModel *pModel, int base)
 {
@@ -127,7 +59,7 @@ void CANConnection::startFrameCapture(int bus)
 
 }
 
-void CANConnection::updateBusSettings(CAN_Bus *bus)
+void CANConnection::updateBusSettings(CANBus bus)
 {
 
 }

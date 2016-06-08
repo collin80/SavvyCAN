@@ -4,34 +4,8 @@
 #include <Qt>
 #include <QObject>
 #include "can_structs.h"
+#include "canbus.h"
 #include "canframemodel.h"
-
-class CANConnection;
-
-class CAN_Bus
-{
-public:
-    CAN_Bus();
-    int busNum;
-    int speed;
-    bool listenOnly;
-    bool singleWire;
-    bool active; //is this bus turned on?
-    CANConnection *connection;
-
-    void setSpeed(int); // new speed
-    void setListenOnly(bool); //bool for whether to only listen
-    void setSingleWire(bool); //bool for whether to use single wire mode
-    void setEnabled(bool); //whether this bus should be enabled or not.
-    void setConnection(CANConnection *);
-    void setBusNum(int);
-    int getSpeed();
-    int getBusNum();
-    bool isListenOnly();
-    bool isSingleWire();
-    bool isActive();
-    CANConnection *getConnection();
-};
 
 
 //Gentle reminder, CANConnection objects run in their own thread (each one, different thread)
@@ -70,7 +44,8 @@ public slots:
     virtual void updatePortName(QString); //string version of the port to connect to. This base doesnt know a thing about this value
     virtual void stopFrameCapture(int); //pass bus number
     virtual void startFrameCapture(int); //pass bus number. Only if stopped. Defaults to started anyway
-    virtual void updateBusSettings(CAN_Bus *bus); //reference to the bus that changed.
+    /* this is not safe to use pointers with QueuedConnection */
+    virtual void updateBusSettings(CANBus); //reference to the bus that changed.
 
 protected:
     bool quit;
