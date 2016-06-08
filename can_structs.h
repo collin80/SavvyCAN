@@ -4,7 +4,7 @@
 #include <QVector>
 #include <stdint.h>
 
-class CANFrame
+struct CANFrame
 {
 public:
     int ID;
