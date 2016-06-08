@@ -281,7 +281,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
+
+void CANFrameModel::addFrame(CANFrame frame, bool autoRefresh = false)
 {
     mutex.lock();
     CANFrame tempFrame;

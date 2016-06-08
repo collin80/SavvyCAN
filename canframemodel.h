@@ -23,7 +23,6 @@ public:
     int columnCount(const QModelIndex &) const;
     int totalFrameCount();    
 
-    void addFrame(const CANFrame &, bool);
     void sendRefresh();
     void sendRefresh(int);
     void sendBulkRefresh(int);
@@ -45,6 +44,9 @@ public:
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
     const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
+
+public slots:
+    void addFrame(CANFrame, bool);
 
 signals:
     void updatedFiltersList();
