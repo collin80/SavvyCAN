@@ -1,10 +1,9 @@
 #ifndef CANCONNECTIONCONTAINER_H
 #define CANCONNECTIONCONTAINER_H
 
-#include "canconnection.h"
 #include <Qt>
 #include <QThread>
-#include "mainwindow.h"
+#include "canconnection.h"
 
 class CANConnectionContainer : public QObject
 {
