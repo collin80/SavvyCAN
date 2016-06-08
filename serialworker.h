@@ -10,6 +10,7 @@
 #include "canframemodel.h"
 #include "canconnection.h"
 
+
 namespace SERIALSTATE {
 
 enum STATE //keep this enum synchronized with the Arduino firmware project
@@ -57,7 +58,7 @@ public slots:
     //void stopFrameCapture(int) override;
     //void startFrameCapture(int)  override;
     void updatePortName(QString) override; //string version of the port to connect to. This base doesnt know a thing about this value
-    void updateBusSettings(CAN_Bus *bus) override;
+    void updateBusSettings(CANBus) override;
 
 private:    
     bool doValidation;
@@ -71,7 +72,7 @@ private:
     int framesRapid;
     STATE rx_state;
     int rx_step;
-    CANFrame *buildFrame;
+    CANFrame buildFrame;
     int can0Baud, can1Baud;
     bool can0Enabled, can1Enabled;
     bool can0ListenOnly, can1ListenOnly;

@@ -11,7 +11,7 @@ SerialWorker::SerialWorker(CANFrameModel *model, int base) : CANConnection(model
     serial = NULL;
     rx_state = IDLE;
     rx_step = 0;
-    buildFrame = new CANFrame;
+    buildFrame;
     ticker = NULL;
     framesRapid = 0;
     gotValidated = true;
@@ -166,8 +166,13 @@ void SerialWorker::sendFrame(const CANFrame *frame)
 
     //qDebug() << "Sending out frame with id " << frame->ID;
 
-    //show our sent frames in the list too. This happens even if we're not connected.    
-    model->addFrame(tempFrame, false);
+    //show our sent frames in the list too. This happens even if we're not connected.
+    /* model lives in UI thread, we need to call invokeMethod */
+    QMetaObject::invokeMethod(model, "addFrame",
+                              Qt::QueuedConnection,
+                              Q_ARG(CANFrame, tempFrame),
+                              Q_ARG(bool, false));
+
     framesRapid++;
 
     if (serial == NULL) return;
@@ -275,56 +280,61 @@ void SerialWorker::procRXChar(unsigned char c)
         switch (rx_step)
         {
         case 0:
-            buildFrame->timestamp = c;
+            buildFrame.timestamp = c;
             break;
         case 1:
-            buildFrame->timestamp |= (uint)(c << 8);
+            buildFrame.timestamp |= (uint)(c << 8);
             break;
         case 2:
-            buildFrame->timestamp |= (uint)c << 16;
+            buildFrame.timestamp |= (uint)c << 16;
             break;
         case 3:
-            buildFrame->timestamp |= (uint)c << 24;
+            buildFrame.timestamp |= (uint)c << 24;
             break;
         case 4:
-            buildFrame->ID = c;
+            buildFrame.ID = c;
             break;
         case 5:
-            buildFrame->ID |= c << 8;
+            buildFrame.ID |= c << 8;
             break;
         case 6:
-            buildFrame->ID |= c << 16;
+            buildFrame.ID |= c << 16;
             break;
         case 7:
-            buildFrame->ID |= c << 24;
-            if ((buildFrame->ID & 1 << 31) == 1 << 31)
+            buildFrame.ID |= c << 24;
+            if ((buildFrame.ID & 1 << 31) == 1 << 31)
             {
-                buildFrame->ID &= 0x7FFFFFFF;
-                buildFrame->extended = true;
+                buildFrame.ID &= 0x7FFFFFFF;
+                buildFrame.extended = true;
             }
-            else buildFrame->extended = false;
+            else buildFrame.extended = false;
             break;
         case 8:
-            buildFrame->len = c & 0xF;
-            if (buildFrame->len > 8) buildFrame->len = 8;
-            buildFrame->bus = (c & 0xF0) >> 4;
+            buildFrame.len = c & 0xF;
+            if (buildFrame.len > 8) buildFrame.len = 8;
+            buildFrame.bus = (c & 0xF0) >> 4;
             break;
         default:
-            if (rx_step < buildFrame->len + 9)
+            if (rx_step < buildFrame.len + 9)
             {
-                buildFrame->data[rx_step - 9] = c;
+                buildFrame.data[rx_step - 9] = c;
             }
             else
             {
                 rx_state = IDLE;
                 rx_step = 0;
-                //qDebug() << "emit from serial handler to main form id: " << buildFrame->ID;
+                //qDebug() << "emit from serial handler to main form id: " << buildFrame.ID;
                 //if (capturing)
                 //{
-                    buildFrame->isReceived = true;
-                    model->addFrame(*buildFrame, false);
+                    buildFrame.isReceived = true;
+                    /* model lives in UI thread, we need to call invokeMethod */
+                    QMetaObject::invokeMethod(model, "addFrame",
+                                              Qt::QueuedConnection,
+                                              Q_ARG(CANFrame, buildFrame),
+                                              Q_ARG(bool, false));
+
                     //take the time the frame came in and try to resync the time base.
-                    if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame->timestamp / 1000);
+                    if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame.timestamp / 1000);
                     framesRapid++;                    
                 //}
             }
@@ -576,24 +586,24 @@ QString SerialWorker::getConnTypeName()
     return QString("GVRET");
 }
 
-void SerialWorker::updateBusSettings(CAN_Bus *bus)
+void SerialWorker::updateBusSettings(CANBus bus)
 {
-    int busNum = bus->busNum - busBase;
+    int busNum = bus.busNum - busBase;
     if (busNum < 0) return;
     if (busNum >= numBuses) return;
     qDebug() << "About to update bus " << busNum << " on GVRET";
     if (busNum == 0)
     {
-        can0Baud = bus->getSpeed();
+        can0Baud = bus.getSpeed();
         can0Baud |= 0x80000000;
-        if (bus->isActive())
+        if (bus.isActive())
         {
             can0Baud |= 0x40000000;
             can0Enabled = true;
         }
         else can0Enabled = false;
 
-        if (bus->isListenOnly())
+        if (bus.isListenOnly())
         {
             can0Baud |= 0x20000000;
             can0ListenOnly = true;
@@ -602,23 +612,23 @@ void SerialWorker::updateBusSettings(CAN_Bus *bus)
     }
     if (busNum == 1)
     {
-        can1Baud = bus->getSpeed();
+        can1Baud = bus.getSpeed();
         can1Baud |= 0x80000000;
-        if (bus->isActive())
+        if (bus.isActive())
         {
             can1Baud |= 0x40000000;
             can1Enabled = true;
         }
         else can1Enabled = false;
 
-        if (bus->isListenOnly())
+        if (bus.isListenOnly())
         {
             can1Baud |= 0x20000000;
             can1ListenOnly = true;
         }
         else can1ListenOnly = false;
 
-        if (bus->isSingleWire())
+        if (bus.isSingleWire())
         {
             can1Baud |= 0x10000000;
             deviceSingleWireMode = 1;
