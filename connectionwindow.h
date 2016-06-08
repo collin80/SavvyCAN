@@ -40,7 +40,7 @@ public:
     bool getSWMode();
 
 signals:
-    void updateBusSettings(CAN_Bus *bus);
+    void updateBusSettings(CANBus *bus);
     void updatePortName(QString port);
 
 public slots:
@@ -58,8 +58,6 @@ private slots:
     void handleDisableAll();
     void handleRevert();
     void handleNewConn();
-    void handleEnableAll();
-    void handleDisableAll();
     void receiveBusStatus(int bus, int speed, int status);
     void connectionSuccess(CANConnection *conn);
 
@@ -74,6 +72,7 @@ private:
     void getSerialPorts();
     void getKvaserPorts();
     void getSocketcanPorts();
+    bool isSocketCanAvailable();
 };
 
 #endif // CONNECTIONWINDOW_H

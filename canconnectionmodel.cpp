@@ -71,8 +71,8 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     if (role == Qt::DisplayRole) {
-        CAN_Bus bus = buses[index.row()];
-        CANConnection *conn = bus.connection;
+        CANBus bus = buses[index.row()];
+        CANConnection *conn = bus.getContainer()->getRef();
         switch (index.column())
         {
         case 0: //bus
@@ -109,35 +109,32 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
         return QVariant();
 }
 
-void CANConnectionModel::addConnection(CANConnection *conn)
-{
-    CAN_Bus bus;
-    CANConnectionContainer *cont = new CANConnectionContainer(conn);
-    connections.append(cont);
-}
 
-void CANConnectionModel::addBus(CAN_Bus &bus)
+void CANConnectionModel::addBus(CANBus &bus)
 {
     beginResetModel();
     buses.append(bus);
     endResetModel();
 }
 
-CAN_Bus* CANConnectionModel::getBus(int bus)
+void CANConnectionModel::removeBus(int busIdx)
+{
+    if (busIdx>=0 && busIdx < buses.count()) {
+        beginResetModel();
+        buses.removeAt(busIdx);
+        endResetModel();
+    }
+}
+
+CANBus* CANConnectionModel::getBus(int bus)
 {
     if (bus < 0) return NULL;
     if (bus >= buses.count()) return NULL;
     return &buses[bus];
 }
 
-CANConnection* CANConnectionModel::getConnection(int conn)
-{
-    if (conn < 0) return NULL;
-    if (conn >= connections.count()) return NULL;
-    return connections[conn]->getRef();
-}
 
-CAN_Bus* CANConnectionModel::findBusByNum(int bus)
+CANBus* CANConnectionModel::findBusByNum(int bus)
 {
     for (int i = 0; i < buses.count(); i++)
     {

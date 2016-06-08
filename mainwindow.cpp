@@ -47,7 +47,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
 
-    model = new CANFrameModel();
+    model = new CANFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
+
     ui->canFramesView->setModel(model);
 
     readSettings();
@@ -510,7 +511,7 @@ void MainWindow::gotFrames(int framesSinceLastUpdate)
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 {
-    model->addFrame(frame, autoRefresh);    
+    model->addFrame(frame, autoRefresh);
     if (autoRefresh)
     {
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();

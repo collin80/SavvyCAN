@@ -2,6 +2,7 @@
 #define CANCONNECTIONMODEL_H
 
 #include "canconnection.h"
+#include "canbus.h"
 #include "canconnectioncontainer.h"
 
 #include <QAbstractTableModel>
@@ -23,17 +24,19 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    void addConnection(CANConnection *conn);
-    void addBus(CAN_Bus &bus);
-    CAN_Bus* getBus(int bus);
+    void addConnection(CANConnectionContainer *conn);
+    void removeConnection(CANConnection*);
+    void addBus(CANBus &bus);
+    void removeBus(int busIdx);
+    CANBus* getBus(int bus);
     CANConnection* getConnection(int conn);
     void refreshView();
 
 private:
     QList<CANConnectionContainer *> connections;
-    QList<CAN_Bus> buses;
+    QList<CANBus> buses;
 
-    CAN_Bus *findBusByNum(int bus);
+    CANBus *findBusByNum(int bus);
 };
 
 #endif // CANCONNECTIONMODEL_H
