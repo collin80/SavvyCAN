@@ -1,12 +1,16 @@
-QT += core
+QT += widgets testlib
 QT -= gui
 
 CONFIG += c++11
 
-TARGET = test
-CONFIG += console
-CONFIG -= app_bundle
+INCLUDEPATH += ../utils
 
-TEMPLATE = app
+SOURCES += \
+    tst_lfqueue.cpp
 
-SOURCES += main.cpp
+
+#HEADERS += \
+#    ../utils/lfqueue.h
+
+target.path= .
+INSTALLS += target
