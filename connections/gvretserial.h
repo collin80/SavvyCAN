@@ -7,7 +7,6 @@
 #include <QTimer>
 
 /*************/
-#include <QMutex>
 #include <QDateTime>
 /*************/
 
@@ -96,7 +95,6 @@ protected:
     bool isAutoRestart;
     bool continuousTimeSync;
     QSerialPort *serial;
-    QMutex sendBulkMutex;
     int framesRapid;
     STATE rx_state;
     int rx_step;
