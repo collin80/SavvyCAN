@@ -2,8 +2,7 @@
 
 #include "connectionwindow.h"
 #include "ui_connectionwindow.h"
-#include "socketcanconnection.h"
-
+#include "connections/canconfactory.h"
 
 
 ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
@@ -26,10 +25,11 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     ui->tableConnections->setColumnWidth(0, 50);
     ui->tableConnections->setColumnWidth(1, 110);
     ui->tableConnections->setColumnWidth(2, 110);
-    ui->tableConnections->setColumnWidth(3, 150);
+    ui->tableConnections->setColumnWidth(3, 110);
     ui->tableConnections->setColumnWidth(4, 75);
     ui->tableConnections->setColumnWidth(5, 75);
     ui->tableConnections->setColumnWidth(6, 75);
+    ui->tableConnections->setColumnWidth(7, 75);
 
     int temp = settings->value("Main/DefaultConnectionType", 0).toInt();
 
@@ -40,7 +40,6 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     ui->ckSingleWire->setChecked(settings->value("Main/SingleWireMode", false).toBool());
 
     ui->cbSpeed->addItem(tr("<Default>"));
-    ui->cbSpeed->addItem(tr("Disabled"));
     ui->cbSpeed->addItem(tr("125000"));
     ui->cbSpeed->addItem(tr("250000"));
     ui->cbSpeed->addItem(tr("500000"));
@@ -66,10 +65,19 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
     connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
     connect(ui->btnRemoveBus, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
+
+
+    qDebug() << "Serial worker thread starting";
+
+    connect(&mTicker, SIGNAL(timeout()), this, SLOT(refreshCanList()));
+    mTicker.setInterval(250); //tick 4 times a second (TODO: make this configurable?) */
+    mTicker.setSingleShot(false);
+    mTicker.start();
 }
 
 ConnectionWindow::~ConnectionWindow()
 {
+    mTicker.stop();
     delete settings;
     delete ui;
 }
@@ -81,6 +89,20 @@ void ConnectionWindow::showEvent(QShowEvent* event)
     handleConnTypeChanged();
 }
 
+void ConnectionWindow::refreshCanList() {
+    QList<CANConnection*>::iterator conn_p;
+    QList<CANConnection*>& conns = connModel->getConnections();
+
+    CANFrame* frame_p = NULL;
+
+    for (conn_p = conns.begin(); conn_p != conns.end(); ++conn_p) {
+        while( (frame_p = (*conn_p)->getQueue().peek() ) ) {
+            canModel->addFrame(*frame_p, true);
+            (*conn_p)->getQueue().dequeue();
+        }
+    }
+}
+
 void ConnectionWindow::handleNewConn()
 {
     ui->tableConnections->selectionModel()->clearSelection();
@@ -88,91 +110,101 @@ void ConnectionWindow::handleNewConn()
     handleConnSelectionChanged();
 }
 
+void ConnectionWindow::setSuspendAll(bool pSuspend)
+{
+    qDebug() << "setSuspendAll";
+
+    QList<CANConnection*>::iterator iter;
+    QList<CANConnection*>& conns = connModel->getConnections();
+
+    for (iter = conns.begin(); iter != conns.end(); ++iter)
+        (*iter)->suspend(pSuspend);
+}
+
+void ConnectionWindow::setActiveAll(bool pActive)
+{
+    QList<CANConnection*>::iterator iter;
+    QList<CANConnection*>& conns = connModel->getConnections();
+    CANBus bus;
+
+    for (iter = conns.begin(); iter != conns.end(); ++iter) {
+        for(int i=0 ; i<(*iter)->getNumBuses() ; i++) {
+            if( (*iter)->getBusSettings(i, bus) ) {
+                bus.active = pActive;
+                (*iter)->setBusSettings(i, bus);
+            }
+        }
+    }
+}
+
 void ConnectionWindow::handleEnableAll()
 {
-
+    setActiveAll(true);
 }
 
 void ConnectionWindow::handleDisableAll()
 {
-
+    setActiveAll(false);
 }
 
 void ConnectionWindow::handleConnTypeChanged()
 {
-    if (ui->rbGVRET->isChecked()) getSerialPorts();
-    if (ui->rbKvaser->isChecked()) getKvaserPorts();
-    if (ui->rbSocketCAN->isChecked()) getSocketcanPorts();
+    if (ui->rbGVRET->isChecked()) selectSerial();
+    if (ui->rbKvaser->isChecked()) selectKvaser();
+    if (ui->rbSocketCAN->isChecked()) selectSocketCan();
 }
 
-void ConnectionWindow::connectionSuccess(CANConnection *conn)
+
+/* status */
+void ConnectionWindow::connectionStatus(CANCon::status pStatus)
 {
-#if 0
-    CANBus bus;
-    bus.active = true;
-    bus.busNum = conn->getBusBase();
-    bus.connection = conn;
-    bus.listenOnly = ui->ckListenOnly->isChecked();
-    bus.singleWire = ui->ckSingleWire->isChecked();
-
-    if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0; //default speed
-    else if (ui->cbSpeed->currentIndex() == 1)
-    {
-        bus.speed = 0;
-        bus.active = false;
-    }
-    else bus.speed = ui->cbSpeed->currentText().toInt();
-    connModel->addBus(bus);
-
-    int numBuses = conn->getNumBuses();
-    for (int i = 1; i < numBuses; i++)
-    {
-        bus.active = false;
-        bus.listenOnly = false;
-        bus.singleWire = false;
-        bus.speed = 250000;
-        bus.busNum = conn->getBusBase() + i;
-        bus.connection = conn;
-        connModel->addBus(bus);
-        qDebug() << "Added bus " << bus.busNum;
-    }
-#endif
+    qDebug() << "Connectionstatus changed";
+    connModel->refreshView();
 }
+
 
 void ConnectionWindow::handleOKButton()
 {
-    QString conn;
-    int connType = 0;
     int whichRow = ui->tableConnections->selectionModel()->currentIndex().row();
-    qDebug() << "OK pressed. Row " << whichRow;
+
+    CANConnection* conn_p = NULL;
 
     if (whichRow > -1)
     {
-        //load settings from GUI into appropriate CANBus entry and then send it off to the appropriate
-        //CANConnection object
-        CANBus *bus = connModel->getBus(whichRow);
-        bus->setListenOnly(ui->ckListenOnly->isChecked());
-        bus->setSingleWire(ui->ckSingleWire->isChecked());
-        bus->setEnabled(ui->ckEnabled->isChecked());
-        if (ui->cbSpeed->currentIndex() == 1)
+        int busId;
+        CANBus bus;
+        bool ret;
+
+        conn_p = connModel->getAtIdx(whichRow, busId);
+        if(!conn_p) return;
+
+        ret = conn_p->getBusSettings(busId, bus);
+        if(!ret) return;
+
+
+        bus.setListenOnly(ui->ckListenOnly->isChecked());
+        bus.setSingleWire(ui->ckSingleWire->isChecked());
+        bus.setEnabled(ui->ckEnabled->isChecked());
+        if (ui->cbSpeed->currentIndex() == 0)
         {
-            bus->speed = 0;
-            bus->setEnabled(false);
+            bus.speed = 0;
+            bus.setEnabled(false);
         }
-        else if (ui->cbSpeed->currentIndex() > 1)
+        else if (ui->cbSpeed->currentIndex() >= 1)
         {
-            bus->setSpeed(ui->cbSpeed->currentText().toInt());
+            bus.setSpeed(ui->cbSpeed->currentText().toInt());
         }        
-        //call through signal/slot interface without using connect
-        QMetaObject::invokeMethod(bus->getContainer()->getRef(), "updateBusSettings",
-                                  Qt::QueuedConnection,
-                                  Q_ARG(CANBus, *bus));
+        /* update bus settings */
+        conn_p->setBusSettings(busId, bus);
+
         connModel->refreshView();
     }
     else //new connection
     {
+#if 0
         if (ui->rbGVRET->isChecked())
-        {            
+        {
+
             SerialWorker *serial = new SerialWorker(canModel, connModel->rowCount());
             connect(serial, SIGNAL(busStatus(int,int,int)), this, SLOT(receiveBusStatus(int,int,int)));
             connect(serial, SIGNAL(connectionSuccess(CANConnection*)), this, SLOT(connectionSuccess(CANConnection*)));
@@ -215,55 +247,43 @@ void ConnectionWindow::handleOKButton()
             QMetaObject::invokeMethod(serial, "updatePortName",
                                       Qt::QueuedConnection,
                                       Q_ARG(QString, ui->cbPort->currentText()));
-        }
-        else if (ui->rbKvaser->isChecked())
-        {
+#endif
 
-        }
-        else if (ui->rbSocketCAN->isChecked())
-        {
-            /* TODO: sanity checks here */
-            /* text, port, etc, ... */
-            /* factorize code with other probes */
+        /* create connection */
+        conn_p = CanConFactory::create(getConnectionType(), getPortName());
+        if(!conn_p)
+            return;
 
-            /* create connection */
-            SocketCanConnection* conn = new SocketCanConnection(canModel, 0); /* what is base? (second param) */
+        /* connect signal */
+        connect(conn_p, SIGNAL(status(CANCon::status)),
+                this, SLOT(connectionStatus(CANCon::status)));
 
-            /* set port name */
-            conn->updatePortName(ui->lePort->text());
+        /*TODO add return value and checks */
+        conn_p->start();
 
-            /* add connection to a container (this creates the thread) */
-            CANConnectionContainer* container = new CANConnectionContainer(conn);
-
+        for (int i=0 ; i<conn_p->getNumBuses() ; i++) {
             /* set bus configuration */
             CANBus bus;
             bus.active = ui->ckEnabled->isChecked();
-            bus.busNum = 0; // not used
-            bus.container = container;
             bus.listenOnly = ui->ckListenOnly->isChecked();
             bus.singleWire = ui->ckSingleWire->isChecked();
 
-            if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0; //default speed
-            else if (ui->cbSpeed->currentIndex() == 1)
-            {
-                bus.speed = 0;
-                bus.active = false;
-            }
+            if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0;
             else bus.speed = ui->cbSpeed->currentText().toInt();
 
-            /* add bus to model */
-            connModel->addBus(bus);
-
-            /* set bus settings (send message to thread) */
-            QMetaObject::invokeMethod(conn, "updateBusSettings",
-                                      Qt::QueuedConnection,
-                                      Q_ARG(CANBus, bus));
+            /* update bus settings */
+            conn_p->setBusSettings(i, bus);
         }
+
+        /* add connection to model */
+        connModel->add(conn_p);
     }
 }
 
+
 void ConnectionWindow::receiveBusStatus(int bus, int speed, int status)
 {
+#if 0
     qDebug() << "bus " << bus << " speed " << speed << " status " << status;
     CANBus *busRef = connModel->getBus(bus);
     if (status & 40) busRef->setSpeed(speed);
@@ -280,6 +300,7 @@ void ConnectionWindow::receiveBusStatus(int bus, int speed, int status)
         busRef->setListenOnly((status & 4)?true:false);
     }
     connModel->refreshView();
+#endif
 }
 
 void ConnectionWindow::handleConnSelectionChanged()
@@ -289,10 +310,13 @@ void ConnectionWindow::handleConnSelectionChanged()
     if (selIdx == -1)
     {
         ui->btnOK->setText(tr("Create New Connection"));
+
         ui->cbPort->setEnabled(true);
         ui->rbGVRET->setEnabled(true);
         ui->rbKvaser->setEnabled(true);
         ui->rbSocketCAN->setEnabled(true);
+        ui->cbSpeed->setEnabled(false);
+
         ui->cbPort->setCurrentIndex(0);
         ui->ckListenOnly->setChecked(false);
         ui->ckSingleWire->setChecked(false);
@@ -300,25 +324,39 @@ void ConnectionWindow::handleConnSelectionChanged()
     }
     else
     {
+        int busId;
+        bool ret;
+        CANBus bus;
+        CANConnection* conn_p = connModel->getAtIdx(selIdx, busId);
+        if(!conn_p) return;
+        ret = conn_p->getBusSettings(busId, bus);
+        if(!ret) return;
+
         ui->btnOK->setText(tr("Update Connection Settings"));
+
         ui->cbPort->setEnabled(false);
         ui->rbGVRET->setEnabled(false);
         ui->rbKvaser->setEnabled(false);
-        ui->rbSocketCAN->setEnabled(false);        
-        CANBus *bus = connModel->getBus(selIdx);
-        if (bus->getContainer()->getRef()->getConnTypeName() == "GVRET") ui->rbGVRET->setChecked(true);
-        if (bus->getContainer()->getRef()->getConnTypeName() == "KVASER") ui->rbKvaser->setChecked(true);
-        if (bus->getContainer()->getRef()->getConnTypeName() == "SOCKETCAN") ui->rbSocketCAN->setChecked(true);
-        ui->ckListenOnly->setChecked(bus->isListenOnly());
-        ui->ckSingleWire->setChecked(bus->isSingleWire());
-        ui->ckEnabled->setChecked(bus->isActive());
-        int speed = bus->getSpeed();
+        ui->rbSocketCAN->setEnabled(false);
+        ui->cbSpeed->setEnabled(true);
+
+        switch(conn_p->getType()) {
+            case CANCon::GVRET_SERIAL: ui->rbGVRET->setChecked(true); break;
+            case CANCon::KVASER: ui->rbKvaser->setChecked(true); break;
+            case CANCon::SOCKETCAN: ui->rbSocketCAN->setChecked(true); break;
+            default: {}
+        }
+
+        ui->ckListenOnly->setChecked(bus.isListenOnly());
+        ui->ckSingleWire->setChecked(bus.isSingleWire());
+        ui->ckEnabled->setChecked(bus.isActive());
+        int speed = bus.getSpeed();
         setSpeed(speed);
     }
 }
 
-/*TODO: rename the 3 following functions */
-void ConnectionWindow::getSerialPorts()
+
+void ConnectionWindow::selectSerial()
 {
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
@@ -333,7 +371,7 @@ void ConnectionWindow::getSerialPorts()
     }
 }
 
-void ConnectionWindow::getKvaserPorts()
+void ConnectionWindow::selectKvaser()
 {
 #ifdef Q_OS_WIN
     /* set combobox page visible */
@@ -341,7 +379,7 @@ void ConnectionWindow::getKvaserPorts()
 #endif
 }
 
-void ConnectionWindow::getSocketcanPorts()
+void ConnectionWindow::selectSocketCan()
 {
 #ifdef Q_OS_LINUX
     /* set edit text page visible */
@@ -394,15 +432,29 @@ int ConnectionWindow::getSpeed()
 
 QString ConnectionWindow::getPortName()
 {
-    return (ui->cbPort->currentText());
+    switch( getConnectionType() ) {
+    case CANCon::GVRET_SERIAL:
+    case CANCon::KVASER:
+        return ui->cbPort->currentText();
+    case CANCon::SOCKETCAN:
+        return ui->lePort->text();
+    default:
+        qDebug() << "getPortName: can't get port";
+    }
+
+    return "";
 }
 
-ConnectionType::ConnectionType ConnectionWindow::getConnectionType()
+CANCon::type ConnectionWindow::getConnectionType()
 {
-    if (ui->rbGVRET->isChecked()) return ConnectionType::GVRET_SERIAL;
-    if (ui->rbKvaser->isChecked()) return ConnectionType::KVASER;
-    if (ui->rbSocketCAN->isChecked()) return ConnectionType::SOCKETCAN;
+    if (ui->rbGVRET->isChecked()) return CANCon::GVRET_SERIAL;
+    if (ui->rbKvaser->isChecked()) return CANCon::KVASER;
+    if (ui->rbSocketCAN->isChecked()) return CANCon::SOCKETCAN;
+
+    qDebug() << "getConnectionType: error";
+    return CANCon::NONE;
 }
+
 
 void ConnectionWindow::setSWMode(bool mode)
 {
@@ -417,22 +469,21 @@ bool ConnectionWindow::getSWMode()
 
 void ConnectionWindow::handleRemoveConn()
 {
-#if 0
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
-    if (selIdx <=0) return;
+    if (selIdx <0) return;
 
-    CANBus* bus = conModel->getBus(selIdx);
-    if(!bus) return;
-
-    /* remove connection to model (this creates the thread) */
-    connModel->removeConnection(bus->connection);
-
-    /* remove connection and reset model */
-    conModel->removeBus(selIdx);
     qDebug() << "remove connection at index: " << selIdx;
 
-    selIdx
-#endif
+    int busId;
+    CANConnection* conn_p = connModel->getAtIdx(selIdx, busId);
+    if(!conn_p) return;
+
+    /* remove connection from model */
+    connModel->remove(conn_p);
+
+    /* stop and delete connection */
+    conn_p->stop();
+    delete conn_p;
 }
 
 void ConnectionWindow::handleRevert()
@@ -442,21 +493,25 @@ void ConnectionWindow::handleRevert()
 
 void ConnectionWindow::sendFrame(const CANFrame *frame)
 {
+#if 0
     CANBus *bus = connModel->getBus(frame->bus);
     if (bus == NULL) return;
     QMetaObject::invokeMethod(bus->getContainer()->getRef(), "sendFrame",
                               Qt::QueuedConnection,
                               Q_ARG(const CANFrame *, frame));
+#endif
 }
 
 void ConnectionWindow::sendFrameBatch(const QList<CANFrame> *frames)
 {
+#if 0
     if (frames->count() == 0) return;
     CANBus *bus = connModel->getBus(frames->at(0).bus);
     if (bus == NULL) return;
     QMetaObject::invokeMethod(bus->getContainer()->getRef(), "sendFrameBatch",
                               Qt::QueuedConnection,
                               Q_ARG(const QList<CANFrame> *, frames));
+#endif
 }
 
 bool ConnectionWindow::isSocketCanAvailable()
