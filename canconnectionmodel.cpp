@@ -1,5 +1,4 @@
-#include "canconnection.h"
-#include "canconnectioncontainer.h"
+#include "connections/canconnection.h"
 #include "canconnectionmodel.h"
 
 CANConnectionModel::CANConnectionModel(QObject *parent)
@@ -7,11 +6,6 @@ CANConnectionModel::CANConnectionModel(QObject *parent)
 {
 }
 
-void CANConnectionModel::refreshView()
-{
-    beginResetModel();
-    endResetModel();
-}
 
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
@@ -41,6 +35,9 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
             return QString(tr("Single Wire"));
             break;
         case 6:
+            return QString(tr("Status"));
+            break;
+        case 7:
             return QString(tr("Active"));
             break;
         }
@@ -52,97 +49,124 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
     return QVariant();
 }
 
-int CANConnectionModel::rowCount(const QModelIndex &parent) const
-{
-    return buses.count();
-}
 
 int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
     return 7;
 }
 
+
+int CANConnectionModel::rowCount(const QModelIndex &parent) const {
+    int rows=0;
+    QList<CANConnection*>::const_iterator iter;
+
+    for (iter = mConns.begin() ; iter != mConns.end() ; ++iter) {
+        rows+=(*iter)->getNumBuses();
+    }
+
+    return rows;
+}
+
+
 QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() >= (buses.count()))
-        return QVariant();
 
     if (role == Qt::DisplayRole) {
-        CANBus bus = buses[index.row()];
-        CANConnection *conn = bus.getContainer()->getRef();
+        int busId;
+        CANConnection *conn_p = getAtIdx(index.row(), busId);
+        if(!conn_p)
+            return QVariant();
+
+        CANBus bus;
+        bool ret;
+        ret = conn_p->getBusSettings(busId, bus);
+        if(!ret) return QVariant();
+
         switch (index.column())
         {
-        case 0: //bus
-            return QString::number(bus.busNum);
-            break;
-        case 1: //type
-            if (conn) return conn->getConnTypeName();
-            else qDebug() << "Tried to show connection type but connection was NULL";
-            break;
-        case 2: //port
-            if (conn) return conn->getConnPortName();
-            else qDebug() << "Tried to show connection port but connection was NULL";
-            break;
-        case 3: //speed
-            return QString::number(bus.speed);
-            break;
-        case 4: //Listen Only
-            if (bus.listenOnly) return QString("True");
-                else return QString("False");
-            break;
-        case 5: //Single Wire
-            if (bus.singleWire) return QString("True");
-                else return QString("False");
-            break;
-        case 6: //Active
-            if (bus.active) return QString("True");
-                else return QString("False");
-            break;
-        default:
-            return QVariant();
+            case 0: //bus
+                return QString::number(busId);
+                break;
+            case 1: //type
+                if (conn_p)
+                    switch (conn_p->getType()) {
+                        case CANCon::KVASER: return "KVASER";
+                        case CANCon::SOCKETCAN: return "SocketCAN";
+                        case CANCon::GVRET_SERIAL: return "GVRET";
+                        default: {}
+                    }
+                else qDebug() << "Tried to show connection type but connection was NULL";
+                break;
+            case 2: //port
+                if (conn_p) return conn_p->getPort();
+                else qDebug() << "Tried to show connection port but connection was NULL";
+                break;
+            case 3: //speed
+                return QString::number(bus.speed);
+            case 4: //Listen Only
+                return (bus.listenOnly) ? "True" : "False";
+            case 5: //Single Wire
+                return (bus.singleWire) ? "True" : "False";
+            case 6: //Status
+                return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
+            case 7: //Active
+                return (bus.active) ? "True" : "False";
+            default: {}
         }
     }
-    else
-        return QVariant();
+
+    return QVariant();
 }
 
 
-void CANConnectionModel::addBus(CANBus &bus)
+void CANConnectionModel::add(CANConnection* pConn_p)
 {
     beginResetModel();
-    buses.append(bus);
+    mConns.append(pConn_p);
     endResetModel();
 }
 
-void CANConnectionModel::removeBus(int busIdx)
-{
-    if (busIdx>=0 && busIdx < buses.count()) {
-        beginResetModel();
-        buses.removeAt(busIdx);
-        endResetModel();
-    }
-}
 
-CANBus* CANConnectionModel::getBus(int bus)
+void CANConnectionModel::remove(CANConnection* pConn_p)
 {
-    if (bus < 0) return NULL;
-    if (bus >= buses.count()) return NULL;
-    return &buses[bus];
+    beginResetModel();
+    mConns.removeOne(pConn_p);
+    endResetModel();
 }
 
 
-CANBus* CANConnectionModel::findBusByNum(int bus)
+QList<CANConnection*>& CANConnectionModel::getConnections()
 {
-    for (int i = 0; i < buses.count(); i++)
-    {
-        if (buses[i].busNum == bus)
-        {
-            return &buses[i];
+    return mConns;
+}
+
+
+CANConnection* CANConnectionModel::getAtIdx(int pIdx, int& pBusId) const
+{
+    if (pIdx < 0)
+        return NULL;
+
+    int i=0;
+    QList<CANConnection*>::const_iterator iter = mConns.begin();
+
+    for (iter = mConns.begin() ; iter != mConns.end() ; ++iter) {
+        if( i <= pIdx && pIdx < i+(*iter)->getNumBuses() ) {
+            pBusId = pIdx - i;
+            return (*iter);
         }
+
+        i+= (*iter)->getNumBuses();
     }
+
     return NULL;
 }
 
+
+void CANConnectionModel::refreshView()
+{
+    beginResetModel();
+    endResetModel();
+}
