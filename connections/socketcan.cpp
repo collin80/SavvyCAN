@@ -2,33 +2,7 @@
 #include <QDebug>
 #include <QCanBusFrame>
 
-
-#include "canframemodel.h"
-#include "canconnection_old.h"
-#include "socketcanconnection.h"
-
-/***********************************/
-/****   nested class            ****/
-/***********************************/
-
-
-BUSConfig::BUSConfig():isConfigured(false){}
-
-void BUSConfig::reset() {
-    isConfigured = false;
-}
-
-bool BUSConfig::operator==(CANBus& bus) {
-    return isConfigured && speed == bus.speed &&
-            listenOnly == bus.listenOnly && active == bus.active;
-}
-
-void BUSConfig::operator=(CANBus& bus) {
-    isConfigured = true;
-    speed = bus.speed;
-    listenOnly = bus.listenOnly;
-    active = bus.active;
-}
+#include "socketcan.h"
 
 
 
@@ -36,41 +10,120 @@ void BUSConfig::operator=(CANBus& bus) {
 /****    class definition       ****/
 /***********************************/
 
-SocketCanConnection::SocketCanConnection(CANFrameModel *model, int base) : CANConnection(model, base), mDev_p(NULL)
+SocketCanConnection::SocketCanConnection(QString portName) :
+    CANConnection(portName, CANCon::SOCKETCAN, 1),
+    mDev_p(NULL),
+    mThread(NULL)
 {
+    getQueue().setSize(2000); /*TODO add check on returned value */
+    /* move ourself to the thread */
+    moveToThread(&mThread);
+
     qDebug() << "SocketCanConnection()";
-    qRegisterMetaType<CANFrame>("CANFrame");
 }
+
 
 SocketCanConnection::~SocketCanConnection()
 {
+    stop();
     qDebug() << "~SocketCanConnection()";
-    /* stop device */
 }
 
-void SocketCanConnection::updateBusSettings(CANBus bus)
-{
-    qDebug()<<"updateBusSettings";
 
-    if(mConf == bus) return;
+void SocketCanConnection::start() {
+
+    qDebug() << "enter thread";
+    mThread.start(QThread::HighPriority);
+
+    connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
+    mTimer.setInterval(1000);
+    mTimer.setSingleShot(false); //keep ticking
+    mTimer.start();
+}
+
+
+void SocketCanConnection::suspend(bool pSuspend) {
+    /* make sure we execute in mThread context */
+    if(QThread::currentThread() != &mThread) {
+        QMetaObject::invokeMethod(this, "suspend",
+                                  Qt::BlockingQueuedConnection,
+                                  Q_ARG(bool, pSuspend));
+        return;
+    }
+
+    /* update capSuspended */
+    setCapSuspended(pSuspend);
+
+    /* flush queue if we are suspended */
+    if(isCapSuspended())
+        getQueue().flush();
+}
+
+
+void SocketCanConnection::stop() {
+    mTimer.stop();
+    mThread.quit();
+    if(!mThread.wait()) {
+        qDebug() << "can't stop thread";
+    }
+    disconnectDevice();
+}
+
+
+bool SocketCanConnection::getBusSettings(int pBusIdx, CANBus& pBus) {
+    /* make sure we execute in mThread context */
+    if(QThread::currentThread() != &mThread) {
+        bool ret;
+        QMetaObject::invokeMethod(this, "getBusSettings",
+                                  Qt::BlockingQueuedConnection,
+                                  Q_RETURN_ARG(bool, ret),
+                                  Q_ARG(int , pBusIdx),
+                                  Q_ARG(CANBus& , pBus));
+        return ret;
+    }
+
+    return getBusConfig(pBusIdx, pBus);
+}
+
+
+void SocketCanConnection::setBusSettings(int pBusIdx, CANBus bus)
+{
+    /* make sure we execute in mThread context */
+    if(QThread::currentThread() != &mThread) {
+        QMetaObject::invokeMethod(this, "setBusSettings",
+                                  Qt::BlockingQueuedConnection,
+                                  Q_ARG(int, pBusIdx),
+                                  Q_ARG(CANBus, bus));
+        return;
+    }
+
+    /* sanity checks */
+    if(0 != pBusIdx)
+        return;
 
     /* disconnect device if we have one connected */
-    if(mDev_p) disconnect();
+    if(mDev_p)
+        disconnectDevice();
+
+    /* copy bus config */
+    setBusConfig(0, bus);
 
     /* if bus is not active we are done */
-    if(!bus.active) return;
+    if(!bus.active)
+        return;
 
     /* create device */
-    mDev_p = QCanBus::instance()->createDevice("socketcan", portName);
+    mDev_p = QCanBus::instance()->createDevice("socketcan", getPort());
     if (!mDev_p) {
-     qDebug() << "can't create device";
-     return;
+        disconnectDevice();
+        qDebug() << "can't create device";
+        return;
     }
 
     /* connect slots */
     connect(mDev_p, &QCanBusDevice::errorOccurred, this, &SocketCanConnection::errorReceived);
-    connect(mDev_p, &QCanBusDevice::framesReceived, this, &SocketCanConnection::framesReceived);
     connect(mDev_p, &QCanBusDevice::framesWritten, this, &SocketCanConnection::framesWritten);
+    connect(mDev_p, &QCanBusDevice::framesReceived, this, &SocketCanConnection::framesReceived);
 
     /* set configuration */
     /*if (p.useConfigurationEnabled) {
@@ -80,10 +133,14 @@ void SocketCanConnection::updateBusSettings(CANBus bus)
 
     /* connect device */
     if (!mDev_p->connectDevice()) {
-        disconnect();
+        disconnectDevice();
         qDebug() << "can't connect device";
     }
 }
+
+
+void SocketCanConnection::sendFrame(const CANFrame *) {}
+void SocketCanConnection::sendFrameBatch(const QList<CANFrame> *){}
 
 
 /***********************************/
@@ -91,8 +148,8 @@ void SocketCanConnection::updateBusSettings(CANBus bus)
 /***********************************/
 
 
-/* connect device */
-void SocketCanConnection::disconnect() {
+/* disconnect device */
+void SocketCanConnection::disconnectDevice() {
     if(mDev_p) {
         mDev_p->disconnectDevice();
         delete mDev_p;
@@ -123,35 +180,81 @@ void SocketCanConnection::framesWritten(qint64 count)
 void SocketCanConnection::framesReceived()
 {
     /* sanity checks */
-    if(!mDev_p) return;
+    if(!mDev_p)
+        return;
 
     /* read frame */
     while(true)
     {
         const QCanBusFrame recFrame = mDev_p->readFrame();
-        /* exit case */
-        if(!recFrame.isValid()) return;
 
+        /* exit case */
+        if(!recFrame.isValid())
+            return;
+
+        /* drop frame if capture is suspended */
+        if(isCapSuspended())
+            continue;
+
+        /* check frame */
         if(!recFrame.payload().isEmpty() &&
            recFrame.payload().length()<=8)
         {
-            CANFrame frame;
-            frame.len           = recFrame.payload().length();
-            frame.bus           = 0;
-            memcpy(frame.data, recFrame.payload().data(), frame.len);
-            frame.extended      = false;
-            frame.ID            = recFrame.frameId();
-            frame.isReceived    = true;
-            frame.timestamp     = recFrame.timeStamp().microSeconds();
+            CANFrame* frame_p = getQueue().get();
+            if(frame_p) {
+                frame_p->len           = recFrame.payload().length();
+                frame_p->bus           = 0;
+                memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
+                frame_p->extended      = false;
+                frame_p->ID            = recFrame.frameId();
+                frame_p->isReceived    = true;
+                frame_p->timestamp     = recFrame.timeStamp().seconds()*1000000 + recFrame.timeStamp().microSeconds();
 
-            /* send frame */
-            QMetaObject::invokeMethod(model, "addFrame",
-                                      Qt::QueuedConnection,
-                                      Q_ARG(CANFrame, frame),
-                                      Q_ARG(bool, false));
+                /* enqueue frame */
+                getQueue().queue();
+            }
+            else
+                qDebug() << "can't get a frame, ERROR";
         }
         else {
             qDebug() << "invalid frame";
         }
     }
+}
+
+
+void SocketCanConnection::testConnection() {
+    QCanBusDevice*  dev_p = QCanBus::instance()->createDevice("socketcan", getPort());
+
+    switch(getStatus())
+    {
+        case CANCon::CONNECTED:
+            if (!dev_p || !dev_p->connectDevice()) {
+                /* we have lost connectivity */
+                disconnectDevice();
+
+                setStatus(CANCon::NOT_CONNECTED);
+                emit status(getStatus());
+            }
+            break;
+        case CANCon::NOT_CONNECTED:
+            if (dev_p && dev_p->connectDevice()) {
+
+                /* try to reconnect */
+                CANBus bus;
+                if(getBusConfig(0, bus))
+                    setBusSettings(0, bus);
+
+                /* disconnect test instance */
+                dev_p->disconnectDevice();
+
+                setStatus(CANCon::CONNECTED);
+                emit status(getStatus());
+            }
+            break;
+        default: {}
+    }
+
+    if(dev_p)
+        delete dev_p;
 }
