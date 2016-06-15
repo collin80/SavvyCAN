@@ -46,7 +46,7 @@ public:
     const QMap<int, bool> *getFiltersReference() const; //this neither
 
 public slots:
-    void addFrame(CANFrame, bool);
+    void addFrame(CANFrame&, bool);
 
 signals:
     void updatedFiltersList();
