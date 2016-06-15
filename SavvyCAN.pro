@@ -50,10 +50,11 @@ SOURCES += main.cpp\
     isotp_interpreterwindow.cpp \
     isotp_handler.cpp \
     canconnectionmodel.cpp \
-    canconnection.cpp \
-    canconnectioncontainer.cpp \
-    socketcanconnection.cpp \
-    canbus.cpp
+    canbus.cpp \
+    connections/canconnection.cpp \
+    connections/socketcan.cpp \
+    connections/canconfactory.cpp \
+    connections/gvretserial.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -90,10 +91,13 @@ HEADERS  += mainwindow.h \
     isotp_interpreterwindow.h \
     isotp_handler.h \
     canconnectionmodel.h \
-    canconnection.h \
-    canconnectioncontainer.h \
-    socketcanconnection.h \
-    canbus.h
+    canbus.h \
+    utils/lfqueue.h \
+    connections/canconnection.h \
+    connections/socketcan.h \
+    connections/canconconst.h \
+    connections/canconfactory.h \
+    connections/gvretserial.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
