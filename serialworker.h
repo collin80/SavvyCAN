@@ -8,7 +8,7 @@
 #include <QTimer>
 #include "can_structs.h"
 #include "canframemodel.h"
-#include "canconnection.h"
+//#include "canconnection_old.h"
 
 
 namespace SERIALSTATE {
@@ -30,6 +30,7 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
 
 }
 
+#if 0
 using namespace SERIALSTATE;
 class SerialWorker : public CANConnection
 {
@@ -84,5 +85,5 @@ private:
     void procRXChar(unsigned char);
     void sendCommValidation();
 };
-
+#endif
 #endif // SERIALTHREAD_H

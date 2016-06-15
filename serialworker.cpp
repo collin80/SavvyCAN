@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QSettings>
 
+#if 0
 SerialWorker::SerialWorker(CANFrameModel *model, int base) : CANConnection(model, base)
 {    
     qDebug() << "Serial Worker constructor";
@@ -576,15 +577,7 @@ void SerialWorker::updatePortName(QString portName)
     }
 }
 
-int SerialWorker::getNumBuses()
-{
-    return 2;
-}
 
-QString SerialWorker::getConnTypeName()
-{
-    return QString("GVRET");
-}
 
 void SerialWorker::updateBusSettings(CANBus bus)
 {
@@ -638,3 +631,18 @@ void SerialWorker::updateBusSettings(CANBus bus)
 
     updateBaudRates(can0Baud,can1Baud);
 }
+
+
+/************************************/
+
+int SerialWorker::getNumBuses()
+{
+    return 2;
+}
+
+QString SerialWorker::getConnTypeName()
+{
+    return QString("GVRET");
+}
+
+#endif
