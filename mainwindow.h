@@ -92,8 +92,7 @@ public slots:
 
 signals:
     void sendCANFrame(const CANFrame *, int);
-    void stopFrameCapturing();
-    void startFrameCapturing();
+    void suspendCapturing(bool);
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
     void framesUpdated(int numFrames); //something has updated the frame list

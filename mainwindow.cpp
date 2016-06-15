@@ -181,6 +181,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow(model);
     connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 }
 
 MainWindow::~MainWindow()
@@ -713,15 +714,11 @@ void MainWindow::toggleCapture()
 {
     allowCapture = !allowCapture;
     if (allowCapture)
-    {
         ui->btnCaptureToggle->setText("Suspend Capturing");
-        emit startFrameCapturing();
-    }
     else
-    {
         ui->btnCaptureToggle->setText("Restart Capturing");
-        emit stopFrameCapturing();
-    }
+
+    emit suspendCapturing(!allowCapture);
 }
 
 void MainWindow::connectionSucceeded(int baud0, int baud1)
