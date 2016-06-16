@@ -10,23 +10,23 @@
 /****    class definition       ****/
 /***********************************/
 
-SocketCanConnection::SocketCanConnection(QString portName) :
+SocketCan::SocketCan(QString portName) :
     CANConnection(portName, CANCon::SOCKETCAN, 1, 4000, true),
     mDev_p(NULL),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
-    qDebug() << "SocketCanConnection()";
+    qDebug() << "SocketCan()";
 }
 
 
-SocketCanConnection::~SocketCanConnection()
+SocketCan::~SocketCan()
 {
     stop();
-    qDebug() << "~SocketCanConnection()";
+    qDebug() << "~SocketCan()";
 }
 
 
-void SocketCanConnection::piStarted()
+void SocketCan::piStarted()
 {
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
     mTimer.setInterval(1000);
@@ -35,7 +35,7 @@ void SocketCanConnection::piStarted()
 }
 
 
-void SocketCanConnection::piSuspend(bool pSuspend)
+void SocketCan::piSuspend(bool pSuspend)
 {
     /* update capSuspended */
     setCapSuspended(pSuspend);
@@ -46,19 +46,19 @@ void SocketCanConnection::piSuspend(bool pSuspend)
 }
 
 
-void SocketCanConnection::piStop() {
+void SocketCan::piStop() {
     mTimer.stop();
     disconnectDevice();
 }
 
 
-bool SocketCanConnection::piGetBusSettings(int pBusIdx, CANBus& pBus)
+bool SocketCan::piGetBusSettings(int pBusIdx, CANBus& pBus)
 {
     return getBusConfig(pBusIdx, pBus);
 }
 
 
-void SocketCanConnection::piSetBusSettings(int pBusIdx, CANBus bus)
+void SocketCan::piSetBusSettings(int pBusIdx, CANBus bus)
 {
     /* sanity checks */
     if(0 != pBusIdx)
@@ -84,9 +84,9 @@ void SocketCanConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     }
 
     /* connect slots */
-    connect(mDev_p, &QCanBusDevice::errorOccurred, this, &SocketCanConnection::errorReceived);
-    connect(mDev_p, &QCanBusDevice::framesWritten, this, &SocketCanConnection::framesWritten);
-    connect(mDev_p, &QCanBusDevice::framesReceived, this, &SocketCanConnection::framesReceived);
+    connect(mDev_p, &QCanBusDevice::errorOccurred, this, &SocketCan::errorReceived);
+    connect(mDev_p, &QCanBusDevice::framesWritten, this, &SocketCan::framesWritten);
+    connect(mDev_p, &QCanBusDevice::framesReceived, this, &SocketCan::framesReceived);
 
     /* set configuration */
     /*if (p.useConfigurationEnabled) {
@@ -102,8 +102,8 @@ void SocketCanConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-void SocketCanConnection::piSendFrame(const CANFrame&) {}
-void SocketCanConnection::piSendFrameBatch(const QList<CANFrame>&){}
+void SocketCan::piSendFrame(const CANFrame&) {}
+void SocketCan::piSendFrameBatch(const QList<CANFrame>&){}
 
 
 /***********************************/
@@ -112,7 +112,7 @@ void SocketCanConnection::piSendFrameBatch(const QList<CANFrame>&){}
 
 
 /* disconnect device */
-void SocketCanConnection::disconnectDevice() {
+void SocketCan::disconnectDevice() {
     if(mDev_p) {
         mDev_p->disconnectDevice();
         delete mDev_p;
@@ -121,7 +121,7 @@ void SocketCanConnection::disconnectDevice() {
 }
 
 
-void SocketCanConnection::errorReceived(QCanBusDevice::CanBusError error) const
+void SocketCan::errorReceived(QCanBusDevice::CanBusError error) const
 {
     switch (error) {
         case QCanBusDevice::ReadError:
@@ -135,12 +135,12 @@ void SocketCanConnection::errorReceived(QCanBusDevice::CanBusError error) const
     }
 }
 
-void SocketCanConnection::framesWritten(qint64 count)
+void SocketCan::framesWritten(qint64 count)
 {
     qDebug() << "Number of frames written:" << count;
 }
 
-void SocketCanConnection::framesReceived()
+void SocketCan::framesReceived()
 {
     /* sanity checks */
     if(!mDev_p)
@@ -186,7 +186,7 @@ void SocketCanConnection::framesReceived()
 }
 
 
-void SocketCanConnection::testConnection() {
+void SocketCan::testConnection() {
     QCanBusDevice*  dev_p = QCanBus::instance()->createDevice("socketcan", getPort());
 
     switch(getStatus())

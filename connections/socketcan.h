@@ -1,5 +1,5 @@
-#ifndef SOCKETCANCONNECTION_H
-#define SOCKETCANCONNECTION_H
+#ifndef SocketCan_H
+#define SocketCan_H
 
 #include <QObject>
 #include <QCanBus>
@@ -10,13 +10,13 @@
 #include "canconnection.h"
 
 
-class SocketCanConnection : public CANConnection
+class SocketCan : public CANConnection
 {
     Q_OBJECT
 
 public:
-    SocketCanConnection(QString portName);
-    virtual ~SocketCanConnection();
+    SocketCan(QString portName);
+    virtual ~SocketCan();
 
 signals:
     void error(const QString &);
@@ -54,4 +54,4 @@ protected:
 };
 
 
-#endif // SOCKETCANCONNECTION_H
+#endif // SocketCan_H

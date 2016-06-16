@@ -23,8 +23,11 @@ public:
      * @param pQueueLen: the length of the lock free queue to use
      * @param pUseThread: if set to true, object will be execute in a dedicated thread
      */
-    CANConnection(QString pPort, CANCon::type pType, int pNumBuses,
-                  int pQueueLen, bool pUseThread);
+    CANConnection(QString pPort,
+                  CANCon::type pType,
+                  int pNumBuses,
+                  int pQueueLen,
+                  bool pUseThread);
     /**
      * @brief CANConnection destructor
      */
@@ -44,7 +47,7 @@ public:
     QString getPort();
 
     /**
-     * @brief getQueue is call by reader to get a reference on the queue to monitor
+     * @brief getQueue
      * @return the lock free queue of the device
      */
     LFQueue<CANFrame>& getQueue();
@@ -63,6 +66,7 @@ public:
 
 
 signals:
+    /*not implemented yet */
     void error(const QString &);
     void deviceInfo(int, int); //First param = driver version (or version of whatever you want), second param a status byte
 
@@ -73,7 +77,7 @@ signals:
     void busStatus(int, int, int);
 
     /**
-     * @brief event sent when the CANCon::status of the connection changes (connected->not_connected or the other way round)
+     * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
      * @param pStatus: the new status of the device
      */
     void status(CANCon::status pStatus);
@@ -82,13 +86,13 @@ signals:
 public slots:
 
     /**
-     * @brief start the device, this calls piStarted
-     * @note starts the working thread if required (piStarted in the working thread context)
+     * @brief start the device. This calls piStarted
+     * @note starts the working thread if required (piStarted is called in the working thread context)
      */
     void start();
 
     /**
-     * @brief stop the device, this calls piStop
+     * @brief stop the device. This calls piStop
      * @note if a working thread is used, piStop is called before exiting the working thread
      */
     void stop();
@@ -113,20 +117,30 @@ public slots:
     /**
      * @brief suspends/restarts data capture
      * @param pSuspend: suspends capture if true else restarts it
-     * @note this calls piSuspend in the working thread context (if one has been started)
-     * @note the caller will not access the queue when capture is suspended, so it is safe for callee to flush the queue
+     * @note this calls piSuspend (in the working thread context if one has been started)
+     * @note the caller shall not access the queue when capture is suspended, it is then safe for callee to flush the queue
      */
     void suspend(bool pSuspend);
 
-    void sendFrame(const CANFrame&);
-    void sendFrameBatch(const QList<CANFrame>&);
+    /**
+     * @brief provides device with the frame to send
+     * @param pFrame: the frame to send
+     * @note this calls piSendFrame (in the working thread context if one has been started)
+     */
+    void sendFrame(const CANFrame& pFrame);
+
+    /**
+     * @brief provides device with a list of frames to send
+     * @param pFrame: the list of frames to send
+     * @note this calls piSendFrameBatch (in the working thread context if one has been started)
+     */
+    void sendFrameBatch(const QList<CANFrame>& pFrames);
 
 protected:
 
     /**
      * @brief setStatus
      * @param pStatus: the status to set
-     * @note multithread safe (can be used while another thread calls @ref getStatus)
      */
     void setStatus(CANCon::status pStatus);
 
@@ -134,7 +148,6 @@ protected:
      * @brief isConfigured
      * @param pBusId
      * @return true if bus is configured
-     * @note NOT multithread safe
      */
     bool isConfigured(int pBusId);
 
@@ -143,7 +156,6 @@ protected:
      * @param pBusId
      * @param pConfigured
      * @note it is not necessary to call this function to set pBusId configured, it is enough to call @ref setBusConfig
-     * @note NOT multithread safe
      */
     void setConfigured(int pBusId, bool pConfigured);
 
@@ -152,7 +164,6 @@ protected:
      * @param pBusId
      * @param pBus
      * @return true if operation succeeds, false if pBusIdx is invalid or bus has not been configured yet
-     * @note NOT multithread safe
      */
     bool getBusConfig(int pBusId, CANBus& pBus);
 
@@ -160,47 +171,46 @@ protected:
      * @brief setBusConfig
      * @param pBusId: the index of the bus for which settings have to be set
      * @param pBus: the settings to set
-     * @note NOT multithread safe
      */
     void setBusConfig(int pBusId, CANBus& pBus);
 
     /**
      * @brief isCapSuspended
      * @return true if the capture is suspended
-     * @note NOT multithread safe
      */
     bool isCapSuspended();
 
     /**
      * @brief setCapSuspended
      * @param pIsSuspended
-     * @note NOT multithread safe
      */
     void setCapSuspended(bool pIsSuspended);
 
 protected:
 
+    /**************************************************************/
+    /***********     protected interface to implement       *******/
+    /**************************************************************/
+
     /**
-     * @brief start the device
-     * @note start a working thread here if needed
+     * @brief starts the device
      */
     virtual void piStarted() = 0;
 
     /**
-     * @brief stop the device
-     * @note stop the working thread here if one has been started
+     * @brief stops the device
      */
     virtual void piStop() = 0;
 
     /**
-     * @brief setBusSettings
+     * @brief piSetBusSettings
      * @param pBusIdx: the index of the bus for which settings have to be set
      * @param pBus: the settings to set
      */
     virtual void piSetBusSettings(int pBusIdx, CANBus pBus) = 0;
 
     /**
-     * @brief getBusSettings
+     * @brief piGetBusSettings
      * @param pBusIdx: the index of the bus for which settings have to be retrieved
      * @param pBus: the CANBus struct to fill with information
      * @return true if operation succeeds, false if pBusIdx is invalid or bus has not been configured yet
@@ -214,7 +224,16 @@ protected:
      */
     virtual void piSuspend(bool pSuspend) = 0;
 
+    /**
+     * @brief provides device with the frame to send
+     * @param pFrame: the frame to send
+     */
     virtual void piSendFrame(const CANFrame&) = 0;
+
+    /**
+     * @brief provides device with a list of frames to send
+     * @param pFrame: the list of frames to send
+     */
     virtual void piSendFrameBatch(const QList<CANFrame>&) = 0;
 
 
