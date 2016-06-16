@@ -7,13 +7,9 @@
 #include "gvretserial.h"
 
 GVRetSerial::GVRetSerial(QString portName) :
-    CANConnection(portName, CANCon::GVRET_SERIAL, 2),
-    mThread(NULL)
+    CANConnection(portName, CANCon::GVRET_SERIAL, 2, 4000, true),
+    mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
-    getQueue().setSize(2000); /*TODO add check on returned value */
-    /* move ourself to the thread */
-    moveToThread(&mThread);
-
     qDebug() << "GVRetSerial()";
 
     serial = NULL;
@@ -35,13 +31,9 @@ GVRetSerial::~GVRetSerial()
 }
 
 
-void GVRetSerial::start()
+void GVRetSerial::piStarted()
 {
-    qDebug() << "enter thread";
-    /* start thread */
-    mThread.start(QThread::HighPriority);
-    /* connect device in thread context */
-    connect(&mThread, SIGNAL(started()), this, SLOT(connectDevice()));
+    connectDevice();
 
     /* start timer */
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
@@ -51,15 +43,8 @@ void GVRetSerial::start()
 }
 
 
-void GVRetSerial::suspend(bool pSuspend) {
-    /* make sure we execute in mThread context */
-    if(QThread::currentThread() != &mThread) {
-        QMetaObject::invokeMethod(this, "suspend",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_ARG(bool, pSuspend));
-        return;
-    }
-
+void GVRetSerial::piSuspend(bool pSuspend)
+{
     /* update capSuspended */
     setCapSuspended(pSuspend);
 
@@ -69,36 +54,98 @@ void GVRetSerial::suspend(bool pSuspend) {
 }
 
 
-void GVRetSerial::stop() {
+void GVRetSerial::piStop()
+{
     mTimer.stop();
-    mThread.quit();
-    if(!mThread.wait()) {
-        qDebug() << "can't stop thread";
-    }
     disconnectDevice();
 }
 
 
-bool GVRetSerial::getBusSettings(int pBusIdx, CANBus& pBus) {
-    /* make sure we execute in mThread context */
-    if(QThread::currentThread() != &mThread) {
-        bool ret;
-        QMetaObject::invokeMethod(this, "getBusSettings",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(int , pBusIdx),
-                                  Q_ARG(CANBus& , pBus));
-        return ret;
-    }
-
+bool GVRetSerial::piGetBusSettings(int pBusIdx, CANBus& pBus)
+{
     return getBusConfig(pBusIdx, pBus);
 }
 
 
-void GVRetSerial::sendFrame(const CANFrame *) {}
-void GVRetSerial::sendFrameBatch(const QList<CANFrame> *){}
+void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
+{
+    /* sanity checks */
+    if( (pBusIdx < 0) || pBusIdx >= getNumBuses())
+        return;
+
+    /* copy bus config */
+    setBusConfig(pBusIdx, bus);
+
+    qDebug() << "About to update bus " << pBusIdx << " on GVRET";
+    if (pBusIdx == 0)
+    {
+        can0Baud = bus.getSpeed();
+        can0Baud |= 0x80000000;
+        if (bus.isActive())
+        {
+            can0Baud |= 0x40000000;
+            can0Enabled = true;
+        }
+        else can0Enabled = false;
+
+        if (bus.isListenOnly())
+        {
+            can0Baud |= 0x20000000;
+            can0ListenOnly = true;
+        }
+        else can0ListenOnly = false;
+    }
+    else if (pBusIdx == 1)
+    {
+        can1Baud = bus.getSpeed();
+        can1Baud |= 0x80000000;
+        if (bus.isActive())
+        {
+            can1Baud |= 0x40000000;
+            can1Enabled = true;
+        }
+        else can1Enabled = false;
+
+        if (bus.isListenOnly())
+        {
+            can1Baud |= 0x20000000;
+            can1ListenOnly = true;
+        }
+        else can1ListenOnly = false;
+
+        if (bus.isSingleWire())
+        {
+            can1Baud |= 0x10000000;
+            deviceSingleWireMode = 1;
+        }
+        else deviceSingleWireMode = 0;
+    }
+
+    /* update baud rates */
+    QByteArray buffer;
+    qDebug() << "Got signal to update bauds. 1: " << can0Baud <<" 2: " << can1Baud;
+    buffer[0] = (char)0xF1; //start of a command over serial
+    buffer[1] = 5; //setup canbus
+    buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
+    buffer[3] = (unsigned char)(can0Baud >> 8);
+    buffer[4] = (unsigned char)(can0Baud >> 16);
+    buffer[5] = (unsigned char)(can0Baud >> 24);
+    buffer[6] = (unsigned char)(can1Baud & 0xFF); //four bytes of ID LSB first
+    buffer[7] = (unsigned char)(can1Baud >> 8);
+    buffer[8] = (unsigned char)(can1Baud >> 16);
+    buffer[9] = (unsigned char)(can1Baud >> 24);
+    buffer[10] = 0;
+    if (serial == NULL) return;
+    if (!serial->isOpen()) return;
+    serial->write(buffer);
+}
 
 
+void GVRetSerial::piSendFrame(const CANFrame&) {}
+void GVRetSerial::piSendFrameBatch(const QList<CANFrame>&){}
+
+
+/****************************************************************/
 
 void GVRetSerial::readSettings()
 {
@@ -528,84 +575,4 @@ void GVRetSerial::sendCommValidation()
 }
 
 
-void GVRetSerial::setBusSettings(int pBusIdx, CANBus bus)
-{
-    /* make sure we execute in mThread context */
-    if(QThread::currentThread() != &mThread) {
-        QMetaObject::invokeMethod(this, "setBusSettings",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_ARG(int, pBusIdx),
-                                  Q_ARG(CANBus, bus));
-        return;
-    }
 
-    /* sanity checks */
-    if( (pBusIdx < 0) || pBusIdx >= getNumBuses())
-        return;
-
-    /* copy bus config */
-    setBusConfig(pBusIdx, bus);
-
-    qDebug() << "About to update bus " << pBusIdx << " on GVRET";
-    if (pBusIdx == 0)
-    {
-        can0Baud = bus.getSpeed();
-        can0Baud |= 0x80000000;
-        if (bus.isActive())
-        {
-            can0Baud |= 0x40000000;
-            can0Enabled = true;
-        }
-        else can0Enabled = false;
-
-        if (bus.isListenOnly())
-        {
-            can0Baud |= 0x20000000;
-            can0ListenOnly = true;
-        }
-        else can0ListenOnly = false;
-    }
-    else if (pBusIdx == 1)
-    {
-        can1Baud = bus.getSpeed();
-        can1Baud |= 0x80000000;
-        if (bus.isActive())
-        {
-            can1Baud |= 0x40000000;
-            can1Enabled = true;
-        }
-        else can1Enabled = false;
-
-        if (bus.isListenOnly())
-        {
-            can1Baud |= 0x20000000;
-            can1ListenOnly = true;
-        }
-        else can1ListenOnly = false;
-
-        if (bus.isSingleWire())
-        {
-            can1Baud |= 0x10000000;
-            deviceSingleWireMode = 1;
-        }
-        else deviceSingleWireMode = 0;
-    }
-
-    /* update baud rates */
-    QByteArray buffer;
-    qDebug() << "Got signal to update bauds. 1: " << can0Baud <<" 2: " << can1Baud;
-    buffer[0] = (char)0xF1; //start of a command over serial
-    buffer[1] = 5; //setup canbus
-    buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
-    buffer[3] = (unsigned char)(can0Baud >> 8);
-    buffer[4] = (unsigned char)(can0Baud >> 16);
-    buffer[5] = (unsigned char)(can0Baud >> 24);
-    buffer[6] = (unsigned char)(can1Baud & 0xFF); //four bytes of ID LSB first
-    buffer[7] = (unsigned char)(can1Baud >> 8);
-    buffer[8] = (unsigned char)(can1Baud >> 16);
-    buffer[9] = (unsigned char)(can1Baud >> 24);
-    buffer[10] = 0;
-    if (serial == NULL) return;
-    if (!serial->isOpen()) return;
-    serial->write(buffer);
-}

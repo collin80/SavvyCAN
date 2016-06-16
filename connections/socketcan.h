@@ -18,10 +18,6 @@ public:
     SocketCanConnection(QString portName);
     virtual ~SocketCanConnection();
 
-    virtual void start();
-    virtual void stop();
-
-
 signals:
     void error(const QString &);
 
@@ -34,18 +30,16 @@ signals:
     //being passed. Just set for things that really are being updated.
     void busStatus(int, int, int);
 
-
-public slots:
-
-    virtual void sendFrame(const CANFrame *);
-    virtual void sendFrameBatch(const QList<CANFrame> *);
-
-    virtual void setBusSettings(int, CANBus);
-    virtual bool getBusSettings(int pBusIdx, CANBus& pBus);
-
-    virtual void suspend(bool);
-
 protected:
+
+    virtual void piStarted();
+    virtual void piStop();
+    virtual void piSetBusSettings(int pBusIdx, CANBus pBus);
+    virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus);
+    virtual void piSuspend(bool pSuspend);
+    virtual void piSendFrame(const CANFrame&) ;
+    virtual void piSendFrameBatch(const QList<CANFrame>&);
+
     void disconnectDevice();
 
 private slots:
@@ -57,7 +51,6 @@ private slots:
 protected:
     QCanBusDevice*     mDev_p;
     QTimer             mTimer;
-    QThread            mThread;
 };
 
 

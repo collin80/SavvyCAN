@@ -11,14 +11,10 @@
 /***********************************/
 
 SocketCanConnection::SocketCanConnection(QString portName) :
-    CANConnection(portName, CANCon::SOCKETCAN, 1),
+    CANConnection(portName, CANCon::SOCKETCAN, 1, 4000, true),
     mDev_p(NULL),
-    mThread(NULL)
+    mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
-    getQueue().setSize(2000); /*TODO add check on returned value */
-    /* move ourself to the thread */
-    moveToThread(&mThread);
-
     qDebug() << "SocketCanConnection()";
 }
 
@@ -30,11 +26,8 @@ SocketCanConnection::~SocketCanConnection()
 }
 
 
-void SocketCanConnection::start() {
-
-    qDebug() << "enter thread";
-    mThread.start(QThread::HighPriority);
-
+void SocketCanConnection::piStarted()
+{
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
     mTimer.setInterval(1000);
     mTimer.setSingleShot(false); //keep ticking
@@ -42,15 +35,8 @@ void SocketCanConnection::start() {
 }
 
 
-void SocketCanConnection::suspend(bool pSuspend) {
-    /* make sure we execute in mThread context */
-    if(QThread::currentThread() != &mThread) {
-        QMetaObject::invokeMethod(this, "suspend",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_ARG(bool, pSuspend));
-        return;
-    }
-
+void SocketCanConnection::piSuspend(bool pSuspend)
+{
     /* update capSuspended */
     setCapSuspended(pSuspend);
 
@@ -60,43 +46,20 @@ void SocketCanConnection::suspend(bool pSuspend) {
 }
 
 
-void SocketCanConnection::stop() {
+void SocketCanConnection::piStop() {
     mTimer.stop();
-    mThread.quit();
-    if(!mThread.wait()) {
-        qDebug() << "can't stop thread";
-    }
     disconnectDevice();
 }
 
 
-bool SocketCanConnection::getBusSettings(int pBusIdx, CANBus& pBus) {
-    /* make sure we execute in mThread context */
-    if(QThread::currentThread() != &mThread) {
-        bool ret;
-        QMetaObject::invokeMethod(this, "getBusSettings",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(int , pBusIdx),
-                                  Q_ARG(CANBus& , pBus));
-        return ret;
-    }
-
+bool SocketCanConnection::piGetBusSettings(int pBusIdx, CANBus& pBus)
+{
     return getBusConfig(pBusIdx, pBus);
 }
 
 
-void SocketCanConnection::setBusSettings(int pBusIdx, CANBus bus)
+void SocketCanConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 {
-    /* make sure we execute in mThread context */
-    if(QThread::currentThread() != &mThread) {
-        QMetaObject::invokeMethod(this, "setBusSettings",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_ARG(int, pBusIdx),
-                                  Q_ARG(CANBus, bus));
-        return;
-    }
-
     /* sanity checks */
     if(0 != pBusIdx)
         return;
@@ -139,8 +102,8 @@ void SocketCanConnection::setBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-void SocketCanConnection::sendFrame(const CANFrame *) {}
-void SocketCanConnection::sendFrameBatch(const QList<CANFrame> *){}
+void SocketCanConnection::piSendFrame(const CANFrame&) {}
+void SocketCanConnection::piSendFrameBatch(const QList<CANFrame>&){}
 
 
 /***********************************/
@@ -239,12 +202,12 @@ void SocketCanConnection::testConnection() {
             break;
         case CANCon::NOT_CONNECTED:
             if (dev_p && dev_p->connectDevice()) {
-
-                /* try to reconnect */
-                CANBus bus;
-                if(getBusConfig(0, bus))
-                    setBusSettings(0, bus);
-
+                if(!mDev_p) {
+                    /* try to reconnect */
+                    CANBus bus;
+                    if(getBusConfig(0, bus))
+                        setBusSettings(0, bus);
+                }
                 /* disconnect test instance */
                 dev_p->disconnectDevice();
 
