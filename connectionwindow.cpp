@@ -70,13 +70,27 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     qDebug() << "Serial worker thread starting";
 
     connect(&mTicker, SIGNAL(timeout()), this, SLOT(refreshCanList()));
-    mTicker.setInterval(250); //tick 4 times a second (TODO: make this configurable?) */
+    /* tick frequency has a huge impact on performances */
+    /* TODO: make this configurable and part of the connection constructor to let connection configure the length of the queue */
+    mTicker.setInterval(500); /*tick twice a second */
     mTicker.setSingleShot(false);
     mTicker.start();
 }
 
 ConnectionWindow::~ConnectionWindow()
 {
+    QList<CANConnection*>& conns = connModel->getConnections();
+    CANConnection* conn_p;
+
+    /* delete connections */
+    while(!conns.isEmpty()) {
+        conn_p = conns.takeFirst();
+        conn_p->stop();
+        delete conn_p;
+    }
+
+    delete connModel;
+
     mTicker.stop();
     delete settings;
     delete ui;
@@ -306,7 +320,6 @@ void ConnectionWindow::receiveBusStatus(int bus, int speed, int status)
 void ConnectionWindow::handleConnSelectionChanged()
 {
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
-    qDebug() << "Selection: " << selIdx;
     if (selIdx == -1)
     {
         ui->btnOK->setText(tr("Create New Connection"));
