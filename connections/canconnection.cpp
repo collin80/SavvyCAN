@@ -55,8 +55,6 @@ CANConnection::~CANConnection()
     /* configured table */
     delete[] mConfigured;
     mConfigured = NULL;
-    /* delete queue table */
-    mQueue.setSize(0);
 }
 
 
