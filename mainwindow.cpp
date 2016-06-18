@@ -47,7 +47,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
 
-    model = new CANFrameModel();
+    model = new CANFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
+
     ui->canFramesView->setModel(model);
 
     readSettings();
@@ -180,6 +181,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow(model);
     connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 }
 
 MainWindow::~MainWindow()
@@ -510,7 +512,7 @@ void MainWindow::gotFrames(int framesSinceLastUpdate)
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 {
-    model->addFrame(frame, autoRefresh);    
+    model->addFrame(frame, autoRefresh);
     if (autoRefresh)
     {
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
@@ -712,15 +714,11 @@ void MainWindow::toggleCapture()
 {
     allowCapture = !allowCapture;
     if (allowCapture)
-    {
         ui->btnCaptureToggle->setText("Suspend Capturing");
-        emit startFrameCapturing();
-    }
     else
-    {
         ui->btnCaptureToggle->setText("Restart Capturing");
-        emit stopFrameCapturing();
-    }
+
+    emit suspendCapturing(!allowCapture);
 }
 
 void MainWindow::connectionSucceeded(int baud0, int baud1)

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui serialbus
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
 
@@ -50,8 +50,11 @@ SOURCES += main.cpp\
     isotp_interpreterwindow.cpp \
     isotp_handler.cpp \
     canconnectionmodel.cpp \
-    canconnection.cpp \
-    canconnectioncontainer.cpp
+    canbus.cpp \
+    connections/canconnection.cpp \
+    connections/socketcan.cpp \
+    connections/canconfactory.cpp \
+    connections/gvretserial.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -88,8 +91,13 @@ HEADERS  += mainwindow.h \
     isotp_interpreterwindow.h \
     isotp_handler.h \
     canconnectionmodel.h \
-    canconnection.h \
-    canconnectioncontainer.h
+    canbus.h \
+    utils/lfqueue.h \
+    connections/canconnection.h \
+    connections/socketcan.h \
+    connections/canconconst.h \
+    connections/canconfactory.h \
+    connections/gvretserial.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \

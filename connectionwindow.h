@@ -1,14 +1,18 @@
 #ifndef CONNECTIONWINDOW_H
 #define CONNECTIONWINDOW_H
 
-#include "canconnectionmodel.h"
+
 
 #include <QSerialPortInfo>
 #include <QDialog>
 #include <QDebug>
 #include <QSettings>
-#include "canconnection.h"
-#include "serialworker.h"
+#include <QTimer>
+//#include "canconnection_old.h"
+//#include "serialworker.h"
+#include "canconnectionmodel.h"
+#include "canframemodel.h"
+
 
 class CANConnectionModel;
 
@@ -16,15 +20,6 @@ namespace Ui {
 class ConnectionWindow;
 }
 
-namespace ConnectionType
-{
-    enum ConnectionType
-    {
-        GVRET_SERIAL,
-        KVASER,
-        SOCKETCAN
-    };
-}
 
 class ConnectionWindow : public QDialog
 {
@@ -36,11 +31,11 @@ public:
     void showEvent(QShowEvent *);
     int getSpeed();
     QString getPortName(); //name of port to connect to
-    ConnectionType::ConnectionType getConnectionType();
+    CANCon::type getConnectionType();
     bool getSWMode();
 
 signals:
-    void updateBusSettings(CAN_Bus *bus);
+    void updateBusSettings(CANBus *bus);
     void updatePortName(QString port);
 
 public slots:
@@ -48,6 +43,8 @@ public slots:
     void setSWMode(bool mode);
     void sendFrame(const CANFrame *);
     void sendFrameBatch(const QList<CANFrame> *);
+    void setSuspendAll(bool);
+
 
 private slots:
     void handleOKButton();
@@ -58,10 +55,10 @@ private slots:
     void handleDisableAll();
     void handleRevert();
     void handleNewConn();
-    void handleEnableAll();
-    void handleDisableAll();
     void receiveBusStatus(int bus, int speed, int status);
-    void connectionSuccess(CANConnection *conn);
+    void connectionStatus(CANCon::status);
+
+    void refreshCanList();
 
 private:
     Ui::ConnectionWindow *ui;
@@ -69,11 +66,14 @@ private:
     QSettings *settings;
     CANConnectionModel *connModel;
     CANFrameModel *canModel;
+    QTimer mTicker;
 
 
-    void getSerialPorts();
-    void getKvaserPorts();
-    void getSocketcanPorts();
+    void selectSerial();
+    void selectKvaser();
+    void selectSocketCan();
+    bool isSocketCanAvailable();
+    void setActiveAll(bool pActive);
 };
 
 #endif // CONNECTIONWINDOW_H
