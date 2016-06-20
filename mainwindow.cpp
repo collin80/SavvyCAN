@@ -157,7 +157,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lbNumFrames->setText("0");
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
-    updateTimer.setInterval(250);
+    updateTimer.setInterval(500); //test 250);
     updateTimer.start();
 
     elapsedTime = new QTime;
