@@ -16,6 +16,13 @@ public:
     uint64_t timestamp;
 };
 
+struct CANFlt
+{
+    quint32 id;
+    quint32 mask;
+    bool    notify;
+};
+
 struct J1939ID
 {
 public:
