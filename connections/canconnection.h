@@ -8,6 +8,7 @@
 #include "canbus.h"
 #include "canconconst.h"
 
+struct BusData;
 
 class CANConnection : public QObject
 {
@@ -64,6 +65,13 @@ public:
      */
     CANCon::status getStatus();
 
+    /**
+     * @brief set the callback function, this call has to be placed before calling start
+     * @param pCallback
+     * @return true if callback can be set
+     */
+    bool setCallback(std::function<void(CANCon::cbtype)> pCallback);
+
 
 signals:
     /*not implemented yet */
@@ -75,6 +83,11 @@ signals:
     //6 = use value passed for speed. This allows bus status to be updated but set that some things aren't really
     //being passed. Just set for things that really are being updated.
     void busStatus(int, int, int);
+
+    /**
+     * @brief event sent when a frame matching a filter set with notification hs been received
+     */
+    void notify();
 
     /**
      * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
@@ -136,6 +149,14 @@ public slots:
      */
     void sendFrameBatch(const QList<CANFrame>& pFrames);
 
+    /**
+     * @brief sets a filter list. Filters can be used to send a signal or filter out messages
+     * @param pFilters: a vector of can filters
+     * @param pFilterOut: if set to true, can frames not matching a filter are discarded
+     * @return true if filters have been set, false if busid is invalid
+     */
+    bool setFilters(int pBusId, const QVector<CANFlt>& pFilters, bool pFilterOut);
+
 protected:
 
     /**
@@ -185,6 +206,22 @@ protected:
      * @param pIsSuspended
      */
     void setCapSuspended(bool pIsSuspended);
+
+    /**
+     * @brief call callback function
+     * @param pCbType callback type (read or write)
+     */
+    void callback(CANCon::cbtype pCbType);
+
+    /**
+     * @brief used to check if a message shall be discarded. The function also update pNotify if a notification is expected for that message
+     * @param pBusId: the bus id on which the frame has been received
+     * @param pId: the id of the message to filter
+     * @param pNotify: set to true if a notification is expected, else pNotify is not set
+     * @return true if message shall be discarded
+     */
+    bool discard(int pBusId, quint32 pId, bool& pNotify);
+
 
 protected:
 
@@ -236,16 +273,24 @@ protected:
      */
     virtual void piSendFrameBatch(const QList<CANFrame>&) = 0;
 
+    /**
+     * @brief sets a hardware filter list
+     * @param pBusId: the bus id on which filters have to be set
+     * @param pFilters: a vector of can filters, the notification flag of CANFilter is ignored
+     * @note implementing this function is optional
+     */
+    virtual void piSetFilters(int pBusId, const QVector<CANFlt>& pFilters);
 
 private:
-    CANBus*             mBus;
-    bool*               mConfigured;
     LFQueue<CANFrame>   mQueue;
     const int           mNumBuses;
     const QString       mPort;
     const CANCon::type  mType;
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;
+    bool                mStarted;
+    std::function<void(CANCon::cbtype)> mCallback;
+    BusData*            mBusData_p;
     QThread*            mThread_p;
 };
 

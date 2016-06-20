@@ -142,6 +142,10 @@ void SocketCan::framesWritten(qint64 count)
 
 void SocketCan::framesReceived()
 {
+    /* test */
+    bool enqueued = false;
+    bool sndNotif = false;
+
     /* sanity checks */
     if(!mDev_p)
         return;
@@ -153,15 +157,16 @@ void SocketCan::framesReceived()
 
         /* exit case */
         if(!recFrame.isValid())
-            return;
+            break;
 
         /* drop frame if capture is suspended */
         if(isCapSuspended())
             continue;
 
         /* check frame */
-        if(!recFrame.payload().isEmpty() &&
-           recFrame.payload().length()<=8)
+        if( !recFrame.payload().isEmpty() &&
+            recFrame.payload().length()<=8 &&
+            !discard(0, recFrame.frameId(), sndNotif) )
         {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
@@ -175,13 +180,20 @@ void SocketCan::framesReceived()
 
                 /* enqueue frame */
                 getQueue().queue();
+                /* set enqueued */
+                enqueued = true;
             }
             else
                 qDebug() << "can't get a frame, ERROR";
         }
-        else {
-            qDebug() << "invalid frame";
-        }
+    }
+
+    if(enqueued) {
+        callback(CANCon::READ);
+    }
+
+    if(sndNotif) {
+        emit notify();
     }
 }
 

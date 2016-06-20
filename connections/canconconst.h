@@ -19,6 +19,13 @@ namespace CANCon {
         SOCKETCAN,
         NONE
     };
+
+    /* test */
+    enum cbtype
+    {
+        READ,
+        WRITE
+    };
 }
 
 #endif // CANCONCONST_H
