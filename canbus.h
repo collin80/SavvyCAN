@@ -7,7 +7,7 @@ class CANBus
 public:
     CANBus();
     CANBus(const CANBus&);
-    bool operator==(CANBus&);
+    bool operator==(const CANBus&) const;
     virtual ~CANBus(){}; /*TODO: remove connection from CANBus and add CANBus as an element of CANConnection */
     int speed;
     bool listenOnly;
