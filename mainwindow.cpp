@@ -679,7 +679,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (int temp = 0; temp < thisFrame.len; temp++)
+        for (unsigned int temp = 0; temp < thisFrame.len; temp++)
         {
             builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
         }
