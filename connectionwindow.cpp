@@ -80,11 +80,6 @@ ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     mTicker.setInterval(500); /*tick twice a second */
     mTicker.setSingleShot(false);
     mTicker.start();
-
-    /*test*/
-    /* retrieve pointer on method */
-    int methodIndex = metaObject()->indexOfMethod(QMetaObject::normalizedSignature("refreshCanList()"));
-    mRefreshM = metaObject()->method(methodIndex);
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -128,19 +123,6 @@ void ConnectionWindow::refreshCanList() {
 
     /* erase flag (this should be done before we start dequeuing...) */
     mRefreshReqOngoing.store(FALSE);
-}
-
-/*test*/
-void ConnectionWindow::callback(CANCon::cbtype pType)
-{
-    if(mRefreshReqOngoing.testAndSetRelaxed(FALSE, TRUE))
-    {
-        /* ask for a refresh */
-        mRefreshM.invoke(this, Qt::AutoConnection);
-    }
-    else {
-        //qDebug() << "skip event";
-    }
 }
 
 void ConnectionWindow::handleNewConn()

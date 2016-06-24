@@ -8,9 +8,6 @@
 #include <QDebug>
 #include <QSettings>
 #include <QTimer>
-/*test*/
-#include <QMetaMethod>
-/******/
 #include "canconnectionmodel.h"
 #include "canframemodel.h"
 
@@ -34,7 +31,6 @@ public:
     QString getPortName(); //name of port to connect to
     CANCon::type getConnectionType();
     bool getSWMode();
-    void callback(CANCon::cbtype pType);
 
 signals:
     void updateBusSettings(CANBus *bus);
@@ -71,10 +67,6 @@ private:
     QTimer mTicker;
 
     QAtomicInt mRefreshReqOngoing;
-
-    /*test*/
-    QMetaMethod mRefreshM;
-
 
     void selectSerial();
     void selectKvaser();
