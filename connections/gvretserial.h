@@ -51,8 +51,7 @@ protected:
     virtual void piSetBusSettings(int pBusIdx, CANBus pBus);
     virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus);
     virtual void piSuspend(bool pSuspend);
-    virtual void piSendFrame(const CANFrame&) ;
-    virtual void piSendFrameBatch(const QList<CANFrame>&);
+    virtual bool piSendFrame(const CANFrame&) ;
 
     void disconnectDevice();
 

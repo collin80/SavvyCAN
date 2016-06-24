@@ -15,14 +15,12 @@ SocketCan::SocketCan(QString portName) :
     mDev_p(NULL),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
-    qDebug() << "SocketCan()";
 }
 
 
 SocketCan::~SocketCan()
 {
     stop();
-    qDebug() << "~SocketCan()";
 }
 
 
@@ -102,8 +100,20 @@ void SocketCan::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-void SocketCan::piSendFrame(const CANFrame&) {}
-void SocketCan::piSendFrameBatch(const QList<CANFrame>&){}
+bool SocketCan::piSendFrame(const CANFrame& pFrame)
+{
+    /* sanity checks */
+    if(0 != pFrame.bus || pFrame.len>8)
+        return false;
+
+    /* fill frame */
+    QCanBusFrame frame;
+    frame.setFrameId(pFrame.ID);
+    frame.setExtendedFrameFormat(false);
+    frame.setPayload(QByteArray((const char*)pFrame.data, pFrame.len));
+
+    return mDev_p->writeFrame(frame);
+}
 
 
 /***********************************/
@@ -143,7 +153,6 @@ void SocketCan::framesWritten(qint64 count)
 void SocketCan::framesReceived()
 {
     /* test */
-    bool enqueued = false;
     bool sndNotif = false;
 
     /* sanity checks */
@@ -180,16 +189,12 @@ void SocketCan::framesReceived()
 
                 /* enqueue frame */
                 getQueue().queue();
-                /* set enqueued */
-                enqueued = true;
             }
+#if 0
             else
                 qDebug() << "can't get a frame, ERROR";
+#endif
         }
-    }
-
-    if(enqueued) {
-        callback(CANCon::READ);
     }
 
     if(sndNotif) {

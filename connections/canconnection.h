@@ -14,7 +14,7 @@ class CANConnection : public QObject
 {
     Q_OBJECT
 
-public:
+protected:
 
     /**
      * @brief CANConnection constructor
@@ -29,6 +29,9 @@ public:
                   int pNumBuses,
                   int pQueueLen,
                   bool pUseThread);
+
+public:
+
     /**
      * @brief CANConnection destructor
      */
@@ -64,13 +67,6 @@ public:
      * @return the @ref CANCon::status of the device (either connected or not)
      */
     CANCon::status getStatus();
-
-    /**
-     * @brief set the callback function, this call has to be placed before calling start
-     * @param pCallback
-     * @return true if callback can be set
-     */
-    bool setCallback(std::function<void(CANCon::cbtype)> pCallback);
 
 
 signals:
@@ -131,23 +127,26 @@ public slots:
      * @brief suspends/restarts data capture
      * @param pSuspend: suspends capture if true else restarts it
      * @note this calls piSuspend (in the working thread context if one has been started)
-     * @note the caller shall not access the queue when capture is suspended, it is then safe for callee to flush the queue
+     * @note the caller shall not access the queue when capture is suspended,
+     * @note the callee is expected to flush the queue
      */
     void suspend(bool pSuspend);
 
     /**
      * @brief provides device with the frame to send
      * @param pFrame: the frame to send
+     * @return false if parameter is invalid (bus id for instance)
      * @note this calls piSendFrame (in the working thread context if one has been started)
      */
-    void sendFrame(const CANFrame& pFrame);
+    bool sendFrame(const CANFrame& pFrame);
 
     /**
      * @brief provides device with a list of frames to send
      * @param pFrame: the list of frames to send
+     * @return false if parameter is invalid (bus id for instance)
      * @note this calls piSendFrameBatch (in the working thread context if one has been started)
      */
-    void sendFrameBatch(const QList<CANFrame>& pFrames);
+    bool sendFrames(const QList<CANFrame>& pFrames);
 
     /**
      * @brief sets a filter list. Filters can be used to send a signal or filter out messages
@@ -208,12 +207,6 @@ protected:
     void setCapSuspended(bool pIsSuspended);
 
     /**
-     * @brief call callback function
-     * @param pCbType callback type (read or write)
-     */
-    void callback(CANCon::cbtype pCbType);
-
-    /**
      * @brief used to check if a message shall be discarded. The function also update pNotify if a notification is expected for that message
      * @param pBusId: the bus id on which the frame has been received
      * @param pId: the id of the message to filter
@@ -264,14 +257,17 @@ protected:
     /**
      * @brief provides device with the frame to send
      * @param pFrame: the frame to send
+     * @return false if parameter is invalid (bus id for instance)
      */
-    virtual void piSendFrame(const CANFrame&) = 0;
+    virtual bool piSendFrame(const CANFrame&) = 0;
 
     /**
      * @brief provides device with a list of frames to send
      * @param pFrame: the list of frames to send
+     * @return false if parameter is invalid (bus id for instance)
+     * @note implementing this function is optional
      */
-    virtual void piSendFrameBatch(const QList<CANFrame>&) = 0;
+    virtual bool piSendFrames(const QList<CANFrame>&);
 
     /**
      * @brief sets a hardware filter list
@@ -289,7 +285,6 @@ private:
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;
     bool                mStarted;
-    std::function<void(CANCon::cbtype)> mCallback;
     BusData*            mBusData_p;
     QThread*            mThread_p;
 };

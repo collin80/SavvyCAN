@@ -22,11 +22,8 @@ CANConnection::CANConnection(QString pPort,
     mIsCapSuspended(false),
     mStatus(CANCon::NOT_CONNECTED),
     mStarted(false),
-    mCallback(NULL),
     mThread_p(NULL)
 {
-    qDebug() << "CANConnection()";
-
     /* register types */
     qRegisterMetaType<CANBus>("CANBus");
     qRegisterMetaType<CANFrame>("CANFrame");
@@ -53,7 +50,6 @@ CANConnection::CANConnection(QString pPort,
 
 CANConnection::~CANConnection()
 {
-    qDebug() << "~CANConnection()";
     /* stop and delete thread */
     if(mThread_p) {
         mThread_p->quit();
@@ -107,7 +103,7 @@ void CANConnection::suspend(bool pSuspend)
 void CANConnection::stop()
 {
     /* 1) execute in mThread_p context */
-    if( mThread_p && (mThread_p != QThread::currentThread()) )
+    if( mThread_p && mStarted && (mThread_p != QThread::currentThread()) )
     {
         /* if thread is finished, it means we call this function for the second time so we can leave */
         if( !mThread_p->isFinished() )
@@ -161,31 +157,37 @@ void CANConnection::setBusSettings(int pBusIdx, CANBus pBus)
 }
 
 
-void CANConnection::sendFrame(const CANFrame& pFrame)
+bool CANConnection::sendFrame(const CANFrame& pFrame)
 {
     /* make sure we execute in mThread context */
-    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
+    if( mThread_p && (mThread_p != QThread::currentThread()) )
+    {
+        bool ret;
         QMetaObject::invokeMethod(this, "sendFrame",
                                   Qt::BlockingQueuedConnection,
+                                  Q_RETURN_ARG(bool, ret),
                                   Q_ARG(const CANFrame&, pFrame));
-        return;
+        return ret;
     }
 
     return piSendFrame(pFrame);
 }
 
 
-void CANConnection::sendFrameBatch(const QList<CANFrame>& pFrames)
+bool CANConnection::sendFrames(const QList<CANFrame>& pFrames)
 {
     /* make sure we execute in mThread context */
-    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
-        QMetaObject::invokeMethod(this, "sendFrameBatch",
+    if( mThread_p && (mThread_p != QThread::currentThread()) )
+    {
+        bool ret;
+        QMetaObject::invokeMethod(this, "sendFrames",
                                   Qt::BlockingQueuedConnection,
+                                  Q_RETURN_ARG(bool, ret),
                                   Q_ARG(const QList<CANFrame>&, pFrames));
-        return;
+        return ret;
     }
 
-    return piSendFrameBatch(pFrames);
+    return piSendFrames(pFrames);
 }
 
 
@@ -244,14 +246,6 @@ CANCon::status CANConnection::getStatus() {
     return (CANCon::status) mStatus.load();
 }
 
-
-bool CANConnection::setCallback(std::function<void(CANCon::cbtype)> pCallback) {
-    if(mStarted || !pCallback) return false;
-    mCallback = pCallback;
-    return true;
-}
-
-
 void CANConnection::setStatus(CANCon::status pStatus) {
     mStatus.store(pStatus);
 }
@@ -262,11 +256,6 @@ bool CANConnection::isCapSuspended() {
 
 void CANConnection::setCapSuspended(bool pIsSuspended) {
     mIsCapSuspended = pIsSuspended;
-}
-
-void CANConnection::callback(CANCon::cbtype pCbType) {
-    if(mCallback)
-        mCallback(pCbType);
 }
 
 bool CANConnection::setFilters(int pBusId, const QVector<CANFlt>& pFilters, bool pFilterOut)
@@ -314,6 +303,18 @@ bool CANConnection::discard(int pBusId, quint32 pId, bool& pNotify)
         }
     }
     return mBusData_p[pBusId].mFilterOut;
+}
+
+
+bool CANConnection::piSendFrames(const QList<CANFrame>& pFrames)
+{
+    foreach(const CANFrame& frame, pFrames)
+    {
+        if(!piSendFrame(frame))
+            return false;
+    }
+
+    return true;
 }
 
 

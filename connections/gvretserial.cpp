@@ -141,8 +141,8 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-void GVRetSerial::piSendFrame(const CANFrame&) {}
-void GVRetSerial::piSendFrameBatch(const QList<CANFrame>&){}
+bool GVRetSerial::piSendFrame(const CANFrame&) {return false;}
+
 
 
 /****************************************************************/
