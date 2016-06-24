@@ -11,7 +11,7 @@ public:
     int bus;
     bool extended;
     bool isReceived; //did we receive this or send it?
-    int len;
+    uint32_t len;
     unsigned char data[8];
     uint64_t timestamp;
 };

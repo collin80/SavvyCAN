@@ -93,13 +93,12 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     CANFrame frame;
     frame.extended = false;
     frame.ID = id.toInt();
-    frame.len = length.toInt();
-    if (frame.len < 0) frame.len = 0;
+    frame.len = length.toUInt();
     if (frame.len > 8) frame.len = 8;
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
-    for (int i = 0; i < frame.len; i++)
+    for (unsigned int i = 0; i < frame.len; i++)
     {
         frame.data[i] = (uint8_t)data.property(i).toInt();
     }
@@ -125,7 +124,7 @@ void ScriptContainer::gotFrame(const CANFrame &frame)
             QJSValueList args;
             args << frame.bus << frame.ID << frame.len;
             QJSValue dataBytes = scriptEngine.newArray(frame.len);
-            for (int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
+            for (unsigned int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
             args.append(dataBytes);
             gotFrameFunction.call(args);
             return; //as soon as one filter matches we jump out
