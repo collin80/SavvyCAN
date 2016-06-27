@@ -112,7 +112,7 @@ void FileComparatorWindow::calculateDetails()
         CANFrame frame = interestedFrames.at(x);
         if (interestedIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
         {
-            for (int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < frame.len; y++)
             {
                 interestedIDs[frame.ID].values[y][frame.data[y]]++;
                 tmp = frame.data[y];
@@ -137,7 +137,7 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < frame.len; y++)
             {
                 newData->values[y][frame.data[y]] = 1;
                 tmp = frame.data[y];
@@ -177,7 +177,7 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < frame.len; y++)
             {
                 newData->values[y][frame.data[y]] = 1;
                 tmp = frame.data[y];

@@ -17,7 +17,7 @@ CANBus::CANBus(const CANBus& pBus) :
     active(pBus.active) {}
 
 
-bool CANBus::operator==(CANBus& bus) {
+bool CANBus::operator==(const CANBus& bus) const{
     return  speed == bus.speed &&
             listenOnly == bus.listenOnly &&
             singleWire == bus.singleWire &&

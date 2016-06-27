@@ -157,7 +157,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lbNumFrames->setText("0");
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
-    updateTimer.setInterval(250);
+    updateTimer.setInterval(500); //test 250);
     updateTimer.start();
 
     elapsedTime = new QTime;
@@ -679,7 +679,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (int temp = 0; temp < thisFrame.len; temp++)
+        for (unsigned int temp = 0; temp < thisFrame.len; temp++)
         {
             builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
         }

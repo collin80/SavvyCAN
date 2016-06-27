@@ -8,12 +8,13 @@
 #include "canbus.h"
 #include "canconconst.h"
 
+struct BusData;
 
 class CANConnection : public QObject
 {
     Q_OBJECT
 
-public:
+protected:
 
     /**
      * @brief CANConnection constructor
@@ -28,6 +29,9 @@ public:
                   int pNumBuses,
                   int pQueueLen,
                   bool pUseThread);
+
+public:
+
     /**
      * @brief CANConnection destructor
      */
@@ -77,6 +81,11 @@ signals:
     void busStatus(int, int, int);
 
     /**
+     * @brief event sent when a frame matching a filter set with notification hs been received
+     */
+    void notify();
+
+    /**
      * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
      * @param pStatus: the new status of the device
      */
@@ -118,23 +127,34 @@ public slots:
      * @brief suspends/restarts data capture
      * @param pSuspend: suspends capture if true else restarts it
      * @note this calls piSuspend (in the working thread context if one has been started)
-     * @note the caller shall not access the queue when capture is suspended, it is then safe for callee to flush the queue
+     * @note the caller shall not access the queue when capture is suspended,
+     * @note the callee is expected to flush the queue
      */
     void suspend(bool pSuspend);
 
     /**
      * @brief provides device with the frame to send
      * @param pFrame: the frame to send
+     * @return false if parameter is invalid (bus id for instance)
      * @note this calls piSendFrame (in the working thread context if one has been started)
      */
-    void sendFrame(const CANFrame& pFrame);
+    bool sendFrame(const CANFrame& pFrame);
 
     /**
      * @brief provides device with a list of frames to send
      * @param pFrame: the list of frames to send
+     * @return false if parameter is invalid (bus id for instance)
      * @note this calls piSendFrameBatch (in the working thread context if one has been started)
      */
-    void sendFrameBatch(const QList<CANFrame>& pFrames);
+    bool sendFrames(const QList<CANFrame>& pFrames);
+
+    /**
+     * @brief sets a filter list. Filters can be used to send a signal or filter out messages
+     * @param pFilters: a vector of can filters
+     * @param pFilterOut: if set to true, can frames not matching a filter are discarded
+     * @return true if filters have been set, false if busid is invalid
+     */
+    bool setFilters(int pBusId, const QVector<CANFlt>& pFilters, bool pFilterOut);
 
 protected:
 
@@ -186,6 +206,16 @@ protected:
      */
     void setCapSuspended(bool pIsSuspended);
 
+    /**
+     * @brief used to check if a message shall be discarded. The function also update pNotify if a notification is expected for that message
+     * @param pBusId: the bus id on which the frame has been received
+     * @param pId: the id of the message to filter
+     * @param pNotify: set to true if a notification is expected, else pNotify is not set
+     * @return true if message shall be discarded
+     */
+    bool discard(int pBusId, quint32 pId, bool& pNotify);
+
+
 protected:
 
     /**************************************************************/
@@ -227,25 +257,35 @@ protected:
     /**
      * @brief provides device with the frame to send
      * @param pFrame: the frame to send
+     * @return false if parameter is invalid (bus id for instance)
      */
-    virtual void piSendFrame(const CANFrame&) = 0;
+    virtual bool piSendFrame(const CANFrame&) = 0;
 
     /**
      * @brief provides device with a list of frames to send
      * @param pFrame: the list of frames to send
+     * @return false if parameter is invalid (bus id for instance)
+     * @note implementing this function is optional
      */
-    virtual void piSendFrameBatch(const QList<CANFrame>&) = 0;
+    virtual bool piSendFrames(const QList<CANFrame>&);
 
+    /**
+     * @brief sets a hardware filter list
+     * @param pBusId: the bus id on which filters have to be set
+     * @param pFilters: a vector of can filters, the notification flag of CANFilter is ignored
+     * @note implementing this function is optional
+     */
+    virtual void piSetFilters(int pBusId, const QVector<CANFlt>& pFilters);
 
 private:
-    CANBus*             mBus;
-    bool*               mConfigured;
     LFQueue<CANFrame>   mQueue;
     const int           mNumBuses;
     const QString       mPort;
     const CANCon::type  mType;
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;
+    bool                mStarted;
+    BusData*            mBusData_p;
     QThread*            mThread_p;
 };
 

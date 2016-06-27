@@ -207,7 +207,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QString::number(thisFrame.len);
             break;
         case 6: //data
-            for (int i = 0; i < thisFrame.len; i++)
+            for (unsigned int i = 0; i < thisFrame.len; i++)
             {
                 tempString.append(Utility::formatNumber(thisFrame.data[i]));
                 tempString.append(" ");

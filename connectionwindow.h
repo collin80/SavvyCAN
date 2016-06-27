@@ -8,8 +8,6 @@
 #include <QDebug>
 #include <QSettings>
 #include <QTimer>
-//#include "canconnection_old.h"
-//#include "serialworker.h"
 #include "canconnectionmodel.h"
 #include "canframemodel.h"
 
@@ -68,6 +66,7 @@ private:
     CANFrameModel *canModel;
     QTimer mTicker;
 
+    QAtomicInt mRefreshReqOngoing;
 
     void selectSerial();
     void selectKvaser();

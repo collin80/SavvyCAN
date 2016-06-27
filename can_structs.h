@@ -11,9 +11,16 @@ public:
     int bus;
     bool extended;
     bool isReceived; //did we receive this or send it?
-    int len;
+    uint32_t len;
     unsigned char data[8];
     uint64_t timestamp;
+};
+
+struct CANFlt
+{
+    quint32 id;
+    quint32 mask;
+    bool    notify;
 };
 
 struct J1939ID

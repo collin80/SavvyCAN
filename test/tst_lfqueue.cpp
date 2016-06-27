@@ -1,19 +1,10 @@
-#include <QtTest/QtTest>
+#include <QtTest>
+
 #include <QtConcurrent/qtconcurrentrun.h>
 
-#include "lfqueue.h"
+#include "utils/lfqueue.h"
+#include "tst_lfqueue.h"
 
-class TestLFQueue: public QObject
-{
-    Q_OBJECT
-private:
-
-private slots:
-    void setSize_data();
-    void setSize();
-    void exchange_data();
-    void exchange();
-};
 
 
 void TestLFQueue::setSize_data()
@@ -92,7 +83,3 @@ void TestLFQueue::exchange()
 
     thread.waitForFinished();
 }
-
-
-QTEST_MAIN(TestLFQueue)
-#include "tst_lfqueue.moc"

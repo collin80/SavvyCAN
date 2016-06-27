@@ -1,13 +1,18 @@
 #include <QCanBus>
+#include <QThread>
 
 #include "connectionwindow.h"
 #include "ui_connectionwindow.h"
 #include "connections/canconfactory.h"
 
+#define FALSE   0
+#define TRUE    1
+
 
 ConnectionWindow::ConnectionWindow(CANFrameModel *cModel, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::ConnectionWindow)
+    ui(new Ui::ConnectionWindow),
+    mRefreshReqOngoing(FALSE)
 {
     ui->setupUi(this);
 
@@ -104,17 +109,20 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 }
 
 void ConnectionWindow::refreshCanList() {
-    QList<CANConnection*>::iterator conn_p;
-    QList<CANConnection*>& conns = connModel->getConnections();
 
+    QList<CANConnection*>& conns = connModel->getConnections();
     CANFrame* frame_p = NULL;
 
-    for (conn_p = conns.begin(); conn_p != conns.end(); ++conn_p) {
-        while( (frame_p = (*conn_p)->getQueue().peek() ) ) {
+    foreach (CANConnection* conn_p, conns)
+    {
+        while( (frame_p = conn_p->getQueue().peek() ) ) {
             canModel->addFrame(*frame_p, true);
-            (*conn_p)->getQueue().dequeue();
+            conn_p->getQueue().dequeue();
         }
     }
+
+    /* erase flag (this should be done before we start dequeuing...) */
+    mRefreshReqOngoing.store(FALSE);
 }
 
 void ConnectionWindow::handleNewConn()
@@ -272,8 +280,16 @@ void ConnectionWindow::handleOKButton()
         connect(conn_p, SIGNAL(status(CANCon::status)),
                 this, SLOT(connectionStatus(CANCon::status)));
 
+        //conn_p->setCallback(std::bind(&ConnectionWindow::callback, this, std::placeholders::_1));
+
         /*TODO add return value and checks */
         conn_p->start();
+        /*{
+            QVector<CANFlt> flters;
+            flters.append({0x305, 0xFFFF, true});
+            conn_p->setFilters(0, flters, false);
+            connect(conn_p, SIGNAL(notify()), this, SLOT(refreshCanList()));
+        }*/
 
         for (int i=0 ; i<conn_p->getNumBuses() ; i++) {
             /* set bus configuration */
