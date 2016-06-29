@@ -1,14 +1,12 @@
-#include "scriptcontainer.h"
-
 #include <QJSValueIterator>
 #include <QDebug>
 
-ScriptContainer::ScriptContainer()
-{
-    fileName = QString();
-    filePath = QString();
-    scriptText = QString();
+#include "scriptcontainer.h"
+#include "connections/canconmanager.h"
 
+ScriptContainer::ScriptContainer(QString& pConName):
+    mConName(pConName)
+{
     connect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
 }
 
@@ -68,6 +66,25 @@ void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     CANFilter filter;
     filter.setFilter(idVal, maskVal, busVal);
     filters.append(filter);
+
+    qDebug() << "FIXME setFilter";
+    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
+    if(conn_p)
+    {
+        for(int i=0 ; i<conn_p->getNumBuses() ; i++)
+        {
+            QVector<CANFlt> fltrs;
+            foreach(const CANFilter& flt, filters)
+            {
+                if(flt.bus==i) {
+                    fltrs.append({flt.ID, flt.mask, true});
+                }
+            }
+
+            if(fltrs.size())
+                conn_p->setFilters(i, fltrs, false);
+        }
+    }
 }
 
 void ScriptContainer::setTickInterval(QJSValue interval)
@@ -86,6 +103,14 @@ void ScriptContainer::clearFilters()
 {
     qDebug() << "Called clear filters";
     filters.clear();
+
+    qDebug() << "FIXME clearFilters";
+    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
+    if(conn_p)
+    {
+        for(int i=0 ; i<conn_p->getNumBuses() ; i++)
+            conn_p->setFilters(i, QVector<CANFlt>(), false);
+    }
 }
 
 void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
@@ -109,8 +134,10 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
 
     if (frame.ID > 0x7FF) frame.extended = true;
 
-    //qDebug() << "Sending frame from script";
-    emit sendCANFrame(&frame);
+    qDebug() << "sending frame from script";
+    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
+    if(conn_p)
+        conn_p->sendFrame(frame);
 }
 
 void ScriptContainer::gotFrame(const CANFrame &frame)
