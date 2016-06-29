@@ -282,7 +282,7 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 }
 
 
-void CANFrameModel::addFrame(CANFrame& frame, bool autoRefresh = false)
+void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 {
     /*TODO: remove mutex */
     mutex.lock();
@@ -346,6 +346,15 @@ void CANFrameModel::addFrame(CANFrame& frame, bool autoRefresh = false)
     mutex.unlock();
 }
 
+
+void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFrames)
+{
+    foreach(const CANFrame& frame, pFrames)
+    {
+        addFrame(frame);
+    }
+}
+
 void CANFrameModel::sendRefresh()
 {    
     qDebug() << "Sending mass refresh";
@@ -377,38 +386,22 @@ void CANFrameModel::sendRefresh(int pos)
 //issue a refresh for the last num entries in the model.
 //used by the serial worker to do batch updates so it doesn't
 //have to send thousands of messages per second
-void CANFrameModel::sendBulkRefresh(int num)
+int CANFrameModel::sendBulkRefresh()
 {
-    //yes, num was sent to us by the serial worker but we actually have a better idea
-    //of how many by tracking the number we last knew about as opposed to how many rows there
-    //are now.
-    num = filteredFrames.count() - lastUpdateNumFrames;
+    int num = filteredFrames.count() - lastUpdateNumFrames;
+    if (num <= 0) return 0;
 
-    if (num < 0) return;
-
-    //qDebug() << "Num: " << num;
-
-    if (num == 0 && !overwriteDups) return;
-    if (filteredFrames.count() == 0) return;
+    if (num == 0 && !overwriteDups) return 0;
+    if (filteredFrames.count() == 0) return 0;
 
     lastUpdateNumFrames += num; //done this way to avoid asking for filteredFrames.count() again
 
     qDebug() << "Bulk refresh of " << num;
 
-    if (!overwriteDups)
-    {        
-        //if (num > filteredFrames.count()) num = filteredFrames.count();
-        //qDebug() << "From " << (filteredFrames.count() - num) << " to " << (filteredFrames.count() - 1);
-        //beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
-        //endInsertRows();
-        beginResetModel();
-        endResetModel();
-    }
-    else
-    {
-        beginResetModel();
-        endResetModel();
-    }    
+    beginResetModel();
+    endResetModel();
+
+    return num;
 }
 
 void CANFrameModel::clearFrames()

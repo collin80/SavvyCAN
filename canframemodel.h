@@ -8,6 +8,7 @@
 #include <QMutex>
 #include "can_structs.h"
 #include "dbchandler.h"
+#include "connections/canconnection.h"
 
 class CANFrameModel: public QAbstractTableModel
 {
@@ -25,7 +26,7 @@ public:
 
     void sendRefresh();
     void sendRefresh(int);
-    void sendBulkRefresh(int);
+    int  sendBulkRefresh();
     void clearFrames();
     void setDBCHandler(DBCHandler *);
     void setInterpetMode(bool);
@@ -46,7 +47,8 @@ public:
     const QMap<int, bool> *getFiltersReference() const; //this neither
 
 public slots:
-    void addFrame(CANFrame&, bool);
+    void addFrame(const CANFrame&, bool);
+    void addFrames(const CANConnection*, const QVector<CANFrame>&);
 
 signals:
     void updatedFiltersList();
