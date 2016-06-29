@@ -182,14 +182,12 @@ void CANConnectionModel::refresh(int pIndex)
     QModelIndex end;
 
     if(pIndex>=0) {
-        begin = createIndex(pIndex, 0);
-        end = begin;
+        begin   = createIndex(pIndex, 0);
+        end     = createIndex(pIndex, columnCount()-1);
     }
     else {
-        begin = createIndex(0, 0);
-        begin = createIndex(rowCount()-1, 0);
-        /*beginResetModel();
-        endResetModel();*/
+        begin   = createIndex(0, 0);
+        end     = createIndex(rowCount()-1, columnCount()-1);
     }
-    dataChanged(begin, end);
+    dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
 }

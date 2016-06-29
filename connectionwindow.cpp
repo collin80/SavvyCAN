@@ -21,11 +21,6 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     qRegisterMetaType<const CANFrame *>("const CANFrame *");
     qRegisterMetaType<const QList<CANFrame> *>("const QList<CANFrame> *");
 
-    qRegisterMetaTypeStreamOperators<QVector<QString>>();
-    qRegisterMetaTypeStreamOperators<QVector<int>>();
-    qRegisterMetaTypeStreamOperators<CANBus>();
-    qRegisterMetaTypeStreamOperators<QList<CANBus>>();
-
 
     connModel = new CANConnectionModel(this);
     ui->tableConnections->setModel(connModel);
@@ -37,8 +32,6 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->tableConnections->setColumnWidth(5, 75);
     ui->tableConnections->setColumnWidth(6, 75);
     ui->tableConnections->setColumnWidth(7, 75);
-
-    //int temp = settings.value("Main/DefaultConnectionType", 0).toInt();
     ui->ckSingleWire->setChecked(settings.value("Main/SingleWireMode", false).toBool());
 
     ui->cbSpeed->addItem(tr("<Default>"));
@@ -51,10 +44,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     /* load connection configuration */
     loadConnections();
 
-#ifdef Q_OS_LINUX
     ui->rbSocketCAN->setEnabled(isSocketCanAvailable());
-#endif
-
 #ifdef Q_OS_WIN
     ui->rbKvaser->setEnabled(true);
 #endif
@@ -171,6 +161,7 @@ void ConnectionWindow::handleOKButton()
 
     if (whichRow > -1)
     {
+        /* set information for selected connection */
         int busId;
         CANBus bus;
         bool ret;
@@ -243,10 +234,11 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     {
         ui->btnOK->setText(tr("Create New Connection"));
         ui->rbGVRET->setChecked(true);
-        ui->cbPort->setCurrentIndex(0);
         ui->ckListenOnly->setChecked(false);
         ui->ckSingleWire->setChecked(false);
         ui->ckEnabled->setChecked(false);
+        setSpeed(0);
+        setPortName(CANCon::GVRET_SERIAL, "");
     }
     else
     {
@@ -259,17 +251,12 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         if(!ret) return;
 
         ui->btnOK->setText(tr("Update Connection Settings"));
-
-        setPortName(conn_p->getType(), conn_p->getPort());
-        setSpeed(bus.getSpeed());
-
         ui->ckListenOnly->setChecked(bus.isListenOnly());
         ui->ckSingleWire->setChecked(bus.isSingleWire());
         ui->ckEnabled->setChecked(bus.isActive());
-        /* this won't be called if elements are disabled */
+        setSpeed(bus.getSpeed());
+        setPortName(conn_p->getType(), conn_p->getPort());
     }
-
-    handleConnTypeChanged();
 }
 
 
@@ -287,40 +274,30 @@ void ConnectionWindow::selectSerial()
 
 void ConnectionWindow::selectKvaser()
 {
-#ifdef Q_OS_WIN
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
-#endif
 }
 
 void ConnectionWindow::selectSocketCan()
 {
-#ifdef Q_OS_LINUX
     /* set edit text page visible */
     ui->stPort->setCurrentWidget(ui->etPage);
-#endif
 }
 
 void ConnectionWindow::setSpeed(int speed0)
 {
-    bool found = false;
-
-    qDebug() << "Set Speed " << speed0;
-
     for (int i = 0; i < ui->cbSpeed->count(); i++)
     {
         if (ui->cbSpeed->itemText(i).toInt() == speed0)
         {
             ui->cbSpeed->setCurrentIndex(i);
-            found = true;
+            return;
         }
     }
-    if (!found)
-    {
-        ui->cbSpeed->addItem(QString::number(speed0));
-        ui->cbSpeed->setCurrentIndex(ui->cbSpeed->count() - 1);
-    }
 
+    /* add custom speed */
+    ui->cbSpeed->addItem(QString::number(speed0));
+    ui->cbSpeed->setCurrentIndex(ui->cbSpeed->count() - 1);
 }
 
 void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
@@ -328,19 +305,28 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
     switch(pType)
     {
         case CANCon::GVRET_SERIAL:
-        {
-            ui->rbGVRET->setChecked(true);
-
-            break;
-        }
+            ui->rbGVRET->setChecked(true); break;
         case CANCon::KVASER:
+            ui->rbKvaser->setChecked(true); break;
+        case CANCon::SOCKETCAN:
+            ui->rbSocketCAN->setChecked(true); break;
+        default: {}
+    }
+
+    /* refresh names whenever needed */
+    handleConnTypeChanged();
+
+    switch(pType)
+    {
+        case CANCon::GVRET_SERIAL:
         {
-            ui->rbKvaser->setChecked(true);
+            int idx = ui->cbPort->findText(pPortName);
+            if( idx<0 ) idx=0;
+            ui->cbPort->setCurrentIndex(idx);
             break;
         }
         case CANCon::SOCKETCAN:
         {
-            ui->rbSocketCAN->setChecked(true);
             ui->lePort->setText(pPortName);
             break;
         }
@@ -349,24 +335,18 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
 }
 
 
-
 //-1 means leave it at whatever it booted up to. 0 means disable. Otherwise the actual rate we want.
 int ConnectionWindow::getSpeed()
 {
     switch (ui->cbSpeed->currentIndex())
     {
-    case -1:
-        return -1;
-        break;
-    case 0:
-        return -1;
-        break;
-    case 1:
-        return 0;
-        break;
-    default:
-        return (ui->cbSpeed->currentText().toInt());
-        break;
+        case -1:
+        case 0:
+            return -1;
+        case 1:
+            return 0;
+        default:
+            return (ui->cbSpeed->currentText().toInt());
     }
 }
 
@@ -424,6 +404,9 @@ void ConnectionWindow::handleRemoveConn()
     /* stop and delete connection */
     conn_p->stop();
     delete conn_p;
+
+    /* select first connection in list */
+    ui->tableConnections->selectRow(0);
 }
 
 void ConnectionWindow::handleRevert()
@@ -436,9 +419,8 @@ bool ConnectionWindow::isSocketCanAvailable()
 {
 #ifdef Q_OS_LINUX
     foreach (const QByteArray &backend, QCanBus::instance()->plugins()) {
-        if (backend == "socketcan") {
+        if (backend == "socketcan")
             return true;
-        }
     }
 #endif
     return false;
@@ -466,6 +448,11 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName)
 
 void ConnectionWindow::loadConnections()
 {
+    qRegisterMetaTypeStreamOperators<QVector<QString>>();
+    qRegisterMetaTypeStreamOperators<QVector<int>>();
+    qRegisterMetaTypeStreamOperators<CANBus>();
+    qRegisterMetaTypeStreamOperators<QList<CANBus>>();
+
     QSettings settings;
 
     /* fill connection list */
@@ -496,7 +483,7 @@ void ConnectionWindow::saveConnections()
     QVector<int> devTypes;
     QList<CANBus> busses;
 
-    /* delete connections */
+    /* save connections */
     foreach(CANConnection* conn_p, conns)
     {
         portNames.append(conn_p->getPort());
