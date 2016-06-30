@@ -42,7 +42,7 @@ public:
      * @brief getNumBuses
      * @return returns the number of buses of the device
      */
-    int getNumBuses();
+    int getNumBuses() const;
 
     /**
      * @brief getPort

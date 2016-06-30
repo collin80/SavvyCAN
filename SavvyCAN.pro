@@ -54,7 +54,8 @@ SOURCES += main.cpp\
     connections/canconnection.cpp \
     connections/socketcan.cpp \
     connections/canconfactory.cpp \
-    connections/gvretserial.cpp
+    connections/gvretserial.cpp \
+    connections/canconmanager.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -97,7 +98,8 @@ HEADERS  += mainwindow.h \
     connections/socketcan.h \
     connections/canconconst.h \
     connections/canconfactory.h \
-    connections/gvretserial.h
+    connections/gvretserial.h \
+    connections/canconmanager.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \

@@ -191,7 +191,7 @@ bool CANConnection::sendFrames(const QList<CANFrame>& pFrames)
 }
 
 
-int CANConnection::getNumBuses() {
+int CANConnection::getNumBuses() const{
     return mNumBuses;
 }
 

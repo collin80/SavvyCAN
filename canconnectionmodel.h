@@ -15,25 +15,19 @@ class CANConnectionModel : public QAbstractTableModel
 
 public:
     explicit CANConnectionModel(QObject *parent = 0);
+    virtual ~CANConnectionModel();
 
-    // Header:
+    // from abstractmodel:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
-
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
-
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
-
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
 
-    QList<CANConnection*>& getConnections();
     CANConnection* getAtIdx(int, int&) const;
-    void refreshView();
-
-private:
-    QList<CANConnection*> mConns;
+    void refresh(int pIndex=-1);
 };
 
 #endif // CANCONNECTIONMODEL_H

@@ -13,12 +13,13 @@ class ScriptContainer : public QObject
     Q_OBJECT
 
 public:
-    ScriptContainer();
+    ScriptContainer(QString&);
     void gotFrame(const CANFrame &frame);
 
     QString fileName;
     QString filePath;
     QString scriptText;
+    QString mConName;
 
 public slots:
     void compileScript();

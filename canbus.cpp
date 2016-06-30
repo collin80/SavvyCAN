@@ -3,10 +3,10 @@
 
 CANBus::CANBus()
 {
-    speed = 250000;
-    listenOnly = false;
-    singleWire = false;
-    active = false;
+    speed       = 250000;
+    listenOnly  = false;
+    singleWire  = false;
+    active      = false;
 }
 
 
@@ -24,44 +24,53 @@ bool CANBus::operator==(const CANBus& bus) const{
             active == bus.active;
 }
 
-
-void CANBus::setSpeed(int newSpeed)
-{
+void CANBus::setSpeed(int newSpeed){
     speed = newSpeed;
 }
 
-void CANBus::setListenOnly(bool mode)
-{
+void CANBus::setListenOnly(bool mode){
     listenOnly = mode;
 }
 
-void CANBus::setSingleWire(bool mode)
-{
+void CANBus::setSingleWire(bool mode){
     singleWire = mode;
 }
 
-void CANBus::setEnabled(bool mode)
-{
+void CANBus::setEnabled(bool mode){
     active = mode;
 }
 
-int CANBus::getSpeed()
-{
+int CANBus::getSpeed(){
     return speed;
 }
 
-bool CANBus::isListenOnly()
-{
+bool CANBus::isListenOnly(){
     return listenOnly;
 }
 
-bool CANBus::isSingleWire()
-{
+bool CANBus::isSingleWire(){
     return singleWire;
 }
 
-bool CANBus::isActive()
-{
+bool CANBus::isActive(){
     return active;
 }
 
+
+QDataStream& operator<<( QDataStream & pStream, const CANBus& pCanBus )
+{
+    pStream << pCanBus.speed;
+    pStream << pCanBus.listenOnly;
+    pStream << pCanBus.singleWire;
+    pStream << pCanBus.active;
+    return pStream;
+}
+
+QDataStream & operator>>(QDataStream & pStream, CANBus& pCanBus)
+{
+    pStream >> pCanBus.speed;
+    pStream >> pCanBus.listenOnly;
+    pStream >> pCanBus.singleWire;
+    pStream >> pCanBus.active;
+    return pStream;
+}

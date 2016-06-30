@@ -4,7 +4,7 @@
 #include <QDateTime>
 #include <QFileDialog>
 #include <QtSerialPort/QSerialPortInfo>
-#include "canframemodel.h"
+#include "connections/canconmanager.h"
 #include "utility.h"
 #include "serialworker.h"
 
@@ -62,28 +62,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(6, 275);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
-    //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
-    //ui->canFramesView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-    /*
-    worker = new SerialWorker(model);
-    worker->moveToThread(&serialWorkerThread);
-    connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
-    connect(&serialWorkerThread, &QThread::started, worker, &SerialWorker::run); //setup timers within the proper thread
-    connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::frameUpdateRapid, this, &MainWindow::gotFrames, Qt::QueuedConnection);
-    connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
-    connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::connectionFailure, this, &MainWindow::connectionFailed, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::deviceInfo, this, &MainWindow::gotDeviceInfo, Qt::QueuedConnection);
-    connect(this, &MainWindow::closeSerialPort, worker, &SerialWorker::closeSerialPort, Qt::QueuedConnection);
-    connect(this, &MainWindow::startFrameCapturing, worker, &SerialWorker::startFrameCapture);
-    connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
-    connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
-    serialWorkerThread.start();
-    serialWorkerThread.setPriority(QThread::HighPriority);    
-    */
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -146,6 +124,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
 
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
+
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
     lbStatusDatabase.setText(tr("No DBC database loaded"));
@@ -179,8 +159,7 @@ MainWindow::MainWindow(QWidget *parent) :
     model->clearFrames();
 
     //Automatically create the connection window so it can be updated even if we never opened it.
-    connectionWindow = new ConnectionWindow(model);
-    connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+    connectionWindow = new ConnectionWindow();
     connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 }
 
@@ -480,28 +459,30 @@ void MainWindow::filterClearAll()
 
 void MainWindow::tickGUIUpdate()
 {
-    int elapsed = elapsedTime->elapsed();
-    if(elapsed) {
-        framesPerSec += rxFrames * 1000 / elapsed - (framesPerSec / 4);
-        elapsedTime->restart();
-    }
-    else
-        framesPerSec = 0;
-
-    model->sendBulkRefresh(rxFrames);
-
-    ui->lbNumFrames->setText(QString::number(model->rowCount()));
-    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
-    ui->lbFPS->setText(QString::number(framesPerSec / 4));
-    if (rxFrames > 0)
+    rxFrames = model->sendBulkRefresh();
+    if(rxFrames>0)
     {
-        bDirty = true;
-        emit framesUpdated(rxFrames); //anyone care that frames were updated?
+        int elapsed = elapsedTime->elapsed();
+        if(elapsed) {
+            framesPerSec = rxFrames * 1000 / elapsed;
+            elapsedTime->restart();
+        }
+        else
+            framesPerSec = 0;
+
+        ui->lbNumFrames->setText(QString::number(model->rowCount()));
+        if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        ui->lbFPS->setText(QString::number(framesPerSec));
+        if (rxFrames > 0)
+        {
+            bDirty = true;
+            emit framesUpdated(rxFrames); //anyone care that frames were updated?
+        }
+
+        if (model->needsFilterRefresh()) updateFilterList();
+
+        rxFrames = 0;
     }
-
-    if (model->needsFilterRefresh()) updateFilterList();
-
-    rxFrames = 0;
 }
 
 void MainWindow::gotFrames(int framesSinceLastUpdate)
@@ -867,7 +848,7 @@ void MainWindow::showFrameSenderWindow()
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
 
-        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, connectionWindow, &ConnectionWindow::sendFrame);
+        //connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, connectionWindow, &ConnectionWindow::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -881,8 +862,8 @@ void MainWindow::showPlaybackWindow()
         else
             playbackWindow = new FramePlaybackWindow(model->getFilteredListReference());
 
-        connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)), Qt::QueuedConnection);
-        connect(playbackWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), connectionWindow, SLOT(sendFrameBatch(const QList<CANFrame>*)), Qt::QueuedConnection);
+        //connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)), Qt::QueuedConnection);
+        //connect(playbackWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), connectionWindow, SLOT(sendFrameBatch(const QList<CANFrame>*)), Qt::QueuedConnection);
     }
     playbackWindow->show();
 }
@@ -892,7 +873,7 @@ void MainWindow::showFirmwareUploaderWindow()
     if (!firmwareUploaderWindow)
     {
         firmwareUploaderWindow = new FirmwareUploaderWindow(model->getListReference());
-        connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
+        //connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
         //connect(worker, SIGNAL(gotTargettedFrame(int)), firmwareUploaderWindow, SLOT(gotTargettedFrame(int)));
     }
     firmwareUploaderWindow->show();
@@ -942,7 +923,6 @@ void MainWindow::showScriptingWindow()
     if (!scriptingWindow)
     {
         scriptingWindow = new ScriptingWindow(model->getListReference());
-        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, connectionWindow, &ConnectionWindow::sendFrame);
     }
     scriptingWindow->show();
 }
@@ -995,8 +975,7 @@ void MainWindow::showConnectionSettingsWindow()
 {
     if (!connectionWindow)
     {
-        connectionWindow = new ConnectionWindow(model);
-        connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+        connectionWindow = new ConnectionWindow();
     }
     connectionWindow->show();
 }

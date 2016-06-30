@@ -147,7 +147,7 @@ void SocketCan::errorReceived(QCanBusDevice::CanBusError error) const
 
 void SocketCan::framesWritten(qint64 count)
 {
-    qDebug() << "Number of frames written:" << count;
+    //qDebug() << "Number of frames written:" << count;
 }
 
 void SocketCan::framesReceived()

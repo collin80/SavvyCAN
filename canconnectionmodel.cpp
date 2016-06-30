@@ -1,8 +1,13 @@
-#include "connections/canconnection.h"
 #include "canconnectionmodel.h"
+#include "connections/canconnection.h"
+#include "connections/canconmanager.h"
 
 CANConnectionModel::CANConnectionModel(QObject *parent)
     : QAbstractTableModel(parent)
+{
+}
+
+CANConnectionModel::~CANConnectionModel()
 {
 }
 
@@ -52,17 +57,20 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
 
 int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
+    Q_UNUSED(parent);
     return 7;
 }
 
 
-int CANConnectionModel::rowCount(const QModelIndex &parent) const {
-    int rows=0;
-    QList<CANConnection*>::const_iterator iter;
+int CANConnectionModel::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
 
-    for (iter = mConns.begin() ; iter != mConns.end() ; ++iter) {
-        rows+=(*iter)->getNumBuses();
-    }
+    int rows=0;
+    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
+
+    foreach(const CANConnection* conn_p, conns)
+        rows+=conn_p->getNumBuses();
 
     return rows;
 }
@@ -124,23 +132,25 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 
 void CANConnectionModel::add(CANConnection* pConn_p)
 {
+    CANConManager* manager = CANConManager::getInstance();
+
+    connect(pConn_p, SIGNAL(notify()), manager, SLOT(refreshCanList()));
+
     beginResetModel();
-    mConns.append(pConn_p);
+    manager->getConnections().append(pConn_p);
     endResetModel();
 }
 
 
 void CANConnectionModel::remove(CANConnection* pConn_p)
 {
+    CANConManager* manager = CANConManager::getInstance();
+
+    disconnect(pConn_p, 0, manager, 0);
+
     beginResetModel();
-    mConns.removeOne(pConn_p);
+    manager->getConnections().removeOne(pConn_p);
     endResetModel();
-}
-
-
-QList<CANConnection*>& CANConnectionModel::getConnections()
-{
-    return mConns;
 }
 
 
@@ -150,23 +160,34 @@ CANConnection* CANConnectionModel::getAtIdx(int pIdx, int& pBusId) const
         return NULL;
 
     int i=0;
-    QList<CANConnection*>::const_iterator iter = mConns.begin();
+    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
-    for (iter = mConns.begin() ; iter != mConns.end() ; ++iter) {
-        if( i <= pIdx && pIdx < i+(*iter)->getNumBuses() ) {
+    foreach(CANConnection* conn_p, conns)
+    {
+        if( i <= pIdx && pIdx < i+conn_p->getNumBuses() ) {
             pBusId = pIdx - i;
-            return (*iter);
+            return conn_p;
         }
 
-        i+= (*iter)->getNumBuses();
+        i+= conn_p->getNumBuses();
     }
 
     return NULL;
 }
 
 
-void CANConnectionModel::refreshView()
+void CANConnectionModel::refresh(int pIndex)
 {
-    beginResetModel();
-    endResetModel();
+    QModelIndex begin;
+    QModelIndex end;
+
+    if(pIndex>=0) {
+        begin   = createIndex(pIndex, 0);
+        end     = createIndex(pIndex, columnCount()-1);
+    }
+    else {
+        begin   = createIndex(0, 0);
+        end     = createIndex(rowCount()-1, columnCount()-1);
+    }
+    dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
 }

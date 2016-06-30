@@ -1,6 +1,6 @@
 #ifndef CANBus_H
 #define CANBus_H
-
+#include <QDataStream>
 
 class CANBus
 {
@@ -8,7 +8,8 @@ public:
     CANBus();
     CANBus(const CANBus&);
     bool operator==(const CANBus&) const;
-    virtual ~CANBus(){}; /*TODO: remove connection from CANBus and add CANBus as an element of CANConnection */
+    virtual ~CANBus(){};
+
     int speed;
     bool listenOnly;
     bool singleWire;
@@ -24,5 +25,10 @@ public:
     bool isSingleWire();
     bool isActive();
 };
+
+QDataStream& operator<<( QDataStream & pStream, const CANBus& pCanBus );
+QDataStream & operator>>(QDataStream & pStream, CANBus& pCanBus);
+
+Q_DECLARE_METATYPE(CANBus);
 
 #endif // CANBus_H
