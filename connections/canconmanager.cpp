@@ -15,7 +15,7 @@ CANConManager* CANConManager::getInstance()
 CANConManager::CANConManager(QObject *parent): QObject(parent)
 {
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(refreshCanList()));
-    mTimer.setInterval(500); /*tick twice a second */
+    mTimer.setInterval(250); /*tick 4 times a second */
     mTimer.setSingleShot(false);
     mTimer.start();
 }
