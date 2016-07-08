@@ -150,9 +150,8 @@ void SnifferModel::clear()
     qDeleteAll(mMap);
     mMap.clear();
     mFilters.clear();
-    endResetModel();
-
     mFilter = false;
+    endResetModel();
 }
 
 
