@@ -4,9 +4,9 @@
 
 
 SnifferItem::SnifferItem(const CANFrame& pFrame):
-    mNotch(0)
+    mNotch(0),
+    mID(pFrame.ID)
 {
-    mID = pFrame.ID;
     mMarker = {0,0};
     mLastMarker = {0,0};
     /* that's dirty */
@@ -65,7 +65,7 @@ void SnifferItem::update(const CANFrame& pFrame)
 
     /* update marker */
     mMarker.data |= mLast.data ^ mCurrent.data;
-    mMarker.len  |= mLast.len ^ mCurrent.data;
+    mMarker.len  |= mLast.len ^ mCurrent.len;
 
     /* restart timeout */
     mTime.restart();

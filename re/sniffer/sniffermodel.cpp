@@ -11,7 +11,9 @@ SnifferModel::SnifferModel(QObject *parent)
 
 SnifferModel::~SnifferModel()
 {
-    clear();
+    qDeleteAll(mMap);
+    mMap.clear();
+    mFilters.clear();
 }
 
 
@@ -33,58 +35,53 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    const QMap<quint32, SnifferItem*>& map = mFilter ? mFilters : mMap;
+    SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
+    if(!item) QVariant();
 
-    if(index.row()<=map.size())
+    int col = index.column();
+
+    switch(role)
     {
-        quint64 key = map.keys()[index.row()];
-        SnifferItem* item = map[key];
-
-        int col = index.column();
-
-        switch(role)
+        case Qt::DisplayRole:
         {
-            case Qt::DisplayRole:
+            switch(col)
             {
-                switch(col)
+                case tc::DELTA:
+                    return QString::number(item->getDelta(), 'f');
+                case tc::ID:
+                    return QString("%1").arg(item->getId(), 5, 16, QLatin1Char(' ')).toUpper();
+                default:
+                    break;
+            }
+            if(tc::DATA_0<=col && col <=tc::DATA_7)
+            {
+                int data = item->getData(col-tc::DATA_0);
+                if(data>=0)
+                    return QString("%1").arg(data, 2, 16, QLatin1Char('0')).toUpper();
+            }
+            break;
+        }
+        case Qt::BackgroundRole:
+        {
+            if(tc::ID==col)
+            {
+                if(item->elapsed()>4000)
+                    return QBrush(Qt::red);
+            }
+            else if(tc::DATA_0<=col && col<=tc::DATA_7)
+            {
+                dc change = item->dataChange(col-tc::DATA_0);
+                switch(change)
                 {
-                    case tc::DELTA:
-                        return QString::number(item->getDelta(), 'f');
-                    case tc::ID:
-                        return QString("%1").arg(item->getId(), 5, 16, QLatin1Char(' ')).toUpper();
+                    case dc::INC:
+                        return QBrush(Qt::green);
+                    case dc::DEC:
+                        return QBrush(Qt::red);
                     default:
                         break;
                 }
-                if(tc::DATA_0<=col && col <=tc::DATA_7)
-                {
-                    int data = item->getData(col-tc::DATA_0);
-                    if(data>=0)
-                        return QString("%1").arg(data, 2, 16, QLatin1Char('0')).toUpper();
-                }
-                break;
             }
-            case Qt::BackgroundRole:
-            {
-                if(tc::ID==col)
-                {
-                    if(item->elapsed()>4000)
-                        return QBrush(Qt::red);
-                }
-                else if(tc::DATA_0<=col && col<=tc::DATA_7)
-                {
-                    dc change = item->dataChange(col-tc::DATA_0);
-                    switch(change)
-                    {
-                        case dc::INC:
-                            return QBrush(Qt::green);
-                        case dc::DEC:
-                            return QBrush(Qt::red);
-                        default:
-                            break;
-                    }
-                }
-                break;
-            }
+            break;
         }
     }
 
@@ -122,8 +119,7 @@ QVariant SnifferModel::headerData(int section, Qt::Orientation orientation, int 
 }
 
 
-QModelIndex SnifferModel::index(int row, int column, const QModelIndex &parent)
-            const
+QModelIndex SnifferModel::index(int row, int column, const QModelIndex &parent) const
 {
     if (parent.isValid())
         return QModelIndex();
@@ -133,7 +129,12 @@ QModelIndex SnifferModel::index(int row, int column, const QModelIndex &parent)
     if(column>tc::LAST || row>=map.size())
         return QModelIndex();
 
-    return createIndex(row, column);
+    /* ugly but I can't find best without creating a list to keep indexes */
+    QMap<quint32, SnifferItem*>::const_iterator iter;
+    int i;
+    for(iter = map.begin(), i=0 ; i<row ; ++i, ++iter);
+
+    return createIndex(row, column, iter.value());
 }
 
 
