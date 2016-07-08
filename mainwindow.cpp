@@ -273,12 +273,11 @@ MainWindow::~MainWindow()
         snifferWindow = NULL;
     }
 
-    delete elapsedTime;
 
-    delete ui;
-    delete dbcHandler;
-    model->clearFrames();
     delete model;
+    delete elapsedTime;
+    delete dbcHandler;
+    delete ui;
 }
 
 void MainWindow::exitApp()

@@ -3,6 +3,15 @@
 #include <QFile>
 #include "utility.h"
 
+
+CANFrameModel::~CANFrameModel()
+{
+    frames.clear();
+    filteredFrames.clear();
+    filters.clear();
+}
+
+
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
