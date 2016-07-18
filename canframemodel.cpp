@@ -227,15 +227,15 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != NULL)
                 {
-                    tempString.append("\r\n");
-                    tempString.append(msg->name + " " + msg->comment + "\r\n");
+                    tempString.append("\n");
+                    tempString.append(msg->name + " " + msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
                         QString sigString;
                         if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, sigString))
                         {
                             tempString.append(sigString);
-                            tempString.append("\r\n");
+                            tempString.append("\n");
                         }
                     }
                 }
