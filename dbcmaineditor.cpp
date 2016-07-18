@@ -259,17 +259,16 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
                 }
             }
             dbcFile->messageHandler->addMessage(newMsg);
+
+            /* insert message in table */
+            inhibitCellChanged = true;
+            replacement = new QTableWidgetItem(Utility::formatNumber(msgID));
+            replacement->setFlags(replacement->flags() ^ Qt::ItemIsEditable);
+            ui->MessagesTable->setItem(row, col, replacement);
+            replacement = new QTableWidgetItem(QString::number(newMsg.len));
+            ui->MessagesTable->setItem(row, 2, replacement);
+            inhibitCellChanged = false;
         }
-        else //editing an existing record
-        {            
-            if (msg != NULL) msg->ID = msgID;
-        }
-        inhibitCellChanged = true;
-        replacement = new QTableWidgetItem(Utility::formatNumber(msgID));
-        ui->MessagesTable->setItem(row, col, replacement);
-        replacement = new QTableWidgetItem(QString::number(newMsg.len));
-        ui->MessagesTable->setItem(row, 2, replacement);
-        inhibitCellChanged = false;
         break;
 
     case 1: //msg name
