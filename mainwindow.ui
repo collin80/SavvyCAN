@@ -214,6 +214,7 @@
     <addaction name="actionRange_State_2"/>
     <addaction name="actionSingle_Multi_State_2"/>
     <addaction name="actionISO_TP_Decoder"/>
+    <addaction name="actionSniffer"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -393,6 +394,11 @@
   <action name="actionISO_TP_Decoder">
    <property name="text">
     <string>ISO-TP Decoder</string>
+   </property>
+  </action>
+  <action name="actionSniffer">
+   <property name="text">
+    <string>Sniffer</string>
    </property>
   </action>
  </widget>

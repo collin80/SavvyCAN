@@ -25,6 +25,7 @@
 #include "dbcloadsavewindow.h"
 #include "fuzzingwindow.h"
 #include "udsscanwindow.h"
+#include "re/sniffer/snifferwindow.h"
 #include "isotp_interpreterwindow.h"
 
 class ConnectionWindow;
@@ -67,6 +68,7 @@ private slots:
     void showFuzzingWindow();
     void showUDSScanWindow();
     void showISOInterpreterWindow();
+    void showSnifferWindow();
     void exitApp();
     void handleSaveDecoded();
     void connectionFailed();
@@ -137,6 +139,7 @@ private:
     FuzzingWindow *fuzzingWindow;
     UDSScanWindow *udsScanWindow;
     ISOTP_InterpreterWindow *isoWindow;
+    SnifferWindow* snifferWindow;
 
     //various private storage
     QLabel lbStatusConnected;

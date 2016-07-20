@@ -80,6 +80,7 @@ MainWindow::MainWindow(QWidget *parent) :
     fuzzingWindow = NULL;
     udsScanWindow = NULL;
     isoWindow = NULL;
+    snifferWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -123,6 +124,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
+    connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -264,13 +266,18 @@ MainWindow::~MainWindow()
         isoWindow->close();
         delete isoWindow;
     }
+    if (snifferWindow)
+    {
+        snifferWindow->close();
+        delete snifferWindow;
+        snifferWindow = NULL;
+    }
 
-    delete elapsedTime;
 
-    delete ui;
-    delete dbcHandler;
-    model->clearFrames();
     delete model;
+    delete elapsedTime;
+    delete dbcHandler;
+    delete ui;
 }
 
 void MainWindow::exitApp()
@@ -291,6 +298,7 @@ void MainWindow::exitApp()
     if (fuzzingWindow) fuzzingWindow->close();
     if (udsScanWindow) udsScanWindow->close();
     if (isoWindow) isoWindow->close();
+    if (snifferWindow) snifferWindow->close();
     this->close();
 }
 
@@ -838,6 +846,14 @@ void MainWindow::showISOInterpreterWindow()
     }
     isoWindow->show();
 }
+
+void MainWindow::showSnifferWindow()
+{
+    if (!snifferWindow)
+        snifferWindow = new SnifferWindow(this);
+    snifferWindow->show();
+}
+
 
 void MainWindow::showFrameSenderWindow()
 {

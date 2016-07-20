@@ -5,6 +5,8 @@
 #include <QMessageBox>
 #include <QSettings>
 
+#define MT_COLUMN_COUNT   5
+
 DBCMainEditor::DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMainEditor)
@@ -26,7 +28,7 @@ DBCMainEditor::DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frame
 
     QStringList headers2;
     headers2 << "Msg ID" << "Msg Name" << "Data Len" << "Signals" << "Comment";
-    ui->MessagesTable->setColumnCount(5);
+    ui->MessagesTable->setColumnCount(MT_COLUMN_COUNT);
     ui->MessagesTable->setColumnWidth(0, 80);
     ui->MessagesTable->setColumnWidth(1, 240);
     ui->MessagesTable->setColumnWidth(2, 80);
@@ -210,148 +212,125 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
 
 void DBCMainEditor::onCellChangedMessage(int row,int col)
 {
+    QTableWidgetItem* item  = NULL;
+    bool ret                = false;
+    DBC_MESSAGE *msg        = NULL;
+    uint msgID;
+
     if (inhibitCellChanged) return;
 
-    qDebug() << "Editing row: " << row << " col: " << col;
-
-    QTableWidgetItem *replacement = NULL;
-    int msgID;
-    QString msgName;
-    int msgLen;
-    QString msgComment;
-    DBC_MESSAGE newMsg;
     DBC_NODE *node = dbcFile->findNodeByIdx(ui->NodesTable->currentRow());
-    DBC_MESSAGE *msg;
     if (node == NULL)
     {
         qDebug() << "No node set?!? This is bad!";
         return;
-        //dbcHandler->findNodeByIdx(0);
     }
 
-    msgID = Utility::ParseStringToNum(ui->MessagesTable->item(row, 0)->text());
-    qDebug() << "Msg ID of edited: " << msgID;
+    item = ui->MessagesTable->item(row, 0);
+    if(!item) return;
+
+    msgID = Utility::ParseStringToNum2(item->text(), &ret);
     msg = dbcFile->messageHandler->findMsgByID(msgID);
 
     switch(col)
     {
-    case 0: //msg id
-        if (row == ui->MessagesTable->rowCount() - 1) //new record
-        {            
-            if (dbcFile->messageHandler->findMsgByID(msgID) != NULL)
+        case 0: //msg id
+        {
+            /* sanity checks */
+            if(!ret)
+            {
+                /* bad message id */
+                ui->MessagesTable->item(row, 0)->setText("");
+                return;
+            }
+            if (msg != NULL)
             {
                 QMessageBox msg;
                 msg.setParent(0);
                 msg.setText("An existing msg with that ID already exists! Aborting!");
                 msg.exec();
+
+                ui->MessagesTable->item(row, 0)->setText("");
                 return;
             }
+
+            /* insert row */
+            DBC_MESSAGE newMsg;
             newMsg.ID = msgID;
             newMsg.name = "";
             newMsg.sender = node;
             newMsg.len = 0;
             for (int i = 0; i < referenceFrames->length(); i++)
             {
-                if (referenceFrames->at(i).ID == msgID)
+                if ((uint) referenceFrames->at(i).ID == msgID)
                 {
                     newMsg.len = referenceFrames->at(i).len;
                     break;
                 }
             }
             dbcFile->messageHandler->addMessage(newMsg);
-        }
-        else //editing an existing record
-        {            
-            if (msg != NULL) msg->ID = msgID;
-        }
-        inhibitCellChanged = true;
-        replacement = new QTableWidgetItem(Utility::formatNumber(msgID));
-        ui->MessagesTable->setItem(row, col, replacement);
-        replacement = new QTableWidgetItem(QString::number(newMsg.len));
-        ui->MessagesTable->setItem(row, 2, replacement);
-        inhibitCellChanged = false;
-        break;
 
-    case 1: //msg name
-        msgName = ui->MessagesTable->item(row, col)->text().simplified().replace(' ', '_');
-        if (msgName.length() == 0) return;
-        if (row == ui->MessagesTable->rowCount() - 1) //new record
-        {            
-            if (dbcFile->messageHandler->findMsgByName(msgName) != NULL)
+            /* insert message in table */
+            inhibitCellChanged = true;
+
+            item =  ui->MessagesTable->item(row, 0);
+            item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+            item->setText(Utility::formatNumber(msgID));
+
+            for(int i=1 ; i<MT_COLUMN_COUNT ; i++)
             {
-                QMessageBox msg;
-                msg.setParent(0);
-                msg.setText("An existing msg with that name already exists! Aborting!");
-                msg.exec();
+                item = ui->MessagesTable->item(row, i);
+                item->setFlags(item->flags() | Qt::ItemIsEditable);
+            }
+
+            /* set length */
+            item = ui->MessagesTable->item(row, 2);
+            item->setText(QString::number(newMsg.len));
+
+            inhibitCellChanged = false;
+
+            /* insert a new row */
+            insertBlankRow();
+            break;
+        }
+        case 1: //msg name
+        {
+            QString msgName = ui->MessagesTable->item(row, 1)->text().simplified().replace(' ', '_');
+            if (msgName.length() == 0) return;
+            if( ret && (msg!=NULL) )
+                msg->name = msgName;
+            break;
+        }
+        case 2: //data length
+        {
+            bool parseOk = false;
+            uint msgLen = ui->MessagesTable->item(row, col)->text().toUInt(&parseOk);
+
+            /* sanity checks */
+            if(!parseOk)
+            {
+                ui->MessagesTable->item(row, col)->setText("");
                 return;
             }
-            newMsg.ID = -1;
-            newMsg.name = msgName;
-            newMsg.sender = node;
-            dbcFile->messageHandler->addMessage(newMsg);
-        }
-        else
-        {
-            if (msg != NULL) msg->name = msgName;
-        }
-        inhibitCellChanged = true;
-        replacement = new QTableWidgetItem(msgName);
-        ui->MessagesTable->setItem(row, col, replacement);
-        inhibitCellChanged = false;
-        break;
+            if (msgLen > 8)
+            {
+                msgLen = 8;
+                ui->MessagesTable->item(row, col)->setText(QString::number(msgLen));
+            }
 
-    case 2: //data length
-        msgLen = ui->MessagesTable->item(row, col)->text().toInt();
-        if (msgLen < 0) msgLen = 0;
-        if (msgLen > 8) msgLen = 8;
-        if (row == ui->MessagesTable->rowCount() - 1) //new record
-        {
-            DBC_MESSAGE newMsg;
-            newMsg.ID = -1;
-            newMsg.name = "";
-            newMsg.len = msgLen;
-            newMsg.sender = node;
-            dbcFile->messageHandler->addMessage(newMsg);
+            if( ret && (msg!=NULL) )
+                msg->len = msgLen;
+            break;
         }
-        else //editing an existing record
+        case 3: //signals (number) - we don't handle anything here. User cannot directly change this value
+            break;
+        case 4: //comment
         {
-            if (msg != NULL) msg->len = msgLen;
+            QString msgComment = ui->MessagesTable->item(row, col)->text().simplified();
+            if( ret && (msgComment!=NULL) )
+                msg->comment = msgComment;
+            break;
         }
-        inhibitCellChanged = true;
-        replacement = new QTableWidgetItem(QString::number(msgLen, 16));
-        ui->MessagesTable->setItem(row, col, replacement);
-        inhibitCellChanged = false;
-
-        break;
-    case 3: //signals (number) - we don't handle anything here. User cannot directly change this value
-        break;
-    case 4: //comment
-        msgComment = ui->MessagesTable->item(row, col)->text().simplified();
-        if (row == ui->MessagesTable->rowCount() - 1) //new record
-        {
-            DBC_MESSAGE newMsg;
-            newMsg.ID = -1;
-            newMsg.name = "";
-            newMsg.len = 0;
-            newMsg.comment = msgComment;
-            newMsg.sender = node;
-            dbcFile->messageHandler->addMessage(newMsg);
-        }
-        else //editing an existing record
-        {
-            if (msg != NULL) msg->comment = msgComment;
-        }
-        inhibitCellChanged = true;
-        replacement = new QTableWidgetItem(msgComment);
-        ui->MessagesTable->setItem(row, col, replacement);
-        inhibitCellChanged = false;
-        break;
-
-    }
-
-    if (row == ui->MessagesTable->rowCount() - 1)
-    {
-        ui->MessagesTable->insertRow(ui->MessagesTable->rowCount());
     }
 
     ui->MessagesTable->setCurrentCell(row, col);
@@ -466,5 +445,17 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
     }
 
     //insert blank record that can be used to add new messages
-    ui->MessagesTable->insertRow(ui->MessagesTable->rowCount());
+    insertBlankRow();
+}
+
+void DBCMainEditor::insertBlankRow()
+{
+    int rowIdx = ui->MessagesTable->rowCount();
+    ui->MessagesTable->insertRow(rowIdx);
+    for(int i=1 ; i<MT_COLUMN_COUNT ; i++)
+    {
+        QTableWidgetItem *item = new QTableWidgetItem("");
+        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+        ui->MessagesTable->setItem(rowIdx, i, item);
+    }
 }

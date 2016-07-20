@@ -55,7 +55,10 @@ SOURCES += main.cpp\
     connections/socketcan.cpp \
     connections/canconfactory.cpp \
     connections/gvretserial.cpp \
-    connections/canconmanager.cpp
+    connections/canconmanager.cpp \
+    re/sniffer/snifferitem.cpp \
+    re/sniffer/sniffermodel.cpp \
+    re/sniffer/snifferwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -99,7 +102,10 @@ HEADERS  += mainwindow.h \
     connections/canconconst.h \
     connections/canconfactory.h \
     connections/gvretserial.h \
-    connections/canconmanager.h
+    connections/canconmanager.h \
+    re/sniffer/snifferitem.h \
+    re/sniffer/sniffermodel.h \
+    re/sniffer/snifferwindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -121,7 +127,8 @@ FORMS    += mainwindow.ui \
     dbcloadsavewindow.ui \
     fuzzingwindow.ui \
     udsscanwindow.ui \
-    isotp_interpreterwindow.ui
+    isotp_interpreterwindow.ui \
+    snifferwindow.ui
 
 DISTFILES +=
 
