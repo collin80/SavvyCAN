@@ -55,6 +55,8 @@ private:
     bool playbackForward;
     static const QColor graphColors[8];
     bool secondsMode;
+    QVector<double> x[8], y[8];
+    QCPGraph *graphRef[8];
 
     void refreshIDList();
     void updateFrameLabel();

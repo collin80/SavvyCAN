@@ -394,10 +394,12 @@ void FramePlaybackWindow::btnLoadLive()
 
 void FramePlaybackWindow::btnBackOneClick()
 {
+    sendingBuffer.clear();
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
 
     updatePosition(false);
+    emit sendFrameBatch(&sendingBuffer);
 }
 
 void FramePlaybackWindow::btnPauseClick()
@@ -444,9 +446,11 @@ void FramePlaybackWindow::btnPlayClick()
 
 void FramePlaybackWindow::btnFwdOneClick()
 {
+    sendingBuffer.clear();
     playbackTimer->stop();
     playbackActive = false;
     updatePosition(true);
+    emit sendFrameBatch(&sendingBuffer);
 }
 
 void FramePlaybackWindow::changePlaybackSpeed(int newSpeed)

@@ -67,6 +67,7 @@ private:
     bool needFilterRefresh;
     uint64_t timeOffset;
     int lastUpdateNumFrames;
+    uint32_t preallocSize;
 };
 
 

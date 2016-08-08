@@ -142,6 +142,7 @@ void GraphingWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        bool appendedToGraph = false;
         if (numFrames > modelFrames->count()) return;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
@@ -151,10 +152,17 @@ void GraphingWindow::updatedFrames(int numFrames)
                 if (graphParams[j].ID == thisFrame.ID)
                 {
                     appendToGraph(graphParams[j], thisFrame);
+                    appendedToGraph = true;
                 }
             }
         }
-        ui->graphingView->replot();
+        if (appendedToGraph) {
+            for (int j = 0; j < graphParams.count(); j++)
+            {
+                graphParams[j].ref->setData(graphParams[j].x, graphParams[j].y);
+            }
+            ui->graphingView->replot();
+        }
     }
 }
 
@@ -829,7 +837,7 @@ void GraphingWindow::loadDefinitions()
 
                             for (int b = 0; b < 8; b++)
                             {
-                                if (oldMask & (1 << b))
+                                if (oldMask & (1ull << b))
                                 {
                                     gp.startBit = (8 * oldEnd) + b;
                                     break;
@@ -838,7 +846,7 @@ void GraphingWindow::loadDefinitions()
 
                             for (int c = 7; c >= 0; c--)
                             {
-                                if ( oldMask & (1<<(((numBytes - 1) * 8) + c)) )
+                                if ( oldMask & (1ull << (((numBytes - 1) * 8) + c)) )
                                 {
                                     gp.numBits -= (7-c);
                                     break;
@@ -857,7 +865,7 @@ void GraphingWindow::loadDefinitions()
                             gp.numBits = 8;
                             for (int b = 0; b < 8; b++)
                             {
-                                if (oldMask & (1 << b))
+                                if (oldMask & (1ull << b))
                                 {
                                     gp.startBit = 8 * oldStart + b;
                                     gp.numBits = 8 - b;
@@ -931,8 +939,6 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
         params.x.append(frame.timestamp - params.xbias);
     }
     params.y.append((tempVal * params.scale) + params.bias);
-
-    params.ref->setData(params.x,params.y);
 }
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)

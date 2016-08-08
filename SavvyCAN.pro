@@ -17,7 +17,7 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
+    mainwindow.cpp \
     canframemodel.cpp \
     utility.cpp \
     qcustomplot.cpp \

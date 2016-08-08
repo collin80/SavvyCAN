@@ -34,7 +34,6 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->tableConnections->setColumnWidth(7, 75);
     ui->ckSingleWire->setChecked(settings.value("Main/SingleWireMode", false).toBool());
 
-    ui->cbSpeed->addItem(tr("<Default>"));
     ui->cbSpeed->addItem(tr("125000"));
     ui->cbSpeed->addItem(tr("250000"));
     ui->cbSpeed->addItem(tr("500000"));
@@ -176,15 +175,7 @@ void ConnectionWindow::handleOKButton()
         bus.setListenOnly(ui->ckListenOnly->isChecked());
         bus.setSingleWire(ui->ckSingleWire->isChecked());
         bus.setEnabled(ui->ckEnabled->isChecked());
-        if (ui->cbSpeed->currentIndex() == 0)
-        {
-            bus.speed = 0;
-            bus.setEnabled(false);
-        }
-        else if (ui->cbSpeed->currentIndex() >= 1)
-        {
-            bus.setSpeed(ui->cbSpeed->currentText().toInt());
-        }        
+        bus.setSpeed(ui->cbSpeed->currentText().toInt());
         /* update bus settings */
         conn_p->setBusSettings(busId, bus);
 
@@ -204,8 +195,7 @@ void ConnectionWindow::handleOKButton()
             bus.listenOnly = ui->ckListenOnly->isChecked();
             bus.singleWire = ui->ckSingleWire->isChecked();
 
-            if (ui->cbSpeed->currentIndex() < 1) bus.speed = 0;
-            else bus.speed = ui->cbSpeed->currentText().toInt();
+            bus.speed = ui->cbSpeed->currentText().toInt();
 
             /* update bus settings */
             conn_p->setBusSettings(i, bus);
