@@ -26,6 +26,7 @@
 #include "fuzzingwindow.h"
 #include "udsscanwindow.h"
 #include "isotp_interpreterwindow.h"
+#include "motorcontrollerconfigwindow.h"
 
 namespace Ui {
 class MainWindow;
@@ -65,6 +66,7 @@ private slots:
     void showScriptingWindow();
     void showDBCFileWindow();
     void showFuzzingWindow();
+    void showMCConfigWindow();
     void showUDSScanWindow();
     void showISOInterpreterWindow();
     void exitApp();
@@ -144,6 +146,7 @@ private:
     FuzzingWindow *fuzzingWindow;
     UDSScanWindow *udsScanWindow;
     ISOTP_InterpreterWindow *isoWindow;
+    MotorControllerConfigWindow *motorctrlConfigWindow;
 
     //various private storage
     QLabel lbStatusConnected;

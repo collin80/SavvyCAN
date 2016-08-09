@@ -221,6 +221,8 @@
     <addaction name="actionScripting_INterface"/>
     <addaction name="actionFuzzing"/>
     <addaction name="actionUDS_Scanner"/>
+    <addaction name="actionFirmware_Update"/>
+    <addaction name="actionMotorControlConfig"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -391,6 +393,16 @@
   <action name="actionISO_TP_Decoder">
    <property name="text">
     <string>ISO-TP Decoder</string>
+   </property>
+  </action>
+  <action name="actionFirmware_Update">
+   <property name="text">
+    <string>Firmware Update</string>
+   </property>
+  </action>
+  <action name="actionMotorControlConfig">
+   <property name="text">
+    <string>MotorControlConfig</string>
    </property>
   </action>
  </widget>

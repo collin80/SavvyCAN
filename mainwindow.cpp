@@ -98,6 +98,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcFileWindow = NULL;
     fuzzingWindow = NULL;
     udsScanWindow = NULL;
+    motorctrlConfigWindow = NULL;
     isoWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
@@ -138,11 +139,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
     connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
     connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
-    connect(ui->actionFirmware_Uploader, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
+    connect(ui->actionFirmware_Update, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
+    connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
 
     lbStatusConnected.setText(tr("Not connected"));
     updateFileStatus();
@@ -976,6 +978,17 @@ void MainWindow::showFuzzingWindow()
         connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
     }
     fuzzingWindow->show();
+}
+
+void MainWindow::showMCConfigWindow()
+{
+    if (!motorctrlConfigWindow)
+    {
+        motorctrlConfigWindow = new MotorControllerConfigWindow(model->getListReference());
+        connect(motorctrlConfigWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        connect(motorctrlConfigWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
+    }
+    motorctrlConfigWindow->show();
 }
 
 void MainWindow::showUDSScanWindow()
