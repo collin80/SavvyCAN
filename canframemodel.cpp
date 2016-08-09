@@ -34,8 +34,21 @@ int CANFrameModel::columnCount(const QModelIndex &index) const
 CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
-    frames.reserve(50000000); //yes, preallocating a huge number of frames.
-    filteredFrames.reserve(50000000); //the goal is to prevent a reallocation from ever happening
+
+    if (QSysInfo::WordSize > 32)
+    {
+        qDebug() << "64 bit OS detected. Requesting a large preallocation";
+        preallocSize = 50000000;
+    }
+    else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
+    {
+        qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
+        preallocSize = 5000000;
+    }
+
+    frames.reserve(preallocSize);
+    filteredFrames.reserve(preallocSize); //the goal is to prevent a reallocation from ever happening
+
     dbcHandler = NULL;
     interpretFrames = false;
     overwriteDups = false;
@@ -159,7 +172,7 @@ void CANFrameModel::recalcOverwrite()
     while (frames.count() > lastUnique) frames.removeLast();
 
     filteredFrames.clear();
-    filteredFrames.reserve(50000000);
+    filteredFrames.reserve(preallocSize);
 
     for (int i = 0; i < frames.count(); i++)
     {
@@ -360,7 +373,7 @@ void CANFrameModel::sendRefresh()
     beginResetModel();
     filteredFrames.clear();
     filteredFrames.append(tempContainer);
-    filteredFrames.reserve(50000000);
+    filteredFrames.reserve(preallocSize);
     lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
     mutex.unlock();
@@ -416,8 +429,8 @@ void CANFrameModel::clearFrames()
     frames.clear();
     filteredFrames.clear();
     filters.clear();
-    frames.reserve(50000000);
-    filteredFrames.reserve(50000000);
+    frames.reserve(preallocSize);
+    filteredFrames.reserve(preallocSize);
     this->endResetModel();
     lastUpdateNumFrames = 0;
     mutex.unlock();
