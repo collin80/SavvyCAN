@@ -918,8 +918,6 @@ void MainWindow::showFuzzingWindow()
     if (!fuzzingWindow)
     {
         fuzzingWindow = new FuzzingWindow(model->getListReference());
-        connect(fuzzingWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
-        connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), connectionWindow, SLOT(sendFrameBatch(const QList<CANFrame>*)));
     }
     fuzzingWindow->show();
 }
@@ -929,7 +927,7 @@ void MainWindow::showUDSScanWindow()
     if (!udsScanWindow)
     {
         udsScanWindow = new UDSScanWindow(model->getListReference());
-        connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
+        //connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
     }
     udsScanWindow->show();
 }

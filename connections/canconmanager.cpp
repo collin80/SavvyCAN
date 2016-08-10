@@ -41,6 +41,16 @@ void CANConManager::remove(CANConnection* pConn_p)
     mConns.removeOne(pConn_p);
 }
 
+//Get total number of buses currently registered with the program
+int CANConManager::getNumBuses()
+{
+    int buses = 0;
+    foreach(CANConnection* conn_p, mConns)
+    {
+        buses += conn_p->getNumBuses();
+    }
+    return buses;
+}
 
 void CANConManager::refreshCanList()
 {
@@ -91,4 +101,48 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
 
     if(frames.size())
         emit framesReceived(pConn_p, frames);
+}
+
+/*
+ * Uses the requested bus to look up which CANConnection object handles this bus based on the order of
+ * the objects and how many buses they implement. For instance, if the request is to send on bus 2
+ * and there is a GVRET object first then a socketcan object it'll send on the socketcan object as
+ * gvret will have claimed buses 0 and 1 and socketcan bus 2. But, each actual CANConnection expects
+ * its own bus numbers to start at zero so the frame bus number has to be offset accordingly.
+ * Also keep in mind that the CANConnection "sendFrame" function uses a blocking queued connection
+ * and so will force the frame to be delivered before it keeps going. This allows on the stack variables
+ * to be used but is slow. This function uses an on the stack copy of the frame so the way it works
+ * is a good thing but performance will suffer. TODO: Investigate a way to use non-blocking calls.
+*/
+bool CANConManager::sendFrame(const CANFrame& pFrame)
+{
+    int busBase = 0;
+    CANFrame workingFrame = pFrame;
+    CANFrame *txFrame;
+
+    foreach (CANConnection* conn, mConns)
+    {
+        //check if this CAN connection is supposed to handle the requested bus
+        if (pFrame.bus <= busBase + conn->getNumBuses())
+        {
+            workingFrame.bus -= busBase;
+            txFrame = conn->getQueue().get();
+            *txFrame = workingFrame;
+            conn->getQueue().queue();
+            return conn->sendFrame(workingFrame);
+        }
+        busBase += conn->getNumBuses();
+    }
+    return false;
+}
+
+bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
+{
+    foreach(const CANFrame& frame, pFrames)
+    {
+        if(!sendFrame(frame))
+            return false;
+    }
+
+    return true;
 }

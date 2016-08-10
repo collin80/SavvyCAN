@@ -96,7 +96,8 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
         switch (index.column())
         {
             case 0: //bus
-                return QString::number(busId);
+                //return QString::number(busId);
+                return QString::number(index.row());
                 break;
             case 1: //type
                 if (conn_p)

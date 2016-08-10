@@ -141,7 +141,52 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool GVRetSerial::piSendFrame(const CANFrame&) {return false;}
+bool GVRetSerial::piSendFrame(const CANFrame& frame)
+{
+    QByteArray buffer;
+    int c;
+    int ID;
+    CANFrame tempFrame = frame;
+    tempFrame.isReceived = false;
+    tempFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() - txTimestampBasis) * 1000);
+
+    //qDebug() << "Sending out frame with id " << frame->ID;
+
+    //show our sent frames in the list too. This happens even if we're not connected.
+    /* model lives in UI thread, we need to call invokeMethod */
+    //QMetaObject::invokeMethod(model, "addFrame",
+    //                          Qt::QueuedConnection,
+    //                          Q_ARG(CANFrame, tempFrame),
+    //                          Q_ARG(bool, false));
+
+    framesRapid++;
+
+    if (serial == NULL) return false;
+    if (!serial->isOpen()) return false;
+    //if (!isConnected) return false;
+
+    ID = frame.ID;
+    if (frame.extended) ID |= 1 << 31;
+
+    buffer[0] = (char)0xF1; //start of a command over serial
+    buffer[1] = 0; //command ID for sending a CANBUS frame
+    buffer[2] = (unsigned char)(ID & 0xFF); //four bytes of ID LSB first
+    buffer[3] = (unsigned char)(ID >> 8);
+    buffer[4] = (unsigned char)(ID >> 16);
+    buffer[5] = (unsigned char)(ID >> 24);
+    buffer[6] = (unsigned char)((frame.bus) & 1);
+    buffer[7] = (unsigned char)frame.len;
+    for (c = 0; c < frame.len; c++)
+    {
+        buffer[8 + c] = frame.data[c];
+    }
+    buffer[8 + frame.len] = 0;
+
+    //qDebug() << "writing " << buffer.length() << " bytes to serial port";
+    serial->write(buffer);
+
+    return true;
+}
 
 
 

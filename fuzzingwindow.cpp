@@ -3,6 +3,7 @@
 #include "utility.h"
 #include <QDebug>
 #include "mainwindow.h"
+#include "connections/canconmanager.h"
 
 FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -36,9 +37,10 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
 
     fuzzTimer->setInterval(ui->spinTiming->value());
 
-    ui->cbBuses->addItem(tr("0"));
-    ui->cbBuses->addItem(tr("1"));
-    ui->cbBuses->addItem(tr("Both"));
+    int numBuses = CANConManager::getInstance()->getNumBuses();
+    for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
+    ui->cbBuses->addItem(tr("All"));
+
 }
 
 FuzzingWindow::~FuzzingWindow()
@@ -111,8 +113,7 @@ void FuzzingWindow::timerTriggered()
 {
     CANFrame thisFrame;
     sendingBuffer.clear();
-    int buses = ui->cbBuses->currentIndex() + 1;
-    if (buses == 0) buses = 1;
+    int buses = ui->cbBuses->currentIndex();
     for (int count = 0; count < ui->spinBurst->value(); count++)
     {
         thisFrame.ID = currentID;
@@ -121,22 +122,26 @@ void FuzzingWindow::timerTriggered()
         else thisFrame.extended = false;
         thisFrame.bus = 0; //hard coded for now. TODO: do not hard code
         thisFrame.len = ui->spinBytes->value();
-        if (buses & 1)
+
+        if (buses < (ui->cbBuses->count() - 1))
         {
-            thisFrame.bus = 0;
+            thisFrame.bus = buses;
             sendingBuffer.append(thisFrame);
         }
-        if (buses & 2)
+        else //fuzz all the buses! HACK THE PLANET! Er, something...
         {
-            thisFrame.bus = 1;
-            sendingBuffer.append(thisFrame);
+            for (int j = 0; j < ui->cbBuses->count() - 1; j++)
+            {
+                thisFrame.bus = j;
+                sendingBuffer.append(thisFrame);
+            }
         }
 
         calcNextID();
         calcNextBitPattern();
         numSentFrames++;
     }
-    emit sendFrameBatch(&sendingBuffer);
+    CANConManager::getInstance()->sendFrames(sendingBuffer);
     ui->lblNumFrames->setText("# of sent frames: " + QString::number(numSentFrames));
 }
 
