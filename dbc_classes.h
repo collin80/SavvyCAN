@@ -91,10 +91,10 @@ class DBC_MESSAGE
 public:
     DBC_MESSAGE();
 
-    int ID;
+    uint32_t ID;
     QString name;
     QString comment;
-    int len;
+    unsigned int len;
     DBC_NODE *sender;
     QList<DBC_ATTRIBUTE> attributes;
     DBCSignalHandler *sigHandler;
