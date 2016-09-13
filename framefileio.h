@@ -43,6 +43,7 @@ public:
     static bool loadFrameFile(QString &, QVector<CANFrame>*);
     static bool saveFrameFile(QString &, const QVector<CANFrame>*);
     static bool loadCanDumpFile(QString, QVector<CANFrame>*);
+    static bool loadPCANFile(QString, QVector<CANFrame>*);
 
 private:
     static QString unQuote(QString);
