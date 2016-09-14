@@ -197,12 +197,16 @@ void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
   Q_UNUSED(event)
   // Set the plot title by double clicking on it
   bool ok;
+
+  /*
   QString newTitle = QInputDialog::getText(this, "SavvyCAN Graphing", "New plot title:", QLineEdit::Normal, title->text(), &ok);
   if (ok)
   {
     title->setText(newTitle);
     ui->graphingView->replot();
   }
+  */
+  editSelectedGraph();
 }
 
 void GraphingWindow::axisLabelDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart part)
@@ -225,7 +229,7 @@ void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem 
   // Rename a graph by double clicking on its legend item
   Q_UNUSED(legend)
   if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
-  {
+  {/*
     QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
     bool ok;
     QString newName = QInputDialog::getText(this, "SavvyCAN Graphing", "New graph name:", QLineEdit::Normal, plItem->plottable()->name(), &ok);
@@ -246,7 +250,8 @@ void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem 
       }
 
       ui->graphingView->replot();
-    }
+    } */
+     editSelectedGraph();
   }
 }
 

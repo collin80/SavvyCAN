@@ -49,8 +49,7 @@ SOURCES += main.cpp\
     can_structs.cpp \
     isotp_interpreterwindow.cpp \
     isotp_handler.cpp \
-    deltawindow.cpp \
-    deltamodel.cpp
+    motorcontrollerconfigwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -86,8 +85,7 @@ HEADERS  += mainwindow.h \
     udsscanwindow.h \
     isotp_interpreterwindow.h \
     isotp_handler.h \
-    deltawindow.h \
-    deltamodel.h
+    motorcontrollerconfigwindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -110,7 +108,8 @@ FORMS    += mainwindow.ui \
     fuzzingwindow.ui \
     udsscanwindow.ui \
     isotp_interpreterwindow.ui \
-    deltawindow.ui
+    deltawindow.ui \
+    motorcontrollerconfigwindow.ui
 
 DISTFILES +=
 
