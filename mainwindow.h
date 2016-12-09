@@ -27,6 +27,7 @@
 #include "udsscanwindow.h"
 #include "re/sniffer/snifferwindow.h"
 #include "isotp_interpreterwindow.h"
+#include "motorcontrollerconfigwindow.h"
 
 class ConnectionWindow;
 
@@ -66,6 +67,7 @@ private slots:
     void showScriptingWindow();
     void showDBCFileWindow();
     void showFuzzingWindow();
+    void showMCConfigWindow();
     void showUDSScanWindow();
     void showISOInterpreterWindow();
     void showSnifferWindow();
@@ -140,6 +142,7 @@ private:
     UDSScanWindow *udsScanWindow;
     ISOTP_InterpreterWindow *isoWindow;
     SnifferWindow* snifferWindow;
+    MotorControllerConfigWindow *motorctrlConfigWindow;
 
     //various private storage
     QLabel lbStatusConnected;

@@ -58,7 +58,9 @@ SOURCES += main.cpp\
     connections/canconmanager.cpp \
     re/sniffer/snifferitem.cpp \
     re/sniffer/sniffermodel.cpp \
-    re/sniffer/snifferwindow.cpp
+    re/sniffer/snifferwindow.cpp \
+    motorcontrollerconfigwindow.cpp
+    motorcontrollerconfigwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -105,7 +107,9 @@ HEADERS  += mainwindow.h \
     connections/canconmanager.h \
     re/sniffer/snifferitem.h \
     re/sniffer/sniffermodel.h \
-    re/sniffer/snifferwindow.h
+    re/sniffer/snifferwindow.h \
+    motorcontrollerconfigwindow.h
+    motorcontrollerconfigwindow.h
 
 FORMS    += mainwindow.ui \
     graphingwindow.ui \
@@ -128,7 +132,8 @@ FORMS    += mainwindow.ui \
     fuzzingwindow.ui \
     udsscanwindow.ui \
     isotp_interpreterwindow.ui \
-    snifferwindow.ui
+    snifferwindow.ui \
+    motorcontrollerconfigwindow.ui
 
 DISTFILES +=
 

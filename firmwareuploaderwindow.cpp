@@ -71,10 +71,11 @@ void FirmwareUploaderWindow::gotTargettedFrame(int frameLoc)
     const CANFrame &frame = modelFrames->at(frameLoc);
     if (frame.ID == (baseAddress + 0x10)) {
         qDebug() << "Start firmware reply";
-        if ((frame.data[0] == 0xDE) && (frame.data[1] == 0xAF))
+        if ((frame.data[0] == 0xAD) && (frame.data[1] == 0xDE))
         {
-            if ((frame.data[2] == 0xDE) && (frame.data[3] == 0xED))
+            if ((frame.data[2] == 0xAF) && (frame.data[3] == 0xDE))
             {
+                qDebug() << "THere's dead beef here";
                 if ((frame.data[4] == (token & 0xFF)) && (frame.data[5] == ((token >> 8) & 0xFF)))
                 {
                     if ((frame.data[6] == ((token >> 16) & 0xFF)) && (frame.data[7] == ((token >> 24) & 0xFF)))
@@ -146,11 +147,11 @@ void FirmwareUploaderWindow::sendFirmwareEnding()
     output->bus = bus;
     output->len = 4;
     output->ID = baseAddress + 0x30;
-    output->data[0] = 0xC0;
-    output->data[1] = 0xDE;
-    output->data[2] = 0xFA;
-    output->data[3] = 0xDE;
-    sendCANFrame(output);
+    output->data[3] = 0xC0;
+    output->data[2] = 0xDE;
+    output->data[1] = 0xFA;
+    output->data[0] = 0xDE;
+    //sendCANFrame(output, bus);
 }
 
 void FirmwareUploaderWindow::handleStartStopTransfer()
@@ -171,10 +172,11 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         output->len = 8;
         output->bus = bus;
         output->ID = baseAddress;
-        output->data[0] = 0xDE;
-        output->data[1] = 0xAD;
-        output->data[2] = 0xBE;
-        output->data[3] = 0xEF;
+
+        output->data[0] = 0xEF;
+        output->data[1] = 0xBE;
+        output->data[2] = 0xAD;
+        output->data[3] = 0xDE;
         output->data[4] = token & 0xFF;
         output->data[5] = (token >> 8) & 0xFF;
         output->data[6] = (token >> 16) & 0xFF;

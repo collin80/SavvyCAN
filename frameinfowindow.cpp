@@ -114,6 +114,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int targettedID;
     int minLen, maxLen, thisLen;
     int avgInterval;
+    int minInterval;
+    int maxInterval;
+    int thisInterval;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
@@ -195,6 +198,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         //clear out all the counters and accumulators
         minLen = 8;
         maxLen = 0;
+        minInterval = 0x7FFFFFFF;
+        maxInterval = 0;
         for (int i = 0; i < 8; i++)
         {
             minData[i] = 256;
@@ -213,7 +218,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
-            if (j != 0) avgInterval += (frameCache[j].timestamp - frameCache[j-1].timestamp);
+            if (j != 0)
+            {
+                thisInterval = (frameCache[j].timestamp - frameCache[j-1].timestamp);
+                if (thisInterval > maxInterval) maxInterval = thisInterval;
+                if (thisInterval < minInterval) minInterval = thisInterval;
+                avgInterval += thisInterval;
+            }
             thisLen = frameCache.at(j).len;
             if (thisLen > maxLen) maxLen = thisLen;
             if (thisLen < minLen) minLen = thisLen;
@@ -249,7 +260,16 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         baseNode->addChild(tempItem);
 
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Average inter-frame interval: ") + QString::number(avgInterval) + "us");
+        tempItem->setText(0, tr("Average inter-frame interval: ") + QString::number(avgInterval / 1000.0f) + "ms");
+        baseNode->addChild(tempItem);
+        tempItem = new QTreeWidgetItem();
+        tempItem->setText(0, tr("Minimum inter-frame interval: ") + QString::number(minInterval / 1000.0f) + "ms");
+        baseNode->addChild(tempItem);
+        tempItem = new QTreeWidgetItem();
+        tempItem->setText(0, tr("Maximum inter-frame interval: ") + QString::number(maxInterval / 1000.0f) + "ms");
+        baseNode->addChild(tempItem);
+        tempItem = new QTreeWidgetItem();
+        tempItem->setText(0, tr("Inter-frame interval variation: ") + QString::number((maxInterval - minInterval) / 1000.0f) + "ms");
         baseNode->addChild(tempItem);
 
         for (int c = 0; c < maxLen; c++)

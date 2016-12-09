@@ -197,6 +197,7 @@ void CANFrameModel::recalcOverwrite()
 
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
+    int dLen;
     QString tempString;
     if (!index.isValid())
         return QVariant();
@@ -229,7 +230,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QString::number(thisFrame.len);
             break;
         case 6: //data
-            for (unsigned int i = 0; i < thisFrame.len; i++)
+            dLen = thisFrame.len;
+            if (dLen < 0) dLen = 0;
+            if (dLen > 8) dLen = 8;
+            for (int i = 0; i < dLen; i++)
             {
                 tempString.append(Utility::formatNumber(thisFrame.data[i]));
                 tempString.append(" ");

@@ -289,7 +289,7 @@ void DBCFile::loadFile(QString fileName)
             if (match.hasMatch())
             {
                 DBC_MESSAGE msg;
-                msg.ID = match.captured(1).toInt(); //the ID is always stored in decimal format
+                msg.ID = match.captured(1).toULong() & 0x7FFFFFFFul; //the ID is always stored in decimal format
                 msg.name = match.captured(2);
                 msg.len = match.captured(3).toInt();
                 msg.sender = findNodeByName(match.captured(4));
@@ -310,7 +310,7 @@ void DBCFile::loadFile(QString fileName)
             sig.isMultiplexor = false;
 
             qDebug() << "Found a SG line";
-            regex.setPattern("^SG\\_ *(\\w+) *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *(\\w+)^ *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
             match = regex.match(line);
             if (match.hasMatch())
@@ -321,7 +321,7 @@ void DBCFile::loadFile(QString fileName)
             }
             else
             {
-                regex.setPattern("^SG\\_ *(\\w+) *m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                regex.setPattern("^SG\\_ *(\\w+)^ *m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                 match = regex.match(line);
                 if (match.hasMatch())
                 {

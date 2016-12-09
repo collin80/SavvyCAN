@@ -225,6 +225,8 @@
     <addaction name="actionScripting_INterface"/>
     <addaction name="actionFuzzing"/>
     <addaction name="actionUDS_Scanner"/>
+    <addaction name="actionFirmware_Update"/>
+    <addaction name="actionMotorControlConfig"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -399,6 +401,16 @@
   <action name="actionSniffer">
    <property name="text">
     <string>Sniffer</string>
+   </property>
+  </action>
+  <action name="actionFirmware_Update">
+   <property name="text">
+    <string>Firmware Update</string>
+   </property>
+  </action>
+  <action name="actionMotorControlConfig">
+   <property name="text">
+    <string>MotorControlConfig</string>
    </property>
   </action>
  </widget>
