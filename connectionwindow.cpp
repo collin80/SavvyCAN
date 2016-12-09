@@ -122,6 +122,7 @@ void ConnectionWindow::setActiveAll(bool pActive)
 void ConnectionWindow::handleNewConn()
 {
     ui->tableConnections->setCurrentIndex(QModelIndex());
+    currentRowChanged(ui->tableConnections->currentIndex(), ui->tableConnections->currentIndex());
 }
 
 
