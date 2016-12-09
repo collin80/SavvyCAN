@@ -348,6 +348,10 @@ void DBCSignalEditor::addNewSignal()
 void DBCSignalEditor::deleteCurrentSignal()
 {
     int currIdx = ui->signalsList->currentRow();
+
+    if(currIdx==ui->signalsList->count()-1)
+        return;
+
     if (currIdx > -1)
     {
         delete(ui->signalsList->item(currIdx));
