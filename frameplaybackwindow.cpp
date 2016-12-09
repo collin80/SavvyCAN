@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QSettings>
+#include "connections/canconmanager.h"
 
 /*
  * Notes about new functionality:
@@ -24,10 +25,10 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
 {
     ui->setupUi(this);
 
-    ui->comboCANBus->addItem(tr("None"));
-    ui->comboCANBus->addItem(tr("0"));
-    ui->comboCANBus->addItem(tr("1"));
-    ui->comboCANBus->addItem(tr("Both"));
+
+    int numBuses = CANConManager::getInstance()->getNumBuses();
+    for (int n = 0; n < numBuses; n++) ui->comboCANBus->addItem(QString::number(n));
+    ui->comboCANBus->addItem(tr("All"));
     ui->comboCANBus->addItem(tr("From File"));
 
     readSettings();
@@ -399,7 +400,7 @@ void FramePlaybackWindow::btnBackOneClick()
     playbackActive = false;
 
     updatePosition(false);
-    emit sendFrameBatch(&sendingBuffer);
+    CANConManager::getInstance()->sendFrames(sendingBuffer);
 }
 
 void FramePlaybackWindow::btnPauseClick()
@@ -450,7 +451,7 @@ void FramePlaybackWindow::btnFwdOneClick()
     playbackTimer->stop();
     playbackActive = false;
     updatePosition(true);
-    emit sendFrameBatch(&sendingBuffer);
+    CANConManager::getInstance()->sendFrames(sendingBuffer);
 }
 
 void FramePlaybackWindow::changePlaybackSpeed(int newSpeed)
@@ -465,8 +466,6 @@ void FramePlaybackWindow::changeLooping(bool check)
 
 void FramePlaybackWindow::changeSendingBus(int newIdx)
 {
-    //falls out neatly this way. 0 = no sending, 1 = bus 0, 2 = bus 1, 3 = both, 4 = from file
-    //the index is exactly the same as the whichSendBus bitfield.
     whichBusSend = newIdx;
 }
 
@@ -516,7 +515,7 @@ void FramePlaybackWindow::timerTriggered()
             updatePosition(false);
         }
     }
-    emit sendFrameBatch(&sendingBuffer);
+    CANConManager::getInstance()->sendFrames(sendingBuffer);
 }
 
 void FramePlaybackWindow::updatePosition(bool forward)
@@ -590,23 +589,25 @@ void FramePlaybackWindow::updatePosition(bool forward)
     int originalBus = thisFrame->bus;
     if (currentSeqItem->idFilters.find(thisFrame->ID).value())
     {
-        //index 0 is none, 1 is Bus 0, 2 is bus 1, 3 is both, 4 is from file
-        if (whichBusSend & 4)
+        if (whichBusSend < ui->comboCANBus->count() - 2)
+        {
+            thisFrame->bus = whichBusSend;
+            sendingBuffer.append(*thisFrame);
+        }
+        else if (whichBusSend = ui->comboCANBus->count() - 2)  //all
+        {
+            for (int c = 0; c < ui->comboCANBus->count() - 2; c++)
+            {
+                thisFrame->bus = c;
+                sendingBuffer.append(*thisFrame);
+            }
+        }
+        else //from file so retain original bus and send as-is
         {
             sendingBuffer.append(*thisFrame);
         }
-        if (whichBusSend & 1)
-        {
-            thisFrame->bus = 0;
-            sendingBuffer.append(*thisFrame);
-        }
-        if (whichBusSend & 2)
-        {
-            thisFrame->bus = 1;
-            sendingBuffer.append(*thisFrame);
-        }
+
         thisFrame->bus = originalBus;
         updateFrameLabel();
     }
-
 }

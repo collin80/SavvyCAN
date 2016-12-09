@@ -40,8 +40,6 @@ private:
     QList<ScriptContainer *> scripts;
     ScriptContainer *currentScript;
     const QVector<CANFrame> *modelFrames;
-
-
 };
 
 #endif // SCRIPTINGWINDOW_H

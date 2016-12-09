@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QDebug>
 #include "mainwindow.h"
+#include "connections/canconmanager.h"
 
 /*
  * notes: need to ensure that you grab pointers when modifying data structures and dont
@@ -151,7 +152,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
                             sendingData[sd].count++;
                             doModifiers(sd);
                             updateGridRow(sd);
-                            sendCANFrame(&sendingData[sd]);
+                            CANConManager::getInstance()->sendFrame(sendingData[sd]);
                         }
                         else //delayed sending frame
                         {
@@ -354,7 +355,7 @@ void FrameSenderWindow::handleTick()
                 doModifiers(i);
                 updateGridRow(i);
                 qDebug() << "About to try to send a frame";
-                emit sendCANFrame(&sendingData[i]);
+                CANConManager::getInstance()->sendFrame(sendingData[i]);
                 if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
             }
         }

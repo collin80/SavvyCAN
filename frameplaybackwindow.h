@@ -53,10 +53,6 @@ private slots:
     void saveFilters();
     void loadFilters();
 
-signals:
-    void sendCANFrame(const CANFrame *);
-    void sendFrameBatch(const QList<CANFrame> *);
-
 private:
     Ui::FramePlaybackWindow *ui;
     QList<int> foundID;

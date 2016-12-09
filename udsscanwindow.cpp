@@ -1,6 +1,7 @@
 #include "udsscanwindow.h"
 #include "ui_udsscanwindow.h"
 #include "mainwindow.h"
+#include "connections/canconmanager.h"
 
 UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -20,10 +21,9 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
     connect(waitTimer, &QTimer::timeout, this, &UDSScanWindow::timeOut);
 
-    ui->cbBuses->addItem("0");
-    ui->cbBuses->addItem("1");
-    ui->cbBuses->addItem("Both");
-
+    int numBuses = CANConManager::getInstance()->getNumBuses();
+    for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
+    ui->cbBuses->addItem(tr("All"));
 }
 
 UDSScanWindow::~UDSScanWindow()
@@ -53,8 +53,6 @@ void UDSScanWindow::scanUDS()
     endID = Utility::ParseStringToNum(ui->txtEndID->text());
 
     int buses = ui->cbBuses->currentIndex();
-    buses++;
-    if (buses < 1) buses = 1;
 
     //start out by sending tester present to every address to see if anyone replies
     for (id = startID; id <= endID; id++)
@@ -68,16 +66,20 @@ void UDSScanWindow::scanUDS()
         frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
         frame.data[6] = 0;frame.data[7] = 0;
 
-        if (buses & 1)
+        if (buses < ui->cbBuses->count()- 1)
         {
-            frame.bus = 0;
+            frame.bus = buses;
             sendingFrames.append(frame);
         }
-        if (buses & 2)
+        else
         {
-            frame.bus = 1;
-            sendingFrames.append(frame);
+            for (int c = 0; c < ui->cbBuses->count() - 1; c++)
+            {
+                frame.bus = c;
+                sendingFrames.append(frame);
+            }
         }
+
     }
 
     //then try asking for the various diagnostic session types
@@ -94,15 +96,18 @@ void UDSScanWindow::scanUDS()
             frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
             frame.data[6] = 0;frame.data[7] = 0;
 
-            if (buses & 1)
+            if (buses < ui->cbBuses->count()- 1)
             {
-                frame.bus = 0;
+                frame.bus = buses;
                 sendingFrames.append(frame);
             }
-            if (buses & 2)
+            else
             {
-                frame.bus = 1;
-                sendingFrames.append(frame);
+                for (int c = 0; c < ui->cbBuses->count() - 1; c++)
+                {
+                    frame.bus = c;
+                    sendingFrames.append(frame);
+                }
             }
         }
     }
@@ -129,6 +134,7 @@ void UDSScanWindow::updatedFrames(int numFrames)
 }
 
 //Updates here are nearly once per millisecond if there is heavy traffic. That's more like it!
+//TODO: I really doubt this works anymore with the new connection system. This breaks the UDS scanner for now! ;(
 void UDSScanWindow::rapidFrames(int numFrames)
 {
     CANFrame thisFrame;
@@ -210,7 +216,7 @@ void UDSScanWindow::sendNextMsg()
     currIdx++;
     if (currIdx < sendingFrames.count())
     {
-        emit sendCANFrame(&sendingFrames[currIdx]);
+        CANConManager::getInstance()->sendFrame(sendingFrames[currIdx]);
         waitTimer->start();
     }
     else

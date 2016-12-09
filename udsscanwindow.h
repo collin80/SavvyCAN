@@ -17,9 +17,6 @@ public:
     explicit UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~UDSScanWindow();
 
-signals:
-    void sendCANFrame(const CANFrame *);
-
 private slots:
     void updatedFrames(int numFrames);
     void rapidFrames(int numFrames);

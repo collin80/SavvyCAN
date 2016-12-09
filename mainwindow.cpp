@@ -863,8 +863,6 @@ void MainWindow::showFrameSenderWindow()
             frameSenderWindow = new FrameSenderWindow(model->getListReference());
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
-
-        //connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, connectionWindow, &ConnectionWindow::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -877,9 +875,6 @@ void MainWindow::showPlaybackWindow()
             playbackWindow = new FramePlaybackWindow(model->getListReference());
         else
             playbackWindow = new FramePlaybackWindow(model->getFilteredListReference());
-
-        //connect(playbackWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)), Qt::QueuedConnection);
-        //connect(playbackWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), connectionWindow, SLOT(sendFrameBatch(const QList<CANFrame>*)), Qt::QueuedConnection);
     }
     playbackWindow->show();
 }
@@ -927,7 +922,6 @@ void MainWindow::showUDSScanWindow()
     if (!udsScanWindow)
     {
         udsScanWindow = new UDSScanWindow(model->getListReference());
-        //connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
     }
     udsScanWindow->show();
 }
