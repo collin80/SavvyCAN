@@ -85,6 +85,7 @@ void ConnectionWindow::showEvent(QShowEvent* event)
     QDialog::showEvent(event);
     qDebug() << "Show connectionwindow";
     ui->tableConnections->selectRow(0);
+    currentRowChanged(ui->tableConnections->currentIndex(), ui->tableConnections->currentIndex());
 }
 
 
@@ -461,6 +462,10 @@ void ConnectionWindow::loadConnections()
         }
         /* add connection to model */
         connModel->add(conn_p);
+    }
+
+    if (connModel->rowCount() > 0) {
+        ui->tableConnections->selectRow(0);
     }
 }
 

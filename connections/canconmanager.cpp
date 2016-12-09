@@ -94,7 +94,19 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
     CANFrame* frame_p = NULL;
     QVector<CANFrame> frames;
 
+    //Each connection only knows about its own bus numbers
+    //so this variable is used to fix that up to turn local bus numbers
+    //into system global bus numbers for display.
+    int busBase = 0;
+
+    foreach (CANConnection* conn, mConns)
+    {
+        if (conn != pConn_p) busBase += conn->getNumBuses();
+        else break;
+    }
+
     while( (frame_p = pConn_p->getQueue().peek() ) ) {
+        frame_p->bus += busBase;
         frames.append(*frame_p);
         pConn_p->getQueue().dequeue();
     }
@@ -126,6 +138,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
         if (pFrame.bus <= busBase + conn->getNumBuses())
         {
             workingFrame.bus -= busBase;
+            workingFrame.isReceived = false;
             txFrame = conn->getQueue().get();
             *txFrame = workingFrame;
             conn->getQueue().queue();
@@ -138,6 +151,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 
 bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
 {
+    qDebug() << "CANConManager sendFrames #" << pFrames.count();
     foreach(const CANFrame& frame, pFrames)
     {
         if(!sendFrame(frame))
