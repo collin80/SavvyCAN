@@ -7,7 +7,7 @@
 #include <QDebug>
 #include <QMutex>
 #include "can_structs.h"
-#include "dbchandler.h"
+#include "dbc/dbchandler.h"
 #include "connections/canconnection.h"
 
 class CANFrameModel: public QAbstractTableModel

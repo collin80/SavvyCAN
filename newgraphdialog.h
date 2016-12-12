@@ -3,7 +3,7 @@
 
 #include <QDialog>
 #include "graphingwindow.h"
-#include "dbchandler.h"
+#include "dbc/dbchandler.h"
 
 namespace Ui {
 class NewGraphDialog;

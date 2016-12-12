@@ -3,7 +3,7 @@
 
 #include "qcustomplot.h"
 #include "can_structs.h"
-#include "dbchandler.h"
+#include "dbc/dbchandler.h"
 
 #include <QDialog>
 
