@@ -6,7 +6,6 @@
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
 #include "utility.h"
-#include "serialworker.h"
 
 /*
 Compile for all platforms and create release (remember to include QScintilla libs) and make Win32 binary.

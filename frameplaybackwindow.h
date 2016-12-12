@@ -5,7 +5,6 @@
 #include <QListWidget>
 #include <QTimer>
 #include "can_structs.h"
-#include "serialworker.h"
 #include "framefileio.h"
 
 namespace Ui {

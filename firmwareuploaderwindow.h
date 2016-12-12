@@ -5,7 +5,6 @@
 #include <QTimer>
 #include "can_structs.h"
 #include "utility.h"
-#include "serialworker.h"
 
 namespace Ui {
 class FirmwareUploaderWindow;

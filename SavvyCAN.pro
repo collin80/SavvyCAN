@@ -21,22 +21,16 @@ SOURCES += main.cpp\
     canframemodel.cpp \
     utility.cpp \
     qcustomplot.cpp \
-    graphingwindow.cpp \
-    newgraphdialog.cpp \
     frameplaybackwindow.cpp \
-    serialworker.cpp \
     candatagrid.cpp \
     framesenderwindow.cpp \
     framefileio.cpp \
     mainsettingsdialog.cpp \
     firmwareuploaderwindow.cpp \
-    connectionwindow.cpp \
     scriptingwindow.cpp \
     scriptcontainer.cpp \
     canfilter.cpp \
     can_structs.cpp \
-    canconnectionmodel.cpp \
-    canbus.cpp \
     motorcontrollerconfigwindow.cpp \
     connections/canconnection.cpp \
     connections/socketcan.cpp \
@@ -59,17 +53,19 @@ SOURCES += main.cpp\
     re/isotp_handler.cpp \
     re/isotp_interpreterwindow.cpp \
     re/rangestatewindow.cpp \
-    re/udsscanwindow.cpp
+    re/udsscanwindow.cpp \
+    connections/canbus.cpp \
+    connections/canconnectionmodel.cpp \
+    connections/connectionwindow.cpp \
+    re/graphingwindow.cpp \
+    re/newgraphdialog.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \
     utility.h \
     qcustomplot.h \
-    graphingwindow.h \
-    newgraphdialog.h \
     frameplaybackwindow.h \
-    serialworker.h \
     candatagrid.h \
     framesenderwindow.h \
     can_trigger_structs.h \
@@ -77,12 +73,9 @@ HEADERS  += mainwindow.h \
     config.h \
     mainsettingsdialog.h \
     firmwareuploaderwindow.h \
-    connectionwindow.h \
     scriptingwindow.h \
     scriptcontainer.h \
     canfilter.h \
-    canconnectionmodel.h \
-    canbus.h \
     utils/lfqueue.h \
     motorcontrollerconfigwindow.h \
     connections/canconnection.h \
@@ -107,7 +100,12 @@ HEADERS  += mainwindow.h \
     re/isotp_handler.h \
     re/isotp_interpreterwindow.h \
     re/rangestatewindow.h \
-    re/udsscanwindow.h
+    re/udsscanwindow.h \
+    connections/canbus.h \
+    connections/canconnectionmodel.h \
+    connections/connectionwindow.h \
+    re/graphingwindow.h \
+    re/newgraphdialog.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
