@@ -81,6 +81,7 @@ MainWindow::MainWindow(QWidget *parent) :
     motorctrlConfigWindow = NULL;
     isoWindow = NULL;
     snifferWindow = NULL;
+    bisectWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -126,6 +127,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
     connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
+    connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -272,6 +274,13 @@ MainWindow::~MainWindow()
         snifferWindow->close();
         delete snifferWindow;
         snifferWindow = NULL;
+    }
+
+    if (bisectWindow)
+    {
+        bisectWindow->close();
+        delete bisectWindow;
+        bisectWindow = NULL;
     }
 
     delete model;
@@ -854,6 +863,14 @@ void MainWindow::showSnifferWindow()
     snifferWindow->show();
 }
 
+void MainWindow::showBisectWindow()
+{
+    if (!bisectWindow)
+    {
+        bisectWindow = new BisectWindow(model->getListReference());
+    }
+    bisectWindow->show();
+}
 
 void MainWindow::showFrameSenderWindow()
 {

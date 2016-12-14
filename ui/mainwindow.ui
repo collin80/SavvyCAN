@@ -215,6 +215,7 @@
     <addaction name="actionSingle_Multi_State_2"/>
     <addaction name="actionISO_TP_Decoder"/>
     <addaction name="actionSniffer"/>
+    <addaction name="actionCapture_Bisector"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -411,6 +412,11 @@
   <action name="actionMotorControlConfig">
    <property name="text">
     <string>MotorControlConfig</string>
+   </property>
+  </action>
+  <action name="actionCapture_Bisector">
+   <property name="text">
+    <string>Capture Bisector</string>
    </property>
   </action>
  </widget>

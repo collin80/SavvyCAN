@@ -11,6 +11,7 @@
 #include "re/graphingwindow.h"
 #include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"
+#include "bisectwindow.h"
 #include "re/flowviewwindow.h"
 #include "framesenderwindow.h"
 #include "re/filecomparatorwindow.h"
@@ -71,6 +72,7 @@ private slots:
     void showUDSScanWindow();
     void showISOInterpreterWindow();
     void showSnifferWindow();
+    void showBisectWindow();
     void exitApp();
     void handleSaveDecoded();
     void connectionFailed();
@@ -143,6 +145,7 @@ private:
     ISOTP_InterpreterWindow *isoWindow;
     SnifferWindow* snifferWindow;
     MotorControllerConfigWindow *motorctrlConfigWindow;
+    BisectWindow* bisectWindow;
 
     //various private storage
     QLabel lbStatusConnected;
