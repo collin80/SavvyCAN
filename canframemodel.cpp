@@ -47,12 +47,12 @@ CANFrameModel::CANFrameModel(QObject *parent)
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 50000000;
+        preallocSize = 20000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
         qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
-        preallocSize = 5000000;
+        preallocSize = 4000000;
     }
 
     frames.reserve(preallocSize);
