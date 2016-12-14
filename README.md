@@ -1,6 +1,6 @@
 # SavvyCAN
 QT based cross platform canbus tool 
-(C) 2015-2016 EVTV and Collin Kidder
+(C) 2015-2017 EVTV and Collin Kidder
 
 A QT5 based cross platform tool which can be used to load, save, and capture canbus frames.
 This tool is designed to help with visualization, reverse engineering, debugging, and
@@ -14,7 +14,7 @@ You are highly recommended to use the CANDue board from EVTV:
 The CANDue board must be running the GVRET firmware which can also be found
 within the collin80 repos.
 
-It is very soon to be possible to use any SocketCAN compatible device
+It is now possible to use any SocketCAN compatible device
 under LINUX. There may, however, be some loss of some functionality as
 some functions of SavvyCAN are designed for use directly with the
 EVTVDue and CANDue 2.0 boards.
@@ -40,6 +40,10 @@ of this program. It can load and save in several formats:
 
 9. Vehicle Spy log files
 
+10. CANDump / Kayak (Read only)
+
+11. PCAN Viewer (Read Only)
+
 Requires QScintilla library available at:
 
 https://www.riverbankcomputing.com/software/qscintilla/download
@@ -50,18 +54,20 @@ http://www.qcustomplot.com/
 
 However, this source code is integrated into the source for SavvyCAN and one isn't required to download it separately.
 
-This project will soon require 5.6.0 or higher because of an upcoming dependency on QSerialBus but currently
-should compile with QT 5.5
+This project requires 5.6.0 or higher because of a dependency on QSerialBus which is an optional download
+with QT 5.6 (so, be sure to select it)
 
-Instructions for compiling with Ubuntu:
+Instructions for compiling:
 
-sudo apt-get install qt5-default qtdeclarative5-dev libqt5serialport5-dev libudev-dev
+Download the newest stable version of Qt directly from qt.io (You need 5.6.x or newer)
 
 download and extract QScintilla (see above for link), assume it is extracted in QScintilla-gpl-2.9.1
 
 cd ~/QScintilla-gpl-2.9.1/Qt4Qt5
 
-qmake qscintilla.pro
+You will need to either put your copy of QT into your path or specify the path to qmake directly
+
+~/Qt/5.7/gcc_64/bin/qmake qscintilla.pro
 
 make
 
@@ -75,7 +81,7 @@ git clone https://github.com/collin80/SavvyCAN.git
 
 cd SavvyCAN
 
-qmake
+~/Qt/5.7/gcc_64/bin/qmake
 
 make
 
