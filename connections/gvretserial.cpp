@@ -18,7 +18,8 @@ GVRetSerial::GVRetSerial(QString portName) :
     gotValidated = true;
     isAutoRestart = false;
 
-    txTimestampBasis = QDateTime::currentMSecsSinceEpoch();
+    timeBasis = 0;
+    lastSystemTimeBasis = 0;
 
     readSettings();
 }
@@ -147,17 +148,9 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     int c;
     int ID;
     CANFrame tempFrame = frame;
-    tempFrame.isReceived = false;
-    tempFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() - txTimestampBasis) * 1000);
+    tempFrame.isReceived = false;    
 
     //qDebug() << "Sending out frame with id " << frame->ID;
-
-    //show our sent frames in the list too. This happens even if we're not connected.
-    /* model lives in UI thread, we need to call invokeMethod */
-    //QMetaObject::invokeMethod(model, "addFrame",
-    //                          Qt::QueuedConnection,
-    //                          Q_ARG(CANFrame, tempFrame),
-    //                          Q_ARG(bool, false));
 
     framesRapid++;
 
@@ -240,7 +233,7 @@ void GVRetSerial::connectDevice()
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x07); //request device information
 
-    output.append((char)0xF1);
+    /*output.append((char)0xF1);
     output.append((char)0x08); //setting singlewire mode
     if (settings.value("Main/SingleWireMode", false).toBool())
     {
@@ -249,7 +242,7 @@ void GVRetSerial::connectDevice()
     else
     {
         output.append((char)0xFF); //signal we don't want single wire mode
-    }
+    }*/
 
     output.append((char)0xF1); //yet another command
     output.append((char)0x09); //comm validation command
@@ -293,7 +286,8 @@ void GVRetSerial::disconnectDevice() {
 void GVRetSerial::connectionTimeout()
 {
     //one second after trying to connect are we actually connected?
-    if (CANCon::NOT_CONNECTED==getStatus()) //no?
+    //if (CANCon::NOT_CONNECTED==getStatus()) //no?
+    if (!gotValidated)
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
@@ -307,10 +301,11 @@ void GVRetSerial::readSerialData()
 {
     QByteArray data = serial->readAll();
     unsigned char c;
-    //qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
+    qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         c = data.at(i);
+        //qDebug() << c << "    " << QString::number(c, 16) << "     " << QString(c);
         procRXChar(c);
     }
 }
@@ -376,6 +371,8 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 3:
             buildFrame.timestamp |= (uint)c << 24;
+
+            buildFrame.timestamp += timeBasis;
             break;
         case 4:
             buildFrame.ID = c;
@@ -425,7 +422,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                         qDebug() << "can't get a frame, ERROR";
 
                     //take the time the frame came in and try to resync the time base.
-                    if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame.timestamp / 1000);
+                    //if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame.timestamp / 1000);
                 }
             }
             break;
@@ -447,7 +444,9 @@ void GVRetSerial::procRXChar(unsigned char c)
         case 3:
             buildTimeBasis += ((uint32_t)c << 24);
             qDebug() << "GVRET firmware reports timestamp of " << buildTimeBasis;
-            txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - ((uint64_t)buildTimeBasis / (uint64_t)1000ull);
+
+            rebuildLocalTimeBasis();
+
             continuousTimeSync = false;
             rx_state = IDLE;
             break;
@@ -576,11 +575,28 @@ void GVRetSerial::procRXChar(unsigned char c)
     }
 }
 
+void GVRetSerial::rebuildLocalTimeBasis()
+{
+    uint64_t currTime = QDateTime::currentMSecsSinceEpoch() * 1000;
+
+    /*
+      our time basis is the value we have to modulate the main system basis by in order
+      to sync the GVRET timestamps to the rest of the system.
+      The rest of the system uses CANConManager::getInstance()->getTimeBasis as the basis.
+      GVRET returns to us the current time since boot up in microseconds.
+      currTime stores the "system" timestamp when the GVRET timestamp was retrieved.
+    */
+    lastSystemTimeBasis = CANConManager::getInstance()->getTimeBasis();
+    int64_t systemDelta = currTime - lastSystemTimeBasis;
+    int32_t localDelta = buildTimeBasis - systemDelta;
+    timeBasis = localDelta;
+}
 
 void GVRetSerial::handleTick()
 {
+    if (lastSystemTimeBasis != CANConManager::getInstance()->getTimeBasis()) rebuildLocalTimeBasis();
     //qDebug() << "Tick!";
-
+/*
     if( CANCon::CONNECTED == getStatus() )
     {
         if (!gotValidated && doValidation)
@@ -600,7 +616,7 @@ void GVRetSerial::handleTick()
             }
         }
     }
-
+*/
     if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 

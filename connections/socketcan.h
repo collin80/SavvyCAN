@@ -8,6 +8,7 @@
 
 #include "canframemodel.h"
 #include "canconnection.h"
+#include "canconmanager.h"
 
 
 class SocketCan : public CANConnection

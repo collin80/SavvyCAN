@@ -10,10 +10,9 @@
 #include <QDateTime>
 /*************/
 
-
 #include "canframemodel.h"
 #include "canconnection.h"
-
+#include "canconmanager.h"
 
 namespace SERIALSTATE {
 
@@ -65,11 +64,11 @@ private:
     void readSettings();
     void procRXChar(unsigned char);
     void sendCommValidation();
+    void rebuildLocalTimeBasis();
 
 protected:
     QTimer             mTimer;
     QThread            mThread;
-
 
     bool doValidation;
     bool gotValidated;
@@ -85,8 +84,9 @@ protected:
     bool can0ListenOnly, can1ListenOnly;
     int deviceBuildNum;
     int deviceSingleWireMode;
-    uint64_t txTimestampBasis;
     uint32_t buildTimeBasis;
+    int32_t timeBasis;
+    uint64_t lastSystemTimeBasis;
 };
 
 #endif // GVRETSERIAL_H

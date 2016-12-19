@@ -155,6 +155,8 @@ void SocketCan::framesReceived()
     /* test */
     bool sndNotif = false;
 
+    uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
+
     /* sanity checks */
     if(!mDev_p)
         return;
@@ -185,7 +187,7 @@ void SocketCan::framesReceived()
                 frame_p->extended      = false;
                 frame_p->ID            = recFrame.frameId();
                 frame_p->isReceived    = true;
-                frame_p->timestamp     = recFrame.timeStamp().seconds()*1000000 + recFrame.timeStamp().microSeconds();
+                frame_p->timestamp     = (recFrame.timeStamp().seconds()*1000000 + recFrame.timeStamp().microSeconds()) - timeBasis;
 
                 /* enqueue frame */
                 getQueue().queue();

@@ -1,3 +1,5 @@
+#include <QDateTime>
+
 #include "canconmanager.h"
 
 
@@ -18,8 +20,14 @@ CANConManager::CANConManager(QObject *parent): QObject(parent)
     mTimer.setInterval(250); /*tick 4 times a second */
     mTimer.setSingleShot(false);
     mTimer.start();
+
+    resetTimeBasis();
 }
 
+void CANConManager::resetTimeBasis()
+{
+    mTimestampBasis = QDateTime::currentMSecsSinceEpoch() * 1000;
+}
 
 CANConManager::~CANConManager()
 {
@@ -70,6 +78,10 @@ void CANConManager::refreshCanList()
     }
 }
 
+uint64_t CANConManager::getTimeBasis()
+{
+    return mTimestampBasis;
+}
 
 QList<CANConnection*>& CANConManager::getConnections()
 {
@@ -139,6 +151,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
+            workingFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() * 1000) - mTimestampBasis);
             txFrame = conn->getQueue().get();
             *txFrame = workingFrame;
             conn->getQueue().queue();

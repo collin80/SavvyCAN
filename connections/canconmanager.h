@@ -20,6 +20,9 @@ public:
 
     CANConnection* getByName(const QString& pName) const;
 
+    uint64_t getTimeBasis();
+    void resetTimeBasis();
+
     int getNumBuses();
 
     /**
@@ -46,6 +49,7 @@ private:
     static CANConManager*  mInstance;
     QList<CANConnection*>  mConns;
     QTimer                 mTimer;
+    uint64_t               mTimestampBasis;
 };
 
 #endif // CANCONNECTIONMODEL_H

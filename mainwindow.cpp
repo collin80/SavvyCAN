@@ -477,8 +477,8 @@ void MainWindow::filterClearAll()
 void MainWindow::tickGUIUpdate()
 {
     rxFrames = model->sendBulkRefresh();
-    if(rxFrames>0)
-    {
+    //if(rxFrames>0)
+    //{
         int elapsed = elapsedTime->elapsed();
         if(elapsed) {
             framesPerSec = rxFrames * 1000 / elapsed;
@@ -499,7 +499,7 @@ void MainWindow::tickGUIUpdate()
         if (model->needsFilterRefresh()) updateFilterList();
 
         rxFrames = 0;
-    }
+    //}
 }
 
 void MainWindow::gotFrames(int framesSinceLastUpdate)
@@ -533,6 +533,7 @@ void MainWindow::clearFrames()
 {
     ui->canFramesView->scrollToTop();
     model->clearFrames();
+    CANConManager::getInstance()->resetTimeBasis();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     bDirty = false;
     loadedFileName = "";
