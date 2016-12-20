@@ -150,7 +150,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     CANFrame tempFrame = frame;
     tempFrame.isReceived = false;    
 
-    //qDebug() << "Sending out frame with id " << frame->ID;
+    //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
     framesRapid++;
 
@@ -301,7 +301,7 @@ void GVRetSerial::readSerialData()
 {
     QByteArray data = serial->readAll();
     unsigned char c;
-    qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
+    //qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         c = data.at(i);
@@ -413,6 +413,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                     /* get frame from queue */
                     CANFrame* frame_p = getQueue().get();
                     if(frame_p) {
+                        //qDebug() << "GVRET got frame on bus " << frame_p->bus;
                         /* copy frame */
                         *frame_p = buildFrame;
                         /* enqueue frame */

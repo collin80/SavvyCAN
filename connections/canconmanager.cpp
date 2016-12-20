@@ -103,6 +103,8 @@ CANConnection* CANConManager::getByName(const QString& pName) const
 
 void CANConManager::refreshConnection(CANConnection* pConn_p)
 {
+    if (pConn_p->getQueue().peek() == NULL) return;
+
     CANFrame* frame_p = NULL;
     QVector<CANFrame> frames;
 
@@ -117,8 +119,11 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
         else break;
     }
 
+    //qDebug() << "Bus fixup number: " << busBase;
+
     while( (frame_p = pConn_p->getQueue().peek() ) ) {
         frame_p->bus += busBase;
+        //qDebug() << "Rx of frame from bus: " << frame_p->bus;
         frames.append(*frame_p);
         pConn_p->getQueue().dequeue();
     }
@@ -147,7 +152,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     foreach (CANConnection* conn, mConns)
     {
         //check if this CAN connection is supposed to handle the requested bus
-        if (pFrame.bus <= busBase + conn->getNumBuses())
+        if (pFrame.bus < busBase + conn->getNumBuses())
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
