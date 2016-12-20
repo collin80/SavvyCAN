@@ -20,6 +20,7 @@ GVRetSerial::GVRetSerial(QString portName) :
 
     timeBasis = 0;
     lastSystemTimeBasis = 0;
+    timeAtGVRETSync = 0;
 
     readSettings();
 }
@@ -445,6 +446,7 @@ void GVRetSerial::procRXChar(unsigned char c)
         case 3:
             buildTimeBasis += ((uint32_t)c << 24);
             qDebug() << "GVRET firmware reports timestamp of " << buildTimeBasis;
+            timeAtGVRETSync = QDateTime::currentMSecsSinceEpoch() * 1000;
 
             rebuildLocalTimeBasis();
 
@@ -578,19 +580,19 @@ void GVRetSerial::procRXChar(unsigned char c)
 
 void GVRetSerial::rebuildLocalTimeBasis()
 {
-    uint64_t currTime = QDateTime::currentMSecsSinceEpoch() * 1000;
+    qDebug() << "Rebuilding GVRET time base. GVRET local base = " << buildTimeBasis;
 
     /*
       our time basis is the value we have to modulate the main system basis by in order
       to sync the GVRET timestamps to the rest of the system.
       The rest of the system uses CANConManager::getInstance()->getTimeBasis as the basis.
       GVRET returns to us the current time since boot up in microseconds.
-      currTime stores the "system" timestamp when the GVRET timestamp was retrieved.
+      timeAtGVRETSync stores the "system" timestamp when the GVRET timestamp was retrieved.
     */
     lastSystemTimeBasis = CANConManager::getInstance()->getTimeBasis();
-    int64_t systemDelta = currTime - lastSystemTimeBasis;
+    int64_t systemDelta = timeAtGVRETSync - lastSystemTimeBasis;
     int32_t localDelta = buildTimeBasis - systemDelta;
-    timeBasis = localDelta;
+    timeBasis = -localDelta;
 }
 
 void GVRetSerial::handleTick()

@@ -87,6 +87,7 @@ protected:
     uint32_t buildTimeBasis;
     int32_t timeBasis;
     uint64_t lastSystemTimeBasis;
+    uint64_t timeAtGVRETSync;
 };
 
 #endif // GVRETSERIAL_H
