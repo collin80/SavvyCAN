@@ -131,7 +131,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
-    lbStatusConnected.setText(tr("Not connected"));
+    lbStatusConnected.setText(tr("Connected to 0 buses"));
     updateFileStatus();
     lbStatusDatabase.setText(tr("No DBC database loaded"));
     ui->statusBar->addWidget(&lbStatusConnected);
@@ -163,9 +163,13 @@ MainWindow::MainWindow(QWidget *parent) :
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
 
+    //connect(CANConManager::getInstance(), CANConManager::connectionStatusUpdated, this, MainWindow::connectionStatusUpdated);
+    connect(CANConManager::getInstance(), SIGNAL(connectionStatusUpdated(int)), this, SLOT(connectionStatusUpdated(int)));
+
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow();
-    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
+    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));    
+
 }
 
 MainWindow::~MainWindow()
@@ -720,41 +724,9 @@ void MainWindow::toggleCapture()
     emit suspendCapturing(!allowCapture);
 }
 
-void MainWindow::connectionSucceeded(int baud0, int baud1)
-{
-    lbStatusConnected.setText(tr("Connected to GVRET"));
-    //finally, find the baud rate in the list of rates or
-    //add it to the bottom if needed (that'll be weird though...
-/*
-    int idx = ui->cbSpeed1->findText(QString::number(baud0));
-    if (idx > -1) ui->cbSpeed1->setCurrentIndex(idx);
-    else
-    {
-        ui->cbSpeed1->addItem(QString::number(baud0));
-        ui->cbSpeed1->setCurrentIndex(ui->cbSpeed1->count() - 1);
-    }
-
-    idx = ui->cbSpeed2->findText(QString::number(baud1));
-    if (idx > -1) ui->cbSpeed2->setCurrentIndex(idx);
-    else
-    {
-        ui->cbSpeed2->addItem(QString::number(baud1));
-        ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
-    }
-    */
-    if (connectionWindow) connectionWindow->setSpeed(baud0);
-    //ui->btnConnect->setEnabled(false);
-    ui->actionConnect->setText(tr("Disconnect"));
-    isConnected = true;
-}
-
-void MainWindow::connectionFailed()
-{
-    lbStatusConnected.setText(tr("Failed to connect!"));
-
-    QMessageBox msgBox;
-    msgBox.setText("Connection to the GVRET firmware failed.\nYou might have an old version of GVRET\nor may have chosen the wrong serial port.");
-    msgBox.exec();
+void MainWindow::connectionStatusUpdated(int conns)
+{    
+    lbStatusConnected.setText(tr("Connected to ") + QString::number(conns) + tr(" buses"));
 }
 
 void MainWindow::updateFileStatus()
@@ -781,28 +753,6 @@ void MainWindow::updateFileStatus()
         }
     }
     lbStatusFilename.setText(output);
-}
-
-void MainWindow::gotDeviceInfo(int build, int swCAN)
-{
-    QString str = tr("Connected to GVRET ") + QString::number(build);
-    if (swCAN == 1) str += "(SW)";
-    lbStatusConnected.setText(str);
-
-    if (build < CURRENT_GVRET_VER)
-    {
-        QMessageBox msgBox;
-        msgBox.setText("It appears that you are not running\nan up-to-date version of GVRET\n\nYour version: "
-                       + QString::number(build) +"\nCurrent Version: " + QString::number(CURRENT_GVRET_VER)
-                       + "\n\nPlease upgrade your firmware version.\nOtherwise, you may experience difficulties.");
-        msgBox.exec();
-    }
-
-    if (connectionWindow)
-    {
-        if (swCAN == 1) connectionWindow->setSWMode(true);
-        else connectionWindow->setSWMode(false);
-    }
 }
 
 void MainWindow::showSettingsDialog()

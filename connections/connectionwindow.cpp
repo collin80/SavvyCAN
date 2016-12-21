@@ -2,6 +2,7 @@
 #include <QThread>
 
 #include "connectionwindow.h"
+#include "mainwindow.h"
 #include "ui_connectionwindow.h"
 #include "connections/canconfactory.h"
 #include "connections/canconmanager.h"
@@ -38,7 +39,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbSpeed->addItem(tr("250000"));
     ui->cbSpeed->addItem(tr("500000"));
     ui->cbSpeed->addItem(tr("1000000"));
-    ui->cbSpeed->addItem(tr("33333"));
+    ui->cbSpeed->addItem(tr("33333"));    
 
     /* load connection configuration */
     loadConnections();

@@ -75,9 +75,7 @@ private slots:
     void showBisectWindow();
     void exitApp();
     void handleSaveDecoded();
-    void connectionFailed();
-    void gotDeviceInfo(int, int);
-    void connectionSucceeded(int, int);
+    void connectionStatusUpdated(int conns);
     void gridClicked(QModelIndex);
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);

@@ -38,6 +38,7 @@ public:
 
 signals:
     void framesReceived(CANConnection* pConn_p, QVector<CANFrame>& pFrames);
+    void connectionStatusUpdated(int conns);
 
 private slots:
         void refreshCanList();

@@ -40,6 +40,7 @@ void CANConManager::add(CANConnection* pConn_p)
 {
     connect(pConn_p, SIGNAL(notify()), this, SLOT(refreshCanList()));
     mConns.append(pConn_p);
+    emit connectionStatusUpdated(getNumBuses());
 }
 
 
@@ -47,6 +48,7 @@ void CANConManager::remove(CANConnection* pConn_p)
 {
     disconnect(pConn_p, 0, this, 0);
     mConns.removeOne(pConn_p);
+    emit connectionStatusUpdated(getNumBuses());
 }
 
 //Get total number of buses currently registered with the program
@@ -169,7 +171,6 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 
 bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
 {
-    qDebug() << "CANConManager sendFrames #" << pFrames.count();
     foreach(const CANFrame& frame, pFrames)
     {
         if(!sendFrame(frame))

@@ -135,10 +135,8 @@ void CANConnectionModel::add(CANConnection* pConn_p)
 {
     CANConManager* manager = CANConManager::getInstance();
 
-    connect(pConn_p, SIGNAL(notify()), manager, SLOT(refreshCanList()));
-
     beginResetModel();
-    manager->getConnections().append(pConn_p);
+    manager->add(pConn_p);
     endResetModel();
 }
 
@@ -147,10 +145,8 @@ void CANConnectionModel::remove(CANConnection* pConn_p)
 {
     CANConManager* manager = CANConManager::getInstance();
 
-    disconnect(pConn_p, 0, manager, 0);
-
     beginResetModel();
-    manager->getConnections().removeOne(pConn_p);
+    manager->remove(pConn_p);
     endResetModel();
 }
 
