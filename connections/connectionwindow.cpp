@@ -257,6 +257,7 @@ void ConnectionWindow::selectSerial()
 {
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
+    ui->cbSpeed->setEnabled(true);
 
     ui->cbPort->clear();
     ports = QSerialPortInfo::availablePorts();
@@ -269,6 +270,7 @@ void ConnectionWindow::selectKvaser()
 {
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
+    ui->cbSpeed->setEnabled(false);
 }
 
 void ConnectionWindow::selectSocketCan()
@@ -298,11 +300,21 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
     switch(pType)
     {
         case CANCon::GVRET_SERIAL:
-            ui->rbGVRET->setChecked(true); break;
+            ui->rbGVRET->setChecked(true);
+            ui->cbSpeed->setEnabled(true);
+            ui->ckListenOnly->setEnabled(true);
+            ui->ckSingleWire->setEnabled(true);
+            break;
         case CANCon::KVASER:
-            ui->rbKvaser->setChecked(true); break;
+            ui->rbKvaser->setChecked(true);
+            break;
         case CANCon::SOCKETCAN:
-            ui->rbSocketCAN->setChecked(true); break;
+            ui->rbSocketCAN->setChecked(true);
+            //you can't configure any of the below three with socketcan so dim them out
+            ui->cbSpeed->setEnabled(false);
+            ui->ckListenOnly->setEnabled(false);
+            ui->ckSingleWire->setEnabled(false);
+            break;
         default: {}
     }
 

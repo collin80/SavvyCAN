@@ -92,6 +92,9 @@ void SocketCan::piSetBusSettings(int pBusIdx, CANBus bus)
          mDev->setConfigurationParameter(item.first, item.second);
     }*/
 
+    //You cannot set the speed of a socketcan interface, it has to be set with console commands.
+    //mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
+
     /* connect device */
     if (!mDev_p->connectDevice()) {
         disconnectDevice();
