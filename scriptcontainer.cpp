@@ -77,9 +77,7 @@ void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
             foreach(const CANFilter& flt, filters)
             {
                 if(flt.bus==i) {
-                    canFlt.id = idVal;
-                    canFlt.mask = maskVal;
-                    conn_p->addTargettedFrame(busVal, canFlt);
+                    conn_p->addTargettedFrame(busVal, idVal, maskVal, this);
                 }
             }
         }

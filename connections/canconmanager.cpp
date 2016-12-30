@@ -37,9 +37,7 @@ CANConManager::~CANConManager()
 
 
 void CANConManager::add(CANConnection* pConn_p)
-{
-    //connect(pConn_p, SIGNAL(notify()), this, SLOT(refreshCanList()));
-    connect(pConn_p, SIGNAL(targettedFrameReceived(CANFrame)), this, SLOT(gotTargettedFrame(CANFrame)));
+{    
     mConns.append(pConn_p);
     emit connectionStatusUpdated(getNumBuses());
 }
@@ -47,7 +45,7 @@ void CANConManager::add(CANConnection* pConn_p)
 
 void CANConManager::remove(CANConnection* pConn_p)
 {
-    disconnect(pConn_p, 0, this, 0);
+    //disconnect(pConn_p, 0, this, 0);
     mConns.removeOne(pConn_p);
     emit connectionStatusUpdated(getNumBuses());
 }
@@ -184,21 +182,21 @@ bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
 //For each device associated with buses go through and see if that device has a bus
 //that the filter should apply to. If so forward the data on but fudge
 //the bus numbers if bus wasn't -1 so that they're local to the device
-bool CANConManager::addTargettedFrame(int pBusId, const CANFlt &target)
+bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
     int tempBusVal;
-    int busBase = 0;
+    int busBase = 0;    
 
     foreach (CANConnection* conn, mConns)
     {
-        if (pBusId == -1) conn->addTargettedFrame(pBusId, target);
+        if (pBusId == -1) conn->addTargettedFrame(pBusId, ID, mask, receiver);
         else
         {
             tempBusVal = pBusId >> busBase;
             tempBusVal &= ((1 << conn->getNumBuses()) - 1);
             if (tempBusVal) {
                 qDebug() << "Forwarding targetted frame setting to a connection object";
-                conn->addTargettedFrame(tempBusVal, target);
+                conn->addTargettedFrame(tempBusVal, ID, mask, receiver);
             }
         }
         busBase += conn->getNumBuses();
@@ -206,43 +204,31 @@ bool CANConManager::addTargettedFrame(int pBusId, const CANFlt &target)
     return true;
 }
 
-bool CANConManager::removeTargettedFrame(int pBusId, const CANFlt &target)
+bool CANConManager::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
     int tempBusVal;
     int busBase = 0;
 
     foreach (CANConnection* conn, mConns)
     {
-        if (pBusId == -1) conn->removeTargettedFrame(pBusId, target);
+        if (pBusId == -1) conn->removeTargettedFrame(pBusId, ID, mask, receiver);
         else
         {
             tempBusVal = pBusId >> busBase;
             tempBusVal &= ((1 << conn->getNumBuses()) - 1);
-            if (tempBusVal) conn->removeTargettedFrame(tempBusVal, target);
+            if (tempBusVal) conn->removeTargettedFrame(tempBusVal, ID, mask, receiver);
         }
         busBase += conn->getNumBuses();
     }
     return true;
 }
 
-/*
- * A connected CANConnection object has passed us a frame that one or more
- * other objects are interested in. Fix up the bus number to be a system global bus
- * number instead of connection local bus number then send it off again.
-*/
-void CANConManager::gotTargettedFrame(CANFrame frame)
+bool CANConManager::removeAllTargettedFrames(QObject *receiver)
 {
-    int busBase = 0;
-
     foreach (CANConnection* conn, mConns)
     {
-        if (conn != sender()) busBase += conn->getNumBuses();
-        else break;
+        conn->removeAllTargettedFrames(receiver);
     }
 
-    qDebug() << "Targetted frame, offset was " << busBase << " id was " << frame.ID;
-
-    frame.bus += busBase;
-
-    emit targettedFrameReceived(frame);
+    return true;
 }

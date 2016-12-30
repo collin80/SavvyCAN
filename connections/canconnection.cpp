@@ -256,19 +256,21 @@ void CANConnection::setCapSuspended(bool pIsSuspended) {
     mIsCapSuspended = pIsSuspended;
 }
 
-bool CANConnection::addTargettedFrame(int pBusId, const CANFlt &target)
+bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-    /* make sure we execute in mThread context */
+/*
     if( mThread_p && (mThread_p != QThread::currentThread()) ) {
         bool ret;
         QMetaObject::invokeMethod(this, "addTargettedFrame",
                                   Qt::BlockingQueuedConnection,
                                   Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(int , pBusId),
-                                  Q_ARG(const CANFlt&, target));
+                                  Q_ARG(int, pBusId),
+                                  Q_ARG(uint32_t , ID),
+                                  Q_ARG(uint32_t , mask),
+                                  Q_ARG(QObject *, receiver));
         return ret;
     }
-
+*/
     /* sanity checks */
     if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
         return false;
@@ -277,6 +279,10 @@ bool CANConnection::addTargettedFrame(int pBusId, const CANFlt &target)
     {
         if ( (pBusId == -1) || (pBusId && (1 << i)) ) {
             qDebug() << "Connection is registering a new targetted frame filter";
+            CANFlt target;
+            target.id = ID;
+            target.mask = mask;
+            target.observer = receiver;
             mBusData_p[i].mTargettedFrames.append(target);
         }
     }
@@ -284,27 +290,47 @@ bool CANConnection::addTargettedFrame(int pBusId, const CANFlt &target)
     return true;
 }
 
-bool CANConnection::removeTargettedFrame(int pBusId, const CANFlt &target)
+bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-    /* make sure we execute in mThread context */
+/*
     if( mThread_p && (mThread_p != QThread::currentThread()) ) {
         bool ret;
-        QMetaObject::invokeMethod(this, "addTargettedFrame",
+        QMetaObject::invokeMethod(this, "removeTargettedFrame",
                                   Qt::BlockingQueuedConnection,
                                   Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(int , pBusId),
-                                  Q_ARG(const CANFlt&, target));
+                                  Q_ARG(int, pBusId),
+                                  Q_ARG(uint32_t , ID),
+                                  Q_ARG(uint32_t , mask),
+                                  Q_ARG(QObject *, receiver));
         return ret;
     }
-
+*/
     /* sanity checks */
     if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
         return false;
 
     for (int i = 0; i < getNumBuses(); i++)
     {
-        //if (pBusId == -1 || (pBusId && (1 << i)))
-            //mBusData_p[i].mTargettedFrames.removeOne(target);
+        if (pBusId == -1 || (pBusId && (1 << i)))
+        {
+            CANFlt target;
+            target.id = ID;
+            target.mask = mask;
+            target.observer = receiver;
+            mBusData_p[i].mTargettedFrames.removeAll(target);
+        }
+    }
+
+    return true;
+}
+
+bool CANConnection::removeAllTargettedFrames(QObject *receiver)
+{
+    for (int i = 0; i < getNumBuses(); i++) {
+        foreach (const CANFlt filt, mBusData_p[i].mTargettedFrames)
+        {
+            if (filt.observer == receiver) mBusData_p[i].mTargettedFrames.removeOne(filt);
+        }
     }
 
     return true;
@@ -318,8 +344,7 @@ void CANConnection::checkTargettedFrame(CANFrame &frame)
         maskedID = frame.ID & filt.mask;
         if (maskedID == filt.id) {
             qDebug() << "In connection object I got a targetted frame. Forwarding it.";
-            emit targettedFrameReceived(frame);
-            return; //only match once then stop.
+            QMetaObject::invokeMethod(filt.observer, "gotTargettedFrame",Qt::QueuedConnection, Q_ARG(CANFrame, frame));
         }
     }
 }

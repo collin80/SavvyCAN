@@ -1,6 +1,7 @@
 #ifndef CAN_STRUCTS_H
 #define CAN_STRUCTS_H
 
+#include <QObject>
 #include <QVector>
 #include <stdint.h>
 
@@ -16,10 +17,19 @@ public:
     uint64_t timestamp;
 };
 
-struct CANFlt
+class CANFlt
 {
+public:
     quint32 id;
     quint32 mask;
+    QObject * observer; //used to target the specific object that setup this filter
+
+    bool operator ==(const CANFlt &b) const
+    {
+        if ( (id == b.id) && (mask == b.mask) && (observer == b.observer) ) return true;
+
+        return false;
+    }
 };
 
 struct J1939ID

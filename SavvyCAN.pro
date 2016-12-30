@@ -107,7 +107,6 @@ HEADERS  += mainwindow.h \
     connections/connectionwindow.h \
     re/graphingwindow.h \
     re/newgraphdialog.h \
-    ui/bisectwindow.h \
     bisectwindow.h
 
 FORMS    += ui/candatagrid.ui \

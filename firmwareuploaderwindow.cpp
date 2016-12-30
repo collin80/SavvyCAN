@@ -27,22 +27,19 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
     timer = new QTimer();
     timer->setInterval(100); //100ms without a reply will cause us to attempt a resend
 
-    CANFlt firmwareFilter;
-    firmwareFilter.id = 0x100;
-    firmwareFilter.mask = 0x7F0;
-    CANConManager::getInstance()->addTargettedFrame(-1, firmwareFilter);
+    CANConManager::getInstance()->addTargettedFrame(-1, 0x100, 0x7F0, this);
     //MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(handleLoadFile()));
     connect(ui->btnStartStop, SIGNAL(clicked(bool)), this, SLOT(handleStartStopTransfer()));
     connect(timer, SIGNAL(timeout()), this, SLOT(timerElapsed()));
-    connect(CANConManager::getInstance(), SIGNAL(targettedFrameReceived(CANFrame)), this, SLOT(gotTargettedFrame(CANFrame)));
 }
 
 FirmwareUploaderWindow::~FirmwareUploaderWindow()
 {
     timer->stop();
+    CANConManager::getInstance()->removeAllTargettedFrames(this);
     delete timer;
     delete ui;
 }

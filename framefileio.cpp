@@ -1051,8 +1051,8 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
     ms = (thisFrame.timestamp / 1000);
     data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
     data[1] = (char)(ms & 0xFF);
-    data[2] = 0xFF;
-    data[3] = 0xFF;
+    data[2] = (char)0xFF;
+    data[3] = (char)0xFF;
     for (int l = 0; l < 8; l++) data[4 + l] = 0;
     outFile->write(data);
 
@@ -1064,7 +1064,7 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
             qApp->processEvents();
             lineCounter = 0;
         }
-        for (int j = 0; j < 8; j++) data[4 + j] = 0xFF;        
+        for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
 
         thisFrame = frames->at(c);
         if (!thisFrame.extended)
