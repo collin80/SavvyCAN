@@ -852,8 +852,6 @@ void MainWindow::showFirmwareUploaderWindow()
     if (!firmwareUploaderWindow)
     {
         firmwareUploaderWindow = new FirmwareUploaderWindow(model->getListReference());
-        //connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*)), connectionWindow, SLOT(sendFrame(const CANFrame*)));
-        //connect(worker, SIGNAL(gotTargettedFrame(int)), firmwareUploaderWindow, SLOT(gotTargettedFrame(int)));
     }
     firmwareUploaderWindow->show();
 }

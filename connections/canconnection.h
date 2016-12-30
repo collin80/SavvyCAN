@@ -81,9 +81,9 @@ signals:
     void busStatus(int, int, int);
 
     /**
-     * @brief event sent when a frame matching a filter set with notification hs been received
+     * @brief event sent when a frame matching a filter is received
      */
-    void notify();
+    void targettedFrameReceived(CANFrame frame);
 
     /**
      * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
@@ -149,14 +149,25 @@ public slots:
     bool sendFrames(const QList<CANFrame>& pFrames);
 
     /**
-     * @brief sets a filter list. Filters can be used to send a signal or filter out messages
-     * @param pFilters: a vector of can filters
-     * @param pFilterOut: if set to true, can frames not matching a filter are discarded
-     * @return true if filters have been set, false if busid is invalid
+     * @brief Add a new filter for the targetted frames. If a frame matches it will immediately be sent via the targettedFrameReceived signal
+     * @param pBusId - Which bus to bond to. -1 for any, otherwise a bitfield of buses (but 0 = first bus, etc)
+     * @param target - The filter to use for selected targetted frames
+     * @return true if filter was able to be added, false otherwise.
      */
-    bool setFilters(int pBusId, const QVector<CANFlt>& pFilters, bool pFilterOut);
+    bool addTargettedFrame(int pBusId, const CANFlt &target);
+
+    /**
+     * @brief Try to find a matching filter in the list and remove it, no longer targetting those frames
+     * @param pBusId - Which bus to bond to. Doesn't have to match the call to addTargettedFrame exactly. You could disconnect just one bus for instance.
+     * @param target - The filter that was set
+     * @return true if filter was found and deleted, false otherwise.
+     */
+    bool removeTargettedFrame(int pBusId, const CANFlt &target);
 
 protected:
+
+    //determine if the passed frame is part of a filter or not.
+    void checkTargettedFrame(CANFrame &frame);
 
     /**
      * @brief setStatus
@@ -205,16 +216,6 @@ protected:
      * @param pIsSuspended
      */
     void setCapSuspended(bool pIsSuspended);
-
-    /**
-     * @brief used to check if a message shall be discarded. The function also update pNotify if a notification is expected for that message
-     * @param pBusId: the bus id on which the frame has been received
-     * @param pId: the id of the message to filter
-     * @param pNotify: set to true if a notification is expected, else pNotify is not set
-     * @return true if message shall be discarded
-     */
-    bool discard(int pBusId, quint32 pId, bool& pNotify);
-
 
 protected:
 
@@ -268,14 +269,6 @@ protected:
      * @note implementing this function is optional
      */
     virtual bool piSendFrames(const QList<CANFrame>&);
-
-    /**
-     * @brief sets a hardware filter list
-     * @param pBusId: the bus id on which filters have to be set
-     * @param pFilters: a vector of can filters, the notification flag of CANFilter is ignored
-     * @note implementing this function is optional
-     */
-    virtual void piSetFilters(int pBusId, const QVector<CANFlt>& pFilters);
 
 private:
     LFQueue<CANFrame>   mQueue;

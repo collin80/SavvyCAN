@@ -27,10 +27,17 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
     timer = new QTimer();
     timer->setInterval(100); //100ms without a reply will cause us to attempt a resend
 
+    CANFlt firmwareFilter;
+    firmwareFilter.id = 0x100;
+    firmwareFilter.mask = 0x7F0;
+    CANConManager::getInstance()->addTargettedFrame(-1, firmwareFilter);
+    //MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
+
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(handleLoadFile()));
     connect(ui->btnStartStop, SIGNAL(clicked(bool)), this, SLOT(handleStartStopTransfer()));
     connect(timer, SIGNAL(timeout()), this, SLOT(timerElapsed()));
+    connect(CANConManager::getInstance(), SIGNAL(targettedFrameReceived(CANFrame)), this, SLOT(gotTargettedFrame(CANFrame)));
 }
 
 FirmwareUploaderWindow::~FirmwareUploaderWindow()
@@ -66,9 +73,9 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
     }
 }
 
-void FirmwareUploaderWindow::gotTargettedFrame(int frameLoc)
+void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 {
-    const CANFrame &frame = modelFrames->at(frameLoc);
+    qDebug() << "FUW: Got targetted frame with id " << frame.ID;
     if (frame.ID == (baseAddress + 0x10)) {
         qDebug() << "Start firmware reply";
         if ((frame.data[0] == 0xAD) && (frame.data[1] == 0xDE))

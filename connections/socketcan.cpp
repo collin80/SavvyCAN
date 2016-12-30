@@ -155,9 +155,6 @@ void SocketCan::framesWritten(qint64 count)
 
 void SocketCan::framesReceived()
 {
-    /* test */
-    bool sndNotif = false;
-
     uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
 
     /* sanity checks */
@@ -179,8 +176,7 @@ void SocketCan::framesReceived()
 
         /* check frame */
         if( !recFrame.payload().isEmpty() &&
-            recFrame.payload().length()<=8 &&
-            !discard(0, recFrame.frameId(), sndNotif) )
+            recFrame.payload().length()<=8 )
         {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
@@ -192,6 +188,8 @@ void SocketCan::framesReceived()
                 frame_p->isReceived    = true;
                 frame_p->timestamp     = (recFrame.timeStamp().seconds()*1000000 + recFrame.timeStamp().microSeconds()) - timeBasis;
 
+                checkTargettedFrame(*frame_p);
+
                 /* enqueue frame */
                 getQueue().queue();
             }
@@ -200,10 +198,6 @@ void SocketCan::framesReceived()
                 qDebug() << "can't get a frame, ERROR";
 #endif
         }
-    }
-
-    if(sndNotif) {
-        emit notify();
     }
 }
 

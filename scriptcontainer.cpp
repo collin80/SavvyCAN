@@ -71,18 +71,17 @@ void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
     if(conn_p)
     {
+        CANFlt canFlt;
         for(int i=0 ; i<conn_p->getNumBuses() ; i++)
         {
-            QVector<CANFlt> fltrs;
             foreach(const CANFilter& flt, filters)
             {
                 if(flt.bus==i) {
-                    fltrs.append({flt.ID, flt.mask, true});
+                    canFlt.id = idVal;
+                    canFlt.mask = maskVal;
+                    conn_p->addTargettedFrame(busVal, canFlt);
                 }
             }
-
-            if(fltrs.size())
-                conn_p->setFilters(i, fltrs, false);
         }
     }
 }
@@ -108,8 +107,8 @@ void ScriptContainer::clearFilters()
     CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
     if(conn_p)
     {
-        for(int i=0 ; i<conn_p->getNumBuses() ; i++)
-            conn_p->setFilters(i, QVector<CANFlt>(), false);
+        //for(int i=0 ; i<conn_p->getNumBuses() ; i++)
+            //conn_p->setFilters(i, QVector<CANFlt>(), false);
     }
 }
 

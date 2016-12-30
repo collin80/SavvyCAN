@@ -417,6 +417,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                         //qDebug() << "GVRET got frame on bus " << frame_p->bus;
                         /* copy frame */
                         *frame_p = buildFrame;
+                        checkTargettedFrame(buildFrame);
                         /* enqueue frame */
                         getQueue().queue();
                     }

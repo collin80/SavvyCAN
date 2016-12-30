@@ -5,8 +5,7 @@
 struct BusData {
     CANBus             mBus;
     bool               mConfigured;
-    QVector<CANFlt>    mFilters;
-    bool               mFilterOut;
+    QVector<CANFlt>    mTargettedFrames;
 };
 
 
@@ -38,7 +37,6 @@ CANConnection::CANConnection(QString pPort,
     mBusData_p = new BusData[mNumBuses];
     for(int i=0 ; i<mNumBuses ; i++) {
         mBusData_p[i].mConfigured  = false;
-        mBusData_p[i].mFilterOut   = false;
     }
 
     /* if needed, create a thread and move ourself into it */
@@ -258,53 +256,73 @@ void CANConnection::setCapSuspended(bool pIsSuspended) {
     mIsCapSuspended = pIsSuspended;
 }
 
-bool CANConnection::setFilters(int pBusId, const QVector<CANFlt>& pFilters, bool pFilterOut)
+bool CANConnection::addTargettedFrame(int pBusId, const CANFlt &target)
 {
     /* make sure we execute in mThread context */
     if( mThread_p && (mThread_p != QThread::currentThread()) ) {
         bool ret;
-        QMetaObject::invokeMethod(this, "setFilters",
+        QMetaObject::invokeMethod(this, "addTargettedFrame",
                                   Qt::BlockingQueuedConnection,
                                   Q_RETURN_ARG(bool, ret),
                                   Q_ARG(int , pBusId),
-                                  Q_ARG(const QVector<CANFlt>&, pFilters),
-                                  Q_ARG(bool , pFilterOut));
+                                  Q_ARG(const CANFlt&, target));
         return ret;
     }
 
     /* sanity checks */
-    if(pBusId<0 || pBusId>=getNumBuses())
+    if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
         return false;
 
-    /* copy filters */
-    mBusData_p[pBusId].mFilters    = pFilters;
-    mBusData_p[pBusId].mFilterOut  = pFilterOut;
-
-    /* set hardware filtering if available */
-    if(pFilterOut)
-        piSetFilters(pBusId, pFilters);
+    for (int i = 0; i < getNumBuses(); i++)
+    {
+        if (pBusId == -1 || pBusId && (1 << i)) {
+            qDebug() << "Connection is registering a new targetted frame filter";
+            mBusData_p[i].mTargettedFrames.append(target);
+        }
+    }
 
     return true;
 }
 
-
-bool CANConnection::discard(int pBusId, quint32 pId, bool& pNotify)
+bool CANConnection::removeTargettedFrame(int pBusId, const CANFlt &target)
 {
-    if(pBusId<0 || pBusId>=getNumBuses())
-        return true;
-
-    foreach (const CANFlt& filter, mBusData_p[pBusId].mFilters)
-    {
-        if( (filter.id & filter.mask) == (pId & filter.mask) )
-        {
-            if(filter.notify)
-                pNotify = true;
-            return false;
-        }
+    /* make sure we execute in mThread context */
+    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
+        bool ret;
+        QMetaObject::invokeMethod(this, "addTargettedFrame",
+                                  Qt::BlockingQueuedConnection,
+                                  Q_RETURN_ARG(bool, ret),
+                                  Q_ARG(int , pBusId),
+                                  Q_ARG(const CANFlt&, target));
+        return ret;
     }
-    return mBusData_p[pBusId].mFilterOut;
+
+    /* sanity checks */
+    if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
+        return false;
+
+    for (int i = 0; i < getNumBuses(); i++)
+    {
+        //if (pBusId == -1 || (pBusId && (1 << i)))
+            //mBusData_p[i].mTargettedFrames.removeOne(target);
+    }
+
+    return true;
 }
 
+void CANConnection::checkTargettedFrame(CANFrame &frame)
+{
+    int maskedID;
+    foreach (const CANFlt filt, mBusData_p[frame.bus].mTargettedFrames)
+    {
+        maskedID = frame.ID & filt.mask;
+        if (maskedID == filt.id) {
+            qDebug() << "In connection object I got a targetted frame. Forwarding it.";
+            emit targettedFrameReceived(frame);
+            return; //only match once then stop.
+        }
+    }
+}
 
 bool CANConnection::piSendFrames(const QList<CANFrame>& pFrames)
 {
@@ -315,12 +333,4 @@ bool CANConnection::piSendFrames(const QList<CANFrame>& pFrames)
     }
 
     return true;
-}
-
-
-/* default implementation of piSetFilters */
-void CANConnection::piSetFilters(int pBusId, const QVector<CANFlt>& pFilters)
-{
-    Q_UNUSED(pBusId);
-    Q_UNUSED(pFilters);
 }
