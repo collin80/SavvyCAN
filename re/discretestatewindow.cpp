@@ -267,6 +267,8 @@ void DiscreteStateWindow::handleTick()
     {
     case DWStates::IDLE:
         break;
+    case DWStates::DONE:
+        break;
     case DWStates::COUNTDOWN_SIGNAL:
         ticksUntilStateChange--;
         if (ticksUntilStateChange == 0)
@@ -334,7 +336,7 @@ void DiscreteStateWindow::calculateResults()
                 frameCache.clear();
                 for (int i = 0; i < modelFrames->count(); i++)
                 {
-                    if (modelFrames->at(i).ID == it.key()) frameCache.append(modelFrames->at(i));
+                    if (modelFrames->at(i).ID == (unsigned int)it.key()) frameCache.append(modelFrames->at(i));
                 }
                 for (int bits = maxBits; bits >= minBits; bits--)
                 {

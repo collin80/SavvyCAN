@@ -151,7 +151,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     int frameType;
     int frameLen;
     int ln;
-    int offset;
+    //int offset;
     ISOTP_MESSAGE msg;
     ISOTP_MESSAGE *pMsg;
 
@@ -230,7 +230,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         if (!pMsg) return;
         ln = pMsg->len - pMsg->data.count();
-        offset = pMsg->data.count();
+        //offset = pMsg->data.count();
         if (useExtendedAddressing)
         {
             if (ln > 6) ln = 6;

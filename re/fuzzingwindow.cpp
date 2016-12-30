@@ -50,7 +50,6 @@ FuzzingWindow::~FuzzingWindow()
 
 void FuzzingWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
     int id;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
@@ -257,7 +256,7 @@ void FuzzingWindow::calcNextBitPattern()
             for (int bit = 0; bit < 8; bit++)
             {
                 thisBit = bitGrid[byt * 8 + bit];
-                if (thisBit == 1 && (byt * 8 + bit) == bitAccum)
+                if ( (thisBit == 1) && (unsigned int)(byt * 8 + bit) == bitAccum)
                 {
                     currentBytes[byt] |= (1 << bit);
                 }

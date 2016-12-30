@@ -77,7 +77,7 @@ protected:
     QSerialPort *serial;
     int framesRapid;
     STATE rx_state;
-    int rx_step;
+    uint32_t rx_step;
     CANFrame buildFrame;
     int can0Baud, can1Baud;
     bool can0Enabled, can1Enabled;

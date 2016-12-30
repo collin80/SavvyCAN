@@ -7,8 +7,8 @@
 struct CANFrame
 {
 public:
-    int ID;
-    int bus;
+    uint32_t ID;
+    uint32_t bus;
     bool extended;
     bool isReceived; //did we receive this or send it?
     uint32_t len;
@@ -38,7 +38,7 @@ public:
 struct ISOTP_MESSAGE
 {
 public:
-    int ID;
+    uint32_t ID;
     int bus;
     bool extended;
     bool isReceived;

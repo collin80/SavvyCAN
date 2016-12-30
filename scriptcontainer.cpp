@@ -127,8 +127,7 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
         frame.data[i] = (uint8_t)data.property(i).toInt();
     }
 
-    frame.bus = bus.toInt();
-    if (frame.bus < 0) frame.bus = 0;
+    frame.bus = (uint32_t)bus.toInt();
     if (frame.bus > 1) frame.bus = 1;
 
     if (frame.ID > 0x7FF) frame.extended = true;

@@ -87,7 +87,6 @@ void ScriptingWindow::loadNewScript()
 {
     QString filename;
     QFileDialog dialog;
-    bool result = false;
     ScriptContainer *container;
 
     QStringList filters;

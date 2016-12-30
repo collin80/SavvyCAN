@@ -32,13 +32,13 @@ class DBCMessageHandler: public QObject
 {
     Q_OBJECT
 public:
-    DBC_MESSAGE *findMsgByID(int id);
+    DBC_MESSAGE *findMsgByID(uint32_t id);
     DBC_MESSAGE *findMsgByIdx(int idx);
     DBC_MESSAGE *findMsgByName(QString name);
     bool addMessage(DBC_MESSAGE &msg);
     bool removeMessage(DBC_MESSAGE *msg);
     bool removeMessageByIndex(int idx);
-    bool removeMessage(int ID);
+    bool removeMessage(uint32_t ID);
     bool removeMessage(QString name);
     void removeAllMessages();
     int getCount();

@@ -178,6 +178,7 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMous
 
 void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
 {
+    Q_UNUSED(ID)
     //its problematic to try to highlight a graph since we get the ID
     //and timestamp not the signal in question so there is no real way
     //to know which graph. But, if that changes here is a stub
@@ -195,8 +196,8 @@ void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
 void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
 {
   Q_UNUSED(event)
+  Q_UNUSED(title)
   // Set the plot title by double clicking on it
-  bool ok;
 
   /*
   QString newTitle = QInputDialog::getText(this, "SavvyCAN Graphing", "New plot title:", QLineEdit::Normal, title->text(), &ok);
@@ -354,6 +355,8 @@ bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
         // standard event processing
         return QObject::eventFilter(obj, event);
     }
+
+    return false;
 }
 
 void GraphingWindow::resetView()

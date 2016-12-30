@@ -84,7 +84,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
         if (numFrames > modelFrames->count()) return;
-        int currID = 0;
+        unsigned int currID = 0;
         if (ui->listFrameID->currentItem())
             currID = ui->listFrameID->currentItem()->text().toInt(NULL, 16);
         bool foundID = false;
@@ -140,7 +140,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int i = 0; i < modelFrames->count(); i++)
         {
             CANFrame thisFrame = modelFrames->at(i);
-            if (thisFrame.ID == targettedID) frameCache.append(thisFrame);
+            if (thisFrame.ID == (unsigned int)targettedID) frameCache.append(thisFrame);
         }
 
         ui->treeDetails->clear();

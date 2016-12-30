@@ -381,6 +381,10 @@ void MainWindow::writeSettings()
 
 void MainWindow::updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1)
 {
+    Q_UNUSED(connectionType);
+    Q_UNUSED(port);
+    Q_UNUSED(speed0);
+    Q_UNUSED(speed1);
     //connType = connectionType;
     //portName = port;
 

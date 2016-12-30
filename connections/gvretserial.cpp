@@ -146,10 +146,8 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
 bool GVRetSerial::piSendFrame(const CANFrame& frame)
 {
     QByteArray buffer;
-    int c;
+    unsigned int c;
     int ID;
-    CANFrame tempFrame = frame;
-    tempFrame.isReceived = false;    
 
     //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
@@ -386,7 +384,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 7:
             buildFrame.ID |= c << 24;
-            if ((buildFrame.ID & 1 << 31) == 1 << 31)
+            if ((buildFrame.ID & 1 << 31) == 1u << 31)
             {
                 buildFrame.ID &= 0x7FFFFFFF;
                 buildFrame.extended = true;

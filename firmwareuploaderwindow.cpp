@@ -54,7 +54,7 @@ void FirmwareUploaderWindow::updateProgress()
 
 void FirmwareUploaderWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    //CANFrame thisFrame;
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -76,7 +76,7 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
 void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 {
     qDebug() << "FUW: Got targetted frame with id " << frame.ID;
-    if (frame.ID == (baseAddress + 0x10)) {
+    if (frame.ID == (uint32_t)(baseAddress + 0x10)) {
         qDebug() << "Start firmware reply";
         if ((frame.data[0] == 0xAD) && (frame.data[1] == 0xDE))
         {
@@ -97,7 +97,7 @@ void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
         }
     }
 
-    if (frame.ID == (baseAddress + 0x20)) {
+    if (frame.ID == (uint32_t)(baseAddress + 0x20)) {
         qDebug() << "Firmware reception success reply";
         int seq = frame.data[0] + (256 * frame.data[1]);
         if (seq == currentSendingPosition)
@@ -201,7 +201,6 @@ void FirmwareUploaderWindow::handleLoadFile()
 {
     QString filename;
     QFileDialog dialog;
-    bool result = false;
 
     QStringList filters;
     filters.append(QString(tr("Raw firmware binary (*.bin)")));

@@ -371,7 +371,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
         if (numFrames > modelFrames->count()) return;
-        int refID;
+        unsigned int refID;
         if (frameCache.count() > 0) refID = frameCache[0].ID;
             else refID = 0;
         bool needRefresh = false;
@@ -510,7 +510,7 @@ void FlowViewWindow::updateFrameLabel()
 void FlowViewWindow::changeID(QString newID)
 {
     //parse the ID and then load up the frame cache with just messages with that ID.
-    int id = Utility::ParseStringToNum(newID);
+    uint32_t id = (uint32_t)Utility::ParseStringToNum(newID);
     frameCache.clear();
 
     if (modelFrames->count() == 0) return;
@@ -531,7 +531,7 @@ void FlowViewWindow::changeID(QString newID)
     if (frameCache.count() == 0) return;
 
     removeAllGraphs();
-    for (int c = 0; c < frameCache.at(0).len; c++)
+    for (uint32_t c = 0; c < frameCache.at(0).len; c++)
     {
         createGraph(c);
     }

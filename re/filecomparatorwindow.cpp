@@ -154,7 +154,7 @@ void FileComparatorWindow::calculateDetails()
         CANFrame frame = referenceFrames.at(x);
         if (referenceIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
         {
-            for (int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < frame.len; y++)
             {
                 referenceIDs[frame.ID].values[y][frame.data[y]]++;
                 tmp = frame.data[y];

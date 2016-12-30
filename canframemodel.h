@@ -33,7 +33,7 @@ public:
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
     void setHexMode(bool);
-    void setFilterState(int ID, bool state);
+    void setFilterState(unsigned int ID, bool state);
     void setAllFilters(bool state);
     void setSecondsMode(bool);
     void loadFilterFile(QString filename);
@@ -42,7 +42,7 @@ public:
     void recalcOverwrite();
     bool needsFilterRefresh();
     void insertFrames(const QVector<CANFrame> &newFrames);
-    int getIndexFromTimeID(int ID, double timestamp);
+    int getIndexFromTimeID(unsigned int ID, double timestamp);
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
     const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither

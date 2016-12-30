@@ -594,7 +594,7 @@ void FramePlaybackWindow::updatePosition(bool forward)
             thisFrame->bus = whichBusSend;
             sendingBuffer.append(*thisFrame);
         }
-        else if (whichBusSend = ui->comboCANBus->count() - 2)  //all
+        else if (whichBusSend == (ui->comboCANBus->count() - 2))  //all
         {
             for (int c = 0; c < ui->comboCANBus->count() - 2; c++)
             {

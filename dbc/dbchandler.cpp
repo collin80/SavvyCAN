@@ -37,6 +37,7 @@ bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
 
 bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
 {
+    Q_UNUSED(sig);
     //if (sigs.removeAll(*sig) > 0) return true;
     return false;
 }
@@ -75,7 +76,7 @@ int DBCSignalHandler::getCount()
     return sigs.count();
 }
 
-DBC_MESSAGE* DBCMessageHandler::findMsgByID(int id)
+DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
 {
     if (messages.count() == 0) return NULL;
     for (int i = 0; i < messages.count(); i++)
@@ -117,6 +118,7 @@ bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 
 bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
 {
+    Q_UNUSED(msg);
     //if (messages.removeAll(*msg) > 0) return true;
     return false;
 }
@@ -130,7 +132,7 @@ bool DBCMessageHandler::removeMessageByIndex(int idx)
     return true;
 }
 
-bool DBCMessageHandler::removeMessage(int ID)
+bool DBCMessageHandler::removeMessage(uint32_t ID)
 {
     bool foundSome = false;
     if (messages.count() == 0) return false;
@@ -302,7 +304,7 @@ void DBCFile::loadFile(QString fileName)
         {
             int offset = 0;
             bool isMultiplexor = false;
-            bool isMultiplexed = false;
+            //bool isMultiplexed = false;
             DBC_SIGNAL sig;
 
             sig.multiplexValue = 0;
@@ -326,7 +328,7 @@ void DBCFile::loadFile(QString fileName)
                 if (match.hasMatch())
                 {
                     qDebug() << "Multiplexed signal";
-                    isMultiplexed = true;
+                    //isMultiplexed = true;
                     sig.isMultiplexed = true;
                     sig.multiplexValue = match.captured(2).toInt();
                     offset = 1;
@@ -805,7 +807,7 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == loadedFiles[i].getAssocBus())
+        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == (unsigned int)loadedFiles[i].getAssocBus())
         {
             DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.ID);
             if (msg != NULL) return msg;

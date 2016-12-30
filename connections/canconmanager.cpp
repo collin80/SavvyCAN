@@ -155,7 +155,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     foreach (CANConnection* conn, mConns)
     {
         //check if this CAN connection is supposed to handle the requested bus
-        if (pFrame.bus < busBase + conn->getNumBuses())
+        if (pFrame.bus < (uint32_t)(busBase + conn->getNumBuses()))
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
@@ -203,6 +203,7 @@ bool CANConManager::addTargettedFrame(int pBusId, const CANFlt &target)
         }
         busBase += conn->getNumBuses();
     }
+    return true;
 }
 
 bool CANConManager::removeTargettedFrame(int pBusId, const CANFlt &target)
@@ -221,6 +222,7 @@ bool CANConManager::removeTargettedFrame(int pBusId, const CANFlt &target)
         }
         busBase += conn->getNumBuses();
     }
+    return true;
 }
 
 /*

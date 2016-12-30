@@ -114,6 +114,7 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
 
 void DBCLoadSaveWindow::cellDoubleClicked(int row, int col)
 {
+    Q_UNUSED(col)
     editorWindow->setFileIdx(row);
     editorWindow->show();
 }

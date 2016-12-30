@@ -103,8 +103,8 @@ void BisectWindow::handleCalculateButton()
     }
     else if (ui->rbIDRange->isChecked())
     {
-        int lowerID = Utility::ParseStringToNum2(ui->cbIDLower->currentText());
-        int upperID = Utility::ParseStringToNum2(ui->cbIDUpper->currentText());
+        uint32_t lowerID = Utility::ParseStringToNum2(ui->cbIDLower->currentText());
+        uint32_t upperID = Utility::ParseStringToNum2(ui->cbIDUpper->currentText());
         for (int i = 0; i < modelFrames->count(); i++)
         {
             if (modelFrames->at(i).ID >= lowerID && modelFrames->at(i).ID <= upperID) splitFrames.append(modelFrames->at(i));

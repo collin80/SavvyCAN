@@ -145,7 +145,6 @@ void NewGraphDialog::loadSignals(int idx)
 void NewGraphDialog::bitfieldClicked(int x,int y)
 {
     int bit = (y * 8 + (7-x));
-    int res;
 
     qDebug() << "Clicked bit: " << bit;
     startBit = bit;

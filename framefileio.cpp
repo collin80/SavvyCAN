@@ -246,6 +246,8 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
 
 bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CANFrame> *frames)
 {
+    Q_UNUSED(filename);
+    Q_UNUSED(frames);
     return true;
 }
 
@@ -440,7 +442,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.bus = 0;
                 thisFrame.extended = false;
                 QList<QByteArray> tokens = line.mid(41, thisFrame.len * 3).split(' ');
-                for (int d = 0; d < thisFrame.len; d++)
+                for (unsigned int d = 0; d < thisFrame.len; d++)
                 {
                     if (tokens[d] != "")
                     {
@@ -580,7 +582,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
         outFile->write(QString::number(frames->at(c).len).toUtf8());
         outFile->putChar(44);
 
-        for (int temp = 0; temp < 8; temp++)
+        for (unsigned int temp = 0; temp < 8; temp++)
         {
             if (temp < frames->at(c).len)
                 outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());

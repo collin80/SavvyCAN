@@ -131,7 +131,7 @@ void CANFrameModel::setOverwriteMode(bool mode)
     endResetModel();
 }
 
-void CANFrameModel::setFilterState(int ID, bool state)
+void CANFrameModel::setFilterState(unsigned int ID, bool state)
 {
     if (!filters.contains(ID)) return;
     filters[ID] = state;
@@ -263,8 +263,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     }
-    else
-        return QVariant();
+
+    return QVariant();
 }
 
 QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
@@ -480,7 +480,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     if (needFilterRefresh) emit updatedFiltersList();
 }
 
-int CANFrameModel::getIndexFromTimeID(int ID, double timestamp)
+int CANFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
 {
     int bestIndex = -1;
     uint64_t intTimeStamp = timestamp * 1000000l;

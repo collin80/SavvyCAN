@@ -139,7 +139,7 @@ void UDSScanWindow::rapidFrames(int numFrames)
 {
     CANFrame thisFrame;
     QString result;
-    int id;
+    uint32_t id;
     int offset = ui->spinReplyOffset->value();
     CANFrame sentFrame;
     bool gotReply = false;
@@ -157,7 +157,7 @@ void UDSScanWindow::rapidFrames(int numFrames)
         thisFrame = modelFrames->at(i);
         id = thisFrame.ID;
 
-        if ((id == (sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
+        if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
         {
             int temp = thisFrame.data[0] >> 4;
             if (temp == 0) //single frame reply (maybe)

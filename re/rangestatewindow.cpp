@@ -171,7 +171,7 @@ void RangeStateWindow::refreshFilterList()
 void RangeStateWindow::recalcButton()
 {
     QHash<int, bool>::iterator iter;
-    int id;
+    uint32_t id;
 
     ui->listCandidates->clear();
     foundSignals.clear();
@@ -376,7 +376,7 @@ void RangeStateWindow::createGraph(QVector<int> values)
     else ymin *= 0.8;
 
     ymax = maxval;
-    if (ymax < 0) ymax * 0.8;
+    if (ymax < 0) ymax *= 0.8;
     else ymax *= 1.2;
 
     if (fabs(ymin) < 0.01) ymin -= (ymax / 60.0);
@@ -401,7 +401,7 @@ void RangeStateWindow::clickedSignalList(int idx)
 {
     if (idx == -1) return; //just in case...
 
-    int id, startBit, bitLength;
+    uint32_t id, startBit, bitLength;
     bool isSigned = false, isBigEndian = false;
     int64_t valu;
 
