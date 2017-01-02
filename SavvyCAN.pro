@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui serialbus
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
 
@@ -17,99 +17,122 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
+    mainwindow.cpp \
     canframemodel.cpp \
     utility.cpp \
     qcustomplot.cpp \
-    graphingwindow.cpp \
-    frameinfowindow.cpp \
-    newgraphdialog.cpp \
     frameplaybackwindow.cpp \
-    serialworker.cpp \
     candatagrid.cpp \
-    flowviewwindow.cpp \
     framesenderwindow.cpp \
-    dbchandler.cpp \
-    dbcmaineditor.cpp \
-    dbcsignaleditor.cpp \
     framefileio.cpp \
-    filecomparatorwindow.cpp \
     mainsettingsdialog.cpp \
     firmwareuploaderwindow.cpp \
-    discretestatewindow.cpp \
-    connectionwindow.cpp \
     scriptingwindow.cpp \
     scriptcontainer.cpp \
     canfilter.cpp \
-    rangestatewindow.cpp \
-    dbc_classes.cpp \
-    dbcloadsavewindow.cpp \
-    fuzzingwindow.cpp \
-    udsscanwindow.cpp \
     can_structs.cpp \
-    isotp_interpreterwindow.cpp \
-    isotp_handler.cpp \
-    motorcontrollerconfigwindow.cpp
+    motorcontrollerconfigwindow.cpp \
+    connections/canconnection.cpp \
+    connections/socketcan.cpp \
+    connections/canconfactory.cpp \
+    connections/gvretserial.cpp \
+    connections/canconmanager.cpp \
+    re/sniffer/snifferitem.cpp \
+    re/sniffer/sniffermodel.cpp \
+    re/sniffer/snifferwindow.cpp \
+    dbc/dbc_classes.cpp \
+    dbc/dbchandler.cpp \
+    dbc/dbcloadsavewindow.cpp \
+    dbc/dbcmaineditor.cpp \
+    dbc/dbcsignaleditor.cpp \
+    re/discretestatewindow.cpp \
+    re/filecomparatorwindow.cpp \
+    re/flowviewwindow.cpp \
+    re/frameinfowindow.cpp \
+    re/fuzzingwindow.cpp \
+    re/isotp_handler.cpp \
+    re/isotp_interpreterwindow.cpp \
+    re/rangestatewindow.cpp \
+    re/udsscanwindow.cpp \
+    connections/canbus.cpp \
+    connections/canconnectionmodel.cpp \
+    connections/connectionwindow.cpp \
+    re/graphingwindow.cpp \
+    re/newgraphdialog.cpp \
+    bisectwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \
     utility.h \
     qcustomplot.h \
-    graphingwindow.h \
-    frameinfowindow.h \
-    newgraphdialog.h \
     frameplaybackwindow.h \
-    serialworker.h \
     candatagrid.h \
-    flowviewwindow.h \
     framesenderwindow.h \
     can_trigger_structs.h \
-    dbc_classes.h \
-    dbchandler.h \
-    dbcmaineditor.h \
-    dbcsignaleditor.h \
     framefileio.h \
     config.h \
-    filecomparatorwindow.h \
     mainsettingsdialog.h \
     firmwareuploaderwindow.h \
-    discretestatewindow.h \
-    connectionwindow.h \
     scriptingwindow.h \
     scriptcontainer.h \
     canfilter.h \
-    rangestatewindow.h \
-    dbcloadsavewindow.h \
-    fuzzingwindow.h \
-    udsscanwindow.h \
-    isotp_interpreterwindow.h \
-    isotp_handler.h \
-    motorcontrollerconfigwindow.h
+    utils/lfqueue.h \
+    motorcontrollerconfigwindow.h \
+    connections/canconnection.h \
+    connections/socketcan.h \
+    connections/canconconst.h \
+    connections/canconfactory.h \
+    connections/gvretserial.h \
+    connections/canconmanager.h \
+    re/sniffer/snifferitem.h \
+    re/sniffer/sniffermodel.h \
+    re/sniffer/snifferwindow.h \
+    dbc/dbc_classes.h \
+    dbc/dbchandler.h \
+    dbc/dbcloadsavewindow.h \
+    dbc/dbcmaineditor.h \
+    dbc/dbcsignaleditor.h \
+    re/discretestatewindow.h \
+    re/filecomparatorwindow.h \
+    re/flowviewwindow.h \
+    re/frameinfowindow.h \
+    re/fuzzingwindow.h \
+    re/isotp_handler.h \
+    re/isotp_interpreterwindow.h \
+    re/rangestatewindow.h \
+    re/udsscanwindow.h \
+    connections/canbus.h \
+    connections/canconnectionmodel.h \
+    connections/connectionwindow.h \
+    re/graphingwindow.h \
+    re/newgraphdialog.h \
+    bisectwindow.h
 
-FORMS    += mainwindow.ui \
-    graphingwindow.ui \
-    frameinfowindow.ui \
-    newgraphdialog.ui \
-    frameplaybackwindow.ui \
-    candatagrid.ui \
-    flowviewwindow.ui \
-    framesenderwindow.ui \
-    dbcmaineditor.ui \
-    dbcsignaleditor.ui \
-    filecomparatorwindow.ui \
-    mainsettingsdialog.ui \
-    firmwareuploaderwindow.ui \
-    discretestatewindow.ui \
-    connectionwindow.ui \
-    scriptingwindow.ui \
-    rangestatewindow.ui \
-    dbcloadsavewindow.ui \
-    fuzzingwindow.ui \
-    udsscanwindow.ui \
-    isotp_interpreterwindow.ui \
-    deltawindow.ui \
-    motorcontrollerconfigwindow.ui
+FORMS    += ui/candatagrid.ui \
+    ui/connectionwindow.ui \
+    ui/dbcloadsavewindow.ui \
+    ui/dbcmaineditor.ui \
+    ui/dbcsignaleditor.ui \
+    ui/discretestatewindow.ui \
+    ui/filecomparatorwindow.ui \
+    ui/firmwareuploaderwindow.ui \
+    ui/flowviewwindow.ui \
+    ui/frameinfowindow.ui \
+    ui/frameplaybackwindow.ui \
+    ui/framesenderwindow.ui \
+    ui/fuzzingwindow.ui \
+    ui/graphingwindow.ui \
+    ui/isotp_interpreterwindow.ui \
+    ui/mainsettingsdialog.ui \
+    ui/mainwindow.ui \
+    ui/motorcontrollerconfigwindow.ui \
+    ui/newgraphdialog.ui \
+    ui/rangestatewindow.ui \
+    ui/scriptingwindow.ui \
+    ui/snifferwindow.ui \
+    ui/udsscanwindow.ui \
+    ui/bisectwindow.ui
 
 DISTFILES +=
 

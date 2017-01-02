@@ -4,8 +4,8 @@
 #include <QDialog>
 #include <QTimer>
 #include "can_structs.h"
+#include "connections/canconmanager.h"
 #include "utility.h"
-#include "serialworker.h"
 
 namespace Ui {
 class FirmwareUploaderWindow;
@@ -20,10 +20,10 @@ public:
     ~FirmwareUploaderWindow();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCANFrame(const CANFrame *);
 
 public slots:
-    void gotTargettedFrame(int frameLoc);
+    void gotTargettedFrame(CANFrame frame);
 
 private slots:
     void handleLoadFile();

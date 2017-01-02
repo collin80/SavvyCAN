@@ -3,6 +3,15 @@
 #include <QFile>
 #include "utility.h"
 
+
+CANFrameModel::~CANFrameModel()
+{
+    frames.clear();
+    filteredFrames.clear();
+    filters.clear();
+}
+
+
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
@@ -38,12 +47,12 @@ CANFrameModel::CANFrameModel(QObject *parent)
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 50000000;
+        preallocSize = 20000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
         qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
-        preallocSize = 5000000;
+        preallocSize = 4000000;
     }
 
     frames.reserve(preallocSize);
@@ -122,7 +131,7 @@ void CANFrameModel::setOverwriteMode(bool mode)
     endResetModel();
 }
 
-void CANFrameModel::setFilterState(int ID, bool state)
+void CANFrameModel::setFilterState(unsigned int ID, bool state)
 {
     if (!filters.contains(ID)) return;
     filters[ID] = state;
@@ -235,15 +244,15 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != NULL)
                 {
-                    tempString.append("\r\n");
-                    tempString.append(msg->name + " " + msg->comment + "\r\n");
+                    tempString.append("\n");
+                    tempString.append(msg->name + " " + msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
                         QString sigString;
                         if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, sigString))
                         {
                             tempString.append(sigString);
-                            tempString.append("\r\n");
+                            tempString.append("\n");
                         }
                     }
                 }
@@ -254,8 +263,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QVariant();
         }
     }
-    else
-        return QVariant();
+
+    return QVariant();
 }
 
 QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
@@ -298,8 +307,10 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
+
+void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 {
+    /*TODO: remove mutex */
     mutex.lock();
     CANFrame tempFrame;
     tempFrame = frame;
@@ -361,6 +372,15 @@ void CANFrameModel::addFrame(const CANFrame &frame, bool autoRefresh = false)
     mutex.unlock();
 }
 
+
+void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFrames)
+{
+    foreach(const CANFrame& frame, pFrames)
+    {
+        addFrame(frame);
+    }
+}
+
 void CANFrameModel::sendRefresh()
 {    
     qDebug() << "Sending mass refresh";
@@ -392,38 +412,22 @@ void CANFrameModel::sendRefresh(int pos)
 //issue a refresh for the last num entries in the model.
 //used by the serial worker to do batch updates so it doesn't
 //have to send thousands of messages per second
-void CANFrameModel::sendBulkRefresh(int num)
+int CANFrameModel::sendBulkRefresh()
 {
-    //yes, num was sent to us by the serial worker but we actually have a better idea
-    //of how many by tracking the number we last knew about as opposed to how many rows there
-    //are now.
-    num = filteredFrames.count() - lastUpdateNumFrames;
+    int num = filteredFrames.count() - lastUpdateNumFrames;
+    if (num <= 0) return 0;
 
-    if (num < 0) return;
-
-    //qDebug() << "Num: " << num;
-
-    if (num == 0 && !overwriteDups) return;
-    if (filteredFrames.count() == 0) return;
+    if (num == 0 && !overwriteDups) return 0;
+    if (filteredFrames.count() == 0) return 0;
 
     lastUpdateNumFrames += num; //done this way to avoid asking for filteredFrames.count() again
 
     qDebug() << "Bulk refresh of " << num;
 
-    if (!overwriteDups)
-    {        
-        //if (num > filteredFrames.count()) num = filteredFrames.count();
-        //qDebug() << "From " << (filteredFrames.count() - num) << " to " << (filteredFrames.count() - 1);
-        //beginInsertRows(QModelIndex(), filteredFrames.count() - num, filteredFrames.count() - 1);
-        //endInsertRows();
-        beginResetModel();
-        endResetModel();
-    }
-    else
-    {
-        beginResetModel();
-        endResetModel();
-    }    
+    beginResetModel();
+    endResetModel();
+
+    return num;
 }
 
 void CANFrameModel::clearFrames()
@@ -476,7 +480,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     if (needFilterRefresh) emit updatedFiltersList();
 }
 
-int CANFrameModel::getIndexFromTimeID(int ID, double timestamp)
+int CANFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
 {
     int bestIndex = -1;
     uint64_t intTimeStamp = timestamp * 1000000l;

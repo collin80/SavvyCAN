@@ -4,9 +4,8 @@
 #include <QDateTime>
 #include <QFileDialog>
 #include <QtSerialPort/QSerialPortInfo>
-#include "canframemodel.h"
+#include "connections/canconmanager.h"
 #include "utility.h"
-#include "serialworker.h"
 
 /*
 Compile for all platforms and create release (remember to include QScintilla libs) and make Win32 binary.
@@ -47,7 +46,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
 
-    model = new CANFrameModel();
+    model = new CANFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
+
     ui->canFramesView->setModel(model);
 
     readSettings();
@@ -61,26 +61,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(6, 275);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
-    //enabling the below line kills performance in every way imaginable. Left here as a warning. Do not do this.
-    //ui->canFramesView->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-
-    worker = new SerialWorker(model);
-    worker->moveToThread(&serialWorkerThread);
-    connect(&serialWorkerThread, &QThread::finished, worker, &QObject::deleteLater);
-    connect(&serialWorkerThread, &QThread::started, worker, &SerialWorker::run); //setup timers within the proper thread
-    connect(this, &MainWindow::sendSerialPort, worker, &SerialWorker::setSerialPort, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::frameUpdateRapid, this, &MainWindow::gotFrames, Qt::QueuedConnection);
-    connect(this, &MainWindow::updateBaudRates, worker, &SerialWorker::updateBaudRates, Qt::QueuedConnection);
-    connect(this, &MainWindow::sendCANFrame, worker, &SerialWorker::sendFrame, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::connectionSuccess, this, &MainWindow::connectionSucceeded, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::connectionFailure, this, &MainWindow::connectionFailed, Qt::QueuedConnection);
-    connect(worker, &SerialWorker::deviceInfo, this, &MainWindow::gotDeviceInfo, Qt::QueuedConnection);
-    connect(this, &MainWindow::closeSerialPort, worker, &SerialWorker::closeSerialPort, Qt::QueuedConnection);
-    connect(this, &MainWindow::startFrameCapturing, worker, &SerialWorker::startFrameCapture);
-    connect(this, &MainWindow::stopFrameCapturing, worker, &SerialWorker::stopFrameCapture);
-    connect(this, &MainWindow::settingsUpdated, worker, &SerialWorker::readSettings);
-    serialWorkerThread.start();
-    serialWorkerThread.setPriority(QThread::HighPriority);    
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -100,6 +80,8 @@ MainWindow::MainWindow(QWidget *parent) :
     udsScanWindow = NULL;
     motorctrlConfigWindow = NULL;
     isoWindow = NULL;
+    snifferWindow = NULL;
+    bisectWindow = NULL;
     dbcHandler = new DBCHandler;
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -109,7 +91,6 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setDBCHandler(dbcHandler);
 
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
-    connect(ui->actionConnect, SIGNAL(triggered(bool)), this, SLOT(connButtonPress()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
@@ -144,9 +125,13 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
+    connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
+    connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
 
-    lbStatusConnected.setText(tr("Not connected"));
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
+
+    lbStatusConnected.setText(tr("Connected to 0 buses"));
     updateFileStatus();
     lbStatusDatabase.setText(tr("No DBC database loaded"));
     ui->statusBar->addWidget(&lbStatusConnected);
@@ -157,7 +142,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->lbNumFrames->setText("0");
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
-    updateTimer.setInterval(250);
+    updateTimer.setInterval(500); //test 250);
     updateTimer.start();
 
     elapsedTime = new QTime;
@@ -178,15 +163,19 @@ MainWindow::MainWindow(QWidget *parent) :
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
 
+    //connect(CANConManager::getInstance(), CANConManager::connectionStatusUpdated, this, MainWindow::connectionStatusUpdated);
+    connect(CANConManager::getInstance(), SIGNAL(connectionStatusUpdated(int)), this, SLOT(connectionStatusUpdated(int)));
+
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow();
-    connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
+    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));    
+
 }
 
 MainWindow::~MainWindow()
 {
-    serialWorkerThread.quit();
-    serialWorkerThread.wait();
+    //serialWorkerThread.quit();
+    //serialWorkerThread.wait();
     //delete worker;
 
     if (graphingWindow)
@@ -284,13 +273,24 @@ MainWindow::~MainWindow()
         isoWindow->close();
         delete isoWindow;
     }
+    if (snifferWindow)
+    {
+        snifferWindow->close();
+        delete snifferWindow;
+        snifferWindow = NULL;
+    }
 
-    delete elapsedTime;
+    if (bisectWindow)
+    {
+        bisectWindow->close();
+        delete bisectWindow;
+        bisectWindow = NULL;
+    }
 
-    delete ui;
-    delete dbcHandler;
-    model->clearFrames();
     delete model;
+    delete elapsedTime;
+    delete dbcHandler;
+    delete ui;
 }
 
 void MainWindow::exitApp()
@@ -311,6 +311,7 @@ void MainWindow::exitApp()
     if (fuzzingWindow) fuzzingWindow->close();
     if (udsScanWindow) udsScanWindow->close();
     if (isoWindow) isoWindow->close();
+    if (snifferWindow) snifferWindow->close();
     this->close();
 }
 
@@ -340,16 +341,16 @@ void MainWindow::readSettings()
         ui->cbAutoScroll->setChecked(true);
     }
 
+    /*
     int cType = settings.value("Main/DefaultConnectionType", 0).toInt();
     if (cType == 0) connType = "GVRET";
     if (cType == 1) connType = "KVASER";
     if (cType == 2) connType = "SOCKETCAN";
     portName = settings.value("Main/DefaultConnectionPort", "").toString();
-    canSpeed0 = -1;
-    canSpeed1 = -1;
+    */
 
-    qDebug() << connType;
-    qDebug() << portName;
+    //qDebug() << connType;
+    //qDebug() << portName;
 
     //"Main/SingleWireMode"
 
@@ -380,52 +381,18 @@ void MainWindow::writeSettings()
 
 void MainWindow::updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1)
 {
-    connType = connectionType;
-    portName = port;
+    Q_UNUSED(connectionType);
+    Q_UNUSED(port);
+    Q_UNUSED(speed0);
+    Q_UNUSED(speed1);
+    //connType = connectionType;
+    //portName = port;
 
-    canSpeed0 = speed0;
-    canSpeed1 = speed1;
+    //canSpeed0 = speed0;
+    //canSpeed1 = speed1;
     if (isConnected)
     {
-        emit updateBaudRates(speed0, speed1);
-    }
-}
-
-void MainWindow::connButtonPress()
-{
-    if (!isConnected)
-    {
-        if (connType == "GVRET")
-        {
-            QList<QSerialPortInfo> ports;
-            ports = QSerialPortInfo::availablePorts();
-
-            for (int i = 0; i < ports.count(); i++)
-            {
-                if (ports[i].portName() == portName)
-                {
-                    portInfo = ports[i];
-                    //need to create some way to send single wire mode to serial port code
-                    emit sendSerialPort(&portInfo);
-                    lbStatusConnected.setText(tr("Attempting to connect to port ") + portName);
-                }
-            }
-        }
-        else if (connType == "KVASER")
-        {
-
-        }
-        else if (connType == "SOCKETCAN")
-        {
-
-        }
-    }
-    else
-    {
-        emit closeSerialPort();
-        isConnected = false;
-        lbStatusConnected.setText(tr("Not Connected"));
-        ui->actionConnect->setText(tr("Connect"));
+        //emit updateBaudRates(speed0, speed1);
     }
 }
 
@@ -517,28 +484,30 @@ void MainWindow::filterClearAll()
 
 void MainWindow::tickGUIUpdate()
 {
-    int elapsed = elapsedTime->elapsed();
-    if(elapsed) {
-        framesPerSec += rxFrames * 1000 / elapsed - (framesPerSec / 4);
-        elapsedTime->restart();
-    }
-    else
-        framesPerSec = 0;
+    rxFrames = model->sendBulkRefresh();
+    //if(rxFrames>0)
+    //{
+        int elapsed = elapsedTime->elapsed();
+        if(elapsed) {
+            framesPerSec = rxFrames * 1000 / elapsed;
+            elapsedTime->restart();
+        }
+        else
+            framesPerSec = 0;
 
-    model->sendBulkRefresh(rxFrames);
+        ui->lbNumFrames->setText(QString::number(model->rowCount()));
+        if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        ui->lbFPS->setText(QString::number(framesPerSec));
+        if (rxFrames > 0)
+        {
+            bDirty = true;
+            emit framesUpdated(rxFrames); //anyone care that frames were updated?
+        }
 
-    ui->lbNumFrames->setText(QString::number(model->rowCount()));
-    if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
-    ui->lbFPS->setText(QString::number(framesPerSec / 4));
-    if (rxFrames > 0)
-    {
-        bDirty = true;
-        emit framesUpdated(rxFrames); //anyone care that frames were updated?
-    }
+        if (model->needsFilterRefresh()) updateFilterList();
 
-    if (model->needsFilterRefresh()) updateFilterList();
-
-    rxFrames = 0;
+        rxFrames = 0;
+    //}
 }
 
 void MainWindow::gotFrames(int framesSinceLastUpdate)
@@ -549,7 +518,7 @@ void MainWindow::gotFrames(int framesSinceLastUpdate)
 
 void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 {
-    model->addFrame(frame, autoRefresh);    
+    model->addFrame(frame, autoRefresh);
     if (autoRefresh)
     {
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
@@ -572,6 +541,7 @@ void MainWindow::clearFrames()
 {
     ui->canFramesView->scrollToTop();
     model->clearFrames();
+    CANConManager::getInstance()->resetTimeBasis();
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     bDirty = false;
     loadedFileName = "";
@@ -583,16 +553,6 @@ void MainWindow::normalizeTiming()
 {
     model->normalizeTiming();
     emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
-}
-
-void MainWindow::changeBaudRates()
-{
-    int Speed1 = 0, Speed2 = 0;
-
-    //Speed1 = ui->cbSpeed1->currentText().toInt();
-    //Speed2 = ui->cbSpeed2->currentText().toInt();
-
-    emit updateBaudRates(Speed1, Speed2);
 }
 
 void MainWindow::handleLoadFile()
@@ -726,7 +686,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (int temp = 0; temp < thisFrame.len; temp++)
+        for (unsigned int temp = 0; temp < thisFrame.len; temp++)
         {
             builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
         }
@@ -761,52 +721,16 @@ void MainWindow::toggleCapture()
 {
     allowCapture = !allowCapture;
     if (allowCapture)
-    {
         ui->btnCaptureToggle->setText("Suspend Capturing");
-        emit startFrameCapturing();
-    }
     else
-    {
         ui->btnCaptureToggle->setText("Restart Capturing");
-        emit stopFrameCapturing();
-    }
+
+    emit suspendCapturing(!allowCapture);
 }
 
-void MainWindow::connectionSucceeded(int baud0, int baud1)
-{
-    lbStatusConnected.setText(tr("Connected to GVRET"));
-    //finally, find the baud rate in the list of rates or
-    //add it to the bottom if needed (that'll be weird though...
-/*
-    int idx = ui->cbSpeed1->findText(QString::number(baud0));
-    if (idx > -1) ui->cbSpeed1->setCurrentIndex(idx);
-    else
-    {
-        ui->cbSpeed1->addItem(QString::number(baud0));
-        ui->cbSpeed1->setCurrentIndex(ui->cbSpeed1->count() - 1);
-    }
-
-    idx = ui->cbSpeed2->findText(QString::number(baud1));
-    if (idx > -1) ui->cbSpeed2->setCurrentIndex(idx);
-    else
-    {
-        ui->cbSpeed2->addItem(QString::number(baud1));
-        ui->cbSpeed2->setCurrentIndex(ui->cbSpeed2->count() - 1);
-    }
-    */
-    if (connectionWindow) connectionWindow->setSpeeds(baud0, baud1);
-    //ui->btnConnect->setEnabled(false);
-    ui->actionConnect->setText(tr("Disconnect"));
-    isConnected = true;
-}
-
-void MainWindow::connectionFailed()
-{
-    lbStatusConnected.setText(tr("Failed to connect!"));
-
-    QMessageBox msgBox;
-    msgBox.setText("Connection to the GVRET firmware failed.\nYou might have an old version of GVRET\nor may have chosen the wrong serial port.");
-    msgBox.exec();
+void MainWindow::connectionStatusUpdated(int conns)
+{    
+    lbStatusConnected.setText(tr("Connected to ") + QString::number(conns) + tr(" buses"));
 }
 
 void MainWindow::updateFileStatus()
@@ -833,33 +757,6 @@ void MainWindow::updateFileStatus()
         }
     }
     lbStatusFilename.setText(output);
-}
-
-void MainWindow::gotDeviceInfo(int build, int swCAN)
-{
-    QString str = tr("Connected to GVRET ") + QString::number(build);
-    if (swCAN == 1) str += "(SW)";
-    lbStatusConnected.setText(str);
-
-    if (build < CURRENT_GVRET_VER)
-    {
-        QMessageBox msgBox;
-        msgBox.setText("It appears that you are not running\nan up-to-date version of GVRET\n\nYour version: "
-                       + QString::number(build) +"\nCurrent Version: " + QString::number(CURRENT_GVRET_VER)
-                       + "\n\nPlease upgrade your firmware version.\nOtherwise, you may experience difficulties.");
-        msgBox.exec();
-    }
-
-    if (connectionWindow)
-    {
-        if (swCAN == 1) connectionWindow->setCAN1SWMode(true);
-        else connectionWindow->setCAN1SWMode(false);
-    }
-}
-
-void MainWindow::setTargettedID(int id)
-{
-    worker->targetFrameID(id);
 }
 
 void MainWindow::showSettingsDialog()
@@ -914,6 +811,22 @@ void MainWindow::showISOInterpreterWindow()
     isoWindow->show();
 }
 
+void MainWindow::showSnifferWindow()
+{
+    if (!snifferWindow)
+        snifferWindow = new SnifferWindow(this);
+    snifferWindow->show();
+}
+
+void MainWindow::showBisectWindow()
+{
+    if (!bisectWindow)
+    {
+        bisectWindow = new BisectWindow(model->getListReference());
+    }
+    bisectWindow->show();
+}
+
 void MainWindow::showFrameSenderWindow()
 {
     if (!frameSenderWindow)
@@ -922,8 +835,6 @@ void MainWindow::showFrameSenderWindow()
             frameSenderWindow = new FrameSenderWindow(model->getListReference());
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
-
-        connect(frameSenderWindow, &FrameSenderWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
     }
     frameSenderWindow->show();
 }
@@ -933,9 +844,9 @@ void MainWindow::showPlaybackWindow()
     if (!playbackWindow)
     {
         if (!useFiltered)
-            playbackWindow = new FramePlaybackWindow(model->getListReference(), worker);
+            playbackWindow = new FramePlaybackWindow(model->getListReference());
         else
-            playbackWindow = new FramePlaybackWindow(model->getFilteredListReference(), worker);
+            playbackWindow = new FramePlaybackWindow(model->getFilteredListReference());
     }
     playbackWindow->show();
 }
@@ -945,8 +856,6 @@ void MainWindow::showFirmwareUploaderWindow()
     if (!firmwareUploaderWindow)
     {
         firmwareUploaderWindow = new FirmwareUploaderWindow(model->getListReference());
-        connect(firmwareUploaderWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
-        connect(worker, SIGNAL(gotTargettedFrame(int)), firmwareUploaderWindow, SLOT(gotTargettedFrame(int)));
     }
     firmwareUploaderWindow->show();
 }
@@ -974,8 +883,6 @@ void MainWindow::showFuzzingWindow()
     if (!fuzzingWindow)
     {
         fuzzingWindow = new FuzzingWindow(model->getListReference());
-        connect(fuzzingWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
-        connect(fuzzingWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
     }
     fuzzingWindow->show();
 }
@@ -985,8 +892,8 @@ void MainWindow::showMCConfigWindow()
     if (!motorctrlConfigWindow)
     {
         motorctrlConfigWindow = new MotorControllerConfigWindow(model->getListReference());
-        connect(motorctrlConfigWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
-        connect(motorctrlConfigWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
+        //connect(motorctrlConfigWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
+        //connect(motorctrlConfigWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
     }
     motorctrlConfigWindow->show();
 }
@@ -996,7 +903,6 @@ void MainWindow::showUDSScanWindow()
     if (!udsScanWindow)
     {
         udsScanWindow = new UDSScanWindow(model->getListReference());
-        connect(udsScanWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
     }
     udsScanWindow->show();
 }
@@ -1006,7 +912,6 @@ void MainWindow::showScriptingWindow()
     if (!scriptingWindow)
     {
         scriptingWindow = new ScriptingWindow(model->getListReference());
-        connect(scriptingWindow, &ScriptingWindow::sendCANFrame, worker, &SerialWorker::sendFrame);
     }
     scriptingWindow->show();
 }
@@ -1060,7 +965,6 @@ void MainWindow::showConnectionSettingsWindow()
     if (!connectionWindow)
     {
         connectionWindow = new ConnectionWindow();
-        connect(connectionWindow, SIGNAL(updateConnectionSettings(QString,QString,int,int)), this, SLOT(updateConnectionSettings(QString,QString,int,int)));
     }
     connectionWindow->show();
 }

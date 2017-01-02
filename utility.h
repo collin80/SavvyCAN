@@ -23,7 +23,7 @@ public:
             if (input.length() < 3) temp = 0;
             else temp = input.right(input.size() - 2).toLongLong(NULL, 16);
         }
-        else if (input.startsWith("B")) //binary number
+        else if (input.startsWith("0B") || input.startsWith("B")) //binary number
         {
             input = input.right(input.size() - 1); //remove the B
             for (int i = 0; i < input.length(); i++)
@@ -42,6 +42,17 @@ public:
     static uint64_t ParseStringToNum(QString input)
     {
         return ParseStringToNum(input.toUtf8());
+    }
+
+    static uint ParseStringToNum2(QString pInput, bool* pOk_p = NULL)
+    {
+        if(pInput.startsWith("0b"))
+        {
+            pInput.remove(0, 2);
+            return pInput.toUInt(pOk_p, 2);
+        }
+
+        return pInput.toUInt(pOk_p, 0);
     }
 
     static long GetTimeMS()

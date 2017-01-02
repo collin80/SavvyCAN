@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QDebug>
 #include "mainwindow.h"
+#include "connections/canconmanager.h"
 
 /*
  * notes: need to ensure that you grab pointers when modifying data structures and dont
@@ -139,9 +140,9 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
             Trigger *thisTrigger = &sendingData[sd].triggers[trig];
             qDebug() << "Trigger ID: " << thisTrigger->ID;
             qDebug() << "Frame ID: " << frame->ID;
-            if (thisTrigger->ID > 0 && thisTrigger->ID == frame->ID)
+            if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->ID)
             {
-                if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
+                if ((uint32_t)thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
                 {
                     if (thisTrigger->currCount < thisTrigger->maxCount)
                     {
@@ -151,7 +152,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
                             sendingData[sd].count++;
                             doModifiers(sd);
                             updateGridRow(sd);
-                            sendCANFrame(&sendingData[sd], sendingData[sd].bus);
+                            CANConManager::getInstance()->sendFrame(sendingData[sd]);
                         }
                         else //delayed sending frame
                         {
@@ -354,7 +355,7 @@ void FrameSenderWindow::handleTick()
                 doModifiers(i);
                 updateGridRow(i);
                 qDebug() << "About to try to send a frame";
-                emit sendCANFrame(&sendingData[i], sendingData[i].bus);
+                CANConManager::getInstance()->sendFrame(sendingData[i]);
                 if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
             }
         }
@@ -457,7 +458,7 @@ CANFrame* FrameSenderWindow::lookupFrame(int ID, int bus)
 {
     if (!frameCache.contains(ID)) return NULL;
 
-    if (bus == -1 || frameCache[ID].bus == bus) return &frameCache[ID];
+    if (bus == -1 || frameCache[ID].bus == (unsigned int)bus) return &frameCache[ID];
 
     return NULL;
 }
@@ -471,7 +472,7 @@ void FrameSenderWindow::processModifierText(int line)
 {
     qDebug() << "processModifierText";
     QString modString;
-    bool firstOp = true;
+    //bool firstOp = true;
     bool abort = false;
     QString token;
     ModifierOp thisOp;
@@ -495,7 +496,6 @@ void FrameSenderWindow::processModifierText(int line)
         {
             Modifier thisMod;
             thisMod.destByte = 0;
-            firstOp = true;
 
             QString leftSide = Utility::grabAlphaNumeric(mods[i]);
             if (leftSide.startsWith("D") && leftSide.length() == 2)
@@ -701,7 +701,7 @@ void FrameSenderWindow::updateGridRow(int idx)
     QTableWidgetItem *item = ui->tableSender->item(gridLine, 7);
     if (item == NULL) item = new QTableWidgetItem();
     item->setText(QString::number(temp->count));
-    for (int i = 0; i < temp->len; i++)
+    for (unsigned int i = 0; i < temp->len; i++)
     {
         dataString.append(Utility::formatNumber(temp->data[i]));
         dataString.append(" ");

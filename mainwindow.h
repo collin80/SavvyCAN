@@ -8,25 +8,29 @@
 #include "canframemodel.h"
 #include "can_structs.h"
 #include "framefileio.h"
-#include "graphingwindow.h"
-#include "frameinfowindow.h"
+#include "re/graphingwindow.h"
+#include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"
-#include "flowviewwindow.h"
+#include "bisectwindow.h"
+#include "re/flowviewwindow.h"
 #include "framesenderwindow.h"
-#include "filecomparatorwindow.h"
-#include "dbchandler.h"
-#include "dbcmaineditor.h"
+#include "re/filecomparatorwindow.h"
+#include "dbc/dbchandler.h"
+#include "dbc/dbcmaineditor.h"
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
-#include "discretestatewindow.h"
-#include "connectionwindow.h"
+#include "re/discretestatewindow.h"
+#include "connections/connectionwindow.h"
 #include "scriptingwindow.h"
-#include "rangestatewindow.h"
-#include "dbcloadsavewindow.h"
-#include "fuzzingwindow.h"
-#include "udsscanwindow.h"
-#include "isotp_interpreterwindow.h"
+#include "re/rangestatewindow.h"
+#include "dbc/dbcloadsavewindow.h"
+#include "re/fuzzingwindow.h"
+#include "re/udsscanwindow.h"
+#include "re/sniffer/snifferwindow.h"
+#include "re/isotp_interpreterwindow.h"
 #include "motorcontrollerconfigwindow.h"
+
+class ConnectionWindow;
 
 namespace Ui {
 class MainWindow;
@@ -40,7 +44,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
     static MainWindow *getReference();
-    void setTargettedID(int);
     ~MainWindow();
 
 private slots:
@@ -49,7 +52,6 @@ private slots:
     void handleSaveFilteredFile();
     void handleSaveFilters();
     void handleLoadFilters();
-    void connButtonPress();
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
@@ -69,12 +71,11 @@ private slots:
     void showMCConfigWindow();
     void showUDSScanWindow();
     void showISOInterpreterWindow();
+    void showSnifferWindow();
+    void showBisectWindow();
     void exitApp();
     void handleSaveDecoded();
-    void changeBaudRates();
-    void connectionFailed();
-    void gotDeviceInfo(int, int);
-    void connectionSucceeded(int, int);
+    void connectionStatusUpdated(int conns);
     void gridClicked(QModelIndex);
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
@@ -94,12 +95,8 @@ public slots:
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 signals:
-    void sendSerialPort(QSerialPortInfo *port);
-    void closeSerialPort();
-    void updateBaudRates(int, int);
     void sendCANFrame(const CANFrame *, int);
-    void stopFrameCapturing();
-    void startFrameCapturing();
+    void suspendCapturing(bool);
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
     void framesUpdated(int numFrames); //something has updated the frame list
@@ -114,8 +111,6 @@ private:
     //canbus related data
     CANFrameModel *model;
     DBCHandler *dbcHandler;    
-    QThread serialWorkerThread;
-    SerialWorker *worker;
     QByteArray inputBuffer;
     QTimer updateTimer;
     QTime *elapsedTime;
@@ -146,7 +141,9 @@ private:
     FuzzingWindow *fuzzingWindow;
     UDSScanWindow *udsScanWindow;
     ISOTP_InterpreterWindow *isoWindow;
+    SnifferWindow* snifferWindow;
     MotorControllerConfigWindow *motorctrlConfigWindow;
+    BisectWindow* bisectWindow;
 
     //various private storage
     QLabel lbStatusConnected;
@@ -154,9 +151,6 @@ private:
     QLabel lbStatusDatabase;
     int normalRowHeight;
     bool isConnected;
-    QSerialPortInfo portInfo;
-    QString connType, portName;
-    int canSpeed0, canSpeed1;
 
     //private methods
     void saveDecodedTextFile(QString);

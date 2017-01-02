@@ -1,14 +1,12 @@
-#include "scriptcontainer.h"
-
 #include <QJSValueIterator>
 #include <QDebug>
 
-ScriptContainer::ScriptContainer()
-{
-    fileName = QString();
-    filePath = QString();
-    scriptText = QString();
+#include "scriptcontainer.h"
+#include "connections/canconmanager.h"
 
+ScriptContainer::ScriptContainer(QString& pConName):
+    mConName(pConName)
+{
     connect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
 }
 
@@ -68,6 +66,22 @@ void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     CANFilter filter;
     filter.setFilter(idVal, maskVal, busVal);
     filters.append(filter);
+
+    qDebug() << "FIXME setFilter";
+    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
+    if(conn_p)
+    {
+        CANFlt canFlt;
+        for(int i=0 ; i<conn_p->getNumBuses() ; i++)
+        {
+            foreach(const CANFilter& flt, filters)
+            {
+                if(flt.bus==i) {
+                    conn_p->addTargettedFrame(busVal, idVal, maskVal, this);
+                }
+            }
+        }
+    }
 }
 
 void ScriptContainer::setTickInterval(QJSValue interval)
@@ -86,6 +100,13 @@ void ScriptContainer::clearFilters()
 {
     qDebug() << "Called clear filters";
     filters.clear();
+
+    qDebug() << "FIXME clearFilters";
+    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
+    if(conn_p)
+    {
+        conn_p->removeAllTargettedFrames(this);
+    }
 }
 
 void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
@@ -93,25 +114,25 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     CANFrame frame;
     frame.extended = false;
     frame.ID = id.toInt();
-    frame.len = length.toInt();
-    if (frame.len < 0) frame.len = 0;
+    frame.len = length.toUInt();
     if (frame.len > 8) frame.len = 8;
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
-    for (int i = 0; i < frame.len; i++)
+    for (unsigned int i = 0; i < frame.len; i++)
     {
         frame.data[i] = (uint8_t)data.property(i).toInt();
     }
 
-    frame.bus = bus.toInt();
-    if (frame.bus < 0) frame.bus = 0;
+    frame.bus = (uint32_t)bus.toInt();
     if (frame.bus > 1) frame.bus = 1;
 
     if (frame.ID > 0x7FF) frame.extended = true;
 
-    //qDebug() << "Sending frame from script";
-    emit sendCANFrame(&frame, frame.bus);
+    qDebug() << "sending frame from script";
+    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
+    if(conn_p)
+        conn_p->sendFrame(frame);
 }
 
 void ScriptContainer::gotFrame(const CANFrame &frame)
@@ -125,7 +146,7 @@ void ScriptContainer::gotFrame(const CANFrame &frame)
             QJSValueList args;
             args << frame.bus << frame.ID << frame.len;
             QJSValue dataBytes = scriptEngine.newArray(frame.len);
-            for (int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
+            for (unsigned int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
             args.append(dataBytes);
             gotFrameFunction.call(args);
             return; //as soon as one filter matches we jump out

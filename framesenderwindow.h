@@ -30,9 +30,6 @@ private slots:
     void loadGrid();
     void updatedFrames(int);
 
-signals:
-    void sendCANFrame(const CANFrame *, int);
-
 private:
     Ui::FrameSenderWindow *ui;
     QList<FrameSendData> sendingData;

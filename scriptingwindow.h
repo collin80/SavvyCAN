@@ -3,6 +3,7 @@
 
 #include "can_structs.h"
 #include "scriptcontainer.h"
+#include "connections/canconnection.h"
 
 #include <QDialog>
 #include <QJSEngine>
@@ -28,12 +29,7 @@ private slots:
     void saveScript();
     void revertScript();
     void recompileScript();
-    void updatedFrames(int);
-
-public slots:
-
-signals:
-    void sendCANFrame(const CANFrame *, int);
+    void newFrames(const CANConnection*, const QVector<CANFrame>&);
 
 private:
     void closeEvent(QCloseEvent *event);
@@ -44,8 +40,6 @@ private:
     QList<ScriptContainer *> scripts;
     ScriptContainer *currentScript;
     const QVector<CANFrame> *modelFrames;
-
-
 };
 
 #endif // SCRIPTINGWINDOW_H

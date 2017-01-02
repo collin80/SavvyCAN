@@ -246,6 +246,8 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
 
 bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CANFrame> *frames)
 {
+    Q_UNUSED(filename);
+    Q_UNUSED(frames);
     return true;
 }
 
@@ -324,7 +326,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
                         else thisFrame.isReceived = true;
                     thisFrame.bus = 0;
                     thisFrame.len = tokens.length() - 3;
-                    for (int d = 0; d < thisFrame.len; d++)
+                    for (unsigned int d = 0; d < thisFrame.len; d++)
                     {
                         if (tokens[d + 3] != "")
                         {
@@ -381,7 +383,7 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
         outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(' ');
 
-        for (int temp = 0; temp < frames->at(c).len; temp++)
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
@@ -440,7 +442,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.bus = 0;
                 thisFrame.extended = false;
                 QList<QByteArray> tokens = line.mid(41, thisFrame.len * 3).split(' ');
-                for (int d = 0; d < thisFrame.len; d++)
+                for (unsigned int d = 0; d < thisFrame.len; d++)
                 {
                     if (tokens[d] != "")
                     {
@@ -512,9 +514,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                 {
                     thisFrame.isReceived = true;
                     thisFrame.bus = tokens[3].toInt();
-                    thisFrame.len = tokens[4].toInt();
+                    thisFrame.len = tokens[4].toUInt();
                     for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
-                    for (int d = 0; d < thisFrame.len; d++)
+                    for (unsigned int d = 0; d < thisFrame.len; d++)
                         thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
                 }
                 else if (fileVersion == 2)
@@ -522,10 +524,10 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     if (tokens[3].at(0) == 'R') thisFrame.isReceived = true;
                     else thisFrame.isReceived = false;
                     thisFrame.bus = tokens[4].toInt();
-                    thisFrame.len = tokens[5].toInt();
-                    if (thisFrame.len + 6 > tokens.length()) thisFrame.len = tokens.length() - 6;
+                    thisFrame.len = tokens[5].toUInt();
+                    if (thisFrame.len + 6 > (unsigned int) tokens.length()) thisFrame.len = tokens.length() - 6;
                     for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
-                    for (int d = 0; d < thisFrame.len; d++)
+                    for (unsigned int d = 0; d < thisFrame.len; d++)
                         thisFrame.data[d] = tokens[6 + d].toInt(NULL, 16);
                 }
 
@@ -580,7 +582,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
         outFile->write(QString::number(frames->at(c).len).toUtf8());
         outFile->putChar(44);
 
-        for (int temp = 0; temp < 8; temp++)
+        for (unsigned int temp = 0; temp < 8; temp++)
         {
             if (temp < frames->at(c).len)
                 outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
@@ -636,7 +638,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
             QList<QByteArray> dataTok = tokens[1].split(' ');
             thisFrame.len = dataTok.length();
             if (thisFrame.len > 8) thisFrame.len = 8;
-            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataTok[d].toInt(NULL, 16);
+            for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataTok[d].toInt(NULL, 16);
 
             frames->append(thisFrame);
         }
@@ -674,7 +676,7 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
         outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(44);
 
-        for (int temp = 0; temp < frames->at(c).len; temp++)
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
@@ -762,10 +764,9 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
                 if (tokens[4] == "s") thisFrame.extended = false;
                     else thisFrame.extended = true;
                 thisFrame.bus = tokens[2].toInt() - 1;
-                thisFrame.len = tokens[5].toInt();
+                thisFrame.len = tokens[5].toUInt();
                 if (thisFrame.len > 8) thisFrame.len = 8;
-                if (thisFrame.len < 0) thisFrame.len = 0;
-                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = tokens[d + 6].toInt(NULL, 16);
+                for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = tokens[d + 6].toInt(NULL, 16);
                 frames->append(thisFrame);
             }
             else foundErrors = true;
@@ -825,7 +826,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
             else outFile->write(" s ");
         outFile->write(QString::number(frames->at(c).len).toUtf8() + " ");
 
-        for (int temp = 0; temp < frames->at(c).len; temp++)
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
@@ -902,7 +903,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
 
                 QStringList dataToks = unQuote(tokens[4]).simplified().split(' ');
                 thisFrame.len = dataToks.length();
-                for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
+                for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
                 frames->append(thisFrame);
             }
             else foundErrors = true;
@@ -955,7 +956,7 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
             else outFile->write(",\"Std\"");
         outFile->write(",\"\",\"");
 
-        for (int temp = 0; temp < frames->at(c).len; temp++)
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
@@ -1018,7 +1019,7 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
 
         if (thisFrame.len <= 8 && thisFrame.ID <= 0x7FF)
         {
-            for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)data[4 + d];
+            for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)data[4 + d];
             frames->append(thisFrame);
         }
         else foundErrors = true;
@@ -1050,8 +1051,8 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
     ms = (thisFrame.timestamp / 1000);
     data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
     data[1] = (char)(ms & 0xFF);
-    data[2] = 0xFF;
-    data[3] = 0xFF;
+    data[2] = (char)0xFF;
+    data[3] = (char)0xFF;
     for (int l = 0; l < 8; l++) data[4 + l] = 0;
     outFile->write(data);
 
@@ -1063,7 +1064,7 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
             qApp->processEvents();
             lineCounter = 0;
         }
-        for (int j = 0; j < 8; j++) data[4 + j] = 0xFF;        
+        for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
 
         thisFrame = frames->at(c);
         if (!thisFrame.extended)
@@ -1074,7 +1075,7 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
             data[1] = (char)(ms & 0xFF);
             data[2] = (char)(id & 0xFF);
             data[3] = (char)((id >> 8) + (thisFrame.len << 4));
-            for (int d = 0; d < thisFrame.len; d++) data[4 + d] = (char)thisFrame.data[d];
+            for (unsigned int d = 0; d < thisFrame.len; d++) data[4 + d] = (char)thisFrame.data[d];
             outFile->write(data);
         }
     }
@@ -1140,11 +1141,10 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
                         if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
                             else thisFrame.extended = true;
                         thisFrame.bus = 0;
-                        thisFrame.len = tokens[3].toInt();
+                        thisFrame.len = tokens[3].toUInt();
                         if (thisFrame.len > 8) thisFrame.len = 8;
-                        if (thisFrame.len < 0) thisFrame.len = 0;
-                        if (thisFrame.len + 4 > tokens.length()) thisFrame.len = tokens.length() - 4;
-                        for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)Utility::ParseStringToNum(tokens[4 + d]);
+                        if (thisFrame.len + 4 > (unsigned int) tokens.length()) thisFrame.len = tokens.length() - 4;
+                        for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)Utility::ParseStringToNum(tokens[4 + d]);
                         frames->append(thisFrame);
                     }
                     else foundErrors = true;
@@ -1206,7 +1206,7 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
         outFile->write("0x" + QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
         outFile->write(QString::number(frames->at(c).len).toUtf8() + ";");
 
-        for (int temp = 0; temp < frames->at(c).len; temp++)
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write("0x" + QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(';');
@@ -1299,12 +1299,11 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
                     if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
                         else thisFrame.extended = true;
                     thisFrame.bus = 0;
-                    thisFrame.len = tokens[3].toInt();
-                    if (thisFrame.len < 0) thisFrame.len = 0;
+                    thisFrame.len = tokens[3].toUInt();
                     if (thisFrame.len > 8) thisFrame.len = 8;
                     QList<QByteArray> dataToks = tokens[4].split(' ');
-                    if (thisFrame.len > dataToks.length()) thisFrame.len = dataToks.length();
-                    for (int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)dataToks[d].toInt(NULL, 16);
+                    if (thisFrame.len > (unsigned int) dataToks.length()) thisFrame.len = (unsigned int) dataToks.length();
+                    for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = (unsigned char)dataToks[d].toInt(NULL, 16);
                     frames->append(thisFrame);
                 }
                 else foundErrors = true;
@@ -1391,7 +1390,7 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
 
         outFile->write(QString::number(frames->at(c).len).toUtf8() + "\t");
 
-        for (int temp = 0; temp < frames->at(c).len; temp++)
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');

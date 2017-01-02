@@ -25,7 +25,7 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
     updateProgress();
 
     timer = new QTimer();
-    timer->setInterval(100); //100ms without a reply will cause us to attempt a resend
+    timer->setInterval(100); //100ms without a reply will cause us to attempt a resend    
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(handleLoadFile()));
@@ -36,6 +36,7 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
 FirmwareUploaderWindow::~FirmwareUploaderWindow()
 {
     timer->stop();
+    CANConManager::getInstance()->removeAllTargettedFrames(this);
     delete timer;
     delete ui;
 }
@@ -47,7 +48,7 @@ void FirmwareUploaderWindow::updateProgress()
 
 void FirmwareUploaderWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    //CANFrame thisFrame;
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -66,10 +67,10 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
     }
 }
 
-void FirmwareUploaderWindow::gotTargettedFrame(int frameLoc)
+void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 {
-    const CANFrame &frame = modelFrames->at(frameLoc);
-    if (frame.ID == (baseAddress + 0x10)) {
+    qDebug() << "FUW: Got targetted frame with id " << frame.ID;
+    if (frame.ID == (uint32_t)(baseAddress + 0x10)) {
         qDebug() << "Start firmware reply";
         if ((frame.data[0] == 0xAD) && (frame.data[1] == 0xDE))
         {
@@ -81,7 +82,7 @@ void FirmwareUploaderWindow::gotTargettedFrame(int frameLoc)
                     if ((frame.data[6] == ((token >> 16) & 0xFF)) && (frame.data[7] == ((token >> 24) & 0xFF)))
                     {
                         qDebug() << "starting firmware process";
-                        MainWindow::getReference()->setTargettedID(baseAddress + 0x20);
+                        //MainWindow::getReference()->setTargettedID(baseAddress + 0x20);
                         transferInProgress = true;
                         sendFirmwareChunk();
                     }
@@ -90,7 +91,7 @@ void FirmwareUploaderWindow::gotTargettedFrame(int frameLoc)
         }
     }
 
-    if (frame.ID == (baseAddress + 0x20)) {
+    if (frame.ID == (uint32_t)(baseAddress + 0x20)) {
         qDebug() << "Firmware reception success reply";
         int seq = frame.data[0] + (256 * frame.data[1]);
         if (seq == currentSendingPosition)
@@ -126,6 +127,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     int xorByte = 0;
     output->extended = false;
     output->len = 7;
+    output->bus = bus;
     output->ID = baseAddress + 0x16;
     output->data[0] = currentSendingPosition & 0xFF;
     output->data[1] = (currentSendingPosition >> 8) & 0xFF;
@@ -135,7 +137,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     output->data[5] = firmwareData[firmwareLocation++];
     for (int i = 0; i < 6; i++) xorByte = xorByte ^ output->data[i];
     output->data[6] = xorByte;    
-    sendCANFrame(output, bus);
+    sendCANFrame(output);
     timer->start();
 }
 
@@ -143,13 +145,14 @@ void FirmwareUploaderWindow::sendFirmwareEnding()
 {
     CANFrame *output = new CANFrame;
     output->extended = false;
+    output->bus = bus;
     output->len = 4;
     output->ID = baseAddress + 0x30;
     output->data[3] = 0xC0;
     output->data[2] = 0xDE;
     output->data[1] = 0xFA;
     output->data[0] = 0xDE;
-    sendCANFrame(output, bus);
+    //sendCANFrame(output, bus);
 }
 
 void FirmwareUploaderWindow::handleStartStopTransfer()
@@ -164,10 +167,12 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         bus = ui->spinBus->value();
         baseAddress = Utility::ParseStringToNum(ui->txtBaseAddr->text());
         qDebug() << "Base address: " + QString::number(baseAddress);
-        MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
+        CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x10, 0x7FF, this);
+        CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x20, 0x7FF, this);
         CANFrame *output = new CANFrame;
         output->extended = false;
         output->len = 8;
+        output->bus = bus;
         output->ID = baseAddress;
 
         output->data[0] = 0xEF;
@@ -178,12 +183,12 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         output->data[5] = (token >> 8) & 0xFF;
         output->data[6] = (token >> 16) & 0xFF;
         output->data[7] = (token >> 24) & 0xFF;
-        sendCANFrame(output, bus);
+        sendCANFrame(output);
     }
     else //stop anything in process
     {
         ui->btnStartStop->setText("Start Upload");
-        MainWindow::getReference()->setTargettedID(-1);
+        CANConManager::getInstance()->removeAllTargettedFrames(this);
     }
 }
 
@@ -191,7 +196,6 @@ void FirmwareUploaderWindow::handleLoadFile()
 {
     QString filename;
     QFileDialog dialog;
-    bool result = false;
 
     QStringList filters;
     filters.append(QString(tr("Raw firmware binary (*.bin)")));

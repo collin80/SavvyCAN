@@ -7,7 +7,8 @@
 #include <QDebug>
 #include <QMutex>
 #include "can_structs.h"
-#include "dbchandler.h"
+#include "dbc/dbchandler.h"
+#include "connections/canconnection.h"
 
 class CANFrameModel: public QAbstractTableModel
 {
@@ -15,6 +16,7 @@ class CANFrameModel: public QAbstractTableModel
 
 public:
     CANFrameModel(QObject *parent = 0);
+    virtual ~CANFrameModel();
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
@@ -23,16 +25,15 @@ public:
     int columnCount(const QModelIndex &) const;
     int totalFrameCount();    
 
-    void addFrame(const CANFrame &, bool);
     void sendRefresh();
     void sendRefresh(int);
-    void sendBulkRefresh(int);
+    int  sendBulkRefresh();
     void clearFrames();
     void setDBCHandler(DBCHandler *);
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
     void setHexMode(bool);
-    void setFilterState(int ID, bool state);
+    void setFilterState(unsigned int ID, bool state);
     void setAllFilters(bool state);
     void setSecondsMode(bool);
     void loadFilterFile(QString filename);
@@ -41,10 +42,14 @@ public:
     void recalcOverwrite();
     bool needsFilterRefresh();
     void insertFrames(const QVector<CANFrame> &newFrames);
-    int getIndexFromTimeID(int ID, double timestamp);
+    int getIndexFromTimeID(unsigned int ID, double timestamp);
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
     const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
+
+public slots:
+    void addFrame(const CANFrame&, bool);
+    void addFrames(const CANConnection*, const QVector<CANFrame>&);
 
 signals:
     void updatedFiltersList();
