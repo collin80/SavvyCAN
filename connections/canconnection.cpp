@@ -278,7 +278,7 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     for (int i = 0; i < getNumBuses(); i++)
     {
         if ( (pBusId == -1) || (pBusId && (1 << i)) ) {
-            qDebug() << "Connection is registering a new targetted frame filter";
+            qDebug() << "Connection is registering a new targetted frame filter, local bus " << i;
             CANFlt target;
             target.id = ID;
             target.mask = mask;
@@ -339,8 +339,10 @@ bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 void CANConnection::checkTargettedFrame(CANFrame &frame)
 {
     unsigned int maskedID;
+    qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
     foreach (const CANFlt filt, mBusData_p[frame.bus].mTargettedFrames)
     {
+        qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
         maskedID = frame.ID & filt.mask;
         if (maskedID == filt.id) {
             qDebug() << "In connection object I got a targetted frame. Forwarding it.";

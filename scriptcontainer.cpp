@@ -105,8 +105,7 @@ void ScriptContainer::clearFilters()
     CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
     if(conn_p)
     {
-        //for(int i=0 ; i<conn_p->getNumBuses() ; i++)
-            //conn_p->setFilters(i, QVector<CANFlt>(), false);
+        conn_p->removeAllTargettedFrames(this);
     }
 }
 

@@ -25,10 +25,7 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
     updateProgress();
 
     timer = new QTimer();
-    timer->setInterval(100); //100ms without a reply will cause us to attempt a resend
-
-    CANConManager::getInstance()->addTargettedFrame(-1, 0x100, 0x7F0, this);
-    //MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
+    timer->setInterval(100); //100ms without a reply will cause us to attempt a resend    
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(handleLoadFile()));
@@ -170,7 +167,8 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         bus = ui->spinBus->value();
         baseAddress = Utility::ParseStringToNum(ui->txtBaseAddr->text());
         qDebug() << "Base address: " + QString::number(baseAddress);
-        //MainWindow::getReference()->setTargettedID(baseAddress + 0x10);
+        CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x10, 0x7FF, this);
+        CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x20, 0x7FF, this);
         CANFrame *output = new CANFrame;
         output->extended = false;
         output->len = 8;
@@ -190,7 +188,7 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
     else //stop anything in process
     {
         ui->btnStartStop->setText("Start Upload");
-        //MainWindow::getReference()->setTargettedID(-1);
+        CANConManager::getInstance()->removeAllTargettedFrames(this);
     }
 }
 
