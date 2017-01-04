@@ -57,7 +57,7 @@ However, this source code is integrated into the source for SavvyCAN and one isn
 This project requires 5.6.0 or higher because of a dependency on QSerialBus which is an optional download
 with QT 5.6 (so, be sure to select it)
 
-Instructions for compiling:
+##Instructions for compiling:
 
 Download the newest stable version of Qt directly from qt.io (You need 5.6.x or newer)
 
@@ -88,4 +88,16 @@ make
 Now run SavvyCAN
 
 ./SavvyCAN
+
+##What to do if your compile failed?
+
+The very first thing to do is try:
+
+qmake
+
+make clean
+
+make
+
+Did that fix it? Great! If not, see if QT seems to be complaining about not finding the QScintilla header files. If that's the case then you are probably not using the same QT version as QScintilla was compiled against. It's easy to run the wrong qmake and have this happen. Double check that you've already compiled and installed QScintilla and that you've used the proper qmake version.
 
