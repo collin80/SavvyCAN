@@ -130,14 +130,14 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             [=]()
             {
                 if (currentSignal == NULL) return;
-                currentSignal->comment = ui->txtComment->text();
+                currentSignal->comment = ui->txtComment->text().simplified().replace(' ', '_');
             });
 
     connect(ui->txtUnitName, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == NULL) return;
-                currentSignal->unitName = ui->txtUnitName->text();
+                currentSignal->unitName = ui->txtUnitName->text().simplified().replace(' ', '_');
             });
     connect(ui->txtBitLength, &QLineEdit::editingFinished,
             [=]()
@@ -155,7 +155,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
             [=]()
             {
                 if (currentSignal == NULL) return;
-                currentSignal->name = ui->txtName->text();
+                currentSignal->name = ui->txtName->text().simplified().replace(' ', '_');
                 //need to update the list too.
                 ui->signalsList->currentItem()->setText(currentSignal->name);
             });
@@ -291,7 +291,7 @@ void DBCSignalEditor::onValuesCellChanged(int row,int col)
     }
     else if (col == 1)
     {
-        currentSignal->valList[row].descript = ui->valuesTable->item(row, col)->text();
+        currentSignal->valList[row].descript = ui->valuesTable->item(row, col)->text().simplified().replace(' ', '_');
     }
 }
 
