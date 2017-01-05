@@ -109,6 +109,8 @@ bool SocketCan::piSendFrame(const CANFrame& pFrame)
     if(0 != pFrame.bus || pFrame.len>8)
         return false;
 
+    if (!mDev_p) return false;
+
     /* fill frame */
     QCanBusFrame frame;
     frame.setFrameId(pFrame.ID);
