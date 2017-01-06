@@ -44,6 +44,8 @@ void NewGraphDialog::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     loadMessages();
+    drawBitfield();
+    qDebug() << "S" << ui->gridData->geometry();
 }
 
 void NewGraphDialog::addButtonClicked()
@@ -153,6 +155,7 @@ void NewGraphDialog::bitfieldClicked(int x,int y)
 
 void NewGraphDialog::drawBitfield()
 {
+    qDebug() << "Draw Bitfield";
     int64_t bitField = 0;
     int endBit, sBit;
 

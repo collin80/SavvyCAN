@@ -43,6 +43,7 @@ void CANDataGrid::mousePressEvent(QMouseEvent *event)
 void CANDataGrid::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
+    qDebug() << "CANDataGrid Paint Event";
     int x, y;
     unsigned char prevByte, thisByte;
     bool thisBit, prevBit;
@@ -53,6 +54,8 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 
     int xSpan = viewport.right() - viewport.left();
     int ySpan = viewport.bottom() - viewport.top();
+
+    qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
 
     int xSector = xSpan / 10;
     int ySector = ySpan / 10;
@@ -139,7 +142,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 
             //painter.fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
             painter.drawRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector);
-            painter.drawText(viewport.left() + (x+2) * xSector + (xSector / 3), viewport.top() + (y + 3) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
+            painter.drawText(viewport.left() + (x+2) * xSector + (xSector / 8), viewport.top() + (y + 3) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
         }
     }
     upperLeft.setX(viewport.left() + 2 * xSector);
