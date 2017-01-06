@@ -73,6 +73,7 @@ private:
     QList<CANConnection*>  mConns;
     QTimer                 mTimer;
     uint64_t               mTimestampBasis;
+    uint32_t               mNumActiveBuses;
 };
 
 #endif // CANCONNECTIONMODEL_H

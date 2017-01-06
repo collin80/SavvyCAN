@@ -21,6 +21,8 @@ CANConManager::CANConManager(QObject *parent): QObject(parent)
     mTimer.setSingleShot(false);
     mTimer.start();
 
+    mNumActiveBuses = 0;
+
     resetTimeBasis();
 }
 
@@ -39,7 +41,6 @@ CANConManager::~CANConManager()
 void CANConManager::add(CANConnection* pConn_p)
 {    
     mConns.append(pConn_p);
-    emit connectionStatusUpdated(getNumBuses());
 }
 
 
@@ -47,7 +48,6 @@ void CANConManager::remove(CANConnection* pConn_p)
 {
     //disconnect(pConn_p, 0, this, 0);
     mConns.removeOne(pConn_p);
-    emit connectionStatusUpdated(getNumBuses());
 }
 
 //Get total number of buses currently registered with the program
@@ -104,6 +104,17 @@ CANConnection* CANConManager::getByName(const QString& pName) const
 
 void CANConManager::refreshConnection(CANConnection* pConn_p)
 {
+    int buses = 0;
+    foreach(CANConnection* conn_p, mConns)
+    {
+        if (conn_p->getStatus() == CANCon::CONNECTED) buses += conn_p->getNumBuses();
+    }
+    if (buses != mNumActiveBuses)
+    {
+        mNumActiveBuses = buses;
+        emit connectionStatusUpdated(buses);
+    }
+
     if (pConn_p->getQueue().peek() == NULL) return;
 
     CANFrame* frame_p = NULL;
