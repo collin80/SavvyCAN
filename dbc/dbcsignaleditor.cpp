@@ -139,7 +139,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
                 if (currentSignal == NULL) return;
                 currentSignal->unitName = ui->txtUnitName->text().simplified().replace(' ', '_');
             });
-    connect(ui->txtBitLength, &QLineEdit::editingFinished,
+    connect(ui->txtBitLength, &QLineEdit::textChanged,
             [=]()
             {
                 if (currentSignal == NULL) return;

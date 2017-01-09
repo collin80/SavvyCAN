@@ -45,7 +45,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
     if (valType == STRING)
     {
         QString buildString;
-        int startByte = signalSize / 8;
+        int startByte = startBit / 8;
         int bytes = signalSize / 8;
         for (int x = 0; x < bytes; x++) buildString.append(frame.data[startByte + x]);
         outString = buildString;
