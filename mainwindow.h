@@ -157,6 +157,8 @@ private:
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);
+    void killEmAll();
+    void killWindow(QDialog *win);
     void readSettings();
     void readUpdateableSettings();
     void writeSettings();

@@ -174,144 +174,58 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    //serialWorkerThread.quit();
-    //serialWorkerThread.wait();
-    //delete worker;
-
-    if (graphingWindow)
-    {
-        graphingWindow->close();
-        delete graphingWindow;
-    }
-
-    if (frameInfoWindow)
-    {
-        frameInfoWindow->close();
-        delete frameInfoWindow;
-    }
-
-    if (playbackWindow)
-    {
-        playbackWindow->close();
-        delete playbackWindow;
-    }
-
-    if (flowViewWindow)
-    {
-        flowViewWindow->close();
-        delete flowViewWindow;
-    }
-
-    if (frameSenderWindow)
-    {
-        frameSenderWindow->close();
-        delete frameSenderWindow;
-    }
-
-    if (comparatorWindow)
-    {
-        comparatorWindow->close();
-        delete comparatorWindow;
-    }
-
-    if (dbcMainEditor)
-    {
-        dbcMainEditor->close();
-        delete dbcMainEditor;
-    }
-
-    if (settingsDialog)
-    {
-        settingsDialog->close();
-        delete settingsDialog;
-    }
-
-    if (discreteStateWindow)
-    {
-        discreteStateWindow->close();
-        delete discreteStateWindow;
-    }
-
-    if (connectionWindow)
-    {
-        connectionWindow->close();
-        delete connectionWindow;
-    }
-   
-    if (scriptingWindow)
-    {
-        scriptingWindow->close();
-        delete scriptingWindow;
-    }
-
-    if (rangeWindow)
-    {
-        rangeWindow->close();
-        delete rangeWindow;
-    }
-
-    if (dbcFileWindow)
-    {
-        dbcFileWindow->close();
-        delete dbcFileWindow;
-    }
-
-    if (fuzzingWindow)
-    {
-        fuzzingWindow->close();
-        delete fuzzingWindow;
-    }
-
-    if (udsScanWindow)
-    {
-        udsScanWindow->close();
-        delete udsScanWindow;
-    }
-
-    if (isoWindow)
-    {
-        isoWindow->close();
-        delete isoWindow;
-    }
-    if (snifferWindow)
-    {
-        snifferWindow->close();
-        delete snifferWindow;
-        snifferWindow = NULL;
-    }
-
-    if (bisectWindow)
-    {
-        bisectWindow->close();
-        delete bisectWindow;
-        bisectWindow = NULL;
-    }
-
+    //killEmAll(); //Ride the lightning
     delete model;
     delete elapsedTime;
     delete dbcHandler;
     delete ui;
 }
 
+//kill every sub window that could be open. At the moment a hard coded list
+//but eventually each window should be registered and be able to be iterated.
+void MainWindow::killEmAll()
+{
+    killWindow(graphingWindow);
+    killWindow(frameInfoWindow);
+    killWindow(playbackWindow);
+    killWindow(flowViewWindow);
+    killWindow(frameSenderWindow);
+    killWindow(comparatorWindow);
+    killWindow(dbcMainEditor);
+    killWindow(settingsDialog);
+    killWindow(discreteStateWindow);
+    killWindow(connectionWindow);
+    killWindow(scriptingWindow);
+    killWindow(rangeWindow);
+    killWindow(dbcFileWindow);
+    killWindow(fuzzingWindow);
+    killWindow(udsScanWindow);
+    killWindow(isoWindow);
+    killWindow(snifferWindow);
+    killWindow(bisectWindow);
+    killWindow(firmwareUploaderWindow);
+    killWindow(motorctrlConfigWindow);
+}
+
+//forcefully close the window, kill it, and salt the earth
+//note, for some stupid reason this function causes a seg fault
+//it seems that when it runs just before the program closes it'll
+//fault out when trying to close the connection window. I assume
+//this could be because that window has long running threads open and doesn't
+//close quickly or maybe cleanly. Investigate.
+void MainWindow::killWindow(QDialog *win)
+{
+    if (win)
+    {
+        win->close();
+        delete win;
+        win = NULL;
+    }
+}
+
 void MainWindow::exitApp()
 {
-    if (graphingWindow) graphingWindow->close();
-    if (frameInfoWindow) frameInfoWindow->close();
-    if (playbackWindow) playbackWindow->close();
-    if (flowViewWindow) flowViewWindow->close();
-    if (frameSenderWindow) frameSenderWindow->close();
-    if (dbcMainEditor) dbcMainEditor->close();
-    if (comparatorWindow) comparatorWindow->close();
-    if (connectionWindow) connectionWindow->close();
-    if (settingsDialog) settingsDialog->close();
-    if (discreteStateWindow) discreteStateWindow->close();
-    if (scriptingWindow) scriptingWindow->close();
-    if (rangeWindow) rangeWindow->close();
-    if (dbcFileWindow) dbcFileWindow->close();
-    if (fuzzingWindow) fuzzingWindow->close();
-    if (udsScanWindow) udsScanWindow->close();
-    if (isoWindow) isoWindow->close();
-    if (snifferWindow) snifferWindow->close();
+    killEmAll();
     this->close();
 }
 
@@ -571,7 +485,7 @@ void MainWindow::handleLoadFile()
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
         updateFileStatus();
-        emit framesUpdated(-2);
+        emit framesUpdated(-1);
     }
 }
 
