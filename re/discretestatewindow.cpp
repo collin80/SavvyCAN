@@ -126,8 +126,8 @@ void DiscreteStateWindow::updatedFrames(int numFrames)
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
 
-            if (operatingState == DWStates::IDLE) stateFrames[0]->append(thisFrame);
-            else stateFrames[currToggleState + 1]->append(thisFrame);
+            //if (operatingState == DWStates::IDLE) stateFrames[0]->append(thisFrame);
+            //else stateFrames[currToggleState + 1]->append(thisFrame);
         }
     }
 }

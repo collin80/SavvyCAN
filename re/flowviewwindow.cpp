@@ -361,12 +361,12 @@ void FlowViewWindow::updatedFrames(int numFrames)
         foundID.clear();
         currentPosition = 0;
         refreshIDList();
-        if (ui->listFrameID->count() > 0)
-        {
-            changeID(ui->listFrameID->item(0)->text());
-            ui->listFrameID->setCurrentRow(0);
-        }
-        updateFrameLabel();
+        //if (ui->listFrameID->count() > 0)
+        //{
+         //   changeID(ui->listFrameID->item(0)->text());
+        //    ui->listFrameID->setCurrentRow(0);
+        //}
+        //updateFrameLabel();
     }
     else //just got some new frames. See if they are relevant.
     {
@@ -424,7 +424,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
                 graphRef[k]->setData(x[k], y[k]);
             }
             ui->graphView->replot();
-            updateDataView();            
+            updateDataView();
             if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
         }
     }
