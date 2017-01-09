@@ -126,7 +126,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
     filters.append(QString(tr("Candump/Kayak (*.log *.LOG)")));
-    filters.append(QString(tr("PCAN Viewer (*.txt *.TXT)")));
+    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
