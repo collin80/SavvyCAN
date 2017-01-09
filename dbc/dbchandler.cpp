@@ -312,7 +312,7 @@ void DBCFile::loadFile(QString fileName)
             sig.isMultiplexor = false;
 
             qDebug() << "Found a SG line";
-            regex.setPattern("^SG\\_ *(\\w+)^ *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *(\\w+) *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
             match = regex.match(line);
             if (match.hasMatch())
@@ -323,7 +323,7 @@ void DBCFile::loadFile(QString fileName)
             }
             else
             {
-                regex.setPattern("^SG\\_ *(\\w+)^ *m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                regex.setPattern("^SG\\_ *(\\w+) *m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                 match = regex.match(line);
                 if (match.hasMatch())
                 {
@@ -335,6 +335,7 @@ void DBCFile::loadFile(QString fileName)
                 }
                 else
                 {
+                    qDebug() << "standard signal";
                     regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                     match = regex.match(line);
                     sig.isMultiplexed = false;
