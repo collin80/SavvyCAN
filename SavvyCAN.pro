@@ -59,7 +59,8 @@ SOURCES += main.cpp\
     connections/connectionwindow.cpp \
     re/graphingwindow.cpp \
     re/newgraphdialog.cpp \
-    bisectwindow.cpp
+    bisectwindow.cpp \
+    signalviewerwindow.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -107,7 +108,8 @@ HEADERS  += mainwindow.h \
     connections/connectionwindow.h \
     re/graphingwindow.h \
     re/newgraphdialog.h \
-    bisectwindow.h
+    bisectwindow.h \
+    signalviewerwindow.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
@@ -132,7 +134,8 @@ FORMS    += ui/candatagrid.ui \
     ui/scriptingwindow.ui \
     ui/snifferwindow.ui \
     ui/udsscanwindow.ui \
-    ui/bisectwindow.ui
+    ui/bisectwindow.ui \
+    ui/signalviewerwindow.ui
 
 DISTFILES +=
 

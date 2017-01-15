@@ -16,7 +16,7 @@ class DBCMainEditor : public QDialog
     Q_OBJECT
 
 public:
-    explicit DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit DBCMainEditor(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~DBCMainEditor();
     void setFileIdx(int idx);
 

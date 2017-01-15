@@ -58,7 +58,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize); //the goal is to prevent a reallocation from ever happening
 
-    dbcHandler = NULL;
+    dbcHandler = DBCHandler::getReference();
     interpretFrames = false;
     overwriteDups = false;
     useHexMode = true;
@@ -87,11 +87,6 @@ void CANFrameModel::setSecondsMode(bool mode)
         timeSeconds = mode;
         this->endResetModel();
     }
-}
-
-void CANFrameModel::setDBCHandler(DBCHandler *handler)
-{
-    dbcHandler = handler;
 }
 
 void CANFrameModel::setInterpetMode(bool mode)

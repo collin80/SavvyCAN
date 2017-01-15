@@ -7,7 +7,7 @@
 
 #define MT_COLUMN_COUNT   5
 
-DBCMainEditor::DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent) :
+DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMainEditor)
 {
@@ -15,7 +15,7 @@ DBCMainEditor::DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frame
 
     readSettings();
 
-    dbcHandler = handler;
+    dbcHandler = DBCHandler::getReference();
     referenceFrames = frames;
 
     QStringList headers;
@@ -47,7 +47,7 @@ DBCMainEditor::DBCMainEditor(DBCHandler *handler, const QVector<CANFrame> *frame
     connect(ui->MessagesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuMessage(QPoint)));
     ui->MessagesTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    sigEditor = new DBCSignalEditor(handler);
+    sigEditor = new DBCSignalEditor();
 }
 
 void DBCMainEditor::showEvent(QShowEvent* event)

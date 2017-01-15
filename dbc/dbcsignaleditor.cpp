@@ -5,7 +5,7 @@
 #include <QMenu>
 #include <QSettings>
 
-DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
+DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCSignalEditor)
 {
@@ -15,7 +15,7 @@ DBCSignalEditor::DBCSignalEditor(DBCHandler *handler, QWidget *parent) :
 
     qsrand(QDateTime::currentMSecsSinceEpoch());
 
-    dbcHandler = handler;
+    dbcHandler = DBCHandler::getReference();
     dbcMessage = NULL;
     currentSignal = NULL;
 
@@ -270,7 +270,7 @@ void DBCSignalEditor::onValuesCellChanged(int row,int col)
 
     if (row == ui->valuesTable->rowCount() - 1)
     {
-        DBC_VAL newVal;
+        DBC_VAL_ENUM_ENTRY newVal;
         newVal.value = 0;
         newVal.descript = "No Description";
         currentSignal->valList.append(newVal);

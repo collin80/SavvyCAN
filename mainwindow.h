@@ -29,6 +29,7 @@
 #include "re/sniffer/snifferwindow.h"
 #include "re/isotp_interpreterwindow.h"
 #include "motorcontrollerconfigwindow.h"
+#include "signalviewerwindow.h"
 
 class ConnectionWindow;
 
@@ -73,6 +74,7 @@ private slots:
     void showISOInterpreterWindow();
     void showSnifferWindow();
     void showBisectWindow();
+    void showSignalViewer();
     void exitApp();
     void handleSaveDecoded();
     void connectionStatusUpdated(int conns);
@@ -144,6 +146,7 @@ private:
     SnifferWindow* snifferWindow;
     MotorControllerConfigWindow *motorctrlConfigWindow;
     BisectWindow* bisectWindow;
+    SignalViewerWindow *signalViewerWindow;
 
     //various private storage
     QLabel lbStatusConnected;

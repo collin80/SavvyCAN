@@ -15,7 +15,7 @@ class DBCLoadSaveWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit DBCLoadSaveWindow(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~DBCLoadSaveWindow();
 
 private slots:

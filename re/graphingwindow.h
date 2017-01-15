@@ -35,7 +35,7 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *, QWidget *parent = 0);
+    explicit GraphingWindow(const QVector<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
     void showEvent(QShowEvent*);
 

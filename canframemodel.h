@@ -29,7 +29,6 @@ public:
     void sendRefresh(int);
     int  sendBulkRefresh();
     void clearFrames();
-    void setDBCHandler(DBCHandler *);
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
     void setHexMode(bool);

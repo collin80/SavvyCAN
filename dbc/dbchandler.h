@@ -10,8 +10,6 @@
  * Finish coding up the decoupled design
  *
 */
-
-
 class DBCSignalHandler: public QObject
 {
     Q_OBJECT
@@ -67,10 +65,11 @@ public:
 
     DBCMessageHandler *messageHandler;
     QList<DBC_NODE> dbc_nodes;
+    QList<DBC_ATTRIBUTE> dbc_attributes;
 private:
     QString fileName;
     QString filePath;
-    int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus
+    int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus, etc.
 };
 
 class DBCHandler: public QObject
@@ -87,9 +86,13 @@ public:
     DBCFile* getFileByIdx(int idx);
     DBCFile* getFileByName(QString name);
     int createBlankFile();
+    static DBCHandler *getReference();
 
 private:
     QList<DBCFile> loadedFiles;
+
+    DBCHandler();
+    static DBCHandler *instance;
 };
 
 #endif // DBCHANDLER_H

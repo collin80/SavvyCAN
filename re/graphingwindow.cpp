@@ -4,7 +4,7 @@
 #include "mainwindow.h"
 #include <QDebug>
 
-GraphingWindow::GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent) :
+GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
 {
@@ -13,7 +13,7 @@ GraphingWindow::GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *fra
     readSettings();
 
     modelFrames = frames;
-    dbcHandler = handler;
+    dbcHandler = DBCHandler::getReference();
 
     ui->graphingView->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);

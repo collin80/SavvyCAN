@@ -82,13 +82,12 @@ MainWindow::MainWindow(QWidget *parent) :
     isoWindow = NULL;
     snifferWindow = NULL;
     bisectWindow = NULL;
-    dbcHandler = new DBCHandler;
+    signalViewerWindow = NULL;
+    dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
     rxFrames = 0;
     framesPerSec = 0;
-
-    model->setDBCHandler(dbcHandler);
 
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
@@ -128,6 +127,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
+    connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -205,6 +205,7 @@ void MainWindow::killEmAll()
     killWindow(bisectWindow);
     killWindow(firmwareUploaderWindow);
     killWindow(motorctrlConfigWindow);
+    killWindow(signalViewerWindow);
 }
 
 //forcefully close the window, kill it, and salt the earth
@@ -687,7 +688,7 @@ void MainWindow::showSettingsDialog()
 void MainWindow::showGraphingWindow()
 {
     if (!graphingWindow) {
-        graphingWindow = new GraphingWindow(dbcHandler, model->getListReference());
+        graphingWindow = new GraphingWindow(model->getListReference());
         connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
         connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
@@ -869,9 +870,18 @@ void MainWindow::showDBCFileWindow()
 {
     if (!dbcFileWindow)
     {
-        dbcFileWindow = new DBCLoadSaveWindow(dbcHandler, model->getListReference());
+        dbcFileWindow = new DBCLoadSaveWindow(model->getListReference());
     }
     dbcFileWindow->show();
+}
+
+void MainWindow::showSignalViewer()
+{
+    if (!signalViewerWindow)
+    {
+        signalViewerWindow = new SignalViewerWindow();
+    }
+    signalViewerWindow->show();
 }
 
 void MainWindow::showConnectionSettingsWindow()

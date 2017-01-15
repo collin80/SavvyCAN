@@ -7,6 +7,8 @@
 #include <QFileDialog>
 #include "utility.h"
 
+DBCHandler* DBCHandler::instance = NULL;
+
 DBC_SIGNAL* DBCSignalHandler::findSignalByIdx(int idx)
 {
     if (sigs.count() == 0) return NULL;
@@ -499,7 +501,7 @@ void DBCFile::loadFile(QString fileName)
                     if (sig != NULL)
                     {
                         QString tokenString = match.captured(3);
-                        DBC_VAL val;
+                        DBC_VAL_ENUM_ENTRY val;
                         while (tokenString.length() > 2)
                         {
                             regex.setPattern("(\\d+) \\\"(.*?)\\\"(.*)");
@@ -522,28 +524,36 @@ void DBCFile::loadFile(QString fileName)
             }
         }
 
-        /*
         if (line.startsWith("BA_DEF_ SG_ "))
         {
             qDebug() << "Found a SG attribute line";
             regex.setPattern("^BA\\_DEF\\_ SG\\_ +\\\"([A-Za-z0-9\-_]+)\\\" +(.+);");
             match = regex.match(line);
-            //captured 1 is the Node name
-            //captured 2 is the comment itself
+            //captured 1 is the name of the attribute to set up
+            //captured 2 is the type of signal attribute to create.
             if (match.hasMatch())
             {
-                qDebug() << "Comment was: " << match.captured(2);
+
             }
         }
-        if (line.startsWith("BA_DEF_ BO_ "))
+        if (line.startsWith("BA_DEF_ BO_ ")) //definition of a message attribute
         {
 
         }
-        if (line.startsWith("BA_DEF_ BU_ "))
+        if (line.startsWith("BA_DEF_ BU_ ")) //definition of a node attribute
         {
 
         }
-*/
+
+        if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
+        {
+
+        }
+
+        if (line.startsWith("BA_ ")) //set value of attribute
+        {
+
+        }
     }
     if (numSigFaults > 0 || numMsgFaults > 0)
     {
@@ -551,7 +561,8 @@ void DBCFile::loadFile(QString fileName)
         QString msg = "DBC file loaded with errors!\n";
         msg += "Number of faulty message entries: " + QString::number(numMsgFaults) + "\n";
         msg += "Number of faulty signal entries: " + QString::number(numSigFaults) + "\n\n";
-        msg += "Faulty entries have not been loaded.";
+        msg += "Faulty entries have not been loaded.\n\n";
+        msg += "All other entries are, however, loaded.";
         msgBox.setText(msg);
         msgBox.exec();
     }
@@ -561,7 +572,6 @@ void DBCFile::loadFile(QString fileName)
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
     assocBuses = -1;
-
 }
 
 void DBCFile::saveFile(QString fileName)
@@ -684,7 +694,7 @@ void DBCFile::saveFile(QString fileName)
                 valuesOutput.append("VAL_ " + QString::number(msg->ID) + " " + sig->name);
                 for (int v = 0; v < sig->valList.count(); v++)
                 {
-                    DBC_VAL val = sig->valList[v];
+                    DBC_VAL_ENUM_ENTRY val = sig->valList[v];
                     valuesOutput.append(" " + QString::number(val.value) + " \"" + val.descript +"\"");
                 }
                 valuesOutput.append(";\n");
@@ -841,4 +851,15 @@ DBCFile* DBCHandler::getFileByName(QString name)
         }
     }
     return NULL;
+}
+
+DBCHandler::DBCHandler()
+{
+
+}
+
+DBCHandler* DBCHandler::getReference()
+{
+    if (!instance) instance = new DBCHandler();
+    return instance;
 }

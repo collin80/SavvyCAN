@@ -216,6 +216,7 @@
     <addaction name="actionISO_TP_Decoder"/>
     <addaction name="actionSniffer"/>
     <addaction name="actionCapture_Bisector"/>
+    <addaction name="actionSignal_Viewer"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -417,6 +418,11 @@
   <action name="actionCapture_Bisector">
    <property name="text">
     <string>Capture Bisector</string>
+   </property>
+  </action>
+  <action name="actionSignal_Viewer">
+   <property name="text">
+    <string>Signal Viewer</string>
    </property>
   </action>
  </widget>

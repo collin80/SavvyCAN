@@ -1,12 +1,12 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
 
-DBCLoadSaveWindow::DBCLoadSaveWindow(DBCHandler *handler, const QVector<CANFrame> *frames, QWidget *parent) :
+DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCLoadSaveWindow)
 {
 
-    dbcHandler = handler;
+    dbcHandler = DBCHandler::getReference();
     referenceFrames = frames;
 
     ui->setupUi(this);
@@ -28,7 +28,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(DBCHandler *handler, const QVector<CANFrame
     connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
 
-    editorWindow = new DBCMainEditor(handler, frames);
+    editorWindow = new DBCMainEditor(frames);
 }
 
 DBCLoadSaveWindow::~DBCLoadSaveWindow()
