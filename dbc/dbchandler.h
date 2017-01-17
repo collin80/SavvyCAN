@@ -55,6 +55,9 @@ public:
     DBCFile& operator=(const DBCFile& cpy);
     DBC_NODE *findNodeByName(QString name);
     DBC_NODE *findNodeByIdx(int idx);
+    DBC_ATTRIBUTE *findAttributeByName(QString name);
+    DBC_ATTRIBUTE *findAttributeByIdx(int idx);
+    void findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> *list);
     void saveFile(QString);
     void loadFile(QString);
     QString getFullFilename();
@@ -70,6 +73,8 @@ private:
     QString fileName;
     QString filePath;
     int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus, etc.
+
+    bool parseAttribute(QString inpString, DBC_ATTRIBUTE &attr);
 };
 
 class DBCHandler: public QObject

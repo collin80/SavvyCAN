@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+#include "utility.h"
+
 FrameFileIO::FrameFileIO()
 {
 
@@ -872,7 +874,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
             QList<QByteArray> tokens = line.split(',');
             if (line.length() >= 5)
             {
-                QString timePortion = unQuote(tokens[0]);
+                QString timePortion = Utility::unQuote(tokens[0]);
                 QStringList timeToks = timePortion.split(':');
                 if (timeToks.length() >= 3)
                 {
@@ -885,8 +887,8 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
                     foundErrors = true;
                 }
                 thisFrame.timestamp = timeStamp;
-                thisFrame.ID = unQuote(tokens[1]).toInt(NULL, 16);
-                QString tempStr = unQuote(tokens[2]).toUpper();
+                thisFrame.ID = Utility::unQuote(tokens[1]).toInt(NULL, 16);
+                QString tempStr = Utility::unQuote(tokens[2]).toUpper();
                 if (tempStr.length() > 0)
                 {
                     if (tempStr.at(0) == 'S') thisFrame.extended = false;
@@ -901,7 +903,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.isReceived = true;
                 thisFrame.bus = 0;
 
-                QStringList dataToks = unQuote(tokens[4]).simplified().split(' ');
+                QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
                 thisFrame.len = dataToks.length();
                 for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
                 frames->append(thisFrame);
@@ -1481,12 +1483,3 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
-
-QString FrameFileIO::unQuote(QString inStr)
-{
-    QStringList temp;
-    temp = inStr.split('\"');
-    if (temp.length() >= 3)
-        return temp[1];
-    return QString("");
-}

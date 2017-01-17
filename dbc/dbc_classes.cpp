@@ -202,3 +202,63 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     outValue = endResult;
     return true;
 }
+
+DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByName(QString name)
+{
+    if (attributes.length() == 0) return NULL;
+    for (int i = 0; i < attributes.length(); i++)
+    {
+        if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &attributes[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= attributes.count()) return NULL;
+    return &attributes[idx];
+}
+
+DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByName(QString name)
+{
+    if (attributes.length() == 0) return NULL;
+    for (int i = 0; i < attributes.length(); i++)
+    {
+        if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &attributes[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= attributes.count()) return NULL;
+    return &attributes[idx];
+}
+
+DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByName(QString name)
+{
+    if (attributes.length() == 0) return NULL;
+    for (int i = 0; i < attributes.length(); i++)
+    {
+        if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &attributes[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= attributes.count()) return NULL;
+    return &attributes[idx];
+}

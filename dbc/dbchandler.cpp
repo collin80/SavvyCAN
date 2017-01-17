@@ -253,6 +253,36 @@ void DBCFile::setAssocBus(int bus)
     assocBuses = bus;
 }
 
+DBC_ATTRIBUTE *DBCFile::findAttributeByName(QString name)
+{
+    if (dbc_attributes.length() == 0) return NULL;
+    for (int i = 0; i < dbc_attributes.length(); i++)
+    {
+        if (dbc_attributes[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        {
+            return &dbc_attributes[i];
+        }
+    }
+    return NULL;
+}
+
+DBC_ATTRIBUTE *DBCFile::findAttributeByIdx(int idx)
+{
+    if (idx < 0) return NULL;
+    if (idx >= dbc_attributes.count()) return NULL;
+    return &dbc_attributes[idx];
+}
+
+void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> *list)
+{
+    if (!list) return;
+    list->clear();
+    foreach (DBC_ATTRIBUTE attr, dbc_attributes)
+    {
+        if (attr.attrType == typ) list->append(attr);
+    }
+}
+
 void DBCFile::loadFile(QString fileName)
 {
     QFile *inFile = new QFile(fileName);
@@ -260,6 +290,7 @@ void DBCFile::loadFile(QString fileName)
     QRegularExpression regex;
     QRegularExpressionMatch match;
     DBC_MESSAGE *currentMessage = NULL;
+    DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
 
     qDebug() << "DBC File: " << fileName;
@@ -527,32 +558,150 @@ void DBCFile::loadFile(QString fileName)
         if (line.startsWith("BA_DEF_ SG_ "))
         {
             qDebug() << "Found a SG attribute line";
-            regex.setPattern("^BA\\_DEF\\_ SG\\_ +\\\"([A-Za-z0-9\-_]+)\\\" +(.+);");
-            match = regex.match(line);
-            //captured 1 is the name of the attribute to set up
-            //captured 2 is the type of signal attribute to create.
-            if (match.hasMatch())
-            {
 
+            if (parseAttribute(line.right(line.length() - 12), attr))
+            {
+                qDebug() << "Success";
+                attr.attrType = SIG;
+                dbc_attributes.append(attr);
             }
         }
         if (line.startsWith("BA_DEF_ BO_ ")) //definition of a message attribute
         {
+            qDebug() << "Found a BO attribute line";
 
+            if (parseAttribute(line.right(line.length() - 12), attr))
+            {
+                qDebug() << "Success";
+                attr.attrType = MESSAGE;
+                dbc_attributes.append(attr);
+            }
         }
         if (line.startsWith("BA_DEF_ BU_ ")) //definition of a node attribute
         {
+            qDebug() << "Found a BU attribute line";
 
+            if (parseAttribute(line.right(line.length() - 12), attr))
+            {
+                qDebug() << "Success";
+                attr.attrType = NODE;
+                dbc_attributes.append(attr);
+            }
         }
 
         if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
-        {
-
+        {            
+            regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*(\\w*)\\\"*");
+            match = regex.match(line);
+            //captured 1 is the name of the attribute
+            //captured 2 is the default value for that attribute
+            if (match.hasMatch())
+            {
+                qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1);
+                DBC_ATTRIBUTE *found = findAttributeByName(match.captured(1));
+                if (found)
+                {
+                    found->defaultValue = match.captured(2);
+                    qDebug() << "Matched an attribute. Setting default value to " << found->defaultValue;
+                }
+            }
         }
 
+        //BA_ "GenMsgCycleTime" BO_ 101 100;
         if (line.startsWith("BA_ ")) //set value of attribute
         {
+            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*(\\w+)\\\"*");
+            match = regex.match(line);
+            //captured 1 is the attribute name
+            //captured 2 is the message ID number (frame ID)
+            //captured 3 is the attribute value
+            if (match.hasMatch())
+            {
+                qDebug() << "Found an attribute setting line for a message";
+                DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
+                if (foundAttr)
+                {
+                    qDebug() << "That attribute does exist";
+                    DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
+                    if (foundMsg)
+                    {
+                        qDebug() << "It references a valid, registered message";
+                        DBC_ATTRIBUTE_VALUE *foundAttrVal = foundMsg->findAttrValByName(match.captured(1));
+                        if (foundAttrVal) foundAttrVal->value = match.captured(3);
+                        else
+                        {
+                            DBC_ATTRIBUTE_VALUE val;
+                            val.attrName = match.captured(1);
+                            val.value = match.captured(3);
+                            foundMsg->attributes.append(val);
+                        }
+                    }
+                }
+            }
 
+            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"*");
+            match = regex.match(line);
+            //captured 1 is the attribute name
+            //captured 2 is the message ID number (frame ID)
+            //captured 3 is the signal name to bind to
+            //captured 4 is the attribute value
+            if (match.hasMatch())
+            {
+                qDebug() << "Found an attribute setting line for a signal";
+                DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
+                if (foundAttr)
+                {
+                    qDebug() << "That attribute does exist";
+                    DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
+                    if (foundMsg)
+                    {
+                        qDebug() << "It references a valid, registered message";
+                        DBC_SIGNAL *foundSig = foundMsg->sigHandler->findSignalByName(match.captured(3));
+                        if (foundSig)
+                        {
+                            DBC_ATTRIBUTE_VALUE *foundAttrVal = foundSig->findAttrValByName(match.captured(1));
+                            if (foundAttrVal) foundAttrVal->value = match.captured(3);
+                            else
+                            {
+                                DBC_ATTRIBUTE_VALUE val;
+                                val.attrName = match.captured(1);
+                                val.value = match.captured(3);
+                                foundSig->attributes.append(val);
+                            }
+                        }
+                    }
+                }
+            }
+
+            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"*");
+            match = regex.match(line);
+            //captured 1 is the attribute name
+            //captured 2 is the name of the node
+            //captured 3 is the attribute value
+            if (match.hasMatch())
+            {
+                qDebug() << "Found an attribute setting line for a node";
+                DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
+                if (foundAttr)
+                {
+                    qDebug() << "That attribute does exist";
+                    DBC_NODE *foundNode = findNodeByName(match.captured(2));
+                    if (foundNode)
+                    {
+                        qDebug() << "References a valid node name";
+                        DBC_ATTRIBUTE_VALUE *foundAttrVal = foundNode->findAttrValByName(match.captured(1));
+                        if (foundAttrVal) foundAttrVal->value = match.captured(3);
+                        else
+                        {
+                            DBC_ATTRIBUTE_VALUE val;
+                            val.attrName = match.captured(1);
+                            val.value = match.captured(3);
+                            foundNode->attributes.append(val);
+                        }
+                    }
+                }
+
+            }
         }
     }
     if (numSigFaults > 0 || numMsgFaults > 0)
@@ -572,6 +721,89 @@ void DBCFile::loadFile(QString fileName)
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
     assocBuses = -1;
+}
+
+bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
+{
+    bool goodAttr = false;
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    regex.setPattern("\\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"* (\\d+) (\\d+)");
+    match = regex.match(inpString);
+    //captured 1 is the name of the attribute to set up
+    //captured 2 is the type of signal attribute to create.
+    //captured 3 is the lower bound value for this attribute
+    //captured 4 is the upper bound value for this attribute
+    if (match.hasMatch())
+    {
+        qDebug() << "Parsing an attribute with low/high values";
+        attr.name = match.captured(1);
+        QString typ = match.captured(2);
+        attr.attrType = SIG;
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.valType = QSTRING;
+        if (!typ.compare("INT", Qt::CaseInsensitive))
+        {
+            qDebug() << "INT attribute named " << attr.name;
+            attr.valType = QINT;
+            attr.lower = match.captured(3).toInt();
+            attr.upper = match.captured(4).toInt();
+            goodAttr = true;
+        }
+        if (!typ.compare("FLOAT", Qt::CaseInsensitive))
+        {
+            qDebug() << "FLOAT attribute named " << attr.name;
+            attr.valType = QFLOAT;
+            attr.lower = match.captured(3).toDouble();
+            attr.upper = match.captured(4).toDouble();
+            goodAttr = true;
+        }
+        if (!typ.compare("STRING", Qt::CaseInsensitive))
+        {
+            qDebug() << "STRING attribute named " << attr.name;
+            attr.valType = QSTRING;
+            goodAttr = true;
+        }
+    }
+    else
+    {
+        regex.setPattern("\\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"*");
+        match = regex.match(inpString);
+        //Same as above but no upper/lower bound values.
+        if (match.hasMatch())
+        {
+            qDebug() << "Parsing an attribute without boundaries";
+            attr.name = match.captured(1);
+            QString typ = match.captured(2);
+            attr.lower = 0;
+            attr.upper = 0;
+            attr.attrType = SIG;
+
+            if (!typ.compare("INT", Qt::CaseInsensitive))
+            {
+                qDebug() << "INT attribute named " << attr.name;
+                attr.valType = QINT;
+                goodAttr = true;
+            }
+
+            if (!typ.compare("FLOAT", Qt::CaseInsensitive))
+            {
+                qDebug() << "FLOAT attribute named " << attr.name;
+                attr.valType = QFLOAT;
+                goodAttr = true;
+            }
+
+            if (!typ.compare("STRING", Qt::CaseInsensitive))
+            {
+                qDebug() << "STRING attribute named " << attr.name;
+                attr.valType = QSTRING;
+                goodAttr = true;
+            }
+        }
+    }
+    return goodAttr;
 }
 
 void DBCFile::saveFile(QString fileName)

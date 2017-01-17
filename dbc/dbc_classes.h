@@ -26,7 +26,7 @@ enum DBC_SIG_VAL_TYPE
 
 enum DBC_ATTRIBUTE_VAL_TYPE
 {
-    HEX,
+    QINT,
     QFLOAT,
     QSTRING,
     ENUM
@@ -52,6 +52,7 @@ public:
 
 class DBC_ATTRIBUTE_VALUE
 {
+public:
     QString attrName;
     QVariant value;
 };
@@ -69,6 +70,9 @@ public:
     QString name;
     QString comment;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
+
+    DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
+    DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
 
 class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
@@ -98,6 +102,8 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     bool processAsText(const CANFrame &frame, QString &outString);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
+    DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
+    DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
 
 class DBCSignalHandler; //forward declaration to keep from having to include dbchandler.h in this file and thus create a loop
@@ -117,6 +123,9 @@ public:
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     DBCSignalHandler *sigHandler;
     DBC_SIGNAL* multiplexorSignal;
+
+    DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
+    DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
 
 

@@ -50,9 +50,6 @@ public:
     static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
     static bool loadCanDumpFile(QString, QVector<CANFrame>*);
     static bool loadPCANFile(QString, QVector<CANFrame>*);
-
-private:
-    static QString unQuote(QString);
 };
 
 #endif // FRAMEFILEIO_H

@@ -13,6 +13,15 @@ public:
 
     static bool decimalMode;
 
+    static QString unQuote(QString inStr)
+    {
+        QStringList temp;
+        temp = inStr.split('\"');
+        if (temp.length() >= 3)
+            return temp[1];
+        return inStr;
+    }
+
     static uint64_t ParseStringToNum(QByteArray input)
     {
         uint64_t temp = 0;
