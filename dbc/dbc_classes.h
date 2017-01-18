@@ -47,6 +47,7 @@ public:
     DBC_ATTRIBUTE_VAL_TYPE valType;
     DBC_ATTRIBUTE_TYPE attrType;
     double upper, lower;
+    QStringList enumVals;
     QVariant defaultValue;
 };
 

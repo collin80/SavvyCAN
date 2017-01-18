@@ -604,8 +604,30 @@ void DBCFile::loadFile(QString fileName)
                 qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1);
                 DBC_ATTRIBUTE *found = findAttributeByName(match.captured(1));
                 if (found)
-                {
-                    found->defaultValue = match.captured(2);
+                {                    
+                    switch (found->valType)
+                    {
+                    case QSTRING:
+                        found->defaultValue = match.captured(2);
+                        break;
+                    case QFLOAT:
+                        found->defaultValue = match.captured(2).toFloat();
+                        break;
+                    case QINT:
+                        found->defaultValue = match.captured(2).toInt();
+                        break;
+                    case ENUM:
+                        QString temp = match.captured(2);
+                        found->defaultValue = 0;
+                        for (int x = 0; x < found->enumVals.count(); x++)
+                        {
+                            if (!found->enumVals[x].compare(temp, Qt::CaseInsensitive))
+                            {
+                                found->defaultValue = x;
+                                break;
+                            }
+                        }
+                    }
                     qDebug() << "Matched an attribute. Setting default value to " << found->defaultValue;
                 }
             }
@@ -631,12 +653,14 @@ void DBCFile::loadFile(QString fileName)
                     {
                         qDebug() << "It references a valid, registered message";
                         DBC_ATTRIBUTE_VALUE *foundAttrVal = foundMsg->findAttrValByName(match.captured(1));
-                        if (foundAttrVal) foundAttrVal->value = match.captured(3);
+                        if (foundAttrVal) {
+                            foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
+                        }
                         else
                         {
                             DBC_ATTRIBUTE_VALUE val;
                             val.attrName = match.captured(1);
-                            val.value = match.captured(3);
+                            val.value = processAttributeVal(match.captured(3), foundAttr->valType);
                             foundMsg->attributes.append(val);
                         }
                     }
@@ -664,12 +688,12 @@ void DBCFile::loadFile(QString fileName)
                         if (foundSig)
                         {
                             DBC_ATTRIBUTE_VALUE *foundAttrVal = foundSig->findAttrValByName(match.captured(1));
-                            if (foundAttrVal) foundAttrVal->value = match.captured(3);
+                            if (foundAttrVal) foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
                             else
                             {
                                 DBC_ATTRIBUTE_VALUE val;
                                 val.attrName = match.captured(1);
-                                val.value = match.captured(3);
+                                val.value = processAttributeVal(match.captured(3), foundAttr->valType);
                                 foundSig->attributes.append(val);
                             }
                         }
@@ -694,12 +718,12 @@ void DBCFile::loadFile(QString fileName)
                     {
                         qDebug() << "References a valid node name";
                         DBC_ATTRIBUTE_VALUE *foundAttrVal = foundNode->findAttrValByName(match.captured(1));
-                        if (foundAttrVal) foundAttrVal->value = match.captured(3);
+                        if (foundAttrVal) foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
                         else
                         {
                             DBC_ATTRIBUTE_VALUE val;
                             val.attrName = match.captured(1);
-                            val.value = match.captured(3);
+                            val.value = processAttributeVal(match.captured(3), foundAttr->valType);
                             foundNode->attributes.append(val);
                         }
                     }
@@ -725,6 +749,25 @@ void DBCFile::loadFile(QString fileName)
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
     assocBuses = -1;
+}
+
+QVariant DBCFile::processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ)
+{
+    QVariant out;
+    switch (typ)
+    {
+    case QSTRING:
+        out = input;
+        break;
+    case QFLOAT:
+        out = input.toFloat();
+        break;
+    case QINT:
+    case ENUM:
+        out = input.toInt();
+        break;
+    }
+    return out;
 }
 
 bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
@@ -773,7 +816,7 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
     }
     else
     {
-        regex.setPattern("\\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"*");
+        regex.setPattern("\\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"* (.*)");
         match = regex.match(inpString);
         //Same as above but no upper/lower bound values.
         if (match.hasMatch())
@@ -803,6 +846,19 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
             {
                 qDebug() << "STRING attribute named " << attr.name;
                 attr.valType = QSTRING;
+                goodAttr = true;
+            }
+
+            if (!typ.compare("ENUM", Qt::CaseInsensitive))
+            {
+                qDebug() << "ENUM attribute named " << attr.name;
+                QStringList enumLst = match.captured(3).split(',');
+                foreach (QString enumStr, enumLst)
+                {
+                    attr.enumVals.append(Utility::unQuote(enumStr));
+                    qDebug() << "Enum value: " << enumStr;
+                }
+                attr.valType = ENUM;
                 goodAttr = true;
             }
         }
@@ -858,6 +914,7 @@ void DBCFile::saveFile(QString fileName)
     outFile->write("\n");
     outFile->write("BS_: \n");
 
+    //Build list of nodes line
     nodesOutput.append("BU_: ");
     for (int x = 0; x < dbc_nodes.count(); x++)
     {
@@ -889,6 +946,7 @@ void DBCFile::saveFile(QString fileName)
     nodesOutput.append("\n");
     outFile->write(nodesOutput.toUtf8());
 
+    //Go through all messages one at at time issuing the message line then all signals in there too.
     for (int x = 0; x < messageHandler->getCount(); x++)
     {
         DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
@@ -899,6 +957,7 @@ void DBCFile::saveFile(QString fileName)
             commentsOutput.append("CM_ BO_ " + QString::number(msg->ID) + " \"" + msg->comment + "\";\n");
         }
 
+        //If this message has attributes then compile them into attributes list to output later on.
         if (msg->attributes.count() > 0)
         {
             foreach (DBC_ATTRIBUTE_VALUE val, msg->attributes) {
@@ -959,6 +1018,7 @@ void DBCFile::saveFile(QString fileName)
                 commentsOutput.append("CM_ SG_ " + QString::number(msg->ID) + " " + sig->name + " \"" + sig->comment + "\";\n");
             }
 
+            //if this signal has attributes then compile them in a special list of attributes
             if (sig->attributes.count() > 0)
             {
                 foreach (DBC_ATTRIBUTE_VALUE val, sig->attributes) {
@@ -1025,6 +1085,12 @@ void DBCFile::saveFile(QString fileName)
             msgOutput.append("STRING ");
             break;
         case ENUM:
+            msgOutput.append("ENUM ");
+            foreach (QString str, dbc_attributes[x].enumVals)
+            {
+                msgOutput.append("\"" + str + "\",");
+            }
+            msgOutput.truncate(msgOutput.length() - 1); //remove trailing ,
             break;
         }
 
@@ -1036,12 +1102,16 @@ void DBCFile::saveFile(QString fileName)
         if (dbc_attributes[x].defaultValue.isValid())
         {
             defaultsOutput.append("BA_DEF_DEF_ \"" + dbc_attributes[x].name + "\" ");
-            switch (dbc_attributes[x].defaultValue.type())
+            switch (dbc_attributes[x].valType)
             {
-            case QMetaType::QString:
+            case QSTRING:
                 defaultsOutput.append("\"" + dbc_attributes[x].defaultValue.toString() + "\";\n");
                 break;
-            case QMetaType::Int:
+            case ENUM:
+                defaultsOutput.append("\"" + dbc_attributes[x].enumVals[dbc_attributes[x].defaultValue.toInt()] + "\";\n");
+                break;
+            case QINT:
+            case QFLOAT:
                 defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
                 break;
             }

@@ -75,6 +75,7 @@ private:
     int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus, etc.
 
     bool parseAttribute(QString inpString, DBC_ATTRIBUTE &attr);
+    QVariant processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ);
 };
 
 class DBCHandler: public QObject
