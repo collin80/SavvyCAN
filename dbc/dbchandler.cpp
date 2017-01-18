@@ -190,6 +190,8 @@ DBCFile::DBCFile(const DBCFile& cpy)
     assocBuses = cpy.assocBuses;
     dbc_nodes.clear();
     dbc_nodes.append(cpy.dbc_nodes);
+    dbc_attributes.clear();
+    dbc_attributes.append(cpy.dbc_attributes);
 }
 
 DBCFile& DBCFile::operator=(const DBCFile& cpy)
@@ -202,6 +204,8 @@ DBCFile& DBCFile::operator=(const DBCFile& cpy)
         assocBuses = cpy.assocBuses;
         dbc_nodes.clear();
         dbc_nodes.append(cpy.dbc_nodes);
+        dbc_attributes.clear();
+        dbc_attributes.append(cpy.dbc_attributes);
     }
     return *this;
 }
@@ -345,7 +349,7 @@ void DBCFile::loadFile(QString fileName)
             sig.isMultiplexor = false;
 
             qDebug() << "Found a SG line";
-            regex.setPattern("^SG\\_ *(\\w+) *M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *(\\w+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
             match = regex.match(line);
             if (match.hasMatch())
@@ -356,7 +360,7 @@ void DBCFile::loadFile(QString fileName)
             }
             else
             {
-                regex.setPattern("^SG\\_ *(\\w+) *m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                regex.setPattern("^SG\\_ *(\\w+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                 match = regex.match(line);
                 if (match.hasMatch())
                 {
@@ -810,6 +814,7 @@ void DBCFile::saveFile(QString fileName)
 {
     QFile *outFile = new QFile(fileName);
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
+    QString defaultsOutput, attrValOutput;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -864,6 +869,21 @@ void DBCFile::saveFile(QString fileName)
             {
                 commentsOutput.append("CM_ BU_ " + node.name + " \"" + node.comment + "\";\n");
             }
+            if (node.attributes.count() > 0)
+            {
+                foreach (DBC_ATTRIBUTE_VALUE val, node.attributes) {
+                    attrValOutput.append("BA_ \"" + val.attrName + "\" BU_ ");
+                    switch (val.value.type())
+                    {
+                    case QMetaType::QString:
+                        attrValOutput.append("\"" + val.value.toString() + "\";\n");
+                        break;
+                    default:
+                        attrValOutput.append(val.value.toString() + ";\n");
+                        break;
+                    }
+                }
+            }
         }
     }
     nodesOutput.append("\n");
@@ -878,6 +898,23 @@ void DBCFile::saveFile(QString fileName)
         {
             commentsOutput.append("CM_ BO_ " + QString::number(msg->ID) + " \"" + msg->comment + "\";\n");
         }
+
+        if (msg->attributes.count() > 0)
+        {
+            foreach (DBC_ATTRIBUTE_VALUE val, msg->attributes) {
+                attrValOutput.append("BA_ \"" + val.attrName + "\" BO_ " + QString::number(msg->ID) + " ");
+                switch (val.value.type())
+                {
+                case QMetaType::QString:
+                    attrValOutput.append("\"" + val.value.toString() + "\";\n");
+                    break;
+                default:
+                    attrValOutput.append(val.value.toString() + ";\n");
+                    break;
+                }
+            }
+        }
+
         for (int s = 0; s < msg->sigHandler->getCount(); s++)
         {
             DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
@@ -921,6 +958,23 @@ void DBCFile::saveFile(QString fileName)
             {
                 commentsOutput.append("CM_ SG_ " + QString::number(msg->ID) + " " + sig->name + " \"" + sig->comment + "\";\n");
             }
+
+            if (sig->attributes.count() > 0)
+            {
+                foreach (DBC_ATTRIBUTE_VALUE val, sig->attributes) {
+                    attrValOutput.append("BA_ \"" + val.attrName + "\" SG_ " + QString::number(msg->ID) + " " + sig->name + " ");
+                    switch (val.value.type())
+                    {
+                    case QMetaType::QString:
+                        attrValOutput.append("\"" + val.value.toString() + "\";\n");
+                        break;
+                    default:
+                        attrValOutput.append(val.value.toString() + ";\n");
+                        break;
+                    }
+                }
+            }
+
             if (sig->valList.count() > 0)
             {
                 valuesOutput.append("VAL_ " + QString::number(msg->ID) + " " + sig->name);
@@ -938,9 +992,72 @@ void DBCFile::saveFile(QString fileName)
         msgOutput.clear(); //got to reset it after writing
     }
 
+    //Now dump out all of the stored attributes
+    for (int x = 0; x < dbc_attributes.count(); x++)
+    {
+        msgOutput.append("BA_DEF_ ");
+        switch (dbc_attributes[x].attrType)
+        {
+        case GENERAL:
+            break;
+        case NODE:
+            msgOutput.append("BU_ ");
+            break;
+        case MESSAGE:
+            msgOutput.append("BO_ ");
+            break;
+        case SIG:
+            msgOutput.append("SG_ ");
+            break;
+        }
+
+        msgOutput.append("\"" + dbc_attributes[x].name + "\" ");
+
+        switch (dbc_attributes[x].valType)
+        {
+        case QINT:
+            msgOutput.append("INT " + QString::number(dbc_attributes[x].lower) + " " + QString::number(dbc_attributes[x].upper));
+            break;
+        case QFLOAT:
+            msgOutput.append("FLOAT " + QString::number(dbc_attributes[x].lower) + " " + QString::number(dbc_attributes[x].upper));
+            break;
+        case QSTRING:
+            msgOutput.append("STRING ");
+            break;
+        case ENUM:
+            break;
+        }
+
+        msgOutput.append(";\n");
+
+        outFile->write(msgOutput.toUtf8());
+        msgOutput.clear(); //got to reset it after writing
+
+        if (dbc_attributes[x].defaultValue.isValid())
+        {
+            defaultsOutput.append("BA_DEF_DEF_ \"" + dbc_attributes[x].name + "\" ");
+            switch (dbc_attributes[x].defaultValue.type())
+            {
+            case QMetaType::QString:
+                defaultsOutput.append("\"" + dbc_attributes[x].defaultValue.toString() + "\";\n");
+                break;
+            case QMetaType::Int:
+                defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
+                break;
+            }
+        }
+    }
+
     //now write out all of the accumulated comments and value tables from above
+    outFile->write(attrValOutput.toUtf8());
+    outFile->write(defaultsOutput.toUtf8());
     outFile->write(commentsOutput.toUtf8());
     outFile->write(valuesOutput.toUtf8());
+
+    attrValOutput.clear();
+    defaultsOutput.clear();
+    commentsOutput.clear();
+    valuesOutput.clear();
 
     outFile->close();
     delete outFile;
