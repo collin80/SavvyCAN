@@ -4,8 +4,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QSettings>
-
-#define MT_COLUMN_COUNT   5
+#include <QColorDialog>
 
 DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -27,13 +26,15 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     ui->NodesTable->horizontalHeader()->setStretchLastSection(true);
 
     QStringList headers2;
-    headers2 << "Msg ID" << "Msg Name" << "Data Len" << "Signals" << "Comment";
-    ui->MessagesTable->setColumnCount(MT_COLUMN_COUNT);
+    headers2 << "Msg ID" << "Msg Name" << "Data Len" << "Signals" << "Fg" << "Bg" << "Comment";
+    ui->MessagesTable->setColumnCount(headers2.count());
     ui->MessagesTable->setColumnWidth(0, 80);
-    ui->MessagesTable->setColumnWidth(1, 240);
+    ui->MessagesTable->setColumnWidth(1, 200);
     ui->MessagesTable->setColumnWidth(2, 80);
     ui->MessagesTable->setColumnWidth(3, 80);
-    ui->MessagesTable->setColumnWidth(4, 340);
+    ui->MessagesTable->setColumnWidth(4, 40);
+    ui->MessagesTable->setColumnWidth(5, 40);
+    ui->MessagesTable->setColumnWidth(6, 300);
     ui->MessagesTable->setHorizontalHeaderLabels(headers2);
     ui->MessagesTable->horizontalHeader()->setStretchLastSection(true);
 
@@ -277,7 +278,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
             item->setText(Utility::formatNumber(msgID));
 
-            for(int i=1 ; i<MT_COLUMN_COUNT ; i++)
+            for(int i=1 ; i < ui->MessagesTable->columnCount(); i++)
             {
                 item = ui->MessagesTable->item(row, i);
                 item->setFlags(item->flags() | Qt::ItemIsEditable);
@@ -324,7 +325,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         }
         case 3: //signals (number) - we don't handle anything here. User cannot directly change this value
             break;
-        case 4: //comment
+        case 6: //comment
         {
             QString msgComment = ui->MessagesTable->item(row, col)->text().simplified();
             if( ret && (msgComment!=NULL) )
@@ -359,6 +360,12 @@ void DBCMainEditor::onCellClickedNode(int row, int col)
 
 void DBCMainEditor::onCellClickedMessage(int row, int col)
 {
+    QTableWidgetItem* thisItem = ui->MessagesTable->item(row, col);
+    QTableWidgetItem* firstCol = ui->MessagesTable->item(row, 0);
+    bool ret = false;
+    DBC_MESSAGE *msg;
+    int msgID;
+
     if (col == 3) //3 is the signals field. If clicked we go to the signals dialog
     {
         QTableWidgetItem* msg = ui->MessagesTable->item(row, 0);
@@ -373,6 +380,60 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
             QTableWidgetItem *replacement = new QTableWidgetItem(QString::number(message->sigHandler->getCount()));
             ui->MessagesTable->setItem(row, col, replacement);
             inhibitCellChanged = false;
+        }
+    }
+    if (col == 4)
+    {
+        QColor newColor = QColorDialog::getColor(thisItem->backgroundColor());
+        thisItem->setBackgroundColor(newColor);
+
+        if(!firstCol) return;
+
+        msgID = Utility::ParseStringToNum2(firstCol->text(), &ret);
+        msg = dbcFile->messageHandler->findMsgByID(msgID);
+
+        if (msg)
+        {
+            msg->fgColor = newColor;
+            DBC_ATTRIBUTE_VALUE *val = msg->findAttrValByName("GenMsgForegroundColor");
+            if (val)
+            {
+                val->value = newColor.name();
+            }
+            else
+            {
+                DBC_ATTRIBUTE_VALUE newVal;
+                newVal.attrName = "GenMsgForegroundColor";
+                newVal.value = newColor.name();
+                msg->attributes.append(newVal);
+            }
+        }
+    }
+    if (col == 5)
+    {
+        QColor newColor = QColorDialog::getColor(thisItem->backgroundColor());
+        thisItem->setBackgroundColor(newColor);
+
+        if(!firstCol) return;
+
+        msgID = Utility::ParseStringToNum2(firstCol->text(), &ret);
+        msg = dbcFile->messageHandler->findMsgByID(msgID);
+
+        if (msg)
+        {
+            msg->bgColor = newColor;
+            DBC_ATTRIBUTE_VALUE *val = msg->findAttrValByName("GenMsgBackgroundColor");
+            if (val)
+            {
+                val->value = newColor.name();
+            }
+            else
+            {
+                DBC_ATTRIBUTE_VALUE newVal;
+                newVal.attrName = "GenMsgBackgroundColor";
+                newVal.value = newColor.name();
+                msg->attributes.append(newVal);
+            }
         }
     }
 }
@@ -453,9 +514,11 @@ void DBCMainEditor::insertBlankRow()
 {
     int rowIdx = ui->MessagesTable->rowCount();
     ui->MessagesTable->insertRow(rowIdx);
-    for(int i=1 ; i<MT_COLUMN_COUNT ; i++)
+    for(int i=1 ; i < ui->MessagesTable->columnCount(); i++)
     {
         QTableWidgetItem *item = new QTableWidgetItem("");
+        if (i == 4) item->setBackgroundColor(QApplication::palette().color(QPalette::WindowText)); //foreground color
+        //if (i == 5) item->setBackgroundColor(ui->MessagesTable->palette().color(ui->MessagesTable->backgroundRole())); //background color
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
         ui->MessagesTable->setItem(rowIdx, i, item);
     }

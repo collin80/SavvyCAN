@@ -1,6 +1,8 @@
 #include "canframemodel.h"
 
 #include <QFile>
+#include <QApplication>
+#include <QPalette>
 #include "utility.h"
 
 
@@ -194,14 +196,43 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
     int dLen;
     QString tempString;
+    CANFrame thisFrame;
+
     if (!index.isValid())
         return QVariant();
 
     if (index.row() >= (filteredFrames.count()))
         return QVariant();
 
+    thisFrame = filteredFrames.at(index.row());
+
+    if (role == Qt::BackgroundColorRole)
+    {
+        if (dbcHandler != NULL && interpretFrames)
+        {
+            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
+            if (msg != NULL)
+            {
+                return msg->bgColor;
+            }
+        }
+        return QApplication::palette().color(QPalette::Window);
+    }
+
+    if (role == Qt::TextColorRole)
+    {
+        if (dbcHandler != NULL && interpretFrames)
+        {
+            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
+            if (msg != NULL)
+            {
+                return msg->fgColor;
+            }
+        }
+        return QApplication::palette().color(QPalette::WindowText);
+    }
+
     if (role == Qt::DisplayRole) {
-        CANFrame thisFrame = filteredFrames.at(index.row());
         switch (index.column())
         {
         case 0: //timestamp
@@ -249,7 +280,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                             tempString.append(sigString);
                             tempString.append("\n");
                         }
-                    }
+                    }                    
                 }
             }
             return tempString;

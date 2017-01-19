@@ -5,6 +5,8 @@
 #include <QDebug>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QApplication>
+#include <QPalette>
 #include "utility.h"
 
 DBCHandler* DBCHandler::instance = NULL;
@@ -732,6 +734,53 @@ void DBCFile::loadFile(QString fileName)
             }
         }
     }
+
+    //upon loading the file add our custom foreground and background color attributes if they don't exist already
+    DBC_ATTRIBUTE *bgAttr = findAttributeByName("GenMsgBackgroundColor");
+    if (!bgAttr)
+    {
+        attr.attrType = MESSAGE;
+        attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
+        attr.enumVals.clear();
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.name = "GenMsgBackgroundColor";
+        attr.valType = QSTRING;
+        dbc_attributes.append(attr);
+        bgAttr = findAttributeByName("GenMsgBackgroundColor");
+    }
+
+    DBC_ATTRIBUTE *fgAttr = findAttributeByName("GenMsgForegroundColor");
+    if (!fgAttr)
+    {
+        attr.attrType = MESSAGE;
+        attr.defaultValue = QApplication::palette().color(QPalette::Window).name();
+        attr.enumVals.clear();
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.name = "GenMsgForegroundColor";
+        attr.valType = QSTRING;
+        dbc_attributes.append(attr);
+        fgAttr = findAttributeByName("GenMsgForegroundColor");
+    }
+
+    QColor DefaultBG = QColor(bgAttr->defaultValue.toString());
+    QColor DefaultFG = QColor(fgAttr->defaultValue.toString());
+
+    DBC_ATTRIBUTE_VALUE *thisBG;
+    DBC_ATTRIBUTE_VALUE *thisFG;
+
+    for (int x = 0; x < messageHandler->getCount(); x++)
+    {
+        DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+        msg->bgColor = DefaultBG;
+        msg->fgColor = DefaultFG;
+        thisBG = msg->findAttrValByName("GenMsgBackgroundColor");
+        thisFG = msg->findAttrValByName("GenMsgForegroundColor");
+        if (thisBG) msg->bgColor = QColor(thisBG->value.toString());
+        if (thisFG) msg->fgColor = QColor(thisFG->value.toString());
+    }
+
     if (numSigFaults > 0 || numMsgFaults > 0)
     {
         QMessageBox msgBox;
@@ -950,6 +999,7 @@ void DBCFile::saveFile(QString fileName)
     for (int x = 0; x < messageHandler->getCount(); x++)
     {
         DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+
         msgOutput.append("BO_ " + QString::number(msg->ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
         if (msg->comment.length() > 0)
@@ -1166,6 +1216,27 @@ void DBCHandler::saveDBCFile(int idx)
 int DBCHandler::createBlankFile()
 {
     DBCFile newFile;
+    DBC_ATTRIBUTE attr;
+
+    //add our custom attributes to the new file so that we know they're already there.
+    attr.attrType = MESSAGE;
+    attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
+    attr.enumVals.clear();
+    attr.lower = 0;
+    attr.upper = 0;
+    attr.name = "GenMsgBackgroundColor";
+    attr.valType = QSTRING;
+    newFile.dbc_attributes.append(attr);
+
+    attr.attrType = MESSAGE;
+    attr.defaultValue = QApplication::palette().color(QPalette::Window).name();
+    attr.enumVals.clear();
+    attr.lower = 0;
+    attr.upper = 0;
+    attr.name = "GenMsgForegroundColor";
+    attr.valType = QSTRING;
+    newFile.dbc_attributes.append(attr);
+
     loadedFiles.append(newFile);
     return loadedFiles.count();
 }
