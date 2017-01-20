@@ -2,6 +2,7 @@
 #define SIGNALVIEWERWINDOW_H
 
 #include <QDialog>
+#include "dbc/dbchandler.h"
 
 namespace Ui {
 class SignalViewerWindow;
@@ -15,8 +16,16 @@ public:
     explicit SignalViewerWindow(QWidget *parent = 0);
     ~SignalViewerWindow();
 
+private slots:
+    void loadMessages();
+    void loadSignals(int idx);
+    void addSignal();
+
 private:
     Ui::SignalViewerWindow *ui;
+    DBCHandler *dbcHandler;
+
+    QList<DBC_SIGNAL *> signalList;
 };
 
 #endif // SIGNALVIEWERWINDOW_H
