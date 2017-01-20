@@ -597,13 +597,13 @@ void DBCFile::loadFile(QString fileName)
 
         if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
         {            
-            regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*(\\w*)\\\"*");
+            regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]*)\\\"*");
             match = regex.match(line);
             //captured 1 is the name of the attribute
             //captured 2 is the default value for that attribute
             if (match.hasMatch())
             {
-                qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1);
+                qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1) << "with data " << match.captured(2);
                 DBC_ATTRIBUTE *found = findAttributeByName(match.captured(1));
                 if (found)
                 {                    
@@ -638,7 +638,7 @@ void DBCFile::loadFile(QString fileName)
         //BA_ "GenMsgCycleTime" BO_ 101 100;
         if (line.startsWith("BA_ ")) //set value of attribute
         {
-            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*(\\w+)\\\"*");
+            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
             match = regex.match(line);
             //captured 1 is the attribute name
             //captured 2 is the message ID number (frame ID)
@@ -669,7 +669,7 @@ void DBCFile::loadFile(QString fileName)
                 }
             }
 
-            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"*");
+            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
             match = regex.match(line);
             //captured 1 is the attribute name
             //captured 2 is the message ID number (frame ID)
@@ -703,7 +703,7 @@ void DBCFile::loadFile(QString fileName)
                 }
             }
 
-            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"*");
+            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
             match = regex.match(line);
             //captured 1 is the attribute name
             //captured 2 is the name of the node
@@ -740,7 +740,7 @@ void DBCFile::loadFile(QString fileName)
     if (!bgAttr)
     {
         attr.attrType = MESSAGE;
-        attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
+        attr.defaultValue = QColor(Qt::white).name();
         attr.enumVals.clear();
         attr.lower = 0;
         attr.upper = 0;
@@ -754,7 +754,7 @@ void DBCFile::loadFile(QString fileName)
     if (!fgAttr)
     {
         attr.attrType = MESSAGE;
-        attr.defaultValue = QApplication::palette().color(QPalette::Window).name();
+        attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
         attr.enumVals.clear();
         attr.lower = 0;
         attr.upper = 0;
@@ -1220,7 +1220,7 @@ int DBCHandler::createBlankFile()
 
     //add our custom attributes to the new file so that we know they're already there.
     attr.attrType = MESSAGE;
-    attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
+    attr.defaultValue = QColor(Qt::white).name();
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
@@ -1229,7 +1229,7 @@ int DBCHandler::createBlankFile()
     newFile.dbc_attributes.append(attr);
 
     attr.attrType = MESSAGE;
-    attr.defaultValue = QApplication::palette().color(QPalette::Window).name();
+    attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;

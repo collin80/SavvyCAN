@@ -490,6 +490,10 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
                 QTableWidgetItem *msgName = new QTableWidgetItem(msg->name);
                 QTableWidgetItem *msgLen = new QTableWidgetItem(QString::number(msg->len));
                 QTableWidgetItem *msgSignals = new QTableWidgetItem(QString::number(msg->sigHandler->getCount()));
+                QTableWidgetItem *fgColor = new QTableWidgetItem("");
+                fgColor->setBackgroundColor(msg->fgColor);
+                QTableWidgetItem *bgColor = new QTableWidgetItem("");
+                bgColor->setBackgroundColor(msg->bgColor);
                 QTableWidgetItem *msgComment = new QTableWidgetItem(msg->comment);
 
                 rowIdx = ui->MessagesTable->rowCount();
@@ -498,7 +502,9 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
                 ui->MessagesTable->setItem(rowIdx, 1, msgName);
                 ui->MessagesTable->setItem(rowIdx, 2, msgLen);
                 ui->MessagesTable->setItem(rowIdx, 3, msgSignals);
-                ui->MessagesTable->setItem(rowIdx, 4, msgComment);
+                ui->MessagesTable->setItem(rowIdx, 4, fgColor);
+                ui->MessagesTable->setItem(rowIdx, 5, bgColor);
+                ui->MessagesTable->setItem(rowIdx, 6, msgComment);
                 //note that there is a sending node field in the structure but we're
                 //not displaying it. It has to be the node we selected from the node list
                 //so no need to show that here.

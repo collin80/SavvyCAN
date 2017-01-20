@@ -216,7 +216,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return msg->bgColor;
             }
         }
-        return QApplication::palette().color(QPalette::Window);
+        //return QApplication::palette().color(QPalette::Button);
+        return QColor(Qt::white);
     }
 
     if (role == Qt::TextColorRole)
