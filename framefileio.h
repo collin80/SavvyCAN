@@ -39,6 +39,9 @@ public:
     static bool loadIXXATFile(QString, QVector<CANFrame>*);
     static bool loadCANDOFile(QString, QVector<CANFrame>*);
     static bool loadVehicleSpyFile(QString, QVector<CANFrame>*);
+    static bool loadCanDumpFile(QString, QVector<CANFrame>*);
+    static bool loadPCANFile(QString, QVector<CANFrame>*);
+    static bool loadKvaserFile(QString, QVector<CANFrame>*, bool);
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);    
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);
@@ -48,8 +51,6 @@ public:
     static bool saveIXXATFile(QString, const QVector<CANFrame>*);
     static bool saveCANDOFile(QString, const QVector<CANFrame>*);
     static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
-    static bool loadCanDumpFile(QString, QVector<CANFrame>*);
-    static bool loadPCANFile(QString, QVector<CANFrame>*);
 };
 
 #endif // FRAMEFILEIO_H

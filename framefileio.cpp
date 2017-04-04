@@ -129,6 +129,8 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
     filters.append(QString(tr("Candump/Kayak (*.log *.LOG)")));
     filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
+    filters.append(QString(tr("Kvaser Log Decimal (*.txt *.TXT)")));
+    filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -159,6 +161,8 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[9]) result = loadCanDumpFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[10]) result = loadPCANFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[11]) result = loadKvaserFile(filename, frameCache, false);
+        if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, true);
 
         progress.cancel();
 
@@ -1483,3 +1487,61 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
+//Chn Identifier Flg   DLC  D0...1...2...3...4...5...6..D7       Time     Dir
+// 0    000000AD         8  FF  FF  00  00  00  00  00  00     154.266550 R
+bool FrameFileIO::loadKvaserFile(QString filename, QVector<CANFrame> *frames, bool useHex)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    int base = 10;
+    bool foundErrors = false;
+
+    if (useHex) base = 16;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    //ignore header
+    line = inFile->readLine().simplified().toUpper();
+
+    if (inFile->atEnd()) foundErrors = true;
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = inFile->readLine().toUpper();
+
+        qDebug() << line.length();
+
+        if (line.length() > 70) {
+            //Chn Identifier Flg   DLC  D0...1...2...3...4...5...6..D7       Time     Dir
+            // 0    000000AD         8  FF  FF  00  00  00  00  00  00     154.266550 R
+            thisFrame.bus = line.mid(0,3).simplified().toInt();
+            thisFrame.ID = line.mid(4,10).simplified().toInt(NULL, base);
+            if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
+                else thisFrame.extended = false;
+            thisFrame.len = line.mid(21, 3).simplified().toInt();
+            for (int i = 0; i < 8; i++) {
+                thisFrame.data[i] = line.mid(25 + i * 4, 3).simplified().toInt(NULL, base);
+            }
+            thisFrame.timestamp = line.mid(57, 14).simplified().toDouble() * 1000000;
+            if (line.mid(72, 1).toUpper() == "R") thisFrame.isReceived = true;
+                else thisFrame.isReceived = false;
+
+            frames->append(thisFrame);
+        }
+        //else foundErrors = true;
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
