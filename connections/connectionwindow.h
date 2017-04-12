@@ -35,6 +35,7 @@ public:
 signals:
     void updateBusSettings(CANBus *bus);
     void updatePortName(QString port);
+    void sendDebugData(QByteArray bytes);
 
 public slots:
     void setSpeed(int speed0);
@@ -42,15 +43,21 @@ public slots:
 
     void setSuspendAll(bool pSuspend);
 
+    void getDebugText(QString debugText);
+
 private slots:
     void handleOKButton();
     void handleConnTypeChanged();
     void currentRowChanged(const QModelIndex &current, const QModelIndex &previous);
+    void consoleEnableChanged(bool checked);
     void handleRemoveConn();
     void handleEnableAll();
     void handleDisableAll();
     void handleRevert();
     void handleNewConn();
+    void handleClearDebugText();
+    void handleSendHex();
+    void handleSendText();
     void connectionStatus(CANCon::status);
 
 private:

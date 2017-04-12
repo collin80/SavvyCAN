@@ -54,6 +54,9 @@ protected:
 
     void disconnectDevice();
 
+public slots:
+    void debugInput(QByteArray bytes);
+
 private slots:
     void connectDevice();
     void connectionTimeout();

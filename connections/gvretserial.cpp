@@ -3,6 +3,7 @@
 #include <QCanBusFrame>
 #include <QSerialPortInfo>
 #include <QSettings>
+#include <QStringBuilder>
 
 #include "gvretserial.h"
 
@@ -11,6 +12,7 @@ GVRetSerial::GVRetSerial(QString portName) :
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
     qDebug() << "GVRetSerial()";
+    debugOutput("GVRetSerial()");
 
     serial = NULL;
     rx_state = IDLE;
@@ -30,6 +32,7 @@ GVRetSerial::~GVRetSerial()
 {
     stop();
     qDebug() << "~GVRetSerial()";
+    debugOutput("~GVRetSerial()");
 }
 
 
@@ -126,6 +129,7 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
     /* update baud rates */
     QByteArray buffer;
     qDebug() << "Got signal to update bauds. 1: " << can0Baud <<" 2: " << can1Baud;
+    debugOutput("Got signal to update bauds. 1: " + QString::number(can0Baud) + " 2: " + QString::number(can1Baud));
     buffer[0] = (char)0xF1; //start of a command over serial
     buffer[1] = 5; //setup canbus
     buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
@@ -175,6 +179,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     buffer[8 + frame.len] = 0;
 
     //qDebug() << "writing " << buffer.length() << " bytes to serial port";
+    debugOutput("writing " + QString::number(buffer.length()) + " bytes to serial port");
     serial->write(buffer);
 
     return true;
@@ -208,6 +213,7 @@ void GVRetSerial::connectDevice()
     serial = new QSerialPort(QSerialPortInfo(getPort()));
     if(!serial) {
         qDebug() << "can't open serial port " << getPort();
+        debugOutput("can't open serial port " + getPort());
         return;
     }
 
@@ -252,6 +258,12 @@ void GVRetSerial::connectDevice()
     continuousTimeSync = true;
 
     serial->write(output);
+    QString buildDebug;
+    buildDebug = "Write to serial -> ";
+    foreach (int byt, output) {
+        buildDebug = buildDebug % QString::number(byt, 16) % " ";
+    }
+    debugOutput(buildDebug);
 
     if(doValidation) {
         QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
@@ -300,15 +312,23 @@ void GVRetSerial::readSerialData()
 {
     QByteArray data = serial->readAll();
     unsigned char c;
+    QString debugBuild;
+    debugOutput("Got data from serial. Len = " % QString::number(data.length()));
     //qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         c = data.at(i);
         //qDebug() << c << "    " << QString::number(c, 16) << "     " << QString(c);
+        debugBuild = debugBuild % QString::number(c, 16) % " ";
         procRXChar(c);
     }
+    debugOutput(debugBuild);
 }
 
+//Debugging data sent from connection window. Inject it into Comm traffic.
+void GVRetSerial::debugInput(QByteArray bytes) {
+   serial->write(bytes);
+}
 
 void GVRetSerial::procRXChar(unsigned char c)
 {

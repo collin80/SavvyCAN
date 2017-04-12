@@ -22,7 +22,6 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     qRegisterMetaType<const CANFrame *>("const CANFrame *");
     qRegisterMetaType<const QList<CANFrame> *>("const QList<CANFrame> *");
 
-
     connModel = new CANConnectionModel(this);
     ui->tableConnections->setModel(connModel);
     ui->tableConnections->setColumnWidth(0, 50);
@@ -39,7 +38,13 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbSpeed->addItem(tr("250000"));
     ui->cbSpeed->addItem(tr("500000"));
     ui->cbSpeed->addItem(tr("1000000"));
-    ui->cbSpeed->addItem(tr("33333"));    
+    ui->cbSpeed->addItem(tr("33333"));
+
+    ui->textConsole->setEnabled(false);
+    ui->btnClearDebug->setEnabled(false);
+    ui->btnSendHex->setEnabled(false);
+    ui->btnSendText->setEnabled(false);
+    ui->lineSend->setEnabled(false);
 
     /* load connection configuration */
     loadConnections();
@@ -59,6 +64,10 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
     connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
     connect(ui->btnRemoveBus, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
+    connect(ui->btnClearDebug, &QPushButton::clicked, this, &ConnectionWindow::handleClearDebugText);
+    connect(ui->btnSendHex, &QPushButton::clicked, this, &ConnectionWindow::handleSendHex);
+    connect(ui->btnSendText, &QPushButton::clicked, this, &ConnectionWindow::handleSendText);
+    connect(ui->ckEnableConsole, &QCheckBox::toggled, this, &ConnectionWindow::consoleEnableChanged);
 }
 
 ConnectionWindow::~ConnectionWindow()
@@ -119,6 +128,28 @@ void ConnectionWindow::setActiveAll(bool pActive)
     connModel->refresh();
 }
 
+void ConnectionWindow::consoleEnableChanged(bool checked) {
+    int busId;
+
+    CANConnection* conn_p = connModel->getAtIdx(ui->tableConnections->currentIndex().row(), busId);
+
+    ui->textConsole->setEnabled(checked);
+    ui->btnClearDebug->setEnabled(checked);
+    ui->btnSendHex->setEnabled(checked);
+    ui->btnSendText->setEnabled(checked);
+    ui->lineSend->setEnabled(checked);
+
+    if(!conn_p) return;
+
+    if (checked) { //enable console
+        connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+        connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+    }
+    else { //turn it off
+        disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
+        disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+    }
+}
 
 void ConnectionWindow::handleNewConn()
 {
@@ -209,13 +240,16 @@ void ConnectionWindow::handleOKButton()
     }
 }
 
-
-
 void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
     Q_UNUSED(previous);
 
     int selIdx = current.row();
+
+    int busId;
+
+    disconnect(connModel->getAtIdx(previous.row(), busId), SIGNAL(debugOutput(QString)), 0, 0);
+    disconnect(this, SIGNAL(sendDebugData(QByteArray)), connModel->getAtIdx(previous.row(), busId), SLOT(debugInput(QByteArray)));
 
     /* enable / diable connection type */
     ui->stPort->setEnabled(selIdx==-1);
@@ -235,11 +269,16 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     }
     else
     {
-        int busId;
         bool ret;
         CANBus bus;
         CANConnection* conn_p = connModel->getAtIdx(selIdx, busId);
         if(!conn_p) return;
+
+        if (ui->ckEnableConsole->isChecked()) { //only connect if console is actually enabled
+            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+            connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        }
+
         ret = conn_p->getBusSettings(busId, bus);
         if(!ret) return;
 
@@ -252,6 +291,29 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     }
 }
 
+void ConnectionWindow::getDebugText(QString debugText) {
+    ui->textConsole->append(debugText);
+}
+
+void ConnectionWindow::handleClearDebugText() {
+    ui->textConsole->clear();
+}
+
+void ConnectionWindow::handleSendHex() {
+    QByteArray bytes;
+    QStringList tokens = ui->lineSend->text().split(' ');
+    foreach (QString token, tokens) {
+        bytes.append(token.toInt(nullptr, 16));
+    }
+    emit sendDebugData(bytes);
+}
+
+void ConnectionWindow::handleSendText() {
+    QByteArray bytes;
+    bytes = ui->lineSend->text().toLatin1();
+    bytes.append('\r'); //add carriage return for line ending
+    emit sendDebugData(bytes);
+}
 
 void ConnectionWindow::selectSerial()
 {

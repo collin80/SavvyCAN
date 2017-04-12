@@ -91,6 +91,11 @@ signals:
      */
     void status(CANCon::status pStatus);
 
+    /**
+      * @brief Event sent when device has done something worthy of debugging output.
+      * @param debugString: String based output to show for debugging purposes
+      */
+    void debugOutput(QString debugString);
 
 public slots:
 
@@ -174,6 +179,8 @@ public slots:
      * @return true if filter(s) was/were found and deleted, false otherwise.
      */
     bool removeAllTargettedFrames(QObject *receiver);
+
+    void debugInput(QByteArray bytes);
 
 protected:
 
