@@ -706,7 +706,8 @@ void GraphingWindow::saveDefinitions()
             outFile->putChar(',');
             outFile->write(QString::number(iter->mask, 16).toUtf8());
             outFile->putChar(',');
-            outFile->write(QString::number(iter->startBit).toUtf8());
+            if (iter->intelFormat) outFile->write(QString::number(iter->startBit).toUtf8());
+                else outFile->write(QString::number(iter->startBit * -1).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->numBits).toUtf8());
             outFile->putChar(',');
@@ -769,6 +770,8 @@ void GraphingWindow::loadDefinitions()
                     gp.ID = tokens[1].toInt(NULL, 16);
                     gp.mask = tokens[2].toULongLong(NULL, 16);
                     gp.startBit = tokens[3].toInt();
+                    if (gp.startBit < 0) gp.intelFormat = false;
+                        else gp.intelFormat = true;
                     gp.numBits = tokens[4].toInt();
                     if (tokens[5] == "Y") gp.isSigned = true;
                         else gp.isSigned = false;
