@@ -14,7 +14,7 @@ CONFIG += c++11 qscintilla2
 
 TARGET = SavvyCAN
 TEMPLATE = app
-
+INCLUDEPATH +=/usr/include/qt5/
 
 SOURCES += main.cpp\
     mainwindow.cpp \
@@ -142,3 +142,5 @@ DISTFILES +=
 RESOURCES += \
     icons.qrc \
     images.qrc
+
+unix:!macx: LIBS += -lqt5scintilla2
