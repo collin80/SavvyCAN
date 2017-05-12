@@ -2,6 +2,7 @@
 #define UDSSCANWINDOW_H
 
 #include "can_structs.h"
+#include "connections/canconnection.h"
 
 #include <QDialog>
 
@@ -19,7 +20,7 @@ public:
 
 private slots:
     void updatedFrames(int numFrames);
-    void rapidFrames(int numFrames);
+    void rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames);
     void scanUDS();
     void timeOut();
 
@@ -32,6 +33,7 @@ private:
     bool currentlyRunning;
 
     void sendNextMsg();
+    void sendOnBuses(CANFrame &frame, int buses);
 };
 
 #endif // UDSSCANWINDOW_H

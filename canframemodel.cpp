@@ -49,12 +49,12 @@ CANFrameModel::CANFrameModel(QObject *parent)
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 20000000;
+        preallocSize = 10000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
         qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
-        preallocSize = 4000000;
+        preallocSize = 2000000;
     }
 
     frames.reserve(preallocSize);
@@ -106,7 +106,7 @@ void CANFrameModel::setInterpetMode(bool mode)
 void CANFrameModel::normalizeTiming()
 {
     mutex.lock();
-    if (frames.count() == 0) return;    
+    if (frames.count() == 0) return;
     timeOffset = frames[0].timestamp;
     for (int i = 0; i < frames.count(); i++)
     {
@@ -240,7 +240,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             if (!timeSeconds) return QString::number(thisFrame.timestamp);
             else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
             break;
-        case 1: //id            
+        case 1: //id
             return Utility::formatNumber(thisFrame.ID);
             break;
         case 2: //ext
@@ -281,7 +281,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                             tempString.append(sigString);
                             tempString.append("\n");
                         }
-                    }                    
+                    }
                 }
             }
             return tempString;
@@ -351,7 +351,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     }
 
     if (!overwriteDups)
-    {        
+    {
         frames.append(tempFrame);
         if (filters[tempFrame.ID])
         {
@@ -366,14 +366,14 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         for (int i = 0; i < frames.count(); i++)
         {
             if (frames[i].ID == tempFrame.ID)
-            {                
+            {
                 frames.replace(i, tempFrame);
                 found = true;
                 break;
             }
         }
         if (!found)
-        {            
+        {
             frames.append(tempFrame);
             if (filters[tempFrame.ID])
             {
@@ -409,9 +409,9 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
 }
 
 void CANFrameModel::sendRefresh()
-{    
+{
     qDebug() << "Sending mass refresh";
-    QVector<CANFrame> tempContainer;    
+    QVector<CANFrame> tempContainer;
     int count = frames.count();
     for (int i = 0; i < count; i++)
     {
@@ -423,8 +423,9 @@ void CANFrameModel::sendRefresh()
     mutex.lock();
     beginResetModel();
     filteredFrames.clear();
-    filteredFrames.append(tempContainer);
     filteredFrames.reserve(preallocSize);
+    filteredFrames.append(tempContainer);
+
     lastUpdateNumFrames = filteredFrames.count();
     endResetModel();
     mutex.unlock();
@@ -479,7 +480,7 @@ void CANFrameModel::clearFrames()
  * allows for a mass import of frames into the model
  */
 void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
-{    
+{
     //not resetting the model here because the serial worker automatically does a bulk refresh every 1/4 second
     //and that refresh will cause the view to update. If you do both it usually ends up thinking you have
     //double the number of frames.

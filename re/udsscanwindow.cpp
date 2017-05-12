@@ -17,7 +17,7 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     waitTimer->setInterval(100);
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
-    connect(MainWindow::getReference(), SIGNAL(frameUpdateRapid(int)), this, SLOT(rapidFrames(int)));
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &UDSScanWindow::rapidFrames);
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
     connect(waitTimer, &QTimer::timeout, this, &UDSScanWindow::timeOut);
 
@@ -33,6 +33,23 @@ UDSScanWindow::~UDSScanWindow()
     delete waitTimer;
 }
 
+void UDSScanWindow::sendOnBuses(CANFrame &frame, int buses)
+{
+    if (buses < ui->cbBuses->count()- 1)
+    {
+        frame.bus = buses;
+        sendingFrames.append(frame);
+    }
+    else
+    {
+        for (int c = 0; c < ui->cbBuses->count() - 1; c++)
+        {
+            frame.bus = c;
+            sendingFrames.append(frame);
+        }
+    }
+}
+
 void UDSScanWindow::scanUDS()
 {
     if (currentlyRunning)
@@ -42,6 +59,8 @@ void UDSScanWindow::scanUDS()
         currentlyRunning = false;
         ui->btnScan->setText("Start Scan");
     }
+
+    waitTimer->setInterval(ui->spinDelay->value());
 
     ui->listResults->clear();
     sendingFrames.clear();
@@ -54,61 +73,50 @@ void UDSScanWindow::scanUDS()
 
     int buses = ui->cbBuses->currentIndex();
 
-    //start out by sending tester present to every address to see if anyone replies
     for (id = startID; id <= endID; id++)
     {
         frame.ID = id;
         frame.len = 8;
         frame.extended = false;
-        frame.data[0] = 2;
-        frame.data[1] = 0x3E; //tester present
-        frame.data[2] = 0;
-        frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
-        frame.data[6] = 0;frame.data[7] = 0;
 
-        if (buses < ui->cbBuses->count()- 1)
+        if (ui->ckTester->isChecked())
         {
-            frame.bus = buses;
-            sendingFrames.append(frame);
-        }
-        else
-        {
-            for (int c = 0; c < ui->cbBuses->count() - 1; c++)
-            {
-                frame.bus = c;
-                sendingFrames.append(frame);
-            }
-        }
-
-    }
-
-    //then try asking for the various diagnostic session types
-    for (typ = 1; typ < 5; typ++)
-    {
-        for (id = startID; id <= endID; id++)
-        {
-            frame.ID = id;
-            frame.len = 8;
-            frame.extended = false;
             frame.data[0] = 2;
-            frame.data[1] = 0x10;
-            frame.data[2] = typ;
+            frame.data[1] = 0x3E; //tester present
+            frame.data[2] = 0;
             frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
             frame.data[6] = 0;frame.data[7] = 0;
-
-            if (buses < ui->cbBuses->count()- 1)
+            sendOnBuses(frame, buses);
+        }
+        if (ui->ckSession->isChecked())
+        {
+            for (typ = 1; typ < 4; typ++) //try each type of session access
             {
-                frame.bus = buses;
-                sendingFrames.append(frame);
+                frame.data[0] = 2;
+                frame.data[1] = 0x10;
+                frame.data[2] = typ;
+                frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
+                frame.data[6] = 0;frame.data[7] = 0;
+                sendOnBuses(frame, buses);
             }
-            else
-            {
-                for (int c = 0; c < ui->cbBuses->count() - 1; c++)
-                {
-                    frame.bus = c;
-                    sendingFrames.append(frame);
-                }
-            }
+        }
+        if (ui->ckReset->isChecked()) //try to command a reset of the ECU. You're likely to know if it works. ;)
+        {
+            frame.data[0] = 2;
+            frame.data[1] = 0x11; //Reset
+            frame.data[2] = 1; //hard reset. 2 = key off/on 3 = soft reset
+            frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
+            frame.data[6] = 0;frame.data[7] = 0;
+            sendOnBuses(frame, buses);
+        }
+        if (ui->ckSecurity->isChecked()) //try to enter security mode - very likely to get a response if an ECU exists.
+        {
+            frame.data[0] = 2;
+            frame.data[1] = 0x27; //request security mode
+            frame.data[2] = 1; //request seed from ECU
+            frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
+            frame.data[6] = 0;frame.data[7] = 0;
+            sendOnBuses(frame, buses);
         }
     }
 
@@ -135,26 +143,24 @@ void UDSScanWindow::updatedFrames(int numFrames)
 
 //Updates here are nearly once per millisecond if there is heavy traffic. That's more like it!
 //TODO: I really doubt this works anymore with the new connection system. This breaks the UDS scanner for now! ;(
-void UDSScanWindow::rapidFrames(int numFrames)
+void UDSScanWindow::rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames)
 {
-    CANFrame thisFrame;
     QString result;
     uint32_t id;
     int offset = ui->spinReplyOffset->value();
     CANFrame sentFrame;
     bool gotReply = false;
 
-    if (numFrames > modelFrames->count()) return;
+    if (pFrames.length() <= 0) return;
 
     int numSending = sendingFrames.length();
     if (numSending == 0) return;
     if (currIdx >= numSending) return;
     sentFrame = sendingFrames[currIdx];
 
-    for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+    foreach(const CANFrame& thisFrame, pFrames)
     {
         if (currIdx >= numSending) return;
-        thisFrame = modelFrames->at(i);
         id = thisFrame.ID;
 
         if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())

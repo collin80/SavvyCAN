@@ -101,7 +101,7 @@ signals:
     void suspendCapturing(bool);
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
-    void framesUpdated(int numFrames); //something has updated the frame list
+    void framesUpdated(int numFrames); //something has updated the frame list (send at gui update frequency)
     void frameUpdateRapid(int numFrames);
     void settingsUpdated();
     void sendCenterTimeID(int32_t ID, double timestamp);
@@ -112,7 +112,7 @@ private:
 
     //canbus related data
     CANFrameModel *model;
-    DBCHandler *dbcHandler;    
+    DBCHandler *dbcHandler;
     QByteArray inputBuffer;
     QTimer updateTimer;
     QTime *elapsedTime;
