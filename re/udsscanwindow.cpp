@@ -20,6 +20,7 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &UDSScanWindow::rapidFrames);
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
     connect(waitTimer, &QTimer::timeout, this, &UDSScanWindow::timeOut);
+    connect(ui->btnSaveResults, &QPushButton::clicked, this, &UDSScanWindow::saveResults);
 
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
@@ -31,6 +32,44 @@ UDSScanWindow::~UDSScanWindow()
     delete ui;
     waitTimer->stop();
     delete waitTimer;
+}
+
+void UDSScanWindow::saveResults()
+{
+    QString filename;
+    QFileDialog dialog(this);
+
+    QStringList filters;
+    filters.append(QString(tr("Text File (*.txt)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".txt";
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            QFile *outFile = new QFile(filename);
+
+            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                delete outFile;
+                return;
+            }
+
+            for (int i = 0; i < ui->listResults->count(); i++)
+            {
+                outFile->write(ui->listResults->item(i)->text().toUtf8());
+                outFile->write("\n");
+            }
+            outFile->close();
+            delete outFile;
+        }
+    }
 }
 
 void UDSScanWindow::sendOnBuses(CANFrame &frame, int buses)
@@ -58,6 +97,7 @@ void UDSScanWindow::scanUDS()
         sendingFrames.clear();
         currentlyRunning = false;
         ui->btnScan->setText("Start Scan");
+        return;
     }
 
     waitTimer->setInterval(ui->spinDelay->value());

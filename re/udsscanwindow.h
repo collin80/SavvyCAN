@@ -22,6 +22,7 @@ private slots:
     void updatedFrames(int numFrames);
     void rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames);
     void scanUDS();
+    void saveResults();
     void timeOut();
 
 private:

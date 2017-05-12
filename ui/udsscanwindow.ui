@@ -25,6 +25,13 @@
     <widget class="QListWidget" name="listResults"/>
    </item>
    <item>
+    <widget class="QPushButton" name="btnSaveResults">
+     <property name="text">
+      <string>Save Scan Results</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
