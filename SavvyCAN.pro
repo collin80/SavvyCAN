@@ -60,7 +60,10 @@ SOURCES += main.cpp\
     re/graphingwindow.cpp \
     re/newgraphdialog.cpp \
     bisectwindow.cpp \
-    signalviewerwindow.cpp
+    signalviewerwindow.cpp \
+    bus_protocols/isotp_handler.cpp \
+    bus_protocols/j1939_handler.cpp \
+    bus_protocols/uds_handler.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -99,7 +102,6 @@ HEADERS  += mainwindow.h \
     re/flowviewwindow.h \
     re/frameinfowindow.h \
     re/fuzzingwindow.h \
-    re/isotp_handler.h \
     re/isotp_interpreterwindow.h \
     re/rangestatewindow.h \
     re/udsscanwindow.h \
@@ -109,7 +111,10 @@ HEADERS  += mainwindow.h \
     re/graphingwindow.h \
     re/newgraphdialog.h \
     bisectwindow.h \
-    signalviewerwindow.h
+    signalviewerwindow.h \
+    bus_protocols/isotp_handler.h \
+    bus_protocols/j1939_handler.h \
+    bus_protocols/uds_handler.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
