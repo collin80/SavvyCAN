@@ -10,6 +10,14 @@ namespace Ui {
 class UDSScanWindow;
 }
 
+struct UDS_TESTS
+{
+    int ID;
+    int bus;
+    int service;
+    int subFunc;
+};
+
 class UDSScanWindow : public QDialog
 {
     Q_OBJECT
@@ -29,12 +37,12 @@ private:
     Ui::UDSScanWindow *ui;
     const QVector<CANFrame> *modelFrames;
     QTimer *waitTimer;
-    QList<CANFrame> sendingFrames;
+    QList<UDS_TESTS> sendingFrames;
     int currIdx = 0;
     bool currentlyRunning;
 
     void sendNextMsg();
-    void sendOnBuses(CANFrame &frame, int buses);
+    void sendOnBuses(UDS_TESTS frame, int buses);
 };
 
 #endif // UDSSCANWINDOW_H

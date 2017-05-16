@@ -2,6 +2,7 @@
 #include "ui_udsscanwindow.h"
 #include "mainwindow.h"
 #include "connections/canconmanager.h"
+#include "bus_protocols/uds_handler.h"
 
 UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -72,19 +73,20 @@ void UDSScanWindow::saveResults()
     }
 }
 
-void UDSScanWindow::sendOnBuses(CANFrame &frame, int buses)
+void UDSScanWindow::sendOnBuses(UDS_TESTS test, int buses)
 {
-    if (buses < ui->cbBuses->count()- 1)
+    int busList = buses;
+    if (busList < ui->cbBuses->count() - 1)
     {
-        frame.bus = buses;
-        sendingFrames.append(frame);
+        test.bus = buses;
+        sendingFrames.append(test);
     }
     else
     {
         for (int c = 0; c < ui->cbBuses->count() - 1; c++)
         {
-            frame.bus = c;
-            sendingFrames.append(frame);
+            test.bus = c;
+            sendingFrames.append(test);
         }
     }
 }
@@ -105,7 +107,7 @@ void UDSScanWindow::scanUDS()
     ui->listResults->clear();
     sendingFrames.clear();
 
-    CANFrame frame;
+    UDS_TESTS test;
     int typ, id;
     int startID, endID;
     startID = Utility::ParseStringToNum(ui->txtStartID->text());
@@ -115,48 +117,34 @@ void UDSScanWindow::scanUDS()
 
     for (id = startID; id <= endID; id++)
     {
-        frame.ID = id;
-        frame.len = 8;
-        frame.extended = false;
+        test.ID = id;
 
         if (ui->ckTester->isChecked())
         {
-            frame.data[0] = 2;
-            frame.data[1] = 0x3E; //tester present
-            frame.data[2] = 0;
-            frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
-            frame.data[6] = 0;frame.data[7] = 0;
-            sendOnBuses(frame, buses);
+            test.service = UDS_SERVICES::TESTER_PRESENT;
+            test.subFunc = 0;
+            sendOnBuses(test, buses);
         }
         if (ui->ckSession->isChecked())
         {
             for (typ = 1; typ < 4; typ++) //try each type of session access
             {
-                frame.data[0] = 2;
-                frame.data[1] = 0x10;
-                frame.data[2] = typ;
-                frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
-                frame.data[6] = 0;frame.data[7] = 0;
-                sendOnBuses(frame, buses);
+                test.service = UDS_SERVICES::DIAG_CONTROL;
+                test.subFunc = typ;
+                sendOnBuses(test, buses);
             }
         }
         if (ui->ckReset->isChecked()) //try to command a reset of the ECU. You're likely to know if it works. ;)
         {
-            frame.data[0] = 2;
-            frame.data[1] = 0x11; //Reset
-            frame.data[2] = 1; //hard reset. 2 = key off/on 3 = soft reset
-            frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
-            frame.data[6] = 0;frame.data[7] = 0;
-            sendOnBuses(frame, buses);
+            test.service = UDS_SERVICES::ECU_RESET;
+            test.subFunc = 1;
+            sendOnBuses(test, buses);
         }
         if (ui->ckSecurity->isChecked()) //try to enter security mode - very likely to get a response if an ECU exists.
         {
-            frame.data[0] = 2;
-            frame.data[1] = 0x27; //request security mode
-            frame.data[2] = 1; //request seed from ECU
-            frame.data[3] = 0;frame.data[4] = 0;frame.data[5] = 0;
-            frame.data[6] = 0;frame.data[7] = 0;
-            sendOnBuses(frame, buses);
+            test.service = UDS_SERVICES::SECURITY_ACCESS;
+            test.subFunc = 1;
+            sendOnBuses(test, buses);
         }
     }
 
@@ -188,7 +176,7 @@ void UDSScanWindow::rapidFrames(const CANConnection* conn, const QVector<CANFram
     QString result;
     uint32_t id;
     int offset = ui->spinReplyOffset->value();
-    CANFrame sentFrame;
+    UDS_TESTS sentFrame;
     bool gotReply = false;
 
     if (pFrames.length() <= 0) return;
@@ -205,27 +193,27 @@ void UDSScanWindow::rapidFrames(const CANConnection* conn, const QVector<CANFram
 
         if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
         {
-            int temp = thisFrame.data[0] >> 4;
-            if (temp == 0) //single frame reply (maybe)
-            {
-                if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].data[1])
+            //int temp = thisFrame.data[0] >> 4;
+            //if (temp == 0) //single frame reply (maybe)
+            //{
+                if (thisFrame.data[1] == 0x40 + sendingFrames[currIdx].service)
                 {
                     result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
-                        + QString::number(sentFrame.data[1], 16)
-                        + " " + QString::number(sentFrame.data[2], 16) + " with affirmation from ID " + QString::number(id, 16)
+                        + QString::number(sentFrame.service, 16)
+                        + " " + QString::number(sentFrame.subFunc, 16) + " with affirmation from ID " + QString::number(id, 16)
                         + " on bus " + QString::number(thisFrame.bus) + ".";
                     gotReply = true;
                 }
                 else if ( thisFrame.data[1] == 0x7F)
                 {
                     result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
-                        + QString::number(sentFrame.data[1], 16)
-                        + " " + QString::number(sentFrame.data[2], 16) + " with an error from ID " + QString::number(id, 16)
+                        + QString::number(sentFrame.service, 16)
+                        + " " + QString::number(sentFrame.subFunc, 16) + " with an error from ID " + QString::number(id, 16)
                         + " on bus " + QString::number(thisFrame.bus) + ".";
                     gotReply = true;
                 }
-            }
-
+            //}
+            /*
             if (temp == 1) //start of a multiframe reply
             {
                 if (thisFrame.data[2] == 0x40 + sendingFrames[currIdx].data[1])
@@ -237,7 +225,7 @@ void UDSScanWindow::rapidFrames(const CANConnection* conn, const QVector<CANFram
                     gotReply = true;
                 }
                 //error replies are never multiframe so the check doesn't have to be done here.
-            }
+            } */
         }
     }
     if (gotReply)
@@ -251,7 +239,7 @@ void UDSScanWindow::timeOut()
 {
     QString result;
     result = "Request on bus " + QString::number(sendingFrames[currIdx].bus) + " ID: " + QString::number(sendingFrames[currIdx].ID, 16) + " got no response to mode "
-             + QString::number(sendingFrames[currIdx].data[1], 16) + " " + QString::number(sendingFrames[currIdx].data[2], 16);
+             + QString::number(sendingFrames[currIdx].service, 16) + " " + QString::number(sendingFrames[currIdx].subFunc, 16);
     ui->listResults->addItem(result);
 
     sendNextMsg();
@@ -259,10 +247,14 @@ void UDSScanWindow::timeOut()
 
 void UDSScanWindow::sendNextMsg()
 {
+    QVector<unsigned char> data;
+
     currIdx++;
     if (currIdx < sendingFrames.count())
     {
-        CANConManager::getInstance()->sendFrame(sendingFrames[currIdx]);
+        data.clear();
+        data.append(sendingFrames[currIdx].subFunc);
+        UDS_HANDLER::getInstance()->sendUDSFrame(sendingFrames[currIdx].bus, sendingFrames[currIdx].ID, sendingFrames[currIdx].service, data);
         waitTimer->start();
     }
     else

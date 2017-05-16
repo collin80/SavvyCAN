@@ -50,7 +50,6 @@ SOURCES += main.cpp\
     re/flowviewwindow.cpp \
     re/frameinfowindow.cpp \
     re/fuzzingwindow.cpp \
-    re/isotp_handler.cpp \
     re/isotp_interpreterwindow.cpp \
     re/rangestatewindow.cpp \
     re/udsscanwindow.cpp \
