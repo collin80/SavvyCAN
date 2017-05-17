@@ -5,7 +5,7 @@
 #include <QObject>
 #include <QDebug>
 #include "can_structs.h"
-#include "isotp_handler.h"
+#include "isotp_message.h"
 
 namespace UDS_SERVICES
 {
@@ -68,6 +68,13 @@ struct CODE_STRUCT
     QString longDesc;
 };
 
+class UDS_MESSAGE: public ISOTP_MESSAGE
+{
+public:
+    int service;
+    int subFunc;
+};
+
 class UDS_HANDLER : public QObject
 {
     Q_OBJECT
@@ -78,6 +85,7 @@ public:
     static UDS_HANDLER* getInstance();
     void setReception(bool mode); //set whether to accept and forward frames or not
     void sendUDSFrame(int bus, int ID, int service, QVector<unsigned char> payload);
+    void sendUDSFrame(const UDS_MESSAGE &msg);
     QString getServiceShortDesc(int service);
     QString getServiceLongDesc(int service);
     QString getNegativeResponseShort(int respCode);
@@ -87,7 +95,7 @@ public slots:
     void gotISOTPFrame(ISOTP_MESSAGE &msg);
 
 signals:
-    void newUDSMessage(ISOTP_MESSAGE &msg);
+    void newUDSMessage(UDS_MESSAGE &msg);
 
 private:
     QList<ISOTP_MESSAGE> messageBuffer;

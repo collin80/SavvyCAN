@@ -7,20 +7,7 @@
 #include "can_structs.h"
 #include "mainwindow.h"
 #include "canframemodel.h"
-
-//the same as the CANFrame struct but with arbitrary data size.
-struct ISOTP_MESSAGE
-{
-public:
-    uint32_t ID;
-    int bus;
-    bool extended;
-    bool isReceived;
-    int len; //# of bytes this message should have (as reported)
-    int actualSize; //# we actually got
-    QVector<unsigned char> data;
-    uint64_t timestamp;
-};
+#include "isotp_message.h"
 
 class ISOTP_HANDLER : public QObject
 {

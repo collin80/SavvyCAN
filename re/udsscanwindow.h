@@ -3,20 +3,13 @@
 
 #include "can_structs.h"
 #include "connections/canconnection.h"
+#include "bus_protocols/uds_handler.h"
 
 #include <QDialog>
 
 namespace Ui {
 class UDSScanWindow;
 }
-
-struct UDS_TESTS
-{
-    int ID;
-    int bus;
-    int service;
-    int subFunc;
-};
 
 class UDSScanWindow : public QDialog
 {
@@ -28,7 +21,7 @@ public:
 
 private slots:
     void updatedFrames(int numFrames);
-    void rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames);
+    void gotUDSReply(UDS_MESSAGE &msg);
     void scanUDS();
     void saveResults();
     void timeOut();
@@ -37,12 +30,12 @@ private:
     Ui::UDSScanWindow *ui;
     const QVector<CANFrame> *modelFrames;
     QTimer *waitTimer;
-    QList<UDS_TESTS> sendingFrames;
+    QList<UDS_MESSAGE> sendingFrames;
     int currIdx = 0;
     bool currentlyRunning;
 
     void sendNextMsg();
-    void sendOnBuses(UDS_TESTS frame, int buses);
+    void sendOnBuses(UDS_MESSAGE frame, int buses);
 };
 
 #endif // UDSSCANWINDOW_H

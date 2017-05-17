@@ -113,7 +113,8 @@ HEADERS  += mainwindow.h \
     signalviewerwindow.h \
     bus_protocols/isotp_handler.h \
     bus_protocols/j1939_handler.h \
-    bus_protocols/uds_handler.h
+    bus_protocols/uds_handler.h \
+    bus_protocols/isotp_message.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \

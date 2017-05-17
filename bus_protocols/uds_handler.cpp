@@ -1,5 +1,6 @@
 #include "uds_handler.h"
 #include "connections/canconmanager.h"
+#include "mainwindow.h"
 #include <QDebug>
 
 QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
@@ -143,6 +144,18 @@ UDS_HANDLER::UDS_HANDLER()
 void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE &msg)
 {
     qDebug() << "UDS handler got ISOTP frame";
+    UDS_MESSAGE udsMsg;
+    udsMsg.bus = msg.bus;
+    udsMsg.extended = msg.extended;
+    udsMsg.ID = msg.ID;
+    udsMsg.isReceived = msg.isReceived;
+    udsMsg.timestamp = msg.timestamp;
+    udsMsg.actualSize = msg.actualSize;
+    udsMsg.len = msg.len;
+    udsMsg.service = msg.data.at(0);
+    udsMsg.subFunc = msg.data.at(1);
+    udsMsg.data = msg.data.mid(1, -1); //don't copy data[0] which was service number
+    emit newUDSMessage(udsMsg);
 }
 
 void UDS_HANDLER::setReception(bool mode)
@@ -175,6 +188,18 @@ void UDS_HANDLER::sendUDSFrame(int bus, int ID, int service, QVector<unsigned ch
     data.append(payload);
     ISOTP_HANDLER::getInstance()->sendISOTPFrame(bus, ID, data);
     qDebug() << "Sent UDS service: " << getServiceShortDesc(service) << " on bus " << bus;
+}
+
+void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
+{
+    QVector<unsigned char> data;
+    if (msg.bus < 0) return;
+    if (msg.bus >= CANConManager::getInstance()->getNumBuses()) return;
+    if (msg.service < 0 || msg.service > 0xFF) return;
+    data.append(msg.service);
+    data.append(msg.data);
+    ISOTP_HANDLER::getInstance()->sendISOTPFrame(msg.bus, msg.ID, data);
+    qDebug() << "Sent UDS service: " << getServiceShortDesc(msg.service) << " on bus " << msg.bus;
 }
 
 QString UDS_HANDLER::getServiceShortDesc(int service)
