@@ -29,7 +29,11 @@ private slots:
     void timeOut();
     void adaptiveToggled();
     void wildcardToggled();
+    void readByToggled();
     void numBytesChanged();
+    void checkIDRange();
+    void checkServiceRange();
+    void checkSubFuncRange();
 
 private:
     Ui::UDSScanWindow *ui;

@@ -52,9 +52,18 @@
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="txtStartID">
-         <property name="text">
-          <string>0x7E0</string>
+        <widget class="QSpinBox" name="spinStartID">
+         <property name="prefix">
+          <string>0x</string>
+         </property>
+         <property name="maximum">
+          <number>536870911</number>
+         </property>
+         <property name="value">
+          <number>2016</number>
+         </property>
+         <property name="displayIntegerBase">
+          <number>16</number>
          </property>
         </widget>
        </item>
@@ -70,9 +79,18 @@
         </widget>
        </item>
        <item>
-        <widget class="QLineEdit" name="txtEndID">
-         <property name="text">
-          <string>0x7E7</string>
+        <widget class="QSpinBox" name="spinEndID">
+         <property name="prefix">
+          <string>0x</string>
+         </property>
+         <property name="maximum">
+          <number>536870911</number>
+         </property>
+         <property name="value">
+          <number>2024</number>
+         </property>
+         <property name="displayIntegerBase">
+          <number>16</number>
          </property>
         </widget>
        </item>
@@ -123,7 +141,7 @@
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
-        <string>Buses to scan</string>
+        <string>Bus to scan</string>
        </property>
       </widget>
      </item>
@@ -174,7 +192,7 @@
      <item>
       <widget class="QCheckBox" name="ckSession">
        <property name="text">
-        <string>Session Control</string>
+        <string>Session Ctrl</string>
        </property>
       </widget>
      </item>
@@ -189,6 +207,24 @@
       <widget class="QCheckBox" name="ckSecurity">
        <property name="text">
         <string>Security Access</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_7">
+     <item>
+      <widget class="QCheckBox" name="ckReadByID">
+       <property name="text">
+        <string>Read By ID</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="ckReadByAddr">
+       <property name="text">
+        <string>Read By Addr</string>
        </property>
       </widget>
      </item>

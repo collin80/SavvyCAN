@@ -26,12 +26,19 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(waitTimer, &QTimer::timeout, this, &UDSScanWindow::timeOut);
     connect(ui->btnSaveResults, &QPushButton::clicked, this, &UDSScanWindow::saveResults);
     connect(ui->ckWildcard, &QCheckBox::toggled, this, &UDSScanWindow::wildcardToggled);
+    connect(ui->ckReadByAddr, &QCheckBox::toggled, this, &UDSScanWindow::readByToggled);
+    connect(ui->ckReadByID, &QCheckBox::toggled, this, &UDSScanWindow::readByToggled);
     connect(ui->cbAllowAdaptiveOffset, &QCheckBox::toggled, this, &UDSScanWindow::adaptiveToggled);
     connect(ui->spinNumBytes, SIGNAL(valueChanged(int)), this, SLOT(numBytesChanged()));
+    connect(ui->spinLowerService, SIGNAL(valueChanged(int)), this, SLOT(checkServiceRange()));
+    connect(ui->spinUpperService, SIGNAL(valueChanged(int)), this, SLOT(checkServiceRange()));
+    connect(ui->spinLowerSubfunc, SIGNAL(valueChanged(int)), this, SLOT(checkSubFuncRange()));
+    connect(ui->spinUpperSubfunc, SIGNAL(valueChanged(int)), this, SLOT(checkSubFuncRange()));
+    connect(ui->spinStartID, SIGNAL(valueChanged(int)), this, SLOT(checkIDRange()));
+    connect(ui->spinEndID, SIGNAL(valueChanged(int)), this, SLOT(checkIDRange()));
 
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
-    ui->cbBuses->addItem(tr("All"));
 }
 
 UDSScanWindow::~UDSScanWindow()
@@ -57,10 +64,14 @@ void UDSScanWindow::wildcardToggled()
     ui->ckSecurity->setEnabled(state);
     ui->ckSession->setEnabled(state);
     ui->ckTester->setEnabled(state);
+    ui->ckReadByAddr->setEnabled(state);
+    ui->ckReadByID->setEnabled(state);
     ui->ckReset->setChecked(false);
     ui->ckSecurity->setChecked(false);
     ui->ckSession->setChecked(false);
     ui->ckTester->setChecked(false);
+    ui->ckReadByAddr->setChecked(false);
+    ui->ckReadByID->setChecked(false);
 
     ui->spinLowerService->setEnabled(!state);
     ui->spinLowerSubfunc->setEnabled(!state);
@@ -69,10 +80,41 @@ void UDSScanWindow::wildcardToggled()
     ui->spinUpperSubfunc->setEnabled(!state);
 }
 
+void UDSScanWindow::readByToggled()
+{
+    bool state = false;
+    if (ui->ckReadByAddr->isChecked() || ui->ckReadByID->isChecked()) state = true;
+    else state = false;
+
+    ui->spinLowerService->setEnabled(false);
+    ui->spinLowerSubfunc->setEnabled(state);
+    ui->spinNumBytes->setEnabled(state);
+    ui->spinUpperService->setEnabled(false);
+    ui->spinUpperSubfunc->setEnabled(state);
+}
+
 void UDSScanWindow::numBytesChanged()
 {
     uint64_t upperBound =  (1 << (8 * ui->spinNumBytes->value())) - 1;
     ui->spinUpperSubfunc->setMaximum(upperBound);
+}
+
+void UDSScanWindow::checkIDRange()
+{
+    ui->spinStartID->setMaximum(ui->spinEndID->value());
+    ui->spinEndID->setMinimum(ui->spinStartID->value());
+}
+
+void UDSScanWindow::checkServiceRange()
+{
+    ui->spinLowerService->setMaximum(ui->spinUpperService->value());
+    ui->spinUpperService->setMinimum(ui->spinLowerService->value());
+}
+
+void UDSScanWindow::checkSubFuncRange()
+{
+    ui->spinLowerSubfunc->setMaximum(ui->spinUpperSubfunc->value());
+    ui->spinUpperSubfunc->setMinimum(ui->spinLowerSubfunc->value());
 }
 
 void UDSScanWindow::saveResults()
@@ -123,19 +165,19 @@ void UDSScanWindow::dumpNode(QTreeWidgetItem* item, QFile *file, int indent)
 void UDSScanWindow::sendOnBuses(UDS_MESSAGE test, int buses)
 {
     int busList = buses;
-    if (busList < ui->cbBuses->count() - 1)
-    {
+    //if (busList < ui->cbBuses->count() - 1)
+    //{
         test.bus = buses;
         sendingFrames.append(test);
-    }
-    else
+    //}
+    /*else
     {
         for (int c = 0; c < ui->cbBuses->count() - 1; c++)
         {
             test.bus = c;
             sendingFrames.append(test);
         }
-    }
+    }*/
 }
 
 void UDSScanWindow::scanUDS()
@@ -160,8 +202,8 @@ void UDSScanWindow::scanUDS()
     UDS_MESSAGE test;
     int typ, id;
     int startID, endID;
-    startID = Utility::ParseStringToNum(ui->txtStartID->text());
-    endID = Utility::ParseStringToNum(ui->txtEndID->text());
+    startID = ui->spinStartID->value();
+    endID = ui->spinEndID->value();
     if (endID < startID) {
         int temp = startID;
         startID = endID;
