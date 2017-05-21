@@ -87,7 +87,7 @@
           <number>536870911</number>
          </property>
          <property name="value">
-          <number>2024</number>
+          <number>2023</number>
          </property>
          <property name="displayIntegerBase">
           <number>16</number>
@@ -100,6 +100,9 @@
       <widget class="QCheckBox" name="ckShowNoReply">
        <property name="text">
         <string>Show Tests with no Replies</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -116,6 +119,9 @@
      </item>
      <item>
       <widget class="QSpinBox" name="spinReplyOffset">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="minimum">
         <number>-128</number>
        </property>
@@ -131,6 +137,9 @@
       <widget class="QCheckBox" name="cbAllowAdaptiveOffset">
        <property name="text">
         <string>Allow adaptive reply offset</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -353,6 +362,13 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QProgressBar" name="progressBar">
+     <property name="value">
+      <number>0</number>
+     </property>
+    </widget>
    </item>
    <item>
     <widget class="QPushButton" name="btnScan">

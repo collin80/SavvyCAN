@@ -343,7 +343,7 @@ bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 void CANConnection::checkTargettedFrame(CANFrame &frame)
 {
     unsigned int maskedID;
-    qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
+    //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
     foreach (const CANFlt filt, mBusData_p[frame.bus].mTargettedFrames)
     {
         qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;

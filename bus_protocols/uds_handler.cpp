@@ -122,6 +122,15 @@ QVector<CODE_STRUCT> UDS_NEG_RESPONSE =
     {0x93, "VOLTAGE_LOW", "Cannot execute request until voltage is higher"},
 };
 
+UDS_MESSAGE::UDS_MESSAGE()
+{
+    subFunc = 0;
+    service = 0;
+    subFuncLen = 1;
+    extended = false;
+    isErrorReply = false;
+}
+
 UDS_HANDLER* UDS_HANDLER::mInstance = NULL;
 
 UDS_HANDLER* UDS_HANDLER::getInstance()
@@ -198,27 +207,22 @@ void UDS_HANDLER::setReception(bool mode)
     }
 }
 
-void UDS_HANDLER::sendUDSFrame(int bus, int ID, int service, QVector<unsigned char> payload)
-{
-    QVector<unsigned char> data;
-    if (bus < 0) return;
-    if (bus >= CANConManager::getInstance()->getNumBuses()) return;
-    if (service < 0 || service > 0xFF) return;
-    data.append(service);
-    data.append(payload);
-    ISOTP_HANDLER::getInstance()->sendISOTPFrame(bus, ID, data);
-    qDebug() << "Sent UDS service: " << getServiceShortDesc(service) << " on bus " << bus;
-}
-
 void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
 {
     QVector<unsigned char> data;
     if (msg.bus < 0) return;
     if (msg.bus >= CANConManager::getInstance()->getNumBuses()) return;
     if (msg.service < 0 || msg.service > 0xFF) return;
+
     data.append(msg.service);
+    for (int b = msg.subFuncLen - 1; b >= 0; b--)
+    {
+        data.append((msg.subFunc >> (8 * b)) & 0xFF);
+    }
+
     data.append(msg.data);
     ISOTP_HANDLER::getInstance()->sendISOTPFrame(msg.bus, msg.ID, data);
+
     qDebug() << "Sent UDS service: " << getServiceShortDesc(msg.service) << " on bus " << msg.bus;
 }
 

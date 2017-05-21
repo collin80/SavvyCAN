@@ -73,7 +73,10 @@ class UDS_MESSAGE: public ISOTP_MESSAGE
 public:
     int service;
     int subFunc;
+    int subFuncLen;
     bool isErrorReply;
+
+    UDS_MESSAGE();
 };
 
 class UDS_HANDLER : public QObject
@@ -85,7 +88,6 @@ public:
     void setExtendedAddressing(bool mode);
     static UDS_HANDLER* getInstance();
     void setReception(bool mode); //set whether to accept and forward frames or not
-    void sendUDSFrame(int bus, int ID, int service, QVector<unsigned char> payload);
     void sendUDSFrame(const UDS_MESSAGE &msg);
     QString getServiceShortDesc(int service);
     QString getServiceLongDesc(int service);

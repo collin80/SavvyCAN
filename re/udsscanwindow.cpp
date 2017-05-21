@@ -223,6 +223,7 @@ void UDSScanWindow::scanUDS()
             test.subFunc = 0;
             sendOnBuses(test, buses);
         }
+
         if (ui->ckSession->isChecked())
         {
             for (typ = 1; typ < 4; typ++) //try each type of session access
@@ -232,22 +233,45 @@ void UDSScanWindow::scanUDS()
                 sendOnBuses(test, buses);
             }
         }
+
         if (ui->ckReset->isChecked()) //try to command a reset of the ECU. You're likely to know if it works. ;)
         {
             test.service = UDS_SERVICES::ECU_RESET;
             test.subFunc = 1;
             sendOnBuses(test, buses);
         }
+
         if (ui->ckSecurity->isChecked()) //try to enter security mode - very likely to get a response if an ECU exists.
         {
             test.service = UDS_SERVICES::SECURITY_ACCESS;
             test.subFunc = 1;
             sendOnBuses(test, buses);
         }
+
+        if (ui->ckReadByAddr->isChecked())
+        {
+            test.subFuncLen = ui->spinNumBytes->value();
+            test.service = UDS_SERVICES::READ_BY_ADDR;
+            for (int subf = ui->spinLowerSubfunc->value(); subf <= ui->spinUpperSubfunc->value(); subf++)
+            {
+                test.subFunc = subf;
+                sendOnBuses(test, buses);
+            }
+        }
+
+        if (ui->ckReadByID->isChecked())
+        {
+            test.subFuncLen = ui->spinNumBytes->value();
+            test.service = UDS_SERVICES::READ_BY_ID;
+            for (int subf = ui->spinLowerSubfunc->value(); subf <= ui->spinUpperSubfunc->value(); subf++)
+            {
+                test.subFunc = subf;
+                sendOnBuses(test, buses);
+            }
+        }
+
         if (ui->ckWildcard->isChecked())
         {
-            int numBytes = ui->spinNumBytes->value();
-
             //preallocate the whole buffer so we don't have to keep updating the size and moving as we go.
             //TODO: this shows a downside to the current method - it might potentially need to create a huge
             //number of frames here. Of course, the rest of the system will do the same so I guess it's a bad idea
@@ -256,18 +280,14 @@ void UDSScanWindow::scanUDS()
             size *= (ui->spinUpperSubfunc->value() - ui->spinLowerSubfunc->value());
             sendingFrames.reserve(size);
 
+            test.subFuncLen = ui->spinNumBytes->value();
+
             for (typ = ui->spinLowerService->value(); typ <= ui->spinUpperService->value(); typ++)
             {
                 test.service = typ;
                 for (int subTyp = ui->spinLowerSubfunc->value(); subTyp <= ui->spinUpperSubfunc->value(); subTyp++)
                 {
-                    test.data.clear();
-                    //multi-byte data sent big endian (largest value byte first) so plan accordingly.
-                    test.subFunc = subTyp >> (8 * (numBytes - 1));
-                    for (int by = 1; by < numBytes; by++)
-                    {
-                        test.data.append(subTyp >> (8 * (numBytes - by)));
-                    }
+                    test.subFunc = subTyp;
                     sendOnBuses(test, buses);
                 }
             }
@@ -278,6 +298,8 @@ void UDSScanWindow::scanUDS()
     currIdx = -1;
     currentlyRunning = true;
     ui->btnScan->setText("Abort Scan");
+    ui->progressBar->setValue(0);
+    ui->progressBar->setMaximum(sendingFrames.length());
     sendNextMsg();
 }
 
@@ -311,6 +333,8 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE &msg)
 
     id = msg.ID;
 
+    qDebug() << "UDS message ID " << msg.ID << "  service: " << msg.service << " subfunc: " << msg.subFunc;
+
     if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
     {
         serviceShortName = UDS_HANDLER::getInstance()->getServiceShortDesc(sentFrame.service);
@@ -332,15 +356,19 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE &msg)
             nodeSubFunc->setForeground(0, QBrush(Qt::darkGreen));
             gotReply = true;
         }
-        else if ( msg.service == 0x7F)
+        else if ( msg.isErrorReply && msg.service == sendingFrames[currIdx].service)
         {
-            setupNodes();
-            QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
-            nodeNegative->setText(0, "NEGATIVE - " + UDS_HANDLER::getInstance()->getNegativeResponseShort(msg.data[1]));
-            nodeNegative->setForeground(0, QBrush(Qt::darkRed));
-            nodeSubFunc->addChild(nodeNegative);
-            nodeSubFunc->setForeground(0, QBrush(Qt::darkRed));
-            gotReply = true;
+            if (msg.data.length())
+            {
+                setupNodes();
+                QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
+                qDebug() << ui->spinNumBytes->value();
+                nodeNegative->setText(0, "NEGATIVE - " + UDS_HANDLER::getInstance()->getNegativeResponseShort(msg.data[0]));
+                nodeNegative->setForeground(0, QBrush(Qt::darkRed));
+                nodeSubFunc->addChild(nodeNegative);
+                nodeSubFunc->setForeground(0, QBrush(Qt::darkRed));
+                gotReply = true;
+            }
         }
     }
     if (gotReply)
@@ -391,15 +419,10 @@ void UDSScanWindow::timeOut()
 
 void UDSScanWindow::sendNextMsg()
 {
-    QVector<unsigned char> data;
-
     currIdx++;
     if (currIdx < sendingFrames.count())
     {
-        data.clear();
-        data.append(sendingFrames[currIdx].subFunc);
-        data.append(sendingFrames[currIdx].data);
-        UDS_HANDLER::getInstance()->sendUDSFrame(sendingFrames[currIdx].bus, sendingFrames[currIdx].ID, sendingFrames[currIdx].service, data);
+        UDS_HANDLER::getInstance()->sendUDSFrame(sendingFrames[currIdx]);
         waitTimer->start();
     }
     else
@@ -408,4 +431,5 @@ void UDSScanWindow::sendNextMsg()
         ui->btnScan->setText("Start Scan");
         currentlyRunning = false;
     }
+    ui->progressBar->setValue(currIdx);
 }
