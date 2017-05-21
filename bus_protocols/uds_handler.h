@@ -73,6 +73,7 @@ class UDS_MESSAGE: public ISOTP_MESSAGE
 public:
     int service;
     int subFunc;
+    bool isErrorReply;
 };
 
 class UDS_HANDLER : public QObject

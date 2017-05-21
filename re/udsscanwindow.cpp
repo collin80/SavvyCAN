@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "connections/canconmanager.h"
 #include "bus_protocols/uds_handler.h"
+#include "utility.h"
 
 UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -24,6 +25,9 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
     connect(waitTimer, &QTimer::timeout, this, &UDSScanWindow::timeOut);
     connect(ui->btnSaveResults, &QPushButton::clicked, this, &UDSScanWindow::saveResults);
+    connect(ui->ckWildcard, &QCheckBox::toggled, this, &UDSScanWindow::wildcardToggled);
+    connect(ui->cbAllowAdaptiveOffset, &QCheckBox::toggled, this, &UDSScanWindow::adaptiveToggled);
+    connect(ui->spinNumBytes, SIGNAL(valueChanged(int)), this, SLOT(numBytesChanged()));
 
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
@@ -35,6 +39,40 @@ UDSScanWindow::~UDSScanWindow()
     delete ui;
     waitTimer->stop();
     delete waitTimer;
+}
+
+void UDSScanWindow::adaptiveToggled()
+{
+    if (ui->cbAllowAdaptiveOffset->isChecked()) ui->spinReplyOffset->setEnabled(false);
+    else ui->spinReplyOffset->setEnabled(true);
+}
+
+void UDSScanWindow::wildcardToggled()
+{
+    bool state = false;
+    if (ui->ckWildcard->isChecked()) state = false;
+    else state = true;
+
+    ui->ckReset->setEnabled(state);
+    ui->ckSecurity->setEnabled(state);
+    ui->ckSession->setEnabled(state);
+    ui->ckTester->setEnabled(state);
+    ui->ckReset->setChecked(false);
+    ui->ckSecurity->setChecked(false);
+    ui->ckSession->setChecked(false);
+    ui->ckTester->setChecked(false);
+
+    ui->spinLowerService->setEnabled(!state);
+    ui->spinLowerSubfunc->setEnabled(!state);
+    ui->spinNumBytes->setEnabled(!state);
+    ui->spinUpperService->setEnabled(!state);
+    ui->spinUpperSubfunc->setEnabled(!state);
+}
+
+void UDSScanWindow::numBytesChanged()
+{
+    uint64_t upperBound =  (1 << (8 * ui->spinNumBytes->value())) - 1;
+    ui->spinUpperSubfunc->setMaximum(upperBound);
 }
 
 void UDSScanWindow::saveResults()
@@ -63,16 +101,23 @@ void UDSScanWindow::saveResults()
                 delete outFile;
                 return;
             }
+            outFile->write("UDS Scan Log:\n\n");
+            dumpNode(ui->treeResults->invisibleRootItem(), outFile, 0);
 
-            for (int i = 0; i < ui->listResults->count(); i++)
-            {
-                outFile->write(ui->listResults->item(i)->text().toUtf8());
-                outFile->write("\n");
-            }
             outFile->close();
             delete outFile;
         }
     }
+}
+
+void UDSScanWindow::dumpNode(QTreeWidgetItem* item, QFile *file, int indent)
+{
+    if (indent > 0) for (int i = 0; i < (indent - 1); i++) file->write("\t");
+    file->write(item->text(0).toUtf8());
+    file->write("\n");
+    for( int i = 0; i < item->childCount(); ++i )
+        dumpNode( item->child(i), file, indent + 1 );
+    if (indent == 1) file->write("\n");
 }
 
 void UDSScanWindow::sendOnBuses(UDS_MESSAGE test, int buses)
@@ -106,20 +151,29 @@ void UDSScanWindow::scanUDS()
 
     waitTimer->setInterval(ui->spinDelay->value());
 
-    ui->listResults->clear();
+    ui->treeResults->clear();
     sendingFrames.clear();
+    nodeService = NULL;
+    nodeID = NULL;
+    nodeSubFunc = NULL;
 
     UDS_MESSAGE test;
     int typ, id;
     int startID, endID;
     startID = Utility::ParseStringToNum(ui->txtStartID->text());
     endID = Utility::ParseStringToNum(ui->txtEndID->text());
+    if (endID < startID) {
+        int temp = startID;
+        startID = endID;
+        endID = temp;
+    }
 
     int buses = ui->cbBuses->currentIndex();
 
     for (id = startID; id <= endID; id++)
     {
         test.ID = id;
+        test.data.clear();
 
         if (ui->ckTester->isChecked())
         {
@@ -148,6 +202,34 @@ void UDSScanWindow::scanUDS()
             test.subFunc = 1;
             sendOnBuses(test, buses);
         }
+        if (ui->ckWildcard->isChecked())
+        {
+            int numBytes = ui->spinNumBytes->value();
+
+            //preallocate the whole buffer so we don't have to keep updating the size and moving as we go.
+            //TODO: this shows a downside to the current method - it might potentially need to create a huge
+            //number of frames here. Of course, the rest of the system will do the same so I guess it's a bad idea
+            //any way you go to generate a 1 billion frame test.
+            int size = (endID - startID) * (ui->spinUpperService->value() - ui->spinLowerService->value());
+            size *= (ui->spinUpperSubfunc->value() - ui->spinLowerSubfunc->value());
+            sendingFrames.reserve(size);
+
+            for (typ = ui->spinLowerService->value(); typ <= ui->spinUpperService->value(); typ++)
+            {
+                test.service = typ;
+                for (int subTyp = ui->spinLowerSubfunc->value(); subTyp <= ui->spinUpperSubfunc->value(); subTyp++)
+                {
+                    test.data.clear();
+                    //multi-byte data sent big endian (largest value byte first) so plan accordingly.
+                    test.subFunc = subTyp >> (8 * (numBytes - 1));
+                    for (int by = 1; by < numBytes; by++)
+                    {
+                        test.data.append(subTyp >> (8 * (numBytes - by)));
+                    }
+                    sendOnBuses(test, buses);
+                }
+            }
+        }
     }
 
     waitTimer->start();
@@ -174,6 +256,7 @@ void UDSScanWindow::updatedFrames(int numFrames)
 void UDSScanWindow::gotUDSReply(UDS_MESSAGE &msg)
 {
     QString result;
+    QString serviceShortName;
     uint32_t id;
     int offset = ui->spinReplyOffset->value();
     UDS_MESSAGE sentFrame;
@@ -188,54 +271,78 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE &msg)
 
     if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
     {
-        //int temp = thisFrame.data[0] >> 4;
-        //if (temp == 0) //single frame reply (maybe)
-        //{
-            if (msg.service == 0x40 + sendingFrames[currIdx].service)
-            {
-                result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
-                    + QString::number(sentFrame.service, 16)
-                    + " " + QString::number(sentFrame.subFunc, 16) + " with affirmation from ID " + QString::number(id, 16)
-                    + " on bus " + QString::number(msg.bus) + ".";
-                gotReply = true;
-            }
-            else if ( msg.service == 0x7F)
-            {
-                result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
-                    + QString::number(sentFrame.service, 16)
-                    + " " + QString::number(sentFrame.subFunc, 16) + " with an error from ID " + QString::number(id, 16)
-                    + " on bus " + QString::number(msg.bus) + ".";
-                gotReply = true;
-            }
-            //}
-            /*
-            if (temp == 1) //start of a multiframe reply
-            {
-                if (thisFrame.data[2] == 0x40 + sendingFrames[currIdx].data[1])
-                {
-                    result = "Request on bus " + QString::number(sentFrame.bus) + " ID: " + QString::number(sentFrame.ID, 16) + " got response to mode "
-                        + QString::number(sentFrame.data[1], 16)
-                        + " " + QString::number(sentFrame.data[2], 16) + " with affirmation from ID " + QString::number(id, 16)
-                        + " on bus " + QString::number(thisFrame.bus) + ".";
-                    gotReply = true;
-                }
-                //error replies are never multiframe so the check doesn't have to be done here.
-            } */
+        serviceShortName = UDS_HANDLER::getInstance()->getServiceShortDesc(sentFrame.service);
+        if (serviceShortName.length() < 3) serviceShortName = QString::number(sentFrame.service, 16);
+        if (msg.service == 0x40 + sendingFrames[currIdx].service)
+        {
+            setupNodes();
 
+            QTreeWidgetItem *nodePositive = new QTreeWidgetItem();
+            QString reply = "POSITIVE ";
+            for (int i = 0; i < msg.data.length(); i++)
+            {
+                reply.append(" ");
+                reply.append(Utility::formatHexNum(msg.data[i]));
+            }
+            nodePositive->setText(0, reply);
+            nodePositive->setForeground(0, QBrush(Qt::darkGreen));
+            nodeSubFunc->addChild(nodePositive);
+            nodeSubFunc->setForeground(0, QBrush(Qt::darkGreen));
+            gotReply = true;
+        }
+        else if ( msg.service == 0x7F)
+        {
+            setupNodes();
+            QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
+            nodeNegative->setText(0, "NEGATIVE - " + UDS_HANDLER::getInstance()->getNegativeResponseShort(msg.data[1]));
+            nodeNegative->setForeground(0, QBrush(Qt::darkRed));
+            nodeSubFunc->addChild(nodeNegative);
+            nodeSubFunc->setForeground(0, QBrush(Qt::darkRed));
+            gotReply = true;
+        }
     }
     if (gotReply)
     {
-        ui->listResults->addItem(result);
+        //ui->listResults->addItem(result);
         sendNextMsg();
     }
 }
 
+void UDSScanWindow::setupNodes()
+{
+    QString serviceShortName = UDS_HANDLER::getInstance()->getServiceShortDesc(sendingFrames[currIdx].service);
+    if (serviceShortName.length() < 3) serviceShortName = QString::number(sendingFrames[currIdx].service, 16);
+
+    if (!nodeID || nodeID->text(0) != Utility::formatHexNum(sendingFrames[currIdx].ID))
+    {
+        nodeID = new QTreeWidgetItem();
+        nodeID->setText(0, Utility::formatHexNum(sendingFrames[currIdx].ID));
+        ui->treeResults->addTopLevelItem(nodeID);
+        nodeService = NULL;
+    }
+    if (!nodeService || nodeService->text(0) != serviceShortName)
+    {
+        nodeService = new QTreeWidgetItem();
+        nodeService->setText(0, serviceShortName);
+        nodeID->addChild(nodeService);
+    }
+
+    nodeSubFunc = new QTreeWidgetItem();
+    nodeSubFunc->setText(0, Utility::formatHexNum(sendingFrames[currIdx].subFunc));
+    nodeService->addChild(nodeSubFunc);
+}
+
 void UDSScanWindow::timeOut()
 {
-    QString result;
-    result = "Request on bus " + QString::number(sendingFrames[currIdx].bus) + " ID: " + QString::number(sendingFrames[currIdx].ID, 16) + " got no response to mode "
-             + QString::number(sendingFrames[currIdx].service, 16) + " " + QString::number(sendingFrames[currIdx].subFunc, 16);
-    ui->listResults->addItem(result);
+    if (ui->ckShowNoReply->isChecked())
+    {
+        setupNodes();
+        QTreeWidgetItem *nodeNoReply = new QTreeWidgetItem();
+        nodeNoReply->setText(0, "No Reply");
+        nodeNoReply->setForeground(0, QBrush(Qt::gray));
+        nodeSubFunc->addChild(nodeNoReply);
+        nodeSubFunc->setForeground(0, QBrush(Qt::gray));
+    }
 
     sendNextMsg();
 }
@@ -249,6 +356,7 @@ void UDSScanWindow::sendNextMsg()
     {
         data.clear();
         data.append(sendingFrames[currIdx].subFunc);
+        data.append(sendingFrames[currIdx].data);
         UDS_HANDLER::getInstance()->sendUDSFrame(sendingFrames[currIdx].bus, sendingFrames[currIdx].ID, sendingFrames[currIdx].service, data);
         waitTimer->start();
     }

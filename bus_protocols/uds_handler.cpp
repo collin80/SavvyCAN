@@ -56,70 +56,70 @@ QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
 
 QVector<CODE_STRUCT> UDS_NEG_RESPONSE =
 {
-    {0x10, "UDS_NEG_GENERAL_REJECT", "General rejection (no other codes matched)"},
-    {0x11, "UDS_NEG_SERVICE_NOTSUPP", "ECU does not support this service code"},
-    {0x12, "UDS_NEG_SUBFUNCT_NOTSUPP", "ECU does not support the requested sub function"},
-    {0x13, "UDS_NEG_INVALID_FORMAT", "Invalid request length or format error"},
-    {0x14, "UDS_NEG_RESPONSE_TOOLONG", "Response would be too long to send"},
-    {0x21, "UDS_NEG_BUSY", "ECU is busy. Try again later"},
-    {0x22, "UDS_NEG_COND_INCORR", "A prereq. condition was not met"},
-    {0x24, "UDS_NEG_REQ_SEQ_ERR", "Invalid sequence of requests"},
-    {0x25, "UDS_NEG_SUBNET_NORESP", "ECU tried to gateway request but response timed out"},
-    {0x26, "UDS_NEG_FAILURE", "A failure (indicated in a DTC) is preventing a reply"},
-    {0x31, "UDS_NEG_REQ_OUTOFRANGE", "A parameter is outside of the valid range"},
-    {0x33, "UDS_NEG_SECURITY_DENIED", "Security access was denied. (invalid seq or ECU not unlocked?)"},
-    {0x35, "UDS_NEG_INVALID_KEY", "Key passed was invalid. Failure counter has been incremented."},
-    {0x36, "UDS_NEG_EXCEED_ATTEMPTS", "Key failed too many times. ECU security access locked out"},
-    {0x37, "UDS_NEG_TIMEDELAY", "Security access too soon after last attempt"},
-    {0x38, "UDS_NEG_EXT_SECUR_1", "Extended security failure code 1"},
-    {0x39, "UDS_NEG_EXT_SECUR_2", "Extended security failure code 2"},
-    {0x3A, "UDS_NEG_EXT_SECUR_3", "Extended security failure code 3"},
-    {0x3B, "UDS_NEG_EXT_SECUR_4", "Extended security failure code 4"},
-    {0x3C, "UDS_NEG_EXT_SECUR_5", "Extended security failure code 5"},
-    {0x3D, "UDS_NEG_EXT_SECUR_6", "Extended security failure code 6"},
-    {0x3E, "UDS_NEG_EXT_SECUR_7", "Extended security failure code 7"},
-    {0x3F, "UDS_NEG_EXT_SECUR_8", "Extended security failure code 8"},
-    {0x40, "UDS_NEG_EXT_SECUR_9", "Extended security failure code 9"},
-    {0x41, "UDS_NEG_EXT_SECUR_10", "Extended security failure code 10"},
-    {0x42, "UDS_NEG_EXT_SECUR_11", "Extended security failure code 11"},
-    {0x43, "UDS_NEG_EXT_SECUR_12", "Extended security failure code 12"},
-    {0x44, "UDS_NEG_EXT_SECUR_13", "Extended security failure code 13"},
-    {0x45, "UDS_NEG_EXT_SECUR_14", "Extended security failure code 14"},
-    {0x46, "UDS_NEG_EXT_SECUR_15", "Extended security failure code 15"},
-    {0x47, "UDS_NEG_EXT_SECUR_16", "Extended security failure code 16"},
-    {0x48, "UDS_NEG_EXT_SECUR_17", "Extended security failure code 17"},
-    {0x49, "UDS_NEG_EXT_SECUR_18", "Extended security failure code 18"},
-    {0x4A, "UDS_NEG_EXT_SECUR_19", "Extended security failure code 19"},
-    {0x4B, "UDS_NEG_EXT_SECUR_20", "Extended security failure code 20"},
-    {0x4C, "UDS_NEG_EXT_SECUR_21", "Extended security failure code 21"},
-    {0x4D, "UDS_NEG_EXT_SECUR_22", "Extended security failure code 22"},
-    {0x4E, "UDS_NEG_EXT_SECUR_23", "Extended security failure code 23"},
-    {0x4F, "UDS_NEG_EXT_SECUR_24", "Extended security failure code 24"},
-    {0x70, "UDS_NEG_UPLOAD_DOWNLOAD", "Fault when attempting to start upload/download"},
-    {0x71, "UDS_NEG_TRX_SUSPENDED", "Transfer aborting due to a fault"},
-    {0x72, "UDS_NEG_GEN_PROGRAMMING", "Fault while attempting to write to ECU memory"},
-    {0x73, "UDS_NEG_WRONG_BLOCK_SEQ", "Invalid sequence value detected during transfer"},
-    {0x78, "UDS_NEG_RESP_PENDING", "Request successful but ECU still busy - Response pending"},
-    {0x7E, "UDS_NEG_SUBFUNCT_CURRSESS", "ECU does not support this subfunction in current session type"},
-    {0x7F, "UDS_NEG_SERVICE_CURRSESS", "ECU does not support this service in current session type"},
-    {0x81, "UDS_NEG_RPM_TOOHIGH", "RPM is too high to execute request"},
-    {0x82, "UDS_NEG_RPM_TOOLOW", "RPM is too low to execute request"},
-    {0x83, "UDS_NEG_ENGINE_RUNNING", "Cannot execute request while engine is running"},
-    {0x84, "UDS_NEG_ENGINE_NOTRUNNING", "Cannot execute request while engine is off"},
-    {0x85, "UDS_NEG_ENG_RUNTIME_LOW", "Cannot execute request until engine has run for longer"},
-    {0x86, "UDS_NEG_TEMPERATURE_HIGH", "Cannot execute request until temperature is lower"},
-    {0x87, "UDS_NEG_TEMPERATURE_LOW", "Cannot execute request until temperature is higher"},
-    {0x88, "UDS_NEG_SPEED_HIGH", "Cannot execute request until vehicle slows down"},
-    {0x89, "UDS_NEG_SPEED_LOW", "Cannot execute request until vehicle is going faster"},
-    {0x8A, "UDS_NEG_PEDAL_HIGH", "Cannot execute request until throttle is lower"},
-    {0x8B, "UDS_NEG_PEDAL_LOW", "Cannot execute request until throttle is higher"},
-    {0x8C, "UDS_NEG_NOT_NEUTRAL", "Cannot execute request until transmission is in neutral"},
-    {0x8D, "UDS_NEG_NOT_INGEAR", "Cannot execute request until vehicle is in gear"},
-    {0x8F, "UDS_NEG_BRAKE_NOTPRESSED", "Cannot execute request until brake pedal is pressed (Hold down)"},
-    {0x90, "UDS_NEG_NOT_PARK", "Cannot execute request until vehicle is in park"},
-    {0x91, "UDS_NEG_CLUTCH_LOCKED", "Cannot execute request while clutch is locked"},
-    {0x92, "UDS_NEG_VOLTAGE_HIGH", "Cannot execute request until voltage is lower"},
-    {0x93, "UDS_NEG_VOLTAGE_LOW", "Cannot execute request until voltage is higher"},
+    {0x10, "GENERAL_REJECT", "General rejection (no other codes matched)"},
+    {0x11, "SERVICE_NOTSUPP", "ECU does not support this service code"},
+    {0x12, "SUBFUNCT_NOTSUPP", "ECU does not support the requested sub function"},
+    {0x13, "INVALID_FORMAT", "Invalid request length or format error"},
+    {0x14, "RESPONSE_TOOLONG", "Response would be too long to send"},
+    {0x21, "BUSY", "ECU is busy. Try again later"},
+    {0x22, "COND_INCORR", "A prereq. condition was not met"},
+    {0x24, "REQ_SEQ_ERR", "Invalid sequence of requests"},
+    {0x25, "SUBNET_NORESP", "ECU tried to gateway request but response timed out"},
+    {0x26, "FAILURE", "A failure (indicated in a DTC) is preventing a reply"},
+    {0x31, "REQ_OUTOFRANGE", "A parameter is outside of the valid range"},
+    {0x33, "SECURITY_DENIED", "Security access was denied. (invalid seq or ECU not unlocked?)"},
+    {0x35, "INVALID_KEY", "Key passed was invalid. Failure counter has been incremented."},
+    {0x36, "EXCEED_ATTEMPTS", "Key failed too many times. ECU security access locked out"},
+    {0x37, "TIMEDELAY", "Security access too soon after last attempt"},
+    {0x38, "EXT_SECUR_1", "Extended security failure code 1"},
+    {0x39, "EXT_SECUR_2", "Extended security failure code 2"},
+    {0x3A, "EXT_SECUR_3", "Extended security failure code 3"},
+    {0x3B, "EXT_SECUR_4", "Extended security failure code 4"},
+    {0x3C, "EXT_SECUR_5", "Extended security failure code 5"},
+    {0x3D, "EXT_SECUR_6", "Extended security failure code 6"},
+    {0x3E, "EXT_SECUR_7", "Extended security failure code 7"},
+    {0x3F, "EXT_SECUR_8", "Extended security failure code 8"},
+    {0x40, "EXT_SECUR_9", "Extended security failure code 9"},
+    {0x41, "EXT_SECUR_10", "Extended security failure code 10"},
+    {0x42, "EXT_SECUR_11", "Extended security failure code 11"},
+    {0x43, "EXT_SECUR_12", "Extended security failure code 12"},
+    {0x44, "EXT_SECUR_13", "Extended security failure code 13"},
+    {0x45, "EXT_SECUR_14", "Extended security failure code 14"},
+    {0x46, "EXT_SECUR_15", "Extended security failure code 15"},
+    {0x47, "EXT_SECUR_16", "Extended security failure code 16"},
+    {0x48, "EXT_SECUR_17", "Extended security failure code 17"},
+    {0x49, "EXT_SECUR_18", "Extended security failure code 18"},
+    {0x4A, "EXT_SECUR_19", "Extended security failure code 19"},
+    {0x4B, "EXT_SECUR_20", "Extended security failure code 20"},
+    {0x4C, "EXT_SECUR_21", "Extended security failure code 21"},
+    {0x4D, "EXT_SECUR_22", "Extended security failure code 22"},
+    {0x4E, "EXT_SECUR_23", "Extended security failure code 23"},
+    {0x4F, "EXT_SECUR_24", "Extended security failure code 24"},
+    {0x70, "UPLOAD_DOWNLOAD", "Fault when attempting to start upload/download"},
+    {0x71, "TRX_SUSPENDED", "Transfer aborting due to a fault"},
+    {0x72, "GEN_PROGRAMMING", "Fault while attempting to write to ECU memory"},
+    {0x73, "WRONG_BLOCK_SEQ", "Invalid sequence value detected during transfer"},
+    {0x78, "RESP_PENDING", "Request successful but ECU still busy - Response pending"},
+    {0x7E, "SUBFUNCT_CURRSESS", "ECU does not support this subfunction in current session type"},
+    {0x7F, "SERVICE_CURRSESS", "ECU does not support this service in current session type"},
+    {0x81, "RPM_TOOHIGH", "RPM is too high to execute request"},
+    {0x82, "RPM_TOOLOW", "RPM is too low to execute request"},
+    {0x83, "ENGINE_RUNNING", "Cannot execute request while engine is running"},
+    {0x84, "ENGINE_NOTRUNNING", "Cannot execute request while engine is off"},
+    {0x85, "ENG_RUNTIME_LOW", "Cannot execute request until engine has run for longer"},
+    {0x86, "TEMPERATURE_HIGH", "Cannot execute request until temperature is lower"},
+    {0x87, "TEMPERATURE_LOW", "Cannot execute request until temperature is higher"},
+    {0x88, "SPEED_HIGH", "Cannot execute request until vehicle slows down"},
+    {0x89, "SPEED_LOW", "Cannot execute request until vehicle is going faster"},
+    {0x8A, "PEDAL_HIGH", "Cannot execute request until throttle is lower"},
+    {0x8B, "PEDAL_LOW", "Cannot execute request until throttle is higher"},
+    {0x8C, "NOT_NEUTRAL", "Cannot execute request until transmission is in neutral"},
+    {0x8D, "NOT_INGEAR", "Cannot execute request until vehicle is in gear"},
+    {0x8F, "BRAKE_NOTPRESSED", "Cannot execute request until brake pedal is pressed (Hold down)"},
+    {0x90, "NOT_PARK", "Cannot execute request until vehicle is in park"},
+    {0x91, "CLUTCH_LOCKED", "Cannot execute request while clutch is locked"},
+    {0x92, "VOLTAGE_HIGH", "Cannot execute request until voltage is lower"},
+    {0x93, "VOLTAGE_LOW", "Cannot execute request until voltage is higher"},
 };
 
 UDS_HANDLER* UDS_HANDLER::mInstance = NULL;
@@ -152,9 +152,29 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE &msg)
     udsMsg.timestamp = msg.timestamp;
     udsMsg.actualSize = msg.actualSize;
     udsMsg.len = msg.len;
-    udsMsg.service = msg.data.at(0);
-    udsMsg.subFunc = msg.data.at(1);
-    udsMsg.data = msg.data.mid(1, -1); //don't copy data[0] which was service number
+    if (msg.data.length() > 0) {
+        udsMsg.service = msg.data.at(0);
+        if (udsMsg.service == 0x7F)
+        {
+            udsMsg.isErrorReply = true;
+            if (msg.data.length() > 1)
+            {
+                udsMsg.service = msg.data.at(1);
+                if (msg.data.length() > 2) udsMsg.subFunc = msg.data.at(2);
+                else return;
+            }
+            else return;
+            udsMsg.data = msg.data.mid(2, -1); //don't copy error byte nor service byte
+        }
+        else
+        {
+            udsMsg.isErrorReply = false;
+            if (msg.data.length() > 1) udsMsg.subFunc = msg.data.at(1);
+            udsMsg.data = msg.data.mid(1, -1); //don't copy service byte
+        }
+    }
+    else return;
+
     emit newUDSMessage(udsMsg);
 }
 
@@ -207,6 +227,7 @@ QString UDS_HANDLER::getServiceShortDesc(int service)
     foreach (CODE_STRUCT code, UDS_SERVICE_DESC)
     {
         if (code.code == service) return code.shortDesc;
+        if (code.code == (service + 0x40)) return code.shortDesc;
     }
     return QString();
 }
@@ -216,6 +237,7 @@ QString UDS_HANDLER::getServiceLongDesc(int service)
     foreach (CODE_STRUCT code, UDS_SERVICE_DESC)
     {
         if (code.code == service) return code.longDesc;
+        if (code.code == (service + 0x40)) return code.longDesc;
     }
     return QString();
 }

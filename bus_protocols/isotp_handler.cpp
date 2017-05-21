@@ -55,8 +55,9 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         frame.bus = bus;
         frame.extended = false;
         frame.ID = ID;
-        frame.len = data.length() + 1;
-        frame.data[0] = frame.len - 1;
+        frame.len = 8;
+        for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
+        frame.data[0] = data.length();
         for (int i = 0; i < frame.data[0]; i++) frame.data[i + 1] = data[i];
         CANConManager::getInstance()->sendFrame(frame);
     }
@@ -66,18 +67,20 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         frame.ID = ID;
         frame.extended = false;
         frame.len = 8;
+        for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
         frame.data[0] = 0x10 + (data.length() / 256);
         frame.data[1] = data.length() & 0xFF;
         for (int i = 0; i < 6; i++) frame.data[2 + i] = data[currByte++];
         CANConManager::getInstance()->sendFrame(frame);
         while (currByte < data.length())
         {
+            for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
             frame.data[0] = 0x20 + index;
             index = (index + 1) & 0xF;
             int bytesToGo = data.length() - currByte;
             if (bytesToGo > 7) bytesToGo = 7;
             for (int i = 0; i < bytesToGo; i++) frame.data[1 + i] = data[currByte++];
-            frame.len = 1 + bytesToGo;
+            frame.len = 8;
             CANConManager::getInstance()->sendFrame(frame);
         }
     }

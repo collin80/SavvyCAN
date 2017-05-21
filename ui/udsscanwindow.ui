@@ -22,7 +22,16 @@
     </widget>
    </item>
    <item>
-    <widget class="QListWidget" name="listResults"/>
+    <widget class="QTreeWidget" name="treeResults">
+     <attribute name="headerVisible">
+      <bool>false</bool>
+     </attribute>
+     <column>
+      <property name="text">
+       <string notr="true">1</string>
+      </property>
+     </column>
+    </widget>
    </item>
    <item>
     <widget class="QPushButton" name="btnSaveResults">
@@ -69,6 +78,13 @@
        </item>
       </layout>
      </item>
+     <item>
+      <widget class="QCheckBox" name="ckShowNoReply">
+       <property name="text">
+        <string>Show Tests with no Replies</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
@@ -97,6 +113,43 @@
       <widget class="QCheckBox" name="cbAllowAdaptiveOffset">
        <property name="text">
         <string>Allow adaptive reply offset</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Buses to scan</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cbBuses"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_7">
+       <property name="text">
+        <string>Maximum reply delay</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="spinDelay">
+       <property name="minimum">
+        <number>50</number>
+       </property>
+       <property name="maximum">
+        <number>10000</number>
+       </property>
+       <property name="singleStep">
+        <number>10</number>
+       </property>
+       <property name="value">
+        <number>100</number>
        </property>
       </widget>
      </item>
@@ -139,40 +192,127 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QCheckBox" name="ckWildcard">
+       <property name="text">
+        <string>Wildcard</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="label_11">
        <property name="text">
-        <string>Buses to scan</string>
+        <string>Lower Service:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="cbBuses"/>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_7">
-       <property name="text">
-        <string>Maximum reply delay</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QSpinBox" name="spinDelay">
-       <property name="minimum">
-        <number>50</number>
+      <widget class="QSpinBox" name="spinLowerService">
+       <property name="enabled">
+        <bool>false</bool>
        </property>
        <property name="maximum">
-        <number>10000</number>
+        <number>255</number>
        </property>
-       <property name="singleStep">
-        <number>10</number>
+       <property name="displayIntegerBase">
+        <number>16</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_12">
+       <property name="text">
+        <string>Upper Service:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="spinUpperService">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximum">
+        <number>255</number>
        </property>
        <property name="value">
-        <number>100</number>
+        <number>255</number>
+       </property>
+       <property name="displayIntegerBase">
+        <number>16</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_5">
+     <item>
+      <widget class="QLabel" name="label_8">
+       <property name="text">
+        <string>Subfunction Bytes:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="spinNumBytes">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>4</number>
+       </property>
+       <property name="value">
+        <number>1</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_9">
+       <property name="text">
+        <string>Lower Bound:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="spinLowerSubfunc">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximum">
+        <number>255</number>
+       </property>
+       <property name="displayIntegerBase">
+        <number>16</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_10">
+       <property name="text">
+        <string>Upper Bound:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QSpinBox" name="spinUpperSubfunc">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximum">
+        <number>255</number>
+       </property>
+       <property name="value">
+        <number>255</number>
+       </property>
+       <property name="displayIntegerBase">
+        <number>16</number>
        </property>
       </widget>
      </item>

@@ -6,6 +6,8 @@
 #include "bus_protocols/uds_handler.h"
 
 #include <QDialog>
+#include <QFile>
+#include <QTreeWidget>
 
 namespace Ui {
 class UDSScanWindow;
@@ -25,17 +27,24 @@ private slots:
     void scanUDS();
     void saveResults();
     void timeOut();
+    void adaptiveToggled();
+    void wildcardToggled();
+    void numBytesChanged();
 
 private:
     Ui::UDSScanWindow *ui;
     const QVector<CANFrame> *modelFrames;
     QTimer *waitTimer;
     QList<UDS_MESSAGE> sendingFrames;
+    QTreeWidgetItem *nodeID;
+    QTreeWidgetItem *nodeService;
+    QTreeWidgetItem *nodeSubFunc;
     int currIdx = 0;
     bool currentlyRunning;
 
     void sendNextMsg();
     void sendOnBuses(UDS_MESSAGE frame, int buses);
+    void setupNodes();
+    void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);
 };
-
 #endif // UDSSCANWINDOW_H
