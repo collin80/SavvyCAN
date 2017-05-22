@@ -9,7 +9,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     ui->setupUi(this);
     modelFrames = frames;
 
-    decoder = new ISOTP_HANDLER(modelFrames);
+    decoder = ISOTP_HANDLER::getInstance();
 
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ISOTP_InterpreterWindow::updatedFrames);
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_HANDLER::updatedFrames);

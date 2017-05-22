@@ -17,7 +17,7 @@ CANConManager* CANConManager::getInstance()
 CANConManager::CANConManager(QObject *parent): QObject(parent)
 {
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(refreshCanList()));
-    mTimer.setInterval(125); /*tick 8 times a second */
+    mTimer.setInterval(20); /*Tick 50 times per second to allow for good resolution in reception where needed. GUI updates *MUCH* more slowly*/
     mTimer.setSingleShot(false);
     mTimer.start();
 
@@ -39,7 +39,7 @@ CANConManager::~CANConManager()
 
 
 void CANConManager::add(CANConnection* pConn_p)
-{    
+{
     mConns.append(pConn_p);
 }
 
@@ -196,7 +196,7 @@ bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
 bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
     int tempBusVal;
-    int busBase = 0;    
+    int busBase = 0;
 
     foreach (CANConnection* conn, mConns)
     {

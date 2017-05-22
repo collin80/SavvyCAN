@@ -64,6 +64,8 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->btnLoadLive, SIGNAL(clicked(bool)), this, SLOT(btnLoadLive()));
     connect(ui->tblSequence, SIGNAL(cellPressed(int,int)), this, SLOT(seqTableCellClicked(int,int)));
     connect(ui->tblSequence, SIGNAL(cellChanged(int,int)), this, SLOT(seqTableCellChanged(int,int)));
+    connect(ui->btnLoadFilters, SIGNAL(clicked(bool)), this, SLOT(loadFilters()));
+    connect(ui->btnSaveFilters, SIGNAL(clicked(bool)), this, SLOT(saveFilters()));
 
     ui->listID->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->listID, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuFilters(QPoint)));

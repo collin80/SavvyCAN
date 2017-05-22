@@ -32,31 +32,5 @@ public:
     }
 };
 
-struct J1939ID
-{
-public:
-    int src;
-    int dest;
-    int pgn;
-    int pf;
-    int ps;
-    int priority;
-    bool isBroadcast;
-};
-
-//the same as the CANFrame struct but with arbitrary data size.
-struct ISOTP_MESSAGE
-{
-public:
-    uint32_t ID;
-    int bus;
-    bool extended;
-    bool isReceived;
-    int len; //# of bytes this message should have (as reported)
-    int actualSize; //# we actually got
-    QVector<unsigned char> data;
-    uint64_t timestamp;
-};
-
 #endif // CAN_STRUCTS_H
 

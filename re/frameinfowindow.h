@@ -6,6 +6,7 @@
 #include <QListWidget>
 #include <QTreeWidget>
 #include "can_structs.h"
+#include "bus_protocols/j1939_handler.h"
 
 namespace Ui {
 class FrameInfoWindow;

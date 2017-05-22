@@ -168,7 +168,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow();
-    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));    
+    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 
 }
 
@@ -644,7 +644,7 @@ void MainWindow::toggleCapture()
 }
 
 void MainWindow::connectionStatusUpdated(int conns)
-{    
+{
     lbStatusConnected.setText(tr("Connected to ") + QString::number(conns) + tr(" buses"));
 }
 
@@ -672,6 +672,11 @@ void MainWindow::updateFileStatus()
         }
     }
     lbStatusFilename.setText(output);
+}
+
+CANFrameModel* MainWindow::getCANFrameModel()
+{
+    return model;
 }
 
 void MainWindow::showSettingsDialog()

@@ -8,6 +8,9 @@
 #include "canframemodel.h"
 #include "can_structs.h"
 #include "framefileio.h"
+#include "dbc/dbchandler.h"
+#include "bus_protocols/isotp_handler.h"
+
 #include "re/graphingwindow.h"
 #include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"
@@ -15,7 +18,6 @@
 #include "re/flowviewwindow.h"
 #include "framesenderwindow.h"
 #include "re/filecomparatorwindow.h"
-#include "dbc/dbchandler.h"
 #include "dbc/dbcmaineditor.h"
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
@@ -32,6 +34,7 @@
 #include "signalviewerwindow.h"
 
 class ConnectionWindow;
+class ISOTP_InterpreterWindow;
 
 namespace Ui {
 class MainWindow;
@@ -45,6 +48,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
     static MainWindow *getReference();
+    CANFrameModel * getCANFrameModel();
     ~MainWindow();
 
 private slots:
@@ -101,7 +105,7 @@ signals:
     void suspendCapturing(bool);
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
-    void framesUpdated(int numFrames); //something has updated the frame list
+    void framesUpdated(int numFrames); //something has updated the frame list (send at gui update frequency)
     void frameUpdateRapid(int numFrames);
     void settingsUpdated();
     void sendCenterTimeID(int32_t ID, double timestamp);
@@ -112,7 +116,7 @@ private:
 
     //canbus related data
     CANFrameModel *model;
-    DBCHandler *dbcHandler;    
+    DBCHandler *dbcHandler;
     QByteArray inputBuffer;
     QTimer updateTimer;
     QTime *elapsedTime;
