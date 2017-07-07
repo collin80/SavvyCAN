@@ -485,7 +485,7 @@ void ConnectionWindow::handleRevert()
 bool ConnectionWindow::isSocketCanAvailable()
 {
 #ifdef Q_OS_LINUX
-    foreach (const QByteArray &backend, QCanBus::instance()->plugins()) {
+    for (const auto &backend : QCanBus::instance()->plugins()) {
         if (backend == "socketcan")
             return true;
     }
