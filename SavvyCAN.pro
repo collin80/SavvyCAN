@@ -14,7 +14,9 @@ CONFIG += c++11 qscintilla2
 
 TARGET = SavvyCAN
 TEMPLATE = app
-INCLUDEPATH +=/usr/include/qt5/
+#you are fairly likely to have to change this next include to match your linux distro
+#this works on Linux Mint 18.1
+unix:!macx: INCLUDEPATH +=/usr/include/x86_64-linux-gnu/qt5
 
 SOURCES += main.cpp\
     mainwindow.cpp \

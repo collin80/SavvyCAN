@@ -17,7 +17,7 @@ void ScriptContainer::compileScript()
     errorWidget->clear();
 
     if (result.isError() && errorWidget)
-    {        
+    {
         errorWidget->addItem("SCRIPT EXCEPTION!");
         errorWidget->addItem("Line: " + result.property("lineNumber").toString());
         errorWidget->addItem(result.property("message").toString());
@@ -71,7 +71,7 @@ void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
     if(conn_p)
     {
-        CANFlt canFlt;
+        //CANFlt canFlt;
         for(int i=0 ; i<conn_p->getNumBuses() ; i++)
         {
             foreach(const CANFilter& flt, filters)

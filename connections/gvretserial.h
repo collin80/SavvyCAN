@@ -28,7 +28,8 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
     SETUP_CANBUS,
     GET_CANBUS_PARAMS,
     GET_DEVICE_INFO,
-    SET_SINGLEWIRE_MODE
+    SET_SINGLEWIRE_MODE,
+    GET_NUM_BUSES
 };
 
 }

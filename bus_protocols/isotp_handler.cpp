@@ -107,6 +107,7 @@ void ISOTP_HANDLER::updatedFrames(int numFrames)
 
 void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames)
 {
+    Q_UNUSED(conn)
     if (pFrames.length() <= 0) return;
 
     qDebug() << "received messages in ISOTP handler";

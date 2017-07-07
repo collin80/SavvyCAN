@@ -257,7 +257,7 @@ void CANConnection::setCapSuspended(bool pIsSuspended) {
 }
 
 void CANConnection::debugInput(QByteArray bytes) {
-
+    Q_UNUSED(bytes)
 }
 
 bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)

@@ -183,6 +183,7 @@ public slots:
     void debugInput(QByteArray bytes);
 
 protected:
+    int           mNumBuses; //protected to allow connected device to figure out how many buses are available
 
     //determine if the passed frame is part of a filter or not.
     void checkTargettedFrame(CANFrame &frame);
@@ -290,7 +291,6 @@ protected:
 
 private:
     LFQueue<CANFrame>   mQueue;
-    const int           mNumBuses;
     const QString       mPort;
     const CANCon::type  mType;
     bool                mIsCapSuspended;

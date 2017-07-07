@@ -164,7 +164,7 @@ void UDSScanWindow::dumpNode(QTreeWidgetItem* item, QFile *file, int indent)
 
 void UDSScanWindow::sendOnBuses(UDS_MESSAGE test, int buses)
 {
-    int busList = buses;
+    //int busList = buses;
     //if (busList < ui->cbBuses->count() - 1)
     //{
         test.bus = buses;

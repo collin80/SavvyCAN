@@ -104,7 +104,7 @@ CANConnection* CANConManager::getByName(const QString& pName) const
 
 void CANConManager::refreshConnection(CANConnection* pConn_p)
 {
-    int buses = 0;
+    unsigned int buses = 0;
     foreach(CANConnection* conn_p, mConns)
     {
         if (conn_p->getStatus() == CANCon::CONNECTED) buses += conn_p->getNumBuses();

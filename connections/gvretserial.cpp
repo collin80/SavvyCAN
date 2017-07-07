@@ -8,7 +8,7 @@
 #include "gvretserial.h"
 
 GVRetSerial::GVRetSerial(QString portName) :
-    CANConnection(portName, CANCon::GVRET_SERIAL, 2, 4000, true),
+    CANConnection(portName, CANCon::GVRET_SERIAL, 3, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
     qDebug() << "GVRetSerial()";
@@ -170,7 +170,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     buffer[3] = (unsigned char)(ID >> 8);
     buffer[4] = (unsigned char)(ID >> 16);
     buffer[5] = (unsigned char)(ID >> 24);
-    buffer[6] = (unsigned char)((frame.bus) & 1);
+    buffer[6] = (unsigned char)((frame.bus) & 3);
     buffer[7] = (unsigned char)frame.len;
     for (c = 0; c < frame.len; c++)
     {
@@ -254,6 +254,10 @@ void GVRetSerial::connectDevice()
 
     output.append((char)0xF1); //and another command
     output.append((char)0x01); //Time Sync - Not implemented until 333 but we can try
+
+    output.append((char)0xF1);
+    output.append((char)0x12); //get number of actually implemented buses. Not implemented except on M2RET
+    mNumBuses = 2; //the proper number if 0x12 is not implemented
 
     continuousTimeSync = true;
 
@@ -373,6 +377,10 @@ void GVRetSerial::procRXChar(unsigned char c)
             gotValidated = true;
             //qDebug() << "Got validated";
             rx_state = IDLE;
+            break;
+        case 12:
+            rx_state = GET_NUM_BUSES;
+            rx_step = 0;
             break;
         }
         break;
@@ -593,7 +601,10 @@ void GVRetSerial::procRXChar(unsigned char c)
     case SET_SINGLEWIRE_MODE:
         rx_state = IDLE;
         break;
-
+    case GET_NUM_BUSES:
+        mNumBuses = c;
+        rx_state = IDLE;
+        break;
     }
 }
 

@@ -485,10 +485,7 @@ void ConnectionWindow::handleRevert()
 bool ConnectionWindow::isSocketCanAvailable()
 {
 #ifdef Q_OS_LINUX
-    for (const auto &backend : QCanBus::instance()->plugins()) {
-        if (backend == "socketcan")
-            return true;
-    }
+    if (QCanBus::instance()->plugins().contains(QStringLiteral("socketcan"))) return true;
 #endif
     return false;
 }
