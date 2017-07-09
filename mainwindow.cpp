@@ -52,13 +52,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    ui->canFramesView->setColumnWidth(0, 110);
+    ui->canFramesView->setColumnWidth(0, 150);
     ui->canFramesView->setColumnWidth(1, 70);
     ui->canFramesView->setColumnWidth(2, 40);
     ui->canFramesView->setColumnWidth(3, 40);
     ui->canFramesView->setColumnWidth(4, 40);
     ui->canFramesView->setColumnWidth(5, 40);
-    ui->canFramesView->setColumnWidth(6, 275);
+    ui->canFramesView->setColumnWidth(6, 225);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
 
@@ -256,19 +256,6 @@ void MainWindow::readSettings()
         ui->cbAutoScroll->setChecked(true);
     }
 
-    /*
-    int cType = settings.value("Main/DefaultConnectionType", 0).toInt();
-    if (cType == 0) connType = "GVRET";
-    if (cType == 1) connType = "KVASER";
-    if (cType == 2) connType = "SOCKETCAN";
-    portName = settings.value("Main/DefaultConnectionPort", "").toString();
-    */
-
-    //qDebug() << connType;
-    //qDebug() << portName;
-
-    //"Main/SingleWireMode"
-
     readUpdateableSettings();
 }
 
@@ -280,6 +267,8 @@ void MainWindow::readUpdateableSettings()
     Utility::decimalMode = !useHex;
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     model->setSecondsMode(secondsMode);
+    useSystemClock = settings.value("Main/TimeClock", false).toBool();
+    model->setSysTimeMode(useSystemClock);
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
 }
 

@@ -26,7 +26,31 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbRestorePositions->setChecked(settings->value("Main/SaveRestorePositions", true).toBool());
     ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
-    ui->cbTimeSeconds->setChecked(settings->value("Main/TimeSeconds", false).toBool());
+
+    bool secondsMode = settings->value("Main/TimeSeconds", false).toBool();
+    bool clockMode = settings->value("Main/TimeClock", false).toBool();
+    if (clockMode)
+    {
+        ui->rbSeconds->setChecked(false);
+        ui->rbMicros->setChecked(false);
+        ui->rbSysClock->setChecked(true);
+    }
+    else
+    {
+        if (secondsMode)
+        {
+            ui->rbSeconds->setChecked(true);
+            ui->rbMicros->setChecked(false);
+            ui->rbSysClock->setChecked(false);
+        }
+        else
+        {
+            ui->rbSeconds->setChecked(false);
+            ui->rbMicros->setChecked(true);
+            ui->rbSysClock->setChecked(false);
+        }
+    }
+
     ui->comboSendingBus->setCurrentIndex(settings->value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings->value("Main/UseFiltered", false).toBool());
 
@@ -40,7 +64,9 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbRestorePositions, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbValidate, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinPlaybackSpeed, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
-    connect(ui->cbTimeSeconds, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->rbSeconds, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->rbMicros, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->rbSysClock, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 }
@@ -68,7 +94,8 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/SaveRestorePositions", ui->cbRestorePositions->isChecked());
     settings->setValue("Main/ValidateComm", ui->cbValidate->isChecked());
     settings->setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
-    settings->setValue("Main/TimeSeconds", ui->cbTimeSeconds->isChecked());
+    settings->setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
+    settings->setValue("Main/TimeClock", ui->rbSysClock->isChecked());
     settings->setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings->setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
 

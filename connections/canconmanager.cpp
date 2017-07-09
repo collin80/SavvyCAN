@@ -1,4 +1,5 @@
 #include <QDateTime>
+#include <QSettings>
 
 #include "canconmanager.h"
 
@@ -24,6 +25,14 @@ CANConManager::CANConManager(QObject *parent): QObject(parent)
     mNumActiveBuses = 0;
 
     resetTimeBasis();
+
+    QSettings settings;
+
+    if (settings.value("Main/TimeClock", false).toBool())
+    {
+        useSystemTime = true;
+    }
+    else useSystemTime = false;
 }
 
 void CANConManager::resetTimeBasis()
@@ -168,7 +177,8 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
-            workingFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() * 1000) - mTimestampBasis);
+            workingFrame.timestamp = (QDateTime::currentMSecsSinceEpoch() * 1000);
+            if (!useSystemTime) workingFrame.timestamp -= mTimestampBasis;
             txFrame = conn->getQueue().get();
             *txFrame = workingFrame;
             conn->getQueue().queue();

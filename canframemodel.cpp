@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QApplication>
 #include <QPalette>
+#include <QDateTime>
 #include "utility.h"
 
 
@@ -87,6 +88,16 @@ void CANFrameModel::setSecondsMode(bool mode)
     {
         this->beginResetModel();
         timeSeconds = mode;
+        this->endResetModel();
+    }
+}
+
+void CANFrameModel::setSysTimeMode(bool mode)
+{
+    if (useSystemTime != mode)
+    {
+        this->beginResetModel();
+        useSystemTime = mode;
         this->endResetModel();
     }
 }
@@ -237,8 +248,11 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         switch (index.column())
         {
         case 0: //timestamp
-            if (!timeSeconds) return QString::number(thisFrame.timestamp);
-            else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
+            if (!useSystemTime) {
+                if (!timeSeconds) return QString::number(thisFrame.timestamp);
+                else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
+            }
+            else return QDateTime::fromMSecsSinceEpoch(thisFrame.timestamp / 1000).toString("MMM-dd HH:mm:ss.zzz");
             break;
         case 1: //id
             return Utility::formatNumber(thisFrame.ID);

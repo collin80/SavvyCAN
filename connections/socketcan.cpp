@@ -1,6 +1,7 @@
 #include <QObject>
 #include <QDebug>
 #include <QCanBusFrame>
+#include <QDateTime>
 
 #include "socketcan.h"
 
@@ -189,7 +190,10 @@ void SocketCan::framesReceived()
                 frame_p->extended      = false;
                 frame_p->ID            = recFrame.frameId();
                 frame_p->isReceived    = true;
-                frame_p->timestamp     = (recFrame.timeStamp().seconds()*1000000 + recFrame.timeStamp().microSeconds()) - timeBasis;
+                if (useSystemTime) {
+                    frame_p->timestamp = QDateTime::currentMSecsSinceEpoch() * 1000ul;
+                }
+                else frame_p->timestamp     = (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis;
 
                 checkTargettedFrame(*frame_p);
 

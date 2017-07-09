@@ -1,3 +1,4 @@
+#include <QSettings>
 #include <QThread>
 #include "canconnection.h"
 
@@ -78,6 +79,14 @@ void CANConnection::start()
 
     /* set started flag */
     mStarted = true;
+
+    QSettings settings;
+
+    if (settings.value("Main/TimeClock", false).toBool())
+    {
+        useSystemTime = true;
+    }
+    else useSystemTime = false;
 
     /* in multithread case, this will be called before entering thread event loop */
     return piStarted();

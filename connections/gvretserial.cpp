@@ -400,6 +400,10 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildFrame.timestamp |= (uint)c << 24;
 
             buildFrame.timestamp += timeBasis;
+            if (useSystemTime)
+            {
+                buildFrame.timestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+            }
             break;
         case 4:
             buildFrame.ID = c;

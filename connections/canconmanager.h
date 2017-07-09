@@ -74,6 +74,7 @@ private:
     QTimer                 mTimer;
     uint64_t               mTimestampBasis;
     uint32_t               mNumActiveBuses;
+    bool useSystemTime;
 };
 
 #endif // CANCONNECTIONMODEL_H

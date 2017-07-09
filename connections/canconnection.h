@@ -237,6 +237,7 @@ protected:
     void setCapSuspended(bool pIsSuspended);
 
 protected:
+    bool useSystemTime;
 
     /**************************************************************/
     /***********     protected interface to implement       *******/

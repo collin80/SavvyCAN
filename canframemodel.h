@@ -23,7 +23,7 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const;
     int columnCount(const QModelIndex &) const;
-    int totalFrameCount();    
+    int totalFrameCount();
 
     void sendRefresh();
     void sendRefresh(int);
@@ -32,6 +32,7 @@ public:
     void setInterpetMode(bool);
     void setOverwriteMode(bool);
     void setHexMode(bool);
+    void setSysTimeMode(bool);
     void setFilterState(unsigned int ID, bool state);
     void setAllFilters(bool state);
     void setSecondsMode(bool);
@@ -63,6 +64,7 @@ private:
     bool overwriteDups; //should we display all frames or only the newest for each ID?
     bool useHexMode;
     bool timeSeconds;
+    bool useSystemTime;
     bool needFilterRefresh;
     uint64_t timeOffset;
     int lastUpdateNumFrames;
