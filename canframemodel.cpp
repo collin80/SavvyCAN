@@ -420,6 +420,11 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
     {
         addFrame(frame);
     }
+    if (overwriteDups) //if in overwrite mode we'll update every time frames come in
+    {
+        beginResetModel();
+        endResetModel();
+    }
 }
 
 void CANFrameModel::sendRefresh()
