@@ -431,7 +431,7 @@ void DBCFile::loadFile(QString fileName)
                 sig.unitName = match.captured(10 + offset);
                 if (match.captured(11 + offset).contains(','))
                 {
-                    QString tmp = match.captured(11).split(',')[0];
+                    QString tmp = match.captured(11 + offset).split(',')[0];
                     sig.receiver = findNodeByName(tmp);
                 }
                 else sig.receiver = findNodeByName(match.captured(11 + offset));
@@ -596,7 +596,7 @@ void DBCFile::loadFile(QString fileName)
         }
 
         if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
-        {            
+        {
             regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]*)\\\"*");
             match = regex.match(line);
             //captured 1 is the name of the attribute
@@ -606,7 +606,7 @@ void DBCFile::loadFile(QString fileName)
                 qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1) << "with data " << match.captured(2);
                 DBC_ATTRIBUTE *found = findAttributeByName(match.captured(1));
                 if (found)
-                {                    
+                {
                     switch (found->valType)
                     {
                     case QSTRING:
