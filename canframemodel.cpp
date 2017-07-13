@@ -69,6 +69,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     timeOffset = 0;
     needFilterRefresh = false;
     lastUpdateNumFrames = 0;
+    timeFormat =  "MMM-dd HH:mm:ss.zzz";
 }
 
 void CANFrameModel::setHexMode(bool mode)
@@ -112,6 +113,13 @@ void CANFrameModel::setInterpetMode(bool mode)
         interpretFrames = mode;
         this->endResetModel();
     }
+}
+
+void CANFrameModel::setTimeFormat(QString format)
+{
+    timeFormat = format;
+    beginResetModel(); //reset model to show new time format
+    endResetModel();
 }
 
 void CANFrameModel::normalizeTiming()
@@ -252,7 +260,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 if (!timeSeconds) return QString::number(thisFrame.timestamp);
                 else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
             }
-            else return QDateTime::fromMSecsSinceEpoch(thisFrame.timestamp / 1000).toString("MMM-dd HH:mm:ss.zzz");
+            else return QDateTime::fromMSecsSinceEpoch(thisFrame.timestamp / 1000).toString(timeFormat);
             break;
         case 1: //id
             return Utility::formatNumber(thisFrame.ID);

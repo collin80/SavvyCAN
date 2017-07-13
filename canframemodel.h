@@ -36,6 +36,7 @@ public:
     void setFilterState(unsigned int ID, bool state);
     void setAllFilters(bool state);
     void setSecondsMode(bool);
+    void setTimeFormat(QString);
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);
     void normalizeTiming();
@@ -62,6 +63,7 @@ private:
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
+    QString timeFormat;
     bool useHexMode;
     bool timeSeconds;
     bool useSystemTime;

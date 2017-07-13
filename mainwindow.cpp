@@ -270,6 +270,8 @@ void MainWindow::readUpdateableSettings()
     useSystemClock = settings.value("Main/TimeClock", false).toBool();
     model->setSysTimeMode(useSystemClock);
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
+    model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
+
 }
 
 void MainWindow::writeSettings()
@@ -673,7 +675,7 @@ void MainWindow::showSettingsDialog()
     if (!settingsDialog)
     {
         settingsDialog = new MainSettingsDialog();
-        connect(settingsDialog, SIGNAL(finished(int)), this, SLOT(updateSettings()));
+        connect (settingsDialog, SIGNAL(updatedSettings()), this, SLOT(readUpdateableSettings()));
     }
     settingsDialog->show();
 }

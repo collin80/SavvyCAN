@@ -97,6 +97,7 @@ private slots:
 public slots:
     void gotFrames(int);
     void updateSettings();
+    void readUpdateableSettings();
     void gotCenterTimeID(int32_t ID, double timestamp);
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
@@ -168,7 +169,6 @@ private:
     void killEmAll();
     void killWindow(QDialog *win);
     void readSettings();
-    void readUpdateableSettings();
     void writeSettings();
 };
 

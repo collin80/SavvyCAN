@@ -26,6 +26,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbRestorePositions->setChecked(settings->value("Main/SaveRestorePositions", true).toBool());
     ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
+    ui->lineClockFormat->setText(settings->value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
 
     bool secondsMode = settings->value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings->value("Main/TimeClock", false).toBool();
@@ -69,6 +70,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->rbSysClock, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -98,6 +100,8 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/TimeClock", ui->rbSysClock->isChecked());
     settings->setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings->setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
+    settings->setValue("Main/TimeFormat", ui->lineClockFormat->text());
 
     settings->sync();
+    emit updatedSettings();
 }

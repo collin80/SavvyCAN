@@ -16,6 +16,9 @@ public:
     explicit MainSettingsDialog(QWidget *parent = 0);
     ~MainSettingsDialog();
 
+signals:
+    void updatedSettings();
+
 private slots:
     void updateSettings();
 

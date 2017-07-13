@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>687</height>
+    <height>691</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -89,6 +89,20 @@
               <string>System Clock</string>
              </property>
             </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <widget class="QLabel" name="label_4">
+             <property name="text">
+              <string>Time Format String:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineClockFormat"/>
            </item>
           </layout>
          </item>
