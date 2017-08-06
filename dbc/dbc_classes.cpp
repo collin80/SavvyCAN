@@ -95,9 +95,16 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
 
     if (valList.count() > 0) //if this is a value list type then look it up and display the proper string
     {
+        bool foundVal = false;
         for (int x = 0; x < valList.count(); x++)
         {
-            if (valList.at(x).value == result) outputString += valList.at(x).descript;
+            if (valList.at(x).value == result)
+            {
+                outputString += valList.at(x).descript;
+                foundVal = true;
+                break;
+            }
+            if (!foundVal) outputString += QString::number(endResult) + unitName;
         }
     }
     else //otherwise display the actual number and unit (if it exists)
