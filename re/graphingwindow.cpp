@@ -45,14 +45,14 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->graphingView, SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
     //connect up the mouse controls
     connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
-    connect(ui->graphingView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
+    connect(ui->graphingView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,int,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,int,QMouseEvent*)));
     connect(ui->graphingView, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
 
     // make bottom and left axes transfer their ranges to top and right axes:
     connect(ui->graphingView->xAxis, SIGNAL(rangeChanged(QCPRange)), ui->graphingView->xAxis2, SLOT(setRange(QCPRange)));
     connect(ui->graphingView->yAxis, SIGNAL(rangeChanged(QCPRange)), ui->graphingView->yAxis2, SLOT(setRange(QCPRange)));
 
-    connect(ui->graphingView, SIGNAL(titleDoubleClick(QMouseEvent*,QCPPlotTitle*)), this, SLOT(titleDoubleClick(QMouseEvent*,QCPPlotTitle*)));
+    //connect(ui->graphingView, SIGNAL(titleDoubleClick(QMouseEvent*,QCPTextElement*)), this, SLOT(titleDoubleClick(QMouseEvent*,QCPTextElement*)));
     connect(ui->graphingView, SIGNAL(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart,QMouseEvent*)), this, SLOT(axisLabelDoubleClick(QCPAxis*,QCPAxis::SelectablePart)));
     connect(ui->graphingView, SIGNAL(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*)));
 
@@ -66,6 +66,8 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     selectedPen.setColor(Qt::blue);
 
     ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
+
+    ui->graphingView->setOpenGl(true); //purdy and fast drawing courtesy of your video card - pretty everyone has 3D accel these days
 
     needScaleSetup = true;
 }
@@ -166,8 +168,9 @@ void GraphingWindow::updatedFrames(int numFrames)
     }
 }
 
-void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event)
+void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event)
 {
+    Q_UNUSED(dataIdx);
     int id = 0;
     //apply transforms to get the X axis value where we double clicked
     double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
@@ -193,20 +196,22 @@ void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
     ui->graphingView->replot();
 }
 
-void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPPlotTitle* title)
+void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPTextElement* title)
 {
   Q_UNUSED(event)
   Q_UNUSED(title)
+    qDebug() << "title Double Click";
   // Set the plot title by double clicking on it
 
-  /*
+    /*
+  bool ok;
   QString newTitle = QInputDialog::getText(this, "SavvyCAN Graphing", "New plot title:", QLineEdit::Normal, title->text(), &ok);
   if (ok)
   {
     title->setText(newTitle);
     ui->graphingView->replot();
-  }
-  */
+  } */
+
   editSelectedGraph();
 }
 
@@ -227,33 +232,21 @@ void GraphingWindow::axisLabelDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart
 
 void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem *item)
 {
-  // Rename a graph by double clicking on its legend item
-  Q_UNUSED(legend)
-  if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
-  {/*
-    QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
-    bool ok;
-    QString newName = QInputDialog::getText(this, "SavvyCAN Graphing", "New graph name:", QLineEdit::Normal, plItem->plottable()->name(), &ok);
-    if (ok)
-    {
-      plItem->plottable()->setName(newName);
-
-      if (ui->graphingView->selectedGraphs().size() > 0)
-      {
-          for (int i = 0; i < graphParams.count(); i++)
-          {
-              if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
-              {
-                  graphParams[i].graphName = newName;
-                  break;
-              }
-          }
-      }
-
-      ui->graphingView->replot();
-    } */
-     editSelectedGraph();
-  }
+   // Rename a graph by double clicking on its legend item
+   qDebug() << "Legend Double Click " << item;
+   Q_UNUSED(legend)
+   if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
+   {
+      QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
+      QCPGraph *pGraph = qobject_cast<QCPGraph *>(plItem->plottable());
+      QCPDataSelection sel;
+      QCPDataRange rang;
+      rang.setBegin(0);
+      rang.setEnd(pGraph->dataCount());
+      sel.addDataRange(rang);
+      pGraph->setSelection(sel);
+      editSelectedGraph();
+   }
 }
 
 void GraphingWindow::selectionChanged()
@@ -294,7 +287,7 @@ void GraphingWindow::selectionChanged()
     if (item->selected() || graph->selected())
     {
       item->setSelected(true);
-      graph->setSelected(true);
+      //graph->setSelected(true);
     }
   }
 }
@@ -543,7 +536,7 @@ void GraphingWindow::saveGraphs()
         if (dialog.selectedNameFilter() == filters[0])
         {
             if (!filename.contains('.')) filename += ".pdf";
-            ui->graphingView->savePdf(filename, true, 0, 0);
+            ui->graphingView->savePdf(filename, 0, 0);
         }
         if (dialog.selectedNameFilter() == filters[1])
         {
@@ -1009,14 +1002,14 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     params.xbias = 0;
 
     ui->graphingView->addGraph();
-    params.ref = ui->graphingView->graph();    
+    params.ref = ui->graphingView->graph();
     if (createGraphParam)
     {
         graphParams.append(params);
         refParam = &graphParams.last();
     }
-    ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
-    ui->graphingView->graph()->setSelectedPen(selectedPen);
+    //ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
+    //ui->graphingView->graph()->setSelectedPen(selectedPen);
 
     if (params.graphName == NULL || params.graphName.length() == 0)
     {

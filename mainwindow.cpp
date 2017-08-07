@@ -8,7 +8,7 @@
 #include "utility.h"
 
 /*
-Compile for all platforms and create release (remember to include QScintilla libs) and make Win32 binary.
+Compile for all platforms and create release and make Win32 binary.
 
 Some notes on things I'd like to put into the program but haven't put on github (yet)
 

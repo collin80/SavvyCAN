@@ -40,10 +40,10 @@ public:
     void showEvent(QShowEvent*);
 
 private slots:
-    void titleDoubleClick(QMouseEvent *event, QCPPlotTitle *title);
+    void titleDoubleClick(QMouseEvent *event, QCPTextElement *title);
     void axisLabelDoubleClick(QCPAxis* axis, QCPAxis::SelectablePart part);
     void legendDoubleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
-    void plottableDoubleClick(QCPAbstractPlottable* plottable,QMouseEvent* event);
+    void plottableDoubleClick(QCPAbstractPlottable* plottable,int dataIdx, QMouseEvent* event);
     void selectionChanged();
     void mousePress();
     void mouseWheel();

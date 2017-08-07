@@ -196,6 +196,9 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
     bool pastHeader = false;
     bool foundErrors = false;
 
+    QDateTime now = QDateTime::currentDateTime();
+    QDateTime tempTime;
+
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
         delete inFile;
@@ -224,7 +227,9 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
         if (tokens.length() > 20)
         {
             thisFrame.bus = 0;
-            thisFrame.timestamp = tokens[1].toDouble() * 1000000.0;
+            tempTime = now;
+            tempTime.addMSecs(tokens[1].toDouble() * 1000.0);
+            thisFrame.timestamp = tempTime.toMSecsSinceEpoch() * 1000ul;
             if (tokens[5].startsWith("T")) thisFrame.isReceived = false;
                 else thisFrame.isReceived = true;
             thisFrame.ID = tokens[9].toInt(NULL, 16);
@@ -260,6 +265,7 @@ bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CANFrame> *
 //CRTD format from Mark Webb-Johnson / OVMS project
 /*
 Sample data in CRTD format
+Timestamp appears to be seconds since the epoch
 1320745424.000 CXX OVMS Tesla Roadster cando2crtd converted log
 1320745424.000 CXX OVMS Tesla roadster log: charge.20111108.csv
 1320745424.002 R11 402 FA 01 C3 A0 96 00 07 01
@@ -503,7 +509,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
             {
                 if (tokens[0].length() > 3)
                 {
-                    long long temp = tokens[0].right(10).toLongLong();
+                    long long temp = tokens[0].toLongLong();
                     thisFrame.timestamp = temp;
                 }
                 else
@@ -635,7 +641,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
         {
             QList<QByteArray> tokens = line.split(',');
 
-            timeStamp += 5;
+            timeStamp += 5000;
             thisFrame.timestamp = timeStamp;
             thisFrame.ID = tokens[0].toInt(NULL, 16);
             if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
@@ -776,7 +782,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
                 frames->append(thisFrame);
             }
             else foundErrors = true;
-        }        
+        }
     }
     inFile->close();
     delete inFile;
@@ -789,7 +795,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
 
-    timestamp = QDateTime::currentDateTime();
+    //timestamp = QDateTime::currentDateTime();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -822,7 +828,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
             lineCounter = 0;
         }
 
-        tempStamp = timestamp.addMSecs(frames->at(c).timestamp / 1000);
+        tempStamp = QDateTime::fromMSecsSinceEpoch(frames->at(c).timestamp / 1000);
         outFile->write(tempStamp.toString("h:m:s:z").toUtf8());
         if (frames->at(c).isReceived) outFile->write(" Rx ");
         else outFile->write(" Tx ");
@@ -951,10 +957,7 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
             qApp->processEvents();
             lineCounter = 0;
         }
-
-        timestamp.setTime(QTime());
-
-        tempStamp = timestamp.addMSecs(frames->at(c).timestamp / 1000);
+        tempStamp = QDateTime::fromMSecsSinceEpoch(frames->at(c).timestamp / 1000);
         outFile->write("\"" + tempStamp.toString("h:m:s.").toUtf8() + tempStamp.toString("z").rightJustified(3, '0').toUtf8() + "\"");
 
         outFile->write(",\"" + QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8() + "\"");
@@ -1448,7 +1451,7 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
 
             thisFrame.timestamp = timeExp.cap(1).toDouble(&ret) * 1000000;
             if(!ret) continue;
-            
+
             /* ID & value */
             QRegExp IdValExp("^(\\S+)#(\\S+)\n$");
             qDebug() << tokens[2];

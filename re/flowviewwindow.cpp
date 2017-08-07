@@ -10,7 +10,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     QDialog(parent),
     ui(new Ui::FlowViewWindow)
 {
-    ui->setupUi(this);    
+    ui->setupUi(this);
 
     readSettings();
 
@@ -33,7 +33,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphView->axisRect()->setupFullAxesBox();
 
     QCPItemText *textLabel = new QCPItemText(ui->graphView);
-    ui->graphView->addItem(textLabel);
+    //ui->graphView->addItem(textLabel);
     textLabel->setPositionAlignment(Qt::AlignTop|Qt::AlignHCenter);
     textLabel->position->setType(QCPItemPosition::ptAxisRectRatio);
     textLabel->position->setCoords(0.5, .5);
@@ -53,11 +53,14 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
     //ui->graphView->xAxis->setAutoSubTicks(false);
     //ui->graphView->xAxis->setAutoTicks(false);
-    ui->graphView->xAxis->setAutoTickStep(false);
-    ui->graphView->xAxis->setAutoSubTicks(false);
-    ui->graphView->xAxis->setNumberFormat("gb");
-    ui->graphView->xAxis->setTickStep(5.0);
-    ui->graphView->xAxis->setSubTickCount(0);
+    QCPAxisTicker *xTicker = new QCPAxisTicker();
+    xTicker->setTickCount(10);
+    ui->graphView->xAxis->setTicker(QSharedPointer<QCPAxisTicker>(xTicker));
+    //ui->graphView->xAxis->setAutoTickStep(false);
+    //ui->graphView->xAxis->setAutoSubTicks(false);
+    //ui->graphView->xAxis->setNumberFormat("gb");
+    //ui->graphView->xAxis->setTickStep(5.0);
+    //ui->graphView->xAxis->setSubTickCount(0);
 
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
@@ -68,7 +71,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->spinPlayback, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     connect(ui->cbLoopPlayback, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(changeID(QString)));
-    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));    
+    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
     connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
     connect(ui->txtTrigger0, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
     connect(ui->txtTrigger1, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
@@ -294,7 +297,7 @@ void FlowViewWindow::saveFileGraph()
         if (dialog.selectedNameFilter() == filters[0])
         {
             if (!filename.contains('.')) filename += ".pdf";
-            ui->graphView->savePdf(filename, true, 0, 0);
+            ui->graphView->savePdf(filename, 0, 0);
         }
         if (dialog.selectedNameFilter() == filters[1])
         {
@@ -408,7 +411,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
                     y[k].append(thisFrame.data[k]);
                     needRefresh = true;
                 }
-            }            
+            }
         }
         if (ui->cbLiveMode->checkState() == Qt::Checked)
         {
@@ -689,7 +692,7 @@ void FlowViewWindow::updatePosition(bool forward)
         memcpy(refBytes, currBytes, 8);
     }
 
-    memcpy(currBytes, frameCache.at(currentPosition).data, 8);    
+    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
 }
@@ -705,26 +708,29 @@ void FlowViewWindow::updateGraphLocation()
     {
         if (secondsMode)
         {
+            /*
             ui->graphView->xAxis->setRange(frameCache[start].timestamp / 1000000.0, frameCache[end].timestamp / 1000000.0);
             ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3000000.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
             ui->graphView->xAxis->setNumberPrecision(6);
+            */
         }
         else
         {
+            /*
             ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
             ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
-            ui->graphView->xAxis->setNumberPrecision(0);
+            ui->graphView->xAxis->setNumberPrecision(0); */
         }
     }
     else
     {
         ui->graphView->xAxis->setRange(start, end);
-        ui->graphView->xAxis->setTickStep(5.0);
-        ui->graphView->xAxis->setSubTickCount(0);
+        //ui->graphView->xAxis->setTickStep(5.0);
+        //ui->graphView->xAxis->setSubTickCount(0);
         ui->graphView->xAxis->setNumberFormat("gb");
     }
 
