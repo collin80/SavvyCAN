@@ -53,7 +53,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,10,0,0,4">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,4">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -61,16 +61,6 @@
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QsciScintilla" name="txtScriptSource">
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="whatsThis">
-        <string/>
        </property>
       </widget>
      </item>
@@ -116,13 +106,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QsciScintilla</class>
-   <extends>QFrame</extends>
-   <header>Qsci/qsciscintilla.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

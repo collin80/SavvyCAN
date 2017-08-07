@@ -10,13 +10,12 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
-CONFIG += c++11 qscintilla2
+CONFIG += c++11
+
+DEFINES += QCUSTOMPLOT_USE_OPENGL
 
 TARGET = SavvyCAN
 TEMPLATE = app
-#you are fairly likely to have to change this next include to match your linux distro
-#this works on Linux Mint 18.1
-unix:!macx: INCLUDEPATH +=/usr/include/x86_64-linux-gnu/qt5
 
 SOURCES += main.cpp\
     mainwindow.cpp \
@@ -64,7 +63,8 @@ SOURCES += main.cpp\
     signalviewerwindow.cpp \
     bus_protocols/isotp_handler.cpp \
     bus_protocols/j1939_handler.cpp \
-    bus_protocols/uds_handler.cpp
+    bus_protocols/uds_handler.cpp \
+    jsedit.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -116,7 +116,8 @@ HEADERS  += mainwindow.h \
     bus_protocols/isotp_handler.h \
     bus_protocols/j1939_handler.h \
     bus_protocols/uds_handler.h \
-    bus_protocols/isotp_message.h
+    bus_protocols/isotp_message.h \
+    jsedit.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
@@ -150,4 +151,3 @@ RESOURCES += \
     icons.qrc \
     images.qrc
 
-unix:!macx: LIBS += -lqt5scintilla2

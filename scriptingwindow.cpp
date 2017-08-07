@@ -4,7 +4,6 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QSettings>
-#include <Qsci/qscilexerjavascript.h>
 
 #include "connections/canconmanager.h"
 
@@ -13,6 +12,13 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui(new Ui::ScriptingWindow)
 {
     ui->setupUi(this);
+
+    editor = new JSEdit();
+    editor->setFrameShape(JSEdit::NoFrame);
+    editor->setWordWrapMode(QTextOption::NoWrap);
+    editor->setTabStopWidth(4);
+    editor->show();
+    ui->verticalLayout->insertWidget(2,editor, 10);
 
     readSettings();
 
@@ -27,11 +33,11 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ScriptingWindow::newFrames);
 
-    ui->txtScriptSource->setLexer(new QsciLexerJavaScript(ui->txtScriptSource));
 }
 
 ScriptingWindow::~ScriptingWindow()
 {
+    delete editor;
     delete ui;
 }
 
@@ -126,8 +132,8 @@ void ScriptingWindow::loadNewScript()
                 container->compileScript();
                 scripts.append(container);
                 currentScript = container;
-                ui->txtScriptSource->setText(container->scriptText);
-                ui->txtScriptSource->setEnabled(true);
+                editor->setPlainText(container->scriptText);
+                setEnabled(true);
             }
         }
     }
@@ -151,8 +157,8 @@ void ScriptingWindow::createNewScript()
     scripts.append(container);
     ui->listLoadedScripts->addItem(container->fileName);
     currentScript = container;
-    ui->txtScriptSource->setText(container->scriptText);
-    ui->txtScriptSource->setEnabled(true);
+    editor->setPlainText(container->scriptText);
+    editor->setEnabled(true);
 }
 
 void ScriptingWindow::deleteCurrentScript()
@@ -162,7 +168,7 @@ void ScriptingWindow::deleteCurrentScript()
 
 void ScriptingWindow::refreshSourceWindow()
 {
-    ui->txtScriptSource->setText(currentScript->scriptText);
+    editor->setPlainText(currentScript->scriptText);
 }
 
 void ScriptingWindow::saveScript()
@@ -191,7 +197,7 @@ void ScriptingWindow::saveScript()
                 delete outFile;
                 return;
             }
-            outFile->write(ui->txtScriptSource->text().toUtf8());
+            outFile->write(editor->toPlainText().toUtf8());
             outFile->close();
             delete outFile;
         }
@@ -205,6 +211,6 @@ void ScriptingWindow::revertScript()
 
 void ScriptingWindow::recompileScript()
 {
-    currentScript->scriptText = ui->txtScriptSource->text();
+    currentScript->scriptText = editor->toPlainText();
     currentScript->compileScript();
 }

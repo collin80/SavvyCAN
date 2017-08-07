@@ -4,6 +4,7 @@
 #include "can_structs.h"
 #include "scriptcontainer.h"
 #include "connections/canconnection.h"
+#include "jsedit.h"
 
 #include <QDialog>
 #include <QJSEngine>
@@ -37,6 +38,7 @@ private:
     void writeSettings();
 
     Ui::ScriptingWindow *ui;
+    JSEdit *editor;
     QList<ScriptContainer *> scripts;
     ScriptContainer *currentScript;
     const QVector<CANFrame> *modelFrames;
