@@ -200,11 +200,34 @@ void MotorControllerConfigWindow::timerTick()
     }
     else //save current value of all data items
     {
-        //qDebug() << "Transmission: " << QString::number(transmitStep);
-        switch (transmitStep)
-        {
+        uint16 thisValue;
+        qDebug() << "Transmission: " << QString::number(transmitStep);
 
+        QString cellVal = ui->tableParams->item(transmitStep, 1)->text();
+
+        if (params[transmitStep].paramType != HEX)
+            thisValue = (uint16_t)QString::number(cellVal);
+        else
+            thisValue = (uint16_t)Utility::ParseStringToNum(cellVal);
+
+        if (thisValue != params[transmitStep].value)
+        {
+            outFrame.ID = 0xC1;
+            outFrame.len = 8;
+            outFrame.bus = 0;
+            outFrame.extended = false;
+            outFrame.data[0] = params[transmitStep].paramID & 0xFF;
+            outFrame.data[1] = (params[transmitStep].paramID >> 8) & 0xFF;
+            outFrame.data[2] = 1; //0 = read, 1 = write
+            outFrame.data[3] = 0; //reserved
+            outFrame.data[4] = params[transmitStep].value & 0xFF;
+            outFrame.data[5] = (params[transmitStep].value >> 8) & 0xFF;
+            outFrame.data[6] = 0; //reserved
+            outFrame.data[7] = 0; //reserved
+
+            emit sendCANFrame(&outFrame, 0);
         }
+
         transmitStep++;
     }
 }
