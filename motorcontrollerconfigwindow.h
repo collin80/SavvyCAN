@@ -9,6 +9,33 @@ namespace Ui {
 class MotorControllerConfigWindow;
 }
 
+//Serial_Number_EEPROM                     , 0x0113, uint, dec, 16, 6, spr, spr, spr
+
+enum PARAM_TYPE
+{
+    DEC,
+    HEX,
+    ASCII,
+};
+
+enum PARAM_SIGNED
+{
+    UNSIGNED,
+    SIGNED,
+    Q15
+};
+
+class PARAM
+{
+public:
+    QString paramName;
+    uint32_t paramID;
+    PARAM_TYPE paramType;
+    PARAM_SIGNED signedType;
+    uint16_t value;
+};
+
+
 class MotorControllerConfigWindow : public QDialog
 {
     Q_OBJECT
@@ -26,6 +53,7 @@ private slots:
     void refreshData();
     void saveData();
     void timerTick();
+    void loadFile();
 
 private:
     Ui::MotorControllerConfigWindow *ui;
@@ -34,10 +62,7 @@ private:
     CANFrame outFrame;
     bool doingRequest;
     int transmitStep;
-
-    void send32BitParam(int param, uint32_t valu);
-    void send16BitParam(int param, uint16_t valu);
-    void send8BitParam(int param, uint8_t valu);
+    QList<PARAM> params;
 
 };
 

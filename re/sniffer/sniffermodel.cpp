@@ -75,7 +75,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 {
                     case dc::INC:
                         return QBrush(Qt::green);
-                    case dc::DEC:
+                    case dc::DEINC:
                         return QBrush(Qt::red);
                     default:
                         break;
