@@ -23,6 +23,7 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     modelFrames = frames;
 
     intervalTimer = new QTimer();
+    intervalTimer->setTimerType(Qt::PreciseTimer);
     intervalTimer->setInterval(1);
 
     QStringList headers;
@@ -45,7 +46,7 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->btnDisableAll, SIGNAL(clicked(bool)), this, SLOT(disableAll()));
     connect(ui->btnEnableAll, SIGNAL(clicked(bool)), this, SLOT(enableAll()));
     connect(ui->btnLoadGrid, SIGNAL(clicked(bool)), this, SLOT(loadGrid()));
-    connect(ui->btnSaveGrid, SIGNAL(clicked(bool)), this, SLOT(saveGrid()));    
+    connect(ui->btnSaveGrid, SIGNAL(clicked(bool)), this, SLOT(saveGrid()));
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
     intervalTimer->start();
@@ -56,7 +57,7 @@ FrameSenderWindow::~FrameSenderWindow()
 {
     delete ui;
 
-    intervalTimer->stop();    
+    intervalTimer->stop();
     delete intervalTimer;
 }
 
@@ -110,7 +111,7 @@ void FrameSenderWindow::updatedFrames(int numFrames)
         buildFrameCache();
     }
     else //just got some new frames. See if they are relevant.
-    {        
+    {
         if (numFrames > modelFrames->count()) return;
         qDebug() << "New frames in sender window";
         //run through the supposedly new frames in order
@@ -134,7 +135,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
 {
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
-        if (sendingData[sd].triggers.count() == 0) continue;        
+        if (sendingData[sd].triggers.count() == 0) continue;
         for (int trig = 0; trig < sendingData[sd].triggers.count(); trig++)
         {
             Trigger *thisTrigger = &sendingData[sd].triggers[trig];

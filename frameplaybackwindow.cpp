@@ -36,6 +36,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     modelFrames = frames;
 
     playbackTimer = new QTimer();
+    playbackTimer->setTimerType(Qt::PreciseTimer);
 
     currentPosition = 0;
     playbackActive = false;
@@ -499,7 +500,7 @@ void FramePlaybackWindow::btnSelectNoneClick()
 }
 
 void FramePlaybackWindow::timerTriggered()
-{    
+{
     sendingBuffer.clear();
     for (int count = 0; count < ui->spinBurstSpeed->value(); count++)
     {

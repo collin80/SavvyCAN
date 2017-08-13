@@ -19,6 +19,7 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     waitTimer->setInterval(100);
 
     UDS_HANDLER::getInstance()->setReception(true);
+    UDS_HANDLER::getInstance()->setProcessAllIDs(true);
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(UDS_HANDLER::getInstance(), &UDS_HANDLER::newUDSMessage, this, &UDSScanWindow::gotUDSReply);
@@ -317,7 +318,7 @@ void UDSScanWindow::updatedFrames(int numFrames)
     }
 }
 
-void UDSScanWindow::gotUDSReply(UDS_MESSAGE &msg)
+void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
 {
     QString result;
     QString serviceShortName;

@@ -18,6 +18,8 @@ ISOTP_HANDLER::ISOTP_HANDLER()
 {
     useExtendedAddressing = false;
     isReceiving = false;
+
+    connect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
 }
 
 void ISOTP_HANDLER::setExtendedAddressing(bool mode)
@@ -61,7 +63,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         for (int i = 0; i < frame.data[0]; i++) frame.data[i + 1] = data[i];
         CANConManager::getInstance()->sendFrame(frame);
     }
-    else //need to send a multi-part ISO_TP message - no flow control possible right now. TODO - Add flow control
+    else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
         frame.bus = bus;
         frame.ID = ID;
@@ -72,6 +74,11 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         frame.data[1] = data.length() & 0xFF;
         for (int i = 0; i < 6; i++) frame.data[2 + i] = data[currByte++];
         CANConManager::getInstance()->sendFrame(frame);
+        //Queue up the rest of the frames
+        waitingForFlow = true;
+        frameTimer.setInterval(200); //wait a while for the flow frame to come in
+        frameTimer.setTimerType(Qt::PreciseTimer);
+        frameTimer.start();
         while (currByte < data.length())
         {
             for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
@@ -81,7 +88,8 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
             if (bytesToGo > 7) bytesToGo = 7;
             for (int i = 0; i < bytesToGo; i++) frame.data[1 + i] = data[currByte++];
             frame.len = 8;
-            CANConManager::getInstance()->sendFrame(frame);
+            sendingFrames.append(frame);
+            //CANConManager::getInstance()->sendFrame(frame);
         }
     }
 }
@@ -100,7 +108,7 @@ void ISOTP_HANDLER::updatedFrames(int numFrames)
     {
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
-            //processFrame(modelFrames->at(i));
+            //processFrame(modelFrames->at(i));  //accepting these frames in rapidFrames instead
         }
     }
 }
@@ -114,7 +122,9 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
 
     foreach(const CANFrame& thisFrame, pFrames)
     {
-        processFrame(thisFrame);
+        //only process frames that we've marked are ISOTP frames
+        //unless processAll is true
+        if (isoIDs[thisFrame.ID] || processAll) processFrame(thisFrame);
     }
 }
 
@@ -220,7 +230,30 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             emit newISOMessage(*pMsg);
         }
         break;
-    case 3: //flow control messages -ignored for now
+    case 3: //flow control messages
+        switch (frameLen) //actually flow control type in this case
+        {
+        case 0: //continue to send frames but maybe change inter-frame delay
+            waitingForFlow = false;
+            //data[1] contains number of frames to send before waiting for next flow control
+            framesUntilFlow = frame.data[1];
+            if (framesUntilFlow == 0) framesUntilFlow = -1; //-1 means don't count frames and just keep going
+            //data[2] contains the interframe delay to use (0xF1 through 0xF9 are special through)
+            if (frame.data[2] < 0xF1) frameTimer.start(frame.data[2]); //set proper delay between frames
+            else frameTimer.start(1); //can't do sub-millisecond sending with this code so just use 1ms timing
+            break;
+        case 1: //wait - do not send any more frames until other side says so
+            waitingForFlow = true;
+            frameTimer.stop(); //quit sending frames for now
+            break;
+        case 2: //overflow or abort. Assume this means abort and quit sending
+            frameTimer.stop();
+            sendingFrames.clear();
+            waitingForFlow = false;
+            break;
+        }
+        waitingForFlow = false;
+
         break;
     }
 }
@@ -231,13 +264,7 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
     {
         if (messageBuffer[i].ID == ID)
         {
-            //warning... this code will work for direct signals as emit turns into a function call
-            //and thus the other side will have time to do its processing before control returns
-            //and we delete the message on our side. But, if this code were used cross thread the
-            //emit would be a queued message instead and control would immediately return
-            //here and then the message would be deleted before being delivered.
-            //To fix that the message would have to be passed by value instead which I'd like to avoid.
-            //Thus, don't use this across threads unless you like to debug strange issues.
+            //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
             qDebug() << "Flushing a partial frame";
             emit newISOMessage(messageBuffer[i]);
             messageBuffer.removeAt(i);
@@ -245,3 +272,52 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
         }
     }
 }
+
+void ISOTP_HANDLER::frameTimerTick()
+{
+    CANFrame frame;
+    if (!waitingForFlow)
+    {
+        if (!sendingFrames.isEmpty())
+        {
+            frame = sendingFrames.takeFirst();
+            CANConManager::getInstance()->sendFrame(frame);
+            if (framesUntilFlow > -1) framesUntilFlow--;
+            if (framesUntilFlow == 0) //stop sending and wait for another flow control message
+            {
+                frameTimer.stop(); //we absolutely will not send anything until other side says to.
+                waitingForFlow = true;
+            }
+        }
+        else //no more frames to send
+        {
+            frameTimer.stop();
+        }
+    }
+    else //while waiting for a flow frame we didn't get one during timeout period. Try to send anyway with default timeout
+    {
+        waitingForFlow = false;
+        frameTimer.setInterval(20); //pretty slow sending which should be OK as a default
+    }
+}
+
+void ISOTP_HANDLER::setProcessAll(bool state)
+{
+    processAll = state;
+}
+
+void ISOTP_HANDLER::addID(uint32_t id)
+{
+    isoIDs[id] = true;
+}
+
+void ISOTP_HANDLER::removeID(uint32_t id)
+{
+    isoIDs.remove(id);
+}
+
+void ISOTP_HANDLER::clearAllIDs()
+{
+    isoIDs.clear();
+}
+

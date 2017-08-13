@@ -150,7 +150,7 @@ UDS_HANDLER::UDS_HANDLER()
     useExtendedAddressing = false;
 }
 
-void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE &msg)
+void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
 {
     qDebug() << "UDS handler got ISOTP frame";
     UDS_MESSAGE udsMsg;
@@ -195,13 +195,13 @@ void UDS_HANDLER::setReception(bool mode)
 
     if (isReceiving)
     {
-        connect(ISOTP_HANDLER::getInstance(), SIGNAL(newISOMessage(ISOTP_MESSAGE&)), this, SLOT(gotISOTPFrame(ISOTP_MESSAGE&)));
+        connect(ISOTP_HANDLER::getInstance(), SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(gotISOTPFrame(ISOTP_MESSAGE)));
         ISOTP_HANDLER::getInstance()->setReception(true); //must enable ISOTP reception too.
         qDebug() << "Enabling reception of ISO-TP frames in UDS handler";
     }
     else
     {
-        disconnect(ISOTP_HANDLER::getInstance(), SIGNAL(newISOMessage(ISOTP_MESSAGE&)), this, SLOT(gotISOTPFrame(ISOTP_MESSAGE&)));
+        disconnect(ISOTP_HANDLER::getInstance(), SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(gotISOTPFrame(ISOTP_MESSAGE)));
         //can't disable ISOTP reception because something else might be using it.
         qDebug() << "Disabling reception of ISOTP frames in UDS handler";
     }
@@ -263,4 +263,26 @@ QString UDS_HANDLER::getNegativeResponseLong(int respCode)
     }
     return QString();
 }
+
+//Little shim functions that drop straight through to the ISO_TP handler
+void UDS_HANDLER::setProcessAllIDs(bool state)
+{
+    ISOTP_HANDLER::getInstance()->setProcessAll(state);
+}
+
+void UDS_HANDLER::addID(uint32_t id)
+{
+    ISOTP_HANDLER::getInstance()->addID(id);
+}
+
+void UDS_HANDLER::removeID(uint32_t id)
+{
+    ISOTP_HANDLER::getInstance()->removeID(id);
+}
+
+void UDS_HANDLER::clearAllIDs()
+{
+    ISOTP_HANDLER::getInstance()->clearAllIDs();
+}
+
 

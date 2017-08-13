@@ -89,16 +89,20 @@ public:
     static UDS_HANDLER* getInstance();
     void setReception(bool mode); //set whether to accept and forward frames or not
     void sendUDSFrame(const UDS_MESSAGE &msg);
+    void setProcessAllIDs(bool state);
+    void addID(uint32_t id);
+    void removeID(uint32_t id);
+    void clearAllIDs();
     QString getServiceShortDesc(int service);
     QString getServiceLongDesc(int service);
     QString getNegativeResponseShort(int respCode);
     QString getNegativeResponseLong(int respCode);
 
 public slots:
-    void gotISOTPFrame(ISOTP_MESSAGE &msg);
+    void gotISOTPFrame(ISOTP_MESSAGE msg);
 
 signals:
-    void newUDSMessage(UDS_MESSAGE &msg);
+    void newUDSMessage(UDS_MESSAGE msg);
 
 private:
     QList<ISOTP_MESSAGE> messageBuffer;

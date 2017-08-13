@@ -11,6 +11,9 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
 
     decoder = ISOTP_HANDLER::getInstance();
 
+    decoder->setReception(true);
+    decoder->setProcessAll(true);
+
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ISOTP_InterpreterWindow::updatedFrames);
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_HANDLER::updatedFrames);
     connect(decoder, &ISOTP_HANDLER::newISOMessage, this, &ISOTP_InterpreterWindow::newISOMessage);
@@ -123,7 +126,7 @@ void ISOTP_InterpreterWindow::showDetailView()
 
 }
 
-void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE &msg)
+void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
 {
     int rowNum;
     QString tempString;

@@ -21,7 +21,7 @@ public:
     void showEvent(QShowEvent*);
 
 private slots:
-    void newISOMessage(ISOTP_MESSAGE &msg);
+    void newISOMessage(ISOTP_MESSAGE msg);
     void showDetailView();
     void updatedFrames(int);
 

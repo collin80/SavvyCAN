@@ -23,7 +23,7 @@ public:
 
 private slots:
     void updatedFrames(int numFrames);
-    void gotUDSReply(UDS_MESSAGE &msg);
+    void gotUDSReply(UDS_MESSAGE msg);
     void scanUDS();
     void saveResults();
     void timeOut();
