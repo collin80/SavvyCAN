@@ -43,6 +43,7 @@ private slots:
     void titleDoubleClick(QMouseEvent *event, QCPTextElement *title);
     void axisLabelDoubleClick(QCPAxis* axis, QCPAxis::SelectablePart part);
     void legendDoubleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
+    void legendSingleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
     void plottableDoubleClick(QCPAbstractPlottable* plottable,int dataIdx, QMouseEvent* event);
     void selectionChanged();
     void mousePress();
@@ -75,6 +76,7 @@ private:
     const QVector<CANFrame> *modelFrames;
     QList<GraphParams> graphParams;
     QPen selectedPen;
+    QCPSelectionDecorator *selDecorator;
     bool needScaleSetup; //do we need to set x,y graphing extents?
     bool secondsMode;
 

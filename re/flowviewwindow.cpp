@@ -708,8 +708,8 @@ void FlowViewWindow::updateGraphLocation()
     {
         if (secondsMode)
         {
-            /*
             ui->graphView->xAxis->setRange(frameCache[start].timestamp / 1000000.0, frameCache[end].timestamp / 1000000.0);
+            /*
             ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3000000.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
@@ -718,8 +718,8 @@ void FlowViewWindow::updateGraphLocation()
         }
         else
         {
-            /*
             ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
+            /*
             ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");

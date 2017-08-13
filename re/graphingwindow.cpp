@@ -55,6 +55,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     //connect(ui->graphingView, SIGNAL(titleDoubleClick(QMouseEvent*,QCPTextElement*)), this, SLOT(titleDoubleClick(QMouseEvent*,QCPTextElement*)));
     connect(ui->graphingView, SIGNAL(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart,QMouseEvent*)), this, SLOT(axisLabelDoubleClick(QCPAxis*,QCPAxis::SelectablePart)));
     connect(ui->graphingView, SIGNAL(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*)));
+    connect(ui->graphingView, SIGNAL(legendClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendSingleClick(QCPLegend*,QCPAbstractLegendItem*)));
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
@@ -230,9 +231,27 @@ void GraphingWindow::axisLabelDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart
   }
 }
 
+void GraphingWindow::legendSingleClick(QCPLegend *legend, QCPAbstractLegendItem *item)
+{
+   // select a graph by clicking on the legend
+   qDebug() << "Legend Single Click " << item;
+   Q_UNUSED(legend)
+   if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
+   {
+      QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
+      QCPGraph *pGraph = qobject_cast<QCPGraph *>(plItem->plottable());
+      QCPDataSelection sel;
+      QCPDataRange rang;
+      rang.setBegin(0);
+      rang.setEnd(pGraph->dataCount());
+      sel.addDataRange(rang);
+      pGraph->setSelection(sel);
+   }
+}
+
 void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem *item)
 {
-   // Rename a graph by double clicking on its legend item
+   // edit a graph by double clicking on its legend item
    qDebug() << "Legend Double Click " << item;
    Q_UNUSED(legend)
    if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
@@ -1008,8 +1027,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         graphParams.append(params);
         refParam = &graphParams.last();
     }
-    //ui->graphingView->graph()->setSelectedBrush(Qt::NoBrush);
-    //ui->graphingView->graph()->setSelectedPen(selectedPen);
+
+    selDecorator = new QCPSelectionDecorator(); //this has to be a pointer as it is freed internally to qcustomplot classes
+    selDecorator->setBrush(Qt::NoBrush);
+    selDecorator->setPen(selectedPen);
+    ui->graphingView->graph()->setSelectionDecorator(selDecorator);
 
     if (params.graphName == NULL || params.graphName.length() == 0)
     {
