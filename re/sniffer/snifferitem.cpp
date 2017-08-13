@@ -41,7 +41,7 @@ dc SnifferItem::dataChange(uchar i) const
             ((uchar*) &mLastMarker.data)[i] &&
             !((uchar*) &mNotch)[i] )
     {
-        return ((uchar*) &mCurrent.data)[i] >= ((uchar*) &mLast.data)[i] ? dc::INC : dc::DEC;
+        return ((uchar*) &mCurrent.data)[i] >= ((uchar*) &mLast.data)[i] ? dc::INC : dc::DEINC;
     }
 
     return dc::NO;

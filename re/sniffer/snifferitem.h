@@ -15,7 +15,7 @@ enum dc
 {
     NO,
     INC,
-    DEC
+    DEINC
 };
 
 
