@@ -8,7 +8,8 @@ capturing of canbus frames.
 
 Really requires at a resolution of at least 1024x768. Fully multi-monitor capable.
 
-You are highly recommended to use the [CANDue board from EVTV](http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23).
+You are highly recommended to use the 
+[CANDue board from EVTV](http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23).
 
 The CANDue board must be running the GVRET firmware which can also be found
 within the collin80 repos.
@@ -35,39 +36,21 @@ of this program. It can load and save in several formats:
 
 ## Dependencies
 
-Requires QScintilla library available at:
+Now this code does not depend on anything other than what is in the source tree or available
+from the QT installer.
 
-https://www.riverbankcomputing.com/software/qscintilla/download
-
-Also uses QCustomPlot available at:
+Uses QCustomPlot available at:
 
 http://www.qcustomplot.com/ 
 
-However, this source code is integrated into the source for SavvyCAN and one isn't required to download it separately.
+However, this source code is integrated into the source for SavvyCAN and one isn't required 
+to download it separately.
 
-This project requires 5.6.0 or higher because of a dependency on QSerialBus which is an optional download
-with QT 5.6 (so, be sure to select it)
+This project requires 5.8.0 or higher because of a dependency on QSerialBus.
 
 ## Instructions for compiling:
 
-Download the newest stable version of Qt directly from qt.io (You need 5.6.x or newer)
-
-download and extract QScintilla (see above for link), assume it is extracted in QScintilla-gpl-2.9.1
-
-```
-cd ~/QScintilla-gpl-2.9.1/Qt4Qt5
-```
-
-You will need to either put your copy of QT into your path or specify the path to qmake directly
-
-```
-~/Qt/5.7/gcc_64/bin/qmake qscintilla.pro
-
-make
-
-sudo make install
-
-# Optionally remove ~/QScintilla-gpl-2.9.1
+Download the newest stable version of Qt directly from qt.io (You need 5.8.x or newer)
 
 cd ~
 
@@ -75,7 +58,7 @@ git clone https://github.com/collin80/SavvyCAN.git
 
 cd SavvyCAN
 
-~/Qt/5.7/gcc_64/bin/qmake
+~/Qt/5.8/gcc_64/bin/qmake
 
 make
 ```
@@ -98,5 +81,6 @@ make clean
 make
 ```
 
-Did that fix it? Great! If not, see if QT seems to be complaining about not finding the QScintilla header files. If that's the case then you are probably not using the same QT version as QScintilla was compiled against. It's easy to run the wrong qmake and have this happen. Double check that you've already compiled and installed QScintilla and that you've used the proper qmake version.
+Did that fix it? Great! If not, ensure that you selected SerialBUS support
+when you installed QT.
 
