@@ -294,7 +294,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 if (msg != NULL)
                 {
                     tempString.append("\n");
-                    tempString.append(msg->name + " " + msg->comment + "\n");
+                    tempString.append(msg->name + "\n" + msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
                         QString sigString;

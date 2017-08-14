@@ -104,8 +104,8 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
                 foundVal = true;
                 break;
             }
-            if (!foundVal) outputString += QString::number(endResult) + unitName;
         }
+        if (!foundVal) outputString += QString::number(endResult) + unitName;
     }
     else //otherwise display the actual number and unit (if it exists)
     {

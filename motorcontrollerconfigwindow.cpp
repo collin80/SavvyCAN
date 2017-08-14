@@ -200,13 +200,13 @@ void MotorControllerConfigWindow::timerTick()
     }
     else //save current value of all data items
     {
-        uint16 thisValue;
+        uint16_t thisValue;
         qDebug() << "Transmission: " << QString::number(transmitStep);
 
         QString cellVal = ui->tableParams->item(transmitStep, 1)->text();
 
         if (params[transmitStep].paramType != HEX)
-            thisValue = (uint16_t)QString::number(cellVal);
+            thisValue = (uint16_t)Utility::ParseStringToNum(cellVal);
         else
             thisValue = (uint16_t)Utility::ParseStringToNum(cellVal);
 
