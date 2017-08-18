@@ -921,6 +921,8 @@ void GraphingWindow::loadDefinitions()
 
 void GraphingWindow::showParamsDialog(int idx = -1)
 {
+    dbcHandler = DBCHandler::getReference();
+
     NewGraphDialog *thisDialog = new NewGraphDialog(dbcHandler);
 
     if (idx > -1)

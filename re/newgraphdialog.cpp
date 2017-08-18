@@ -90,7 +90,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
     ui->colorSwatch->setPalette(p);
-
+    loadMessages();
     drawBitfield();
 }
 
@@ -120,10 +120,13 @@ void NewGraphDialog::loadMessages()
 {
     ui->cbMessages->clear();
     if (dbcHandler == NULL) return;
-    if (dbcHandler->getFileCount() == 0) dbcHandler->createBlankFile();
-    for (int x = 0; x < dbcHandler->getFileByIdx(0)->messageHandler->getCount(); x++)
+    if (dbcHandler->getFileCount() == 0) return;
+    for (int y = 0; y < dbcHandler->getFileCount(); y++)
     {
-        ui->cbMessages->addItem(dbcHandler->getFileByIdx(0)->messageHandler->findMsgByIdx(x)->name);
+        for (int x = 0; x < dbcHandler->getFileByIdx(y)->messageHandler->getCount(); x++)
+        {
+            ui->cbMessages->addItem(dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x)->name);
+        }
     }
 }
 
