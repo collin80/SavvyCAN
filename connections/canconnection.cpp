@@ -352,13 +352,13 @@ bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 void CANConnection::checkTargettedFrame(CANFrame &frame)
 {
     unsigned int maskedID;
-    qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
+    //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
     if (mBusData_p == 0) return;
 
     if (mBusData_p[frame.bus].mTargettedFrames.length() == 0) return;
     foreach (const CANFlt filt, mBusData_p[frame.bus].mTargettedFrames)
     {
-        qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
+        //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
         maskedID = frame.ID & filt.mask;
         if (maskedID == filt.id) {
             qDebug() << "In connection object I got a targetted frame. Forwarding it.";
