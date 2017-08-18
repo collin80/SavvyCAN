@@ -68,7 +68,7 @@ void MotorControllerConfigWindow::updatedFrames(int numFrames)
                         if (params[i].paramID == paramID)
                         {
                             params[i].value = thisFrame.data[4] + (thisFrame.data[5] * 256);
-                            if (params[i].paramType == ASCII) item = new QTableWidgetItem(QString::fromUtf8((char *)params[i].value, 2));
+                            if (params[i].paramType == ASCII) item = new QTableWidgetItem(); //QString::fromUtf8((char *)params[i].value, 2));
                             if (params[i].paramType == HEX) item = new QTableWidgetItem(Utility::formatHexNum(params[i].value));
                             if (params[i].paramType == DEC)
                             {
@@ -80,7 +80,7 @@ void MotorControllerConfigWindow::updatedFrames(int numFrames)
                                 }
                                 if (params[i].signedType == Q15) item = new QTableWidgetItem(QString::number(params[i].value / 32768.0));
                             }
-
+                            ui->tableParams->setItem(i, 1, item);
                             break;
                         }
                     }
@@ -189,7 +189,7 @@ void MotorControllerConfigWindow::timerTick()
         outFrame.data[6] = 0; //reserved
         outFrame.data[7] = 0; //reserved
 
-        emit sendCANFrame(&outFrame, 0);
+        CANConManager::getInstance()->sendFrame(outFrame);
 
         transmitStep++;
         if (transmitStep == params.length())
@@ -225,7 +225,7 @@ void MotorControllerConfigWindow::timerTick()
             outFrame.data[6] = 0; //reserved
             outFrame.data[7] = 0; //reserved
 
-            emit sendCANFrame(&outFrame, 0);
+            CANConManager::getInstance()->sendFrame(outFrame);
         }
 
         transmitStep++;
