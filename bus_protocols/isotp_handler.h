@@ -21,6 +21,7 @@ public:
     void setReception(bool mode); //set whether to accept and forward frames or not
     void sendISOTPFrame(int bus, int ID, QVector<unsigned char> data);
     void setProcessAll(bool state);
+    void setFlowCtrl(bool state);
     void addID(uint32_t id);
     void removeID(uint32_t id);
     void clearAllIDs();
@@ -43,7 +44,10 @@ private:
     bool waitingForFlow;
     int framesUntilFlow;
     bool processAll;
+    bool issueFlowMsgs;
     QTimer frameTimer;
+    uint32_t lastSenderID;
+    uint32_t lastSenderBus;
 
     void processFrame(const CANFrame &frame);
     void checkNeedFlush(uint64_t ID);

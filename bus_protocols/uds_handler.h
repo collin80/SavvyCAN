@@ -90,6 +90,7 @@ public:
     void setReception(bool mode); //set whether to accept and forward frames or not
     void sendUDSFrame(const UDS_MESSAGE &msg);
     void setProcessAllIDs(bool state);
+    void setFlowCtrl(bool state);
     void addID(uint32_t id);
     void removeID(uint32_t id);
     void clearAllIDs();

@@ -18,9 +18,6 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     waitTimer = new QTimer;
     waitTimer->setInterval(100);
 
-    UDS_HANDLER::getInstance()->setReception(true);
-    UDS_HANDLER::getInstance()->setProcessAllIDs(true);
-
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(UDS_HANDLER::getInstance(), &UDS_HANDLER::newUDSMessage, this, &UDSScanWindow::gotUDSReply);
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
@@ -187,10 +184,17 @@ void UDSScanWindow::scanUDS()
     {
         waitTimer->stop();
         sendingFrames.clear();
+        UDS_HANDLER::getInstance()->setReception(false);
+        UDS_HANDLER::getInstance()->setProcessAllIDs(false);
+        UDS_HANDLER::getInstance()->setFlowCtrl(false);
         currentlyRunning = false;
         ui->btnScan->setText("Start Scan");
         return;
     }
+
+    UDS_HANDLER::getInstance()->setReception(true);
+    UDS_HANDLER::getInstance()->setProcessAllIDs(true);
+    UDS_HANDLER::getInstance()->setFlowCtrl(true);
 
     waitTimer->setInterval(ui->spinDelay->value());
 

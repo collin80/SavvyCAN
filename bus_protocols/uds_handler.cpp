@@ -187,6 +187,11 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
     emit newUDSMessage(udsMsg);
 }
 
+void UDS_HANDLER::setFlowCtrl(bool state)
+{
+    ISOTP_HANDLER::getInstance()->setFlowCtrl(state);
+}
+
 void UDS_HANDLER::setReception(bool mode)
 {
     if (isReceiving == mode) return;

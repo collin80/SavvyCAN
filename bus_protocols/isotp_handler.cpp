@@ -18,6 +18,10 @@ ISOTP_HANDLER::ISOTP_HANDLER()
 {
     useExtendedAddressing = false;
     isReceiving = false;
+    issueFlowMsgs = false;
+    processAll = false;
+    lastSenderBus = 0;
+    lastSenderID = 0;
 
     connect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
 }
@@ -25,6 +29,11 @@ ISOTP_HANDLER::ISOTP_HANDLER()
 void ISOTP_HANDLER::setExtendedAddressing(bool mode)
 {
     useExtendedAddressing = mode;
+}
+
+void ISOTP_HANDLER::setFlowCtrl(bool state)
+{
+    issueFlowMsgs = state;
 }
 
 void ISOTP_HANDLER::setReception(bool mode)
@@ -52,13 +61,16 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
     if (bus < 0) return;
     if (bus >= CANConManager::getInstance()->getNumBuses()) return;
 
+    lastSenderID = ID;
+    lastSenderBus = bus;
+
     if (data.length() < 8)
     {
         frame.bus = bus;
         frame.extended = false;
         frame.ID = ID;
         frame.len = 8;
-        for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
+        for (int b = 0; b < 8; b++) frame.data[b] = 0x00;
         frame.data[0] = data.length();
         for (int i = 0; i < frame.data[0]; i++) frame.data[i + 1] = data[i];
         CANConManager::getInstance()->sendFrame(frame);
@@ -69,7 +81,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         frame.ID = ID;
         frame.extended = false;
         frame.len = 8;
-        for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
+        for (int b = 0; b < 8; b++) frame.data[b] = 0x00;
         frame.data[0] = 0x10 + (data.length() / 256);
         frame.data[1] = data.length() & 0xFF;
         for (int i = 0; i < 6; i++) frame.data[2 + i] = data[currByte++];
@@ -81,7 +93,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         frameTimer.start();
         while (currByte < data.length())
         {
-            for (int b = 0; b < 8; b++) frame.data[b] = 0xAA;
+            for (int b = 0; b < 8; b++) frame.data[b] = 0x00;
             frame.data[0] = 0x20 + index;
             index = (index + 1) & 0xF;
             int bytesToGo = data.length() - currByte;
@@ -200,6 +212,21 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             for (int j = 0; j < 6; j++) msg.data.append(frame.data[2 + j]);
         }
         messageBuffer.append(msg);
+        //The sending ID is set to the last ID we used to send from this class which is
+        //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
+        if (issueFlowMsgs && lastSenderID > 0)
+        {
+            CANFrame outFrame;
+            outFrame.bus = lastSenderBus;
+            outFrame.extended = false;
+            outFrame.ID = lastSenderID;
+            outFrame.len = 8;
+            for (int b = 0; b < 8; b++) outFrame.data[b] = 0x00;
+            outFrame.data[0] = 0x30; //flow control, go ahead and send
+            outFrame.data[1] = 0; //dont ask again about flow control
+            outFrame.data[2] = 3; //separation time in milliseconds between messages.
+            CANConManager::getInstance()->sendFrame(outFrame);
+        }
         break;
     case 2: //subsequent frames for multi-frame messages
         pMsg = NULL;
