@@ -365,6 +365,8 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     tempFrame = frame;
     tempFrame.timestamp -= timeOffset;
 
+    lastUpdateNumFrames++;
+
     //if this ID isn't found in the filters list then add it and show it by default
     if (!filters.contains(tempFrame.ID))
     {
@@ -382,7 +384,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
             if (autoRefresh) endInsertRows();
         }
     }
-    else
+    else //yes, overwrite dups
     {
         bool found = false;
         for (int i = 0; i < frames.count(); i++)
@@ -453,7 +455,7 @@ void CANFrameModel::sendRefresh()
     filteredFrames.reserve(preallocSize);
     filteredFrames.append(tempContainer);
 
-    lastUpdateNumFrames = filteredFrames.count();
+    lastUpdateNumFrames = 0;
     endResetModel();
     mutex.unlock();
 }
@@ -469,18 +471,19 @@ void CANFrameModel::sendRefresh(int pos)
 //have to send thousands of messages per second
 int CANFrameModel::sendBulkRefresh()
 {
-    int num = filteredFrames.count() - lastUpdateNumFrames;
-    if (num <= 0) return 0;
+    //int num = filteredFrames.count() - lastUpdateNumFrames;
+    if (lastUpdateNumFrames <= 0) return 0;
 
-    if (num == 0 && !overwriteDups) return 0;
+    if (lastUpdateNumFrames == 0 && !overwriteDups) return 0;
     if (filteredFrames.count() == 0) return 0;
 
-    lastUpdateNumFrames += num; //done this way to avoid asking for filteredFrames.count() again
-
-    qDebug() << "Bulk refresh of " << num;
+    qDebug() << "Bulk refresh of " << lastUpdateNumFrames;
 
     beginResetModel();
     endResetModel();
+
+    int num = lastUpdateNumFrames;
+    lastUpdateNumFrames = 0;
 
     return num;
 }
@@ -528,6 +531,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
             filteredFrames.append(newFrames[i]);
         }
     }
+    lastUpdateNumFrames = newFrames.count();
     mutex.unlock();
     //endResetModel();
     //beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + insertedFiltered);
