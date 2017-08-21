@@ -16,8 +16,8 @@ class ISOTP_HANDLER : public QObject
 
 public:
     ISOTP_HANDLER();
+    ~ISOTP_HANDLER();
     void setExtendedAddressing(bool mode);
-    static ISOTP_HANDLER* getInstance();
     void setReception(bool mode); //set whether to accept and forward frames or not
     void sendISOTPFrame(int bus, int ID, QVector<unsigned char> data);
     void setProcessAll(bool state);
@@ -51,8 +51,6 @@ private:
 
     void processFrame(const CANFrame &frame);
     void checkNeedFlush(uint64_t ID);
-
-    static ISOTP_HANDLER*  mInstance;
 };
 
 #endif // ISOTP_HANDLER_H

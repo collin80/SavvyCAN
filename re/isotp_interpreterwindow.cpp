@@ -9,7 +9,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     ui->setupUi(this);
     modelFrames = frames;
 
-    decoder = ISOTP_HANDLER::getInstance();
+    decoder = new ISOTP_HANDLER;
 
     decoder->setReception(true);
     decoder->setProcessAll(true);

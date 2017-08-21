@@ -38,6 +38,7 @@ private slots:
 private:
     Ui::UDSScanWindow *ui;
     const QVector<CANFrame> *modelFrames;
+    UDS_HANDLER *udsHandler;
     QTimer *waitTimer;
     QList<UDS_MESSAGE> sendingFrames;
     QTreeWidgetItem *nodeID;

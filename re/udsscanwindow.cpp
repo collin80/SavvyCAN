@@ -18,8 +18,10 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     waitTimer = new QTimer;
     waitTimer->setInterval(100);
 
+    udsHandler = new UDS_HANDLER;
+
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
-    connect(UDS_HANDLER::getInstance(), &UDS_HANDLER::newUDSMessage, this, &UDSScanWindow::gotUDSReply);
+    connect(udsHandler, &UDS_HANDLER::newUDSMessage, this, &UDSScanWindow::gotUDSReply);
     connect(ui->btnScan, &QPushButton::clicked, this, &UDSScanWindow::scanUDS);
     connect(waitTimer, &QTimer::timeout, this, &UDSScanWindow::timeOut);
     connect(ui->btnSaveResults, &QPushButton::clicked, this, &UDSScanWindow::saveResults);
@@ -44,6 +46,7 @@ UDSScanWindow::~UDSScanWindow()
     delete ui;
     waitTimer->stop();
     delete waitTimer;
+    delete udsHandler;
 }
 
 void UDSScanWindow::adaptiveToggled()
@@ -184,17 +187,17 @@ void UDSScanWindow::scanUDS()
     {
         waitTimer->stop();
         sendingFrames.clear();
-        UDS_HANDLER::getInstance()->setReception(false);
-        UDS_HANDLER::getInstance()->setProcessAllIDs(false);
-        UDS_HANDLER::getInstance()->setFlowCtrl(false);
+        udsHandler->setReception(false);
+        udsHandler->setProcessAllIDs(false);
+        udsHandler->setFlowCtrl(false);
         currentlyRunning = false;
         ui->btnScan->setText("Start Scan");
         return;
     }
 
-    UDS_HANDLER::getInstance()->setReception(true);
-    UDS_HANDLER::getInstance()->setProcessAllIDs(true);
-    UDS_HANDLER::getInstance()->setFlowCtrl(true);
+    udsHandler->setReception(true);
+    udsHandler->setProcessAllIDs(true);
+    udsHandler->setFlowCtrl(true);
 
     waitTimer->setInterval(ui->spinDelay->value());
 
@@ -342,7 +345,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
 
     if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
     {
-        serviceShortName = UDS_HANDLER::getInstance()->getServiceShortDesc(sentFrame.service);
+        serviceShortName = udsHandler->getServiceShortDesc(sentFrame.service);
         if (serviceShortName.length() < 3) serviceShortName = QString::number(sentFrame.service, 16);
         if (msg.service == 0x40 + sendingFrames[currIdx].service)
         {
@@ -368,7 +371,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
                 setupNodes();
                 QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
                 qDebug() << ui->spinNumBytes->value();
-                nodeNegative->setText(0, "NEGATIVE - " + UDS_HANDLER::getInstance()->getNegativeResponseShort(msg.data[0]));
+                nodeNegative->setText(0, "NEGATIVE - " + udsHandler->getNegativeResponseShort(msg.data[0]));
                 nodeNegative->setForeground(0, QBrush(Qt::darkRed));
                 nodeSubFunc->addChild(nodeNegative);
                 nodeSubFunc->setForeground(0, QBrush(Qt::darkRed));
@@ -385,7 +388,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
 
 void UDSScanWindow::setupNodes()
 {
-    QString serviceShortName = UDS_HANDLER::getInstance()->getServiceShortDesc(sendingFrames[currIdx].service);
+    QString serviceShortName = udsHandler->getServiceShortDesc(sendingFrames[currIdx].service);
     if (serviceShortName.length() < 3) serviceShortName = QString::number(sendingFrames[currIdx].service, 16);
 
     if (!nodeID || nodeID->text(0) != Utility::formatHexNum(sendingFrames[currIdx].ID))
@@ -427,7 +430,7 @@ void UDSScanWindow::sendNextMsg()
     currIdx++;
     if (currIdx < sendingFrames.count())
     {
-        UDS_HANDLER::getInstance()->sendUDSFrame(sendingFrames[currIdx]);
+        udsHandler->sendUDSFrame(sendingFrames[currIdx]);
         waitTimer->start();
     }
     else

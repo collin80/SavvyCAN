@@ -7,6 +7,8 @@
 #include "can_structs.h"
 #include "isotp_message.h"
 
+class ISOTP_HANDLER;
+
 namespace UDS_SERVICES
 {
     enum
@@ -85,6 +87,7 @@ class UDS_HANDLER : public QObject
 
 public:
     UDS_HANDLER();
+    ~UDS_HANDLER();
     void setExtendedAddressing(bool mode);
     static UDS_HANDLER* getInstance();
     void setReception(bool mode); //set whether to accept and forward frames or not
@@ -113,7 +116,7 @@ private:
 
     void processFrame(const CANFrame &frame);
 
-    static UDS_HANDLER*  mInstance;
+    ISOTP_HANDLER *isoHandler;
 };
 
 

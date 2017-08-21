@@ -1,19 +1,6 @@
 #include "isotp_handler.h"
 #include "connections/canconmanager.h"
 
-ISOTP_HANDLER* ISOTP_HANDLER::mInstance = NULL;
-
-ISOTP_HANDLER* ISOTP_HANDLER::getInstance()
-{
-    if(!mInstance)
-    {
-        mInstance = new ISOTP_HANDLER();
-        mInstance->modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
-    }
-
-    return mInstance;
-}
-
 ISOTP_HANDLER::ISOTP_HANDLER()
 {
     useExtendedAddressing = false;
@@ -23,7 +10,14 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     lastSenderBus = 0;
     lastSenderID = 0;
 
+    modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
+
     connect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
+}
+
+ISOTP_HANDLER::~ISOTP_HANDLER()
+{
+    disconnect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
 }
 
 void ISOTP_HANDLER::setExtendedAddressing(bool mode)
