@@ -3,7 +3,6 @@
 
 #include "canconmanager.h"
 
-
 CANConManager* CANConManager::mInstance = NULL;
 
 CANConManager* CANConManager::getInstance()
@@ -13,7 +12,6 @@ CANConManager* CANConManager::getInstance()
 
     return mInstance;
 }
-
 
 CANConManager::CANConManager(QObject *parent): QObject(parent)
 {
@@ -46,6 +44,13 @@ CANConManager::~CANConManager()
     mInstance = NULL;
 }
 
+void CANConManager::stopAllConnections()
+{
+    foreach (CANConnection *conn, mConns)
+    {
+        conn->stop();
+    }
+}
 
 void CANConManager::add(CANConnection* pConn_p)
 {

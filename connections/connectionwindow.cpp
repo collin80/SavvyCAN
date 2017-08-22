@@ -32,6 +32,9 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->tableConnections->setColumnWidth(5, 75);
     ui->tableConnections->setColumnWidth(6, 75);
     ui->tableConnections->setColumnWidth(7, 75);
+    QHeaderView *HorzHdr = ui->tableConnections->horizontalHeader();
+    HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+
     ui->ckSingleWire->setChecked(settings.value("Main/SingleWireMode", false).toBool());
 
     ui->cbSpeed->addItem(tr("125000"));
@@ -94,10 +97,37 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     qDebug() << "Show connectionwindow";
+    readSettings();
     ui->tableConnections->selectRow(0);
     currentRowChanged(ui->tableConnections->currentIndex(), ui->tableConnections->currentIndex());
 }
 
+void ConnectionWindow::closeEvent(QCloseEvent *event)
+{
+    Q_UNUSED(event);
+    writeSettings();
+}
+
+void ConnectionWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("ConnWindow/WindowSize", QSize(956, 665)).toSize());
+        move(settings.value("ConnWindow/WindowPos", QPoint(100, 100)).toPoint());
+    }
+}
+
+void ConnectionWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("ConnWindow/WindowSize", size());
+        settings.setValue("ConnWindow/WindowPos", pos());
+    }
+}
 
 void ConnectionWindow::setSuspendAll(bool pSuspend)
 {

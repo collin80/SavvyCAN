@@ -27,7 +27,6 @@ class ConnectionWindow : public QDialog
 public:
     explicit ConnectionWindow(QWidget *parent = 0);
     ~ConnectionWindow();
-    void showEvent(QShowEvent *);
 
     CANCon::type getConnectionType();
     bool getSWMode();
@@ -78,6 +77,10 @@ private:
     CANConnection* create(CANCon::type pTye, QString pPortName);
     void loadConnections();
     void saveConnections();
+    void showEvent(QShowEvent *);
+    void closeEvent(QCloseEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // CONNECTIONWINDOW_H

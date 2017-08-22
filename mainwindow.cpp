@@ -174,11 +174,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
-    //killEmAll(); //Ride the lightning
+    updateTimer.stop();
+    killEmAll(); //Ride the lightning
+    delete ui;
     delete model;
     delete elapsedTime;
     delete dbcHandler;
-    delete ui;
+
 }
 
 //kill every sub window that could be open. At the moment a hard coded list
@@ -194,7 +196,6 @@ void MainWindow::killEmAll()
     killWindow(dbcMainEditor);
     killWindow(settingsDialog);
     killWindow(discreteStateWindow);
-    killWindow(connectionWindow);
     killWindow(scriptingWindow);
     killWindow(rangeWindow);
     killWindow(dbcFileWindow);
@@ -206,6 +207,7 @@ void MainWindow::killEmAll()
     killWindow(firmwareUploaderWindow);
     killWindow(motorctrlConfigWindow);
     killWindow(signalViewerWindow);
+    killWindow(connectionWindow);
 }
 
 //forcefully close the window, kill it, and salt the earth
@@ -226,7 +228,6 @@ void MainWindow::killWindow(QDialog *win)
 
 void MainWindow::exitApp()
 {
-    killEmAll();
     this->close();
 }
 
