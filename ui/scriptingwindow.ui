@@ -53,7 +53,7 @@
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,4">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,4,0">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -92,7 +92,7 @@
      <item>
       <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>Current Scripting Errors</string>
+        <string>Log Window:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -100,7 +100,14 @@
       </widget>
      </item>
      <item>
-      <widget class="QListWidget" name="listErrors"/>
+      <widget class="QListWidget" name="listLog"/>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClearLog">
+       <property name="text">
+        <string>Clear Log Window</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

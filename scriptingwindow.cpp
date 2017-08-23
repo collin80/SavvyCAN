@@ -17,6 +17,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     editor->setFrameShape(JSEdit::NoFrame);
     editor->setWordWrapMode(QTextOption::NoWrap);
     editor->setTabStopWidth(4);
+    editor->setEnabled(false);
     editor->show();
     ui->verticalLayout->insertWidget(2,editor, 10);
 
@@ -30,6 +31,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(ui->btnRemoveScript, &QAbstractButton::pressed, this, &ScriptingWindow::deleteCurrentScript);
     connect(ui->btnRevertScript, &QAbstractButton::pressed, this, &ScriptingWindow::revertScript);
     connect(ui->btnSaveScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveScript);
+    connect(ui->btnClearLog, &QAbstractButton::pressed, this, &ScriptingWindow::clickedLogClear);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ScriptingWindow::newFrames);
 
@@ -51,7 +53,7 @@ void ScriptingWindow::newFrames(const CANConnection* pConn, const QVector<CANFra
     {
         foreach(const CANFrame& frame, pFrames)
         {
-            scripts[j]->gotFrame(frame);
+            //scripts[j]->gotFrame(frame);
         }
     }
 }
@@ -117,23 +119,17 @@ void ScriptingWindow::loadNewScript()
                 QStringList fileList = filename.split('/');
                 QString justFileName = fileList[fileList.length() - 1];
                 ui->listLoadedScripts->addItem(justFileName);
-                /* get the first connection in the list for now */
-                qDebug() << "FIXME: connection is always the first in list";
-                QString portName;
-                QList<CANConnection*> list = CANConManager::getInstance()->getConnections();
-                if(!list.isEmpty())
-                    portName = list.first()->getPort();
 
-                container = new ScriptContainer(portName);
+                container = new ScriptContainer;
                 container->fileName = justFileName;
                 container->filePath = filename;
                 container->scriptText = contents;
-                container->setErrorWidget(ui->listErrors);
+                container->setLogWidget(ui->listLog);
                 container->compileScript();
                 scripts.append(container);
                 currentScript = container;
                 editor->setPlainText(container->scriptText);
-                setEnabled(true);
+                editor->setEnabled(true);
             }
         }
     }
@@ -143,17 +139,12 @@ void ScriptingWindow::createNewScript()
 {
     ScriptContainer *container;
 
-    QString portName;
-    QList<CANConnection*> list = CANConManager::getInstance()->getConnections();
-    if(!list.isEmpty())
-        portName = list.first()->getPort();
-
-    container = new ScriptContainer(portName);
+    container = new ScriptContainer;
 
     container->fileName = "UNNAMED_" + QString::number((qrand() % 10000)) + ".js";
     container->filePath = QString();
     container->scriptText = QString();
-    container->setErrorWidget(ui->listErrors);
+    container->setLogWidget(ui->listLog);
     scripts.append(container);
     ui->listLoadedScripts->addItem(container->fileName);
     currentScript = container;
@@ -213,4 +204,9 @@ void ScriptingWindow::recompileScript()
 {
     currentScript->scriptText = editor->toPlainText();
     currentScript->compileScript();
+}
+
+void ScriptingWindow::clickedLogClear()
+{
+    ui->listLog->clear();
 }

@@ -4,9 +4,12 @@
 #include "scriptcontainer.h"
 #include "connections/canconmanager.h"
 
-ScriptContainer::ScriptContainer(QString& pConName):
-    mConName(pConName)
+ScriptContainer::ScriptContainer()
 {
+    canHelper = new CANScriptHelper(&scriptEngine);
+    isoHelper = new ISOTPScriptHelper;
+    udsHelper = new UDSScriptHelper;
+    elapsedTime.start();
     connect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
 }
 
@@ -14,25 +17,39 @@ void ScriptContainer::compileScript()
 {
     QJSValue result = scriptEngine.evaluate(scriptText, fileName);
 
-    errorWidget->clear();
-
-    if (result.isError() && errorWidget)
+    if (logWidget)
     {
-        errorWidget->addItem("SCRIPT EXCEPTION!");
-        errorWidget->addItem("Line: " + result.property("lineNumber").toString());
-        errorWidget->addItem(result.property("message").toString());
-        errorWidget->addItem("Stack:");
-        errorWidget->addItem(result.property("stack").toString());
+        logWidget->addItem("");
+        logWidget->addItem("Compiling script " + fileName);
+    }
+
+    if (result.isError() && logWidget)
+    {
+        logWidget->addItem("SCRIPT EXCEPTION!");
+        logWidget->addItem("Line: " + result.property("lineNumber").toString());
+        logWidget->addItem(result.property("message").toString());
+        logWidget->addItem("Stack:");
+        logWidget->addItem(result.property("stack").toString());
     }
     else
     {
         compiledScript = result;
 
+        //Add a bunch of helper objects into javascript that the scripts
+        //can use to interact with the CAN buses
         QJSValue hostObj = scriptEngine.newQObject(this);
         scriptEngine.globalObject().setProperty("host", hostObj);
+        QJSValue canObj = scriptEngine.newQObject(canHelper);
+        scriptEngine.globalObject().setProperty("can", canObj);
+        QJSValue isoObj = scriptEngine.newQObject(isoHelper);
+        scriptEngine.globalObject().setProperty("isotp", isoObj);
+        QJSValue udsObj = scriptEngine.newQObject(udsHelper);
+        scriptEngine.globalObject().setProperty("uds", udsObj);
 
+        //Find out which callbacks the script has created.
         setupFunction = scriptEngine.globalObject().property("setup");
-        gotFrameFunction = scriptEngine.globalObject().property("gotFrame");
+        canHelper->setRxCallback(scriptEngine.globalObject().property("gotCANFrame"));
+
         tickFunction = scriptEngine.globalObject().property("tick");
 
         if (setupFunction.isCallable())
@@ -41,47 +58,23 @@ void ScriptContainer::compileScript()
             QJSValue res = setupFunction.call();
             if (res.isError())
             {
-                errorWidget->addItem("Error in setup function on line " + res.property("lineNumber").toString());
-                errorWidget->addItem(res.property("message").toString());
+                logWidget->addItem("Error in setup function on line " + res.property("lineNumber").toString());
+                logWidget->addItem(res.property("message").toString());
             }
         }
-
-        if (gotFrameFunction.isCallable()) qDebug() << "gotFrame exists";
         if (tickFunction.isCallable()) qDebug() << "tick exists";
     }
 }
 
-void ScriptContainer::setErrorWidget(QListWidget *list)
+void ScriptContainer::setLogWidget(QListWidget *list)
 {
-    errorWidget = list;
+    logWidget = list;
 }
 
-void ScriptContainer::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
+void ScriptContainer::log(QJSValue logString)
 {
-    uint32_t idVal = id.toUInt();
-    uint32_t maskVal = mask.toUInt();
-    int busVal = bus.toInt();
-    qDebug() << "Called set filter";
-    qDebug() << idVal << "*" << maskVal << "*" << busVal;
-    CANFilter filter;
-    filter.setFilter(idVal, maskVal, busVal);
-    filters.append(filter);
-
-    qDebug() << "FIXME setFilter";
-    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
-    if(conn_p)
-    {
-        //CANFlt canFlt;
-        for(int i=0 ; i<conn_p->getNumBuses() ; i++)
-        {
-            foreach(const CANFilter& flt, filters)
-            {
-                if(flt.bus==i) {
-                    conn_p->addTargettedFrame(busVal, idVal, maskVal, this);
-                }
-            }
-        }
-    }
+    QString val = logString.toString();
+    logWidget->addItem(QString::number(elapsedTime.elapsed()) + ": " + val);
 }
 
 void ScriptContainer::setTickInterval(QJSValue interval)
@@ -96,20 +89,59 @@ void ScriptContainer::setTickInterval(QJSValue interval)
     else timer.stop();
 }
 
-void ScriptContainer::clearFilters()
+void ScriptContainer::tick()
 {
-    qDebug() << "Called clear filters";
-    filters.clear();
-
-    qDebug() << "FIXME clearFilters";
-    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
-    if(conn_p)
+    if (tickFunction.isCallable())
     {
-        conn_p->removeAllTargettedFrames(this);
+        //qDebug() << "Calling tick function";
+        QJSValue res = tickFunction.call();
+        if (res.isError())
+        {
+            logWidget->addItem("Error in tick function on line " + res.property("lineNumber").toString());
+            logWidget->addItem(res.property("message").toString());
+        }
     }
 }
 
-void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
+
+/* CANScriptHandler Methods */
+
+CANScriptHelper::CANScriptHelper(QJSEngine *engine)
+{
+    scriptEngine = engine;
+}
+
+void CANScriptHelper::setRxCallback(QJSValue cb)
+{
+    gotFrameFunction = cb;
+}
+
+void CANScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
+{
+    uint32_t idVal = id.toUInt();
+    uint32_t maskVal = mask.toUInt();
+    int busVal = bus.toInt();
+    qDebug() << "Called set filter";
+    qDebug() << idVal << "*" << maskVal << "*" << busVal;
+    CANFilter filter;
+    filter.setFilter(idVal, maskVal, busVal);
+    filters.append(filter);
+
+    CANConManager::getInstance()->addTargettedFrame(busVal, idVal, maskVal, this);
+}
+
+void CANScriptHelper::clearFilters()
+{
+    qDebug() << "Called clear filters";
+    foreach (CANFilter filter, filters)
+    {
+        CANConManager::getInstance()->removeTargettedFrame(filter.bus, filter.ID, filter.mask, this);
+    }
+
+    filters.clear();
+}
+
+void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
 {
     CANFrame frame;
     frame.extended = false;
@@ -125,17 +157,15 @@ void ScriptContainer::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     }
 
     frame.bus = (uint32_t)bus.toInt();
-    if (frame.bus > 1) frame.bus = 1;
+    //if (frame.bus > 1) frame.bus = 1;
 
     if (frame.ID > 0x7FF) frame.extended = true;
 
     qDebug() << "sending frame from script";
-    CANConnection* conn_p = CANConManager::getInstance()->getByName(mConName);
-    if(conn_p)
-        conn_p->sendFrame(frame);
+    CANConManager::getInstance()->sendFrame(frame);
 }
 
-void ScriptContainer::gotFrame(const CANFrame &frame)
+void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
 {
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     //qDebug() << "Got frame in script interface";
@@ -145,7 +175,8 @@ void ScriptContainer::gotFrame(const CANFrame &frame)
         {
             QJSValueList args;
             args << frame.bus << frame.ID << frame.len;
-            QJSValue dataBytes = scriptEngine.newArray(frame.len);
+            QJSValue dataBytes = scriptEngine->newArray(frame.len);
+
             for (unsigned int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
             args.append(dataBytes);
             gotFrameFunction.call(args);
@@ -154,16 +185,4 @@ void ScriptContainer::gotFrame(const CANFrame &frame)
     }
 }
 
-void ScriptContainer::tick()
-{
-    if (tickFunction.isCallable())
-    {
-        //qDebug() << "Calling tick function";
-        QJSValue res = tickFunction.call();
-        if (res.isError())
-        {
-            errorWidget->addItem("Error in tick function on line " + res.property("lineNumber").toString());
-            errorWidget->addItem(res.property("message").toString());
-        }
-    }
-}
+

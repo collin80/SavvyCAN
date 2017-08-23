@@ -31,6 +31,7 @@ private slots:
     void revertScript();
     void recompileScript();
     void newFrames(const CANConnection*, const QVector<CANFrame>&);
+    void clickedLogClear();
 
 private:
     void closeEvent(QCloseEvent *event);
