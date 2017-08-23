@@ -9,6 +9,7 @@
 #include "mainwindow.h"
 #include "canframemodel.h"
 #include "isotp_message.h"
+#include "canfilter.h"
 
 class ISOTP_HANDLER : public QObject
 {
@@ -22,9 +23,9 @@ public:
     void sendISOTPFrame(int bus, int ID, QVector<unsigned char> data);
     void setProcessAll(bool state);
     void setFlowCtrl(bool state);
-    void addID(uint32_t id);
-    void removeID(uint32_t id);
-    void clearAllIDs();
+    void addFilter(int pBusId, uint32_t ID, uint32_t mask);
+    void removeFilter(int pBusId, uint32_t ID, uint32_t mask);
+    void clearAllFilters();
 
 public slots:
     void updatedFrames(int);
@@ -37,7 +38,7 @@ signals:
 private:
     QList<ISOTP_MESSAGE> messageBuffer;
     QList<CANFrame> sendingFrames;
-    QMap<uint32_t, bool> isoIDs;
+    QList<CANFilter> filters;
     const QVector<CANFrame> *modelFrames;
     bool useExtendedAddressing;
     bool isReceiving;

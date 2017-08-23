@@ -3,6 +3,9 @@
 
 #include "can_structs.h"
 #include "canfilter.h"
+#include "bus_protocols/isotp_handler.h"
+#include "bus_protocols/isotp_message.h"
+#include "bus_protocols/uds_handler.h"
 
 #include <QElapsedTimer>
 #include <QJSEngine>
@@ -33,17 +36,37 @@ private:
 class ISOTPScriptHelper: public QObject
 {
     Q_OBJECT
+public:
+    ISOTPScriptHelper(QJSEngine *engine);
+public slots:
+    void setFilter(QJSValue id, QJSValue mask, QJSValue bus);
+    void clearFilters();
+    void sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue data);
+    void setRxCallback(QJSValue cb);
+private slots:
+    void newISOMessage(ISOTP_MESSAGE msg);
 private:
     QJSValue gotFrameFunction;
     QJSEngine *scriptEngine;
+    ISOTP_HANDLER *handler;
 };
 
 class UDSScriptHelper: public QObject
 {
     Q_OBJECT
+public:
+    UDSScriptHelper(QJSEngine *engine);
+public slots:
+    void setFilter(QJSValue id, QJSValue mask, QJSValue bus);
+    void clearFilters();
+    void sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSValue sublen, QJSValue subFunc, QJSValue length, QJSValue data);
+    void setRxCallback(QJSValue cb);
+private slots:
+    void newUDSMessage(UDS_MESSAGE msg);
 private:
     QJSValue gotFrameFunction;
     QJSEngine *scriptEngine;
+    UDS_HANDLER *handler;
 };
 
 class ScriptContainer : public QObject

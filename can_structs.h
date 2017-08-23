@@ -17,14 +17,14 @@ public:
     uint64_t timestamp;
 };
 
-class CANFlt
+class CANFltObserver
 {
 public:
     quint32 id;
     quint32 mask;
     QObject * observer; //used to target the specific object that setup this filter
 
-    bool operator ==(const CANFlt &b) const
+    bool operator ==(const CANFltObserver &b) const
     {
         if ( (id == b.id) && (mask == b.mask) && (observer == b.observer) ) return true;
 

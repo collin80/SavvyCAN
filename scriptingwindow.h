@@ -1,13 +1,15 @@
 #ifndef SCRIPTINGWINDOW_H
 #define SCRIPTINGWINDOW_H
 
-#include "can_structs.h"
 #include "scriptcontainer.h"
+#include "can_structs.h"
 #include "connections/canconnection.h"
 #include "jsedit.h"
 
 #include <QDialog>
 #include <QJSEngine>
+
+class ScriptContainer;
 
 namespace Ui {
 class ScriptingWindow;

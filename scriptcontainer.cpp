@@ -7,8 +7,8 @@
 ScriptContainer::ScriptContainer()
 {
     canHelper = new CANScriptHelper(&scriptEngine);
-    isoHelper = new ISOTPScriptHelper;
-    udsHelper = new UDSScriptHelper;
+    isoHelper = new ISOTPScriptHelper(&scriptEngine);
+    udsHelper = new UDSScriptHelper(&scriptEngine);
     elapsedTime.start();
     connect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
 }
@@ -104,6 +104,9 @@ void ScriptContainer::tick()
 }
 
 
+
+
+
 /* CANScriptHandler Methods */
 
 CANScriptHelper::CANScriptHelper(QJSEngine *engine)
@@ -185,4 +188,145 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
     }
 }
 
+
+
+
+/* ISOTPScriptHelper methods */
+ISOTPScriptHelper::ISOTPScriptHelper(QJSEngine *engine)
+{
+    scriptEngine = engine;
+    handler = new ISOTP_HANDLER;
+    connect(handler, SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(newISOMessage(ISOTP_MESSAGE)));
+    handler->setReception(true);
+}
+
+void ISOTPScriptHelper::clearFilters()
+{
+    handler->clearAllFilters();
+}
+
+void ISOTPScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
+{
+    uint32_t idVal = id.toUInt();
+    uint32_t maskVal = mask.toUInt();
+    int busVal = bus.toInt();
+    qDebug() << "Called isotp set filter";
+    qDebug() << idVal << "*" << maskVal << "*" << busVal;
+
+    handler->addFilter(busVal, idVal, maskVal);
+}
+
+void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
+{
+    ISOTP_MESSAGE msg;
+    msg.extended = false;
+    msg.ID = id.toInt();
+    msg.len = length.toUInt();
+
+    if (!data.isArray()) qDebug() << "data isn't an array";
+
+    for (unsigned int i = 0; i < msg.len; i++)
+    {
+        msg.data[i] = (uint8_t)data.property(i).toInt();
+    }
+
+    msg.bus = (uint32_t)bus.toInt();
+
+    if (msg.ID > 0x7FF) msg.extended = true;
+
+    qDebug() << "sending isotp message from script";
+    handler->sendISOTPFrame(msg.bus, msg.ID, msg.data);
+}
+
+void ISOTPScriptHelper::setRxCallback(QJSValue cb)
+{
+    gotFrameFunction = cb;
+}
+
+void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
+{
+    if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
+    //qDebug() << "Got frame in script interface";
+
+    QJSValueList args;
+    args << msg.bus << msg.ID << msg.len;
+    QJSValue dataBytes = scriptEngine->newArray(msg.len);
+
+    for (unsigned int j = 0; j < msg.len; j++) dataBytes.setProperty(j, QJSValue(msg.data[j]));
+    args.append(dataBytes);
+    gotFrameFunction.call(args);
+}
+
+
+
+
+/* UDSScriptHelper methods */
+UDSScriptHelper::UDSScriptHelper(QJSEngine *engine)
+{
+    scriptEngine = engine;
+    handler = new UDS_HANDLER;
+    connect(handler, SIGNAL(newUDSMessage(UDS_MESSAGE)), this, SLOT(newUDSMessage(UDS_MESSAGE)));
+    handler->setReception(true);
+}
+
+void UDSScriptHelper::clearFilters()
+{
+    handler->clearAllFilters();
+}
+
+void UDSScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
+{
+    uint32_t idVal = id.toUInt();
+    uint32_t maskVal = mask.toUInt();
+    int busVal = bus.toInt();
+    qDebug() << "Called uds set filter";
+    qDebug() << idVal << "*" << maskVal << "*" << busVal;
+
+    handler->addFilter(busVal, idVal, maskVal);
+}
+
+void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSValue sublen, QJSValue subFunc, QJSValue length, QJSValue data)
+{
+    UDS_MESSAGE msg;
+    msg.extended = false;
+    msg.ID = id.toInt();
+    msg.len = length.toUInt();
+    msg.service = service.toUInt();
+    msg.subFuncLen = sublen.toUInt();
+    msg.subFunc = subFunc.toUInt();
+
+    if (!data.isArray()) qDebug() << "data isn't an array";
+
+    for (unsigned int i = 0; i < msg.len; i++)
+    {
+        msg.data[i] = (uint8_t)data.property(i).toInt();
+    }
+
+    msg.bus = (uint32_t)bus.toInt();
+
+    if (msg.ID > 0x7FF) msg.extended = true;
+
+    qDebug() << "sending UDS message from script";
+
+    handler->sendUDSFrame(msg);
+}
+
+void UDSScriptHelper::setRxCallback(QJSValue cb)
+{
+    gotFrameFunction = cb;
+}
+
+void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
+{
+    if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
+    //qDebug() << "Got frame in script interface";
+
+    QJSValueList args;
+    args << msg.bus << msg.ID << msg.service << msg.subFunc << msg.len;
+    QJSValue dataBytes = scriptEngine->newArray(msg.len);
+
+    for (unsigned int j = 0; j < msg.len; j++) dataBytes.setProperty(j, QJSValue(msg.data[j]));
+    args.append(dataBytes);
+    gotFrameFunction.call(args);
+}
 

@@ -35,6 +35,7 @@
 
 class ConnectionWindow;
 class ISOTP_InterpreterWindow;
+class ScriptingWindow;
 
 namespace Ui {
 class MainWindow;

@@ -94,9 +94,10 @@ public:
     void sendUDSFrame(const UDS_MESSAGE &msg);
     void setProcessAllIDs(bool state);
     void setFlowCtrl(bool state);
-    void addID(uint32_t id);
-    void removeID(uint32_t id);
-    void clearAllIDs();
+    void addFilter(int pBusId, uint32_t ID, uint32_t mask);
+    void removeFilter(int pBusId, uint32_t ID, uint32_t mask);
+    void clearAllFilters();
+
     QString getServiceShortDesc(int service);
     QString getServiceLongDesc(int service);
     QString getNegativeResponseShort(int respCode);

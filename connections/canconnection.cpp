@@ -6,7 +6,7 @@
 struct BusData {
     CANBus             mBus;
     bool               mConfigured;
-    QVector<CANFlt>    mTargettedFrames;
+    QVector<CANFltObserver>    mTargettedFrames;
 };
 
 
@@ -28,7 +28,7 @@ CANConnection::CANConnection(QString pPort,
     qRegisterMetaType<CANBus>("CANBus");
     qRegisterMetaType<CANFrame>("CANFrame");
     qRegisterMetaType<CANCon::status>("CANCon::status");
-    qRegisterMetaType<CANFlt>("CANFlt");
+    qRegisterMetaType<CANFltObserver>("CANFlt");
 
     /* set queue size */
     mQueue.setSize(pQueueLen); /*TODO add check on returned value */
@@ -289,7 +289,7 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
         return false;
 
     qDebug() << "Connection is registering a new targetted frame filter, local bus " << pBusId;
-    CANFlt target;
+    CANFltObserver target;
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
@@ -317,7 +317,7 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     if(pBusId < -1 || pBusId >= getNumBuses())
         return false;
 
-    CANFlt target;
+    CANFltObserver target;
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
@@ -329,7 +329,7 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
 bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 {
     for (int i = 0; i < getNumBuses(); i++) {
-        foreach (const CANFlt filt, mBusData_p[i].mTargettedFrames)
+        foreach (const CANFltObserver filt, mBusData_p[i].mTargettedFrames)
         {
             if (filt.observer == receiver) mBusData_p[i].mTargettedFrames.removeOne(filt);
         }
@@ -345,7 +345,7 @@ void CANConnection::checkTargettedFrame(CANFrame &frame)
     if (mBusData_p == 0) return;
 
     if (mBusData_p[frame.bus].mTargettedFrames.length() == 0) return;
-    foreach (const CANFlt filt, mBusData_p[frame.bus].mTargettedFrames)
+    foreach (const CANFltObserver filt, mBusData_p[frame.bus].mTargettedFrames)
     {
         //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
         maskedID = frame.ID & filt.mask;

@@ -130,7 +130,19 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
     {
         //only process frames that we've marked are ISOTP frames
         //unless processAll is true
-        if (isoIDs[thisFrame.ID] || processAll) processFrame(thisFrame);
+        if (processAll) processFrame(thisFrame);
+        else
+        {
+            for (int i = 0; i < filters.count(); i++)
+            {
+                if ((thisFrame.bus == filters[i].bus) && ((thisFrame.ID & filters[i].mask) == filters[i].ID))
+                {
+                    processFrame(thisFrame);
+                    break;
+                }
+            }
+
+        }
     }
 }
 
@@ -327,18 +339,27 @@ void ISOTP_HANDLER::setProcessAll(bool state)
     processAll = state;
 }
 
-void ISOTP_HANDLER::addID(uint32_t id)
+void ISOTP_HANDLER::addFilter(int pBusId, uint32_t ID, uint32_t mask)
 {
-    isoIDs[id] = true;
+    CANFilter filt;
+    filt.ID = ID;
+    filt.bus = pBusId;
+    filt.mask = mask;
+
+    filters.append(filt);
 }
 
-void ISOTP_HANDLER::removeID(uint32_t id)
+void ISOTP_HANDLER::removeFilter(int pBusId, uint32_t ID, uint32_t mask)
 {
-    isoIDs.remove(id);
+    for (int i = 0; i < filters.count(); i++)
+    {
+        if (filters[i].bus == pBusId && filters[i].ID == ID && filters[i].mask == mask) filters.removeAt(i);
+    }
 }
 
-void ISOTP_HANDLER::clearAllIDs()
+void ISOTP_HANDLER::clearAllFilters()
 {
-    isoIDs.clear();
+    filters.clear();
 }
+
 

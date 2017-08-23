@@ -396,7 +396,7 @@ void MainWindow::tickGUIUpdate()
     //{
         int elapsed = elapsedTime->elapsed();
         if(elapsed) {
-            framesPerSec = rxFrames * 1000 / elapsed;
+            framesPerSec = (framesPerSec + (rxFrames * 1000 / elapsed)) / 2;
             elapsedTime->restart();
         }
         else
