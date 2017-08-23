@@ -216,14 +216,11 @@ bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     foreach (CANConnection* conn, mConns)
     {
         if (pBusId == -1) conn->addTargettedFrame(pBusId, ID, mask, receiver);
-        else
+        else if (pBusId < (uint32_t)(busBase + conn->getNumBuses()))
         {
-            tempBusVal = pBusId >> busBase;
-            tempBusVal &= ((1 << conn->getNumBuses()) - 1);
-            if (tempBusVal) {
-                qDebug() << "Forwarding targetted frame setting to a connection object";
-                conn->addTargettedFrame(tempBusVal, ID, mask, receiver);
-            }
+            qDebug() << "Forwarding targetted frame setting to a connection object";
+            conn->addTargettedFrame(pBusId - busBase, ID, mask, receiver);
+
         }
         busBase += conn->getNumBuses();
     }
@@ -238,11 +235,11 @@ bool CANConManager::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     foreach (CANConnection* conn, mConns)
     {
         if (pBusId == -1) conn->removeTargettedFrame(pBusId, ID, mask, receiver);
-        else
+        else if (pBusId < (uint32_t)(busBase + conn->getNumBuses()))
         {
-            tempBusVal = pBusId >> busBase;
-            tempBusVal &= ((1 << conn->getNumBuses()) - 1);
-            if (tempBusVal) conn->removeTargettedFrame(tempBusVal, ID, mask, receiver);
+            qDebug() << "Forwarding targetted frame setting to a connection object";
+            conn->removeTargettedFrame(pBusId - busBase, ID, mask, receiver);
+
         }
         busBase += conn->getNumBuses();
     }

@@ -285,20 +285,15 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     }
 */
     /* sanity checks */
-    if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
+    if(pBusId < -1 || pBusId >=  getNumBuses())
         return false;
 
-    for (int i = 0; i < getNumBuses(); i++)
-    {
-        if ( (pBusId == -1) || (pBusId && (1 << i)) ) {
-            qDebug() << "Connection is registering a new targetted frame filter, local bus " << i;
-            CANFlt target;
-            target.id = ID;
-            target.mask = mask;
-            target.observer = receiver;
-            mBusData_p[i].mTargettedFrames.append(target);
-        }
-    }
+    qDebug() << "Connection is registering a new targetted frame filter, local bus " << pBusId;
+    CANFlt target;
+    target.id = ID;
+    target.mask = mask;
+    target.observer = receiver;
+    mBusData_p[pBusId].mTargettedFrames.append(target);
 
     return true;
 }
@@ -319,20 +314,14 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     }
 */
     /* sanity checks */
-    if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
+    if(pBusId < -1 || pBusId >= getNumBuses())
         return false;
 
-    for (int i = 0; i < getNumBuses(); i++)
-    {
-        if (pBusId == -1 || (pBusId && (1 << i)))
-        {
-            CANFlt target;
-            target.id = ID;
-            target.mask = mask;
-            target.observer = receiver;
-            mBusData_p[i].mTargettedFrames.removeAll(target);
-        }
-    }
+    CANFlt target;
+    target.id = ID;
+    target.mask = mask;
+    target.observer = receiver;
+    mBusData_p[pBusId].mTargettedFrames.removeAll(target);
 
     return true;
 }
