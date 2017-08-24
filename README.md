@@ -52,6 +52,7 @@ This project requires 5.8.0 or higher because of a dependency on QSerialBus.
 
 Download the newest stable version of Qt directly from qt.io (You need 5.8.x or newer)
 
+```sh
 cd ~
 
 git clone https://github.com/collin80/SavvyCAN.git
