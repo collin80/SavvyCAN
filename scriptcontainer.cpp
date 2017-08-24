@@ -49,6 +49,8 @@ void ScriptContainer::compileScript()
         //Find out which callbacks the script has created.
         setupFunction = scriptEngine.globalObject().property("setup");
         canHelper->setRxCallback(scriptEngine.globalObject().property("gotCANFrame"));
+        isoHelper->setRxCallback(scriptEngine.globalObject().property("gotISOTPMessage"));
+        udsHelper->setRxCallback(scriptEngine.globalObject().property("gotUDSMessage"));
 
         tickFunction = scriptEngine.globalObject().property("tick");
 
@@ -245,6 +247,7 @@ void ISOTPScriptHelper::setRxCallback(QJSValue cb)
 
 void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
 {
+    qDebug() << "isotpScriptHelper got a ISOTP message";
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     //qDebug() << "Got frame in script interface";
 
@@ -318,6 +321,8 @@ void UDSScriptHelper::setRxCallback(QJSValue cb)
 
 void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
 {
+    //qDebug() << "udsScriptHelper got a UDS message";
+    qDebug() << "UDS script helper. Meg data len: " << msg.len;
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     //qDebug() << "Got frame in script interface";
 
@@ -325,7 +330,7 @@ void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
     args << msg.bus << msg.ID << msg.service << msg.subFunc << msg.len;
     QJSValue dataBytes = scriptEngine->newArray(msg.len);
 
-    for (unsigned int j = 0; j < msg.len; j++) dataBytes.setProperty(j, QJSValue(msg.data[j]));
+    for (unsigned int j = 0; j < msg.data.length(); j++) dataBytes.setProperty(j, QJSValue(msg.data[j]));
     args.append(dataBytes);
     gotFrameFunction.call(args);
 }
