@@ -22,6 +22,7 @@ public:
     float bias;
     float scale;
     int stride;
+    int strideSoFar;
     QColor color;
     QCPGraph *ref;
     QString graphName;
@@ -56,6 +57,7 @@ private slots:
     void saveSpreadsheet();
     void saveDefinitions();
     void loadDefinitions();
+    void toggleFollowMode();
     void addNewGraph();
     void createGraph(GraphParams &params, bool createGraphParam = true);
     void appendToGraph(GraphParams &params, CANFrame &frame);
@@ -79,6 +81,7 @@ private:
     QCPSelectionDecorator *selDecorator;
     bool needScaleSetup; //do we need to set x,y graphing extents?
     bool secondsMode;
+    bool followGraphEnd;
 
     void showParamsDialog(int idx);
     void closeEvent(QCloseEvent *event);

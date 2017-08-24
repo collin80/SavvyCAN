@@ -71,6 +71,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphingView->setOpenGl(true); //purdy and fast drawing courtesy of your video card - pretty everyone has 3D accel these days
 
     needScaleSetup = true;
+    followGraphEnd = false;
 }
 
 GraphingWindow::~GraphingWindow()
@@ -163,6 +164,22 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int j = 0; j < graphParams.count(); j++)
             {
                 graphParams[j].ref->setData(graphParams[j].x, graphParams[j].y);
+            }
+            if (followGraphEnd)
+            {
+                //find the current X span and maintain that span but move the end of it over to match the new end
+                //of the actual graph. This causes the view to move with the data to always show the end
+                QCPRange range = ui->graphingView->xAxis->range();
+                double size = range.size();
+                bool foundRange;
+                QCPRange keyRange = ui->graphingView->graph()->getKeyRange(foundRange);
+                if (foundRange)
+                {
+                    double end, start;
+                    end = keyRange.upper;
+                    start = end - size;
+                    ui->graphingView->xAxis->setRange(start, end);
+                }
             }
             ui->graphingView->replot();
         }
@@ -493,6 +510,11 @@ void GraphingWindow::removeAllGraphs()
     }
 }
 
+void GraphingWindow::toggleFollowMode()
+{
+    followGraphEnd = !followGraphEnd;
+}
+
 void GraphingWindow::contextMenuRequest(QPoint pos)
 {
   QMenu *menu = new QMenu(this);
@@ -512,6 +534,9 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     menu->addAction(tr("Save graph definitions to file"), this, SLOT(saveDefinitions()));
     menu->addAction(tr("Load graph definitions from file"), this, SLOT(loadDefinitions()));
     menu->addAction(tr("Save spreadsheet of data"), this, SLOT(saveSpreadsheet()));
+    QAction *act = menu->addAction(tr("Follow end of graph"), this, SLOT(toggleFollowMode()));
+    act->setCheckable(true);
+    act->setChecked(followGraphEnd);
     menu->addAction(tr("Add new graph"), this, SLOT(addNewGraph()));
     if (ui->graphingView->selectedGraphs().size() > 0)
     {
@@ -953,17 +978,25 @@ void GraphingWindow::addNewGraph()
 
 void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
 {
-    int64_t tempVal; //64 bit temp value.
-    tempVal = Utility::processIntegerSignal(frame.data, params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
-    if (secondsMode)
+    params.strideSoFar++;
+    if (params.strideSoFar >= params.stride)
     {
-        params.x.append((double)(frame.timestamp) / 1000000.0 - params.xbias);
+        params.strideSoFar = 0;
+        int64_t tempVal; //64 bit temp value.
+        tempVal = Utility::processIntegerSignal(frame.data, params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
+        double xVal, yVal;
+        if (secondsMode)
+        {
+            xVal = ((double)(frame.timestamp) / 1000000.0 - params.xbias);
+        }
+        else
+        {
+            xVal = (frame.timestamp - params.xbias);
+        }
+        yVal = (tempVal * params.scale) + params.bias;
+        params.x.append(xVal);
+        params.y.append(yVal);
     }
-    else
-    {
-        params.x.append(frame.timestamp - params.xbias);
-    }
-    params.y.append((tempVal * params.scale) + params.bias);
 }
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
@@ -1003,15 +1036,16 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     for (int j = 0; j < numEntries; j++)
     {
-        tempVal = Utility::processIntegerSignal(frameCache[j * params.stride].data, sBit, bits, intelFormat, isSigned); //& params.mask;
+        int k = j * params.stride;
+        tempVal = Utility::processIntegerSignal(frameCache[k].data, sBit, bits, intelFormat, isSigned); //& params.mask;
         //qDebug() << tempVal;
         if (secondsMode)
         {
-            params.x[j] = (double)(frameCache[j].timestamp) / 1000000.0;
+            params.x[j] = (double)(frameCache[k].timestamp) / 1000000.0;
         }
         else
         {
-            params.x[j] = frameCache[j].timestamp;
+            params.x[j] = frameCache[k].timestamp;
         }
         params.y[j] = (tempVal * params.scale) + params.bias;
         if (params.y[j] < yminval) yminval = params.y[j];
