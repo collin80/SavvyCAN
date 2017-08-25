@@ -169,12 +169,14 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
             }
             else return;
             udsMsg.data = msg.data.mid(2, -1); //don't copy error byte nor service byte
+            udsMsg.len -= 2; //and remove those bytes from the length reported too.
         }
         else
         {
             udsMsg.isErrorReply = false;
             if (msg.data.length() > 1) udsMsg.subFunc = msg.data.at(1);
             udsMsg.data = msg.data.mid(1, -1); //don't copy service byte
+            udsMsg.len -= 1; //and remove service byte from length too.
         }
     }
     else return;
