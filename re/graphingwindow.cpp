@@ -190,6 +190,7 @@ void GraphingWindow::updatedFrames(int numFrames)
 void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event)
 {
     Q_UNUSED(dataIdx);
+    qDebug() << "plottableDoubleClick";
     int id = 0;
     //apply transforms to get the X axis value where we double clicked
     double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
@@ -236,6 +237,7 @@ void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPTextElement* title)
 
 void GraphingWindow::axisLabelDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart part)
 {
+  qDebug() << "axisLabelDoubleClick";
   // Set an axis label by double clicking on it
   if (part == QCPAxis::spAxisLabel) // only react when the actual axis label is clicked, not tick label or axis backbone
   {
@@ -301,6 +303,8 @@ void GraphingWindow::selectionChanged()
    or on its legend item.
   */
 
+    qDebug() << "SelectionChanged";
+
   // make top and bottom axes be selected synchronously, and handle axis and tick labels as one selectable object:
   if (ui->graphingView->xAxis->selectedParts().testFlag(QCPAxis::spAxis) || ui->graphingView->xAxis->selectedParts().testFlag(QCPAxis::spTickLabels) ||
       ui->graphingView->xAxis2->selectedParts().testFlag(QCPAxis::spAxis) || ui->graphingView->xAxis2->selectedParts().testFlag(QCPAxis::spTickLabels))
@@ -324,7 +328,13 @@ void GraphingWindow::selectionChanged()
     if (item->selected() || graph->selected())
     {
       item->setSelected(true);
-      //graph->setSelected(true);
+      //select graph too.
+      QCPDataSelection sel;
+      QCPDataRange rang;
+      rang.setBegin(0);
+      rang.setEnd(graph->dataCount());
+      sel.addDataRange(rang);
+      graph->setSelection(sel);
     }
   }
 }
@@ -1055,6 +1065,14 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         if (params.x[j] > xmaxval) xmaxval = params.x[j];
     }
 
+    if (numEntries == 0)
+    {
+        yminval = -128.0;
+        ymaxval = 128.0;
+        xminval = 0;
+        xmaxval = 100;
+    }
+
     params.xbias = 0;
 
     ui->graphingView->addGraph();
@@ -1103,6 +1121,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
 void GraphingWindow::moveLegend()
 {
+    qDebug() << "moveLegend";
   if (QAction* contextAction = qobject_cast<QAction*>(sender())) // make sure this slot is really called by a context menu action, so it carries the data we need
   {
     bool ok;

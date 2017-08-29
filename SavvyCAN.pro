@@ -151,3 +151,6 @@ RESOURCES += \
     icons.qrc \
     images.qrc
 
+win32 {
+   LIBS += opengl32.lib
+}
