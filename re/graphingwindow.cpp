@@ -68,7 +68,8 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
 
-    ui->graphingView->setOpenGl(true); //purdy and fast drawing courtesy of your video card - pretty everyone has 3D accel these days
+    //ui->graphingView->setOpenGl(true); //purdy and fast drawing courtesy of your video card - pretty everyone has 3D accel these days
+    ui->graphingView->setAntialiasedElements(QCP::aeNone);
 
     needScaleSetup = true;
     followGraphEnd = false;
