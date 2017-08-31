@@ -68,8 +68,17 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
 
-    //ui->graphingView->setOpenGl(true); //purdy and fast drawing courtesy of your video card - pretty everyone has 3D accel these days
-    ui->graphingView->setAntialiasedElements(QCP::aeNone);
+    if (useOpenGL)
+    {
+        ui->graphingView->setAntialiasedElements(QCP::aeAll);
+        //ui->graphingView->setNoAntialiasingOnDrag(true);
+        ui->graphingView->setOpenGl(true);
+    }
+    else
+    {
+        ui->graphingView->setOpenGl(false);
+        ui->graphingView->setAntialiasedElements(QCP::aeNone);
+    }
 
     needScaleSetup = true;
     followGraphEnd = false;
@@ -104,6 +113,7 @@ void GraphingWindow::readSettings()
         move(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint());
     }
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+    useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
 }
 
 void GraphingWindow::writeSettings()
@@ -120,6 +130,7 @@ void GraphingWindow::writeSettings()
 void GraphingWindow::updatedFrames(int numFrames)
 {
     CANFrame thisFrame;
+    QVector<double> x, y;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
         //removeAllGraphs();
@@ -156,7 +167,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             {
                 if (graphParams[j].ID == thisFrame.ID)
                 {
-                    appendToGraph(graphParams[j], thisFrame);
+                    appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
                 }
             }
@@ -164,7 +175,8 @@ void GraphingWindow::updatedFrames(int numFrames)
         if (appendedToGraph) {
             for (int j = 0; j < graphParams.count(); j++)
             {
-                graphParams[j].ref->setData(graphParams[j].x, graphParams[j].y);
+                //graphParams[j].ref->setData(graphParams[j].x, graphParams[j].y);
+                graphParams[j].ref->addData(x, y, true);
             }
             if (followGraphEnd)
             {
@@ -987,7 +999,7 @@ void GraphingWindow::addNewGraph()
     showParamsDialog(-1);
 }
 
-void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
+void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y)
 {
     params.strideSoFar++;
     if (params.strideSoFar >= params.stride)
@@ -1007,6 +1019,8 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame)
         yVal = (tempVal * params.scale) + params.bias;
         params.x.append(xVal);
         params.y.append(yVal);
+        x.append(xVal);
+        y.append(yVal);
     }
 }
 

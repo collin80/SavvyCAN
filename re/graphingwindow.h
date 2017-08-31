@@ -60,7 +60,7 @@ private slots:
     void toggleFollowMode();
     void addNewGraph();
     void createGraph(GraphParams &params, bool createGraphParam = true);
-    void appendToGraph(GraphParams &params, CANFrame &frame);
+    void appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y);
     void editSelectedGraph();
     void updatedFrames(int);
     void gotCenterTimeID(int32_t ID, double timestamp);
@@ -81,6 +81,7 @@ private:
     QCPSelectionDecorator *selDecorator;
     bool needScaleSetup; //do we need to set x,y graphing extents?
     bool secondsMode;
+    bool useOpenGL;
     bool followGraphEnd;
 
     void showParamsDialog(int idx);

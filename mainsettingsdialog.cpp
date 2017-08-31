@@ -54,6 +54,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
 
     ui->comboSendingBus->setCurrentIndex(settings->value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings->value("Main/UseFiltered", false).toBool());
+    ui->cbUseOpenGL->setChecked(settings->value("Main/UseOpenGL", false).toBool());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -71,6 +72,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -100,6 +102,7 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/TimeClock", ui->rbSysClock->isChecked());
     settings->setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings->setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
+    settings->setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
     settings->setValue("Main/TimeFormat", ui->lineClockFormat->text());
 
     settings->sync();

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>691</height>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -116,6 +116,13 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QCheckBox" name="cbUseOpenGL">
+        <property name="text">
+         <string>OpenGL Accelerated AntiAliased Graphing</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -220,6 +227,16 @@
        </widget>
       </item>
      </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Some settings will not take effect until the application is restarted</string>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
     </widget>
    </item>
   </layout>
