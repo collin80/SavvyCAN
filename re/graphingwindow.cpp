@@ -131,6 +131,9 @@ void GraphingWindow::updatedFrames(int numFrames)
 {
     CANFrame thisFrame;
     QVector<double> x, y;
+    bool appendedToGraph = false;
+    bool needReplot = false;
+
     if (numFrames == -1) //all frames deleted. Kill the display
     {
         //removeAllGraphs();
@@ -158,26 +161,31 @@ void GraphingWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
-        bool appendedToGraph = false;
         if (numFrames > modelFrames->count()) return;
-        for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+
+        for (int j = 0; j < graphParams.count(); j++)
         {
-            thisFrame = modelFrames->at(i);
-            for (int j = 0; j < graphParams.count(); j++)
+            appendedToGraph = false;
+            x.clear();
+            y.clear();
+            for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
+                thisFrame = modelFrames->at(i);
                 if (graphParams[j].ID == thisFrame.ID)
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
                 }
             }
-        }
-        if (appendedToGraph) {
-            for (int j = 0; j < graphParams.count(); j++)
+            if (appendedToGraph)
             {
-                //graphParams[j].ref->setData(graphParams[j].x, graphParams[j].y);
-                graphParams[j].ref->addData(x, y, true);
+                graphParams[j].ref->addData(x, y);
+                needReplot = true;
             }
+        }
+
+        if (needReplot)
+        {
             if (followGraphEnd)
             {
                 //find the current X span and maintain that span but move the end of it over to match the new end
