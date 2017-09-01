@@ -36,6 +36,8 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ScriptingWindow::newFrames);
 
+    currentScript = NULL;
+
     elapsedTime.start();
 }
 
@@ -162,14 +164,45 @@ void ScriptingWindow::createNewScript()
     container->setScriptWindow(this);
     scripts.append(container);
     ui->listLoadedScripts->addItem(container->fileName);
-    currentScript = container;
-    editor->setPlainText(container->scriptText);
-    editor->setEnabled(true);
+
+    ui->listLoadedScripts->setCurrentRow(ui->listLoadedScripts->count() - 1);
+    changeCurrentScript();
 }
 
 void ScriptingWindow::deleteCurrentScript()
 {
+    int sel = ui->listLoadedScripts->currentRow();
+    if (sel < 0) return;
 
+    QMessageBox msgBox;
+    msgBox.setText("Really remove script?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    int ret = msgBox.exec();
+    switch (ret)
+    {
+    case QMessageBox::Yes:
+        ui->listLoadedScripts->takeItem(sel);
+        scripts.removeAt(sel);
+        currentScript = NULL;
+
+        if (ui->listLoadedScripts->count() > 0)
+        {
+            ui->listLoadedScripts->setCurrentRow(0);
+            changeCurrentScript();
+        }
+        else
+        {
+            editor->setPlainText("");
+            editor->setEnabled(false);
+        }
+        break;
+    case QMessageBox::No:
+        break;
+    default:
+        // should never be reached
+        break;
+    }
 }
 
 void ScriptingWindow::refreshSourceWindow()
@@ -212,7 +245,24 @@ void ScriptingWindow::saveScript()
 
 void ScriptingWindow::revertScript()
 {
-
+    QMessageBox msgBox;
+    msgBox.setText("Are you sure you'd like to revert?");
+    msgBox.setInformativeText("Really do it?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    int ret = msgBox.exec();
+    switch (ret)
+    {
+    case QMessageBox::Yes:
+        //just grab the last stored copy of the script (last compiled version) and replace current text with that text
+        editor->setPlainText(currentScript->scriptText);
+        break;
+    case QMessageBox::No:
+        break;
+    default:
+        // should never be reached
+        break;
+    }
 }
 
 void ScriptingWindow::recompileScript()
