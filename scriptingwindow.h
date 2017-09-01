@@ -24,6 +24,9 @@ public:
     void showEvent(QShowEvent*);
     ~ScriptingWindow();
 
+public slots:
+    void log(QString text);
+
 private slots:
     void loadNewScript();
     void createNewScript();
@@ -32,6 +35,7 @@ private slots:
     void saveScript();
     void revertScript();
     void recompileScript();
+    void changeCurrentScript();
     void newFrames(const CANConnection*, const QVector<CANFrame>&);
     void clickedLogClear();
 
@@ -45,6 +49,7 @@ private:
     QList<ScriptContainer *> scripts;
     ScriptContainer *currentScript;
     const QVector<CANFrame> *modelFrames;
+    QElapsedTimer elapsedTime;
 };
 
 #endif // SCRIPTINGWINDOW_H

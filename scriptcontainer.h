@@ -12,6 +12,8 @@
 #include <QTimer>
 #include <qlistwidget.h>
 
+class ScriptingWindow;
+
 class CANScriptHelper: public QObject
 {
     Q_OBJECT
@@ -75,7 +77,7 @@ class ScriptContainer : public QObject
 
 public:
     ScriptContainer();
-    void setLogWidget(QListWidget *list);
+    void setScriptWindow(ScriptingWindow *win);
 
     QString fileName;
     QString filePath;
@@ -86,6 +88,9 @@ public slots:
     void setTickInterval(QJSValue interval);
     void log(QJSValue logString);
 
+signals:
+    void sendLog(QString text);
+
 private slots:
     void tick();
 
@@ -95,11 +100,10 @@ private:
     QJSValue setupFunction;
     QJSValue tickFunction;
     QTimer timer;
-    QListWidget *logWidget;
+    ScriptingWindow *window;
     CANScriptHelper *canHelper;
     ISOTPScriptHelper *isoHelper;
     UDSScriptHelper *udsHelper;
-    QElapsedTimer elapsedTime;
 };
 
 #endif // SCRIPTCONTAINER_H

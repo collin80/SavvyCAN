@@ -13,9 +13,22 @@
   <property name="windowTitle">
    <string>Scripting Interface</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,4">
+  <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,4">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Public Variables:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="tableVariables"/>
+     </item>
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
@@ -30,30 +43,34 @@
       <widget class="QListWidget" name="listLoadedScripts"/>
      </item>
      <item>
-      <widget class="QPushButton" name="btnLoadScript">
-       <property name="text">
-        <string>Load New Script</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnNewScript">
-       <property name="text">
-        <string>Create New Script</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnRemoveScript">
-       <property name="text">
-        <string>Remove Current Script</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QPushButton" name="btnNewScript">
+         <property name="text">
+          <string>New</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnRemoveScript">
+         <property name="text">
+          <string>Del</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnLoadScript">
+         <property name="text">
+          <string>Load</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,4,0">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,4,0,0">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -101,6 +118,13 @@
      </item>
      <item>
       <widget class="QListWidget" name="listLog"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="cbAutoScroll">
+       <property name="text">
+        <string>Auto Scroll Log Window</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="btnClearLog">

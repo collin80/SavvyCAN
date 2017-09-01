@@ -9,7 +9,6 @@ ScriptContainer::ScriptContainer()
     canHelper = new CANScriptHelper(&scriptEngine);
     isoHelper = new ISOTPScriptHelper(&scriptEngine);
     udsHelper = new UDSScriptHelper(&scriptEngine);
-    elapsedTime.start();
     connect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
 }
 
@@ -17,19 +16,16 @@ void ScriptContainer::compileScript()
 {
     QJSValue result = scriptEngine.evaluate(scriptText, fileName);
 
-    if (logWidget)
-    {
-        logWidget->addItem("");
-        logWidget->addItem("Compiling script " + fileName);
-    }
+    emit sendLog("Compiling script...");
 
-    if (result.isError() && logWidget)
+    if (result.isError())
     {
-        logWidget->addItem("SCRIPT EXCEPTION!");
-        logWidget->addItem("Line: " + result.property("lineNumber").toString());
-        logWidget->addItem(result.property("message").toString());
-        logWidget->addItem("Stack:");
-        logWidget->addItem(result.property("stack").toString());
+
+        emit sendLog("SCRIPT EXCEPTION!");
+        emit sendLog("Line: " + result.property("lineNumber").toString());
+        emit sendLog(result.property("message").toString());
+        emit sendLog("Stack:");
+        emit sendLog(result.property("stack").toString());
     }
     else
     {
@@ -60,23 +56,24 @@ void ScriptContainer::compileScript()
             QJSValue res = setupFunction.call();
             if (res.isError())
             {
-                logWidget->addItem("Error in setup function on line " + res.property("lineNumber").toString());
-                logWidget->addItem(res.property("message").toString());
+                emit sendLog("Error in setup function on line " + res.property("lineNumber").toString());
+                emit sendLog(res.property("message").toString());
             }
         }
         if (tickFunction.isCallable()) qDebug() << "tick exists";
     }
 }
 
-void ScriptContainer::setLogWidget(QListWidget *list)
+void ScriptContainer::setScriptWindow(ScriptingWindow *win)
 {
-    logWidget = list;
+    window = win;
+    connect(this, &ScriptContainer::sendLog, window, &ScriptingWindow::log);
 }
 
 void ScriptContainer::log(QJSValue logString)
 {
     QString val = logString.toString();
-    logWidget->addItem(QString::number(elapsedTime.elapsed()) + ": " + val);
+    emit sendLog(val);
 }
 
 void ScriptContainer::setTickInterval(QJSValue interval)
@@ -99,8 +96,8 @@ void ScriptContainer::tick()
         QJSValue res = tickFunction.call();
         if (res.isError())
         {
-            logWidget->addItem("Error in tick function on line " + res.property("lineNumber").toString());
-            logWidget->addItem(res.property("message").toString());
+            emit sendLog("Error in tick function on line " + res.property("lineNumber").toString());
+            emit sendLog(res.property("message").toString());
         }
     }
 }

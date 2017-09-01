@@ -32,9 +32,11 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(ui->btnRevertScript, &QAbstractButton::pressed, this, &ScriptingWindow::revertScript);
     connect(ui->btnSaveScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveScript);
     connect(ui->btnClearLog, &QAbstractButton::pressed, this, &ScriptingWindow::clickedLogClear);
+    connect(ui->listLoadedScripts, &QListWidget::currentRowChanged, this, &ScriptingWindow::changeCurrentScript);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ScriptingWindow::newFrames);
 
+    elapsedTime.start();
 }
 
 ScriptingWindow::~ScriptingWindow()
@@ -91,6 +93,19 @@ void ScriptingWindow::showEvent(QShowEvent* event)
     QDialog::showEvent(event);
 }
 
+void ScriptingWindow::changeCurrentScript()
+{
+    int sel = ui->listLoadedScripts->currentRow();
+    if (sel < 0) return;
+
+    if (currentScript) currentScript->scriptText = editor->toPlainText();
+
+    ScriptContainer *container = scripts.at(sel);
+    currentScript = container;
+    editor->setPlainText(container->scriptText);
+    editor->setEnabled(true);
+}
+
 void ScriptingWindow::loadNewScript()
 {
     QString filename;
@@ -124,12 +139,12 @@ void ScriptingWindow::loadNewScript()
                 container->fileName = justFileName;
                 container->filePath = filename;
                 container->scriptText = contents;
-                container->setLogWidget(ui->listLog);
+                container->setScriptWindow(this);
                 container->compileScript();
                 scripts.append(container);
-                currentScript = container;
-                editor->setPlainText(container->scriptText);
-                editor->setEnabled(true);
+
+                ui->listLoadedScripts->setCurrentRow(ui->listLoadedScripts->count() - 1);
+                changeCurrentScript();
             }
         }
     }
@@ -144,7 +159,7 @@ void ScriptingWindow::createNewScript()
     container->fileName = "UNNAMED_" + QString::number((qrand() % 10000)) + ".js";
     container->filePath = QString();
     container->scriptText = QString();
-    container->setLogWidget(ui->listLog);
+    container->setScriptWindow(this);
     scripts.append(container);
     ui->listLoadedScripts->addItem(container->fileName);
     currentScript = container;
@@ -209,4 +224,19 @@ void ScriptingWindow::recompileScript()
 void ScriptingWindow::clickedLogClear()
 {
     ui->listLog->clear();
+    elapsedTime.start();
+}
+
+void ScriptingWindow::log(QString text)
+{
+    ScriptContainer *cont = qobject_cast<ScriptContainer*>(sender());
+    if (cont != NULL)
+       ui->listLog->addItem(QString::number(elapsedTime.elapsed()) + "(" + cont->fileName + "): " + text);
+    else
+       ui->listLog->addItem(QString::number(elapsedTime.elapsed()) + ": " + text);
+
+    if (ui->cbAutoScroll->isChecked())
+    {
+        ui->listLog->scrollToBottom();
+    }
 }
