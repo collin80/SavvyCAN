@@ -147,6 +147,7 @@ void SocketCan::errorReceived(QCanBusDevice::CanBusError error) const
         case QCanBusDevice::ConfigurationError:
         case QCanBusDevice::UnknownError:
         qWarning() << mDev_p->errorString();
+        break;
     default:
         break;
     }
