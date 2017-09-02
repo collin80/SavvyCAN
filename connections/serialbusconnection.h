@@ -1,15 +1,11 @@
 #ifndef SERIALBUSCONNECTION_H
 #define SERIALBUSCONNECTION_H
 
-#include <QObject>
-#include <QCanBus>
-#include <QTimer>
-#include <qthread.h>
-
-#include "canframemodel.h"
 #include "canconnection.h"
-#include "canconmanager.h"
+#include "canframemodel.h"
 
+#include <QCanBusDevice>
+#include <QTimer>
 
 class SerialBusConnection : public CANConnection
 {
