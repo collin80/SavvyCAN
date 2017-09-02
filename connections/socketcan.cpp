@@ -115,7 +115,7 @@ bool SocketCan::piSendFrame(const CANFrame& pFrame)
     /* fill frame */
     QCanBusFrame frame;
     frame.setFrameId(pFrame.ID);
-    frame.setExtendedFrameFormat(false);
+    frame.setExtendedFrameFormat(pFrame.extended);
     frame.setPayload(QByteArray(reinterpret_cast<const char *>(pFrame.data),
                                 static_cast<int>(pFrame.len)));
 
@@ -187,7 +187,7 @@ void SocketCan::framesReceived()
                 frame_p->len           = static_cast<uint32_t>(recFrame.payload().length());
                 frame_p->bus           = 0;
                 memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
-                frame_p->extended      = false;
+                frame_p->extended      = recFrame.hasExtendedFrameFormat();
                 frame_p->ID            = recFrame.frameId();
                 frame_p->isReceived    = true;
                 if (useSystemTime) {
