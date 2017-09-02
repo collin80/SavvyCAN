@@ -1,5 +1,5 @@
-#ifndef SocketCan_H
-#define SocketCan_H
+#ifndef SERIALBUSCONNECTION_H
+#define SERIALBUSCONNECTION_H
 
 #include <QObject>
 #include <QCanBus>
@@ -11,13 +11,13 @@
 #include "canconmanager.h"
 
 
-class SocketCan : public CANConnection
+class SerialBusConnection : public CANConnection
 {
     Q_OBJECT
 
 public:
-    SocketCan(QString portName);
-    virtual ~SocketCan();
+    SerialBusConnection(QString portName);
+    virtual ~SerialBusConnection();
 
 protected:
 
@@ -42,4 +42,4 @@ protected:
 };
 
 
-#endif // SocketCan_H
+#endif // SERIALBUSCONNECTION_H
