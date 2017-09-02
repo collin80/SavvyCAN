@@ -181,9 +181,7 @@ void SocketCan::framesReceived()
             continue;
 
         /* check frame */
-        if( !recFrame.payload().isEmpty() &&
-            recFrame.payload().length()<=8 )
-        {
+        if (recFrame.payload().length() <= 8) {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
                 frame_p->len           = static_cast<uint32_t>(recFrame.payload().length());
