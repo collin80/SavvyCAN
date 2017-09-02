@@ -1,11 +1,11 @@
-#include <QObject>
-#include <QDebug>
-#include <QCanBusFrame>
-#include <QDateTime>
-
 #include "serialbusconnection.h"
 
+#include "canconmanager.h"
 
+#include <QCanBus>
+#include <QCanBusFrame>
+#include <QDateTime>
+#include <QDebug>
 
 /***********************************/
 /****    class definition       ****/
