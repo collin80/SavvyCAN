@@ -4,9 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialbus
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
+QT = core gui printsupport qml serialbus serialport widgets
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
