@@ -83,10 +83,17 @@ public:
     QString filePath;
     QString scriptText;
 
+/*
+  Anything registered as a public slot on this class and that takes either no arguments
+  or only QJSValue arguments will be callable from scripts via  host.XXX calls. So, have at it, champ.
+*/
 public slots:
     void compileScript();
     void setTickInterval(QJSValue interval);
     void log(QJSValue logString);
+    void addParameter(QJSValue name);
+    void updateValuesTable(QTableWidget *widget);
+    void updateParameter(QString name, QString value);
 
 signals:
     void sendLog(QString text);
@@ -104,6 +111,7 @@ private:
     CANScriptHelper *canHelper;
     ISOTPScriptHelper *isoHelper;
     UDSScriptHelper *udsHelper;
+    QVector<QString> scriptParams;
 };
 
 #endif // SCRIPTCONTAINER_H

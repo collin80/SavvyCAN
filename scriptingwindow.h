@@ -27,6 +27,10 @@ public:
 public slots:
     void log(QString text);
 
+signals:
+    void updateValueTable(QTableWidget *widget);
+    void updatedParameter(QString name, QString value);
+
 private slots:
     void loadNewScript();
     void createNewScript();
@@ -38,6 +42,8 @@ private slots:
     void changeCurrentScript();
     void newFrames(const CANConnection*, const QVector<CANFrame>&);
     void clickedLogClear();
+    void valuesTimerElapsed();
+    void updatedValue(int row, int col);
 
 private:
     void closeEvent(QCloseEvent *event);
@@ -50,6 +56,7 @@ private:
     ScriptContainer *currentScript;
     const QVector<CANFrame> *modelFrames;
     QElapsedTimer elapsedTime;
+    QTimer valuesTimer;
 };
 
 #endif // SCRIPTINGWINDOW_H

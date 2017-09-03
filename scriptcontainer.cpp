@@ -102,6 +102,60 @@ void ScriptContainer::tick()
     }
 }
 
+void ScriptContainer::addParameter(QJSValue name)
+{
+    scriptParams.append(name.toString());
+}
+
+void ScriptContainer::updateValuesTable(QTableWidget *widget)
+{
+    QString valu;
+
+    if (widget->columnCount() == 0)
+    {
+        widget->insertColumn(0);
+        widget->insertColumn(1);
+    }
+
+    foreach (QString paramName, scriptParams)
+    {
+        valu = scriptEngine.globalObject().property(paramName).toString();
+        qDebug() << paramName << " - " << valu;
+        bool found = false;
+        for (int i = 0; i < widget->rowCount(); i++)
+        {
+            if (widget->item(i, 0)->text().compare(paramName) == 0)
+            {
+                found = true;
+                if (!widget->item(i, 1)->isSelected())
+                {
+                    widget->item(i,1)->setText(valu);
+                }
+                break;
+            }
+        }
+        if (!found)
+        {
+            int row = widget->rowCount();
+            widget->insertRow(widget->rowCount());
+            QTableWidgetItem *item;
+            item = new QTableWidgetItem();
+            item->setText(paramName);
+            item->setFlags(Qt::ItemIsEnabled);
+            widget->setItem(row, 0, item);
+            item = new QTableWidgetItem();
+            item->setText(valu);
+            widget->setItem(row, 1, item);
+        }
+    }
+}
+
+void ScriptContainer::updateParameter(QString name, QString value)
+{
+    qDebug() << name << " * " << value;
+    QJSValue val(value);
+    scriptEngine.globalObject().setProperty(name, val);
+}
 
 
 

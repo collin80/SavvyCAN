@@ -33,12 +33,16 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(ui->btnSaveScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveScript);
     connect(ui->btnClearLog, &QAbstractButton::pressed, this, &ScriptingWindow::clickedLogClear);
     connect(ui->listLoadedScripts, &QListWidget::currentRowChanged, this, &ScriptingWindow::changeCurrentScript);
+    connect(ui->tableVariables, SIGNAL(cellChanged(int,int)), this, SLOT(updatedValue(int, int)));
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ScriptingWindow::newFrames);
+
+    connect(&valuesTimer, SIGNAL(timeout()), this, SLOT(valuesTimerElapsed()));
 
     currentScript = NULL;
 
     elapsedTime.start();
+    valuesTimer.start(1000);
 }
 
 ScriptingWindow::~ScriptingWindow()
@@ -62,6 +66,22 @@ void ScriptingWindow::newFrames(const CANConnection* pConn, const QVector<CANFra
     }
 }
 
+void ScriptingWindow::updatedValue(int row, int col)
+{
+    QTableWidgetItem *nameItem = ui->tableVariables->item(row, 0);
+    QTableWidgetItem *valItem = ui->tableVariables->item(row, 1);
+
+    if (!valItem) return;
+    if (col == 0) return;
+    if (!valItem->isSelected()) return; // don't record updates not from a user edited cell
+
+    if (nameItem && valItem)
+    {
+        QString name = nameItem->text();
+        QString val = valItem->text();
+        emit updatedParameter(name, val);
+    }
+}
 
 void ScriptingWindow::closeEvent(QCloseEvent *event)
 {
@@ -100,12 +120,27 @@ void ScriptingWindow::changeCurrentScript()
     int sel = ui->listLoadedScripts->currentRow();
     if (sel < 0) return;
 
-    if (currentScript) currentScript->scriptText = editor->toPlainText();
+    if (currentScript) {
+        currentScript->scriptText = editor->toPlainText();
+        disconnect(this, SIGNAL(updateValueTable(QTableWidget*)), currentScript, SLOT(updateValuesTable(QTableWidget*)));
+        disconnect(this, SIGNAL(updatedParameter(QString,QString)), currentScript, SLOT(updateParameter(QString,QString)));
+    }
 
     ScriptContainer *container = scripts.at(sel);
     currentScript = container;
     editor->setPlainText(container->scriptText);
     editor->setEnabled(true);
+    ui->tableVariables->clear();
+    connect(this, SIGNAL(updateValueTable(QTableWidget*)), currentScript, SLOT(updateValuesTable(QTableWidget*)));
+    connect(this, SIGNAL(updatedParameter(QString,QString)), currentScript, SLOT(updateParameter(QString,QString)));
+}
+
+void ScriptingWindow::valuesTimerElapsed()
+{
+    if (currentScript)
+    {
+        emit updateValueTable(ui->tableVariables);
+    }
 }
 
 void ScriptingWindow::loadNewScript()
