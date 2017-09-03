@@ -32,6 +32,7 @@ private:
     QList<int> foundID;
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
+    bool useOpenGL;
 
     void refreshIDList();
     void closeEvent(QCloseEvent *event);

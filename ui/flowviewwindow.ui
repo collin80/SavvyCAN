@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1078</width>
-    <height>621</height>
+    <height>623</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -67,7 +67,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="icons.qrc">
+             <iconset resource="../icons.qrc">
               <normaloff>:/icons/images/NavBack.png</normaloff>:/icons/images/NavBack.png</iconset>
             </property>
            </widget>
@@ -78,7 +78,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="icons.qrc">
+             <iconset resource="../icons.qrc">
               <normaloff>:/icons/images/StopHS.png</normaloff>:/icons/images/StopHS.png</iconset>
             </property>
            </widget>
@@ -89,7 +89,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="icons.qrc">
+             <iconset resource="../icons.qrc">
               <normaloff>:/icons/images/NavForward.png</normaloff>:/icons/images/NavForward.png</iconset>
             </property>
            </widget>
@@ -104,7 +104,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="icons.qrc">
+             <iconset resource="../icons.qrc">
               <normaloff>:/icons/images/ReverseHS.png</normaloff>:/icons/images/ReverseHS.png</iconset>
             </property>
            </widget>
@@ -115,7 +115,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="icons.qrc">
+             <iconset resource="../icons.qrc">
               <normaloff>:/icons/images/PauseHS.png</normaloff>:/icons/images/PauseHS.png</iconset>
             </property>
            </widget>
@@ -126,7 +126,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="icons.qrc">
+             <iconset resource="../icons.qrc">
               <normaloff>:/icons/images/PlayHS.png</normaloff>:/icons/images/PlayHS.png</iconset>
             </property>
            </widget>
@@ -1389,7 +1389,7 @@
   </customwidget>
  </customwidgets>
  <resources>
-  <include location="icons.qrc"/>
+  <include location="../icons.qrc"/>
  </resources>
  <connections/>
 </ui>

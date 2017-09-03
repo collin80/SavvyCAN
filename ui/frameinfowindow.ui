@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Detailed Frame Information</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_2" stretch="10,1,5">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -72,8 +72,19 @@
      </property>
     </widget>
    </item>
+   <item>
+    <widget class="QCustomPlot" name="graphHistogram" native="true"/>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
  <slots>

@@ -62,6 +62,17 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     //ui->graphView->xAxis->setTickStep(5.0);
     //ui->graphView->xAxis->setSubTickCount(0);
 
+    if (openGLMode)
+    {
+        ui->graphView->setAntialiasedElements(QCP::aeAll);
+        ui->graphView->setOpenGl(true);
+    }
+    else
+    {
+        ui->graphView->setOpenGl(false);
+        ui->graphView->setAntialiasedElements(QCP::aeNone);
+    }
+
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
     connect(ui->btnReverse, SIGNAL(clicked(bool)), this, SLOT(btnReverseClick()));
@@ -146,6 +157,7 @@ void FlowViewWindow::readSettings()
     }
 
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+    openGLMode = settings.value("Main/UseOpenGL", false).toBool();
 }
 
 void FlowViewWindow::writeSettings()

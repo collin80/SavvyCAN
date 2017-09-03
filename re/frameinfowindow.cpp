@@ -17,6 +17,31 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
 
+
+    ui->graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                    QCP::iSelectLegend | QCP::iSelectPlottables);
+
+    ui->graphHistogram->xAxis->setRange(0, 63);
+    ui->graphHistogram->yAxis->setRange(0, 100);
+    ui->graphHistogram->axisRect()->setupFullAxesBox();
+
+    ui->graphHistogram->xAxis->setLabel("Bits");
+    ui->graphHistogram->yAxis->setLabel("Instances");
+
+    ui->graphHistogram->legend->setVisible(false);
+
+    if (useOpenGL)
+    {
+        ui->graphHistogram->setAntialiasedElements(QCP::aeAll);
+        //ui->graphingView->setNoAntialiasingOnDrag(true);
+        ui->graphHistogram->setOpenGl(true);
+    }
+    else
+    {
+        ui->graphHistogram->setOpenGl(false);
+        ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
+    }
+
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -50,6 +75,7 @@ void FrameInfoWindow::readSettings()
         resize(settings.value("FrameInfo/WindowSize", QSize(794, 494)).toSize());
         move(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint());
     }
+    useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
 }
 
 void FrameInfoWindow::writeSettings()
@@ -121,6 +147,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int maxData[8];
     int dataHistogram[256][8];
     int bitfieldHistogram[64];
+    QVector<double> graphX, graphY;
+    double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
@@ -300,7 +328,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                     tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +" (" + Utility::formatByteAsBinary(d) +") -> " + QString::number(dataHistogram[d][c]));
                     histBase->addChild(tempItem);
                 }
-            }            
+            }
         }
 
         dataBase = new QTreeWidgetItem();
@@ -312,10 +340,25 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                             + QString::number(c % 8) + ") :" + QString::number(bitfieldHistogram[c]));
 
             dataBase->addChild(tempItem);
+            graphX.append(c);
+            graphY.append(bitfieldHistogram[c]);
+            if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
         }
         baseNode->addChild(dataBase);
 
         ui->treeDetails->insertTopLevelItem(0, baseNode);
+        ui->graphHistogram->clearGraphs();
+        ui->graphHistogram->addGraph();
+        ui->graphHistogram->graph()->setData(graphX, graphY);
+        ui->graphHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
+        QBrush graphBrush;
+        graphBrush.setColor(Qt::red);
+        graphBrush.setStyle(Qt::SolidPattern);
+        ui->graphHistogram->graph()->setPen(Qt::NoPen);
+        ui->graphHistogram->graph()->setBrush(graphBrush);
+        ui->graphHistogram->yAxis->setRange(0, maxY * 1.02);
+        ui->graphHistogram->axisRect()->setupFullAxesBox();
+        ui->graphHistogram->replot();
     }
     else
     {
