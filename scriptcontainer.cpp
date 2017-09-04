@@ -111,12 +111,6 @@ void ScriptContainer::updateValuesTable(QTableWidget *widget)
 {
     QString valu;
 
-    if (widget->columnCount() == 0)
-    {
-        widget->insertColumn(0);
-        widget->insertColumn(1);
-    }
-
     foreach (QString paramName, scriptParams)
     {
         valu = scriptEngine.globalObject().property(paramName).toString();
@@ -124,7 +118,7 @@ void ScriptContainer::updateValuesTable(QTableWidget *widget)
         bool found = false;
         for (int i = 0; i < widget->rowCount(); i++)
         {
-            if (widget->item(i, 0)->text().compare(paramName) == 0)
+            if (widget->item(i, 0) && widget->item(i, 0)->text().compare(paramName) == 0)
             {
                 found = true;
                 if (!widget->item(i, 1)->isSelected())

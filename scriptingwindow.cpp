@@ -43,6 +43,9 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     elapsedTime.start();
     valuesTimer.start(1000);
+
+    ui->tableVariables->insertColumn(0);
+    ui->tableVariables->insertColumn(1);
 }
 
 ScriptingWindow::~ScriptingWindow()
@@ -117,6 +120,13 @@ void ScriptingWindow::showEvent(QShowEvent* event)
 
 void ScriptingWindow::changeCurrentScript()
 {
+    ui->tableVariables->clear();
+    for (int i = 0; i < ui->tableVariables->rowCount(); i++) ui->tableVariables->removeRow(0);
+    QStringList labels;
+    labels.append("Parameter");
+    labels.append("Value");
+    ui->tableVariables->setHorizontalHeaderLabels(labels);
+
     int sel = ui->listLoadedScripts->currentRow();
     if (sel < 0) return;
 
@@ -130,7 +140,6 @@ void ScriptingWindow::changeCurrentScript()
     currentScript = container;
     editor->setPlainText(container->scriptText);
     editor->setEnabled(true);
-    ui->tableVariables->clear();
     connect(this, SIGNAL(updateValueTable(QTableWidget*)), currentScript, SLOT(updateValuesTable(QTableWidget*)));
     connect(this, SIGNAL(updatedParameter(QString,QString)), currentScript, SLOT(updateParameter(QString,QString)));
 }

@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Scripting Interface</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,4">
+  <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,4">
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
