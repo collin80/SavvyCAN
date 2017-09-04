@@ -67,8 +67,7 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
         return;
 
     /* disconnect device if we have one connected */
-    if(mDev_p)
-        disconnectDevice();
+    disconnectDevice();
 
     /* copy bus config */
     setBusConfig(0, bus);
@@ -78,10 +77,11 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
         return;
 
     /* create device */
-    mDev_p = QCanBus::instance()->createDevice("socketcan", getPort());
+    QString errorString;
+    mDev_p = QCanBus::instance()->createDevice("socketcan", getPort(), &errorString);
     if (!mDev_p) {
         disconnectDevice();
-        qDebug() << "can't create device";
+        qDebug() << "Error: createDevice(" << getType() << getPort() << "):" << errorString;
         return;
     }
 
