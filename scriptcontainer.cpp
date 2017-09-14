@@ -18,6 +18,10 @@ void ScriptContainer::compileScript()
 
     emit sendLog("Compiling script...");
 
+    canHelper->clearFilters();
+    isoHelper->clearFilters();
+    udsHelper->clearFilters();
+
     if (result.isError())
     {
 
