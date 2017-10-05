@@ -18,6 +18,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     editor->setWordWrapMode(QTextOption::NoWrap);
     editor->setTabStopWidth(4);
     editor->setEnabled(false);
+    editor->setFont(QFont("Monospace", 12));
     editor->show();
     ui->verticalLayout->insertWidget(2,editor, 10);
 
