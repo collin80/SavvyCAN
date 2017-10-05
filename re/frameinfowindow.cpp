@@ -94,12 +94,18 @@ void FrameInfoWindow::updatedFrames(int numFrames)
 {
     if (numFrames == -1) //all frames deleted. Kill the display
     {
+        //qDebug() << "Delete all frames in Info Window";
         ui->listFrameID->clear();
         ui->treeDetails->clear();
+        foundID.clear();
         refreshIDList();
     }
     else if (numFrames == -2) //all new set of frames. Reset
     {
+        //qDebug() << "All new set of frames in Info Window";
+        ui->listFrameID->clear();
+        ui->treeDetails->clear();
+        foundID.clear();
         refreshIDList();
         if (ui->listFrameID->count() > 0)
         {
@@ -109,20 +115,29 @@ void FrameInfoWindow::updatedFrames(int numFrames)
     }
     else //just got some new frames. See if they are relevant.
     {
+        //qDebug() << "Got frames in Info Window";
         if (numFrames > modelFrames->count()) return;
+
         unsigned int currID = 0;
         if (ui->listFrameID->currentItem())
-            currID = ui->listFrameID->currentItem()->text().toInt(NULL, 16);
-        bool foundID = false;
+            currID = (unsigned int)ui->listFrameID->currentItem()->text().toInt(NULL, 16);
+        bool thisID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
+            unsigned int id = modelFrames->at(x).ID;
+            if (!foundID.contains(id))
+            {
+                foundID.append(id);
+                ui->listFrameID->addItem(Utility::formatNumber(id));
+            }
+
             if (currID == modelFrames->at(x).ID)
             {
-                foundID = true;
+                thisID = true;
                 break;
             }
         }
-        if (foundID)
+        if (thisID)
         {
             //the problem here is that it'll blast us out of the details as soon as this
             //happens. The only way to do this properly is to actually traverse
@@ -132,6 +147,9 @@ void FrameInfoWindow::updatedFrames(int numFrames)
 
             //updateDetailsWindow(ui->listFrameID->currentItem()->text());
         }
+        //default is to sort in ascending order
+        ui->listFrameID->sortItems();
+        ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
     }
 }
 
@@ -376,7 +394,7 @@ void FrameInfoWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = modelFrames->at(i).ID;
+        id = (int)modelFrames->at(i).ID;
         if (!foundID.contains(id))
         {
             foundID.append(id);
