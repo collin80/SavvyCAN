@@ -49,6 +49,24 @@
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLabel" name="lblContMsg">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <italic>true</italic>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
       <item alignment="Qt::AlignHCenter">
        <widget class="QLabel" name="label">
         <property name="sizePolicy">
@@ -240,6 +258,8 @@
     <addaction name="actionOpen_Log_File"/>
     <addaction name="actionSave_Filtered_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="actionSave_Continuous_Logfile"/>
+    <addaction name="separator"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
@@ -426,6 +446,11 @@
   <action name="actionSignal_Viewer">
    <property name="text">
     <string>Signal Viewer</string>
+   </property>
+  </action>
+  <action name="actionSave_Continuous_Logfile">
+   <property name="text">
+    <string>Start Continuous Logging</string>
    </property>
   </action>
  </widget>

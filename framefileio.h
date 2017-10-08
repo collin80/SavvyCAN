@@ -42,7 +42,7 @@ public:
     static bool loadCanDumpFile(QString, QVector<CANFrame>*);
     static bool loadPCANFile(QString, QVector<CANFrame>*);
     static bool loadKvaserFile(QString, QVector<CANFrame>*, bool);
-    static bool saveCRTDFile(QString, const QVector<CANFrame>*);    
+    static bool saveCRTDFile(QString, const QVector<CANFrame>*);
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);
     static bool saveLogFile(QString, const QVector<CANFrame>*);
@@ -51,6 +51,13 @@ public:
     static bool saveIXXATFile(QString, const QVector<CANFrame>*);
     static bool saveCANDOFile(QString, const QVector<CANFrame>*);
     static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
+    static bool openContinuousNative();
+    static bool closeContinuousNative();
+    static bool writeContinuousNative(const QVector<CANFrame>*, int);
+    static bool flushContinuousNative();
+
+private:
+    static QFile continuousFile;
 };
 
 #endif // FRAMEFILEIO_H

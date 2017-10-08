@@ -7,9 +7,10 @@
 
 #include "utility.h"
 
+QFile FrameFileIO::continuousFile;
+
 FrameFileIO::FrameFileIO()
 {
-
 }
 
 bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* frameCache)
@@ -609,6 +610,92 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
     outFile->close();
     delete outFile;
     return true;
+}
+
+bool FrameFileIO::openContinuousNative()
+{
+    QString filename;
+    QFileDialog dialog(qApp->activeWindow());
+
+    QStringList filters;
+    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        continuousFile.setFileName(filename);
+
+        if (!continuousFile.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
+            return false;
+        }
+        continuousFile.write("Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
+        continuousFile.write("\n");
+        return true;
+    }
+    return false;
+}
+
+bool FrameFileIO::closeContinuousNative()
+{
+    if (continuousFile.isOpen())
+    {
+        continuousFile.close();
+        return true;
+    }
+    return false;
+}
+
+bool FrameFileIO::writeContinuousNative(const QVector<CANFrame>* frames, int beginningFrame)
+{
+    if (!continuousFile.isOpen()) return false;
+    qDebug() << "Bgn: " << beginningFrame << "  Count: " << frames->count();
+    for (int c = beginningFrame; c < frames->count(); c++)
+    {
+        continuousFile.write(QString::number(frames->at(c).timestamp).toUtf8());
+        continuousFile.putChar(44);
+
+        continuousFile.write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        continuousFile.putChar(44);
+
+        if (frames->at(c).extended) continuousFile.write("true,");
+        else continuousFile.write("false,");
+
+        if (frames->at(c).isReceived) continuousFile.write("Rx,");
+        else continuousFile.write("Tx,");
+
+        continuousFile.write(QString::number(frames->at(c).bus).toUtf8());
+        continuousFile.putChar(44);
+
+        continuousFile.write(QString::number(frames->at(c).len).toUtf8());
+        continuousFile.putChar(44);
+
+        for (unsigned int temp = 0; temp < 8; temp++)
+        {
+            if (temp < frames->at(c).len)
+                continuousFile.write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            else
+                continuousFile.write("00");
+            continuousFile.putChar(44);
+        }
+
+        continuousFile.write("\n");
+    }
+    return true;
+}
+
+bool FrameFileIO::flushContinuousNative()
+{
+    if (continuousFile.isOpen())
+    {
+        return continuousFile.flush();
+    }
+    return false;
 }
 
 bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames)

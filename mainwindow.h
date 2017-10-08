@@ -58,6 +58,7 @@ private slots:
     void handleSaveFilteredFile();
     void handleSaveFilters();
     void handleLoadFilters();
+    void handleContinousLogging();
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
@@ -131,6 +132,9 @@ private:
     bool useSystemClock;
     bool bDirty; //have frames been added or subtracted since the last save/load?
     bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
+
+    bool continuousLogging;
+    int continuousLogFlushCounter;
 
     //References to other windows we can display
     GraphingWindow *graphingWindow;

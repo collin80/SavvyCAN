@@ -8,14 +8,7 @@
 #include "utility.h"
 
 /*
-Compile for all platforms and create release and make Win32 binary.
-
 Some notes on things I'd like to put into the program but haven't put on github (yet)
-
-Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
-
-fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
-or, try to find things that appear to be multi-byte integers
 
 Allow scripts to read/write signals from DBC files
 allow scripts to load DBC files in support of the script - maybe the graphing system too.
@@ -88,6 +81,8 @@ MainWindow::MainWindow(QWidget *parent) :
     inhibitFilterUpdate = false;
     rxFrames = 0;
     framesPerSec = 0;
+    continuousLogging = false;
+    continuousLogFlushCounter = 0;
 
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
@@ -128,6 +123,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
+    connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -413,6 +409,30 @@ void MainWindow::tickGUIUpdate()
 
         if (model->needsFilterRefresh()) updateFilterList();
 
+        if (continuousLogging)
+        {
+            const QVector<CANFrame> *modelFrames = model->getListReference();
+            FrameFileIO::writeContinuousNative(modelFrames, modelFrames->count() - rxFrames);
+
+            continuousLogFlushCounter++;
+            if ((continuousLogFlushCounter % 3) == 0)
+            {
+                if (ui->lblContMsg->text().length() > 2)
+                {
+                    ui->lblContMsg->setText("");
+                }
+                else
+                {
+                    ui->lblContMsg->setText("CONTINUOUS LOGGING");
+                }
+            }
+            if (continuousLogFlushCounter > 8)
+            {
+                continuousLogFlushCounter = 0;
+                FrameFileIO::flushContinuousNative();
+            }
+        }
+
         rxFrames = 0;
     //}
 }
@@ -490,6 +510,23 @@ void MainWindow::handleSaveFile()
     {
         loadedFileName = filename;
         updateFileStatus();
+    }
+}
+
+void MainWindow::handleContinousLogging()
+{
+    continuousLogging = !continuousLogging;
+
+    if (continuousLogging)
+    {
+        ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
+        FrameFileIO::openContinuousNative();
+    }
+    else
+    {
+        ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
+        ui->lblContMsg->setText("");
+        FrameFileIO::closeContinuousNative();
     }
 }
 
