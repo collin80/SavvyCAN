@@ -223,6 +223,25 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>signalsList</tabstop>
+  <tabstop>txtName</tabstop>
+  <tabstop>txtBitLength</tabstop>
+  <tabstop>cbIntelFormat</tabstop>
+  <tabstop>comboType</tabstop>
+  <tabstop>txtScale</tabstop>
+  <tabstop>txtBias</tabstop>
+  <tabstop>txtMinVal</tabstop>
+  <tabstop>txtMaxVal</tabstop>
+  <tabstop>txtUnitName</tabstop>
+  <tabstop>comboReceiver</tabstop>
+  <tabstop>rbNotMulti</tabstop>
+  <tabstop>rbMultiplexed</tabstop>
+  <tabstop>rbMultiplexor</tabstop>
+  <tabstop>txtMultiplexValue</tabstop>
+  <tabstop>txtComment</tabstop>
+  <tabstop>valuesTable</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

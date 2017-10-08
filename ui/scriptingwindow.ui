@@ -137,6 +137,19 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>listLog</tabstop>
+  <tabstop>btnNewScript</tabstop>
+  <tabstop>btnRemoveScript</tabstop>
+  <tabstop>btnLoadScript</tabstop>
+  <tabstop>listLoadedScripts</tabstop>
+  <tabstop>tableVariables</tabstop>
+  <tabstop>btnSaveScript</tabstop>
+  <tabstop>btnRevertScript</tabstop>
+  <tabstop>btnRecompile</tabstop>
+  <tabstop>cbAutoScroll</tabstop>
+  <tabstop>btnClearLog</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

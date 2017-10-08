@@ -104,6 +104,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>btnInterestedFile</tabstop>
+  <tabstop>btnLoadRefFile</tabstop>
+  <tabstop>btnClear</tabstop>
+  <tabstop>ckUniqueToInterested</tabstop>
+  <tabstop>treeDetails</tabstop>
+  <tabstop>btnSaveDetails</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

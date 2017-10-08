@@ -379,6 +379,30 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>spinStartID</tabstop>
+  <tabstop>spinEndID</tabstop>
+  <tabstop>ckShowNoReply</tabstop>
+  <tabstop>spinReplyOffset</tabstop>
+  <tabstop>cbAllowAdaptiveOffset</tabstop>
+  <tabstop>cbBuses</tabstop>
+  <tabstop>spinDelay</tabstop>
+  <tabstop>ckTester</tabstop>
+  <tabstop>ckSession</tabstop>
+  <tabstop>ckReset</tabstop>
+  <tabstop>ckSecurity</tabstop>
+  <tabstop>ckReadByID</tabstop>
+  <tabstop>ckReadByAddr</tabstop>
+  <tabstop>ckWildcard</tabstop>
+  <tabstop>spinLowerService</tabstop>
+  <tabstop>spinUpperService</tabstop>
+  <tabstop>spinNumBytes</tabstop>
+  <tabstop>spinLowerSubfunc</tabstop>
+  <tabstop>spinUpperSubfunc</tabstop>
+  <tabstop>btnScan</tabstop>
+  <tabstop>treeResults</tabstop>
+  <tabstop>btnSaveResults</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

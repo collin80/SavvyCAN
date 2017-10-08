@@ -301,6 +301,25 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>spinTiming</tabstop>
+  <tabstop>spinBurst</tabstop>
+  <tabstop>spinBytes</tabstop>
+  <tabstop>cbBuses</tabstop>
+  <tabstop>rbSequentialID</tabstop>
+  <tabstop>rbRandomID</tabstop>
+  <tabstop>rbRangeIDSel</tabstop>
+  <tabstop>rbFilterIDSel</tabstop>
+  <tabstop>rbSequentialBits</tabstop>
+  <tabstop>rbSweep</tabstop>
+  <tabstop>rbRandomBits</tabstop>
+  <tabstop>txtStartID</tabstop>
+  <tabstop>txtEndID</tabstop>
+  <tabstop>listID</tabstop>
+  <tabstop>btnAllFilters</tabstop>
+  <tabstop>btnNoFilters</tabstop>
+  <tabstop>btnStartStop</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

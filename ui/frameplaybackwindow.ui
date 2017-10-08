@@ -355,6 +355,27 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>btnStepBack</tabstop>
+  <tabstop>btnPause</tabstop>
+  <tabstop>btnPlayReverse</tabstop>
+  <tabstop>btnStop</tabstop>
+  <tabstop>btnPlay</tabstop>
+  <tabstop>btnStepForward</tabstop>
+  <tabstop>spinPlaySpeed</tabstop>
+  <tabstop>spinBurstSpeed</tabstop>
+  <tabstop>cbLoop</tabstop>
+  <tabstop>comboCANBus</tabstop>
+  <tabstop>tblSequence</tabstop>
+  <tabstop>btnLoadFile</tabstop>
+  <tabstop>btnLoadLive</tabstop>
+  <tabstop>btnDelete</tabstop>
+  <tabstop>listID</tabstop>
+  <tabstop>btnSelectAll</tabstop>
+  <tabstop>btnSelectNone</tabstop>
+  <tabstop>btnLoadFilters</tabstop>
+  <tabstop>btnSaveFilters</tabstop>
+ </tabstops>
  <resources>
   <include location="../icons.qrc"/>
  </resources>

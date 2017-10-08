@@ -266,6 +266,20 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>treeMatches</tabstop>
+  <tabstop>spinStates</tabstop>
+  <tabstop>rbRealtime</tabstop>
+  <tabstop>rbLogged</tabstop>
+  <tabstop>spinFreq</tabstop>
+  <tabstop>spinMinBits</tabstop>
+  <tabstop>spinIterations</tabstop>
+  <tabstop>spinMaxBits</tabstop>
+  <tabstop>listID</tabstop>
+  <tabstop>btnAll</tabstop>
+  <tabstop>btnNone</tabstop>
+  <tabstop>btnStart</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

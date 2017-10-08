@@ -85,6 +85,11 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>listFrameID</tabstop>
+  <tabstop>treeDetails</tabstop>
+  <tabstop>btnSave</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
  <slots>

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>720</height>
+    <height>743</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -241,6 +241,24 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>cbRestorePositions</tabstop>
+  <tabstop>cbDisplayHex</tabstop>
+  <tabstop>cbValidate</tabstop>
+  <tabstop>rbSeconds</tabstop>
+  <tabstop>rbMicros</tabstop>
+  <tabstop>rbSysClock</tabstop>
+  <tabstop>lineClockFormat</tabstop>
+  <tabstop>cbUseFiltered</tabstop>
+  <tabstop>cbUseOpenGL</tabstop>
+  <tabstop>cbMainAutoScroll</tabstop>
+  <tabstop>cbFlowUseTimestamp</tabstop>
+  <tabstop>cbFlowAutoRef</tabstop>
+  <tabstop>cbPlaybackLoop</tabstop>
+  <tabstop>spinPlaybackSpeed</tabstop>
+  <tabstop>comboSendingBus</tabstop>
+  <tabstop>cbInfoAutoExpand</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
