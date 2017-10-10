@@ -276,12 +276,12 @@ void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJ
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
-    for (unsigned int i = 0; i < msg.len; i++)
+    for (int i = 0; i < msg.len; i++)
     {
-        msg.data[i] = (uint8_t)data.property(i).toInt();
+        msg.data[i] = static_cast<uint8_t>(data.property(i).toInt());
     }
 
-    msg.bus = (uint32_t)bus.toInt();
+    msg.bus = bus.toInt();
 
     if (msg.ID > 0x7FF) msg.extended = true;
 
@@ -302,7 +302,7 @@ void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
 
     QJSValueList args;
     args << msg.bus << msg.ID << msg.len;
-    QJSValue dataBytes = scriptEngine->newArray(msg.len);
+    QJSValue dataBytes = scriptEngine->newArray(static_cast<uint>(msg.len));
 
     for (unsigned int j = 0; j < msg.len; j++) dataBytes.setProperty(j, QJSValue(msg.data[j]));
     args.append(dataBytes);
@@ -341,7 +341,7 @@ void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSVa
 {
     UDS_MESSAGE msg;
     msg.extended = false;
-    msg.ID = id.toInt();
+    msg.ID = id.toUInt();
     msg.len = length.toUInt();
     msg.service = service.toUInt();
     msg.subFuncLen = sublen.toUInt();
@@ -351,7 +351,7 @@ void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSVa
 
     for (unsigned int i = 0; i < msg.len; i++)
     {
-        msg.data[i] = (uint8_t)data.property(i).toInt();
+        msg.data[i] = static_cast<uint8_t>(data.property(i).toInt());
     }
 
     msg.bus = (uint32_t)bus.toInt();

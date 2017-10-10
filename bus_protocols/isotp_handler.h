@@ -23,8 +23,8 @@ public:
     void sendISOTPFrame(int bus, int ID, QVector<unsigned char> data);
     void setProcessAll(bool state);
     void setFlowCtrl(bool state);
-    void addFilter(int pBusId, uint32_t ID, uint32_t mask);
-    void removeFilter(int pBusId, uint32_t ID, uint32_t mask);
+    void addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask);
+    void removeFilter(uint32_t pBusId, uint32_t ID, uint32_t mask);
     void clearAllFilters();
 
 public slots:

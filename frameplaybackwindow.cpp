@@ -30,6 +30,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     for (int n = 0; n < numBuses; n++) ui->comboCANBus->addItem(QString::number(n));
     ui->comboCANBus->addItem(tr("All"));
     ui->comboCANBus->addItem(tr("From File"));
+    ui->comboCANBus->setCurrentIndex(0);
 
     readSettings();
 
@@ -113,7 +114,7 @@ void FramePlaybackWindow::readSettings()
         ui->cbLoop->setChecked(true);
     }
     ui->spinPlaySpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
-    ui->comboCANBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
+    ui->comboCANBus->setCurrentIndex(settings.value("Playback/SendingBus", 0).toInt());
     whichBusSend = ui->comboCANBus->currentIndex();
 }
 
@@ -523,7 +524,7 @@ void FramePlaybackWindow::timerTriggered()
 
 void FramePlaybackWindow::updatePosition(bool forward)
 {
-
+    //qDebug() << "updatePosition";
     if (forward)
     {
         if (currentPosition < (currentSeqItem->data.count() - 1)) currentPosition++; //still in same file so keep going
@@ -586,10 +587,10 @@ void FramePlaybackWindow::updatePosition(bool forward)
             }
         }
     }
-
+    updateFrameLabel();
     //only send frame out if its ID is checked in the list. Otherwise discard it.
     CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
-    int originalBus = thisFrame->bus;
+    uint32_t originalBus = thisFrame->bus;
     if (currentSeqItem->idFilters.find(thisFrame->ID).value())
     {
         if (whichBusSend < ui->comboCANBus->count() - 2)
@@ -611,6 +612,5 @@ void FramePlaybackWindow::updatePosition(bool forward)
         }
 
         thisFrame->bus = originalBus;
-        updateFrameLabel();
     }
 }

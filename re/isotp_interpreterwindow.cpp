@@ -10,15 +10,20 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     modelFrames = frames;
 
     decoder = new ISOTP_HANDLER;
+    udsDecoder = new UDS_HANDLER;
 
     decoder->setReception(true);
     decoder->setProcessAll(true);
 
+    udsDecoder->setReception(false);
+
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ISOTP_InterpreterWindow::updatedFrames);
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_HANDLER::updatedFrames);
     connect(decoder, &ISOTP_HANDLER::newISOMessage, this, &ISOTP_InterpreterWindow::newISOMessage);
+    connect(udsDecoder, &UDS_HANDLER::newUDSMessage, this, &ISOTP_InterpreterWindow::newUDSMessage);
 
     connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
+    connect(ui->btnClearList, &QAbstractButton::click, this, &ISOTP_InterpreterWindow::clearList);
 
     QStringList headers;
     headers << "Timestamp" << "ID" << "Bus" << "Dir" << "Length" << "Data";
@@ -32,6 +37,10 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     ui->tableIsoFrames->setHorizontalHeaderLabels(headers);
     QHeaderView *HorzHdr = ui->tableIsoFrames->horizontalHeader();
     HorzHdr->setStretchLastSection(true);
+
+    decoder->setReception(true);
+    decoder->setFlowCtrl(false);
+    decoder->setProcessAll(true);
 }
 
 ISOTP_InterpreterWindow::~ISOTP_InterpreterWindow()
@@ -72,6 +81,11 @@ void ISOTP_InterpreterWindow::writeSettings()
         settings.setValue("ISODecodeWindow/WindowSize", size());
         settings.setValue("ISODecodeWindow/WindowPos", pos());
     }
+}
+
+void ISOTP_InterpreterWindow::clearList()
+{
+    ui->tableIsoFrames->clear();
 }
 
 void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
@@ -117,13 +131,34 @@ void ISOTP_InterpreterWindow::showDetailView()
     }
     buildString.append("\r\r");
 
-    //if (ui->cb->isChecked())
-    //{
+    ui->txtFrameDetails->setPlainText(buildString);
 
-    //}
+    //pass this frame to the UDS decoder to see if it feels it could be a UDS related message
+    udsDecoder->gotISOTPFrame(messages[rowNum]);
+}
 
-    ui->txtFrameDetails->setText(buildString);
+void ISOTP_InterpreterWindow::newUDSMessage(UDS_MESSAGE msg)
+{
+    //qDebug() << "Got UDS message in ISOTP Interpreter";
+    QString buildText;
 
+    buildText = ui->txtFrameDetails->toPlainText();
+
+    buildText.append("UDS Message:\n");
+    if (msg.isErrorReply)
+    {
+        buildText.append("Error reply for service " + udsDecoder->getServiceShortDesc(msg.service));
+        buildText.append("\nError Desc: " + udsDecoder->getNegativeResponseShort(msg.subFunc));
+    }
+    else
+    {
+        if (msg.service < 0x3F || (msg.service > 0x7F && msg.service < 0xAF))
+            buildText.append("Request for service " + udsDecoder->getServiceShortDesc(msg.service) + " Sub Func: " + QString::number(msg.subFunc));
+        else
+            buildText.append("Response on service " + udsDecoder->getServiceShortDesc(msg.service - 0x40) + " Sub Func: " + QString::number(msg.subFunc));
+    }
+
+    ui->txtFrameDetails->setPlainText(buildText);
 }
 
 void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)

@@ -65,7 +65,7 @@ namespace UDS_SERVICES
 
 struct CODE_STRUCT
 {
-    int code;
+    unsigned int code;
     QString shortDesc;
     QString longDesc;
 };
@@ -73,9 +73,9 @@ struct CODE_STRUCT
 class UDS_MESSAGE: public ISOTP_MESSAGE
 {
 public:
-    int service;
-    int subFunc;
-    int subFuncLen;
+    unsigned int service;
+    unsigned int subFunc;
+    unsigned int subFuncLen;
     bool isErrorReply;
 
     UDS_MESSAGE();
@@ -94,8 +94,8 @@ public:
     void sendUDSFrame(const UDS_MESSAGE &msg);
     void setProcessAllIDs(bool state);
     void setFlowCtrl(bool state);
-    void addFilter(int pBusId, uint32_t ID, uint32_t mask);
-    void removeFilter(int pBusId, uint32_t ID, uint32_t mask);
+    void addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask);
+    void removeFilter(uint32_t pBusId, uint32_t ID, uint32_t mask);
     void clearAllFilters();
 
     QString getServiceShortDesc(int service);

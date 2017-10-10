@@ -272,12 +272,12 @@ void UDS_HANDLER::setProcessAllIDs(bool state)
     isoHandler->setProcessAll(state);
 }
 
-void UDS_HANDLER::addFilter(int pBusId, uint32_t ID, uint32_t mask)
+void UDS_HANDLER::addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask)
 {
     isoHandler->addFilter(pBusId, ID, mask);
 }
 
-void UDS_HANDLER::removeFilter(int pBusId, uint32_t ID, uint32_t mask)
+void UDS_HANDLER::removeFilter(uint32_t pBusId, uint32_t ID, uint32_t mask)
 {
     isoHandler->removeFilter(pBusId, ID, mask);
 }

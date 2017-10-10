@@ -60,14 +60,15 @@ void ScriptingWindow::newFrames(const CANConnection* pConn, const QVector<CANFra
 {
     /*FIXME: name of the probe and bus should be checked */
     Q_UNUSED(pConn);
+    Q_UNUSED(pFrames);
 
-    for (int j = 0; j < scripts.length(); j++)
+    /*for (int j = 0; j < scripts.length(); j++)
     {
         foreach(const CANFrame& frame, pFrames)
         {
             //scripts[j]->gotFrame(frame);
         }
-    }
+    }*/
 }
 
 void ScriptingWindow::updatedValue(int row, int col)

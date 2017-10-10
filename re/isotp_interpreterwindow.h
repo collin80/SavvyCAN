@@ -22,12 +22,15 @@ public:
 
 private slots:
     void newISOMessage(ISOTP_MESSAGE msg);
+    void newUDSMessage(UDS_MESSAGE msg);
     void showDetailView();
     void updatedFrames(int);
+    void clearList();
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;
     ISOTP_HANDLER *decoder;
+    UDS_HANDLER *udsDecoder;
 
     const QVector<CANFrame> *modelFrames;
     QVector<ISOTP_MESSAGE> messages;
