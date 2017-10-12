@@ -4,6 +4,33 @@
 #include "isotp_handler.h"
 #include <QDebug>
 
+QVector<CODE_STRUCT> UDS_DIAG_CTRL_SUB = {
+    {1,"DFLT_SESS", "Default session"},
+    {2,"PROG_SESS", "Programming Session"},
+    {3,"EXT_SESS", "Extended Diagnostics Session"},
+    {4,"SAFETY_SESS", "Safety System Diagnostics Session"},
+};
+
+QVector<CODE_STRUCT> UDS_ECU_RESET_SUB = {
+    {1,"HARD_RESET", "Hard reset of ECU"},
+    {2,"KEYOFFON_RESET", "Simulated key off then on reset"},
+    {3,"SOFT_RESET", "Soft reset - leaving RAM intact"},
+    {4,"EN_POWERDOWN_RESET", "Enable sleep mode"},
+    {5,"DIS_POWERDOWN_RESET", "Disable sleep mode"},
+};
+
+QVector<CODE_STRUCT> UDS_COMM_CTRL_SUB = {
+    {0,"COMM_NORMAL", "Enable both Rx and Tx of normal messages"},
+    {1,"COMM_DIS_TX", "Enable reception of normal messages but don't Tx them"},
+    {3,"COMM_DIS_ALL", "Disable both Rx and Tx of non-diagnostics messages"},
+};
+
+QVector<CODE_STRUCT> UDS_ROUTINE_SUB = {
+    {1,"START_ROUTINE", "Start routine by given ID"},
+    {2,"STOP_ROUTINE", "Stop routine by given ID"},
+    {3,"GET_ROUTINE_RESULTS", "Get results from routine specified by ID"},
+};
+
 QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
     {1, "OBDII_SHOW_CURRENT", "OBDII - Show current data"},
     {2, "OBDII_SHOW_FREEZE", "OBDII - Show freeze data"},
@@ -214,7 +241,7 @@ void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
     QVector<unsigned char> data;
     if (msg.bus < 0) return;
     if (msg.bus >= CANConManager::getInstance()->getNumBuses()) return;
-    if (msg.service < 0 || msg.service > 0xFF) return;
+    if (msg.service > 0xFF) return;
 
     data.append(msg.service);
     for (int b = msg.subFuncLen - 1; b >= 0; b--)
@@ -228,42 +255,173 @@ void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
     qDebug() << "Sent UDS service: " << getServiceShortDesc(msg.service) << " on bus " << msg.bus;
 }
 
-QString UDS_HANDLER::getServiceShortDesc(int service)
+QString UDS_HANDLER::getShortDesc(QVector<CODE_STRUCT> &codeVector, int code)
 {
-    foreach (CODE_STRUCT code, UDS_SERVICE_DESC)
+    foreach (CODE_STRUCT codeRec, codeVector)
     {
-        if (code.code == service) return code.shortDesc;
-        if (code.code == (service + 0x40)) return code.shortDesc;
+        if (codeRec.code == code) return codeRec.shortDesc;
     }
     return QString();
+}
+
+QString UDS_HANDLER::getLongDesc(QVector<CODE_STRUCT> &codeVector, int code)
+{
+    foreach (CODE_STRUCT codeRec, codeVector)
+    {
+        if (codeRec.code == code) return codeRec.longDesc;
+    }
+    return QString();
+}
+
+QString UDS_HANDLER::getServiceShortDesc(int service)
+{
+    QString ret;
+    ret = getShortDesc(UDS_SERVICE_DESC, service);
+    if (ret.length() == 0)
+        ret = getShortDesc(UDS_SERVICE_DESC, service + 0x40);
+    return ret;
 }
 
 QString UDS_HANDLER::getServiceLongDesc(int service)
 {
-    foreach (CODE_STRUCT code, UDS_SERVICE_DESC)
-    {
-        if (code.code == service) return code.longDesc;
-        if (code.code == (service + 0x40)) return code.longDesc;
-    }
-    return QString();
+    QString ret;
+    ret = getLongDesc(UDS_SERVICE_DESC, service);
+    if (ret.length() == 0)
+        ret = getLongDesc(UDS_SERVICE_DESC, service + 0x40);
+    return ret;
 }
 
 QString UDS_HANDLER::getNegativeResponseShort(int respCode)
 {
-    foreach (CODE_STRUCT code, UDS_NEG_RESPONSE)
-    {
-        if (code.code == respCode) return code.shortDesc;
-    }
-    return QString();
+    QString ret;
+    ret = getShortDesc(UDS_NEG_RESPONSE, respCode);
+    return ret;
 }
 
 QString UDS_HANDLER::getNegativeResponseLong(int respCode)
 {
-    foreach (CODE_STRUCT code, UDS_NEG_RESPONSE)
-    {
-        if (code.code == respCode) return code.longDesc;
+    QString ret;
+    ret = getLongDesc(UDS_NEG_RESPONSE, respCode);
+    return ret;
+}
+
+/*
+ * This function kind of breaks the hands off approach of the rest of the class. In here
+ * we dig deep into nitty gritty details of UDS and much more of this is hardcoded
+ * to the UDS standard than the rest of the code where the code doesn't really know anything
+ * about what it is doing - it just reads arrays and such.
+ * No, in here we end up with hard coded handlers to figure out each type of message and how to
+ * interpret it to a fine level of detail. Look away code purists, this is likely to be a mess.
+ * The output here is potentially multi-line and is useful for debugging a UDS problem. You'll
+ * get a finely detailed dump of exactly what the message means.
+*/
+QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
+{
+    QString buildString;
+    bool isResponse = true;
+
+    if (msg.service < 0x3F || (msg.service > 0x7F && msg.service < 0xAF)) {
+        isResponse = false;
+        buildString.append("UDS Request\n");
+        buildString.append("Service: " + getServiceLongDesc(msg.service) + "\n");
     }
-    return QString();
+    else
+    {
+        isResponse = true;
+        buildString.append("UDS Response\n");
+        buildString.append("Service: " + getServiceLongDesc(msg.service - 0x40) + "\n");
+    }
+
+    if (msg.isErrorReply)
+    {
+        //Negative responses replace the sub function with an error code instead
+        buildString.append("Negative response: " + getLongDesc(UDS_NEG_RESPONSE, msg.subFunc) + "\n");
+    }
+    else
+    {
+        switch (msg.service)
+        {
+        case UDS_SERVICES::DIAG_CONTROL:
+            //diag control requests have one parameter - which type of session we want.
+            buildString.append("Session Request: " + getLongDesc(UDS_DIAG_CTRL_SUB, msg.subFunc));
+            break;
+        case UDS_SERVICES::DIAG_CONTROL + 0x40: //positive response
+            buildString.append("Session Request: " + getLongDesc(UDS_DIAG_CTRL_SUB, msg.subFunc));
+            //there should be four extra bytes now
+            if (msg.data.length() < 4)
+            {
+                //buildString.append("\nReturned data payload wasn't at least \n4 bytes like it should have been");
+            }
+            else
+            {
+                int p2 = msg.data[0] * 256 + msg.data[1];
+                buildString.append("\nP2MAX: " + QString::number(p2));
+                p2 = msg.data[2] * 256 + msg.data[3];
+                buildString.append("\nP2*MAX: " + QString::number(p2));
+            }
+            break;
+        case UDS_SERVICES::ECU_RESET:
+            //ECU reset has one parameter - which reset type to ask for
+            buildString.append("Reset Type: " + getLongDesc(UDS_ECU_RESET_SUB, msg.subFunc));
+            break;
+        case UDS_SERVICES::ECU_RESET + 0x40:
+            buildString.append("Reset Type: " + getLongDesc(UDS_ECU_RESET_SUB, msg.subFunc));
+            //There should be one additional byte which encodes power down time
+            if (msg.data.length() > 0)
+            {
+                if (msg.data[0] < 0xFF)
+                {
+                    buildString.append("\nMinimum powered down time: " + QString::number(msg.data[0]));
+                }
+                else buildString.append("\nPowerdown time not available");
+            }
+            else buildString.append("\nNo powerdown time returned");
+            break;
+        case UDS_SERVICES::COMM_CTRL:
+            //Comm control has two parameters, sub funct and the next byte should be 1. But it's always one so ignore for now
+            buildString.append("Comm type: " + getLongDesc(UDS_COMM_CTRL_SUB, msg.subFunc));
+            break;
+        case UDS_SERVICES::SECURITY_ACCESS:
+            if ((msg.subFunc % 2) == 1)
+            {
+                buildString.append("Seed request for security level: " + QString::number(msg.subFunc) + "\n");
+                if (msg.data.length()> 0)
+                {
+                    buildString.append("Data payload: ");
+                    for (int j = 0; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
+                }
+            }
+            else
+            {
+                buildString.append("Key sending for security level: " + QString::number(msg.subFunc - 1));
+                if (msg.data.length()> 0) //and it sure as hell should be!
+                {
+                    buildString.append("KEY: ");
+                    for (int j = 0; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
+                }
+            }
+            break;
+        case UDS_SERVICES::SECURITY_ACCESS + 0x40:
+            if ((msg.subFunc % 2) == 1)
+            {
+                buildString.append("Seed response for security level: " + QString::number(msg.subFunc) + "\n");
+                if (msg.data.length()> 0) //be kinda pointless if it weren't
+                {
+                    buildString.append("SEED: ");
+                    for (int j = 0; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
+                }
+            }
+            else
+            {
+                buildString.append("Positive response to key for security level: " + QString::number(msg.subFunc - 1));
+                buildString.append("\nECU is now unlocked");
+            }
+            break;
+        }
+    }
+
+    //qDebug() << buildString;
+    return buildString;
 }
 
 //Little shim functions that drop straight through to the ISO_TP handler

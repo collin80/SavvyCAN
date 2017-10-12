@@ -97,6 +97,7 @@ void UDSScanWindow::readByToggled()
 void UDSScanWindow::numBytesChanged()
 {
     uint64_t upperBound =  (1 << (8 * ui->spinNumBytes->value())) - 1;
+    if (upperBound > 0x7FFFFFFF) upperBound = 0x7FFFFFFF;
     ui->spinUpperSubfunc->setMaximum(upperBound);
 }
 
@@ -232,16 +233,22 @@ void UDSScanWindow::scanUDS()
 
         if (ui->ckReset->isChecked()) //try to command a reset of the ECU. You're likely to know if it works. ;)
         {
-            test.service = UDS_SERVICES::ECU_RESET;
-            test.subFunc = 1;
-            sendOnBuses(test, buses);
+            for (typ = 1; typ < 4; typ++) //try each type of session access
+            {
+                test.service = UDS_SERVICES::ECU_RESET;
+                test.subFunc = typ;
+                sendOnBuses(test, buses);
+            }
         }
 
         if (ui->ckSecurity->isChecked()) //try to enter security mode - very likely to get a response if an ECU exists.
         {
-            test.service = UDS_SERVICES::SECURITY_ACCESS;
-            test.subFunc = 1;
-            sendOnBuses(test, buses);
+            for (typ = 1; typ < 0x42; typ = typ + 2) //try each type of session access. In practice only the first 1-3 are likely to work
+            {
+                test.service = UDS_SERVICES::SECURITY_ACCESS;
+                test.subFunc = typ;
+                sendOnBuses(test, buses);
+            }
         }
 
         if (ui->ckReadByAddr->isChecked())

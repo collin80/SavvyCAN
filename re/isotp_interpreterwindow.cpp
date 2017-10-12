@@ -23,7 +23,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     connect(udsDecoder, &UDS_HANDLER::newUDSMessage, this, &ISOTP_InterpreterWindow::newUDSMessage);
 
     connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
-    connect(ui->btnClearList, &QAbstractButton::click, this, &ISOTP_InterpreterWindow::clearList);
+    connect(ui->btnClearList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::clearList);
 
     QStringList headers;
     headers << "Timestamp" << "ID" << "Bus" << "Dir" << "Length" << "Data";
@@ -85,7 +85,9 @@ void ISOTP_InterpreterWindow::writeSettings()
 
 void ISOTP_InterpreterWindow::clearList()
 {
-    ui->tableIsoFrames->clear();
+    qDebug() << "Clearing the table";
+    while (ui->tableIsoFrames->rowCount() > 0)
+        ui->tableIsoFrames->removeRow(0);
 }
 
 void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
@@ -144,6 +146,7 @@ void ISOTP_InterpreterWindow::newUDSMessage(UDS_MESSAGE msg)
 
     buildText = ui->txtFrameDetails->toPlainText();
 
+    /*
     buildText.append("UDS Message:\n");
     if (msg.isErrorReply)
     {
@@ -156,7 +159,10 @@ void ISOTP_InterpreterWindow::newUDSMessage(UDS_MESSAGE msg)
             buildText.append("Request for service " + udsDecoder->getServiceShortDesc(msg.service) + " Sub Func: " + QString::number(msg.subFunc));
         else
             buildText.append("Response on service " + udsDecoder->getServiceShortDesc(msg.service - 0x40) + " Sub Func: " + QString::number(msg.subFunc));
-    }
+    }*/
+
+    //Much more detailed analysis than the code above. You'll like it.
+    buildText.append(udsDecoder->getDetailedMessageAnalysis(msg));
 
     ui->txtFrameDetails->setPlainText(buildText);
 }

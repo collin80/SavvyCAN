@@ -160,7 +160,7 @@
      <item>
       <widget class="QLabel" name="label_7">
        <property name="text">
-        <string>Maximum reply delay</string>
+        <string>Maximum reply delay (ms)</string>
        </property>
       </widget>
      </item>

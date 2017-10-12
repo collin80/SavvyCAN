@@ -102,6 +102,9 @@ public:
     QString getServiceLongDesc(int service);
     QString getNegativeResponseShort(int respCode);
     QString getNegativeResponseLong(int respCode);
+    QString getShortDesc(QVector<CODE_STRUCT> &codeVector, int code);
+    QString getLongDesc(QVector<CODE_STRUCT> &codeVector, int code);
+    QString getDetailedMessageAnalysis(const UDS_MESSAGE &msg);
 
 public slots:
     void gotISOTPFrame(ISOTP_MESSAGE msg);

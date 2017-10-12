@@ -13,7 +13,7 @@ public:
 public:
     uint32_t ID;
     uint32_t mask;
-    uint32_t bus;
+    int bus;
 };
 
 #endif // CANFILTER_H
