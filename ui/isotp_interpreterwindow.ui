@@ -25,11 +25,22 @@
     <widget class="QTableWidget" name="tableIsoFrames"/>
    </item>
    <item>
-    <widget class="QPushButton" name="btnClearList">
-     <property name="text">
-      <string>Clear Messages List</string>
-     </property>
-    </widget>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QPushButton" name="btnCaptured">
+       <property name="text">
+        <string>Interpret Previously Captured Frames</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClearList">
+       <property name="text">
+        <string>Clear Messages List</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item alignment="Qt::AlignHCenter">
     <widget class="QCheckBox" name="cbShowIncomplete">

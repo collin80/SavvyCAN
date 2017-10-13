@@ -124,7 +124,7 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
     Q_UNUSED(conn)
     if (pFrames.length() <= 0) return;
 
-    qDebug() << "received messages in ISOTP handler";
+    //qDebug() << "received messages in ISOTP handler";
 
     foreach(const CANFrame& thisFrame, pFrames)
     {
@@ -190,7 +190,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         msg.timestamp = frame.timestamp;
         if (useExtendedAddressing) for (int j = 0; j < frameLen; j++) msg.data.append(frame.data[j+2]);
         else for (int j = 0; j < frameLen; j++) msg.data.append(frame.data[j+1]);
-        qDebug() << "Emitting single frame ISOTP message";
+        //qDebug() << "Emitting single frame ISOTP message";
         emit newISOMessage(msg);
         break;
     case 1: //first frame of a multi-frame message
@@ -259,7 +259,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         if (pMsg->len <= pMsg->data.count())
         {
-            qDebug() << "Emitting multiframe ISOTP message";
+            //qDebug() << "Emitting multiframe ISOTP message";
             emit newISOMessage(*pMsg);
         }
         break;
@@ -298,7 +298,7 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
         if (messageBuffer[i].ID == ID)
         {
             //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
-            qDebug() << "Flushing a partial frame";
+            //qDebug() << "Flushing a partial frame";
             emit newISOMessage(messageBuffer[i]);
             messageBuffer.removeAt(i);
             return;

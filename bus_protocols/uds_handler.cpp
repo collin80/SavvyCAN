@@ -320,7 +320,13 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
     QString buildString;
     bool isResponse = true;
 
-    if (msg.service < 0x3F || (msg.service > 0x7F && msg.service < 0xAF)) {
+    if (msg.isErrorReply)
+    {
+        isResponse = true;
+        buildString.append("UDS ERROR Response\n");
+        buildString.append("Service: " + getServiceLongDesc(msg.service) + "\n");
+    }
+    else if (msg.service < 0x3F || (msg.service > 0x7F && msg.service < 0xAF)) {
         isResponse = false;
         buildString.append("UDS Request\n");
         buildString.append("Service: " + getServiceLongDesc(msg.service) + "\n");
@@ -328,7 +334,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
     else
     {
         isResponse = true;
-        buildString.append("UDS Response\n");
+        buildString.append("UDS Positive Response\n");
         buildString.append("Service: " + getServiceLongDesc(msg.service - 0x40) + "\n");
     }
 
@@ -348,16 +354,16 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
         case UDS_SERVICES::DIAG_CONTROL + 0x40: //positive response
             buildString.append("Session Request: " + getLongDesc(UDS_DIAG_CTRL_SUB, msg.subFunc));
             //there should be four extra bytes now
-            if (msg.data.length() < 4)
+            if (msg.data.length() < 5) //5 because subfunc codes are left in data so it starts with one subfunc byte
             {
                 //buildString.append("\nReturned data payload wasn't at least \n4 bytes like it should have been");
             }
             else
             {
-                int p2 = msg.data[0] * 256 + msg.data[1];
-                buildString.append("\nP2MAX: " + QString::number(p2));
-                p2 = msg.data[2] * 256 + msg.data[3];
-                buildString.append("\nP2*MAX: " + QString::number(p2));
+                int p2 = msg.data[1] * 256 + msg.data[2];
+                buildString.append("\nP2MAX: " + QString::number(p2) + "ms");
+                p2 = (msg.data[3] * 256 + msg.data[4]) * 10;
+                buildString.append("\nP2*MAX: " + QString::number(p2) + "ms");
             }
             break;
         case UDS_SERVICES::ECU_RESET:
@@ -367,11 +373,11 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
         case UDS_SERVICES::ECU_RESET + 0x40:
             buildString.append("Reset Type: " + getLongDesc(UDS_ECU_RESET_SUB, msg.subFunc));
             //There should be one additional byte which encodes power down time
-            if (msg.data.length() > 0)
+            if (msg.data.length() > 1)
             {
-                if (msg.data[0] < 0xFF)
+                if (msg.data[1] < 0xFF)
                 {
-                    buildString.append("\nMinimum powered down time: " + QString::number(msg.data[0]));
+                    buildString.append("\nMinimum powered down time: " + QString::number(msg.data[1]));
                 }
                 else buildString.append("\nPowerdown time not available");
             }
@@ -385,19 +391,19 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if ((msg.subFunc % 2) == 1)
             {
                 buildString.append("Seed request for security level: " + QString::number(msg.subFunc) + "\n");
-                if (msg.data.length()> 0)
+                if (msg.data.length()> 1)
                 {
                     buildString.append("Data payload: ");
-                    for (int j = 0; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
+                    for (int j = 1; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
                 }
             }
             else
             {
                 buildString.append("Key sending for security level: " + QString::number(msg.subFunc - 1));
-                if (msg.data.length()> 0) //and it sure as hell should be!
+                if (msg.data.length()> 1) //and it sure as hell should be!
                 {
                     buildString.append("KEY: ");
-                    for (int j = 0; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
+                    for (int j = 1; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
                 }
             }
             break;
@@ -405,10 +411,10 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if ((msg.subFunc % 2) == 1)
             {
                 buildString.append("Seed response for security level: " + QString::number(msg.subFunc) + "\n");
-                if (msg.data.length()> 0) //be kinda pointless if it weren't
+                if (msg.data.length()> 1) //be kinda pointless if it weren't
                 {
                     buildString.append("SEED: ");
-                    for (int j = 0; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
+                    for (int j = 1; j < msg.data.length(); j++) buildString.append(Utility::formatHexNum(msg.data[j]) + " ");
                 }
             }
             else

@@ -21,6 +21,10 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_HANDLER::updatedFrames);
     connect(decoder, &ISOTP_HANDLER::newISOMessage, this, &ISOTP_InterpreterWindow::newISOMessage);
     connect(udsDecoder, &UDS_HANDLER::newUDSMessage, this, &ISOTP_InterpreterWindow::newUDSMessage);
+    connect(ui->listFilter, &QListWidget::itemChanged, this, &ISOTP_InterpreterWindow::listFilterItemChanged);
+    connect(ui->btnAll, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::filterAll);
+    connect(ui->btnNone, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::filterNone);
+    connect(ui->btnCaptured, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::interpretCapturedFrames);
 
     connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
     connect(ui->btnClearList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::clearList);
@@ -83,24 +87,60 @@ void ISOTP_InterpreterWindow::writeSettings()
     }
 }
 
+//erase current list then repopulate as if all the previously captured frames just came in again.
+void ISOTP_InterpreterWindow::interpretCapturedFrames()
+{
+    clearList();
+    decoder->rapidFrames(NULL, *modelFrames);
+}
+
+void ISOTP_InterpreterWindow::listFilterItemChanged(QListWidgetItem *item)
+{
+    if (item)
+    {
+        int id = item->text().toInt(NULL, 16);
+        bool state = item->checkState();
+        //qDebug() << id << "*" << state;
+        idFilters[id] = state;
+    }
+}
+
+void ISOTP_InterpreterWindow::filterAll()
+{
+    for (int i = 0 ; i < ui->listFilter->count(); i++)
+    {
+        ui->listFilter->item(i)->setCheckState(Qt::Checked);
+        idFilters[ui->listFilter->item(1)->text().toInt(NULL, 16)] = true;
+    }
+}
+
+void ISOTP_InterpreterWindow::filterNone()
+{
+    for (int i = 0 ; i < ui->listFilter->count(); i++)
+    {
+        ui->listFilter->item(i)->setCheckState(Qt::Unchecked);
+        idFilters[ui->listFilter->item(1)->text().toInt(NULL, 16)] = false;
+    }
+}
+
 void ISOTP_InterpreterWindow::clearList()
 {
     qDebug() << "Clearing the table";
-    while (ui->tableIsoFrames->rowCount() > 0)
-        ui->tableIsoFrames->removeRow(0);
+    ui->tableIsoFrames->clearContents();
+    ui->tableIsoFrames->model()->removeRows(0, ui->tableIsoFrames->rowCount());
+    messages.clear();
+    //idFilters.clear();
 }
 
 void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
 {
     if (numFrames == -1) //all frames deleted. Kill the display
     {
-        messages.clear();
-        ui->tableIsoFrames->clear();
+        clearList();
     }
     else if (numFrames == -2) //all new set of frames. Reset
     {
-        messages.clear();
-        ui->tableIsoFrames->clear();
+        clearList();
     }
     else //just got some new frames. See if they are relevant.
     {
@@ -174,12 +214,21 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
 
     if ((msg.len != msg.data.count()) && !ui->cbShowIncomplete->isChecked()) return;
 
+    if (idFilters.find(msg.ID) == idFilters.end())
+    {
+        idFilters.insert(msg.ID, true);
+
+        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(msg.ID), ui->listFilter);
+        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
+        listItem->setCheckState(Qt::Checked);
+    }
+    if (!idFilters[msg.ID]) return;
     messages.append(msg);
 
     rowNum = ui->tableIsoFrames->rowCount();
     ui->tableIsoFrames->insertRow(rowNum);
 
-    ui->tableIsoFrames->setItem(rowNum, 0, new QTableWidgetItem(QString::number(msg.timestamp)));
+    ui->tableIsoFrames->setItem(rowNum, 0, new QTableWidgetItem(Utility::formatTimestamp(msg.timestamp)));
     ui->tableIsoFrames->setItem(rowNum, 1, new QTableWidgetItem(QString::number(msg.ID, 16)));
     ui->tableIsoFrames->setItem(rowNum, 2, new QTableWidgetItem(QString::number(msg.bus)));
     if (msg.isReceived) ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Rx"));

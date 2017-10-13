@@ -85,20 +85,20 @@ void CANFrameModel::setHexMode(bool mode)
 
 void CANFrameModel::setSecondsMode(bool mode)
 {
-    if (timeSeconds != mode)
+    if (Utility::secondsMode != mode)
     {
         this->beginResetModel();
-        timeSeconds = mode;
+        Utility::secondsMode = mode;
         this->endResetModel();
     }
 }
 
 void CANFrameModel::setSysTimeMode(bool mode)
 {
-    if (useSystemTime != mode)
+    if (Utility::sysTimeMode != mode)
     {
         this->beginResetModel();
-        useSystemTime = mode;
+        Utility::sysTimeMode = mode;
         this->endResetModel();
     }
 }
@@ -117,7 +117,7 @@ void CANFrameModel::setInterpetMode(bool mode)
 
 void CANFrameModel::setTimeFormat(QString format)
 {
-    timeFormat = format;
+    Utility::timeFormat = format;
     beginResetModel(); //reset model to show new time format
     endResetModel();
 }
@@ -127,6 +127,10 @@ void CANFrameModel::normalizeTiming()
     mutex.lock();
     if (frames.count() == 0) return;
     timeOffset = frames[0].timestamp;
+    for (int j = 0; j < frames.count(); j++)
+    {
+        if (frames[j].timestamp < timeOffset) timeOffset = frames[j].timestamp;
+    }
     for (int i = 0; i < frames.count(); i++)
     {
         frames[i].timestamp -= timeOffset;
@@ -256,11 +260,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         switch (index.column())
         {
         case 0: //timestamp
-            if (!useSystemTime) {
-                if (!timeSeconds) return QString::number(thisFrame.timestamp);
-                else return QString::number((double)thisFrame.timestamp / 1000000.0, 'f', 6);
-            }
-            else return QDateTime::fromMSecsSinceEpoch(thisFrame.timestamp / 1000).toString(timeFormat);
+            return Utility::formatTimestamp(thisFrame.timestamp);
             break;
         case 1: //id
             return Utility::formatNumber(thisFrame.ID);

@@ -26,6 +26,10 @@ private slots:
     void showDetailView();
     void updatedFrames(int);
     void clearList();
+    void listFilterItemChanged(QListWidgetItem *item);
+    void filterAll();
+    void filterNone();
+    void interpretCapturedFrames();
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;
@@ -34,6 +38,7 @@ private:
 
     const QVector<CANFrame> *modelFrames;
     QVector<ISOTP_MESSAGE> messages;
+    QHash<int, bool> idFilters;
 
     void closeEvent(QCloseEvent *event);
     void readSettings();

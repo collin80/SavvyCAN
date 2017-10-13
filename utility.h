@@ -12,6 +12,9 @@ class Utility
 public:
 
     static bool decimalMode;
+    static bool secondsMode;
+    static bool sysTimeMode;
+    static QString timeFormat;
 
     static QString unQuote(QString inStr)
     {
@@ -102,6 +105,15 @@ public:
             else output += "0";
         }
         return output;
+    }
+
+    static QString formatTimestamp(uint64_t timestamp)
+    {
+        if (!sysTimeMode) {
+            if (!secondsMode) return QString::number(timestamp);
+            else return QString::number((double)timestamp / 1000000.0, 'f', 6);
+        }
+        else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000).toString(timeFormat);
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric
