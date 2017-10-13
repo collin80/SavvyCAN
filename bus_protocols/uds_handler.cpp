@@ -23,6 +23,8 @@ QVector<CODE_STRUCT> UDS_COMM_CTRL_SUB = {
     {0,"COMM_NORMAL", "Enable both Rx and Tx of normal messages"},
     {1,"COMM_DIS_TX", "Enable reception of normal messages but don't Tx them"},
     {3,"COMM_DIS_ALL", "Disable both Rx and Tx of non-diagnostics messages"},
+    {4,"COMM_DIS_TX_ENH", "Addressed bus master should turn off TX on related sub-bus"},
+    {5,"COMM_ENHANC", "Addressed bus master should set related sub-bus to app scheduling mode"},
 };
 
 QVector<CODE_STRUCT> UDS_ROUTINE_SUB = {
@@ -319,6 +321,8 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
 {
     QString buildString;
     bool isResponse = true;
+    int dataSize;
+    int addrSize;
 
     if (msg.isErrorReply)
     {
@@ -384,8 +388,15 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             else buildString.append("\nNo powerdown time returned");
             break;
         case UDS_SERVICES::COMM_CTRL:
-            //Comm control has two parameters, sub funct and the next byte should be 1. But it's always one so ignore for now
-            buildString.append("Comm type: " + getLongDesc(UDS_COMM_CTRL_SUB, msg.subFunc));
+            //Comm control has potentially a lot of parameters. control type, comm type, nodeID
+            buildString.append("Control type: " + getLongDesc(UDS_COMM_CTRL_SUB, msg.subFunc));
+            if (msg.data.length() > 1)
+                buildString.append("\nComm Type: " + QString::number(msg.data[1])); //TODO: no attempt to interpret yet
+            if (msg.data.length() > 3)
+            {
+                int nodeID = (msg.data[2] * 256 + msg.data[3]);
+                buildString.append("\nNode ID: " + Utility::formatHexNum(nodeID));
+            }
             break;
         case UDS_SERVICES::SECURITY_ACCESS:
             if ((msg.subFunc % 2) == 1)
@@ -422,6 +433,96 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
                 buildString.append("Positive response to key for security level: " + QString::number(msg.subFunc - 1));
                 buildString.append("\nECU is now unlocked");
             }
+            break;
+        case UDS_SERVICES::READ_BY_ID:
+            //parameter is groups of two bytes, each of which specify an ID to read
+            if (msg.data.length() > 2)
+            {
+                uint32_t id;
+                for (int i = 1; i < msg.data.length(); i = i + 2)
+                {
+                    id = (msg.data[i] * 256) + msg.data[i+1];
+                    buildString.append("\nID to read: " + Utility::formatHexNum(id));
+                }
+            }
+            break;
+        case UDS_SERVICES::READ_BY_ID + 0x40: //reply
+            buildString.append("Reply is non-standard and so no decoding is done. The format is (ID) followed by how ever much data that ID returns, followed by more ID/data pairs if applicable.\nPayload: ");
+            for (int i = 1; i < msg.data.length(); i++)
+            {
+                buildString.append(Utility::formatHexNum(msg.data[i]) + " ");
+            }
+            break;
+        case UDS_SERVICES::READ_BY_ADDR:
+            //subfunc byte specifies address and length format, then address, then size
+            dataSize = msg.subFunc >> 4;
+            addrSize = msg.subFunc & 0xF;
+            if (msg.data.length() > (dataSize + addrSize))
+            {
+                buildString.append("Address: 0x");
+                for (int i = 0; i < addrSize; i++) buildString.append(QString::number(msg.data[1+i], 16).toUpper().rightJustified(2,'0'));
+                buildString.append("\nSize: 0x");
+                for (int i = 0; i < dataSize; i++) buildString.append(QString::number(msg.data[1+i+addrSize], 16).toUpper().rightJustified(2,'0'));
+            }
+            else
+            {
+                buildString.append("Message has insufficient bytes to properly decode address and size!");
+            }
+            break;
+        case UDS_SERVICES::READ_BY_ADDR + 0x40:
+            buildString.append("Reply is a raw packet of data of the size requested.\nPayload: ");
+            for (int i = 1; i < msg.data.length(); i++)
+            {
+                buildString.append(Utility::formatHexNum(msg.data[i]) + " ");
+            }
+            break;
+        case UDS_SERVICES::WRITE_BY_ID:
+            break;
+        case UDS_SERVICES::ROUTINE_CTRL:
+            buildString.append("Routine Control: " + getLongDesc(UDS_ROUTINE_SUB, msg.subFunc));
+            if (msg.data.length() > 2)
+            {
+                int routineID;
+                routineID = (msg.data[1] * 256 + msg.data[2]);
+                buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
+            }
+            if (msg.data.length() > 3)
+            {
+                buildString.append("\nParameter bytes to routine: ");
+                for (int i = 4; i < msg.data.length(); i++)
+                {
+                    buildString.append(Utility::formatHexNum(msg.data[i]) + " ");
+                }
+            }
+            break;
+        case UDS_SERVICES::ROUTINE_CTRL + 0x40:
+            buildString.append("Routine Control: " + getLongDesc(UDS_ROUTINE_SUB, msg.subFunc));
+            if (msg.data.length() > 2)
+            {
+                int routineID;
+                routineID = (msg.data[1] * 256 + msg.data[2]);
+                buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
+            }
+            if (msg.data.length() > 3)
+            {
+                buildString.append("\nBytes returned by routine: ");
+                for (int i = 4; i < msg.data.length(); i++)
+                {
+                    buildString.append(Utility::formatHexNum(msg.data[i]) + " ");
+                }
+            }
+            break;
+        case UDS_SERVICES::REQUEST_DOWNLOAD:
+            break;
+        case UDS_SERVICES::REQUEST_UPLOAD:
+            break;
+        case UDS_SERVICES::TRANSFER_DATA:
+            break;
+        case UDS_SERVICES::REQ_TRANS_EXIT:
+            break;
+        case UDS_SERVICES::REQ_FILE_TRANS:
+            break;
+        case UDS_SERVICES::WRITE_BY_ADDR:
             break;
         }
     }
