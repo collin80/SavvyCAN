@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>792</width>
+    <width>830</width>
     <height>725</height>
    </rect>
   </property>
@@ -42,10 +42,17 @@
      </item>
     </layout>
    </item>
-   <item alignment="Qt::AlignHCenter">
+   <item alignment="Qt::AlignLeft">
     <widget class="QCheckBox" name="cbShowIncomplete">
      <property name="text">
       <string>Show incomplete and/or corrupted messages</string>
+     </property>
+    </widget>
+   </item>
+   <item alignment="Qt::AlignLeft">
+    <widget class="QCheckBox" name="cbUseExtendedAddressing">
+     <property name="text">
+      <string>Use extended addressing</string>
      </property>
     </widget>
    </item>
