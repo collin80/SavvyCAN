@@ -28,6 +28,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
 
     connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
     connect(ui->btnClearList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::clearList);
+    connect(ui->cbUseExtendedAddressing, SIGNAL(toggled(bool)), this, SLOT(useExtendedAddressing(bool)));
 
     QStringList headers;
     headers << "Timestamp" << "ID" << "Bus" << "Dir" << "Length" << "Data";
@@ -130,6 +131,12 @@ void ISOTP_InterpreterWindow::clearList()
     ui->tableIsoFrames->model()->removeRows(0, ui->tableIsoFrames->rowCount());
     messages.clear();
     //idFilters.clear();
+}
+
+void ISOTP_InterpreterWindow::useExtendedAddressing(bool checked)
+{
+    decoder->setExtendedAddressing(checked);
+    this->interpretCapturedFrames();
 }
 
 void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
