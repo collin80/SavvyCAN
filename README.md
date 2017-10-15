@@ -50,7 +50,7 @@ This project requires 5.8.0 or higher because of a dependency on QSerialBus.
 
 ## Instructions for compiling:
 
-Download the newest stable version of Qt directly from qt.io (You need 5.8.x or newer)
+[Download the newest stable version of Qt directly from qt.io](https://www.qt.io/download/) (You need 5.8.x or newer)
 
 ```sh
 cd ~
