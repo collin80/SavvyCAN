@@ -365,9 +365,9 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             else
             {
                 int p2 = msg.data[1] * 256 + msg.data[2];
-                buildString.append("\nP2MAX: " + QString::number(p2) + "ms");
+                buildString.append("\nP2MAX (Max Wait / Resp Time): " + QString::number(p2) + "ms");
                 p2 = (msg.data[3] * 256 + msg.data[4]) * 10;
-                buildString.append("\nP2*MAX: " + QString::number(p2) + "ms");
+                buildString.append("\nP2 Ext MAX: " + QString::number(p2) + "ms");
             }
             break;
         case UDS_SERVICES::ECU_RESET:
