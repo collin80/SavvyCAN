@@ -30,6 +30,7 @@ private slots:
     void filterAll();
     void filterNone();
     void interpretCapturedFrames();
+    void useExtendedAddressing(bool checked);
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;
@@ -43,6 +44,7 @@ private:
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
+
 };
 
 #endif // ISOTP_INTERPRETERWINDOW_H
