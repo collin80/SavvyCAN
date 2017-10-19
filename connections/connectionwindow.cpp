@@ -24,24 +24,16 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 
     connModel = new CANConnectionModel(this);
     ui->tableConnections->setModel(connModel);
-    ui->tableConnections->setColumnWidth(0, 50);
-    ui->tableConnections->setColumnWidth(1, 110);
-    ui->tableConnections->setColumnWidth(2, 110);
-    ui->tableConnections->setColumnWidth(3, 110);
-    ui->tableConnections->setColumnWidth(4, 75);
-    ui->tableConnections->setColumnWidth(5, 75);
-    ui->tableConnections->setColumnWidth(6, 75);
-    ui->tableConnections->setColumnWidth(7, 75);
+    ui->tableConnections->setColumnWidth(0, 40);
+    ui->tableConnections->setColumnWidth(1, 70);
+    ui->tableConnections->setColumnWidth(2, 70);
+    ui->tableConnections->setColumnWidth(3, 70);
+    ui->tableConnections->setColumnWidth(4, 70);
+    ui->tableConnections->setColumnWidth(5, 70);
+    ui->tableConnections->setColumnWidth(6, 70);
+    ui->tableConnections->setColumnWidth(7, 90);
     QHeaderView *HorzHdr = ui->tableConnections->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
-
-    ui->ckSingleWire->setChecked(settings.value("Main/SingleWireMode", false).toBool());
-
-    ui->cbSpeed->addItem(tr("125000"));
-    ui->cbSpeed->addItem(tr("250000"));
-    ui->cbSpeed->addItem(tr("500000"));
-    ui->cbSpeed->addItem(tr("1000000"));
-    ui->cbSpeed->addItem(tr("33333"));
 
     ui->textConsole->setEnabled(false);
     ui->btnClearDebug->setEnabled(false);
@@ -61,9 +53,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->rbGVRET, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->rbKvaser, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->rbSocketCAN, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
-    connect(ui->btnRevert, &QPushButton::clicked, this, &ConnectionWindow::handleRevert);
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
-    connect(ui->btnNewConn, &QPushButton::clicked, this, &ConnectionWindow::handleNewConn);
     connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
     connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
     connect(ui->btnRemoveBus, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
@@ -236,10 +226,10 @@ void ConnectionWindow::handleOKButton()
         if(!ret) return;
 
 
-        bus.setListenOnly(ui->ckListenOnly->isChecked());
-        bus.setSingleWire(ui->ckSingleWire->isChecked());
-        bus.setEnabled(ui->ckEnabled->isChecked());
-        bus.setSpeed(ui->cbSpeed->currentText().toInt());
+        //bus.setListenOnly(ui->ckListenOnly->isChecked());
+        //bus.setSingleWire(ui->ckSingleWire->isChecked());
+        //bus.setEnabled(ui->ckEnabled->isChecked());
+        //bus.setSpeed(ui->cbSpeed->currentText().toInt());
         /* update bus settings */
         conn_p->setBusSettings(busId, bus);
 
@@ -255,11 +245,11 @@ void ConnectionWindow::handleOKButton()
         for (int i=0 ; i<conn_p->getNumBuses() ; i++) {
             /* set bus configuration */
             CANBus bus;
-            bus.active = ui->ckEnabled->isChecked();
-            bus.listenOnly = ui->ckListenOnly->isChecked();
-            bus.singleWire = ui->ckSingleWire->isChecked();
+            //bus.active = ui->ckEnabled->isChecked();
+            //bus.listenOnly = ui->ckListenOnly->isChecked();
+            //bus.singleWire = ui->ckSingleWire->isChecked();
 
-            bus.speed = ui->cbSpeed->currentText().toInt();
+            //bus.speed = ui->cbSpeed->currentText().toInt();
 
             /* update bus settings */
             conn_p->setBusSettings(i, bus);
@@ -280,6 +270,7 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
 
     disconnect(connModel->getAtIdx(previous.row(), busId), SIGNAL(debugOutput(QString)), 0, 0);
     disconnect(this, SIGNAL(sendDebugData(QByteArray)), connModel->getAtIdx(previous.row(), busId), SLOT(debugInput(QByteArray)));
+return;
 
     /* enable / diable connection type */
     ui->stPort->setEnabled(selIdx==-1);
@@ -291,9 +282,6 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     {
         ui->btnOK->setText(tr("Create New Connection"));
         ui->rbGVRET->setChecked(true);
-        ui->ckListenOnly->setChecked(false);
-        ui->ckSingleWire->setChecked(false);
-        ui->ckEnabled->setChecked(false);
         setSpeed(0);
         setPortName(CANCon::GVRET_SERIAL, "");
     }
@@ -313,9 +301,6 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         if(!ret) return;
 
         ui->btnOK->setText(tr("Update Connection Settings"));
-        ui->ckListenOnly->setChecked(bus.isListenOnly());
-        ui->ckSingleWire->setChecked(bus.isSingleWire());
-        ui->ckEnabled->setChecked(bus.isActive());
         setSpeed(bus.getSpeed());
         setPortName(conn_p->getType(), conn_p->getPort());
     }
@@ -349,7 +334,6 @@ void ConnectionWindow::selectSerial()
 {
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
-    ui->cbSpeed->setEnabled(true);
 
     ui->cbPort->clear();
     ports = QSerialPortInfo::availablePorts();
@@ -362,7 +346,6 @@ void ConnectionWindow::selectKvaser()
 {
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
-    ui->cbSpeed->setEnabled(false);
 }
 
 void ConnectionWindow::selectSocketCan()
@@ -373,18 +356,6 @@ void ConnectionWindow::selectSocketCan()
 
 void ConnectionWindow::setSpeed(int speed0)
 {
-    for (int i = 0; i < ui->cbSpeed->count(); i++)
-    {
-        if (ui->cbSpeed->itemText(i).toInt() == speed0)
-        {
-            ui->cbSpeed->setCurrentIndex(i);
-            return;
-        }
-    }
-
-    /* add custom speed */
-    ui->cbSpeed->addItem(QString::number(speed0));
-    ui->cbSpeed->setCurrentIndex(ui->cbSpeed->count() - 1);
 }
 
 void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
@@ -393,9 +364,6 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
     {
         case CANCon::GVRET_SERIAL:
             ui->rbGVRET->setChecked(true);
-            ui->cbSpeed->setEnabled(true);
-            ui->ckListenOnly->setEnabled(true);
-            ui->ckSingleWire->setEnabled(true);
             break;
         case CANCon::KVASER:
             ui->rbKvaser->setChecked(true);
@@ -403,9 +371,6 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
         case CANCon::SOCKETCAN:
             ui->rbSocketCAN->setChecked(true);
             //you can't configure any of the below three with socketcan so dim them out
-            ui->cbSpeed->setEnabled(false);
-            ui->ckListenOnly->setEnabled(false);
-            ui->ckSingleWire->setEnabled(false);
             break;
         default: {}
     }
@@ -435,16 +400,6 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
 //-1 means leave it at whatever it booted up to. 0 means disable. Otherwise the actual rate we want.
 int ConnectionWindow::getSpeed()
 {
-    switch (ui->cbSpeed->currentIndex())
-    {
-        case -1:
-        case 0:
-            return -1;
-        case 1:
-            return 0;
-        default:
-            return (ui->cbSpeed->currentText().toInt());
-    }
 }
 
 QString ConnectionWindow::getPortName()
@@ -475,12 +430,10 @@ CANCon::type ConnectionWindow::getConnectionType()
 
 void ConnectionWindow::setSWMode(bool mode)
 {
-    ui->ckSingleWire->setChecked(mode);
 }
 
 bool ConnectionWindow::getSWMode()
 {
-    if (ui->ckSingleWire->checkState() == Qt::Checked) return true;
     return false;
 }
 
