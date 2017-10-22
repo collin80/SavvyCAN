@@ -30,7 +30,6 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->btnNewDBC, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::newFile);
     connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
-    //connect(ui->tableFiles, &QTableWidget::cellActivated, this, &DBCLoadSaveWindow::cellChanged);
 
     editorWindow = new DBCMainEditor(frames);
 }
