@@ -67,12 +67,22 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
     {
+        if ( frame.len*8 < (startBit+signalSize) )
+        {
+            result = 0;
+            return false;
+        }
         result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;
     }
     else if (valType == SP_FLOAT)
     {
+        if ( frame.len*8 < (startBit+32) )
+        {
+            result = 0;
+            return false;
+        }
         //The theory here is that we force the integer signal code to treat this as
         //a 32 bit unsigned integer. This integer is then cast into a float in such a way
         //that the bytes that make up the integer are instead treated as having made up
@@ -83,6 +93,11 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
     }
     else //double precision float
     {
+        if ( frame.len < 8 )
+        {
+            result = 0;
+            return false;
+        }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
         result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
@@ -144,6 +159,11 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     }
 
     if (valType == SIGNED_INT) isSigned = true;
+    if ( frame.len*8 < (startBit+signalSize) )
+    {
+        result = 0;
+        return false;
+    }
     result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
 
     double endResult = ((double)result * factor) + bias;
@@ -183,6 +203,11 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
     {
+        if ( frame.len*8 < (startBit+signalSize) )
+        {
+            result = 0;
+            return false;
+        }
         result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;
@@ -190,6 +215,11 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     /*TODO: It should be noted that the below floating point has not even been tested. For shame! Test it!*/
     else if (valType == SP_FLOAT)
     {
+        if ( frame.len*8 < (startBit+32) )
+        {
+            result = 0;
+            return false;
+        }
         //The theory here is that we force the integer signal code to treat this as
         //a 32 bit unsigned integer. This integer is then cast into a float in such a way
         //that the bytes that make up the integer are instead treated as having made up
@@ -200,6 +230,11 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     }
     else //double precision float
     {
+        if ( frame.len < 8 )
+        {
+            result = 0;
+            return false;
+        }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
         result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
