@@ -1,5 +1,6 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
+#include <QCheckBox>
 
 DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -12,11 +13,13 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     ui->setupUi(this);
 
     QStringList header;
-    header << "Filename" << "Associated Bus";
-    ui->tableFiles->setColumnCount(2);
+    header << "Filename" << "Associated Bus" << "J1939";
+    ui->tableFiles->setColumnCount(3);
     ui->tableFiles->setHorizontalHeaderLabels(header);
-    ui->tableFiles->setColumnWidth(0, 355);
+    ui->tableFiles->setColumnWidth(0, 265);
     ui->tableFiles->setColumnWidth(1, 125);
+    ui->tableFiles->setColumnWidth(2, 80);
+    ui->tableFiles->horizontalHeader()->setStretchLastSection(true);
 
     connect(ui->btnEdit, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::editFile);
     connect(ui->btnLoad, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFile);
@@ -43,6 +46,10 @@ void DBCLoadSaveWindow::newFile()
     ui->tableFiles->insertRow(ui->tableFiles->rowCount());
     ui->tableFiles->setItem(idx, 0, new QTableWidgetItem("UNNAMEDFILE"));
     ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
+
+    QTableWidgetItem *item = new QTableWidgetItem("");
+    item->setCheckState(Qt::Unchecked);
+    ui->tableFiles->setItem(idx, 2, item);
 }
 
 void DBCLoadSaveWindow::loadFile()
@@ -53,6 +60,17 @@ void DBCLoadSaveWindow::loadFile()
         ui->tableFiles->insertRow(ui->tableFiles->rowCount());
         ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
         ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
+        DBC_ATTRIBUTE *attr = file->findAttributeByName("isj1939dbc");
+        QTableWidgetItem *item = new QTableWidgetItem("");
+        ui->tableFiles->setItem(idx, 2, item);
+        if (attr && attr->defaultValue > 0)
+        {
+            item->setCheckState(Qt::Checked);
+        }
+        else
+        {
+            item->setCheckState(Qt::Unchecked);
+        }
     }
 }
 
@@ -108,6 +126,35 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
         if (bus > -2 && bus < 2)
         {
             file->setAssocBus(bus);
+        }
+    }
+    else if (col == 2)
+    {
+        DBCFile *file = dbcHandler->getFileByIdx(row);
+        if (file)
+        {
+            //int isj1939dbc = ui->tableFiles->item(row, col)->text().toInt();
+            bool isj1939dbc = ui->tableFiles->item(row, col)->checkState() == Qt::Checked;
+            DBC_ATTRIBUTE *attr = file->findAttributeByName("isj1939dbc");
+            if (attr)
+            {
+                attr->defaultValue = isj1939dbc ? 1 : 0;
+                file->messageHandler->setJ1939(isj1939dbc);
+            }
+            else
+            {
+                DBC_ATTRIBUTE attr;
+
+                attr.attrType = MESSAGE;
+                attr.defaultValue = isj1939dbc ? 1 : 0;
+                attr.enumVals.clear();
+                attr.lower = 0;
+                attr.upper = 0;
+                attr.name = "isj1939dbc";
+                attr.valType = QINT;
+                file->dbc_attributes.append(attr);
+                file->messageHandler->setJ1939(isj1939dbc);
+            }
         }
     }
 }

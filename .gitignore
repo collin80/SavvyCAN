@@ -27,3 +27,8 @@
 *.out
 *.app
 *.user
+
+# Generated files
+**/moc_*
+**/ui_*.h
+**/qrc_*.cpp
