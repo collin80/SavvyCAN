@@ -40,8 +40,11 @@ public:
     bool removeMessage(QString name);
     void removeAllMessages();
     int getCount();
+    bool isJ1939();
+    void setJ1939(bool j1939);
 private:
     QList<DBC_MESSAGE> messages;
+    bool isJ1939Handler;
 };
 
 //technically there should be a node handler too but I'm sort of treating nodes as second class

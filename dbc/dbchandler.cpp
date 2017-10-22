@@ -85,9 +85,34 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
     if (messages.count() == 0) return NULL;
     for (int i = 0; i < messages.count(); i++)
     {
-        if (messages[i].ID == id)
+        if (isJ1939Handler)
         {
-            return &messages[i];
+            // include data page and extended data page in the pgn
+            uint32_t pgn = (id & 0x3FFFF00) >> 8;
+            if ( (pgn & 0xFF00) <= 0xEF00 )
+            {
+                // PDU1 format
+                pgn &= 0x3FF00;
+                if ((messages[i].ID & 0x3FF0000) == (pgn << 8))
+                {
+                    return &messages[i];
+                }
+            }
+            else
+            {
+                // PDU2 format
+                if ((messages[i].ID & 0x3FFFF00) == (pgn << 8))
+                {
+                    return &messages[i];
+                }
+            }
+        }
+        else
+        {
+            if ( messages[i].ID == id )
+            {
+                return &messages[i];
+            }
         }
     }
     return NULL;
@@ -176,6 +201,16 @@ int DBCMessageHandler::getCount()
     return messages.count();
 }
 
+bool DBCMessageHandler::isJ1939()
+{
+    return isJ1939Handler;
+}
+
+void DBCMessageHandler::setJ1939(bool j1939)
+{
+    isJ1939Handler = j1939;
+}
+
 DBCFile::DBCFile()
 {
     messageHandler = new DBCMessageHandler;
@@ -187,6 +222,7 @@ DBCFile::DBCFile(const DBCFile& cpy)
     for (int i = 0 ; i < cpy.messageHandler->getCount() ; i++)
         messageHandler->addMessage(*cpy.messageHandler->findMsgByIdx(i));
 
+    messageHandler->setJ1939(cpy.messageHandler->isJ1939());
     fileName = cpy.fileName;
     filePath = cpy.filePath;
     assocBuses = cpy.assocBuses;
@@ -764,11 +800,23 @@ void DBCFile::loadFile(QString fileName)
         fgAttr = findAttributeByName("GenMsgForegroundColor");
     }
 
+    DBC_ATTRIBUTE *j1939attr = findAttributeByName("isj1939dbc");
+    if (j1939attr)
+    {
+        messageHandler->setJ1939(j1939attr->defaultValue > 0);
+    }
+    else
+    {
+        messageHandler->setJ1939(false);
+    }
+
     QColor DefaultBG = QColor(bgAttr->defaultValue.toString());
     QColor DefaultFG = QColor(fgAttr->defaultValue.toString());
 
     DBC_ATTRIBUTE_VALUE *thisBG;
     DBC_ATTRIBUTE_VALUE *thisFG;
+
+
 
     for (int x = 0; x < messageHandler->getCount(); x++)
     {
@@ -1235,6 +1283,15 @@ int DBCHandler::createBlankFile()
     attr.upper = 0;
     attr.name = "GenMsgForegroundColor";
     attr.valType = QSTRING;
+    newFile.dbc_attributes.append(attr);
+
+    attr.attrType = MESSAGE;
+    attr.defaultValue = 0;
+    attr.enumVals.clear();
+    attr.lower = 0;
+    attr.upper = 0;
+    attr.name = "isj1939dbc";
+    attr.valType = QINT;
     newFile.dbc_attributes.append(attr);
 
     loadedFiles.append(newFile);
