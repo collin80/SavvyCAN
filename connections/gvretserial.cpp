@@ -125,25 +125,71 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         }
         else deviceSingleWireMode = 0;
     }
+    else if (pBusIdx == 2)
+    {
+        swcanBaud = bus.getSpeed();
+        swcanBaud |= 0x80000000;
+        if (bus.isActive())
+        {
+            swcanBaud |= 0x40000000;
+            swcanEnabled = true;
+        }
+        else swcanEnabled = false;
 
-    /* update baud rates */
-    QByteArray buffer;
-    qDebug() << "Got signal to update bauds. 1: " << can0Baud <<" 2: " << can1Baud;
-    debugOutput("Got signal to update bauds. 1: " + QString::number(can0Baud) + " 2: " + QString::number(can1Baud));
-    buffer[0] = (char)0xF1; //start of a command over serial
-    buffer[1] = 5; //setup canbus
-    buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
-    buffer[3] = (unsigned char)(can0Baud >> 8);
-    buffer[4] = (unsigned char)(can0Baud >> 16);
-    buffer[5] = (unsigned char)(can0Baud >> 24);
-    buffer[6] = (unsigned char)(can1Baud & 0xFF); //four bytes of ID LSB first
-    buffer[7] = (unsigned char)(can1Baud >> 8);
-    buffer[8] = (unsigned char)(can1Baud >> 16);
-    buffer[9] = (unsigned char)(can1Baud >> 24);
-    buffer[10] = 0;
-    if (serial == NULL) return;
-    if (!serial->isOpen()) return;
-    serial->write(buffer);
+        if (bus.isListenOnly())
+        {
+            swcanBaud |= 0x20000000;
+            swcanListenOnly = true;
+        }
+        else swcanListenOnly = false;
+
+    }
+
+    if (pBusIdx < 2) {
+        /* update baud rates */
+        QByteArray buffer;
+        qDebug() << "Got signal to update bauds. 1: " << can0Baud <<" 2: " << can1Baud;
+        debugOutput("Got signal to update bauds. 1: " + QString::number(can0Baud) + " 2: " + QString::number(can1Baud));
+        buffer[0] = (char)0xF1; //start of a command over serial
+        buffer[1] = 5; //setup canbus
+        buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
+        buffer[3] = (unsigned char)(can0Baud >> 8);
+        buffer[4] = (unsigned char)(can0Baud >> 16);
+        buffer[5] = (unsigned char)(can0Baud >> 24);
+        buffer[6] = (unsigned char)(can1Baud & 0xFF); //four bytes of ID LSB first
+        buffer[7] = (unsigned char)(can1Baud >> 8);
+        buffer[8] = (unsigned char)(can1Baud >> 16);
+        buffer[9] = (unsigned char)(can1Baud >> 24);
+        buffer[10] = 0;
+        if (serial == NULL) return;
+        if (!serial->isOpen()) return;
+        serial->write(buffer);
+    }
+    else
+    {
+        /* update baud rates */
+        QByteArray buffer;
+        qDebug() << "Got signal to update extended bus speeds SWCAN: " << swcanBaud <<" LIN1: " << lin1Baud << " LIN2: " << lin2Baud;
+        debugOutput("Got signal to update extended bus speeds SWCAN: " + QString::number(swcanBaud) + " LIN1: " + QString::number(lin1Baud) + " LIN2: " + QString::number(lin2Baud));
+        buffer[0] = (char)0xF1; //start of a command over serial
+        buffer[1] = 14; //setup extended buses
+        buffer[2] = (unsigned char)(swcanBaud & 0xFF); //four bytes of ID LSB first
+        buffer[3] = (unsigned char)(swcanBaud >> 8);
+        buffer[4] = (unsigned char)(swcanBaud >> 16);
+        buffer[5] = (unsigned char)(swcanBaud >> 24);
+        buffer[6] = (unsigned char)(lin1Baud & 0xFF); //four bytes of ID LSB first
+        buffer[7] = (unsigned char)(lin1Baud >> 8);
+        buffer[8] = (unsigned char)(lin1Baud >> 16);
+        buffer[9] = (unsigned char)(lin1Baud >> 24);
+        buffer[10] = (unsigned char)(lin2Baud & 0xFF); //four bytes of ID LSB first
+        buffer[11] = (unsigned char)(lin2Baud >> 8);
+        buffer[12] = (unsigned char)(lin2Baud >> 16);
+        buffer[13] = (unsigned char)(lin2Baud >> 24);
+        buffer[14] = 0;
+        if (serial == NULL) return;
+        if (!serial->isOpen()) return;
+        serial->write(buffer);
+    }
 }
 
 
