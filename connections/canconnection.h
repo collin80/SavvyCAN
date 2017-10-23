@@ -89,7 +89,7 @@ signals:
      * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
      * @param pStatus: the new status of the device
      */
-    void status(CANCon::status pStatus);
+    void status(CANConStatus pStatus);
 
     /**
       * @brief Event sent when device has done something worthy of debugging output.
@@ -183,7 +183,8 @@ public slots:
     void debugInput(QByteArray bytes);
 
 protected:
-    int           mNumBuses; //protected to allow connected device to figure out how many buses are available
+    int mNumBuses; //protected to allow connected device to figure out how many buses are available
+    QVector<BusData> mBusData;
 
     //determine if the passed frame is part of a filter or not.
     void checkTargettedFrame(CANFrame &frame);
@@ -297,7 +298,6 @@ private:
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;
     bool                mStarted;
-    BusData*            mBusData_p;
     QThread*            mThread_p;
 };
 

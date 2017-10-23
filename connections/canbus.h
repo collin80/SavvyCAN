@@ -1,6 +1,7 @@
 #ifndef CANBus_H
 #define CANBus_H
 #include <QDataStream>
+#include "can_structs.h"
 
 class CANBus
 {
@@ -30,5 +31,11 @@ QDataStream& operator<<( QDataStream & pStream, const CANBus& pCanBus );
 QDataStream & operator>>(QDataStream & pStream, CANBus& pCanBus);
 
 Q_DECLARE_METATYPE(CANBus);
+
+struct BusData {
+    CANBus             mBus;
+    bool               mConfigured;
+    QVector<CANFltObserver>    mTargettedFrames;
+};
 
 #endif // CANBus_H

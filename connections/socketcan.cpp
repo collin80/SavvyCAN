@@ -211,6 +211,7 @@ void SocketCan::framesReceived()
 
 void SocketCan::testConnection() {
     QCanBusDevice*  dev_p = QCanBus::instance()->createDevice("socketcan", getPort());
+    CANConStatus stats;
 
     switch(getStatus())
     {
@@ -220,7 +221,9 @@ void SocketCan::testConnection() {
                 disconnectDevice();
 
                 setStatus(CANCon::NOT_CONNECTED);
-                emit status(getStatus());
+                stats.conStatus = getStatus();
+                stats.numHardwareBuses = mNumBuses;
+                emit status(stats);
             }
             break;
         case CANCon::NOT_CONNECTED:
@@ -235,7 +238,9 @@ void SocketCan::testConnection() {
                 dev_p->disconnectDevice();
 
                 setStatus(CANCon::CONNECTED);
-                emit status(getStatus());
+                stats.conStatus = getStatus();
+                stats.numHardwareBuses = mNumBuses;
+                emit status(stats);
             }
             break;
         default: {}

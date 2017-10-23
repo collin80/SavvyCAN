@@ -197,7 +197,7 @@ void ConnectionWindow::handleConnTypeChanged()
 
 
 /* status */
-void ConnectionWindow::connectionStatus(CANCon::status pStatus)
+void ConnectionWindow::connectionStatus(CANConStatus pStatus)
 {
     Q_UNUSED(pStatus);
 
@@ -208,34 +208,9 @@ void ConnectionWindow::connectionStatus(CANCon::status pStatus)
 
 void ConnectionWindow::handleOKButton()
 {
-    int whichRow = ui->tableConnections->selectionModel()->currentIndex().row();
-
     CANConnection* conn_p = NULL;
 
-    if (whichRow > -1)
-    {
-        /* set information for selected connection */
-        int busId;
-        CANBus bus;
-        bool ret;
-
-        conn_p = connModel->getAtIdx(whichRow, busId);
-        if(!conn_p) return;
-
-        ret = conn_p->getBusSettings(busId, bus);
-        if(!ret) return;
-
-
-        //bus.setListenOnly(ui->ckListenOnly->isChecked());
-        //bus.setSingleWire(ui->ckSingleWire->isChecked());
-        //bus.setEnabled(ui->ckEnabled->isChecked());
-        //bus.setSpeed(ui->cbSpeed->currentText().toInt());
-        /* update bus settings */
-        conn_p->setBusSettings(busId, bus);
-
-        connModel->refresh(whichRow);
-    }
-    else if( ! CANConManager::getInstance()->getByName(getPortName()) )
+    if( ! CANConManager::getInstance()->getByName(getPortName()) )
     {
         /* create connection */
         conn_p = create(getConnectionType(), getPortName());
@@ -483,8 +458,8 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName)
     if(conn_p)
     {
         /* connect signal */
-        connect(conn_p, SIGNAL(status(CANCon::status)),
-                this, SLOT(connectionStatus(CANCon::status)));
+        connect(conn_p, SIGNAL(status(CANConStatus)),
+                this, SLOT(connectionStatus(CANConStatus)));
 
         /*TODO add return value and checks */
         conn_p->start();

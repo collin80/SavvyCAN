@@ -16,7 +16,7 @@
 
 namespace SERIALSTATE {
 
-enum STATE //keep this enum synchronized with the Arduino firmware project
+enum STATE
 {
     IDLE,
     GET_COMMAND,
@@ -29,11 +29,11 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
     GET_CANBUS_PARAMS,
     GET_DEVICE_INFO,
     SET_SINGLEWIRE_MODE,
-    GET_NUM_BUSES
+    GET_NUM_BUSES,
+    GET_EXT_BUSES
 };
 
 }
-
 
 using namespace SERIALSTATE;
 class GVRetSerial : public CANConnection
@@ -83,9 +83,9 @@ protected:
     STATE rx_state;
     uint32_t rx_step;
     CANFrame buildFrame;
-    int can0Baud, can1Baud;
-    bool can0Enabled, can1Enabled;
-    bool can0ListenOnly, can1ListenOnly;
+    int can0Baud, can1Baud, swcanBaud, lin1Baud, lin2Baud;
+    bool can0Enabled, can1Enabled, swcanEnabled, lin1Enabled, lin2Enabled;
+    bool can0ListenOnly, can1ListenOnly, swcanListenOnly;
     int deviceBuildNum;
     int deviceSingleWireMode;
     uint32_t buildTimeBasis;

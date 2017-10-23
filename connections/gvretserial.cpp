@@ -232,6 +232,10 @@ void GVRetSerial::connectDevice()
     output.append((char)0xE7); //this puts the device into binary comm mode
     output.append((char)0xE7);
 
+    output.append((char)0xF1);
+    output.append((char)0x0C); //get number of actually implemented buses. Not implemented except on M2RET
+    mNumBuses = 2; //the proper number if C/12 is not implemented
+
     output.append((char)0xF1); //signal we want to issue a command
     output.append((char)0x06); //request canbus stats from the board
 
@@ -249,15 +253,11 @@ void GVRetSerial::connectDevice()
         output.append((char)0xFF); //signal we don't want single wire mode
     }*/
 
-    output.append((char)0xF1); //yet another command
-    output.append((char)0x09); //comm validation command
-
     output.append((char)0xF1); //and another command
     output.append((char)0x01); //Time Sync - Not implemented until 333 but we can try
 
-    output.append((char)0xF1);
-    output.append((char)0x12); //get number of actually implemented buses. Not implemented except on M2RET
-    mNumBuses = 2; //the proper number if 0x12 is not implemented
+    output.append((char)0xF1); //yet another command
+    output.append((char)0x09); //comm validation command
 
     continuousTimeSync = true;
 
@@ -274,7 +274,10 @@ void GVRetSerial::connectDevice()
     }
     else {
         setStatus(CANCon::CONNECTED);
-        emit status(getStatus());
+        CANConStatus stats;
+        stats.conStatus = getStatus();
+        stats.numHardwareBuses = mNumBuses;
+        emit status(stats);
     }
 
     /* connect reading event */
@@ -336,6 +339,10 @@ void GVRetSerial::debugInput(QByteArray bytes) {
 
 void GVRetSerial::procRXChar(unsigned char c)
 {
+    CANConStatus stats;
+    int oldBuses;
+    QByteArray output;
+
     switch (rx_state)
     {
     case IDLE:
@@ -380,6 +387,12 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 12:
             rx_state = GET_NUM_BUSES;
+            qDebug() << "Got num buses reply";
+            rx_step = 0;
+            break;
+        case 13:
+            rx_state = GET_EXT_BUSES;
+            qDebug() << "Got extended buses info reply";
             rx_step = 0;
             break;
         }
@@ -545,6 +558,8 @@ void GVRetSerial::procRXChar(unsigned char c)
             rx_state = IDLE;
             qDebug() << "Baud 0 = " << can0Baud;
             qDebug() << "Baud 1 = " << can1Baud;
+            mBusData[0].mBus.setSpeed(can0Baud);
+            mBusData[1].mBus.setSpeed(can1Baud);
 
             can0Baud |= 0x80000000;
             if (can0Enabled) can0Baud |= 0x40000000;
@@ -556,7 +571,9 @@ void GVRetSerial::procRXChar(unsigned char c)
             if (deviceSingleWireMode > 0) can1Baud |= 0x10000000;
 
             setStatus(CANCon::CONNECTED);
-            emit status(getStatus());
+            stats.conStatus = getStatus();
+            stats.numHardwareBuses = mNumBuses;
+            emit status(stats);
 
             int can0Status = 0x78; //updating everything we can update
             int can1Status = 0x78;
@@ -606,8 +623,88 @@ void GVRetSerial::procRXChar(unsigned char c)
         rx_state = IDLE;
         break;
     case GET_NUM_BUSES:
+        oldBuses = mNumBuses;
         mNumBuses = c;
         rx_state = IDLE;
+        qDebug() << "Get number of buses = " << mNumBuses;
+        stats.conStatus = getStatus();
+        stats.numHardwareBuses = mNumBuses;
+        mBusData.resize(mNumBuses);
+        if (mNumBuses > oldBuses)
+        {
+            for (int i = oldBuses; i < mNumBuses; i++)
+            {
+                mBusData[i].mConfigured = true;
+                mBusData[i].mBus = mBusData[0].mBus;
+            }
+        }
+
+        output.append((char)0xF1); //start a new command
+        output.append((char)13); //get extended buses
+        serial->write(output);
+
+        emit status(stats);
+        break;
+    case GET_EXT_BUSES:
+        switch (rx_step)
+        {
+        case 0:
+            swcanEnabled = (c & 0xF);
+            swcanListenOnly = (c >> 4);
+            break;
+        case 1:
+            swcanBaud = c;
+            break;
+        case 2:
+            swcanBaud |= c << 8;
+            break;
+        case 3:
+            swcanBaud |= c << 16;
+            break;
+        case 4:
+            swcanBaud |= c << 24;
+            break;
+        case 5:
+            lin1Enabled = (c & 0xF);
+            break;
+        case 6:
+            lin1Baud = c;
+            break;
+        case 7:
+            lin1Baud |= c << 8;
+            break;
+        case 8:
+            lin1Baud |= c << 16;
+            break;
+        case 9:
+            lin1Baud |= c << 24;
+        case 10:
+            lin2Enabled = (c & 0xF);
+            break;
+        case 11:
+            lin2Baud = c;
+            break;
+        case 12:
+            lin2Baud |= c << 8;
+            break;
+        case 13:
+            lin2Baud |= c << 16;
+            break;
+        case 14:
+            lin2Baud |= c << 24;
+            rx_state = IDLE;
+            qDebug() << "SWCAN Baud = " << swcanBaud;
+            qDebug() << "LIN1 Baud = " << lin1Baud;
+            qDebug() << "LIN2 Baud = " << lin2Baud;
+            mBusData[2].mBus.setSpeed(swcanBaud);
+
+            setStatus(CANCon::CONNECTED);
+            stats.conStatus = getStatus();
+            stats.numHardwareBuses = mNumBuses;
+            emit status(stats);
+            break;
+        }
+        rx_step++;
         break;
     }
 }

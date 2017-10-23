@@ -65,11 +65,13 @@ int CANConnectionModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
 
-    int rows=0;
+    int rows = 0;
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
     foreach(const CANConnection* conn_p, conns)
-        rows+=conn_p->getNumBuses();
+        rows += conn_p->getNumBuses();
+
+    qDebug() << "Num Rows: " << rows;
 
     return rows;
 }
@@ -143,6 +145,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
+    qDebug() << "Row: " << index.row();
 
     int busId;
     CANConnection *conn_p = getAtIdx(index.row(), busId);
@@ -150,6 +153,8 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     bool ret;
     ret = conn_p->getBusSettings(busId, bus);
     bool isSocketCAN = (conn_p->getType() == CANCon::SOCKETCAN) ? true: false;
+
+    qDebug() << "ConnP: " << conn_p << "  ret " << ret;
 
     if (role == Qt::DisplayRole) {
         if(!conn_p)
@@ -254,6 +259,9 @@ CANConnection* CANConnectionModel::getAtIdx(int pIdx, int& pBusId) const
 
 void CANConnectionModel::refresh(int pIndex)
 {
+    beginResetModel();
+    endResetModel();
+    /*
     QModelIndex begin;
     QModelIndex end;
 
@@ -265,5 +273,5 @@ void CANConnectionModel::refresh(int pIndex)
         begin   = createIndex(0, 0);
         end     = createIndex(rowCount()-1, columnCount()-1);
     }
-    dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
+    dataChanged(begin, end, QVector<int>(Qt::DisplayRole)); */
 }
