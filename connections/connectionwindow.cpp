@@ -216,20 +216,6 @@ void ConnectionWindow::handleOKButton()
         conn_p = create(getConnectionType(), getPortName());
         if(!conn_p)
             return;
-
-        for (int i=0 ; i<conn_p->getNumBuses() ; i++) {
-            /* set bus configuration */
-            CANBus bus;
-            //bus.active = ui->ckEnabled->isChecked();
-            //bus.listenOnly = ui->ckListenOnly->isChecked();
-            //bus.singleWire = ui->ckSingleWire->isChecked();
-
-            //bus.speed = ui->cbSpeed->currentText().toInt();
-
-            /* update bus settings */
-            conn_p->setBusSettings(i, bus);
-        }
-
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -480,17 +466,10 @@ void ConnectionWindow::loadConnections()
     /* fill connection list */
     QVector<QString> portNames = settings.value("connections/portNames").value<QVector<QString>>();
     QVector<int>    devTypes = settings.value("connections/types").value<QVector<int>>();
-    QList<CANBus> busses = settings.value("connections/busses").value<QList<CANBus>>();
-
 
     for(int i=0 ; i<portNames.count() ; i++)
     {
         CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i]);
-        if(conn_p)
-        {
-            for(int j=0 ; j<conn_p->getNumBuses() ; j++)
-                conn_p->setBusSettings(j, busses.takeFirst());
-        }
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -507,23 +486,14 @@ void ConnectionWindow::saveConnections()
     QSettings settings;
     QVector<QString> portNames;
     QVector<int> devTypes;
-    QList<CANBus> busses;
 
     /* save connections */
     foreach(CANConnection* conn_p, conns)
     {
         portNames.append(conn_p->getPort());
         devTypes.append(conn_p->getType());
-
-        for(int i=0 ; i<conn_p->getNumBuses() ; i++)
-        {
-            CANBus bus;
-            conn_p->getBusSettings(i, bus);
-            busses.append(bus);
-        }
     }
 
     settings.setValue("connections/portNames", QVariant::fromValue(portNames));
     settings.setValue("connections/types", QVariant::fromValue(devTypes));
-    settings.setValue("connections/busses", QVariant::fromValue(busses));
 }

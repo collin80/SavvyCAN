@@ -32,6 +32,7 @@ void SocketCan::piStarted()
     mTimer.setSingleShot(false); //keep ticking
     mTimer.start();
     mBusData[0].mBus.setEnabled(true);
+    mBusData[0].mConfigured = true;
 }
 
 

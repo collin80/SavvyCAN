@@ -148,8 +148,8 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
     if (pBusIdx < 2) {
         /* update baud rates */
         QByteArray buffer;
-        qDebug() << "Got signal to update bauds. 1: " << can0Baud <<" 2: " << can1Baud;
-        debugOutput("Got signal to update bauds. 1: " + QString::number(can0Baud) + " 2: " + QString::number(can1Baud));
+        qDebug() << "Got signal to update bauds. 1: " << (can0Baud & 0xFFFFFFF) <<" 2: " << (can1Baud & 0xFFFFFFF);
+        debugOutput("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)) + " 2: " + QString::number((can1Baud & 0xFFFFFFF)));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 5; //setup canbus
         buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
@@ -606,6 +606,10 @@ void GVRetSerial::procRXChar(unsigned char c)
             qDebug() << "Baud 1 = " << can1Baud;
             mBusData[0].mBus.setSpeed(can0Baud);
             mBusData[1].mBus.setSpeed(can1Baud);
+            mBusData[0].mBus.setEnabled(can0Enabled);
+            mBusData[1].mBus.setEnabled(can1Enabled);
+            mBusData[0].mConfigured = true;
+            mBusData[1].mConfigured = true;
 
             can0Baud |= 0x80000000;
             if (can0Enabled) can0Baud |= 0x40000000;
@@ -743,6 +747,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             qDebug() << "LIN1 Baud = " << lin1Baud;
             qDebug() << "LIN2 Baud = " << lin2Baud;
             mBusData[2].mBus.setSpeed(swcanBaud);
+            mBusData[2].mBus.setEnabled(swcanEnabled);
 
             setStatus(CANCon::CONNECTED);
             stats.conStatus = getStatus();
