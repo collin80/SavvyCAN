@@ -48,26 +48,27 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
 
     updateFrameLabel();
 
-    connect(ui->btnStepBack, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
-    connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
-    connect(ui->btnPlayReverse, SIGNAL(clicked(bool)), this, SLOT(btnReverseClick()));
-    connect(ui->btnStop, SIGNAL(clicked(bool)), this, SLOT(btnStopClick()));
-    connect(ui->btnPlay, SIGNAL(clicked(bool)), this, SLOT(btnPlayClick()));
-    connect(ui->btnStepForward, SIGNAL(clicked(bool)), this, SLOT(btnFwdOneClick()));
-    connect(ui->btnSelectAll, SIGNAL(clicked(bool)), this, SLOT(btnSelectAllClick()));
-    connect(ui->btnSelectNone, SIGNAL(clicked(bool)), this, SLOT(btnSelectNoneClick()));
-    connect(ui->btnDelete, SIGNAL(clicked(bool)), this, SLOT(btnDeleteCurrSeq()));
+    connect(ui->btnStepBack, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnBackOneClick);
+    connect(ui->btnPause, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnPauseClick);
+    connect(ui->btnPlayReverse, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnReverseClick);
+    connect(ui->btnStop, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnStopClick);
+    connect(ui->btnPlay, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnPlayClick);
+    connect(ui->btnStepForward, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnFwdOneClick);
+    connect(ui->btnSelectAll, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnSelectAllClick);
+    connect(ui->btnSelectNone, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnSelectNoneClick);
+    connect(ui->btnDelete, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnDeleteCurrSeq);
     connect(ui->spinPlaySpeed, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     //connect(ui->cbLoop, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->comboCANBus, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSendingBus(int)));
-    connect(ui->listID, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(changeIDFiltering(QListWidgetItem*)));
-    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
-    connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(btnLoadFile()));
-    connect(ui->btnLoadLive, SIGNAL(clicked(bool)), this, SLOT(btnLoadLive()));
-    connect(ui->tblSequence, SIGNAL(cellPressed(int,int)), this, SLOT(seqTableCellClicked(int,int)));
-    connect(ui->tblSequence, SIGNAL(cellChanged(int,int)), this, SLOT(seqTableCellChanged(int,int)));
-    connect(ui->btnLoadFilters, SIGNAL(clicked(bool)), this, SLOT(loadFilters()));
-    connect(ui->btnSaveFilters, SIGNAL(clicked(bool)), this, SLOT(saveFilters()));
+    connect(ui->listID, &QListWidget::itemClicked, this, &FramePlaybackWindow::changeIDFiltering);
+    connect(playbackTimer, &QTimer::timeout, this, &FramePlaybackWindow::timerTriggered);
+    connect(ui->btnLoadFile, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnLoadFile);
+    connect(ui->btnLoadLive, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnLoadLive);
+    connect(ui->tblSequence, &QTableWidget::cellPressed, this, &FramePlaybackWindow::seqTableCellClicked);
+    connect(ui->tblSequence, &QTableWidget::cellChanged, this, &FramePlaybackWindow::seqTableCellChanged);
+    connect(ui->btnLoadFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::loadFilters);
+    connect(ui->btnSaveFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::saveFilters);
+    connect(ui->cbOriginalTiming, &QCheckBox::toggled, this, &FramePlaybackWindow::useOrigTimingClicked);
 
     ui->listID->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->listID, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuFilters(QPoint)));
@@ -313,6 +314,20 @@ void FramePlaybackWindow::fillIDHash(SequenceItem &item)
     }
 }
 
+void FramePlaybackWindow::useOrigTimingClicked()
+{
+    if (ui->cbOriginalTiming->isChecked())
+    {
+        ui->spinBurstSpeed->setEnabled(false);
+        ui->spinPlaySpeed->setEnabled(false);
+    }
+    else
+    {
+        ui->spinBurstSpeed->setEnabled(true);
+        ui->spinPlaySpeed->setEnabled(true);
+    }
+}
+
 void FramePlaybackWindow::btnDeleteCurrSeq()
 {
     if (currentSeqNum == -1) return;
@@ -345,6 +360,7 @@ void FramePlaybackWindow::btnLoadFile()
 
     if (FrameFileIO::loadFrameFile(filename, &item.data))
     {
+        qSort(item.data); //sort by timestamp to be sure it's in order
         QStringList fileList = filename.split('/');
         item.filename = fileList[fileList.length() - 1];
         item.currentLoopCount = 0;
@@ -377,6 +393,7 @@ void FramePlaybackWindow::btnLoadLive()
     item.currentLoopCount = 0;
     item.maxLoops = 1;
     item.data = QVector<CANFrame>(*modelFrames); //create a copy of the current frames from the main view
+    qSort(item.data); //be sure it's all in time based order
     fillIDHash(item);
     if (ui->tblSequence->currentRow() == -1)
     {
@@ -417,6 +434,12 @@ void FramePlaybackWindow::btnReverseClick()
 {
     playbackActive = true;
     playbackForward = false;
+    if (ui->cbOriginalTiming->isChecked())
+    {
+        playbackElapsed.start();
+        playbackTimer->setInterval(1);
+        playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp + 2000;
+    }
     playbackTimer->start();
 }
 
@@ -446,6 +469,14 @@ void FramePlaybackWindow::btnPlayClick()
 {
     playbackActive = true;
     playbackForward = true;
+    if (ui->cbOriginalTiming->isChecked())
+    {
+        playbackTimer->setInterval(1);
+        playbackElapsed.start();
+        if (currentSeqItem->data[currentPosition].timestamp > 1000)
+            playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp - 2000;
+        else playbackLastTimeStamp = 0;
+    }
     playbackTimer->start();
 }
 
@@ -503,26 +534,68 @@ void FramePlaybackWindow::btnSelectNoneClick()
 void FramePlaybackWindow::timerTriggered()
 {
     sendingBuffer.clear();
-    for (int count = 0; count < ui->spinBurstSpeed->value(); count++)
+
+    if (ui->cbOriginalTiming->isChecked())
     {
-        if (!playbackActive)
-        {
-            playbackTimer->stop();
-            return;
-        }
+        //get elapsed microseconds since last tick (in case timer skips or is otherwise inaccurate, though there are no guarantees about elapsed timer either)
+        quint64 elapsed = playbackElapsed.nsecsElapsed() / 1000;
+        playbackElapsed.start();
         if (playbackForward)
         {
-            updatePosition(true);
+            playbackLastTimeStamp += elapsed;
+            //qDebug() << playbackLastTimeStamp;
+            while (peekPosition(true) <= playbackLastTimeStamp)
+            {
+                updatePosition(true);
+            }
+            if (peekPosition(true) == 0xFFFFFFFFFFFFFFFFull)
+            {
+                updatePosition(true); //this'll go to the next log (if there is one)
+                if (currentSeqItem->data[currentPosition].timestamp > 1000)
+                    playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp - 1000;
+                else playbackLastTimeStamp = 0;
+            }
         }
         else
         {
-            updatePosition(false);
+            if (playbackLastTimeStamp > elapsed)
+                playbackLastTimeStamp -= elapsed;
+            else playbackLastTimeStamp = 0;
+            while (peekPosition(false) >= playbackLastTimeStamp && peekPosition(false) != 0xFFFFFFFFFFFFFFFFull)
+            {
+                updatePosition(false);
+            }
+            if (peekPosition(false) == 0xFFFFFFFFFFFFFFFFull)
+            {
+                updatePosition(false); //this'll go to the next log (if there is one)
+                playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp + 1000;
+            }
         }
     }
+    else
+    {
+        for (int count = 0; count < ui->spinBurstSpeed->value(); count++)
+        {
+            if (!playbackActive)
+            {
+                playbackTimer->stop();
+                return;
+            }
+            if (playbackForward)
+            {
+                updatePosition(true);
+            }
+            else
+            {
+                updatePosition(false);
+            }
+        }
+    }
+
     CANConManager::getInstance()->sendFrames(sendingBuffer);
 }
 
-void FramePlaybackWindow::updatePosition(bool forward)
+quint64 FramePlaybackWindow::updatePosition(bool forward)
 {
     //qDebug() << "updatePosition";
     if (forward)
@@ -613,4 +686,29 @@ void FramePlaybackWindow::updatePosition(bool forward)
 
         thisFrame->bus = originalBus;
     }
+    return thisFrame->timestamp;
 }
+
+quint64 FramePlaybackWindow::peekPosition(bool forward)
+{
+    int peekCurrentPosition = currentPosition;
+    if (forward)
+    {
+        if (peekCurrentPosition < (currentSeqItem->data.count() - 1)) peekCurrentPosition++; //still in same file so keep going
+        else //hit the end of the current file
+        {
+            return 0xFFFFFFFFFFFFFFFFull;
+        }
+    }
+    else
+    {
+        if (peekCurrentPosition > 0) peekCurrentPosition--;
+        else //hit the beginning of the current sequence
+        {
+            return 0xFFFFFFFFFFFFFFFFull;
+        }
+    }
+    CANFrame *thisFrame = &currentSeqItem->data[peekCurrentPosition];
+    return thisFrame->timestamp;
+}
+

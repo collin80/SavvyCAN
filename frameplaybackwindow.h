@@ -2,6 +2,7 @@
 #define FRAMEPLAYBACKWINDOW_H
 
 #include <QDialog>
+#include <QElapsedTimer>
 #include <QListWidget>
 #include <QTimer>
 #include "can_structs.h"
@@ -51,6 +52,7 @@ private slots:
     void contextMenuFilters(QPoint);
     void saveFilters();
     void loadFilters();
+    void useOrigTimingClicked();
 
 private:
     Ui::FramePlaybackWindow *ui;
@@ -60,6 +62,8 @@ private:
     const QVector<CANFrame> *modelFrames;
     int currentPosition;
     QTimer *playbackTimer;
+    QElapsedTimer playbackElapsed;
+    quint64 playbackLastTimeStamp;
     bool playbackActive;
     bool playbackForward;
     int whichBusSend;
@@ -69,8 +73,9 @@ private:
 
     void refreshIDList();
     void updateFrameLabel();
-    void updatePosition(bool forward);
-    void fillIDHash(SequenceItem &item);    
+    quint64 updatePosition(bool forward);
+    quint64 peekPosition(bool forward);
+    void fillIDHash(SequenceItem &item);
     void showEvent(QShowEvent *);
     void closeEvent(QCloseEvent *event);
     void readSettings();
