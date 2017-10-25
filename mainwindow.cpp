@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(6, 225);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+    connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(on_sectionClicked(int)));
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -232,6 +233,13 @@ void MainWindow::closeEvent(QCloseEvent *event)
     Q_UNUSED(event);
     writeSettings();
     exitApp();
+}
+
+void MainWindow::on_sectionClicked ( int logicalIndex )
+{
+    QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
+    HorzHdr->setSortIndicator(logicalIndex, Qt::AscendingOrder);
+    ui->canFramesView->sortByColumn(logicalIndex);
 }
 
 void MainWindow::updateSettings()

@@ -102,6 +102,7 @@ public slots:
     void readUpdateableSettings();
     void gotCenterTimeID(int32_t ID, double timestamp);
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
+    void on_sectionClicked ( int logicalIndex );
 
 signals:
     void sendCANFrame(const CANFrame *, int);
