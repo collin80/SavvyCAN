@@ -42,11 +42,18 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     ui->tableIsoFrames->setHorizontalHeaderLabels(headers);
     QHeaderView *HorzHdr = ui->tableIsoFrames->horizontalHeader();
     HorzHdr->setStretchLastSection(true);
+    connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 
     decoder->setReception(true);
     decoder->setFlowCtrl(false);
     decoder->setProcessAll(true);
 }
+
+void ISOTP_InterpreterWindow::headerClicked(int logicalIndex)
+{
+    ui->tableIsoFrames->sortByColumn(logicalIndex);
+}
+
 
 ISOTP_InterpreterWindow::~ISOTP_InterpreterWindow()
 {
