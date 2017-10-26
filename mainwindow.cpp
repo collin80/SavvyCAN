@@ -238,11 +238,6 @@ void MainWindow::closeEvent(QCloseEvent *event)
     exitApp();
 }
 
-void MainWindow::headerClicked(int logicalIndex)
-{
-    ui->canFramesView->sortByColumn(logicalIndex);
-}
-
 void MainWindow::updateSettings()
 {
     readUpdateableSettings();
@@ -306,6 +301,11 @@ void MainWindow::updateConnectionSettings(QString connectionType, QString port, 
     {
         //emit updateBaudRates(speed0, speed1);
     }
+}
+
+void MainWindow::headerClicked(int logicalIndex)
+{
+    ui->canFramesView->sortByColumn(logicalIndex);
 }
 
 void MainWindow::gridClicked(QModelIndex idx)

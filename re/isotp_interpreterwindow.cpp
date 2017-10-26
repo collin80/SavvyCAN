@@ -49,12 +49,6 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     decoder->setProcessAll(true);
 }
 
-void ISOTP_InterpreterWindow::headerClicked(int logicalIndex)
-{
-    ui->tableIsoFrames->sortByColumn(logicalIndex);
-}
-
-
 ISOTP_InterpreterWindow::~ISOTP_InterpreterWindow()
 {
     delete decoder;
@@ -159,6 +153,11 @@ void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
     }
+}
+
+void ISOTP_InterpreterWindow::headerClicked(int logicalIndex)
+{
+    ui->tableIsoFrames->sortByColumn(logicalIndex);
 }
 
 void ISOTP_InterpreterWindow::showDetailView()
