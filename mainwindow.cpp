@@ -41,7 +41,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     model = new CANFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
 
-    ui->canFramesView->setModel(model);
+    QSortFilterProxyModel* proxyModel = new QSortFilterProxyModel;
+    proxyModel->setSourceModel(model);
+
+    ui->canFramesView->setModel(proxyModel);
 
     readSettings();
 
@@ -54,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setColumnWidth(6, 225);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+    connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 
     graphingWindow = NULL;
     frameInfoWindow = NULL;
@@ -297,6 +301,11 @@ void MainWindow::updateConnectionSettings(QString connectionType, QString port, 
     {
         //emit updateBaudRates(speed0, speed1);
     }
+}
+
+void MainWindow::headerClicked(int logicalIndex)
+{
+    ui->canFramesView->sortByColumn(logicalIndex);
 }
 
 void MainWindow::gridClicked(QModelIndex idx)
