@@ -31,6 +31,7 @@ private slots:
     void filterNone();
     void interpretCapturedFrames();
     void useExtendedAddressing(bool checked);
+    void headerClicked(int logicalIndex);
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;
