@@ -349,9 +349,11 @@ void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSVa
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
+    msg.data.reserve(msg.len);
+
     for (unsigned int i = 0; i < msg.len; i++)
     {
-        msg.data[i] = static_cast<uint8_t>(data.property(i).toInt());
+        msg.data.append(static_cast<uint8_t>(data.property(i).toInt()));
     }
 
     msg.bus = (uint32_t)bus.toInt();
