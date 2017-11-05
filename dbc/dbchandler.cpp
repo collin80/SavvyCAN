@@ -214,6 +214,7 @@ void DBCMessageHandler::setJ1939(bool j1939)
 DBCFile::DBCFile()
 {
     messageHandler = new DBCMessageHandler;
+    messageHandler->setJ1939(false);
 }
 
 DBCFile::DBCFile(const DBCFile& cpy)
@@ -346,6 +347,7 @@ void DBCFile::loadFile(QString fileName)
     qDebug() << "Starting DBC load";
     dbc_nodes.clear();
     messageHandler->removeAllMessages();
+    messageHandler->setJ1939(false);
 
     DBC_NODE falseNode;
     falseNode.name = "Vector__XXX";
