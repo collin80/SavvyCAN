@@ -1,0 +1,78 @@
+VERSION ""
+
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    CAT_DEF_
+    CAT_
+    FILTER
+    BA_DEF_DEF_
+    EV_DATA_
+    ENVVAR_DATA_
+    SGTYPE_
+    SGTYPE_VAL_
+    BA_DEF_SGTYPE_
+    BA_SGTYPE_
+    SIG_TYPE_REF_
+    VAL_TABLE_
+    SIG_GROUP_
+    SIG_VALTYPE_
+    SIGTYPE_VALTYPE_
+    BO_TX_BU_
+    BA_DEF_REL_
+    BA_REL_
+    BA_DEF_DEF_REL_
+    BU_SG_REL_
+    BU_EV_REL_
+    BU_BO_REL_
+    SG_MUL_VAL_
+
+BS_: 
+BU_: VCM Inverter LBC Charger 
+BO_ 468 Ctrl1: 8 VCM
+   SG_ RequestedTorque : 23|12@0- (1,0) [0|0] "" Vector__XXX
+   SG_ SecurityByte : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 498 Ctrl2: 8 VCM
+
+BO_ 644 WheelSpeeds: 8 VCM
+   SG_ LeftWheel : 7|16@0+ (1,0) [0|0] "" Vector__XXX
+   SG_ RightWheel : 23|16@0+ (1,0) [0|0] "" Vector__XXX
+   SG_ MysterySpeedSensor : 39|16@0+ (1,0) [0|0] "" Vector__XXX
+   SG_ TraveledDistance : 55|16@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1449 Status1: 8 VCM
+
+BO_ 1465 Status2: 5 VCM
+
+BO_ 282 Inv1: 8 Inverter
+
+BO_ 474 InverterStatus: 8 Inverter
+   SG_ Voltage : 0|8@1+ (1,0) [0|0] "" Vector__XXX
+   SG_ Amps : 18|11@0- (0.5,0) [0|0] "" Vector__XXX
+   SG_ RPM : 39|16@0- (0.5,0) [0|0] "" Vector__XXX
+   SG_ MultiplexByte : 48|8@1+ (1,0) [0|0] "" Vector__XXX
+   SG_ SecurityByte : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1370 InverterStatus2: 8 Inverter
+   SG_ InvBoardTemp : 8|8@1+ (0.5,0) [0|0] "" Vector__XXX
+   SG_ IGBTTemp : 16|8@1+ (0.5,0) [0|0] "" Vector__XXX
+   SG_ MotorTemp : 40|8@1+ (0.5,0) [0|0] "" Vector__XXX
+
+BO_ 475 BatteryStatus: 8 LBC
+   SG_ BattCurrent : 7|11@0- (0.5,0) [0|0] "" Vector__XXX
+   SG_ BattVoltage : 23|10@0+ (0.5,0) [0|0] "" Vector__XXX
+   SG_ SecurityByte : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+   SG_ MultiplexByte : 48|8@1+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 476 BatteryStatus2: 8 LBC
+   SG_ MaxPower : 0|8@1+ (1,0) [0|0] "kW" Vector__XXX
+   SG_ MaxChargePower : 15|12@0+ (1,0) [0|0] "" Vector__XXX
+   SG_ SecurityByte : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+
+CM_ BU_ VCM "Main ECU";
+CM_ BU_ LBC "Lithium Battery Controller";

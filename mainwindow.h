@@ -95,6 +95,7 @@ private slots:
     void filterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
+    void headerClicked (int logicalIndex);
 
 public slots:
     void gotFrames(int);
