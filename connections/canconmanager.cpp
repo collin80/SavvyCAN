@@ -36,6 +36,7 @@ CANConManager::CANConManager(QObject *parent): QObject(parent)
 void CANConManager::resetTimeBasis()
 {
     mTimestampBasis = QDateTime::currentMSecsSinceEpoch() * 1000;
+    mElapsedTimer.restart();
 }
 
 CANConManager::~CANConManager()
@@ -182,8 +183,15 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
-            workingFrame.timestamp = (QDateTime::currentMSecsSinceEpoch() * 1000);
-            if (!useSystemTime) workingFrame.timestamp -= mTimestampBasis;
+            if (useSystemTime)
+            {
+                workingFrame.timestamp = (QDateTime::currentMSecsSinceEpoch() * 1000);
+            }
+            else
+            {
+                workingFrame.timestamp = mElapsedTimer.nsecsElapsed() / 1000;
+                //workingFrame.timestamp -= mTimestampBasis;
+            }
             txFrame = conn->getQueue().get();
             *txFrame = workingFrame;
             conn->getQueue().queue();

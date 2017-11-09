@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QElapsedTimer>
 
 #include "canconnection.h"
 
@@ -73,6 +74,7 @@ private:
     static CANConManager*  mInstance;
     QList<CANConnection*>  mConns;
     QTimer                 mTimer;
+    QElapsedTimer          mElapsedTimer;
     uint64_t               mTimestampBasis;
     uint32_t               mNumActiveBuses;
     bool useSystemTime;
