@@ -55,6 +55,7 @@ private:
     int currentSeqNum;
     FramePlaybackObject playbackObject;
     bool forward;
+    bool isPlaying;
     int currentPosition;
 
     void refreshIDList();

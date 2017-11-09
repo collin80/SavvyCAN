@@ -38,26 +38,6 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
                 playbackActive = false;
                 playbackTimer->stop();
                 emit EndOfFrameCache();
-                /*
-                currentSeqNum++; //go forward in the sequence
-                if (currentSeqNum == seqItems.count()) //are we at the end of the sequence?
-                {
-                    //reset the loop figures for each sequence entry
-                    for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
-                    currentSeqNum = 0;
-                    if (ui->cbLoop->isChecked()) //go back to beginning if we're looping the sequence
-                    {
-
-                    }
-                    else //not looping so stop playback entirely
-                    {
-                        playbackActive = false;
-                        playbackTimer->stop();
-                    }
-                }
-                currentSeqItem = &seqItems[currentSeqNum];
-                ui->tblSequence->setCurrentCell(currentSeqNum, 0);
-                */
             }
         }
     }
@@ -74,31 +54,10 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
                 playbackActive = false;
                 playbackTimer->stop();
                 emit EndOfFrameCache();
-
-                /*
-                currentSeqNum--; //go backward in the sequence
-                if (currentSeqNum == -1) //are we trying to go past the beginning?
-                {
-                    //reset the loop figures for each sequence entry
-                    for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
-                    currentSeqNum = seqItems.count() - 1;
-                    if (ui->cbLoop->isChecked()) //go back to the last sequence entry if we're looping
-                    {
-
-                    }
-                    else //not looping so stop playback entirely
-                    {
-                        playbackActive = false;
-                        playbackTimer->stop();
-                    }
-                }
-                currentSeqItem = &seqItems[currentSeqNum];
-                ui->tblSequence->setCurrentCell(currentSeqNum, 0);
-                */
             }
         }
     }
-    //updateFrameLabel();
+
     //only send frame out if its ID is checked in the list. Otherwise discard it.
     CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
     uint32_t originalBus = thisFrame->bus;
@@ -303,22 +262,6 @@ void FramePlaybackObject::stopPlayback()
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
     currentPosition = 0;
-    /*
-    if (seqItems.count() > 0)
-    {
-        currentSeqNum = 0;
-        currentSeqItem = &seqItems[currentSeqNum];
-    }
-    else {
-        currentSeqNum = -1;
-        currentSeqItem = NULL;
-    }
-    if (ui->tblSequence->rowCount() > 0)
-    {
-        ui->tblSequence->setCurrentCell(0, 0);
-        refreshIDList();
-    }
-    updateFrameLabel(); */
 }
 
 void FramePlaybackObject::pausePlayback()

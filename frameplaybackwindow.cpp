@@ -43,6 +43,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     currentSeqNum = -1;
     currentPosition = 0;
     forward = true;
+    isPlaying = false;
 
     updateFrameLabel();
 
@@ -271,11 +272,49 @@ void FramePlaybackWindow::EndOfFrameCache()
 {
     if (forward)
     {
+        currentSeqNum++; //go forward in the sequence
+        if (currentSeqNum == seqItems.count()) //are we at the end of the sequence?
+        {
+            //reset the loop figures for each sequence entry
+            for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
+            currentSeqNum = 0;
+            if (ui->cbLoop->isChecked()) //go back to beginning if we're looping the sequence
+            {
 
+            }
+            else //not looping so stop playback entirely
+            {
+                isPlaying = false;
+                playbackObject.stopPlayback();
+            }
+        }
+        currentSeqItem = &seqItems[currentSeqNum];
+        playbackObject.setSequenceObject(currentSeqItem);
+        if (isPlaying) playbackObject.startPlaybackForward();
+        ui->tblSequence->setCurrentCell(currentSeqNum, 0);
     }
     else
     {
+        currentSeqNum--; //go backward in the sequence
+        if (currentSeqNum == -1) //are we trying to go past the beginning?
+        {
+            //reset the loop figures for each sequence entry
+            for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
+            currentSeqNum = seqItems.count() - 1;
+            if (ui->cbLoop->isChecked()) //go back to the last sequence entry if we're looping
+            {
 
+            }
+            else //not looping so stop playback entirely
+            {
+                isPlaying = false;
+                playbackObject.stopPlayback();
+            }
+        }
+        currentSeqItem = &seqItems[currentSeqNum];
+        playbackObject.setSequenceObject(currentSeqItem);
+        if (isPlaying) playbackObject.startPlaybackBackward();
+        ui->tblSequence->setCurrentCell(currentSeqNum, 0);
     }
 }
 
@@ -445,22 +484,26 @@ void FramePlaybackWindow::btnLoadLive()
 void FramePlaybackWindow::btnBackOneClick()
 {
     forward = false;
+    isPlaying = false;
     playbackObject.stepPlaybackBackward();
 }
 
 void FramePlaybackWindow::btnPauseClick()
 {
+    isPlaying = false;
     playbackObject.pausePlayback();
 }
 
 void FramePlaybackWindow::btnReverseClick()
 {
     forward = false;
+    isPlaying = true;
     playbackObject.startPlaybackBackward();
 }
 
 void FramePlaybackWindow::btnStopClick()
 {
+    isPlaying = false;
     playbackObject.stopPlayback();
     if (seqItems.count() > 0)
     {
@@ -475,19 +518,21 @@ void FramePlaybackWindow::btnStopClick()
     {
         ui->tblSequence->setCurrentCell(0, 0);
         refreshIDList();
-    }
-    //updateFrameLabel();
+    }    
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnPlayClick()
 {
     forward = true;
+    isPlaying = true;
     playbackObject.startPlaybackForward();
 }
 
 void FramePlaybackWindow::btnFwdOneClick()
 {
     forward = true;
+    isPlaying = false;
     playbackObject.stepPlaybackForward();
 }
 
