@@ -32,19 +32,17 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     ui->comboCANBus->addItem(tr("From File"));
     ui->comboCANBus->setCurrentIndex(0);
 
+    playbackObject.initialize();
+    playbackObject.setNumBuses(numBuses);
+
     readSettings();
 
     modelFrames = frames;
 
-    playbackTimer = new QTimer();
-    playbackTimer->setTimerType(Qt::PreciseTimer);
-
-    currentPosition = 0;
-    playbackActive = false;
-    playbackForward = true;
-    whichBusSend = 0; //0 = no bus, 1 = bus 0, 2 = bus 1, 4 = from file - Bitfield so you can 'or' them.
     currentSeqItem = NULL;
     currentSeqNum = -1;
+    currentPosition = 0;
+    forward = true;
 
     updateFrameLabel();
 
@@ -58,10 +56,10 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->btnSelectNone, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnSelectNoneClick);
     connect(ui->btnDelete, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnDeleteCurrSeq);
     connect(ui->spinPlaySpeed, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
+    connect(ui->spinBurstSpeed, SIGNAL(valueChanged(int)), this, SLOT(changeBurstRate(int)));
     //connect(ui->cbLoop, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->comboCANBus, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSendingBus(int)));
     connect(ui->listID, &QListWidget::itemClicked, this, &FramePlaybackWindow::changeIDFiltering);
-    connect(playbackTimer, &QTimer::timeout, this, &FramePlaybackWindow::timerTriggered);
     connect(ui->btnLoadFile, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnLoadFile);
     connect(ui->btnLoadLive, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnLoadLive);
     connect(ui->tblSequence, &QTableWidget::cellPressed, this, &FramePlaybackWindow::seqTableCellClicked);
@@ -70,10 +68,13 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->btnSaveFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::saveFilters);
     connect(ui->cbOriginalTiming, &QCheckBox::toggled, this, &FramePlaybackWindow::useOrigTimingClicked);
 
+    connect(&playbackObject, &FramePlaybackObject::EndOfFrameCache, this, &FramePlaybackWindow::EndOfFrameCache);
+    connect(&playbackObject, &FramePlaybackObject::statusUpdate, this, &FramePlaybackWindow::getStatusUpdate);
+
     ui->listID->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->listID, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuFilters(QPoint)));
 
-    playbackTimer->setInterval(ui->spinPlaySpeed->value()); //set the timer to the default value of the control
+    playbackObject.setPlaybackInterval(ui->spinPlaySpeed->value());
 
     QStringList headers;
     headers << "Source" << "Loops";
@@ -86,9 +87,6 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
 FramePlaybackWindow::~FramePlaybackWindow()
 {
     delete ui;
-
-    playbackTimer->stop();
-    delete playbackTimer;
 }
 
 void FramePlaybackWindow::showEvent(QShowEvent *)
@@ -116,7 +114,8 @@ void FramePlaybackWindow::readSettings()
     }
     ui->spinPlaySpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
     ui->comboCANBus->setCurrentIndex(settings.value("Playback/SendingBus", 0).toInt());
-    whichBusSend = ui->comboCANBus->currentIndex();
+
+    calculateWhichBus();
 }
 
 void FramePlaybackWindow::writeSettings()
@@ -257,6 +256,35 @@ void FramePlaybackWindow::refreshIDList()
     ui->listID->sortItems();
 }
 
+void FramePlaybackWindow::calculateWhichBus()
+{
+    int idx = ui->comboCANBus->currentIndex();
+    int maxIdx = ui->comboCANBus->count() - 1;
+    int out = idx;
+    if (idx == (maxIdx - 1) ) out = -1;
+    if (idx == maxIdx) out = -2;
+
+    playbackObject.setSendingBus(out);
+}
+
+void FramePlaybackWindow::EndOfFrameCache()
+{
+    if (forward)
+    {
+
+    }
+    else
+    {
+
+    }
+}
+
+void FramePlaybackWindow::getStatusUpdate(int frameNum)
+{
+    currentPosition = frameNum;
+    updateFrameLabel();
+}
+
 void FramePlaybackWindow::updateFrameLabel()
 {
     int row = currentSeqNum;
@@ -320,11 +348,13 @@ void FramePlaybackWindow::useOrigTimingClicked()
     {
         ui->spinBurstSpeed->setEnabled(false);
         ui->spinPlaySpeed->setEnabled(false);
+        playbackObject.setUseOriginalTiming(true);
     }
     else
     {
         ui->spinBurstSpeed->setEnabled(true);
         ui->spinPlaySpeed->setEnabled(true);
+        playbackObject.setUseOriginalTiming(false);
     }
 }
 
@@ -332,11 +362,7 @@ void FramePlaybackWindow::btnDeleteCurrSeq()
 {
     if (currentSeqNum == -1) return;
 
-    if (playbackActive)
-    {
-        playbackActive = false;
-        playbackTimer->stop();
-    }
+    playbackObject.stopPlayback();
 
     seqItems.removeAt(currentSeqNum);
     ui->tblSequence->removeRow(currentSeqNum);
@@ -380,6 +406,7 @@ void FramePlaybackWindow::btnLoadFile()
         {
             currentSeqNum = 0;
             currentSeqItem = &seqItems[0];
+            playbackObject.setSequenceObject(currentSeqItem);
         }
         refreshIDList();
         updateFrameLabel();
@@ -408,6 +435,7 @@ void FramePlaybackWindow::btnLoadLive()
     {
         currentSeqNum = 0;
         currentSeqItem = &seqItems[0];
+        playbackObject.setSequenceObject(currentSeqItem);
     }
     refreshIDList();
     updateFrameLabel();
@@ -416,38 +444,24 @@ void FramePlaybackWindow::btnLoadLive()
 
 void FramePlaybackWindow::btnBackOneClick()
 {
-    sendingBuffer.clear();
-    playbackTimer->stop(); //pushing this button halts automatic playback
-    playbackActive = false;
-
-    updatePosition(false);
-    CANConManager::getInstance()->sendFrames(sendingBuffer);
+    forward = false;
+    playbackObject.stepPlaybackBackward();
 }
 
 void FramePlaybackWindow::btnPauseClick()
 {
-    playbackActive = false;
-    playbackTimer->stop();
+    playbackObject.pausePlayback();
 }
 
 void FramePlaybackWindow::btnReverseClick()
 {
-    playbackActive = true;
-    playbackForward = false;
-    if (ui->cbOriginalTiming->isChecked())
-    {
-        playbackElapsed.start();
-        playbackTimer->setInterval(1);
-        playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp + 2000;
-    }
-    playbackTimer->start();
+    forward = false;
+    playbackObject.startPlaybackBackward();
 }
 
 void FramePlaybackWindow::btnStopClick()
 {
-    playbackTimer->stop(); //pushing this button halts automatic playback
-    playbackActive = false;
-    currentPosition = 0;
+    playbackObject.stopPlayback();
     if (seqItems.count() > 0)
     {
         currentSeqNum = 0;
@@ -462,36 +476,29 @@ void FramePlaybackWindow::btnStopClick()
         ui->tblSequence->setCurrentCell(0, 0);
         refreshIDList();
     }
-    updateFrameLabel();
+    //updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnPlayClick()
 {
-    playbackActive = true;
-    playbackForward = true;
-    if (ui->cbOriginalTiming->isChecked())
-    {
-        playbackTimer->setInterval(1);
-        playbackElapsed.start();
-        if (currentSeqItem->data[currentPosition].timestamp > 1000)
-            playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp - 2000;
-        else playbackLastTimeStamp = 0;
-    }
-    playbackTimer->start();
+    forward = true;
+    playbackObject.startPlaybackForward();
 }
 
 void FramePlaybackWindow::btnFwdOneClick()
 {
-    sendingBuffer.clear();
-    playbackTimer->stop();
-    playbackActive = false;
-    updatePosition(true);
-    CANConManager::getInstance()->sendFrames(sendingBuffer);
+    forward = true;
+    playbackObject.stepPlaybackForward();
 }
 
 void FramePlaybackWindow::changePlaybackSpeed(int newSpeed)
 {
-    playbackTimer->setInterval(newSpeed);
+    playbackObject.setPlaybackInterval(newSpeed);
+}
+
+void FramePlaybackWindow::changeBurstRate(int burst)
+{
+    playbackObject.setPlaybackBurst(burst);
 }
 
 void FramePlaybackWindow::changeLooping(bool check)
@@ -501,7 +508,7 @@ void FramePlaybackWindow::changeLooping(bool check)
 
 void FramePlaybackWindow::changeSendingBus(int newIdx)
 {
-    whichBusSend = newIdx;
+    calculateWhichBus();
 }
 
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
@@ -530,185 +537,3 @@ void FramePlaybackWindow::btnSelectNoneClick()
         currentSeqItem->idFilters[Utility::ParseStringToNum(item->text())] = false;
     }
 }
-
-void FramePlaybackWindow::timerTriggered()
-{
-    sendingBuffer.clear();
-
-    if (ui->cbOriginalTiming->isChecked())
-    {
-        //get elapsed microseconds since last tick (in case timer skips or is otherwise inaccurate, though there are no guarantees about elapsed timer either)
-        quint64 elapsed = playbackElapsed.nsecsElapsed() / 1000;
-        playbackElapsed.start();
-        if (playbackForward)
-        {
-            playbackLastTimeStamp += elapsed;
-            //qDebug() << playbackLastTimeStamp;
-            while (peekPosition(true) <= playbackLastTimeStamp)
-            {
-                updatePosition(true);
-            }
-            if (peekPosition(true) == 0xFFFFFFFFFFFFFFFFull)
-            {
-                updatePosition(true); //this'll go to the next log (if there is one)
-                if (currentSeqItem->data[currentPosition].timestamp > 1000)
-                    playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp - 1000;
-                else playbackLastTimeStamp = 0;
-            }
-        }
-        else
-        {
-            if (playbackLastTimeStamp > elapsed)
-                playbackLastTimeStamp -= elapsed;
-            else playbackLastTimeStamp = 0;
-            while (peekPosition(false) >= playbackLastTimeStamp && peekPosition(false) != 0xFFFFFFFFFFFFFFFFull)
-            {
-                updatePosition(false);
-            }
-            if (peekPosition(false) == 0xFFFFFFFFFFFFFFFFull)
-            {
-                updatePosition(false); //this'll go to the next log (if there is one)
-                playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp + 1000;
-            }
-        }
-    }
-    else
-    {
-        for (int count = 0; count < ui->spinBurstSpeed->value(); count++)
-        {
-            if (!playbackActive)
-            {
-                playbackTimer->stop();
-                return;
-            }
-            if (playbackForward)
-            {
-                updatePosition(true);
-            }
-            else
-            {
-                updatePosition(false);
-            }
-        }
-    }
-
-    CANConManager::getInstance()->sendFrames(sendingBuffer);
-}
-
-quint64 FramePlaybackWindow::updatePosition(bool forward)
-{
-    //qDebug() << "updatePosition";
-    if (forward)
-    {
-        if (currentPosition < (currentSeqItem->data.count() - 1)) currentPosition++; //still in same file so keep going
-        else //hit the end of the current file
-        {
-            qDebug() << "hit end of current sequence";
-            currentSeqItem->currentLoopCount++;
-            currentPosition = 0;
-            if (currentSeqItem->currentLoopCount == currentSeqItem->maxLoops) //have we looped enough times?
-            {
-                currentSeqNum++; //go forward in the sequence
-                if (currentSeqNum == seqItems.count()) //are we at the end of the sequence?
-                {
-                    //reset the loop figures for each sequence entry
-                    for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
-                    currentSeqNum = 0;
-                    if (ui->cbLoop->isChecked()) //go back to beginning if we're looping the sequence
-                    {
-
-                    }
-                    else //not looping so stop playback entirely
-                    {
-                        playbackActive = false;
-                        playbackTimer->stop();
-                    }
-                }
-                currentSeqItem = &seqItems[currentSeqNum];
-                ui->tblSequence->setCurrentCell(currentSeqNum, 0);
-            }
-        }
-    }
-    else
-    {
-        if (currentPosition > 0) currentPosition--;
-        else //hit the beginning of the current sequence
-        {
-            qDebug() << "hit start of current sequence";
-            currentSeqItem->currentLoopCount++;
-            currentPosition = currentSeqItem->data.count() - 1;
-            if (currentSeqItem->currentLoopCount == currentSeqItem->maxLoops) //have we looped enough times?
-            {
-                currentSeqNum--; //go backward in the sequence
-                if (currentSeqNum == -1) //are we trying to go past the beginning?
-                {
-                    //reset the loop figures for each sequence entry
-                    for (int i = 0; i < seqItems.count(); i++) seqItems[i].currentLoopCount = 0;
-                    currentSeqNum = seqItems.count() - 1;
-                    if (ui->cbLoop->isChecked()) //go back to the last sequence entry if we're looping
-                    {
-
-                    }
-                    else //not looping so stop playback entirely
-                    {
-                        playbackActive = false;
-                        playbackTimer->stop();
-                    }
-                }
-                currentSeqItem = &seqItems[currentSeqNum];
-                ui->tblSequence->setCurrentCell(currentSeqNum, 0);
-            }
-        }
-    }
-    updateFrameLabel();
-    //only send frame out if its ID is checked in the list. Otherwise discard it.
-    CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
-    uint32_t originalBus = thisFrame->bus;
-    if (currentSeqItem->idFilters.find(thisFrame->ID).value())
-    {
-        if (whichBusSend < ui->comboCANBus->count() - 2)
-        {
-            thisFrame->bus = whichBusSend;
-            sendingBuffer.append(*thisFrame);
-        }
-        else if (whichBusSend == (ui->comboCANBus->count() - 2))  //all
-        {
-            for (int c = 0; c < ui->comboCANBus->count() - 2; c++)
-            {
-                thisFrame->bus = c;
-                sendingBuffer.append(*thisFrame);
-            }
-        }
-        else //from file so retain original bus and send as-is
-        {
-            sendingBuffer.append(*thisFrame);
-        }
-
-        thisFrame->bus = originalBus;
-    }
-    return thisFrame->timestamp;
-}
-
-quint64 FramePlaybackWindow::peekPosition(bool forward)
-{
-    int peekCurrentPosition = currentPosition;
-    if (forward)
-    {
-        if (peekCurrentPosition < (currentSeqItem->data.count() - 1)) peekCurrentPosition++; //still in same file so keep going
-        else //hit the end of the current file
-        {
-            return 0xFFFFFFFFFFFFFFFFull;
-        }
-    }
-    else
-    {
-        if (peekCurrentPosition > 0) peekCurrentPosition--;
-        else //hit the beginning of the current sequence
-        {
-            return 0xFFFFFFFFFFFFFFFFull;
-        }
-    }
-    CANFrame *thisFrame = &currentSeqItem->data[peekCurrentPosition];
-    return thisFrame->timestamp;
-}
-

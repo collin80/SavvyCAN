@@ -64,7 +64,8 @@ SOURCES += main.cpp\
     bus_protocols/isotp_handler.cpp \
     bus_protocols/j1939_handler.cpp \
     bus_protocols/uds_handler.cpp \
-    jsedit.cpp
+    jsedit.cpp \
+    frameplaybackobject.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -117,7 +118,8 @@ HEADERS  += mainwindow.h \
     bus_protocols/j1939_handler.h \
     bus_protocols/uds_handler.h \
     bus_protocols/isotp_message.h \
-    jsedit.h
+    jsedit.h \
+    frameplaybackobject.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \

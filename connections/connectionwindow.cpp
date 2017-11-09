@@ -90,6 +90,7 @@ void ConnectionWindow::showEvent(QShowEvent* event)
     readSettings();
     ui->tableConnections->selectRow(0);
     currentRowChanged(ui->tableConnections->currentIndex(), ui->tableConnections->currentIndex());
+    handleConnTypeChanged();
 }
 
 void ConnectionWindow::closeEvent(QCloseEvent *event)
