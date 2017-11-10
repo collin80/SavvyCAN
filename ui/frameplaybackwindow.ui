@@ -101,6 +101,13 @@
     </spacer>
    </item>
    <item>
+    <widget class="QCheckBox" name="cbOriginalTiming">
+     <property name="text">
+      <string>Use original frame timing from captured frames</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">

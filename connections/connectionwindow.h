@@ -57,7 +57,7 @@ private slots:
     void handleClearDebugText();
     void handleSendHex();
     void handleSendText();
-    void connectionStatus(CANCon::status);
+    void connectionStatus(CANConStatus);
 
 private:
     Ui::ConnectionWindow *ui;

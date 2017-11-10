@@ -25,6 +25,9 @@
      </item>
      <item>
       <widget class="QTableView" name="tableConnections">
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::SingleSelection</enum>
        </property>
@@ -36,23 +39,12 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_5">
        <item>
-        <widget class="QPushButton" name="btnNewConn">
-         <property name="text">
-          <string>New Connection</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QPushButton" name="btnRemoveBus">
          <property name="text">
           <string>Remove Selected Connection</string>
          </property>
         </widget>
        </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_6">
        <item>
         <widget class="QPushButton" name="btnActivateAll">
          <property name="text">
@@ -194,45 +186,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QCheckBox" name="ckSingleWire">
-       <property name="text">
-        <string>Single Wire Mode</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="ckListenOnly">
-       <property name="text">
-        <string>Listen Only Mode</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QCheckBox" name="ckEnabled">
-       <property name="text">
-        <string>Enabled</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,2">
-       <item>
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string>CAN Speed</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QComboBox" name="cbSpeed">
-         <property name="editable">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
       <layout class="QHBoxLayout" name="horizontalLayout_4">
        <item>
         <widget class="QPushButton" name="btnOK">
@@ -241,14 +194,20 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnRevert">
-         <property name="text">
-          <string>Revert</string>
-         </property>
-        </widget>
-       </item>
       </layout>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item alignment="Qt::AlignHCenter">
       <widget class="QCheckBox" name="ckEnableConsole">
@@ -318,19 +277,6 @@
         </widget>
        </item>
       </layout>
-     </item>
-     <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>

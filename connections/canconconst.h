@@ -21,4 +21,11 @@ namespace CANCon {
     };
 }
 
+class CANConStatus
+{
+public:
+    CANCon::status conStatus;
+    int numHardwareBuses;
+};
+
 #endif // CANCONCONST_H

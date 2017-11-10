@@ -1,4 +1,5 @@
 #include <QObject>
+#include <QDebug>
 #include "canbus.h"
 
 CANBus::CANBus()
@@ -25,18 +26,22 @@ bool CANBus::operator==(const CANBus& bus) const{
 }
 
 void CANBus::setSpeed(int newSpeed){
+    //qDebug() << "CANBUS SetSpeed = " << newSpeed;
     speed = newSpeed;
 }
 
 void CANBus::setListenOnly(bool mode){
+    //qDebug() << "CANBUS SetListenOnly = " << mode;
     listenOnly = mode;
 }
 
 void CANBus::setSingleWire(bool mode){
+    //qDebug() << "CANBUS SetSingleWire = " << mode;
     singleWire = mode;
 }
 
 void CANBus::setEnabled(bool mode){
+    //qDebug() << "CANBUS SetEnabled = " << mode;
     active = mode;
 }
 
