@@ -151,16 +151,13 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     CANConnection *conn_p = getAtIdx(index.row(), busId);
     CANBus bus;
     bool ret;
+    if (!conn_p) return QVariant();
     ret = conn_p->getBusSettings(busId, bus);
     bool isSocketCAN = (conn_p->getType() == CANCon::SOCKETCAN) ? true: false;
 
     //qDebug() << "ConnP: " << conn_p << "  ret " << ret;
 
-    if (role == Qt::DisplayRole) {
-        if(!conn_p)
-            return QVariant();
-
-        if(!ret) return QVariant();
+    if (role == Qt::DisplayRole) {        
 
         switch (index.column())
         {
@@ -183,6 +180,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                 else qDebug() << "Tried to show connection port but connection was NULL";
                 break;
             case 3: //speed
+                if(!ret) return QVariant();
                 if (!isSocketCAN) return QString::number(bus.speed);
                 else return QString("N/A");
             case 4: //Listen Only
