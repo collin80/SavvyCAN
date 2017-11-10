@@ -40,10 +40,10 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
             return QString(tr("Single Wire"));
             break;
         case 6:
-            return QString(tr("Status"));
+            return QString(tr("Active"));
             break;
         case 7:
-            return QString(tr("Active"));
+            return QString(tr("Status"));
             break;
         }
     }
@@ -54,11 +54,10 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
     return QVariant();
 }
 
-
 int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 7;
+    return 8;
 }
 
 
@@ -66,32 +65,99 @@ int CANConnectionModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
 
-    int rows=0;
+    int rows = 0;
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
     foreach(const CANConnection* conn_p, conns)
-        rows+=conn_p->getNumBuses();
+        rows += conn_p->getNumBuses();
+
+    //qDebug() << "Num Rows: " << rows;
 
     return rows;
 }
 
+Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
+{
+    if (!index.isValid())
+        return Qt::ItemFlag::NoItemFlags;
+
+    int busId;
+    CANConnection *conn_p = getAtIdx(index.row(), busId);
+    if (!conn_p) return Qt::ItemFlag::NoItemFlags;
+
+    //you can't set speed, single wire, or listen only on socketcan devices so
+    //detect if we're using GVRET where you can and turn that functionality on
+    bool editParams = false;
+    if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
+
+    switch (index.column())
+    {
+    case 3: //speed
+        if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled;
+        else return Qt::ItemFlag::NoItemFlags;
+        break;
+    case 4: //listen only
+    case 5: //single wire
+        if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
+        else return Qt::ItemFlag::NoItemFlags;
+        break;
+    case 6: //enabled
+        return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
+        break;
+    default:
+        return Qt::ItemFlag::ItemIsEnabled;
+        break;
+    }
+}
+
+bool CANConnectionModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    qDebug() << "setData: " << index.row() << ":" << index.column() << " role: " << role << " Val: " << value;
+
+    int busId;
+    CANConnection *conn_p = getAtIdx(index.row(), busId);
+    if (!conn_p) return false;
+    CANBus bus;
+    bool ret;
+    ret = conn_p->getBusSettings(busId, bus);
+    if (!ret) return false;
+
+    switch (index.column())
+    {
+    case 3: //speed
+        bus.speed = value.toInt();
+        break;
+    case 4: //listen only
+        bus.listenOnly = value.toBool();
+        break;
+    case 5: //single wire
+        bus.singleWire = value.toBool();
+        break;
+    case 6: //active
+        bus.active = value.toBool();
+        break;
+    }
+    conn_p->setBusSettings(busId, bus);
+    return true;
+}
 
 QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
+    //qDebug() << "Row: " << index.row();
 
+    int busId;
+    CANConnection *conn_p = getAtIdx(index.row(), busId);
+    CANBus bus;
+    bool ret;
+    if (!conn_p) return QVariant();
+    ret = conn_p->getBusSettings(busId, bus);
+    bool isSocketCAN = (conn_p->getType() == CANCon::SOCKETCAN) ? true: false;
 
-    if (role == Qt::DisplayRole) {
-        int busId;
-        CANConnection *conn_p = getAtIdx(index.row(), busId);
-        if(!conn_p)
-            return QVariant();
+    //qDebug() << "ConnP: " << conn_p << "  ret " << ret;
 
-        CANBus bus;
-        bool ret;
-        ret = conn_p->getBusSettings(busId, bus);
-        if(!ret) return QVariant();
+    if (role == Qt::DisplayRole) {        
 
         switch (index.column())
         {
@@ -114,16 +180,33 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                 else qDebug() << "Tried to show connection port but connection was NULL";
                 break;
             case 3: //speed
-                return QString::number(bus.speed);
+                if(!ret) return QVariant();
+                if (!isSocketCAN) return QString::number(bus.speed);
+                else return QString("N/A");
             case 4: //Listen Only
-                return (bus.listenOnly) ? "True" : "False";
+                return QVariant();
             case 5: //Single Wire
-                return (bus.singleWire) ? "True" : "False";
+                return QVariant();
             case 6: //Status
-                return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
+                return QVariant();
             case 7: //Active
-                return (bus.active) ? "True" : "False";
+                 return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
             default: {}
+        }
+    }
+    if (role == Qt::CheckStateRole)
+    {
+        switch (index.column())
+        {
+        case 4:
+            return (bus.listenOnly) ? Qt::Checked : Qt::Unchecked;
+            break;
+        case 5:
+            return (bus.singleWire) ? Qt::Checked : Qt::Unchecked;
+            break;
+        case 6:
+            return (bus.active) ? Qt::Checked : Qt::Unchecked;
+            break;
         }
     }
 
@@ -172,9 +255,11 @@ CANConnection* CANConnectionModel::getAtIdx(int pIdx, int& pBusId) const
     return NULL;
 }
 
-
 void CANConnectionModel::refresh(int pIndex)
 {
+    beginResetModel();
+    endResetModel();
+    /*
     QModelIndex begin;
     QModelIndex end;
 
@@ -186,5 +271,5 @@ void CANConnectionModel::refresh(int pIndex)
         begin   = createIndex(0, 0);
         end     = createIndex(rowCount()-1, columnCount()-1);
     }
-    dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
+    dataChanged(begin, end, QVector<int>(Qt::DisplayRole)); */
 }

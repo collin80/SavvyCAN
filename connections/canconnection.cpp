@@ -2,14 +2,6 @@
 #include <QThread>
 #include "canconnection.h"
 
-
-struct BusData {
-    CANBus             mBus;
-    bool               mConfigured;
-    QVector<CANFltObserver>    mTargettedFrames;
-};
-
-
 CANConnection::CANConnection(QString pPort,
                              CANCon::type pType,
                              int pNumBuses,
@@ -27,7 +19,7 @@ CANConnection::CANConnection(QString pPort,
     /* register types */
     qRegisterMetaType<CANBus>("CANBus");
     qRegisterMetaType<CANFrame>("CANFrame");
-    qRegisterMetaType<CANCon::status>("CANCon::status");
+    qRegisterMetaType<CANConStatus>("CANConStatus");
     qRegisterMetaType<CANFltObserver>("CANFlt");
 
     /* set queue size */
@@ -35,9 +27,9 @@ CANConnection::CANConnection(QString pPort,
 
     /* allocate buses */
     /* TODO: change those tables for a vector */
-    mBusData_p = new BusData[mNumBuses];
+    mBusData.resize(mNumBuses);
     for(int i=0 ; i<mNumBuses ; i++) {
-        mBusData_p[i].mConfigured  = false;
+        mBusData[i].mConfigured  = false;
     }
 
     /* if needed, create a thread and move ourself into it */
@@ -57,10 +49,7 @@ CANConnection::~CANConnection()
         mThread_p = NULL;
     }
 
-    if(mBusData_p) {
-        delete[] mBusData_p;
-        mBusData_p = NULL;
-    }
+    mBusData.clear();
 }
 
 
@@ -206,13 +195,13 @@ int CANConnection::getNumBuses() const{
 bool CANConnection::isConfigured(int pBusId) {
     if( pBusId < 0 || pBusId >= getNumBuses())
         return false;
-    return mBusData_p[pBusId].mConfigured;
+    return mBusData[pBusId].mConfigured;
 }
 
 void CANConnection::setConfigured(int pBusId, bool pConfigured) {
     if( pBusId < 0 || pBusId >= getNumBuses())
         return;
-    mBusData_p[pBusId].mConfigured = pConfigured;
+    mBusData[pBusId].mConfigured = pConfigured;
 }
 
 
@@ -220,7 +209,7 @@ bool CANConnection::getBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses() || !isConfigured(pBusId))
         return false;
 
-    pBus = mBusData_p[pBusId].mBus;
+    pBus = mBusData[pBusId].mBus;
     return true;
 }
 
@@ -229,8 +218,8 @@ void CANConnection::setBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses())
         return;
 
-    mBusData_p[pBusId].mConfigured = true;
-    mBusData_p[pBusId].mBus = pBus;
+    mBusData[pBusId].mConfigured = true;
+    mBusData[pBusId].mBus = pBus;
 }
 
 
@@ -293,7 +282,7 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData_p[pBusId].mTargettedFrames.append(target);
+    mBusData[pBusId].mTargettedFrames.append(target);
 
     return true;
 }
@@ -321,7 +310,7 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData_p[pBusId].mTargettedFrames.removeAll(target);
+    mBusData[pBusId].mTargettedFrames.removeAll(target);
 
     return true;
 }
@@ -329,9 +318,9 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
 bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 {
     for (int i = 0; i < getNumBuses(); i++) {
-        foreach (const CANFltObserver filt, mBusData_p[i].mTargettedFrames)
+        foreach (const CANFltObserver filt, mBusData[i].mTargettedFrames)
         {
-            if (filt.observer == receiver) mBusData_p[i].mTargettedFrames.removeOne(filt);
+            if (filt.observer == receiver) mBusData[i].mTargettedFrames.removeOne(filt);
         }
     }
 
@@ -342,10 +331,10 @@ void CANConnection::checkTargettedFrame(CANFrame &frame)
 {
     unsigned int maskedID;
     //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
-    if (mBusData_p == 0) return;
+    if (mBusData.count() == 0) return;
 
-    if (mBusData_p[frame.bus].mTargettedFrames.length() == 0) return;
-    foreach (const CANFltObserver filt, mBusData_p[frame.bus].mTargettedFrames)
+    if (mBusData[frame.bus].mTargettedFrames.length() == 0) return;
+    foreach (const CANFltObserver filt, mBusData[frame.bus].mTargettedFrames)
     {
         //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
         maskedID = frame.ID & filt.mask;

@@ -15,6 +15,11 @@ public:
     uint32_t len;
     unsigned char data[8];
     uint64_t timestamp;
+
+    friend bool operator<(const CANFrame& l, const CANFrame& r)
+    {
+        return l.timestamp < r.timestamp;
+    }
 };
 
 class CANFltObserver

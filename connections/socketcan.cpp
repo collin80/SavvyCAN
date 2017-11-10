@@ -31,6 +31,8 @@ void SocketCan::piStarted()
     mTimer.setInterval(1000);
     mTimer.setSingleShot(false); //keep ticking
     mTimer.start();
+    mBusData[0].mBus.setEnabled(true);
+    mBusData[0].mConfigured = true;
 }
 
 
@@ -59,6 +61,7 @@ bool SocketCan::piGetBusSettings(int pBusIdx, CANBus& pBus)
 
 void SocketCan::piSetBusSettings(int pBusIdx, CANBus bus)
 {
+    CANConStatus stats;
     /* sanity checks */
     if(0 != pBusIdx)
         return;
@@ -109,7 +112,6 @@ bool SocketCan::piSendFrame(const CANFrame& pFrame)
     /* sanity checks */
     if(0 != pFrame.bus || pFrame.len>8)
         return false;
-
     if (!mDev_p) return false;
 
     /* fill frame */
@@ -211,6 +213,7 @@ void SocketCan::framesReceived()
 
 void SocketCan::testConnection() {
     QCanBusDevice*  dev_p = QCanBus::instance()->createDevice("socketcan", getPort());
+    CANConStatus stats;
 
     switch(getStatus())
     {
@@ -220,7 +223,9 @@ void SocketCan::testConnection() {
                 disconnectDevice();
 
                 setStatus(CANCon::NOT_CONNECTED);
-                emit status(getStatus());
+                stats.conStatus = getStatus();
+                stats.numHardwareBuses = mNumBuses;
+                emit status(stats);
             }
             break;
         case CANCon::NOT_CONNECTED:
@@ -229,13 +234,18 @@ void SocketCan::testConnection() {
                     /* try to reconnect */
                     CANBus bus;
                     if(getBusConfig(0, bus))
+                    {
+                        bus.setEnabled(true);
                         setBusSettings(0, bus);
+                    }
                 }
                 /* disconnect test instance */
                 dev_p->disconnectDevice();
 
                 setStatus(CANCon::CONNECTED);
-                emit status(getStatus());
+                stats.conStatus = getStatus();
+                stats.numHardwareBuses = mNumBuses;
+                emit status(stats);
             }
             break;
         default: {}
