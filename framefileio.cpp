@@ -29,6 +29,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
+    filters.append(QString(tr("Candump/Kayak(*.log)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -98,7 +99,11 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
             if (!filename.contains('.')) filename += ".csv";
             result = saveVehicleSpyFile(filename, frameCache);
         }
-
+	if (dialog.selectedNameFilter() == filters[9])
+	{
+		if (!filename.contains('.')) filename += ".log";
+		saveCanDumpFile(filename,frameCache);
+	}
         progress.cancel();
 
         if (result)
@@ -1500,6 +1505,51 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
     return true;
 }
 
+bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * frames)
+{
+    QFile *outFile = new QFile(filename);
+    QDateTime timestamp;
+    int lineCounter = 0;
+    double tempTime;
+
+    timestamp = QDateTime::currentDateTime();
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if ((lineCounter % 100) == 0)
+        {
+            qApp->processEvents();
+        }
+
+        outFile->write("(");
+
+	tempTime = frames->at(c).timestamp / 1000000.0;
+        outFile->write(QString::number(tempTime,'f').toUtf8());
+        outFile->write(") vcan0 ");
+
+        outFile->write(QString::number(frames->at(c).ID, 16).rightJustified(3,'0').toUpper().toUtf8());
+
+        outFile->write("#");
+
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).rightJustified(2,'0').toUpper().toUtf8());
+        }
+
+        outFile->write("\n");
+
+    }
+    outFile->close();
+    delete outFile;
+    return true;
+}
 /* (0.003800) vcan0 164#0000c01aa8000013 */
 bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
 {
