@@ -56,6 +56,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
     connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
     connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
+    connect(ui->btnReconnect, &QPushButton::clicked, this, &ConnectionWindow::handleReconnect);
     connect(ui->btnRemoveBus, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
     connect(ui->btnClearDebug, &QPushButton::clicked, this, &ConnectionWindow::handleClearDebugText);
     connect(ui->btnSendHex, &QPushButton::clicked, this, &ConnectionWindow::handleSendHex);
@@ -147,6 +148,19 @@ void ConnectionWindow::setActiveAll(bool pActive)
     }
 
     connModel->refresh();
+}
+
+void ConnectionWindow::handleReconnect()
+{
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx <0) return;
+
+    int busId;
+    CANConnection* conn_p = connModel->getAtIdx(selIdx, busId);
+    if(!conn_p) return;
+
+    conn_p->stop();
+    conn_p->start();
 }
 
 void ConnectionWindow::consoleEnableChanged(bool checked) {

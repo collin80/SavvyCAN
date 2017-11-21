@@ -39,6 +39,13 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_5">
        <item>
+        <widget class="QPushButton" name="btnReconnect">
+         <property name="text">
+          <string>Reconnect</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btnRemoveBus">
          <property name="text">
           <string>Remove Selected Connection</string>

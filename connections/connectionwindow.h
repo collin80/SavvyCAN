@@ -52,6 +52,7 @@ private slots:
     void handleRemoveConn();
     void handleEnableAll();
     void handleDisableAll();
+    void handleReconnect();
     void handleRevert();
     void handleNewConn();
     void handleClearDebugText();
