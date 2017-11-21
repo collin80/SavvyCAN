@@ -37,7 +37,7 @@ GVRetSerial::~GVRetSerial()
 
 
 void GVRetSerial::piStarted()
-{
+{    
     connectDevice();
 
     /* start timer */
@@ -328,6 +328,7 @@ void GVRetSerial::connectDevice()
 
     /* connect reading event */
     connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
+    connect(serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(serialError(QSerialPort::SerialPortError)));
 }
 
 
@@ -343,6 +344,82 @@ void GVRetSerial::disconnectDevice() {
         serial->disconnect(); //disconnect all signals
         delete serial;
         serial = NULL;
+    }
+    setStatus(CANCon::NOT_CONNECTED);
+    CANConStatus stats;
+    stats.conStatus = getStatus();
+    stats.numHardwareBuses = mNumBuses;
+    emit status(stats);
+}
+
+void GVRetSerial::serialError(QSerialPort::SerialPortError err)
+{
+    QString errMessage;
+    bool killConnection = false;
+    switch (err)
+    {
+    case QSerialPort::NoError:
+        return;
+    case QSerialPort::DeviceNotFoundError:
+        errMessage = "Device not found error on serial";
+        killConnection = true;
+        break;
+    case QSerialPort::PermissionError:
+        errMessage =  "Permission error on serial port";
+        killConnection = true;
+        break;
+    case QSerialPort::OpenError:
+        errMessage =  "Open error on serial port";
+        killConnection = true;
+        break;
+    case QSerialPort::ParityError:
+        errMessage = "Parity error on serial port";
+        break;
+    case QSerialPort::FramingError:
+        errMessage = "Framing error on serial port";
+        break;
+    case QSerialPort::BreakConditionError:
+        errMessage = "Break error on serial port";
+        break;
+    case QSerialPort::WriteError:
+        errMessage = "Write error on serial port";
+        break;
+    case QSerialPort::ReadError:
+        errMessage = "Read error on serial port";
+        break;
+    case QSerialPort::ResourceError:
+        errMessage = "Serial port seems to have disappeared.";
+        killConnection = true;
+        break;
+    case QSerialPort::UnsupportedOperationError:
+        errMessage = "Unsupported operation on serial port";
+        killConnection = true;
+        break;
+    case QSerialPort::UnknownError:
+        errMessage = "Beats me what happened to the serial port.";
+        killConnection = true;
+        break;
+    case QSerialPort::TimeoutError:
+        errMessage = "Timeout error on serial port";
+        killConnection = true;
+        break;
+    case QSerialPort::NotOpenError:
+        errMessage = "The serial port isn't open dummy";
+        killConnection = true;
+        break;
+    }
+    serial->clearError();
+    serial->flush();
+    serial->close();
+    if (errMessage.length() > 1)
+    {
+        qDebug() << errMessage;
+        debugOutput(errMessage);
+    }
+    if (killConnection)
+    {
+        qDebug() << "Shooting the serial object in the head. It deserves it.";
+        disconnectDevice();
     }
 }
 
@@ -781,7 +858,7 @@ void GVRetSerial::handleTick()
 {
     if (lastSystemTimeBasis != CANConManager::getInstance()->getTimeBasis()) rebuildLocalTimeBasis();
     //qDebug() << "Tick!";
-/*
+
     if( CANCon::CONNECTED == getStatus() )
     {
         if (!gotValidated && doValidation)
@@ -792,16 +869,16 @@ void GVRetSerial::handleTick()
                 qDebug() << "Comm validation failed. ";
 
                 setStatus(CANCon::NOT_CONNECTED);
-                emit status(getStatus());
+                //emit status(getStatus());
 
                 disconnectDevice(); //start by stopping everything.
                 //Then wait 500ms and restart the connection automatically
-                QTimer::singleShot(500, this, SLOT(connectDevice()));
+                //QTimer::singleShot(500, this, SLOT(connectDevice()));
                 return;
             }
         }
+        else if (doValidation); //qDebug()  << "Comm connection validated";
     }
-*/
     if (doValidation && serial && serial->isOpen()) sendCommValidation();
 }
 
@@ -811,9 +888,6 @@ void GVRetSerial::sendCommValidation()
     QByteArray output;
 
     gotValidated = false;
-    output.append((char)0xF1); //another command to the GVRET
-    output.append((char)0x09); //request a reply to get validation
-    //send it twice for good measure.
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x09); //request a reply to get validation
 
