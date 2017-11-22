@@ -376,6 +376,7 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
 //-1 means leave it at whatever it booted up to. 0 means disable. Otherwise the actual rate we want.
 int ConnectionWindow::getSpeed()
 {
+    return -1;
 }
 
 QString ConnectionWindow::getPortName()
