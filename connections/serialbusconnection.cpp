@@ -13,7 +13,6 @@
 
 SerialBusConnection::SerialBusConnection(QString portName) :
     CANConnection(portName, CANCon::SOCKETCAN, 1, 4000, true),
-    mDev_p(NULL),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
@@ -135,7 +134,7 @@ void SerialBusConnection::disconnectDevice() {
     if(mDev_p) {
         mDev_p->disconnectDevice();
         delete mDev_p;
-        mDev_p = Q_NULLPTR;
+        mDev_p = nullptr;
     }
 }
 
