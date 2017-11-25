@@ -33,7 +33,7 @@ private slots:
     void testConnection();
 
 protected:
-    QCanBusDevice*     mDev_p;
+    QCanBusDevice     *mDev_p = nullptr;
     QTimer             mTimer;
 };
 
