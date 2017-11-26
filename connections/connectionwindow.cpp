@@ -164,25 +164,24 @@ void ConnectionWindow::handleReconnect()
 }
 
 void ConnectionWindow::consoleEnableChanged(bool checked) {
-    int busId;
-
-    CANConnection* conn_p = connModel->getAtIdx(ui->tableConnections->currentIndex().row(), busId);
-
     ui->textConsole->setEnabled(checked);
     ui->btnClearDebug->setEnabled(checked);
     ui->btnSendHex->setEnabled(checked);
     ui->btnSendText->setEnabled(checked);
     ui->lineSend->setEnabled(checked);
 
-    if(!conn_p) return;
+    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
-    if (checked) { //enable console
-        connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
-        connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
-    }
-    else { //turn it off
-        disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
-        disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+    foreach(CANConnection* conn_p, conns)
+    {
+        if (checked) { //enable console
+            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+            connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        }
+        else { //turn it off
+            disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
+            disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        }
     }
 }
 
@@ -233,6 +232,7 @@ void ConnectionWindow::handleOKButton()
             return;
         /* add connection to model */
         connModel->add(conn_p);
+        consoleEnableChanged(ui->ckEnableConsole->isChecked());
     }
 }
 

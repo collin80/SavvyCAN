@@ -35,6 +35,29 @@ GVRetSerial::~GVRetSerial()
     debugOutput("~GVRetSerial()");
 }
 
+void GVRetSerial::sendToSerial(const QByteArray &bytes)
+{
+    if (serial == NULL)
+    {
+        debugOutput("Attempt to write to serial port when it has not been initialized!");
+        return;
+    }
+    if (!serial->isOpen())
+    {
+        debugOutput("Attempt to write to serial port when it is not open!");
+        return;
+    }
+
+    QString buildDebug;
+    buildDebug = "Write to serial -> ";
+    foreach (int byt, bytes) {
+        byt = (unsigned char)byt;
+        buildDebug = buildDebug % QString::number(byt, 16) % " ";
+    }
+    debugOutput(buildDebug);
+
+    serial->write(bytes);
+}
 
 void GVRetSerial::piStarted()
 {    
@@ -161,9 +184,7 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         buffer[8] = (unsigned char)(can1Baud >> 16);
         buffer[9] = (unsigned char)(can1Baud >> 24);
         buffer[10] = 0;
-        if (serial == NULL) return;
-        if (!serial->isOpen()) return;
-        serial->write(buffer);
+        sendToSerial(buffer);
     }
     else
     {
@@ -186,9 +207,7 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         buffer[12] = (unsigned char)(lin2Baud >> 16);
         buffer[13] = (unsigned char)(lin2Baud >> 24);
         buffer[14] = 0;
-        if (serial == NULL) return;
-        if (!serial->isOpen()) return;
-        serial->write(buffer);
+        sendToSerial(buffer);
     }
 }
 
@@ -210,7 +229,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     ID = frame.ID;
     if (frame.extended) ID |= 1 << 31;
 
-    buffer[0] = (char)0xF1; //start of a command over serial
+    buffer[0] = (unsigned char)0xF1; //start of a command over serial
     buffer[1] = 0; //command ID for sending a CANBUS frame
     buffer[2] = (unsigned char)(ID & 0xFF); //four bytes of ID LSB first
     buffer[3] = (unsigned char)(ID >> 8);
@@ -224,9 +243,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     }
     buffer[8 + frame.len] = 0;
 
-    //qDebug() << "writing " << buffer.length() << " bytes to serial port";
-    debugOutput("writing " + QString::number(buffer.length()) + " bytes to serial port");
-    serial->write(buffer);
+    sendToSerial(buffer);
 
     return true;
 }
@@ -262,6 +279,7 @@ void GVRetSerial::connectDevice()
         debugOutput("can't open serial port " + getPort());
         return;
     }
+    debugOutput("Created Serial Port Object");
 
     /* configure */
     serial->setDataBits(serial->Data8);
@@ -273,20 +291,22 @@ void GVRetSerial::connectDevice()
     serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
     serial->setRequestToSend(true);
 
+    debugOutput("Opened Serial Port");
+
 
     QByteArray output;
-    output.append((char)0xE7); //this puts the device into binary comm mode
-    output.append((char)0xE7);
+    output.append((unsigned char)0xE7); //this puts the device into binary comm mode
+    output.append((unsigned char)0xE7);
 
-    output.append((char)0xF1);
-    output.append((char)0x0C); //get number of actually implemented buses. Not implemented except on M2RET
+    output.append((unsigned char)0xF1);
+    output.append((unsigned char)0x0C); //get number of actually implemented buses. Not implemented except on M2RET
     mNumBuses = 2; //the proper number if C/12 is not implemented
 
-    output.append((char)0xF1); //signal we want to issue a command
-    output.append((char)0x06); //request canbus stats from the board
+    output.append((unsigned char)0xF1); //signal we want to issue a command
+    output.append((unsigned char)0x06); //request canbus stats from the board
 
-    output.append((char)0xF1); //another command to the GVRET
-    output.append((char)0x07); //request device information
+    output.append((unsigned char)0xF1); //another command to the GVRET
+    output.append((unsigned char)0x07); //request device information
 
     /*output.append((char)0xF1);
     output.append((char)0x08); //setting singlewire mode
@@ -299,21 +319,15 @@ void GVRetSerial::connectDevice()
         output.append((char)0xFF); //signal we don't want single wire mode
     }*/
 
-    output.append((char)0xF1); //and another command
-    output.append((char)0x01); //Time Sync - Not implemented until 333 but we can try
+    output.append((unsigned char)0xF1); //and another command
+    output.append((unsigned char)0x01); //Time Sync - Not implemented until 333 but we can try
 
-    output.append((char)0xF1); //yet another command
-    output.append((char)0x09); //comm validation command
+    output.append((unsigned char)0xF1); //yet another command
+    output.append((unsigned char)0x09); //comm validation command
 
     continuousTimeSync = true;
 
-    serial->write(output);
-    QString buildDebug;
-    buildDebug = "Write to serial -> ";
-    foreach (int byt, output) {
-        buildDebug = buildDebug % QString::number(byt, 16) % " ";
-    }
-    debugOutput(buildDebug);
+    sendToSerial(output);
 
     if(doValidation) {
         QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
@@ -457,7 +471,7 @@ void GVRetSerial::readSerialData()
 
 //Debugging data sent from connection window. Inject it into Comm traffic.
 void GVRetSerial::debugInput(QByteArray bytes) {
-   serial->write(bytes);
+   sendToSerial(bytes);
 }
 
 void GVRetSerial::procRXChar(unsigned char c)
@@ -766,9 +780,9 @@ void GVRetSerial::procRXChar(unsigned char c)
             }
         }
 
-        output.append((char)0xF1); //start a new command
-        output.append((char)13); //get extended buses
-        serial->write(output);
+        output.append((unsigned char)0xF1); //start a new command
+        output.append((unsigned char)13); //get extended buses
+        sendToSerial(output);
 
         emit status(stats);
         break;
@@ -888,10 +902,10 @@ void GVRetSerial::sendCommValidation()
     QByteArray output;
 
     gotValidated = false;
-    output.append((char)0xF1); //another command to the GVRET
-    output.append((char)0x09); //request a reply to get validation
+    output.append((unsigned char)0xF1); //another command to the GVRET
+    output.append((unsigned char)0x09); //request a reply to get validation
 
-    serial->write(output);
+    sendToSerial(output);
 }
 
 
