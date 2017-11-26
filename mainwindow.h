@@ -22,7 +22,6 @@
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
 #include "re/discretestatewindow.h"
-#include "connections/connectionwindow.h"
 #include "scriptingwindow.h"
 #include "re/rangestatewindow.h"
 #include "dbc/dbcloadsavewindow.h"
@@ -33,6 +32,7 @@
 #include "motorcontrollerconfigwindow.h"
 #include "signalviewerwindow.h"
 
+class CANConnection;
 class ConnectionWindow;
 class ISOTP_InterpreterWindow;
 class ScriptingWindow;

@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
+#include "connections/connectionwindow.h"
 #include "utility.h"
 
 /*

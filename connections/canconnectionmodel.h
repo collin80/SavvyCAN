@@ -5,9 +5,8 @@
 #include <QAbstractTableModel>
 
 #include "canbus.h"
-#include "connections/canconnection.h"
-#include "connectionwindow.h"
 
+class CANConnection;
 
 class CANConnectionModel : public QAbstractTableModel
 {
