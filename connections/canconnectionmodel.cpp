@@ -11,6 +11,16 @@ CANConnectionModel::~CANConnectionModel()
 {
 }
 
+enum class Column {
+    Bus        = 0, ///< A sequential number describing the bus
+    Type       = 1, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
+    Port       = 2, ///< The CAN hardware port, e.g. can0 for socketcan
+    Speed      = 3, ///< The bus speed in bit/second
+    ListenOnly = 4, ///< True if the bus is in listen-only mode
+    SingleWire = 5, ///< True if the bus operates in single-wire mode
+    Active     = 6, ///< True if the bus is activated for sending and receiving
+    Status     = 7  ///< The bus status as text message
+};
 
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
@@ -19,23 +29,23 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
 
     if (orientation == Qt::Horizontal)
     {
-        switch (section)
+        switch (Column(section))
         {
-        case 0:
+        case Column::Bus:
             return QString(tr("Bus"));
-        case 1:
+        case Column::Type:
             return QString(tr("Type"));
-        case 2:
+        case Column::Port:
             return QString(tr("Port"));
-        case 3:
+        case Column::Speed:
             return QString(tr("Speed"));
-        case 4:
+        case Column::ListenOnly:
             return QString(tr("Listen Only"));
-        case 5:
+        case Column::SingleWire:
             return QString(tr("Single Wire"));
-        case 6:
+        case Column::Active:
             return QString(tr("Active"));
-        case 7:
+        case Column::Status:
             return QString(tr("Status"));
         }
     }
@@ -82,16 +92,16 @@ Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
     bool editParams = false;
     if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
 
-    switch (index.column())
+    switch (Column(index.column()))
     {
-    case 3: //speed
+    case Column::Speed:
         if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled;
         return Qt::ItemFlag::NoItemFlags;
-    case 4: //listen only
-    case 5: //single wire
+    case Column::ListenOnly:
+    case Column::SingleWire:
         if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
         return Qt::ItemFlag::NoItemFlags;
-    case 6: //enabled
+    case Column::Active:
         return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
     default:
         return Qt::ItemFlag::ItemIsEnabled;
@@ -110,20 +120,21 @@ bool CANConnectionModel::setData(const QModelIndex &index, const QVariant &value
     ret = conn_p->getBusSettings(busId, bus);
     if (!ret) return false;
 
-    switch (index.column())
+    switch (Column(index.column()))
     {
-    case 3: //speed
+    case Column::Speed:
         bus.speed = value.toInt();
         break;
-    case 4: //listen only
+    case Column::ListenOnly:
         bus.listenOnly = value.toBool();
         break;
-    case 5: //single wire
+    case Column::SingleWire:
         bus.singleWire = value.toBool();
         break;
-    case 6: //active
+    case Column::Active:
         bus.active = value.toBool();
         break;
+    default: {}
     }
     conn_p->setBusSettings(busId, bus);
     return true;
@@ -145,14 +156,14 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 
     //qDebug() << "ConnP: " << conn_p << "  ret " << ret;
 
-    if (role == Qt::DisplayRole) {        
+    if (role == Qt::DisplayRole) {
 
-        switch (index.column())
+        switch (Column(index.column()))
         {
-            case 0: //bus
+            case Column::Bus:
                 //return QString::number(busId);
                 return QString::number(index.row());
-            case 1: //type
+            case Column::Type:
                 if (conn_p)
                     switch (conn_p->getType()) {
                         case CANCon::KVASER: return "KVASER";
@@ -162,35 +173,35 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                     }
                 else qDebug() << "Tried to show connection type but connection was NULL";
                 break;
-            case 2: //port
+            case Column::Port:
                 if (conn_p) return conn_p->getPort();
                 else qDebug() << "Tried to show connection port but connection was NULL";
                 break;
-            case 3: //speed
+            case Column::Speed:
                 if(!ret) return QVariant();
                 if (!isSocketCAN) return QString::number(bus.speed);
                 else return QString("N/A");
-            case 4: //Listen Only
+            case Column::ListenOnly:
                 return QVariant();
-            case 5: //Single Wire
+            case Column::SingleWire:
                 return QVariant();
-            case 6: //Status
+            case Column::Active:
                 return QVariant();
-            case 7: //Active
+            case Column::Status:
                  return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
-            default: {}
         }
     }
     if (role == Qt::CheckStateRole)
     {
-        switch (index.column())
+        switch (Column(index.column()))
         {
-        case 4:
+        case Column::ListenOnly:
             return (bus.listenOnly) ? Qt::Checked : Qt::Unchecked;
-        case 5:
+        case Column::SingleWire:
             return (bus.singleWire) ? Qt::Checked : Qt::Unchecked;
-        case 6:
+        case Column::Active:
             return (bus.active) ? Qt::Checked : Qt::Unchecked;
+        default: {}
         }
     }
 
