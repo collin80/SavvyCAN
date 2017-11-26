@@ -261,23 +261,17 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         {
         case 0: //timestamp
             return Utility::formatTimestamp(thisFrame.timestamp);
-            break;
         case 1: //id
             return Utility::formatNumber(thisFrame.ID);
-            break;
         case 2: //ext
             return QString::number(thisFrame.extended);
-            break;
         case 3: //direction
             if (thisFrame.isReceived) return QString(tr("Rx"));
-            else return QString(tr("Tx"));
-            break;
+            return QString(tr("Tx"));
         case 4: //bus
             return QString::number(thisFrame.bus);
-            break;
         case 5: //len
             return QString::number(thisFrame.len);
-            break;
         case 6: //data
             dLen = thisFrame.len;
             if (dLen < 0) dLen = 0;
@@ -307,7 +301,6 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 }
             }
             return tempString;
-            break;
         default:
             return QVariant();
         }
@@ -328,25 +321,18 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         {
         case 0:
             return QString(tr("Timestamp"));
-            break;
         case 1:
             return QString(tr("ID"));
-            break;
         case 2:
             return QString(tr("Ext"));
-            break;
         case 3:
             return QString(tr("Dir"));
-            break;
         case 4:
             return QString(tr("Bus"));
-            break;
         case 5:
             return QString(tr("Len"));
-            break;
         case 6:
             return QString(tr("Data"));
-            break;
         }
     }
 
