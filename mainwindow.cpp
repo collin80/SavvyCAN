@@ -133,10 +133,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     updateFileStatus();
-    lbStatusDatabase.setText(tr("No DBC database loaded"));
+    //lbStatusDatabase.setText(tr("No DBC database loaded"));
     ui->statusBar->addWidget(&lbStatusConnected);
     ui->statusBar->addWidget(&lbStatusFilename);
-    ui->statusBar->addWidget(&lbStatusDatabase);
+    //ui->statusBar->addWidget(&lbStatusDatabase);
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
