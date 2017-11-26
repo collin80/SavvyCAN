@@ -272,7 +272,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case Column::TimeStamp:
             return Utility::formatTimestamp(thisFrame.timestamp);
         case Column::FrameId:
-            return Utility::formatNumber(thisFrame.ID);
+            return Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         case Column::Extended:
             return QString::number(thisFrame.extended);
         case Column::Direction:

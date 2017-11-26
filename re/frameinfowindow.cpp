@@ -124,11 +124,12 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         bool thisID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
-            unsigned int id = modelFrames->at(x).ID;
+            CANFrame thisFrame = modelFrames->at(x);
+            unsigned int id = thisFrame.ID;
             if (!foundID.contains(id))
             {
                 foundID.append(id);
-                ui->listFrameID->addItem(Utility::formatNumber(id));
+                ui->listFrameID->addItem(Utility::formatCANID(id, thisFrame.extended));
             }
 
             if (currID == modelFrames->at(x).ID)
@@ -394,11 +395,12 @@ void FrameInfoWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = (int)modelFrames->at(i).ID;
+        CANFrame thisFrame = modelFrames->at(i);
+        id = (int)thisFrame.ID;
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            ui->listFrameID->addItem(Utility::formatNumber(id));
+            ui->listFrameID->addItem(Utility::formatCANID(id, thisFrame.extended));
         }
     }
     //default is to sort in ascending order

@@ -74,7 +74,7 @@ void FuzzingWindow::updatedFrames(int numFrames)
                 foundIDs.append(id);
                 selectedIDs.append(id);
                 QListWidgetItem *thisItem = new QListWidgetItem();
-                thisItem->setText(Utility::formatNumber(id));
+                thisItem->setText(Utility::formatCANID(id, modelFrames->at(i).extended));
                 thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
                 thisItem->setCheckState(Qt::Checked);
                 ui->listID->addItem(thisItem);
@@ -346,14 +346,15 @@ void FuzzingWindow::refreshIDList()
 
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
-    {
-        id = modelFrames->at(i).ID;
+    {        
+        CANFrame thisFrame = modelFrames->at(i);
+        id = thisFrame.ID;
         if (!foundIDs.contains(id))
         {
             foundIDs.append(id);
             selectedIDs.append(id);
             QListWidgetItem *thisItem = new QListWidgetItem();
-            thisItem->setText(Utility::formatNumber(id));
+            thisItem->setText(Utility::formatCANID(id, thisFrame.extended));
             thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
             thisItem->setCheckState(Qt::Checked);
             ui->listID->addItem(thisItem);

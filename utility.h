@@ -96,6 +96,27 @@ public:
         else return formatHexNum(value);
     }
 
+    static QString formatCANID(uint64_t id, bool extended)
+    {
+        if (decimalMode) return QString::number(id, 10);
+
+        if (extended)
+        {
+            return "0x" + QString::number(id, 16).toUpper().rightJustified(8,'0');
+        }
+        else
+        {
+            id = id & 0x7FF;
+            return "0x" + QString::number(id, 16).toUpper().rightJustified(3,'0');
+        }
+    }
+
+    static QString formatCANID(uint64_t id)
+    {
+        if (id < 0x800) return formatCANID(id, false);
+        return formatCANID(id, true);
+    }
+
     static QString formatByteAsBinary(uint8_t value)
     {
         QString output;
