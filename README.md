@@ -1,8 +1,8 @@
 # SavvyCAN
-QT based cross platform canbus tool 
+Qt based cross platform canbus tool 
 (C) 2015-2017 EVTV and Collin Kidder
 
-A QT5 based cross platform tool which can be used to load, save, and capture canbus frames.
+A Qt5 based cross platform tool which can be used to load, save, and capture canbus frames.
 This tool is designed to help with visualization, reverse engineering, debugging, and
 capturing of canbus frames.
 
@@ -37,7 +37,7 @@ of this program. It can load and save in several formats:
 ## Dependencies
 
 Now this code does not depend on anything other than what is in the source tree or available
-from the QT installer.
+from the Qt installer.
 
 Uses QCustomPlot available at:
 
@@ -83,5 +83,5 @@ make
 ```
 
 Did that fix it? Great! If not, ensure that you selected SerialBUS support
-when you installed QT.
+when you installed Qt.
 

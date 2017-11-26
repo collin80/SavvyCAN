@@ -1,23 +1,19 @@
-#ifndef SocketCan_H
-#define SocketCan_H
+#ifndef SERIALBUSCONNECTION_H
+#define SERIALBUSCONNECTION_H
 
-#include <QObject>
-#include <QCanBus>
-#include <QTimer>
-#include <qthread.h>
-
-#include "canframemodel.h"
 #include "canconnection.h"
-#include "canconmanager.h"
+#include "canframemodel.h"
 
+#include <QCanBusDevice>
+#include <QTimer>
 
-class SocketCan : public CANConnection
+class SerialBusConnection : public CANConnection
 {
     Q_OBJECT
 
 public:
-    SocketCan(QString portName);
-    virtual ~SocketCan();
+    SerialBusConnection(QString portName);
+    virtual ~SerialBusConnection();
 
 protected:
 
@@ -37,9 +33,9 @@ private slots:
     void testConnection();
 
 protected:
-    QCanBusDevice*     mDev_p;
+    QCanBusDevice     *mDev_p = nullptr;
     QTimer             mTimer;
 };
 
 
-#endif // SocketCan_H
+#endif // SERIALBUSCONNECTION_H

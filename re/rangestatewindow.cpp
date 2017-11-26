@@ -138,7 +138,7 @@ void RangeStateWindow::updatedFrames(int numFrames)
             if (!idFilters.contains(thisFrame.ID))
             {
                 idFilters.insert(thisFrame.ID, true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listFilter);
+                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listFilter);
                 listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
@@ -159,7 +159,9 @@ void RangeStateWindow::refreshFilterList()
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
-            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(id), ui->listFilter);
+            QListWidgetItem* listItem;
+            if (id < 0x800) listItem = new QListWidgetItem(Utility::formatCANID(id, false), ui->listFilter);
+                else listItem = new QListWidgetItem(Utility::formatCANID(id, true), ui->listFilter);
             listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
             listItem->setCheckState(Qt::Checked); //default all filters to be set active
         }

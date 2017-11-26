@@ -397,7 +397,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
             if (!foundID.contains(thisFrame.ID))
             {
                 foundID.append(thisFrame.ID);
-                /*QListWidgetItem* item =*/ new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listFrameID);
+                /*QListWidgetItem* item =*/ new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listFrameID);
             }
 
             if (thisFrame.ID == refID)
@@ -506,11 +506,12 @@ void FlowViewWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = modelFrames->at(i).ID;
+        CANFrame thisFrame = modelFrames->at(i);
+        id = thisFrame.ID;
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            /*QListWidgetItem* item = */ new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
+            /*QListWidgetItem* item = */ new QListWidgetItem(Utility::formatCANID(id, thisFrame.extended), ui->listFrameID);
         }
     }
     //default is to sort in ascending order
