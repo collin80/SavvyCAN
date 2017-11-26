@@ -121,7 +121,7 @@ void DiscreteStateWindow::updatedFrames(int numFrames)
             if (!idFilters.contains(thisFrame.ID))
             {
                 idFilters.insert(thisFrame.ID, true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listID);
+                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listID);
                 listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
@@ -141,11 +141,12 @@ void DiscreteStateWindow::refreshFilterList()
 
     for (int i = 0; i < modelFrames->length(); i++)
     {
-        id = modelFrames->at(i).ID;
+        CANFrame thisFrame = modelFrames->at(i);
+        id = thisFrame.ID;
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
-            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(id), ui->listID);
+            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(id, thisFrame.extended), ui->listID);
             listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
             listItem->setCheckState(Qt::Checked); //default all filters to be set active
         }

@@ -353,7 +353,7 @@ void MainWindow::updateFilterList()
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
         QListWidgetItem *thisItem = new QListWidgetItem();
-        thisItem->setText(Utility::formatNumber(filterIter.key()));
+        thisItem->setText(Utility::formatCANID(filterIter.key()));
         thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
         if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
             else thisItem->setCheckState(Qt::Unchecked);
@@ -632,7 +632,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         CANFrame thisFrame = frames->at(c);
         QString builderString;
         builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
-        builderString += tr("    ID: ") + Utility::formatNumber(thisFrame.ID);
+        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         if (thisFrame.extended) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
         builderString += tr("Bus: ") + QString::number(thisFrame.bus);

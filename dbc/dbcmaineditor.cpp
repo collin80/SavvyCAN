@@ -276,7 +276,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
 
             item =  ui->MessagesTable->item(row, 0);
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-            item->setText(Utility::formatNumber(msgID));
+            item->setText(Utility::formatCANID(msgID));
 
             for(int i=1 ; i < ui->MessagesTable->columnCount(); i++)
             {
@@ -486,7 +486,7 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
             if (msg->sender == node)
             {
                 //many of these are simplistic first versions just to test functionality.
-                QTableWidgetItem *msgID = new QTableWidgetItem(Utility::formatNumber(msg->ID));
+                QTableWidgetItem *msgID = new QTableWidgetItem(Utility::formatCANID(msg->ID));
                 QTableWidgetItem *msgName = new QTableWidgetItem(msg->name);
                 QTableWidgetItem *msgLen = new QTableWidgetItem(QString::number(msg->len));
                 QTableWidgetItem *msgSignals = new QTableWidgetItem(QString::number(msg->sigHandler->getCount()));
