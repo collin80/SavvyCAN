@@ -70,6 +70,7 @@ private:
     void procRXChar(unsigned char);
     void sendCommValidation();
     void rebuildLocalTimeBasis();
+    void sendToSerial(const QByteArray &bytes);
 
 protected:
     QTimer             mTimer;
