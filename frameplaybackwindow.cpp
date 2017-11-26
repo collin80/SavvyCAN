@@ -248,7 +248,7 @@ void FramePlaybackWindow::refreshIDList()
     QHash<int, bool>::Iterator filterIter;
     for (filterIter = currentSeqItem->idFilters.begin(); filterIter != currentSeqItem->idFilters.end(); ++filterIter)
     {
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(filterIter.key()), ui->listID);
+        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(filterIter.key()), ui->listID);
         listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
         if (filterIter.value()) listItem->setCheckState(Qt::Checked);
         else listItem->setCheckState(Qt::Unchecked);

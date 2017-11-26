@@ -85,7 +85,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     startBit = params.startBit;
     dataLen = params.numBits;
     ui->txtDataLen->setText(QString::number(dataLen));
-    ui->txtID->setText(Utility::formatNumber(params.ID));
+    ui->txtID->setText(Utility::formatCANID(params.ID));
     ui->txtName->setText(params.graphName);
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
@@ -211,7 +211,7 @@ void NewGraphDialog::copySignalToParamsUI()
     startBit = sig->startBit;
     ui->txtBias->setText(QString::number(sig->bias));
     ui->txtDataLen->setText(QString::number(sig->signalSize));
-    ui->txtID->setText(Utility::formatNumber(msg->ID));
+    ui->txtID->setText(Utility::formatCANID(msg->ID));
     ui->txtMask->setText("0xFFFFFFFF");
     ui->txtName->setText(sig->name);
     ui->txtScale->setText(QString::number(sig->factor));

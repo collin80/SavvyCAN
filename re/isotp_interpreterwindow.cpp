@@ -231,7 +231,7 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     {
         idFilters.insert(msg.ID, true);
 
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(msg.ID), ui->listFilter);
+        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(msg.ID, msg.extended), ui->listFilter);
         listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
         listItem->setCheckState(Qt::Checked);
     }
