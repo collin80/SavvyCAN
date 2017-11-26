@@ -23,28 +23,20 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
         {
         case 0:
             return QString(tr("Bus"));
-            break;
         case 1:
             return QString(tr("Type"));
-            break;
         case 2:
             return QString(tr("Port"));
-            break;
         case 3:
             return QString(tr("Speed"));
-            break;
         case 4:
             return QString(tr("Listen Only"));
-            break;
         case 5:
             return QString(tr("Single Wire"));
-            break;
         case 6:
             return QString(tr("Active"));
-            break;
         case 7:
             return QString(tr("Status"));
-            break;
         }
     }
 
@@ -94,19 +86,15 @@ Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
     {
     case 3: //speed
         if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled;
-        else return Qt::ItemFlag::NoItemFlags;
-        break;
+        return Qt::ItemFlag::NoItemFlags;
     case 4: //listen only
     case 5: //single wire
         if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
-        else return Qt::ItemFlag::NoItemFlags;
-        break;
+        return Qt::ItemFlag::NoItemFlags;
     case 6: //enabled
         return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
-        break;
     default:
         return Qt::ItemFlag::ItemIsEnabled;
-        break;
     }
 }
 
@@ -164,7 +152,6 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
             case 0: //bus
                 //return QString::number(busId);
                 return QString::number(index.row());
-                break;
             case 1: //type
                 if (conn_p)
                     switch (conn_p->getType()) {
@@ -200,13 +187,10 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
         {
         case 4:
             return (bus.listenOnly) ? Qt::Checked : Qt::Unchecked;
-            break;
         case 5:
             return (bus.singleWire) ? Qt::Checked : Qt::Unchecked;
-            break;
         case 6:
             return (bus.active) ? Qt::Checked : Qt::Unchecked;
-            break;
         }
     }
 
