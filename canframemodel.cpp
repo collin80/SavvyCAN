@@ -215,6 +215,16 @@ void CANFrameModel::recalcOverwrite()
     mutex.unlock();
 }
 
+enum class Column {
+    TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
+    FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
+    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
+    Direction = 3, ///< Whether the frame was transmitted or received
+    Bus       = 4, ///< The bus where the frame was transmitted or received
+    Length    = 5, ///< The frames payload data length
+    Data      = 6 ///< The frames payload data
+};
+
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
     int dLen;
@@ -257,28 +267,22 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     }
 
     if (role == Qt::DisplayRole) {
-        switch (index.column())
+        switch (Column(index.column()))
         {
-        case 0: //timestamp
+        case Column::TimeStamp:
             return Utility::formatTimestamp(thisFrame.timestamp);
-            break;
-        case 1: //id
+        case Column::FrameId:
             return Utility::formatNumber(thisFrame.ID);
-            break;
-        case 2: //ext
+        case Column::Extended:
             return QString::number(thisFrame.extended);
-            break;
-        case 3: //direction
+        case Column::Direction:
             if (thisFrame.isReceived) return QString(tr("Rx"));
-            else return QString(tr("Tx"));
-            break;
-        case 4: //bus
+            return QString(tr("Tx"));
+        case Column::Bus:
             return QString::number(thisFrame.bus);
-            break;
-        case 5: //len
+        case Column::Length:
             return QString::number(thisFrame.len);
-            break;
-        case 6: //data
+        case Column::Data:
             dLen = thisFrame.len;
             if (dLen < 0) dLen = 0;
             if (dLen > 8) dLen = 8;
@@ -307,9 +311,6 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 }
             }
             return tempString;
-            break;
-        default:
-            return QVariant();
         }
     }
 
@@ -324,29 +325,22 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 
     if (orientation == Qt::Horizontal)
     {
-        switch (section)
+        switch (Column(section))
         {
-        case 0:
+        case Column::TimeStamp:
             return QString(tr("Timestamp"));
-            break;
-        case 1:
+        case Column::FrameId:
             return QString(tr("ID"));
-            break;
-        case 2:
+        case Column::Extended:
             return QString(tr("Ext"));
-            break;
-        case 3:
+        case Column::Direction:
             return QString(tr("Dir"));
-            break;
-        case 4:
+        case Column::Bus:
             return QString(tr("Bus"));
-            break;
-        case 5:
+        case Column::Length:
             return QString(tr("Len"));
-            break;
-        case 6:
+        case Column::Data:
             return QString(tr("Data"));
-            break;
         }
     }
 
