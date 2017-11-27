@@ -1,8 +1,6 @@
 Main / Start Up Screen
 ======================
 
-**SavvyCAN main screen**
-
 .. image:: ./images/MainScreen.png
 
 This screen embodies the core of the program. Here you will find the master list of all frames. Also, here you can navigate to the other aspects

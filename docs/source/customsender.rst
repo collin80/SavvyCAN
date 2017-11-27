@@ -1,13 +1,13 @@
 Custom Sender Window
-====================
+=====================
 
-**SavvyCAN Custom Frame Sender**
+.
 
 .. image:: ./images/CustomSender.png
 
 
 General Overview
-=================
+====================
 
 This window allows you to create custom frames that will be sent out on one of the can buses. The uses are endless.
 It can be used to generate valid traffic to control connected hardware. It can be used to test out various ideas
@@ -16,7 +16,7 @@ modifications.
 
 
 Layout of the View
-===================
+=====================
 
 This screen is laid out as a data grid. 
 

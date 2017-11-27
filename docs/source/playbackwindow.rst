@@ -1,5 +1,6 @@
 Playback Window
 ===============
 
-Play back that which was once captured
+.. image:: ./images/Playback.png
+
 

@@ -1,5 +1,6 @@
 Preference Window
 =================
 
-So, what do you prefer?
+.. image:: ./images/Preferences.png
+
 
