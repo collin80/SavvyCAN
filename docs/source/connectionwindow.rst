@@ -1,7 +1,7 @@
 Connection Window
-=============================
+==============================
 
-**Connection Management Window**
+.
 
 .. image:: ./images/ConnectionWindow.png
 
@@ -10,7 +10,7 @@ At this time GVRET compatible devices are: EVTVDue, EVTV CANDue (1.3/2/2.1/2.2),
 
 
 Connecting To A Dongle
-=============================
+==============================
 
 SavvyCAN is able to connect to GVRET compatible devices to capture new traffic. These devices will present as serial ports on the connected PC.
 To connect to a dongle select the proper serial port and click "Create New Connection". If a valid device is found on that serial port the first
@@ -27,7 +27,7 @@ for details on configuring such devices.
 
 
 Debugging Connection Problems
-=============================
+==============================
 GVRET devices present as serial ports and have significant configuration options. However, the ability to configure so many things and the ability to compile the firmware yourself both come as a
 double edged sword. They present many opportunities for things to go wrong. Because of this there is a debugging console present on the connection window. Click a bus in the table then click "Enable Console" 
 to cause it to start logging serial traffic. From this console you can see what is going on. It shows what SavvyCAN is sending and what it is getting back. It has extended status messages that might help to narrow down 
