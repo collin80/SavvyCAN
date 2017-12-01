@@ -1,6 +1,7 @@
 #include "flowviewwindow.h"
 #include "ui_flowviewwindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -192,6 +193,9 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
             break;
         case Qt::Key_Y:
             btnFwdOneClick();
+            break;
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("flowview.html");
             break;
         }
         return true;

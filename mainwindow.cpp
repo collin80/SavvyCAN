@@ -6,6 +6,7 @@
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
 #include "connections/connectionwindow.h"
+#include "helpwindow.h"
 #include "utility.h"
 
 /*
@@ -130,6 +131,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
 
+
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
@@ -171,6 +173,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connectionWindow = new ConnectionWindow();
     connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 
+    installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
@@ -235,9 +238,29 @@ void MainWindow::exitApp()
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
     exitApp();
 }
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("mainscreen.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
+
 
 void MainWindow::updateSettings()
 {

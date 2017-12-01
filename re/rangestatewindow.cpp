@@ -2,6 +2,7 @@
 #include "ui_rangestatewindow.h"
 #include "mainwindow.h"
 #include "utility.h"
+#include "helpwindow.h"
 
 RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -88,12 +89,33 @@ void RangeStateWindow::showEvent(QShowEvent* event)
     readSettings();
 
     refreshFilterList();
+
+    installEventFilter(this);
 }
 
 void RangeStateWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool RangeStateWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("rangestate.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void RangeStateWindow::readSettings()

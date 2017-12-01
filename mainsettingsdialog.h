@@ -27,6 +27,7 @@ private:
     QSettings *settings;
 
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // MAINSETTINGSDIALOG_H

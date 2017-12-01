@@ -1,6 +1,6 @@
 #include "filecomparatorwindow.h"
 #include "ui_filecomparatorwindow.h"
-
+#include "helpwindow.h"
 #include <QSettings>
 
 FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
@@ -16,10 +16,13 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
 
     ui->lblFirstFile->setText("");
     ui->lblRefFrames->setText("0");
+
+    installEventFilter(this);
 }
 
 FileComparatorWindow::~FileComparatorWindow()
 {
+    removeEventFilter(this);
     delete ui;
 }
 
@@ -32,6 +35,24 @@ void FileComparatorWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     writeSettings();
+}
+
+bool FileComparatorWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("filecomparison.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void FileComparatorWindow::readSettings()

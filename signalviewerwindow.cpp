@@ -1,5 +1,6 @@
 #include "signalviewerwindow.h"
 #include "ui_signalviewerwindow.h"
+#include "helpwindow.h"
 
 SignalViewerWindow::SignalViewerWindow(QWidget *parent) :
     QDialog(parent),

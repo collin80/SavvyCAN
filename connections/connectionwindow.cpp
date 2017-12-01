@@ -3,12 +3,11 @@
 
 #include "connectionwindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include "ui_connectionwindow.h"
 #include "connections/canconfactory.h"
 #include "connections/canconmanager.h"
 #include "canbus.h"
-
-
 
 ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QDialog(parent),
@@ -88,6 +87,7 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     qDebug() << "Show connectionwindow";
+    installEventFilter(this);
     readSettings();
     ui->tableConnections->selectRow(0);
     currentRowChanged(ui->tableConnections->currentIndex(), ui->tableConnections->currentIndex());
@@ -97,7 +97,26 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 void ConnectionWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool ConnectionWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("connectionwindow.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void ConnectionWindow::readSettings()

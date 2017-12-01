@@ -66,6 +66,7 @@ private:
     void readSettings();
     void writeSettings();
     void calculateWhichBus();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // FRAMEPLAYBACKWINDOW_H
