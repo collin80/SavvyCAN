@@ -53,6 +53,7 @@ private:
 
     void refreshFilterList();
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
     void updateStateLabel();

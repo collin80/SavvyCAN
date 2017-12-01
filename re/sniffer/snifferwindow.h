@@ -45,6 +45,7 @@ public slots:
 
 private:
     void filter(bool pFilter);
+    bool eventFilter(QObject *obj, QEvent *event);
 
     Ui::snifferWindow*          ui;
     SnifferModel                mModel;

@@ -2,6 +2,7 @@
 #include "ui_graphingwindow.h"
 #include "newgraphdialog.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include <QDebug>
 
 GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
@@ -396,6 +397,9 @@ bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
             break;
         case Qt::Key_Minus:
             zoomOut();
+            break;
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("graphwindow.html");
             break;
         }
         return true;

@@ -5,6 +5,7 @@
 #include <QMenu>
 #include <QSettings>
 #include "connections/canconmanager.h"
+#include "helpwindow.h"
 
 /*
  * Notes about new functionality:
@@ -93,12 +94,32 @@ FramePlaybackWindow::~FramePlaybackWindow()
 void FramePlaybackWindow::showEvent(QShowEvent *)
 {
     readSettings();
+    installEventFilter(this);
 }
 
 void FramePlaybackWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool FramePlaybackWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("playbackwindow.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void FramePlaybackWindow::readSettings()

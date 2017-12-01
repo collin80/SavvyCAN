@@ -1,6 +1,7 @@
 #include "isotp_interpreterwindow.h"
 #include "ui_isotp_interpreterwindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 
 ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -60,12 +61,32 @@ void ISOTP_InterpreterWindow::showEvent(QShowEvent* event)
     QDialog::showEvent(event);
     readSettings();
     decoder->updatedFrames(-2);
+    installEventFilter(this);
 }
 
 void ISOTP_InterpreterWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool ISOTP_InterpreterWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("isotp_decoder.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void ISOTP_InterpreterWindow::readSettings()

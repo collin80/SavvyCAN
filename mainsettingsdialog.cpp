@@ -1,5 +1,6 @@
 #include "mainsettingsdialog.h"
 #include "ui_mainsettingsdialog.h"
+#include "helpwindow.h"
 
 MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -73,6 +74,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    installEventFilter(this);
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -84,8 +86,28 @@ MainSettingsDialog::~MainSettingsDialog()
 void MainSettingsDialog::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     settings->sync();
 }
+
+bool MainSettingsDialog::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("preferences.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
+
 
 void MainSettingsDialog::updateSettings()
 {

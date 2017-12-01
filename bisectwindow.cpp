@@ -3,6 +3,7 @@
 
 #include "mainwindow.h"
 #include "framefileio.h"
+#include "helpwindow.h"
 
 #include <QDebug>
 #include <algorithm>
@@ -23,10 +24,12 @@ BisectWindow::BisectWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->slidePercentage, &QSlider::sliderReleased, this, &BisectWindow::updatePercentText);
     connect(ui->editFrameNumber, &QLineEdit::editingFinished, this, &BisectWindow::updateFrameNumSlider);
     connect(ui->editPercentage, &QLineEdit::editingFinished, this, &BisectWindow::updatePercentSlider);
+    installEventFilter(this);
 }
 
 BisectWindow::~BisectWindow()
 {
+    removeEventFilter(this);
     delete ui;
 }
 
@@ -37,6 +40,24 @@ void BisectWindow::showEvent(QShowEvent* event)
     refreshFrameNumbers();
     updateFrameNumText();
     updatePercentText();
+}
+
+bool BisectWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("bisector.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void BisectWindow::refreshIDList()

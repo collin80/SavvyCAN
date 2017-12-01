@@ -5,6 +5,7 @@
 #include <QFileDialog>
 #include <QDebug>
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include "connections/canconmanager.h"
 
 /*
@@ -51,14 +52,34 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
 
     intervalTimer->start();
     elapsedTimer.start();
+    installEventFilter(this);
 }
 
 FrameSenderWindow::~FrameSenderWindow()
 {
+    removeEventFilter(this);
     delete ui;
 
     intervalTimer->stop();
     delete intervalTimer;
+}
+
+bool FrameSenderWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("customsender.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void FrameSenderWindow::createBlankRow()

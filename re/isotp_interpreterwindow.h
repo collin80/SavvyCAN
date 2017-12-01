@@ -43,6 +43,7 @@ private:
     QHash<int, bool> idFilters;
 
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
 
