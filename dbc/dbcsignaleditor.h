@@ -44,6 +44,7 @@ private:
     void generateUsedBits();
 
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
 };

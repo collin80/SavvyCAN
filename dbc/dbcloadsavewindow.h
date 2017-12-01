@@ -38,6 +38,7 @@ private:
     void swapTableRows(bool up);
     QList<QTableWidgetItem*> takeRow(int row);
     void setRow(int row, const QList<QTableWidgetItem*>& rowItems);
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // DBCLOADSAVEWINDOW_H
