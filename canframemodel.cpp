@@ -40,7 +40,7 @@ int CANFrameModel::totalFrameCount()
 int CANFrameModel::columnCount(const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    return 7;
+    return 8;
 }
 
 CANFrameModel::CANFrameModel(QObject *parent)
@@ -222,7 +222,8 @@ enum class Column {
     Direction = 3, ///< Whether the frame was transmitted or received
     Bus       = 4, ///< The bus where the frame was transmitted or received
     Length    = 5, ///< The frames payload data length
-    Data      = 6 ///< The frames payload data
+    ASCII     = 6, ///< The payload interpreted as ASCII characters
+    Data      = 7 ///< The frames payload data
 };
 
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
@@ -282,13 +283,27 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return QString::number(thisFrame.bus);
         case Column::Length:
             return QString::number(thisFrame.len);
-        case Column::Data:
+        case Column::ASCII:
             dLen = thisFrame.len;
             if (dLen < 0) dLen = 0;
             if (dLen > 8) dLen = 8;
             for (int i = 0; i < dLen; i++)
             {
-                tempString.append(Utility::formatNumber(thisFrame.data[i]));
+                quint8 byt = thisFrame.data[i];
+                if (byt < 0x20) byt = 0x2E; //A dot
+                if (byt > 0x7E) byt = 0x2E;
+                tempString.append(QString::fromUtf8((char *)&byt, 1));
+            }
+            return tempString;
+        case Column::Data:
+            dLen = thisFrame.len;
+            if (dLen < 0) dLen = 0;
+            if (dLen > 8) dLen = 8;
+            //if (useHexMode) tempString.append("0x ");
+            for (int i = 0; i < dLen; i++)
+            {
+                if (useHexMode) tempString.append( QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2, '0'));
+                else tempString.append(QString::number(thisFrame.data[i], 10));
                 tempString.append(" ");
             }
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
@@ -339,6 +354,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
             return QString(tr("Bus"));
         case Column::Length:
             return QString(tr("Len"));
+        case Column::ASCII:
+            return QString(tr("ASCII"));
         case Column::Data:
             return QString(tr("Data"));
         }
