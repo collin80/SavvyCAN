@@ -50,13 +50,14 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    ui->canFramesView->setColumnWidth(0, 150);
-    ui->canFramesView->setColumnWidth(1, 70);
-    ui->canFramesView->setColumnWidth(2, 40);
-    ui->canFramesView->setColumnWidth(3, 40);
-    ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 40);
-    ui->canFramesView->setColumnWidth(6, 225);
+    ui->canFramesView->setColumnWidth(0, 150); //time stamp
+    ui->canFramesView->setColumnWidth(1, 70); //frame ID
+    ui->canFramesView->setColumnWidth(2, 40); //extended
+    ui->canFramesView->setColumnWidth(3, 40); //direction
+    ui->canFramesView->setColumnWidth(4, 40); //bus
+    ui->canFramesView->setColumnWidth(5, 40); //length
+    ui->canFramesView->setColumnWidth(6, 50); //ascii
+    ui->canFramesView->setColumnWidth(7, 225); //data
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
