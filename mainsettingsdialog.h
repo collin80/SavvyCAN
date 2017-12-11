@@ -19,7 +19,7 @@ public:
 signals:
     void updatedSettings();
 
-private slots:
+public slots:
     void updateSettings();
 
 private:

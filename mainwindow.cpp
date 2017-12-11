@@ -48,6 +48,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->canFramesView->setModel(proxyModel);
 
+    settingsDialog = new MainSettingsDialog(); //instantiate the settings dialog so it can initialize settings if this is the first run or the config file was deleted.
+    settingsDialog->updateSettings(); //write out all the settings. If this is the first run it'll write defaults out.
+
     readSettings();
 
     ui->canFramesView->setColumnWidth(0, 150); //time stamp
