@@ -53,14 +53,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    ui->canFramesView->setColumnWidth(0, 150); //time stamp
-    ui->canFramesView->setColumnWidth(1, 70); //frame ID
-    ui->canFramesView->setColumnWidth(2, 40); //extended
-    ui->canFramesView->setColumnWidth(3, 40); //direction
-    ui->canFramesView->setColumnWidth(4, 40); //bus
-    ui->canFramesView->setColumnWidth(5, 40); //length
-    ui->canFramesView->setColumnWidth(6, 50); //ascii
-    ui->canFramesView->setColumnWidth(7, 225); //data
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
@@ -279,6 +271,14 @@ void MainWindow::readSettings()
     {
         resize(settings.value("Main/WindowSize", QSize(800, 750)).toSize());
         move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
+        ui->canFramesView->setColumnWidth(0, settings.value("Main/TimeColumn", 150).toUInt()); //time stamp
+        ui->canFramesView->setColumnWidth(1, settings.value("Main/IDColumn", 70).toUInt()); //frame ID
+        ui->canFramesView->setColumnWidth(2, settings.value("Main/ExtColumn", 40).toUInt()); //extended
+        ui->canFramesView->setColumnWidth(3, settings.value("Main/DirColumn", 40).toUInt()); //direction
+        ui->canFramesView->setColumnWidth(4, settings.value("Main/BusColumn", 40).toUInt()); //bus
+        ui->canFramesView->setColumnWidth(5, settings.value("Main/LengthColumn", 40).toUInt()); //length
+        ui->canFramesView->setColumnWidth(6, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
+        ui->canFramesView->setColumnWidth(7, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
     if (settings.value("Main/AutoScroll", false).toBool())
     {
@@ -311,6 +311,14 @@ void MainWindow::writeSettings()
     {
         settings.setValue("Main/WindowSize", size());
         settings.setValue("Main/WindowPos", pos());
+        settings.setValue("Main/TimeColumn", ui->canFramesView->columnWidth(0));
+        settings.setValue("Main/IDColumn", ui->canFramesView->columnWidth(1));
+        settings.setValue("Main/ExtColumn", ui->canFramesView->columnWidth(2));
+        settings.setValue("Main/DirColumn", ui->canFramesView->columnWidth(3));
+        settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(4));
+        settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(5));
+        settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(6));
+        settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(7));
     }
 }
 
