@@ -284,6 +284,10 @@ void MainWindow::readSettings()
     {
         ui->cbAutoScroll->setChecked(true);
     }
+    int fontSize = settings.value("Main/FontSize", 9).toUInt();
+    QFont newFont = QFont(ui->canFramesView->font());
+    newFont.setPointSize(fontSize);
+    ui->canFramesView->setFont(newFont);
 
     readUpdateableSettings();
 }

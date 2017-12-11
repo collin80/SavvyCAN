@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>743</height>
+    <height>850</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -121,6 +121,28 @@
         <property name="text">
          <string>OpenGL Accelerated AntiAliased Graphing</string>
         </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_7">
+        <property name="title">
+         <string>Font Size</string>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_8">
+         <item>
+          <widget class="QSpinBox" name="spinFontSize">
+           <property name="minimum">
+            <number>7</number>
+           </property>
+           <property name="maximum">
+            <number>15</number>
+           </property>
+           <property name="value">
+            <number>9</number>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </widget>
       </item>
      </layout>
