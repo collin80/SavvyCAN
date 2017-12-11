@@ -29,6 +29,8 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
     ui->lineClockFormat->setText(settings->value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
 
+    ui->spinFontSize->setValue(settings->value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
+
     bool secondsMode = settings->value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings->value("Main/TimeClock", false).toBool();
     if (clockMode)
@@ -87,6 +89,7 @@ void MainSettingsDialog::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     removeEventFilter(this);
+    updateSettings();
     settings->sync();
 }
 
@@ -126,6 +129,7 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings->setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
     settings->setValue("Main/TimeFormat", ui->lineClockFormat->text());
+    settings->setValue("Main/FontSize", ui->spinFontSize->value());
 
     settings->sync();
     emit updatedSettings();
