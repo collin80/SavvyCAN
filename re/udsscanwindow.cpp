@@ -117,7 +117,7 @@ void UDSScanWindow::readByToggled()
 
 void UDSScanWindow::numBytesChanged()
 {
-    uint64_t upperBound =  (1 << (8 * ui->spinNumBytes->value())) - 1;
+    uint64_t upperBound =  (1ull << (8ull * ui->spinNumBytes->value())) - 1;
     if (upperBound > 0x7FFFFFFF) upperBound = 0x7FFFFFFF;
     ui->spinUpperSubfunc->setMaximum(upperBound);
 }
