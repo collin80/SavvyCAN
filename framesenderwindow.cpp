@@ -27,18 +27,7 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     intervalTimer->setTimerType(Qt::PreciseTimer);
     intervalTimer->setInterval(1);
 
-    QStringList headers;
-    headers << "En" << "Bus" << "ID" << "Len" << "Data" << "Trigger" << "Modifications" << "Count";
-    ui->tableSender->setColumnCount(8);
-    ui->tableSender->setColumnWidth(0, 50);
-    ui->tableSender->setColumnWidth(1, 50);
-    ui->tableSender->setColumnWidth(2, 50);
-    ui->tableSender->setColumnWidth(3, 50);
-    ui->tableSender->setColumnWidth(4, 220);
-    ui->tableSender->setColumnWidth(5, 220);
-    ui->tableSender->setColumnWidth(6, 220);
-    ui->tableSender->setColumnWidth(7, 80);
-    ui->tableSender->setHorizontalHeaderLabels(headers);
+    setupGrid();
     createBlankRow();
 
     connect(ui->tableSender, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChanged(int,int)));
@@ -53,6 +42,22 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     intervalTimer->start();
     elapsedTimer.start();
     installEventFilter(this);
+}
+
+void FrameSenderWindow::setupGrid()
+{
+    QStringList headers;
+    headers << "En" << "Bus" << "ID" << "Len" << "Data" << "Trigger" << "Modifications" << "Count";
+    ui->tableSender->setColumnCount(8);
+    ui->tableSender->setColumnWidth(0, 50);
+    ui->tableSender->setColumnWidth(1, 50);
+    ui->tableSender->setColumnWidth(2, 50);
+    ui->tableSender->setColumnWidth(3, 50);
+    ui->tableSender->setColumnWidth(4, 220);
+    ui->tableSender->setColumnWidth(5, 220);
+    ui->tableSender->setColumnWidth(6, 220);
+    ui->tableSender->setColumnWidth(7, 80);
+    ui->tableSender->setHorizontalHeaderLabels(headers);
 }
 
 FrameSenderWindow::~FrameSenderWindow()
@@ -88,7 +93,7 @@ void FrameSenderWindow::createBlankRow()
     ui->tableSender->insertRow(row);
 
     QTableWidgetItem *item = new QTableWidgetItem();
-    item->setFlags(item->flags() |Qt::ItemIsUserCheckable);
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
     inhibitChanged = true;
     ui->tableSender->setItem(row, 0, item);
@@ -262,6 +267,8 @@ void FrameSenderWindow::loadGrid()
             loadSenderFile(filename);
         }
     }
+
+    setupGrid();
 }
 
 void FrameSenderWindow::saveSenderFile(QString filename)
@@ -309,22 +316,30 @@ void FrameSenderWindow::loadSenderFile(QString filename)
     }
 
     ui->tableSender->clear();
+    while (ui->tableSender->rowCount() > 0) ui->tableSender->removeRow(0);
     sendingData.clear();
 
     while (!inFile->atEnd()) {
+        inhibitChanged = true;
         line = inFile->readLine().simplified();
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split('#');
             int row = ui->tableSender->rowCount();
             ui->tableSender->insertRow(row);
-            ui->tableSender->item(row, 0)->setFlags(Qt::ItemIsUserCheckable);
+            QTableWidgetItem *item = new QTableWidgetItem();
+            ui->tableSender->setItem(row, 0, item);
+            ui->tableSender->item(row, 0)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             if (tokens[0] == "T")
             {
                 ui->tableSender->item(row, 0)->setCheckState(Qt::Checked);
             }
             else ui->tableSender->item(row, 0)->setCheckState(Qt::Unchecked);
-            for (int i = 0; i < 7; i++) ui->tableSender->item(row, i)->setText(tokens[i]);
+            for (int i = 1; i < 7; i++)
+            {
+                ui->tableSender->setItem(row, i, new QTableWidgetItem(QString(tokens[i])));
+            }
+            inhibitChanged = false;
             for (int k = 0; k < 7; k++) processCellChange(row, k);
 
         }
