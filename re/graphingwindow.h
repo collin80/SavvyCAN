@@ -46,6 +46,7 @@ private slots:
     void legendDoubleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
     void legendSingleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
     void plottableDoubleClick(QCPAbstractPlottable* plottable,int dataIdx, QMouseEvent* event);
+    void plottableClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event);
     void selectionChanged();
     void mousePress();
     void mouseWheel();
@@ -79,6 +80,8 @@ private:
     QList<GraphParams> graphParams;
     QPen selectedPen;
     QCPSelectionDecorator *selDecorator;
+    QCPItemText *locationText;
+    QCPItemTracer *itemTracer;
     bool needScaleSetup; //do we need to set x,y graphing extents?
     bool secondsMode;
     bool useOpenGL;
