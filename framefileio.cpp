@@ -1598,6 +1598,11 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             /* ID */
             qDebug() << IdValExp.cap(1);
             thisFrame.ID = IdValExp.cap(1).toInt(&ret, 16);
+            if (IdValExp.cap(1).length() > 3) {
+                thisFrame.extended = true;
+            } else {
+                thisFrame.extended = false;
+            }
             if(!ret) continue;
 
             QString val= IdValExp.cap(2);
@@ -1616,7 +1621,6 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             }
 
             /*NB: should we make sure len <= 8? */
-            thisFrame.extended = false;
             thisFrame.isReceived = true;
             thisFrame.bus = 0;
        }
