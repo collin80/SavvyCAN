@@ -98,7 +98,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
     connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
     connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
-    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::pressed, this, &MainWindow::gridClicked);
     connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
@@ -126,7 +126,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
-
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -247,9 +246,10 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         {
         case Qt::Key_F1:
             HelpWindow::getRef()->showHelp("mainscreen.html");
+            return true;
             break;
         }
-        return true;
+        return false;
     } else {
         // standard event processing
         return QObject::eventFilter(obj, event);
@@ -350,6 +350,7 @@ void MainWindow::headerClicked(int logicalIndex)
 
 void MainWindow::gridClicked(QModelIndex idx)
 {
+    //qDebug() << "Grid Clicked";
     if (ui->canFramesView->rowHeight(idx.row()) > normalRowHeight)
     {
         ui->canFramesView->setRowHeight(idx.row(), normalRowHeight);
@@ -361,6 +362,7 @@ void MainWindow::gridClicked(QModelIndex idx)
 
 void MainWindow::gridDoubleClicked(QModelIndex idx)
 {
+    //qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
     emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);
