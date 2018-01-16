@@ -79,6 +79,11 @@ private:
 
     bool parseAttribute(QString inpString, DBC_ATTRIBUTE &attr);
     QVariant processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ);
+    DBC_SIGNAL* parseSignalLine(QString line, DBC_MESSAGE *msg);
+    DBC_MESSAGE* parseMessageLine(QString line);
+    bool parseValueLine(QString line);
+    bool parseAttributeLine(QString line);
+    bool parseDefaultAttrLine(QString line);
 };
 
 class DBCHandler: public QObject
