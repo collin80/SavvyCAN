@@ -9,6 +9,7 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     processAll = false;
     lastSenderBus = 0;
     lastSenderID = 0;
+    issuedMultiFrame = false;
 
     modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
 
@@ -60,6 +61,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
 
     if (data.length() < 8)
     {
+        issuedMultiFrame = false;
         frame.bus = bus;
         frame.extended = false;
         frame.ID = ID;
@@ -71,6 +73,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
+        issuedMultiFrame = true;
         frame.bus = bus;
         frame.ID = ID;
         frame.extended = false;
@@ -200,6 +203,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         msg.ID = ID;
         msg.timestamp = frame.timestamp;
         msg.isReceived = frame.isReceived;
+        issuedMultiFrame = true;
         frameLen = frameLen << 8;
         if (useExtendedAddressing)
         {
@@ -220,7 +224,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         messageBuffer.append(msg);
         //The sending ID is set to the last ID we used to send from this class which is
         //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
-        if (issueFlowMsgs && lastSenderID > 0)
+        if (issueFlowMsgs && lastSenderID > 0 && issuedMultiFrame)
         {
             CANFrame outFrame;
             outFrame.bus = lastSenderBus;
@@ -260,6 +264,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (pMsg->len <= pMsg->data.count())
         {
             //qDebug() << "Emitting multiframe ISOTP message";
+            issuedMultiFrame = false;
             emit newISOMessage(*pMsg);
         }
         break;
@@ -300,6 +305,7 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
             //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
             //qDebug() << "Flushing a partial frame";
             emit newISOMessage(messageBuffer[i]);
+            issuedMultiFrame = false;
             messageBuffer.removeAt(i);
             return;
         }

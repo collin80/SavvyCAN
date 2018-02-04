@@ -6,15 +6,47 @@
 
 ScriptContainer::ScriptContainer()
 {
-    canHelper = new CANScriptHelper(&scriptEngine);
-    isoHelper = new ISOTPScriptHelper(&scriptEngine);
-    udsHelper = new UDSScriptHelper(&scriptEngine);
+    qDebug() << "Script Container Constructor";
+    scriptEngine = new QJSEngine();
+    canHelper = new CANScriptHelper(scriptEngine);
+    isoHelper = new ISOTPScriptHelper(scriptEngine);
+    udsHelper = new UDSScriptHelper(scriptEngine);
     connect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
+}
+
+ScriptContainer::~ScriptContainer()
+{
+    qDebug() << "Script Container Destructor " << (uint64_t)this << "c: " << (uint64_t)canHelper;
+    timer.stop();
+    disconnect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
+    if (scriptEngine)
+    {
+        scriptText = "";
+        compileScript();
+        //delete scriptEngine;   //doing this here seems to cause a crash. No crash if you don't.
+        //scriptEngine = NULL;
+    }
+    if (canHelper)
+    {
+        delete canHelper;
+        canHelper = NULL;
+    }
+    if (isoHelper)
+    {
+        delete isoHelper;
+        isoHelper = NULL;
+    }
+    if (udsHelper)
+    {
+        delete udsHelper;
+        udsHelper = NULL;
+    }
+    qDebug() << "end of destruct";
 }
 
 void ScriptContainer::compileScript()
 {
-    QJSValue result = scriptEngine.evaluate(scriptText, fileName);
+    QJSValue result = scriptEngine->evaluate(scriptText, fileName);
 
     emit sendLog("Compiling script...");
 
@@ -37,22 +69,22 @@ void ScriptContainer::compileScript()
 
         //Add a bunch of helper objects into javascript that the scripts
         //can use to interact with the CAN buses
-        QJSValue hostObj = scriptEngine.newQObject(this);
-        scriptEngine.globalObject().setProperty("host", hostObj);
-        QJSValue canObj = scriptEngine.newQObject(canHelper);
-        scriptEngine.globalObject().setProperty("can", canObj);
-        QJSValue isoObj = scriptEngine.newQObject(isoHelper);
-        scriptEngine.globalObject().setProperty("isotp", isoObj);
-        QJSValue udsObj = scriptEngine.newQObject(udsHelper);
-        scriptEngine.globalObject().setProperty("uds", udsObj);
+        QJSValue hostObj = scriptEngine->newQObject(this);
+        scriptEngine->globalObject().setProperty("host", hostObj);
+        QJSValue canObj = scriptEngine->newQObject(canHelper);
+        scriptEngine->globalObject().setProperty("can", canObj);
+        QJSValue isoObj = scriptEngine->newQObject(isoHelper);
+        scriptEngine->globalObject().setProperty("isotp", isoObj);
+        QJSValue udsObj = scriptEngine->newQObject(udsHelper);
+        scriptEngine->globalObject().setProperty("uds", udsObj);
 
         //Find out which callbacks the script has created.
-        setupFunction = scriptEngine.globalObject().property("setup");
-        canHelper->setRxCallback(scriptEngine.globalObject().property("gotCANFrame"));
-        isoHelper->setRxCallback(scriptEngine.globalObject().property("gotISOTPMessage"));
-        udsHelper->setRxCallback(scriptEngine.globalObject().property("gotUDSMessage"));
+        setupFunction = scriptEngine->globalObject().property("setup");
+        canHelper->setRxCallback(scriptEngine->globalObject().property("gotCANFrame"));
+        isoHelper->setRxCallback(scriptEngine->globalObject().property("gotISOTPMessage"));
+        udsHelper->setRxCallback(scriptEngine->globalObject().property("gotUDSMessage"));
 
-        tickFunction = scriptEngine.globalObject().property("tick");
+        tickFunction = scriptEngine->globalObject().property("tick");
 
         if (setupFunction.isCallable())
         {
@@ -117,7 +149,7 @@ void ScriptContainer::updateValuesTable(QTableWidget *widget)
 
     foreach (QString paramName, scriptParams)
     {
-        valu = scriptEngine.globalObject().property(paramName).toString();
+        valu = scriptEngine->globalObject().property(paramName).toString();
         qDebug() << paramName << " - " << valu;
         bool found = false;
         for (int i = 0; i < widget->rowCount(); i++)
@@ -152,7 +184,7 @@ void ScriptContainer::updateParameter(QString name, QString value)
 {
     qDebug() << name << " * " << value;
     QJSValue val(value);
-    scriptEngine.globalObject().setProperty(name, val);
+    scriptEngine->globalObject().setProperty(name, val);
 }
 
 
@@ -249,6 +281,7 @@ ISOTPScriptHelper::ISOTPScriptHelper(QJSEngine *engine)
     handler = new ISOTP_HANDLER;
     connect(handler, SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(newISOMessage(ISOTP_MESSAGE)));
     handler->setReception(true);
+    handler->setFlowCtrl(true);
 }
 
 void ISOTPScriptHelper::clearFilters()
@@ -319,6 +352,7 @@ UDSScriptHelper::UDSScriptHelper(QJSEngine *engine)
     handler = new UDS_HANDLER;
     connect(handler, SIGNAL(newUDSMessage(UDS_MESSAGE)), this, SLOT(newUDSMessage(UDS_MESSAGE)));
     handler->setReception(true);
+    handler->setFlowCtrl(true);
 }
 
 void UDSScriptHelper::clearFilters()
