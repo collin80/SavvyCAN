@@ -284,6 +284,12 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case Column::Length:
             return QString::number(thisFrame.len);
         case Column::ASCII:
+            if (thisFrame.ID >= 0x7FFFFFF0ull)
+            {
+                tempString.append("MARK ");
+                tempString.append(QString::number(thisFrame.ID & 0x7));
+                return tempString;
+            }
             dLen = thisFrame.len;
             if (dLen < 0) dLen = 0;
             if (dLen > 8) dLen = 8;
