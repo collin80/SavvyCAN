@@ -77,6 +77,7 @@ class ScriptContainer : public QObject
 
 public:
     ScriptContainer();
+    virtual ~ScriptContainer();
     void setScriptWindow(ScriptingWindow *win);
 
     QString fileName;
@@ -102,7 +103,7 @@ private slots:
     void tick();
 
 private:
-    QJSEngine scriptEngine;
+    QJSEngine *scriptEngine;
     QJSValue compiledScript;
     QJSValue setupFunction;
     QJSValue tickFunction;
