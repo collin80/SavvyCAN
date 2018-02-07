@@ -137,6 +137,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
     filters.append(QString(tr("Kvaser Log Decimal (*.txt *.TXT)")));
     filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -169,6 +170,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[10]) result = loadPCANFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[11]) result = loadKvaserFile(filename, frameCache, false);
         if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, true);
+        if (dialog.selectedNameFilter() == filters[13]) result = loadCanalyzerASC(filename, frameCache);
 
         progress.cancel();
 
@@ -416,6 +418,8 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
 }
 
 
+/*Fixed length lines
+    Version 1.1
 //;   Message Number
 //;   |         Time Offset (ms)
 //;   |         |        Type
@@ -424,14 +428,27 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
 //;   |         |        |        |     |   Data Bytes (hex) ...
 //;   |         |        |        |     |   |
 //;---+--   ----+----  --+--  ----+---  +  -+ -- -- -- -- -- -- --
-// 0-6         10-18    21-25  28-35    38  41-?
-//Fixed length lines
+// 0-6       10-18     21-25   28-35    38  41-? two chars each + space
+
+    Version 2.0
+;   Message   Time    Type ID     Rx/Tx
+;   Number    Offset  |    [hex]  |  Data Length
+;   |         [ms]    |    |      |  |  Data [hex] ...
+;   |         |       |    |      |  |  |
+;---+-- ------+------ +- --+----- +- +- +- +- -- -- -- -- -- -- --
+  0-6    8-20     22-23  25-32 34-35 37-38 40-? two chars each + space
+
+  Both versions are supported now but rather lazily. Very many aspects of the file are ignored.
+  It seems as if Version 2 files might be able to store other protocols like ISO-TP or J1939
+*/
+
 bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
     int lineCounter = 0;
+    int fileVersion = 1;
     bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -448,27 +465,54 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
+        if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 2;
         if (line.startsWith(';')) continue;
         if (line.length() > 2)
         {
-            thisFrame.timestamp = line.mid(10, 8).simplified().toFloat() * 1000ull;
-            thisFrame.ID = line.mid(28, 8).simplified().toUInt(NULL, 16);
-            if (thisFrame.ID < 0x1FFFFFFF)
+            if (fileVersion == 1)
             {
-                thisFrame.len = line.mid(38,1).toInt();
-                thisFrame.isReceived = true;
-                thisFrame.bus = 0;
-                thisFrame.extended = false;
-                QList<QByteArray> tokens = line.mid(41, thisFrame.len * 3).split(' ');
-                for (unsigned int d = 0; d < thisFrame.len; d++)
+                thisFrame.timestamp = (uint32_t)(line.mid(10, 8).simplified().toFloat() * 1000.0);
+                thisFrame.ID = line.mid(28, 8).simplified().toUInt(NULL, 16);
+                if (thisFrame.ID < 0x1FFFFFFF)
                 {
-                    if (tokens[d] != "")
+                    thisFrame.len = line.mid(38,1).toInt();
+                    thisFrame.isReceived = true;
+                    thisFrame.bus = 0;
+                    thisFrame.extended = false;
+                    QList<QByteArray> tokens = line.mid(41, thisFrame.len * 3).split(' ');
+                    for (unsigned int d = 0; d < thisFrame.len; d++)
                     {
-                        thisFrame.data[d] = tokens[d].toInt(NULL, 16);
+                        if (tokens[d] != "")
+                        {
+                            thisFrame.data[d] = tokens[d].toInt(NULL, 16);
+                        }
+                        else thisFrame.data[d] = 0;
                     }
-                    else thisFrame.data[d] = 0;
+                    frames->append(thisFrame);
                 }
-                frames->append(thisFrame);
+            }
+            else if (fileVersion == 2)
+            {
+                thisFrame.timestamp = (uint32_t)(line.mid(8, 13).simplified().toFloat() * 1000.0);
+                thisFrame.ID = line.mid(25, 8).simplified().toUInt(NULL, 16);
+                if (thisFrame.ID < 0x1FFFFFFF)
+                {
+                    thisFrame.len = line.mid(37,2).trimmed().toInt();
+                    qDebug() << thisFrame.len;
+                    thisFrame.isReceived = true;
+                    thisFrame.bus = 0;
+                    thisFrame.extended = false;
+                    QList<QByteArray> tokens = line.mid(40, thisFrame.len * 3).split(' ');
+                    for (unsigned int d = 0; d < thisFrame.len; d++)
+                    {
+                        if (tokens[d] != "")
+                        {
+                            thisFrame.data[d] = tokens[d].toInt(NULL, 16);
+                        }
+                        else thisFrame.data[d] = 0;
+                    }
+                    frames->append(thisFrame);
+                }
             }
         }
         //else foundErrors = true;
@@ -478,6 +522,71 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+//There tends to be four lines of header first. The last of which starts with // so first burn off lines
+//until a line starting with // is seen, then the rest are formatted like this:
+//  47.971842 2  248             Rx   d 8 FF FF FF FF FF FF FF FF
+//That can be simplified to look like this:
+//47.971842 2 248 Rx d 8 FF FF FF FF FF FF FF FF
+//Which is then easy to parse by splitting on the spaces
+//Time   bus id dir ? len databytes
+bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+    bool inHeader = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = inFile->readLine();
+        if (line.startsWith("//"))
+        {
+            inHeader = false;
+            continue;
+        }
+        if (inHeader) continue;
+        if (line.length() > 2)
+        {
+            QList<QByteArray> tokens = line.simplified().split(' ');
+            thisFrame.timestamp = (uint32_t)(tokens[0].toFloat() * 1000000.0);
+            thisFrame.ID = tokens[2].toUInt(NULL, 16);
+            thisFrame.len = tokens[5].toUInt();
+            thisFrame.isReceived = tokens[3].toUpper().contains("RX");
+            thisFrame.bus = tokens[1].toUInt();
+            thisFrame.extended = (thisFrame.ID > 0x7FF);
+            for (unsigned int d = 6; d < (6 + thisFrame.len); d++)
+            {
+                if (tokens.count() > d)
+                {
+                    thisFrame.data[d - 6] = tokens[d].toInt(NULL, 16);
+                }
+                else //expected byte wasn't there to read. Set it zero and set error flag
+                {
+                    thisFrame.data[d - 6] = 0;
+                    foundErrors = true;
+                }
+            }
+            frames->append(thisFrame);
+        }
+        //else foundErrors = true;
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
 
 //The "native" file format for this program
 bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
