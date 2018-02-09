@@ -43,6 +43,7 @@ public:
     static bool loadPCANFile(QString, QVector<CANFrame>*);
     static bool loadKvaserFile(QString, QVector<CANFrame>*, bool);
     static bool loadCanalyzerASC(QString, QVector<CANFrame>*);
+    static bool loadCanalyzerBLF(QString, QVector<CANFrame>*);
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);

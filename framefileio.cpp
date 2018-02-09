@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "utility.h"
+#include "blfhandler.h"
 
 QFile FrameFileIO::continuousFile;
 
@@ -138,6 +139,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Kvaser Log Decimal (*.txt *.TXT)")));
     filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
+    filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -171,6 +173,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[11]) result = loadKvaserFile(filename, frameCache, false);
         if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, true);
         if (dialog.selectedNameFilter() == filters[13]) result = loadCanalyzerASC(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerBLF(filename, frameCache);
 
         progress.cancel();
 
@@ -586,6 +589,12 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
     inFile->close();
     delete inFile;
     return !foundErrors;
+}
+
+bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
+{
+    BLFHandler blf;
+    blf.loadBLF(filename, frames);
 }
 
 //The "native" file format for this program
