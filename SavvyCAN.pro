@@ -64,7 +64,8 @@ SOURCES += main.cpp\
     bus_protocols/uds_handler.cpp \
     jsedit.cpp \
     frameplaybackobject.cpp \
-    helpwindow.cpp
+    helpwindow.cpp \
+    blfhandler.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -119,7 +120,8 @@ HEADERS  += mainwindow.h \
     bus_protocols/isotp_message.h \
     jsedit.h \
     frameplaybackobject.h \
-    helpwindow.h
+    helpwindow.h \
+    blfhandler.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
