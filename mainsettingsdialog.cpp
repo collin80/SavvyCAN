@@ -28,6 +28,9 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
     ui->lineClockFormat->setText(settings->value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
+    ui->lineRemoteHost->setText(settings->value("Remote/Host", "api.savvycan.com").toString());
+    ui->lineRemotePort->setText(settings->value("Remote/Port", "21315").toString()); // = 0x5343 = SC. Yep, really creative port number
+    ui->cbAutoStartRemote->setChecked(settings->value("Remote/AutoStart", false).toBool());
 
     ui->spinFontSize->setValue(settings->value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
 
@@ -76,6 +79,9 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbAutoStartRemote, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    connect(ui->lineRemotePort, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     installEventFilter(this);
 }
 
@@ -130,6 +136,9 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
     settings->setValue("Main/TimeFormat", ui->lineClockFormat->text());
     settings->setValue("Main/FontSize", ui->spinFontSize->value());
+    settings->setValue("Remote/Host", ui->lineRemoteHost->text());
+    settings->setValue("Remote/Port", ui->lineRemotePort->text());
+    settings->setValue("Remote/AutoStart", ui->cbAutoStartRemote->isChecked());
 
     settings->sync();
     emit updatedSettings();

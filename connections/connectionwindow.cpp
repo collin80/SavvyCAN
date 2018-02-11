@@ -52,6 +52,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->rbGVRET, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->rbKvaser, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->rbSocketCAN, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
+    connect(ui->rbRemote, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
     connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
     connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
@@ -226,6 +227,7 @@ void ConnectionWindow::handleConnTypeChanged()
     if (ui->rbGVRET->isChecked()) selectSerial();
     if (ui->rbKvaser->isChecked()) selectKvaser();
     if (ui->rbSocketCAN->isChecked()) selectSocketCan();
+    if (ui->rbRemote->isChecked()) selectRemote();
 }
 
 
@@ -327,6 +329,7 @@ void ConnectionWindow::handleSendText() {
 
 void ConnectionWindow::selectSerial()
 {
+    ui->lPort->setText("Port:");
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
 
@@ -339,13 +342,21 @@ void ConnectionWindow::selectSerial()
 
 void ConnectionWindow::selectKvaser()
 {
+    ui->lPort->setText("Port:");
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
 }
 
 void ConnectionWindow::selectSocketCan()
 {
+    ui->lPort->setText("Port:");
     /* set edit text page visible */
+    ui->stPort->setCurrentWidget(ui->etPage);
+}
+
+void ConnectionWindow::selectRemote()
+{
+    ui->lPort->setText("Access Key:");
     ui->stPort->setCurrentWidget(ui->etPage);
 }
 

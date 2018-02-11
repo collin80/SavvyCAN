@@ -69,6 +69,7 @@ private:
     void selectSerial();
     void selectKvaser();
     void selectSocketCan();
+    void selectRemote();
     bool isSocketCanAvailable();
     int getSpeed();
     QString getPortName();
