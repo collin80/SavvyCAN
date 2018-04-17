@@ -140,6 +140,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
     filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)")));
+    filters.append(QString(tr("CANHacker Trace Files (*.trc *.TRC)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -174,6 +175,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, true);
         if (dialog.selectedNameFilter() == filters[13]) result = loadCanalyzerASC(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerBLF(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[15]) result = loadCANHackerFile(filename, frameCache);
 
         progress.cancel();
 
@@ -295,7 +297,6 @@ tokens:
 2 = ID
 3-x = The data bytes
 */
-
 bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -359,6 +360,75 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
                     }
                     frames->append(thisFrame);
                 }
+            }
+            else foundErrors = true;
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
+
+// CANHacker trace format
+// Time   ID     DLC Data                    Comment
+// 00.000 00004000 8 36 47 19 43 01 00 00 80 
+bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    line = inFile->readLine().toUpper(); //read out the header first and discard it.
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = inFile->readLine().simplified();
+        if (line.length() > 2)
+        {
+            QList<QByteArray> tokens = line.split(' ');
+            int multiplier;
+            if (tokens.length() > 3)
+            {
+                int idxOfDecimal = tokens[0].indexOf('.');
+                if (idxOfDecimal > -1) {
+                    //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
+                    //the result of the above is the # of digits after the decimal.
+                    //This program deals in microsecond so turn the value into microseconds
+                    multiplier = 1000000; //turn the decimal into full microseconds
+                }
+                else
+                {
+                    multiplier = 1; //special case. Assume no decimal means microseconds
+                }
+                //qDebug() << "decimal places " << decimalPlaces;
+                thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * multiplier);
+                thisFrame.ID = tokens[1].toInt(NULL, 16);
+                thisFrame.extended = (thisFrame.ID > 0x7FF);
+                thisFrame.isReceived = true;
+                thisFrame.bus = 0;
+                thisFrame.len = tokens[2].toInt(NULL, 16);
+                for (unsigned int d = 0; d < thisFrame.len; d++)
+                {
+                    if (tokens[d + 3] != "")
+                    {
+                        thisFrame.data[d] = tokens[d + 3].toInt(NULL, 16);
+                    }
+                    else thisFrame.data[d] = 0;
+                }
+                frames->append(thisFrame);
             }
             else foundErrors = true;
         }
