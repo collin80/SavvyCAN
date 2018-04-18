@@ -82,5 +82,10 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
         }
         else return false;
     }
+    return true;
+}
+
+bool BLFHandler::saveBLF(QString filename, QVector<CANFrame> *frames)
+{
     return false;
 }

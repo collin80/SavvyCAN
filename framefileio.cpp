@@ -594,7 +594,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
 bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
 {
     BLFHandler blf;
-    blf.loadBLF(filename, frames);
+    return blf.loadBLF(filename, frames);
 }
 
 //The "native" file format for this program

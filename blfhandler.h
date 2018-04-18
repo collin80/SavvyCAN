@@ -69,6 +69,7 @@ class BLFHandler
 public:
     BLFHandler();
     bool loadBLF(QString filename, QVector<CANFrame>* frames);
+    bool saveBLF(QString filename, QVector<CANFrame>* frames);
 
 private:
     BLF_FILE_HEADER header;
