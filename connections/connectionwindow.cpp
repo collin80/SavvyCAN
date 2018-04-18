@@ -356,7 +356,7 @@ void ConnectionWindow::selectSocketCan()
 
 void ConnectionWindow::selectRemote()
 {
-    ui->lPort->setText("Access Key:");
+    ui->lPort->setText("IP Address:");
     ui->stPort->setCurrentWidget(ui->etPage);
 }
 
@@ -394,6 +394,7 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
             break;
         }
         case CANCon::SOCKETCAN:
+        case CANCon::REMOTE:
         {
             ui->lePort->setText(pPortName);
             break;
@@ -416,6 +417,7 @@ QString ConnectionWindow::getPortName()
     case CANCon::KVASER:
         return ui->cbPort->currentText();
     case CANCon::SOCKETCAN:
+    case CANCon::REMOTE:
         return ui->lePort->text();
     default:
         qDebug() << "getPortName: can't get port";
@@ -429,7 +431,7 @@ CANCon::type ConnectionWindow::getConnectionType()
     if (ui->rbGVRET->isChecked()) return CANCon::GVRET_SERIAL;
     if (ui->rbKvaser->isChecked()) return CANCon::KVASER;
     if (ui->rbSocketCAN->isChecked()) return CANCon::SOCKETCAN;
-
+    if (ui->rbRemote->isChecked()) return CANCon::REMOTE;
     qDebug() << "getConnectionType: error";
     return CANCon::NONE;
 }
