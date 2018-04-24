@@ -32,6 +32,8 @@ private slots:
     void copySignalToParamsUI();
 
 private:
+    bool eventFilter(QObject *obj, QEvent *event);
+
     Ui::NewGraphDialog *ui;
     DBCHandler *dbcHandler;
     int startBit, dataLen;

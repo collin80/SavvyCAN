@@ -1,6 +1,7 @@
 #include "frameinfowindow.h"
 #include "ui_frameinfowindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include <QtDebug>
 
 FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent) :
@@ -42,6 +43,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
         ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
     }
 
+    installEventFilter(this);
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -56,8 +58,27 @@ void FrameInfoWindow::showEvent(QShowEvent* event)
     }
 }
 
+bool FrameInfoWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("framedetails.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
+
 FrameInfoWindow::~FrameInfoWindow()
 {
+    removeEventFilter(this);
     delete ui;
 }
 

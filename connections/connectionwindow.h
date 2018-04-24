@@ -52,6 +52,7 @@ private slots:
     void handleRemoveConn();
     void handleEnableAll();
     void handleDisableAll();
+    void handleReconnect();
     void handleRevert();
     void handleNewConn();
     void handleClearDebugText();
@@ -68,6 +69,7 @@ private:
     void selectSerial();
     void selectKvaser();
     void selectSocketCan();
+    void selectRemote();
     bool isSocketCanAvailable();
     int getSpeed();
     QString getPortName();
@@ -79,6 +81,7 @@ private:
     void saveConnections();
     void showEvent(QShowEvent *);
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
 };

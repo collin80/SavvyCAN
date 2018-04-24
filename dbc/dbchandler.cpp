@@ -326,15 +326,347 @@ void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> 
     }
 }
 
+DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    DBC_MESSAGE *msgPtr;
+
+    qDebug() << "Found a BO line";
+    regex.setPattern("^BO\\_ (\\w+) (\\w+) *: (\\w+) (\\w+)");
+    match = regex.match(line);
+    //captured 1 = the ID in decimal
+    //captured 2 = The message name
+    //captured 3 = the message length
+    //captured 4 = the NODE responsible for this message
+    if (match.hasMatch())
+    {
+        DBC_MESSAGE msg;
+        msg.ID = match.captured(1).toULong() & 0x7FFFFFFFul; //the ID is always stored in decimal format
+        msg.name = match.captured(2);
+        msg.len = match.captured(3).toInt();
+        msg.sender = findNodeByName(match.captured(4));
+        messageHandler->addMessage(msg);
+        msgPtr = messageHandler->findMsgByID(msg.ID);
+    }
+    else msgPtr = nullptr;
+    return msgPtr;
+}
+
+DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    int offset = 0;
+    bool isMultiplexor = false;
+    //bool isMultiplexed = false;
+    DBC_SIGNAL sig;
+
+    sig.multiplexValue = 0;
+    sig.isMultiplexed = false;
+    sig.isMultiplexor = false;
+
+    qDebug() << "Found a SG line";
+    regex.setPattern("^SG\\_ *(\\w+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+
+    match = regex.match(line);
+    if (match.hasMatch())
+    {
+        qDebug() << "Multiplexor signal";
+        isMultiplexor = true;
+        sig.isMultiplexor = true;
+    }
+    else
+    {
+        regex.setPattern("^SG\\_ *(\\w+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+        match = regex.match(line);
+        if (match.hasMatch())
+        {
+            qDebug() << "Multiplexed signal";
+            //isMultiplexed = true;
+            sig.isMultiplexed = true;
+            sig.multiplexValue = match.captured(2).toInt();
+            offset = 1;
+        }
+        else
+        {
+            qDebug() << "standard signal";
+            regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            match = regex.match(line);
+            sig.isMultiplexed = false;
+            sig.isMultiplexor = false;
+        }
+    }
+
+    //captured 1 is the signal name
+    //captured 2 would be multiplex value if this is a multiplex signal. Then offset the rest of these by 1
+    //captured 2 is the starting bit
+    //captured 3 is the length in bits
+    //captured 4 is the byte order / value type
+    //captured 5 specifies signed/unsigned for ints
+    //captured 6 is the scaling factor
+    //captured 7 is the offset
+    //captured 8 is the minimum value
+    //captured 9 is the maximum value
+    //captured 10 is the unit
+    //captured 11 is the receiving node
+
+    if (match.hasMatch())
+    {
+        sig.name = match.captured(1);
+        sig.startBit = match.captured(2 + offset).toInt();
+        sig.signalSize = match.captured(3 + offset).toInt();
+        int val = match.captured(4 + offset).toInt();
+        if (val < 2)
+        {
+            if (match.captured(5 + offset) == "+") sig.valType = UNSIGNED_INT;
+            else sig.valType = SIGNED_INT;
+        }
+        switch (val)
+        {
+        case 0: //big endian mode
+            sig.intelByteOrder = false;
+            break;
+        case 1: //little endian mode
+            sig.intelByteOrder = true;
+            break;
+        case 2:
+            sig.valType = SP_FLOAT;
+            break;
+        case 3:
+            sig.valType = DP_FLOAT;
+            break;
+        case 4:
+            sig.valType = STRING;
+            break;
+        }
+        sig.factor = match.captured(6 + offset).toDouble();
+        sig.bias = match.captured(7 + offset).toDouble();
+        sig.min = match.captured(8 + offset).toDouble();
+        sig.max = match.captured(9 + offset).toDouble();
+        sig.unitName = match.captured(10 + offset);
+        if (match.captured(11 + offset).contains(','))
+        {
+            QString tmp = match.captured(11 + offset).split(',')[0];
+            sig.receiver = findNodeByName(tmp);
+        }
+        else sig.receiver = findNodeByName(match.captured(11 + offset));
+        sig.parentMessage = msg;
+        msg->sigHandler->addSignal(sig);
+        if (isMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
+        return msg->sigHandler->findSignalByName(sig.name);
+    }
+
+    return nullptr;
+}
+
+bool DBCFile::parseValueLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    qDebug() << "Found a value definition line";
+    regex.setPattern("^VAL\\_ (\\w+) (\\w+) (.*);");
+    match = regex.match(line);
+    //captured 1 is the ID to match against
+    //captured 2 is the signal name to match against
+    //captured 3 is a series of values in the form (number "text") that is, all sep'd by spaces
+    if (match.hasMatch())
+    {
+        //qDebug() << "Data was: " << match.captured(3);
+        DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
+        if (msg != NULL)
+        {
+            DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
+            if (sig != NULL)
+            {
+                QString tokenString = match.captured(3);
+                DBC_VAL_ENUM_ENTRY val;
+                while (tokenString.length() > 2)
+                {
+                    regex.setPattern("(\\d+) \\\"(.*?)\\\"(.*)");
+                    match = regex.match(tokenString);
+                    if (match.hasMatch())
+                    {
+                        val.value = match.captured(1).toInt();
+                        val.descript = match.captured(2);
+                        //qDebug() << "sig val " << val.value << " desc " <<val.descript;
+                        sig->valList.append(val);
+                        int rightSize = tokenString.length() - match.captured(1).length() - match.captured(2).length() - 4;
+                        if (rightSize > 0) tokenString = tokenString.right(rightSize);
+                        else tokenString = "";
+                        //qDebug() << "New token string: " << tokenString;
+                    }
+                    else tokenString = "";
+                }
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool DBCFile::parseAttributeLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
+    match = regex.match(line);
+    //captured 1 is the attribute name
+    //captured 2 is the message ID number (frame ID)
+    //captured 3 is the attribute value
+    if (match.hasMatch())
+    {
+        qDebug() << "Found an attribute setting line for a message";
+        DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
+        if (foundAttr)
+        {
+            qDebug() << "That attribute does exist";
+            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
+            if (foundMsg)
+            {
+                qDebug() << "It references a valid, registered message";
+                DBC_ATTRIBUTE_VALUE *foundAttrVal = foundMsg->findAttrValByName(match.captured(1));
+                if (foundAttrVal) {
+                    foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
+                }
+                else
+                {
+                    DBC_ATTRIBUTE_VALUE val;
+                    val.attrName = match.captured(1);
+                    val.value = processAttributeVal(match.captured(3), foundAttr->valType);
+                    foundMsg->attributes.append(val);
+                }
+            }
+        }
+    }
+
+    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
+    match = regex.match(line);
+    //captured 1 is the attribute name
+    //captured 2 is the message ID number (frame ID)
+    //captured 3 is the signal name to bind to
+    //captured 4 is the attribute value
+    if (match.hasMatch())
+    {
+        qDebug() << "Found an attribute setting line for a signal";
+        DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
+        if (foundAttr)
+        {
+            qDebug() << "That attribute does exist";
+            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
+            if (foundMsg)
+            {
+                qDebug() << "It references a valid, registered message";
+                DBC_SIGNAL *foundSig = foundMsg->sigHandler->findSignalByName(match.captured(3));
+                if (foundSig)
+                {
+                    DBC_ATTRIBUTE_VALUE *foundAttrVal = foundSig->findAttrValByName(match.captured(1));
+                    if (foundAttrVal) foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
+                    else
+                    {
+                        DBC_ATTRIBUTE_VALUE val;
+                        val.attrName = match.captured(1);
+                        val.value = processAttributeVal(match.captured(3), foundAttr->valType);
+                        foundSig->attributes.append(val);
+                    }
+                }
+            }
+        }
+    }
+
+    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
+    match = regex.match(line);
+    //captured 1 is the attribute name
+    //captured 2 is the name of the node
+    //captured 3 is the attribute value
+    if (match.hasMatch())
+    {
+        qDebug() << "Found an attribute setting line for a node";
+        DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
+        if (foundAttr)
+        {
+            qDebug() << "That attribute does exist";
+            DBC_NODE *foundNode = findNodeByName(match.captured(2));
+            if (foundNode)
+            {
+                qDebug() << "References a valid node name";
+                DBC_ATTRIBUTE_VALUE *foundAttrVal = foundNode->findAttrValByName(match.captured(1));
+                if (foundAttrVal) foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
+                else
+                {
+                    DBC_ATTRIBUTE_VALUE val;
+                    val.attrName = match.captured(1);
+                    val.value = processAttributeVal(match.captured(3), foundAttr->valType);
+                    foundNode->attributes.append(val);
+                }
+            }
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool DBCFile::parseDefaultAttrLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]*)\\\"*");
+    match = regex.match(line);
+    //captured 1 is the name of the attribute
+    //captured 2 is the default value for that attribute
+    if (match.hasMatch())
+    {
+        qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1) << "with data " << match.captured(2);
+        DBC_ATTRIBUTE *found = findAttributeByName(match.captured(1));
+        if (found)
+        {
+            switch (found->valType)
+            {
+            case QSTRING:
+                found->defaultValue = match.captured(2);
+                break;
+            case QFLOAT:
+                found->defaultValue = match.captured(2).toFloat();
+                break;
+            case QINT:
+                found->defaultValue = match.captured(2).toInt();
+                break;
+            case ENUM:
+                QString temp = match.captured(2);
+                found->defaultValue = 0;
+                for (int x = 0; x < found->enumVals.count(); x++)
+                {
+                    if (!found->enumVals[x].compare(temp, Qt::CaseInsensitive))
+                    {
+                        found->defaultValue = x;
+                        break;
+                    }
+                }
+            }
+            qDebug() << "Matched an attribute. Setting default value to " << found->defaultValue;
+            return true;
+        }
+    }
+    return false;
+}
+
 void DBCFile::loadFile(QString fileName)
 {
     QFile *inFile = new QFile(fileName);
-    QString line;
+    QString line, rawLine;
     QRegularExpression regex;
     QRegularExpressionMatch match;
     DBC_MESSAGE *currentMessage = NULL;
     DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
+
+    bool inMultilineBU = false;
 
     qDebug() << "DBC File: " << fileName;
 
@@ -355,420 +687,159 @@ void DBCFile::loadFile(QString fileName)
     dbc_nodes.append(falseNode);
 
     while (!inFile->atEnd()) {
-        line = QString(inFile->readLine().simplified());
-        if (line.startsWith("BO_ ")) //defines a message
+        rawLine = QString(inFile->readLine());
+        line = rawLine.simplified();
+
+        if (inMultilineBU)
         {
-            qDebug() << "Found a BO line";
-            regex.setPattern("^BO\\_ (\\w+) (\\w+) *: (\\w+) (\\w+)");
-            match = regex.match(line);
-            //captured 1 = the ID in decimal
-            //captured 2 = The message name
-            //captured 3 = the message length
-            //captured 4 = the NODE responsible for this message
-            if (match.hasMatch())
+            if (rawLine.startsWith("\t") || rawLine.startsWith("   "))
             {
-                DBC_MESSAGE msg;
-                msg.ID = match.captured(1).toULong() & 0x7FFFFFFFul; //the ID is always stored in decimal format
-                msg.name = match.captured(2);
-                msg.len = match.captured(3).toInt();
-                msg.sender = findNodeByName(match.captured(4));
-                messageHandler->addMessage(msg);
-                currentMessage = messageHandler->findMsgByID(msg.ID);
+                DBC_NODE node;
+                node.name = line;
+                dbc_nodes.append(node);
             }
-            else numMsgFaults++;
+            else inMultilineBU = false;
         }
-        if (line.startsWith("SG_ ")) //defines a signal
+
+        if (!inMultilineBU)
         {
-            int offset = 0;
-            bool isMultiplexor = false;
-            //bool isMultiplexed = false;
-            DBC_SIGNAL sig;
-
-            sig.multiplexValue = 0;
-            sig.isMultiplexed = false;
-            sig.isMultiplexor = false;
-
-            qDebug() << "Found a SG line";
-            regex.setPattern("^SG\\_ *(\\w+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
-
-            match = regex.match(line);
-            if (match.hasMatch())
+            if (line.startsWith("BO_ ")) //defines a message
             {
-                qDebug() << "Multiplexor signal";
-                isMultiplexor = true;
-                sig.isMultiplexor = true;
+                currentMessage = parseMessageLine(line);
+                if (currentMessage == nullptr) numMsgFaults++;
             }
-            else
+            if (line.startsWith("SG_ ")) //defines a signal
             {
-                regex.setPattern("^SG\\_ *(\\w+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                if (!parseSignalLine(line, currentMessage)) numSigFaults++;
+            }
+            if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
+            {
+                qDebug() << "Found a BU line";
+                regex.setPattern("^BU\\_\\:(.*)");
                 match = regex.match(line);
+                //captured 1 = a list of node names separated by spaces. No idea how many yet
                 if (match.hasMatch())
                 {
-                    qDebug() << "Multiplexed signal";
-                    //isMultiplexed = true;
-                    sig.isMultiplexed = true;
-                    sig.multiplexValue = match.captured(2).toInt();
-                    offset = 1;
-                }
-                else
-                {
-                    qDebug() << "standard signal";
-                    regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
-                    match = regex.match(line);
-                    sig.isMultiplexed = false;
-                    sig.isMultiplexor = false;
-                }
-            }
-
-            //captured 1 is the signal name
-            //captured 2 would be multiplex value if this is a multiplex signal. Then offset the rest of these by 1
-            //captured 2 is the starting bit
-            //captured 3 is the length in bits
-            //captured 4 is the byte order / value type
-            //captured 5 specifies signed/unsigned for ints
-            //captured 6 is the scaling factor
-            //captured 7 is the offset
-            //captured 8 is the minimum value
-            //captured 9 is the maximum value
-            //captured 10 is the unit
-            //captured 11 is the receiving node
-
-            if (match.hasMatch())
-            {
-                sig.name = match.captured(1);
-                sig.startBit = match.captured(2 + offset).toInt();
-                sig.signalSize = match.captured(3 + offset).toInt();
-                int val = match.captured(4 + offset).toInt();
-                if (val < 2)
-                {
-                    if (match.captured(5 + offset) == "+") sig.valType = UNSIGNED_INT;
-                    else sig.valType = SIGNED_INT;
-                }
-                switch (val)
-                {
-                case 0: //big endian mode
-                    sig.intelByteOrder = false;
-                    break;
-                case 1: //little endian mode
-                    sig.intelByteOrder = true;
-                    break;
-                case 2:
-                    sig.valType = SP_FLOAT;
-                    break;
-                case 3:
-                    sig.valType = DP_FLOAT;
-                    break;
-                case 4:
-                    sig.valType = STRING;
-                    break;
-                }
-                sig.factor = match.captured(6 + offset).toDouble();
-                sig.bias = match.captured(7 + offset).toDouble();
-                sig.min = match.captured(8 + offset).toDouble();
-                sig.max = match.captured(9 + offset).toDouble();
-                sig.unitName = match.captured(10 + offset);
-                if (match.captured(11 + offset).contains(','))
-                {
-                    QString tmp = match.captured(11 + offset).split(',')[0];
-                    sig.receiver = findNodeByName(tmp);
-                }
-                else sig.receiver = findNodeByName(match.captured(11 + offset));
-                sig.parentMessage = currentMessage;
-                currentMessage->sigHandler->addSignal(sig);
-                if (isMultiplexor) currentMessage->multiplexorSignal = currentMessage->sigHandler->findSignalByName(sig.name);
-            }
-            else numSigFaults++;
-        }
-        if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
-        {
-            qDebug() << "Found a BU line";
-            regex.setPattern("^BU\\_\\:(.*)");
-            match = regex.match(line);
-            //captured 1 = a list of node names separated by spaces. No idea how many yet
-            if (match.hasMatch())
-            {
-                QStringList nodeStrings = match.captured(1).split(' ');
-                qDebug() << "Found " << nodeStrings.count() << " node names";
-                for (int i = 0; i < nodeStrings.count(); i++)
-                {
-                    //qDebug() << nodeStrings[i];
-                    if (nodeStrings[i].length() > 1)
+                    QStringList nodeStrings = match.captured(1).split(' ');
+                    qDebug() << "Found " << nodeStrings.count() << " node names";
+                    for (int i = 0; i < nodeStrings.count(); i++)
                     {
-                        DBC_NODE node;
-                        node.name = nodeStrings[i];
-                        dbc_nodes.append(node);
-                    }
-                }
-            }
-        }
-        if (line.startsWith("CM_ SG_ "))
-        {
-            qDebug() << "Found an SG comment line";
-            regex.setPattern("^CM\\_ SG\\_ *(\\w+) *(\\w+) *\\\"(.*)\\\";");
-            match = regex.match(line);
-            //captured 1 is the ID to match against to get to the message
-            //captured 2 is the signal name from that message
-            //captured 3 is the comment itself
-            if (match.hasMatch())
-            {
-                //qDebug() << "Comment was: " << match.captured(3);
-                DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
-                if (msg != NULL)
-                {
-                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
-                    if (sig != NULL)
-                    {
-                        sig->comment = match.captured(3);
-                    }
-                }
-            }
-        }
-        if (line.startsWith("CM_ BO_ "))
-        {
-            qDebug() << "Found a BO comment line";
-            regex.setPattern("^CM\\_ BO\\_ *(\\w+) *\\\"(.*)\\\";");
-            match = regex.match(line);
-            //captured 1 is the ID to match against to get to the message
-            //captured 2 is the comment itself
-            if (match.hasMatch())
-            {
-                //qDebug() << "Comment was: " << match.captured(2);
-                DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
-                if (msg != NULL)
-                {
-                    msg->comment = match.captured(2);
-                }
-            }
-        }
-        if (line.startsWith("CM_ BU_ "))
-        {
-            qDebug() << "Found a BU comment line";
-            regex.setPattern("^CM\\_ BU\\_ *(\\w+) *\\\"(.*)\\\";");
-            match = regex.match(line);
-            //captured 1 is the Node name
-            //captured 2 is the comment itself
-            if (match.hasMatch())
-            {
-                //qDebug() << "Comment was: " << match.captured(2);
-                DBC_NODE *node = findNodeByName(match.captured(1));
-                if (node != NULL)
-                {
-                    node->comment = match.captured(2);
-                }
-            }
-        }
-        //VAL_ (1090) (VCUPresentParkLightOC) (1 "Error present" 0 "Error not present") ;
-        if (line.startsWith("VAL_ "))
-        {
-            qDebug() << "Found a value definition line";
-            regex.setPattern("^VAL\\_ (\\w+) (\\w+) (.*);");
-            match = regex.match(line);
-            //captured 1 is the ID to match against
-            //captured 2 is the signal name to match against
-            //captured 3 is a series of values in the form (number "text") that is, all sep'd by spaces
-            if (match.hasMatch())
-            {
-                //qDebug() << "Data was: " << match.captured(3);
-                DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
-                if (msg != NULL)
-                {
-                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
-                    if (sig != NULL)
-                    {
-                        QString tokenString = match.captured(3);
-                        DBC_VAL_ENUM_ENTRY val;
-                        while (tokenString.length() > 2)
+                        //qDebug() << nodeStrings[i];
+                        if (nodeStrings[i].length() > 1)
                         {
-                            regex.setPattern("(\\d+) \\\"(.*?)\\\"(.*)");
-                            match = regex.match(tokenString);
-                            if (match.hasMatch())
-                            {
-                                val.value = match.captured(1).toInt();
-                                val.descript = match.captured(2);
-                                //qDebug() << "sig val " << val.value << " desc " <<val.descript;
-                                sig->valList.append(val);
-                                int rightSize = tokenString.length() - match.captured(1).length() - match.captured(2).length() - 4;
-                                if (rightSize > 0) tokenString = tokenString.right(rightSize);
-                                else tokenString = "";
-                                //qDebug() << "New token string: " << tokenString;
-                            }
-                            else tokenString = "";
+                            DBC_NODE node;
+                            node.name = nodeStrings[i];
+                            dbc_nodes.append(node);
                         }
                     }
+                    inMultilineBU = true; //we might be... Need to check next line.
                 }
             }
-        }
-
-        if (line.startsWith("BA_DEF_ SG_ "))
-        {
-            qDebug() << "Found a SG attribute line";
-
-            if (parseAttribute(line.right(line.length() - 12), attr))
+            if (line.startsWith("CM_ SG_ "))
             {
-                qDebug() << "Success";
-                attr.attrType = SIG;
-                dbc_attributes.append(attr);
-            }
-        }
-        if (line.startsWith("BA_DEF_ BO_ ")) //definition of a message attribute
-        {
-            qDebug() << "Found a BO attribute line";
-
-            if (parseAttribute(line.right(line.length() - 12), attr))
-            {
-                qDebug() << "Success";
-                attr.attrType = MESSAGE;
-                dbc_attributes.append(attr);
-            }
-        }
-        if (line.startsWith("BA_DEF_ BU_ ")) //definition of a node attribute
-        {
-            qDebug() << "Found a BU attribute line";
-
-            if (parseAttribute(line.right(line.length() - 12), attr))
-            {
-                qDebug() << "Success";
-                attr.attrType = NODE;
-                dbc_attributes.append(attr);
-            }
-        }
-
-        if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
-        {
-            regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]*)\\\"*");
-            match = regex.match(line);
-            //captured 1 is the name of the attribute
-            //captured 2 is the default value for that attribute
-            if (match.hasMatch())
-            {
-                qDebug() << "Found an attribute default value line, searching for an attribute named " << match.captured(1) << "with data " << match.captured(2);
-                DBC_ATTRIBUTE *found = findAttributeByName(match.captured(1));
-                if (found)
+                qDebug() << "Found an SG comment line";
+                regex.setPattern("^CM\\_ SG\\_ *(\\w+) *(\\w+) *\\\"(.*)\\\";");
+                match = regex.match(line);
+                //captured 1 is the ID to match against to get to the message
+                //captured 2 is the signal name from that message
+                //captured 3 is the comment itself
+                if (match.hasMatch())
                 {
-                    switch (found->valType)
+                    //qDebug() << "Comment was: " << match.captured(3);
+                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
+                    if (msg != NULL)
                     {
-                    case QSTRING:
-                        found->defaultValue = match.captured(2);
-                        break;
-                    case QFLOAT:
-                        found->defaultValue = match.captured(2).toFloat();
-                        break;
-                    case QINT:
-                        found->defaultValue = match.captured(2).toInt();
-                        break;
-                    case ENUM:
-                        QString temp = match.captured(2);
-                        found->defaultValue = 0;
-                        for (int x = 0; x < found->enumVals.count(); x++)
+                        DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
+                        if (sig != NULL)
                         {
-                            if (!found->enumVals[x].compare(temp, Qt::CaseInsensitive))
-                            {
-                                found->defaultValue = x;
-                                break;
-                            }
-                        }
-                    }
-                    qDebug() << "Matched an attribute. Setting default value to " << found->defaultValue;
-                }
-            }
-        }
-
-        //BA_ "GenMsgCycleTime" BO_ 101 100;
-        if (line.startsWith("BA_ ")) //set value of attribute
-        {
-            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
-            match = regex.match(line);
-            //captured 1 is the attribute name
-            //captured 2 is the message ID number (frame ID)
-            //captured 3 is the attribute value
-            if (match.hasMatch())
-            {
-                qDebug() << "Found an attribute setting line for a message";
-                DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
-                if (foundAttr)
-                {
-                    qDebug() << "That attribute does exist";
-                    DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
-                    if (foundMsg)
-                    {
-                        qDebug() << "It references a valid, registered message";
-                        DBC_ATTRIBUTE_VALUE *foundAttrVal = foundMsg->findAttrValByName(match.captured(1));
-                        if (foundAttrVal) {
-                            foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
-                        }
-                        else
-                        {
-                            DBC_ATTRIBUTE_VALUE val;
-                            val.attrName = match.captured(1);
-                            val.value = processAttributeVal(match.captured(3), foundAttr->valType);
-                            foundMsg->attributes.append(val);
+                            sig->comment = match.captured(3);
                         }
                     }
                 }
             }
-
-            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
-            match = regex.match(line);
-            //captured 1 is the attribute name
-            //captured 2 is the message ID number (frame ID)
-            //captured 3 is the signal name to bind to
-            //captured 4 is the attribute value
-            if (match.hasMatch())
+            if (line.startsWith("CM_ BO_ "))
             {
-                qDebug() << "Found an attribute setting line for a signal";
-                DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
-                if (foundAttr)
+                qDebug() << "Found a BO comment line";
+                regex.setPattern("^CM\\_ BO\\_ *(\\w+) *\\\"(.*)\\\";");
+                match = regex.match(line);
+                //captured 1 is the ID to match against to get to the message
+                //captured 2 is the comment itself
+                if (match.hasMatch())
                 {
-                    qDebug() << "That attribute does exist";
-                    DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
-                    if (foundMsg)
+                    //qDebug() << "Comment was: " << match.captured(2);
+                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
+                    if (msg != NULL)
                     {
-                        qDebug() << "It references a valid, registered message";
-                        DBC_SIGNAL *foundSig = foundMsg->sigHandler->findSignalByName(match.captured(3));
-                        if (foundSig)
-                        {
-                            DBC_ATTRIBUTE_VALUE *foundAttrVal = foundSig->findAttrValByName(match.captured(1));
-                            if (foundAttrVal) foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
-                            else
-                            {
-                                DBC_ATTRIBUTE_VALUE val;
-                                val.attrName = match.captured(1);
-                                val.value = processAttributeVal(match.captured(3), foundAttr->valType);
-                                foundSig->attributes.append(val);
-                            }
-                        }
+                        msg->comment = match.captured(2);
                     }
                 }
             }
-
-            regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
-            match = regex.match(line);
-            //captured 1 is the attribute name
-            //captured 2 is the name of the node
-            //captured 3 is the attribute value
-            if (match.hasMatch())
+            if (line.startsWith("CM_ BU_ "))
             {
-                qDebug() << "Found an attribute setting line for a node";
-                DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
-                if (foundAttr)
+                qDebug() << "Found a BU comment line";
+                regex.setPattern("^CM\\_ BU\\_ *(\\w+) *\\\"(.*)\\\";");
+                match = regex.match(line);
+                //captured 1 is the Node name
+                //captured 2 is the comment itself
+                if (match.hasMatch())
                 {
-                    qDebug() << "That attribute does exist";
-                    DBC_NODE *foundNode = findNodeByName(match.captured(2));
-                    if (foundNode)
+                    //qDebug() << "Comment was: " << match.captured(2);
+                    DBC_NODE *node = findNodeByName(match.captured(1));
+                    if (node != NULL)
                     {
-                        qDebug() << "References a valid node name";
-                        DBC_ATTRIBUTE_VALUE *foundAttrVal = foundNode->findAttrValByName(match.captured(1));
-                        if (foundAttrVal) foundAttrVal->value = processAttributeVal(match.captured(3), foundAttr->valType);
-                        else
-                        {
-                            DBC_ATTRIBUTE_VALUE val;
-                            val.attrName = match.captured(1);
-                            val.value = processAttributeVal(match.captured(3), foundAttr->valType);
-                            foundNode->attributes.append(val);
-                        }
+                        node->comment = match.captured(2);
                     }
                 }
+            }
+            //VAL_ (1090) (VCUPresentParkLightOC) (1 "Error present" 0 "Error not present") ;
+            if (line.startsWith("VAL_ "))
+            {
+                parseValueLine(line);
+            }
 
+            if (line.startsWith("BA_DEF_ SG_ "))
+            {
+                qDebug() << "Found a SG attribute line";
+
+                if (parseAttribute(line.right(line.length() - 12), attr))
+                {
+                    qDebug() << "Success";
+                    attr.attrType = SIG;
+                    dbc_attributes.append(attr);
+                }
+            }
+            if (line.startsWith("BA_DEF_ BO_ ")) //definition of a message attribute
+            {
+                qDebug() << "Found a BO attribute line";
+
+                if (parseAttribute(line.right(line.length() - 12), attr))
+                {
+                    qDebug() << "Success";
+                    attr.attrType = MESSAGE;
+                    dbc_attributes.append(attr);
+                }
+            }
+            if (line.startsWith("BA_DEF_ BU_ ")) //definition of a node attribute
+            {
+                qDebug() << "Found a BU attribute line";
+
+                if (parseAttribute(line.right(line.length() - 12), attr))
+                {
+                    qDebug() << "Success";
+                    attr.attrType = NODE;
+                    dbc_attributes.append(attr);
+                }
+            }
+
+            if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
+            {
+                parseDefaultAttrLine(line);
+            }
+
+            //BA_ "GenMsgCycleTime" BO_ 101 100;
+            if (line.startsWith("BA_ ")) //set value of attribute
+            {
+                parseAttributeLine(line);
             }
         }
     }
@@ -817,8 +888,6 @@ void DBCFile::loadFile(QString fileName)
 
     DBC_ATTRIBUTE_VALUE *thisBG;
     DBC_ATTRIBUTE_VALUE *thisFG;
-
-
 
     for (int x = 0; x < messageHandler->getCount(); x++)
     {

@@ -1,6 +1,7 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
 #include <QCheckBox>
+#include "helpwindow.h"
 
 DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -32,11 +33,32 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
 
     editorWindow = new DBCMainEditor(frames);
+
+    installEventFilter(this);
 }
 
 DBCLoadSaveWindow::~DBCLoadSaveWindow()
 {
+    removeEventFilter(this);
     delete ui;
+}
+
+bool DBCLoadSaveWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("dbc_manager.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void DBCLoadSaveWindow::newFile()

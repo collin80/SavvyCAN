@@ -2,6 +2,7 @@
 #include "ui_graphingwindow.h"
 #include "newgraphdialog.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include <QDebug>
 
 GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
@@ -41,11 +42,24 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphingView->legend->setSelectedFont(legendSelectedFont);
     ui->graphingView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
 
+    locationText = new QCPItemText(ui->graphingView);
+    locationText->position->setType(QCPItemPosition::ptAxisRectRatio);
+    locationText->position->setCoords(QPointF(0.16, 0.03));
+    locationText->setText("X: 0  Y: 0");
+    locationText->setFont(legendSelectedFont);
+
+    itemTracer = new QCPItemTracer(ui->graphingView);
+    itemTracer->setInterpolating(true);
+    itemTracer->setVisible(false); //no graph selected yet
+    itemTracer->setStyle(QCPItemTracer::tsCircle);
+    itemTracer->setSize(20);
+
     // connect slot that ties some axis selections together (especially opposite axes):
     connect(ui->graphingView, SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
     //connect up the mouse controls
     connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
     connect(ui->graphingView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,int,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,int,QMouseEvent*)));
+    connect(ui->graphingView, SIGNAL(plottableClick(QCPAbstractPlottable*,int,QMouseEvent*)), this, SLOT(plottableClick(QCPAbstractPlottable*,int,QMouseEvent*)));
     connect(ui->graphingView, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
 
     // make bottom and left axes transfer their ranges to top and right axes:
@@ -207,6 +221,15 @@ void GraphingWindow::updatedFrames(int numFrames)
     }
 }
 
+void GraphingWindow::plottableClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event)
+{
+    qDebug() << "plottableClick";
+    double x, y;
+    QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
+    graph->pixelsToCoords(event->localPos(), x, y);
+    locationText->setText("X: " + QString::number(x, 'f', 3) + " Y: " + QString::number(y, 'f', 3));
+}
+
 void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event)
 {
     Q_UNUSED(dataIdx);
@@ -217,6 +240,15 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     id = plottable->property("id").toInt();
     if (secondsMode) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
+
+    double x, y;
+    QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
+    graph->pixelsToCoords(event->localPos(), x, y);
+    locationText->setText("X: " + QString::number(x) + " Y: " + QString::number(y));
+
+    itemTracer->setGraph(graph);
+    itemTracer->setVisible(true);
+    itemTracer->setGraphKey(x);
 }
 
 void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
@@ -396,6 +428,9 @@ bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
             break;
         case Qt::Key_Minus:
             zoomOut();
+            break;
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("graphwindow.html");
             break;
         }
         return true;

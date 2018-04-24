@@ -3,12 +3,11 @@
 
 #include "connectionwindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include "ui_connectionwindow.h"
 #include "connections/canconfactory.h"
 #include "connections/canconmanager.h"
 #include "canbus.h"
-
-
 
 ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QDialog(parent),
@@ -53,9 +52,11 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->rbGVRET, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->rbKvaser, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->rbSocketCAN, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
+    connect(ui->rbRemote, &QAbstractButton::clicked, this, &ConnectionWindow::handleConnTypeChanged);
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
     connect(ui->btnActivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleEnableAll);
     connect(ui->btnDeactivateAll, &QPushButton::clicked, this, &ConnectionWindow::handleDisableAll);
+    connect(ui->btnReconnect, &QPushButton::clicked, this, &ConnectionWindow::handleReconnect);
     connect(ui->btnRemoveBus, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
     connect(ui->btnClearDebug, &QPushButton::clicked, this, &ConnectionWindow::handleClearDebugText);
     connect(ui->btnSendHex, &QPushButton::clicked, this, &ConnectionWindow::handleSendHex);
@@ -87,6 +88,7 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     qDebug() << "Show connectionwindow";
+    installEventFilter(this);
     readSettings();
     ui->tableConnections->selectRow(0);
     currentRowChanged(ui->tableConnections->currentIndex(), ui->tableConnections->currentIndex());
@@ -96,7 +98,26 @@ void ConnectionWindow::showEvent(QShowEvent* event)
 void ConnectionWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool ConnectionWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("connectionwindow.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void ConnectionWindow::readSettings()
@@ -149,26 +170,38 @@ void ConnectionWindow::setActiveAll(bool pActive)
     connModel->refresh();
 }
 
-void ConnectionWindow::consoleEnableChanged(bool checked) {
+void ConnectionWindow::handleReconnect()
+{
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx <0) return;
+
     int busId;
+    CANConnection* conn_p = connModel->getAtIdx(selIdx, busId);
+    if(!conn_p) return;
 
-    CANConnection* conn_p = connModel->getAtIdx(ui->tableConnections->currentIndex().row(), busId);
+    conn_p->stop();
+    conn_p->start();
+}
 
+void ConnectionWindow::consoleEnableChanged(bool checked) {
     ui->textConsole->setEnabled(checked);
     ui->btnClearDebug->setEnabled(checked);
     ui->btnSendHex->setEnabled(checked);
     ui->btnSendText->setEnabled(checked);
     ui->lineSend->setEnabled(checked);
 
-    if(!conn_p) return;
+    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
-    if (checked) { //enable console
-        connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
-        connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
-    }
-    else { //turn it off
-        disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
-        disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+    foreach(CANConnection* conn_p, conns)
+    {
+        if (checked) { //enable console
+            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+            connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        }
+        else { //turn it off
+            disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
+            disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        }
     }
 }
 
@@ -194,6 +227,7 @@ void ConnectionWindow::handleConnTypeChanged()
     if (ui->rbGVRET->isChecked()) selectSerial();
     if (ui->rbKvaser->isChecked()) selectKvaser();
     if (ui->rbSocketCAN->isChecked()) selectSocketCan();
+    if (ui->rbRemote->isChecked()) selectRemote();
 }
 
 
@@ -219,6 +253,7 @@ void ConnectionWindow::handleOKButton()
             return;
         /* add connection to model */
         connModel->add(conn_p);
+        consoleEnableChanged(ui->ckEnableConsole->isChecked());
     }
 }
 
@@ -294,6 +329,7 @@ void ConnectionWindow::handleSendText() {
 
 void ConnectionWindow::selectSerial()
 {
+    ui->lPort->setText("Port:");
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
 
@@ -306,13 +342,21 @@ void ConnectionWindow::selectSerial()
 
 void ConnectionWindow::selectKvaser()
 {
+    ui->lPort->setText("Port:");
     /* set combobox page visible */
     ui->stPort->setCurrentWidget(ui->cbPage);
 }
 
 void ConnectionWindow::selectSocketCan()
 {
+    ui->lPort->setText("Port:");
     /* set edit text page visible */
+    ui->stPort->setCurrentWidget(ui->etPage);
+}
+
+void ConnectionWindow::selectRemote()
+{
+    ui->lPort->setText("IP Address:");
     ui->stPort->setCurrentWidget(ui->etPage);
 }
 
@@ -350,6 +394,7 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName)
             break;
         }
         case CANCon::SOCKETCAN:
+        case CANCon::REMOTE:
         {
             ui->lePort->setText(pPortName);
             break;
@@ -372,6 +417,7 @@ QString ConnectionWindow::getPortName()
     case CANCon::KVASER:
         return ui->cbPort->currentText();
     case CANCon::SOCKETCAN:
+    case CANCon::REMOTE:
         return ui->lePort->text();
     default:
         qDebug() << "getPortName: can't get port";
@@ -385,7 +431,7 @@ CANCon::type ConnectionWindow::getConnectionType()
     if (ui->rbGVRET->isChecked()) return CANCon::GVRET_SERIAL;
     if (ui->rbKvaser->isChecked()) return CANCon::KVASER;
     if (ui->rbSocketCAN->isChecked()) return CANCon::SOCKETCAN;
-
+    if (ui->rbRemote->isChecked()) return CANCon::REMOTE;
     qDebug() << "getConnectionType: error";
     return CANCon::NONE;
 }

@@ -44,6 +44,7 @@ private:
     void refreshMessagesTable(const DBC_NODE *node);
     void showEvent(QShowEvent* event);
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
     void insertBlankRow();

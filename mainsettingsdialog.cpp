@@ -1,5 +1,6 @@
 #include "mainsettingsdialog.h"
 #include "ui_mainsettingsdialog.h"
+#include "helpwindow.h"
 
 MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -27,6 +28,11 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbValidate->setChecked(settings->value("Main/ValidateComm", true).toBool());
     ui->spinPlaybackSpeed->setValue(settings->value("Playback/DefSpeed", 5).toInt());
     ui->lineClockFormat->setText(settings->value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
+    ui->lineRemoteHost->setText(settings->value("Remote/Host", "api.savvycan.com").toString());
+    ui->lineRemotePort->setText(settings->value("Remote/Port", "21315").toString()); // = 0x5343 = SC. Yep, really creative port number
+    ui->cbAutoStartRemote->setChecked(settings->value("Remote/AutoStart", false).toBool());
+
+    ui->spinFontSize->setValue(settings->value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
 
     bool secondsMode = settings->value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings->value("Main/TimeClock", false).toBool();
@@ -73,6 +79,10 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbAutoStartRemote, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    connect(ui->lineRemotePort, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    installEventFilter(this);
 }
 
 MainSettingsDialog::~MainSettingsDialog()
@@ -84,8 +94,29 @@ MainSettingsDialog::~MainSettingsDialog()
 void MainSettingsDialog::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
+    updateSettings();
     settings->sync();
 }
+
+bool MainSettingsDialog::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("preferences.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
+
 
 void MainSettingsDialog::updateSettings()
 {
@@ -104,6 +135,10 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings->setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
     settings->setValue("Main/TimeFormat", ui->lineClockFormat->text());
+    settings->setValue("Main/FontSize", ui->spinFontSize->value());
+    settings->setValue("Remote/Host", ui->lineRemoteHost->text());
+    settings->setValue("Remote/Port", ui->lineRemotePort->text());
+    settings->setValue("Remote/AutoStart", ui->cbAutoStartRemote->isChecked());
 
     settings->sync();
     emit updatedSettings();

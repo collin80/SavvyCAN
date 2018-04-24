@@ -2,6 +2,7 @@
 #include <QListWidgetItem>
 #include "snifferwindow.h"
 #include "ui_snifferwindow.h"
+#include "helpwindow.h"
 #include "connections/canconmanager.h"
 
 SnifferWindow::SnifferWindow(QWidget *parent) :
@@ -50,7 +51,7 @@ void SnifferWindow::showEvent(QShowEvent* event)
     QDialog::showEvent(event);
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, &mModel, &SnifferModel::update);
     mTimer.start();
-
+    installEventFilter(this);
     qDebug() << "show";
 }
 
@@ -69,8 +70,26 @@ void SnifferWindow::closeEvent(QCloseEvent *event)
     mMap.clear();
     /* reset filtering */
     mFilter = false;
+    removeEventFilter(this);
 }
 
+bool SnifferWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("sniffer.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
 
 void SnifferWindow::update()
 {

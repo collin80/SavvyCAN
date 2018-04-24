@@ -3,6 +3,7 @@
 #include "utility.h"
 #include <QDebug>
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include "connections/canconmanager.h"
 
 FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
@@ -41,11 +42,31 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
     ui->cbBuses->addItem(tr("All"));
 
+    installEventFilter(this);
 }
 
 FuzzingWindow::~FuzzingWindow()
 {
+    removeEventFilter(this);
     delete ui;
+}
+
+bool FuzzingWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("fuzzingwindow.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void FuzzingWindow::updatedFrames(int numFrames)

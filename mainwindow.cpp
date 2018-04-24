@@ -6,6 +6,7 @@
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
 #include "connections/connectionwindow.h"
+#include "helpwindow.h"
 #include "utility.h"
 
 /*
@@ -47,15 +48,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->canFramesView->setModel(proxyModel);
 
+    settingsDialog = new MainSettingsDialog(); //instantiate the settings dialog so it can initialize settings if this is the first run or the config file was deleted.
+    settingsDialog->updateSettings(); //write out all the settings. If this is the first run it'll write defaults out.
+
     readSettings();
 
-    ui->canFramesView->setColumnWidth(0, 150);
-    ui->canFramesView->setColumnWidth(1, 70);
-    ui->canFramesView->setColumnWidth(2, 40);
-    ui->canFramesView->setColumnWidth(3, 40);
-    ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 40);
-    ui->canFramesView->setColumnWidth(6, 225);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
@@ -101,7 +98,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
     connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
     connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
-    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::pressed, this, &MainWindow::gridClicked);
     connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
@@ -134,10 +131,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     updateFileStatus();
-    lbStatusDatabase.setText(tr("No DBC database loaded"));
+    //lbStatusDatabase.setText(tr("No DBC database loaded"));
     ui->statusBar->addWidget(&lbStatusConnected);
     ui->statusBar->addWidget(&lbStatusFilename);
-    ui->statusBar->addWidget(&lbStatusDatabase);
+    //ui->statusBar->addWidget(&lbStatusDatabase);
+    ui->lblRemoteConn->setVisible(false);
+    ui->lineRemoteKey->setVisible(false);
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
@@ -171,6 +170,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connectionWindow = new ConnectionWindow();
     connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 
+    ui->actionFirmware_Update->setVisible(false);
+    ui->actionMotorControlConfig->setVisible(false);
+    ui->actionSignal_Viewer->setVisible(false);
+    ui->actionSingle_Multi_State_2->setVisible(false);
+
+    installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
@@ -235,9 +240,30 @@ void MainWindow::exitApp()
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
     exitApp();
 }
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("mainscreen.html");
+            return true;
+            break;
+        }
+        return false;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
+
 
 void MainWindow::updateSettings()
 {
@@ -252,11 +278,23 @@ void MainWindow::readSettings()
     {
         resize(settings.value("Main/WindowSize", QSize(800, 750)).toSize());
         move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
+        ui->canFramesView->setColumnWidth(0, settings.value("Main/TimeColumn", 150).toUInt()); //time stamp
+        ui->canFramesView->setColumnWidth(1, settings.value("Main/IDColumn", 70).toUInt()); //frame ID
+        ui->canFramesView->setColumnWidth(2, settings.value("Main/ExtColumn", 40).toUInt()); //extended
+        ui->canFramesView->setColumnWidth(3, settings.value("Main/DirColumn", 40).toUInt()); //direction
+        ui->canFramesView->setColumnWidth(4, settings.value("Main/BusColumn", 40).toUInt()); //bus
+        ui->canFramesView->setColumnWidth(5, settings.value("Main/LengthColumn", 40).toUInt()); //length
+        ui->canFramesView->setColumnWidth(6, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
+        ui->canFramesView->setColumnWidth(7, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
     if (settings.value("Main/AutoScroll", false).toBool())
     {
         ui->cbAutoScroll->setChecked(true);
     }
+    int fontSize = settings.value("Main/FontSize", 9).toUInt();
+    QFont newFont = QFont(ui->canFramesView->font());
+    newFont.setPointSize(fontSize);
+    ui->canFramesView->setFont(newFont);
 
     readUpdateableSettings();
 }
@@ -284,6 +322,14 @@ void MainWindow::writeSettings()
     {
         settings.setValue("Main/WindowSize", size());
         settings.setValue("Main/WindowPos", pos());
+        settings.setValue("Main/TimeColumn", ui->canFramesView->columnWidth(0));
+        settings.setValue("Main/IDColumn", ui->canFramesView->columnWidth(1));
+        settings.setValue("Main/ExtColumn", ui->canFramesView->columnWidth(2));
+        settings.setValue("Main/DirColumn", ui->canFramesView->columnWidth(3));
+        settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(4));
+        settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(5));
+        settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(6));
+        settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(7));
     }
 }
 
@@ -311,6 +357,7 @@ void MainWindow::headerClicked(int logicalIndex)
 
 void MainWindow::gridClicked(QModelIndex idx)
 {
+    //qDebug() << "Grid Clicked";
     if (ui->canFramesView->rowHeight(idx.row()) > normalRowHeight)
     {
         ui->canFramesView->setRowHeight(idx.row(), normalRowHeight);
@@ -322,6 +369,7 @@ void MainWindow::gridClicked(QModelIndex idx)
 
 void MainWindow::gridDoubleClicked(QModelIndex idx)
 {
+    //qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
     emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);

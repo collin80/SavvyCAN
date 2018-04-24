@@ -51,5 +51,6 @@ private:
     void sendOnBuses(UDS_MESSAGE frame, int buses);
     void setupNodes();
     void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 #endif // UDSSCANWINDOW_H

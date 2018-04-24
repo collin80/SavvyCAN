@@ -36,6 +36,7 @@ private:
     void signalsFactory();
     bool processSignal(int startBit, int bitLength, int sensitivity, bool bigEndian, bool isSigned);
     void createGraph(QVector<int> values);
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // RANGESTATEWINDOW_H

@@ -6,6 +6,7 @@
 #include <QSettings>
 
 #include "connections/canconmanager.h"
+#include "helpwindow.h"
 
 ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -88,10 +89,35 @@ void ScriptingWindow::updatedValue(int row, int col)
     }
 }
 
+void ScriptingWindow::showEvent(QShowEvent* event)
+{
+    QDialog::showEvent(event);
+    installEventFilter(this);
+}
+
 void ScriptingWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool ScriptingWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("scriptingwindow.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void ScriptingWindow::readSettings()
@@ -113,11 +139,6 @@ void ScriptingWindow::writeSettings()
         settings.setValue("ScriptingWindow/WindowSize", size());
         settings.setValue("ScriptingWindow/WindowPos", pos());
     }
-}
-
-void ScriptingWindow::showEvent(QShowEvent* event)
-{
-    QDialog::showEvent(event);
 }
 
 void ScriptingWindow::changeCurrentScript()
@@ -183,7 +204,7 @@ void ScriptingWindow::loadNewScript()
                 QString justFileName = fileList[fileList.length() - 1];
                 ui->listLoadedScripts->addItem(justFileName);
 
-                container = new ScriptContainer;
+                container = new ScriptContainer();
                 container->fileName = justFileName;
                 container->filePath = filename;
                 container->scriptText = contents;
@@ -202,7 +223,7 @@ void ScriptingWindow::createNewScript()
 {
     ScriptContainer *container;
 
-    container = new ScriptContainer;
+    container = new ScriptContainer();
 
     container->fileName = "UNNAMED_" + QString::number((qrand() % 10000)) + ".js";
     container->filePath = QString();
@@ -217,6 +238,8 @@ void ScriptingWindow::createNewScript()
 
 void ScriptingWindow::deleteCurrentScript()
 {
+    ScriptContainer* thisScript;
+
     int sel = ui->listLoadedScripts->currentRow();
     if (sel < 0) return;
 
@@ -229,7 +252,10 @@ void ScriptingWindow::deleteCurrentScript()
     {
     case QMessageBox::Yes:
         ui->listLoadedScripts->takeItem(sel);
+        thisScript = scripts.at(sel);
         scripts.removeAt(sel);
+        delete thisScript;  //causes a seg fault. Seems to be due to currently running javascript code. No idea how to stop code from running
+        thisScript = NULL;
         currentScript = NULL;
 
         if (ui->listLoadedScripts->count() > 0)

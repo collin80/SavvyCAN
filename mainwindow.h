@@ -176,6 +176,7 @@ private:
     void killWindow(QDialog *win);
     void readSettings();
     void writeSettings();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // MAINWINDOW_H
