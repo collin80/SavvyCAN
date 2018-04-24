@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QColorDialog>
+#include "helpwindow.h"
 
 DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -49,6 +50,8 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     ui->MessagesTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
     sigEditor = new DBCSignalEditor();
+
+    installEventFilter(this);
 }
 
 void DBCMainEditor::showEvent(QShowEvent* event)
@@ -66,8 +69,27 @@ void DBCMainEditor::showEvent(QShowEvent* event)
 
 DBCMainEditor::~DBCMainEditor()
 {
+    removeEventFilter(this);
     delete ui;
     delete sigEditor;
+}
+
+bool DBCMainEditor::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("dbc_editor.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void DBCMainEditor::setFileIdx(int idx)
@@ -374,6 +396,7 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
             DBC_MESSAGE *message = dbcFile->messageHandler->findMsgByID(Utility::ParseStringToNum(idString));
             sigEditor->setMessageRef(message);
             sigEditor->setFileIdx(fileIdx);
+            sigEditor->setWindowModality(Qt::WindowModal);
             sigEditor->exec(); //blocks this window from being active until we're done
             //now update the displayed # of signals
             inhibitCellChanged = true;

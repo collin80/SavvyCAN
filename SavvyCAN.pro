@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT = core gui printsupport qml serialbus serialport widgets
+QT = core gui printsupport qml serialbus serialport widgets help
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
@@ -63,7 +63,9 @@ SOURCES += main.cpp\
     bus_protocols/j1939_handler.cpp \
     bus_protocols/uds_handler.cpp \
     jsedit.cpp \
-    frameplaybackobject.cpp
+    frameplaybackobject.cpp \
+    helpwindow.cpp \
+    blfhandler.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -117,7 +119,9 @@ HEADERS  += mainwindow.h \
     bus_protocols/uds_handler.h \
     bus_protocols/isotp_message.h \
     jsedit.h \
-    frameplaybackobject.h
+    frameplaybackobject.h \
+    helpwindow.h \
+    blfhandler.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
@@ -143,7 +147,8 @@ FORMS    += ui/candatagrid.ui \
     ui/snifferwindow.ui \
     ui/udsscanwindow.ui \
     ui/bisectwindow.ui \
-    ui/signalviewerwindow.ui
+    ui/signalviewerwindow.ui \
+    helpwindow.ui
 
 DISTFILES +=
 

@@ -64,6 +64,7 @@ private:
     void calcNextID();
     void calcNextBitPattern();
     void redrawGrid();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // FUZZINGWINDOW_H

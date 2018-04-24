@@ -1,6 +1,7 @@
 #include "flowviewwindow.h"
 #include "ui_flowviewwindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -193,6 +194,9 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_Y:
             btnFwdOneClick();
             break;
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("flowview.html");
+            break;
         }
         return true;
     } else {
@@ -357,6 +361,9 @@ void FlowViewWindow::saveFileFlow()
 
 void FlowViewWindow::updatedFrames(int numFrames)
 {
+    QVector<double>newX[8];
+    QVector<double>newY[8];
+
     CANFrame thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
@@ -409,18 +416,18 @@ void FlowViewWindow::updatedFrames(int numFrames)
                     if (ui->cbTimeGraph->isChecked())
                     {
                         if (secondsMode){
-                            x[k].append((double)(thisFrame.timestamp) / 1000000.0);
+                            newX[k].append((double)(thisFrame.timestamp) / 1000000.0);
                         }
                         else
                         {
-                            x[k].append(thisFrame.timestamp);
+                            newX[k].append(thisFrame.timestamp);
                         }
                     }
                     else
                     {
-                        x[k].append(x[k].count());
+                        newX[k].append(x[k].count());
                     }
-                    y[k].append(thisFrame.data[k]);
+                    newY[k].append(thisFrame.data[k]);
                     needRefresh = true;
                 }
             }
@@ -436,7 +443,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
         {
             for (int k = 0; k < 8; k++)
             {
-                graphRef[k]->setData(x[k], y[k]);
+                graphRef[k]->addData(newX[k], newY[k]);
             }
             ui->graphView->replot();
             updateDataView();

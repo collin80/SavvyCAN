@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMenu>
 #include <QSettings>
+#include "helpwindow.h"
 
 DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     QDialog(parent),
@@ -205,10 +206,13 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = NULL;
                 }
             });
+
+    installEventFilter(this);
 }
 
 DBCSignalEditor::~DBCSignalEditor()
 {
+    removeEventFilter(this);
     delete ui;
 }
 
@@ -216,6 +220,24 @@ void DBCSignalEditor::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     writeSettings();
+}
+
+bool DBCSignalEditor::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("signaleditor.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void DBCSignalEditor::setFileIdx(int idx)

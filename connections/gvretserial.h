@@ -5,6 +5,7 @@
 #include <QCanBusDevice>
 #include <QThread>
 #include <QTimer>
+#include <QTcpSocket>
 
 /*************/
 #include <QDateTime>
@@ -62,6 +63,8 @@ private slots:
     void connectDevice();
     void connectionTimeout();
     void readSerialData();
+    void serialError(QSerialPort::SerialPortError err);
+    void tcpConnected();
     void handleTick();
 
 private:
@@ -69,6 +72,7 @@ private:
     void procRXChar(unsigned char);
     void sendCommValidation();
     void rebuildLocalTimeBasis();
+    void sendToSerial(const QByteArray &bytes);
 
 protected:
     QTimer             mTimer;
@@ -79,6 +83,7 @@ protected:
     bool isAutoRestart;
     bool continuousTimeSync;
     QSerialPort *serial;
+    QTcpSocket *tcpClient;
     int framesRapid;
     STATE rx_state;
     uint32_t rx_step;

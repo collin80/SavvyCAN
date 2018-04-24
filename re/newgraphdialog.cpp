@@ -2,6 +2,7 @@
 #include "ui_newgraphdialog.h"
 #include <QColorDialog>
 #include "utility.h"
+#include "helpwindow.h"
 
 NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     QDialog(parent),
@@ -33,10 +34,13 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     dataLen = 1;
 
     loadMessages();
+
+    installEventFilter(this);
 }
 
 NewGraphDialog::~NewGraphDialog()
 {
+    removeEventFilter(this);
     delete ui;
 }
 
@@ -46,6 +50,24 @@ void NewGraphDialog::showEvent(QShowEvent* event)
     loadMessages();
     drawBitfield();
     qDebug() << "S" << ui->gridData->geometry();
+}
+
+bool NewGraphDialog::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("graphsetup.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void NewGraphDialog::addButtonClicked()

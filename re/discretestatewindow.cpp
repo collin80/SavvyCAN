@@ -1,6 +1,7 @@
 #include "discretestatewindow.h"
 #include "ui_discretestatewindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 
 DiscreteStateWindow::DiscreteStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -55,10 +56,12 @@ DiscreteStateWindow::DiscreteStateWindow(const QVector<CANFrame> *frames, QWidge
             });
 
     refreshFilterList();
+    installEventFilter(this);
 }
 
 DiscreteStateWindow::~DiscreteStateWindow()
 {
+    removeEventFilter(this);
     timer->stop();
 
     for (int i = 0; i < stateFrames.count(); i++)
@@ -69,6 +72,24 @@ DiscreteStateWindow::~DiscreteStateWindow()
 
     delete timer;
     delete ui;
+}
+
+bool DiscreteStateWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("discretestate.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void DiscreteStateWindow::typeChanged()

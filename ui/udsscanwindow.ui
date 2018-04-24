@@ -260,6 +260,9 @@
        <property name="enabled">
         <bool>false</bool>
        </property>
+       <property name="prefix">
+        <string>0x</string>
+       </property>
        <property name="maximum">
         <number>255</number>
        </property>
@@ -279,6 +282,9 @@
       <widget class="QSpinBox" name="spinUpperService">
        <property name="enabled">
         <bool>false</bool>
+       </property>
+       <property name="prefix">
+        <string>0x</string>
        </property>
        <property name="maximum">
         <number>255</number>
@@ -330,6 +336,9 @@
        <property name="enabled">
         <bool>false</bool>
        </property>
+       <property name="prefix">
+        <string>0x</string>
+       </property>
        <property name="maximum">
         <number>255</number>
        </property>
@@ -349,6 +358,9 @@
       <widget class="QSpinBox" name="spinUpperSubfunc">
        <property name="enabled">
         <bool>false</bool>
+       </property>
+       <property name="prefix">
+        <string>0x</string>
        </property>
        <property name="maximum">
         <number>255</number>
