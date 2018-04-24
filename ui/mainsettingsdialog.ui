@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>965</width>
-    <height>585</height>
+    <height>591</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -272,6 +272,9 @@
      </item>
      <item>
       <widget class="QGroupBox" name="groupBox_8">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="title">
         <string>Remote Connection:</string>
        </property>

@@ -303,17 +303,17 @@ void GVRetSerial::connectDevice()
 
         /* configure */
         serial->setDataBits(serial->Data8);
-        //serial->setFlowControl(serial->HardwareControl); //this is important though
-        serial->setFlowControl(serial->NoFlowControl);
+        serial->setFlowControl(serial->HardwareControl); //this is important though
+        //serial->setFlowControl(serial->NoFlowControl);
         serial->setBaudRate(1000000);
         if (!serial->open(QIODevice::ReadWrite))
         {
             qDebug() << serial->errorString();
         }
-        serial->setDataTerminalReady(false); //you do need to set these or the fan gets dirty
-        serial->setRequestToSend(false);
-        //serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
-        //serial->setRequestToSend(true);
+        //serial->setDataTerminalReady(false); //you do need to set these or the fan gets dirty
+        //serial->setRequestToSend(false);
+        serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
+        serial->setRequestToSend(true);
 
         debugOutput("Opened Serial Port");
         /* connect reading event */

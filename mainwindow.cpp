@@ -135,6 +135,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->statusBar->addWidget(&lbStatusConnected);
     ui->statusBar->addWidget(&lbStatusFilename);
     //ui->statusBar->addWidget(&lbStatusDatabase);
+    ui->lblRemoteConn->setVisible(false);
+    ui->lineRemoteKey->setVisible(false);
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
@@ -167,6 +169,11 @@ MainWindow::MainWindow(QWidget *parent) :
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow();
     connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
+
+    ui->actionFirmware_Update->setVisible(false);
+    ui->actionMotorControlConfig->setVisible(false);
+    ui->actionSignal_Viewer->setVisible(false);
+    ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
 }
