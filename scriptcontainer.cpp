@@ -231,6 +231,7 @@ void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
 {
     CANFrame frame;
     frame.extended = false;
+    frame.remote = false;
     frame.ID = id.toInt();
     frame.len = length.toUInt();
     if (frame.len > 8) frame.len = 8;
