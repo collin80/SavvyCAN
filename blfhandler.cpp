@@ -4,6 +4,8 @@
 #include <QString>
 #include <QtEndian>
 
+#define BLF_REMOTE_FLAG 0x80
+
 BLFHandler::BLFHandler()
 {
 
@@ -70,8 +72,13 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                             frame.ID = canObject.id & 0x1FFFFFFFull;
                             frame.isReceived = true;
                             frame.len = canObject.dlc;
+                            if (canObject.flags & BLF_REMOTE_FLAG) {
+                                frame.remote = true;
+                            } else {
+                                frame.remote = false;
+                                for (int i = 0; i < 8; i++) frame.data[i] = canObject.data[i];
+                            }
                             frame.timestamp = obj.header.uncompSize / 1000000.0; //uncompsize field also used for timestamp oddly enough
-                            for (int i = 0; i < 8; i++) frame.data[i] = canObject.data[i];
                             frames->append(frame);
                         }
                         pos += obj.header.objSize + (obj.header.objSize % 4);

@@ -11,6 +11,7 @@ public:
     uint32_t ID;
     uint32_t bus;
     bool extended;
+    bool remote;
     bool isReceived; //did we receive this or send it?
     uint32_t len;
     unsigned char data[8];
