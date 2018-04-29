@@ -187,9 +187,44 @@ void SerialBusConnection::framesReceived()
             if(frame_p) {
                 frame_p->len           = static_cast<uint32_t>(recFrame.payload().length());
                 frame_p->bus           = 0;
-                memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
-                frame_p->extended      = recFrame.hasExtendedFrameFormat();
-                frame_p->ID            = recFrame.frameId();
+                if (recFrame.frameType() == QCanBusFrame::ErrorFrame) {
+                    // Constants defined in include/uapi/linux/can/error.h
+                    switch (recFrame.error()) {
+                        case QCanBusFrame::TransmissionTimeoutError:
+                            frame_p->ID = 0x20000001;
+                            break;
+                        case QCanBusFrame::LostArbitrationError:
+                            frame_p->ID = 0x20000002;
+                            break;
+                        case QCanBusFrame::ControllerError:
+                            frame_p->ID = 0x20000004;
+                            break;
+                        case QCanBusFrame::ProtocolViolationError:
+                            frame_p->ID = 0x20000008;
+                            break;
+                        case QCanBusFrame::TransceiverError:
+                            frame_p->ID = 0x20000010;
+                            break;
+                        case QCanBusFrame::MissingAcknowledgmentError:
+                            frame_p->ID = 0x20000020;
+                            break;
+                        case QCanBusFrame::BusOffError:
+                            frame_p->ID = 0x20000040;
+                            break;
+                        case QCanBusFrame::BusError:
+                            frame_p->ID = 0x20000080;
+                            break;
+                        case QCanBusFrame::ControllerRestartError:
+                            frame_p->ID = 0x20000100;
+                            break;
+                        default:
+                            break;
+                    }
+                    frame_p->extended = true;
+                } else {
+                    frame_p->extended      = recFrame.hasExtendedFrameFormat();
+                    frame_p->ID            = recFrame.frameId();
+                }
                 frame_p->isReceived    = true;
                 if (useSystemTime) {
                     frame_p->timestamp = QDateTime::currentMSecsSinceEpoch() * 1000ul;
