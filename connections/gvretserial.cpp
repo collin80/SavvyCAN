@@ -236,6 +236,11 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     if (!serial->isOpen()) return false;
     //if (!isConnected) return false;
 
+    // Doesn't make sense to send an error frame
+    // to an adapter
+    if (frame.ID & 0x20000000) {
+        return true;
+    }
     ID = frame.ID;
     if (frame.extended) ID |= 1 << 31;
 
@@ -639,6 +644,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                         //qDebug() << "GVRET got frame on bus " << frame_p->bus;
                         /* copy frame */
                         *frame_p = buildFrame;
+                        frame_p->remote = false;
                         checkTargettedFrame(buildFrame);
                         /* enqueue frame */
                         getQueue().queue();

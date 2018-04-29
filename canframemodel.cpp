@@ -6,6 +6,18 @@
 #include <QDateTime>
 #include "utility.h"
 
+enum class Column {
+    TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
+    FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
+    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
+    Remote    = 3, ///< True if the frames is a remote frame
+    Direction = 4, ///< Whether the frame was transmitted or received
+    Bus       = 5, ///< The bus where the frame was transmitted or received
+    Length    = 6, ///< The frames payload data length
+    ASCII     = 7, ///< The payload interpreted as ASCII characters
+    Data      = 8, ///< The frames payload data
+    NUM_COLUMN
+};
 
 CANFrameModel::~CANFrameModel()
 {
@@ -40,7 +52,7 @@ int CANFrameModel::totalFrameCount()
 int CANFrameModel::columnCount(const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    return 8;
+    return (int)Column::NUM_COLUMN;
 }
 
 CANFrameModel::CANFrameModel(QObject *parent)
@@ -215,17 +227,6 @@ void CANFrameModel::recalcOverwrite()
     mutex.unlock();
 }
 
-enum class Column {
-    TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
-    FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
-    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
-    Direction = 3, ///< Whether the frame was transmitted or received
-    Bus       = 4, ///< The bus where the frame was transmitted or received
-    Length    = 5, ///< The frames payload data length
-    ASCII     = 6, ///< The payload interpreted as ASCII characters
-    Data      = 7 ///< The frames payload data
-};
-
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
     int dLen;
@@ -276,6 +277,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         case Column::Extended:
             return QString::number(thisFrame.extended);
+        case Column::Remote:
+            return QString::number(thisFrame.remote);
         case Column::Direction:
             if (thisFrame.isReceived) return QString(tr("Rx"));
             return QString(tr("Tx"));
@@ -291,14 +294,16 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return tempString;
             }
             dLen = thisFrame.len;
-            if (dLen < 0) dLen = 0;
-            if (dLen > 8) dLen = 8;
-            for (int i = 0; i < dLen; i++)
-            {
-                quint8 byt = thisFrame.data[i];
-                if (byt < 0x20) byt = 0x2E; //A dot
-                if (byt > 0x7E) byt = 0x2E;
-                tempString.append(QString::fromUtf8((char *)&byt, 1));
+            if (!thisFrame.remote) {
+                if (dLen < 0) dLen = 0;
+                if (dLen > 8) dLen = 8;
+                for (int i = 0; i < dLen; i++)
+                {
+                    quint8 byt = thisFrame.data[i];
+                    if (byt < 0x20) byt = 0x2E; //A dot
+                    if (byt > 0x7E) byt = 0x2E;
+                    tempString.append(QString::fromUtf8((char *)&byt, 1));
+                }
             }
             return tempString;
         case Column::Data:
@@ -306,6 +311,9 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             if (dLen < 0) dLen = 0;
             if (dLen > 8) dLen = 8;
             //if (useHexMode) tempString.append("0x ");
+            if (thisFrame.remote) {
+                return tempString;
+            }
             for (int i = 0; i < dLen; i++)
             {
                 if (useHexMode) tempString.append( QString::number(thisFrame.data[i], 16).toUpper().rightJustified(2, '0'));
@@ -332,6 +340,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 }
             }
             return tempString;
+        default:
+            return tempString;
         }
     }
 
@@ -354,6 +364,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
             return QString(tr("ID"));
         case Column::Extended:
             return QString(tr("Ext"));
+        case Column::Remote:
+            return QString(tr("Rem"));
         case Column::Direction:
             return QString(tr("Dir"));
         case Column::Bus:
@@ -364,6 +376,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
             return QString(tr("ASCII"));
         case Column::Data:
             return QString(tr("Data"));
+        default:
+            return QString("");
         }
     }
 
