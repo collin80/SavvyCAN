@@ -545,7 +545,20 @@ void MainWindow::handleLoadFile()
     QString filename;
     QVector<CANFrame> tempFrames;
 
-    if (FrameFileIO::loadFrameFile(filename, &tempFrames))
+    QMessageBox::StandardButton confirmDialog;
+
+    bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames);
+
+    if (!loadResult)
+    {
+        confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes) {
+            loadResult = true;
+        }
+    }
+
+    if (loadResult)
     {
         ui->canFramesView->scrollToTop();
         model->clearFrames();
