@@ -325,7 +325,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
         {
             QList<QByteArray> tokens = line.split(' ');
             int multiplier;
-            if (tokens.length() > 3)
+            if (tokens.length() > 2)
             {
                 int idxOfDecimal = tokens[0].indexOf('.');
                 if (idxOfDecimal > -1) {
@@ -699,7 +699,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
-            if (tokens.length() >= 6)
+            if (tokens.length() >= 5)
             {
                 if (tokens[0].length() > 3)
                 {
