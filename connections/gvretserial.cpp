@@ -72,12 +72,6 @@ void GVRetSerial::sendToSerial(const QByteArray &bytes)
 void GVRetSerial::piStarted()
 {    
     connectDevice();
-
-    /* start timer */
-    connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
-    mTimer.setInterval(250); //tick four times per second
-    mTimer.setSingleShot(false); //keep ticking
-    mTimer.start();
 }
 
 
@@ -287,12 +281,14 @@ void GVRetSerial::connectDevice()
     /* open new device */
     if (getPort().contains('.')) //TCP/IP mode then since it looks like an IP address
     {
+        qDebug() << "TCP Connection to a GVRET device";
         tcpClient = new QTcpSocket();
         tcpClient->connectToHost(getPort(), 23);
         connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readSerialData()));
         connect(tcpClient, SIGNAL(connected()), this, SLOT(tcpConnected()));
     }
     else {
+        qDebug() << "Serial connection to a GVRET device";
         serial = new QSerialPort(QSerialPortInfo(getPort()));
         if(!serial) {
             qDebug() << "can't open serial port " << getPort();
@@ -361,6 +357,12 @@ void GVRetSerial::tcpConnected()
     continuousTimeSync = true;
 
     sendToSerial(output);
+
+    /* start timer */
+    connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
+    mTimer.setInterval(250); //tick four times per second
+    mTimer.setSingleShot(false); //keep ticking
+    mTimer.start();
 
     if(doValidation) {
         QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
