@@ -504,8 +504,6 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName)
 
 void ConnectionWindow::loadConnections()
 {
-    qRegisterMetaTypeStreamOperators<QVector<QString>>();
-    qRegisterMetaTypeStreamOperators<QVector<int>>();
     qRegisterMetaTypeStreamOperators<CANBus>();
     qRegisterMetaTypeStreamOperators<QList<CANBus>>();
 
