@@ -224,6 +224,7 @@ void SerialBusConnection::framesReceived()
                 } else {
                     frame_p->extended      = recFrame.hasExtendedFrameFormat();
                     frame_p->ID            = recFrame.frameId();
+                    memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
                 }
                 frame_p->isReceived    = true;
                 if (useSystemTime) {
