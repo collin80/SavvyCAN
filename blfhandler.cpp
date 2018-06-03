@@ -4,6 +4,8 @@
 #include <QString>
 #include <QtEndian>
 
+#define BLF_REMOTE_FLAG 0x80
+
 BLFHandler::BLFHandler()
 {
 
@@ -70,7 +72,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                 }
                 //then process all the objects
                 while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.count())
-                {                    
+                {
                     memcpy(&obj.header, (uncompressedData.constData() + pos), sizeof(BLF_OBJ_HEADER));
                     qDebug() << "Pos: " << pos << " Type: " << obj.header.objType << "Obj Size: " << obj.header.objSize;
                     if (qFromLittleEndian(objHeader.sig) == 0x4A424F4C)
@@ -85,8 +87,14 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                             frame.ID = canObject.id & 0x1FFFFFFFull;
                             frame.isReceived = true;
                             frame.len = canObject.dlc;
-                            frame.timestamp = obj.header.uncompSize / 100000.0; //uncompsize field also used for timestamp oddly enough
-                            for (int i = 0; i < 8; i++) frame.data[i] = canObject.data[i];
+
+                            if (canObject.flags & BLF_REMOTE_FLAG) {
+                                frame.remote = true;
+                            } else {
+                                frame.remote = false;
+                                for (int i = 0; i < 8; i++) frame.data[i] = canObject.data[i];
+                            }
+                            frame.timestamp = obj.header.uncompSize / 1000000.0; //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
                         }
                         else

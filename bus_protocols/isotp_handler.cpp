@@ -51,6 +51,7 @@ void ISOTP_HANDLER::setReception(bool mode)
 void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
 {
     CANFrame frame;
+    frame.remote = false;
     int currByte = 0;
     int index = 0;
     if (bus < 0) return;
