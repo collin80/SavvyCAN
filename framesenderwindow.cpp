@@ -47,16 +47,19 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
 void FrameSenderWindow::setupGrid()
 {
     QStringList headers;
-    headers << "En" << "Bus" << "ID" << "Len" << "Data" << "Trigger" << "Modifications" << "Count";
-    ui->tableSender->setColumnCount(8);
+    headers << "En" << "Bus" << "ID" << "Len" << "Ext" << "Rem" << "Data"
+            << "Trigger" << "Modifications" << "Count";
+    ui->tableSender->setColumnCount(10);
     ui->tableSender->setColumnWidth(0, 50);
     ui->tableSender->setColumnWidth(1, 50);
     ui->tableSender->setColumnWidth(2, 50);
     ui->tableSender->setColumnWidth(3, 50);
-    ui->tableSender->setColumnWidth(4, 220);
-    ui->tableSender->setColumnWidth(5, 220);
+    ui->tableSender->setColumnWidth(4, 50);
+    ui->tableSender->setColumnWidth(5, 50);
     ui->tableSender->setColumnWidth(6, 220);
-    ui->tableSender->setColumnWidth(7, 80);
+    ui->tableSender->setColumnWidth(7, 220);
+    ui->tableSender->setColumnWidth(8, 220);
+    ui->tableSender->setColumnWidth(9, 80);
     ui->tableSender->setHorizontalHeaderLabels(headers);
 }
 
@@ -98,10 +101,22 @@ void FrameSenderWindow::createBlankRow()
     inhibitChanged = true;
     ui->tableSender->setItem(row, 0, item);
 
-    for (int i = 1; i < 8; i++)
+    item = new QTableWidgetItem();
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    ui->tableSender->setItem(row, 4, item);
+
+    item = new QTableWidgetItem();
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    ui->tableSender->setItem(row, 5, item);
+
+    for (int i = 1; i < 10; i++)
     {
-        item = new QTableWidgetItem("");
-        ui->tableSender->setItem(row, i, item);
+        if (i != 4 && i != 5) {
+            item = new QTableWidgetItem("");
+            ui->tableSender->setItem(row, i, item);
+         }
     }
 
     inhibitChanged = false;
@@ -290,9 +305,17 @@ void FrameSenderWindow::saveSenderFile(QString filename)
             outString = "T#";
         }
         else outString = "F#";
-        for (int i = 1; i < 7; i++)
+        for (int i = 1; i < 9; i++)
         {
-            outString.append(ui->tableSender->item(c, i)->text());
+            if (i == 4 || i == 5) {
+                if (ui->tableSender->item(c, i)->checkState() == Qt::Checked) {
+                    outString.append("T");
+                } else {
+                    outString.append("F");
+                }
+            } else {
+                outString.append(ui->tableSender->item(c, i)->text());
+            }
             outString.append("#");
         }
         outString.append("\n");
@@ -330,17 +353,43 @@ void FrameSenderWindow::loadSenderFile(QString filename)
             QTableWidgetItem *item = new QTableWidgetItem();
             ui->tableSender->setItem(row, 0, item);
             ui->tableSender->item(row, 0)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+
+            item = new QTableWidgetItem();
+            ui->tableSender->setItem(row, 4, item);
+            ui->tableSender->item(row, 4)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(Qt::Unchecked);
+
+            item = new QTableWidgetItem();
+            ui->tableSender->setItem(row, 5, item);
+            ui->tableSender->item(row, 5)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(Qt::Unchecked);
+
             if (tokens[0] == "T")
             {
                 ui->tableSender->item(row, 0)->setCheckState(Qt::Checked);
             }
             else ui->tableSender->item(row, 0)->setCheckState(Qt::Unchecked);
-            for (int i = 1; i < 7; i++)
-            {
-                ui->tableSender->setItem(row, i, new QTableWidgetItem(QString(tokens[i])));
+            if (tokens.length() >= 9) {
+                for (int i = 1; i < 9; i++)
+                {
+                    if (i != 4 && i != 5) {
+                        ui->tableSender->setItem(row, i, new QTableWidgetItem(QString(tokens[i])));
+                    } else {
+                        if (tokens[i] == "T") {
+                            ui->tableSender->item(row, i)->setCheckState(Qt::Checked);
+                        }
+                    }
+                }
+            } else {
+                ui->tableSender->setItem(row, 1, new QTableWidgetItem(QString(tokens[1])));
+                ui->tableSender->setItem(row, 2, new QTableWidgetItem(QString(tokens[2])));
+                ui->tableSender->setItem(row, 3, new QTableWidgetItem(QString(tokens[3])));
+                ui->tableSender->setItem(row, 6, new QTableWidgetItem(QString(tokens[4])));
+                ui->tableSender->setItem(row, 7, new QTableWidgetItem(QString(tokens[5])));
+                ui->tableSender->setItem(row, 8, new QTableWidgetItem(QString(tokens[6])));
             }
             inhibitChanged = false;
-            for (int k = 0; k < 7; k++) processCellChange(row, k);
+            for (int k = 0; k < 9; k++) processCellChange(row, k);
 
         }
     }
@@ -523,7 +572,7 @@ void FrameSenderWindow::processModifierText(int line)
 
     //yeah, lots of operations on this one line but it's for a good cause. Removes the convenience English versions of the
     //logical operators and replaces them with the math equivs. Also uppercases and removes all superfluous whitespace
-    modString = ui->tableSender->item(line, 6)->text().toUpper().trimmed().replace("AND", "&").replace("XOR", "^").replace("OR", "|").replace(" ", "");
+    modString = ui->tableSender->item(line, 8)->text().toUpper().trimmed().replace("AND", "&").replace("XOR", "^").replace("OR", "|").replace(" ", "");
     if (modString != "")
     {
         QStringList mods = modString.split(',');
@@ -613,7 +662,7 @@ void FrameSenderWindow::processTriggerText(int line)
     //trigger has two levels of syntactic parsing. First you split by comma to get each
     //actual trigger. Then you split by spaces to get the tokens within each trigger
     //trigger = ui->tableSender->item(line, 5)->text().toUpper().trimmed().replace(" ", "");
-    trigger = ui->tableSender->item(line, 5)->text().toUpper();
+    trigger = ui->tableSender->item(line, 7)->text().toUpper();
     if (trigger != "")
     {
         QStringList triggers = trigger.split(',');
@@ -735,15 +784,19 @@ void FrameSenderWindow::updateGridRow(int idx)
     FrameSendData *temp = &sendingData[idx];
     int gridLine = idx;
     QString dataString;
-    QTableWidgetItem *item = ui->tableSender->item(gridLine, 7);
+    QTableWidgetItem *item = ui->tableSender->item(gridLine, 9);
     if (item == NULL) item = new QTableWidgetItem();
     item->setText(QString::number(temp->count));
-    for (unsigned int i = 0; i < temp->len; i++)
-    {
-        dataString.append(Utility::formatNumber(temp->data[i]));
-        dataString.append(" ");
+    if (!temp->remote) {
+        for (unsigned int i = 0; i < temp->len; i++)
+        {
+            dataString.append(Utility::formatNumber(temp->data[i]));
+            dataString.append(" ");
+        }
+        ui->tableSender->item(gridLine, 6)->setText(dataString);
+    } else {
+        ui->tableSender->item(gridLine, 6)->setText("");
     }
-    ui->tableSender->item(gridLine, 4)->setText(dataString);
     inhibitChanged = false;
 }
 
@@ -759,6 +812,8 @@ void FrameSenderWindow::processCellChange(int line, int col)
     {
         FrameSendData tempData;
         tempData.enabled = false;
+        tempData.remote = false;
+        tempData.extended = false;
         sendingData.append(tempData);
     }
 
@@ -786,8 +841,12 @@ void FrameSenderWindow::processCellChange(int line, int col)
             if (tempVal < 1) tempVal = 1;
             if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
             sendingData[line].ID = tempVal;
-            if (sendingData[line].ID <= 0x7FF) sendingData[line].extended = false;
-            else sendingData[line].extended = true;
+            if (sendingData[line].ID > 0x7FF) {
+                sendingData[line].extended = true;
+                ui->tableSender->blockSignals(true);
+                ui->tableSender->item(line, 4)->setCheckState(Qt::Checked);
+                ui->tableSender->blockSignals(false);
+            }
             qDebug() << "setting ID to " << tempVal;
             break;
         case 3: //length field
@@ -796,19 +855,33 @@ void FrameSenderWindow::processCellChange(int line, int col)
             if (tempVal > 8) tempVal = 8;
             sendingData[line].len = tempVal;
             break;
-        case 4: //Data bytes
+        case 4: // Ext
+            if (ui->tableSender->item(line, 4)->checkState() == Qt::Checked) {
+                sendingData[line].extended = true;
+            } else {
+                sendingData[line].extended = false;
+            }
+            break;
+        case 5: // Rem
+            if (ui->tableSender->item(line, 5)->checkState() == Qt::Checked) {
+                sendingData[line].remote = true;
+            } else {
+                sendingData[line].remote = false;
+            }
+            break;
+        case 6: //Data bytes
             for (int i = 0; i < 8; i++) sendingData[line].data[i] = 0;
 
-            tokens = ui->tableSender->item(line, 4)->text().split(" ");
+            tokens = ui->tableSender->item(line, 6)->text().split(" ");
             for (int j = 0; j < tokens.count(); j++)
             {
                 sendingData[line].data[j] = (uint8_t)Utility::ParseStringToNum(tokens[j]);
             }
             break;
-        case 5: //triggers
+        case 7: //triggers
             processTriggerText(line);
             break;
-        case 6: //modifiers
+        case 8: //modifiers
             processModifierText(line);
             break;
     }

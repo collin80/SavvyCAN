@@ -132,6 +132,7 @@ void FuzzingWindow::changedNumDataBytes(int newVal)
 void FuzzingWindow::timerTriggered()
 {
     CANFrame thisFrame;
+    thisFrame.remote = false;
     sendingBuffer.clear();
     int buses = ui->cbBuses->currentIndex();
     for (int count = 0; count < ui->spinBurst->value(); count++)

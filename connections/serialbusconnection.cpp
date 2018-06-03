@@ -117,9 +117,13 @@ bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
     QCanBusFrame frame;
     frame.setFrameId(pFrame.ID);
     frame.setExtendedFrameFormat(pFrame.extended);
+    if (pFrame.remote) {
+        frame.setFrameType(QCanBusFrame::FrameType::RemoteRequestFrame);
+    } else {
+        frame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+    }
     frame.setPayload(QByteArray(reinterpret_cast<const char *>(pFrame.data),
                                 static_cast<int>(pFrame.len)));
-
     return mDev_p->writeFrame(frame);
 }
 
@@ -187,6 +191,7 @@ void SerialBusConnection::framesReceived()
             if(frame_p) {
                 frame_p->len           = static_cast<uint32_t>(recFrame.payload().length());
                 frame_p->bus           = 0;
+
                 if (recFrame.frameType() == QCanBusFrame::ErrorFrame) {
                     // Constants defined in include/uapi/linux/can/error.h
                     switch (recFrame.error()) {
@@ -226,6 +231,7 @@ void SerialBusConnection::framesReceived()
                     frame_p->ID            = recFrame.frameId();
                     memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
                 }
+              
                 frame_p->isReceived    = true;
                 if (useSystemTime) {
                     frame_p->timestamp = QDateTime::currentMSecsSinceEpoch() * 1000ul;
