@@ -29,6 +29,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    qRegisterMetaTypeStreamOperators<QVector<QString>>();
+    qRegisterMetaTypeStreamOperators<QVector<int>>();
 
     useHex = true;
 
