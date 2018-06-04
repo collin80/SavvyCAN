@@ -37,15 +37,15 @@ struct BLF_FILE_HEADER
 
 struct BLF_OBJ_HEADER
 {
-    uint32_t sig;
-    uint16_t headerSize;
-    uint16_t headerVersion;
-    uint32_t objSize;
-    uint32_t objType;
-    uint32_t flags;
-    uint16_t nothing;
-    uint16_t objVer;
-    uint64_t uncompSize;
+    uint32_t sig; //0 offset from start
+    uint16_t headerSize; //4
+    uint16_t headerVersion; //6
+    uint32_t objSize; //8
+    uint32_t objType; //12
+    uint32_t flags; //16
+    uint16_t nothing; //20
+    uint16_t objVer; //22
+    uint64_t uncompSize; //24
 }; //32 bytes
 
 struct BLF_OBJECT
