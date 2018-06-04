@@ -61,7 +61,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->spinBurstSpeed, SIGNAL(valueChanged(int)), this, SLOT(changeBurstRate(int)));
     //connect(ui->cbLoop, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(ui->comboCANBus, SIGNAL(currentIndexChanged(int)), this, SLOT(changeSendingBus(int)));
-    connect(ui->listID, &QListWidget::itemClicked, this, &FramePlaybackWindow::changeIDFiltering);
+    connect(ui->listID, &QListWidget::itemChanged, this, &FramePlaybackWindow::changeIDFiltering);
     connect(ui->btnLoadFile, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnLoadFile);
     connect(ui->btnLoadLive, &QAbstractButton::clicked, this, &FramePlaybackWindow::btnLoadLive);
     connect(ui->tblSequence, &QTableWidget::cellPressed, this, &FramePlaybackWindow::seqTableCellClicked);
@@ -95,6 +95,15 @@ void FramePlaybackWindow::showEvent(QShowEvent *)
 {
     readSettings();
     installEventFilter(this);
+    int numBuses = CANConManager::getInstance()->getNumBuses();
+    ui->comboCANBus->clear();
+    for (int n = 0; n < numBuses; n++) ui->comboCANBus->addItem(QString::number(n));
+    ui->comboCANBus->addItem(tr("All"));
+    ui->comboCANBus->addItem(tr("From File"));
+    ui->comboCANBus->setCurrentIndex(0);
+
+    playbackObject.initialize();
+    playbackObject.setNumBuses(numBuses);
 }
 
 void FramePlaybackWindow::closeEvent(QCloseEvent *event)
@@ -264,6 +273,9 @@ void FramePlaybackWindow::refreshIDList()
 
     ui->tblSequence->setCurrentCell(currentSeqNum, 0);
 
+    //this signal would otherwise be called constantly as we do this routine. Turn it off temporarily
+    disconnect(ui->listID, &QListWidget::itemChanged, this, &FramePlaybackWindow::changeIDFiltering);
+
     ui->listID->clear();
 
     QHash<int, bool>::Iterator filterIter;
@@ -276,6 +288,8 @@ void FramePlaybackWindow::refreshIDList()
     }
     //default is to sort in ascending order
     ui->listID->sortItems();
+
+    connect(ui->listID, &QListWidget::itemChanged, this, &FramePlaybackWindow::changeIDFiltering);
 }
 
 void FramePlaybackWindow::calculateWhichBus()
@@ -579,9 +593,9 @@ void FramePlaybackWindow::changeSendingBus(int newIdx)
 
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
 {
-    qDebug() << "Changed ID filter";
-    int ID = Utility::ParseStringToNum(item->text());
-    currentSeqItem->idFilters[ID] = item->checkState();
+    qDebug() << "Changed ID filter " << item->text() << " : " << item->checkState();
+    int ID = Utility::ParseStringToNum(item->text()); 
+    currentSeqItem->idFilters[ID] = (item->checkState() == Qt::Checked) ? true : false;
 }
 
 void FramePlaybackWindow::btnSelectAllClick()
