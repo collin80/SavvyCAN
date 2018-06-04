@@ -838,7 +838,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
             break;
         case 2: //ID field
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 2)->text());
-            if (tempVal < 1) tempVal = 1;
+            if (tempVal < 0) tempVal = 0;
             if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
             sendingData[line].ID = tempVal;
             if (sendingData[line].ID > 0x7FF) {
