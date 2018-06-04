@@ -194,7 +194,7 @@ void RangeStateWindow::refreshFilterList()
 
 void RangeStateWindow::recalcButton()
 {
-    QHash<int, bool>::iterator iter;
+    QMap<int, bool>::iterator iter;
     uint32_t id;
 
     ui->listCandidates->clear();
@@ -208,6 +208,8 @@ void RangeStateWindow::recalcButton()
     progress.setRange(0,0);
     progress.setMinimumDuration(0);
     progress.show();
+
+
 
     for (iter = idFilters.begin(); iter != idFilters.end(); ++iter)
     {
@@ -345,7 +347,7 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
     {
         //now look at the second order differentials. This is acceleration. There shouldn't be hard acceleration in values for a ranging signal
         comparisonValue = Utility::Lerp((double)range * 0.20, 1, lerpPoint);
-        maxOvers = maxOvers / 10;
+        maxOvers = Utility::Lerp(8, 2, lerpPoint); //really clamp down on second order over limits
         qDebug() << "2nd Delta comparisonvalue: " << comparisonValue;
         overValues = 0;
         for (i = 0; i < diff2.count(); i++)
