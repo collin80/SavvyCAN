@@ -229,7 +229,9 @@ void SerialBusConnection::framesReceived()
                 } else {
                     frame_p->extended      = recFrame.hasExtendedFrameFormat();
                     frame_p->ID            = recFrame.frameId();
+                    frame_p->remote        = (recFrame.frameType() == recFrame.RemoteRequestFrame);
                     memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
+                    frame_p->isReceived = true;
                 }
               
                 frame_p->isReceived    = true;
