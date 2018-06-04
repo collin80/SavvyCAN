@@ -161,7 +161,10 @@ MainWindow::MainWindow(QWidget *parent) :
     temp.ID = 0x100;
     temp.len = 0;
     model->addFrame(temp, true);
+    qApp->processEvents();
+    tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
     normalRowHeight = ui->canFramesView->rowHeight(0);
+    if (normalRowHeight == 0) normalRowHeight = 30; //should not be necessary but provides a sane number if something stupid happened.
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
 
@@ -172,10 +175,12 @@ MainWindow::MainWindow(QWidget *parent) :
     connectionWindow = new ConnectionWindow();
     connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 
+    //these either are unfinished/not working or are not for general use. But,they exist
+    //so if you want to enable them and play with them then go for it.
     ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
     ui->actionSignal_Viewer->setVisible(false);
-    ui->actionSingle_Multi_State_2->setVisible(false);
+    //ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
 }
