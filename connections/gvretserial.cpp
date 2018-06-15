@@ -8,7 +8,8 @@
 
 #include "gvretserial.h"
 
-GVRetSerial::GVRetSerial(QString portName) :
+GVRetSerial::GVRetSerial(QString portName, useTcp) :
+    useTcp(useTcp),
     CANConnection(portName, CANCon::GVRET_SERIAL, 3, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
@@ -284,7 +285,10 @@ void GVRetSerial::connectDevice()
         disconnectDevice();
 
     /* open new device */
-    if (getPort().contains('.')) //TCP/IP mode then since it looks like an IP address
+
+    // this does the wrong thing if the serial port has a '.' in the name
+    // if (getPort().contains('.')) //TCP/IP mode then since it looks like an IP address
+    if (useTcp)
     {
         qDebug() << "TCP Connection to a GVRET device";
         tcpClient = new QTcpSocket();
