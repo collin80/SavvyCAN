@@ -67,22 +67,12 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
     {
-        if ( frame.len*8 < (startBit+signalSize) )
-        {
-            result = 0;
-            return false;
-        }
         result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;
     }
     else if (valType == SP_FLOAT)
     {
-        if ( frame.len*8 < (startBit+32) )
-        {
-            result = 0;
-            return false;
-        }
         //The theory here is that we force the integer signal code to treat this as
         //a 32 bit unsigned integer. This integer is then cast into a float in such a way
         //that the bytes that make up the integer are instead treated as having made up
