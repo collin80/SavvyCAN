@@ -42,7 +42,7 @@ class GVRetSerial : public CANConnection
     Q_OBJECT
 
 public:
-    GVRetSerial(QString portName);
+    GVRetSerial(QString portName, bool useTcp);
     virtual ~GVRetSerial();
 
 protected:
@@ -82,6 +82,7 @@ protected:
     bool gotValidated;
     bool isAutoRestart;
     bool continuousTimeSync;
+    bool useTcp;
     QSerialPort *serial;
     QTcpSocket *tcpClient;
     int framesRapid;
