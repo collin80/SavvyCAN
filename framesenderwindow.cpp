@@ -832,7 +832,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
         case 1: //Bus designation
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 1)->text());
             if (tempVal < 0) tempVal = 0;
-            if (tempVal > 1) tempVal = 1;
+            if (tempVal > 2) tempVal = 2;
             sendingData[line].bus = tempVal;
             qDebug() << "Setting bus to " << tempVal;
             break;

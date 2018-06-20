@@ -145,10 +145,7 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
     {
         DBCFile *file = dbcHandler->getFileByIdx(row);
         int bus = ui->tableFiles->item(row, col)->text().toInt();
-        if (bus > -2 && bus < 2)
-        {
-            file->setAssocBus(bus);
-        }
+        file->setAssocBus(bus);
     }
     else if (col == 2)
     {

@@ -292,7 +292,7 @@ int DBCFile::getAssocBus()
 void DBCFile::setAssocBus(int bus)
 {
     if (bus < -1) return;
-    if (bus > 1) return;
+    if (bus > 2) return;
     assocBuses = bus;
 }
 
