@@ -240,6 +240,7 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CANFrame> *frames
         if (tokens.length() > 20)
         {
             thisFrame.bus = 0;
+            thisFrame.remote = false;
             tempTime = now;
             tempTime.addMSecs(tokens[1].toDouble() * 1000.0);
             thisFrame.timestamp = tempTime.toMSecsSinceEpoch() * 1000ul;
@@ -350,6 +351,7 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
                         else thisFrame.isReceived = true;
                     thisFrame.bus = 0;
                     thisFrame.len = tokens.length() - 3;
+                    thisFrame.remote = false;
                     for (unsigned int d = 0; d < thisFrame.len; d++)
                     {
                         if (tokens[d + 3] != "")
@@ -418,6 +420,7 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.ID = tokens[1].toInt(NULL, 16);
                 thisFrame.extended = (thisFrame.ID > 0x7FF);
                 thisFrame.isReceived = true;
+                thisFrame.remote = false;
                 thisFrame.bus = 0;
                 thisFrame.len = tokens[2].toInt(NULL, 16);
                 for (unsigned int d = 0; d < thisFrame.len; d++)
@@ -717,7 +720,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
 
-        line = inFile->readLine();
+        line = inFile->readLine().simplified();
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
@@ -737,6 +740,8 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.ID = tokens[1].toInt(NULL, 16);
                 if (tokens[2].toUpper().contains("TRUE")) thisFrame.extended = 1;
                     else thisFrame.extended = 0;
+
+                thisFrame.remote = false;
 
                 if (fileVersion == 1)
                 {
@@ -950,6 +955,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
             if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
             else thisFrame.extended  = false;
             thisFrame.bus = 0;
+            thisFrame.remote = false;
             QList<QByteArray> dataTok = tokens[1].split(' ');
             thisFrame.len = dataTok.length();
             if (thisFrame.len > 8) thisFrame.len = 8;
@@ -1240,6 +1246,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
 
                 thisFrame.isReceived = true;
                 thisFrame.bus = 0;
+                thisFrame.remote = false;
 
                 QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
                 thisFrame.len = dataToks.length();
@@ -1343,6 +1350,7 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
         thisFrame.bus = 0;
         thisFrame.isReceived = true;
         thisFrame.extended = false; //format is incapable of extended frames
+        thisFrame.remote = false;
 
         thisFrame.timestamp = 1000000ul * ((unsigned char)data[0] >> 2);
         thisFrame.timestamp += (((data[0] & 3) << 8) + (unsigned char)data[1]) * 1000;
@@ -1476,6 +1484,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
                         thisFrame.timestamp = timeStamp;
                         if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
                             else thisFrame.isReceived = false;
+                        thisFrame.remote = false;
                         thisFrame.ID = Utility::ParseStringToNum(tokens[2]);
                         if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
                             else thisFrame.extended = true;
@@ -1639,6 +1648,7 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
                     if (thisFrame.ID <= 0x7FF) thisFrame.extended = false;
                         else thisFrame.extended = true;
                     thisFrame.bus = 0;
+                    thisFrame.remote = false;
                     thisFrame.len = tokens[3].toUInt();
                     if (thisFrame.len > 8) thisFrame.len = 8;
                     QList<QByteArray> dataToks = tokens[4].split(' ');
@@ -1927,6 +1937,7 @@ bool FrameFileIO::loadKvaserFile(QString filename, QVector<CANFrame> *frames, bo
             thisFrame.ID = line.mid(4,10).simplified().toInt(NULL, base);
             if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
                 else thisFrame.extended = false;
+            thisFrame.remote = false;
             thisFrame.len = line.mid(21, 3).simplified().toInt();
             for (int i = 0; i < 8; i++) {
                 thisFrame.data[i] = line.mid(25 + i * 4, 3).simplified().toInt(NULL, base);
