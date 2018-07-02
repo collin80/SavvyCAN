@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QTcpSocket>
+#include <QUdpSocket>
 
 /*************/
 #include <QDateTime>
@@ -79,12 +80,13 @@ protected:
     QThread            mThread;
 
     bool doValidation;
-    bool gotValidated;
+    int validationCounter;
     bool isAutoRestart;
     bool continuousTimeSync;
     bool useTcp;
     QSerialPort *serial;
     QTcpSocket *tcpClient;
+    QUdpSocket *udpClient;
     int framesRapid;
     STATE rx_state;
     uint32_t rx_step;
