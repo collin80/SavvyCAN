@@ -21,7 +21,7 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     udpClient = NULL;
     rx_state = IDLE;
     rx_step = 0;
-    validationCounter = 4; //how many times we can miss validation before we die
+    validationCounter = 10; //how many times we can miss validation before we die
     isAutoRestart = false;
 
     timeBasis = 0;
@@ -302,14 +302,14 @@ void GVRetSerial::connectDevice()
     // if (getPort().contains('.')) //TCP/IP mode then since it looks like an IP address
     if (useTcp)
     {
-
+        // /*
         qDebug() << "TCP Connection to a GVRET device";
         tcpClient = new QTcpSocket();
         tcpClient->connectToHost(getPort(), 23);
         connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readSerialData()));
         connect(tcpClient, SIGNAL(connected()), this, SLOT(tcpConnected()));
         debugOutput("Created TCP Socket");
-
+        // */
         /*
         qDebug() << "UDP Connection to a GVRET device";
         udpClient = new QUdpSocket();
@@ -608,7 +608,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             rx_step = 0;
             break;
         case 9:
-            validationCounter++;
+            validationCounter = 10;
             //qDebug() << "Got validated";
             rx_state = IDLE;
             break;
