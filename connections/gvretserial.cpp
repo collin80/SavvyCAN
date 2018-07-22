@@ -23,6 +23,7 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     rx_step = 0;
     validationCounter = 10; //how many times we can miss validation before we die
     isAutoRestart = false;
+    espSerialMode = true;
 
     timeBasis = 0;
     lastSystemTimeBasis = 0;
@@ -298,8 +299,6 @@ void GVRetSerial::connectDevice()
 
     /* open new device */
 
-    // this does the wrong thing if the serial port has a '.' in the name
-    // if (getPort().contains('.')) //TCP/IP mode then since it looks like an IP address
     if (useTcp)
     {
         // /*
@@ -330,33 +329,44 @@ void GVRetSerial::connectDevice()
         }
         debugOutput("Created Serial Port Object");
 
-        /* configure */
-        serial->setDataBits(serial->Data8);
-        serial->setFlowControl(serial->HardwareControl); //this is important though
-        //serial->setFlowControl(serial->NoFlowControl);
-        serial->setBaudRate(1000000);
-        if (!serial->open(QIODevice::ReadWrite))
-        {
-            qDebug() << serial->errorString();
-        }
-        //serial->setDataTerminalReady(false); //you do need to set these or the fan gets dirty
-        //serial->setRequestToSend(false);
-        serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
-        serial->setRequestToSend(true);
-
-        debugOutput("Opened Serial Port");
         /* connect reading event */
         connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
         connect(serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(serialError(QSerialPort::SerialPortError)));
-    }
 
-    if (serial) tcpConnected(); //well, not a proper function name I guess...
+        /* configure */
+        serial->setDataBits(serial->Data8);
+
+        if (espSerialMode)
+        {
+            serial->setFlowControl(serial->NoFlowControl);
+            serial->setBaudRate(115200);
+            if (!serial->open(QIODevice::ReadWrite))
+            {
+                qDebug() << serial->errorString();
+            }
+            serial->setDataTerminalReady(false); //ESP32 uses these for bootloader selection and reset so turn them off
+            serial->setRequestToSend(false);
+            QTimer::singleShot(3000, this, SLOT(tcpConnected())); //give ESP32 some time as it probably rebooted
+        }
+        else
+        {
+            serial->setFlowControl(serial->HardwareControl); //this is important though
+            serial->setBaudRate(1000000);
+            if (!serial->open(QIODevice::ReadWrite))
+            {
+                qDebug() << serial->errorString();
+            }
+            serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
+            serial->setRequestToSend(true);
+            tcpConnected(); //well, not a proper function name I guess...
+        }
+    }
 }
 
 void GVRetSerial::tcpConnected()
 {
-    qDebug() << "Connected to GVRET Device!";
-    debugOutput("Connected to GVRET Device!");
+    qDebug() << "Connecting to GVRET Device!";
+    debugOutput("Connecting to GVRET Device!");
     QByteArray output;
     output.append((unsigned char)0xE7); //this puts the device into binary comm mode
     output.append((unsigned char)0xE7);
@@ -392,14 +402,8 @@ void GVRetSerial::tcpConnected()
 
     sendToSerial(output);
 
-    /* start timer */
-    connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
-    mTimer.setInterval(250); //tick four times per second
-    mTimer.setSingleShot(false); //keep ticking
-    mTimer.start();
-
     if(doValidation) {
-        QTimer::singleShot(1000, this, SLOT(connectionTimeout()));
+        QTimer::singleShot(5000, this, SLOT(connectionTimeout()));
     }
     else {
         setStatus(CANCon::CONNECTED);
@@ -503,7 +507,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
         killConnection = true;
         break;
     case QSerialPort::NotOpenError:
-        errMessage = "The serial port isn't open dummy";
+        errMessage = "The serial port isn't open";
         killConnection = true;
         break;
     }
@@ -526,13 +530,23 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
 void GVRetSerial::connectionTimeout()
 {
     //one second after trying to connect are we actually connected?
-    //if (CANCon::NOT_CONNECTED==getStatus()) //no?
-    if (validationCounter == 0)
+    if (CANCon::NOT_CONNECTED==getStatus()) //no?
     {
         //then emit the the failure signal and see if anyone cares
         qDebug() << "Failed to connect to GVRET at that com port";
 
+        //toggle the serial mode and try again
+        espSerialMode = !espSerialMode;
         disconnectDevice();
+        connectDevice();
+    }
+    else
+    {
+        /* start timer */
+        connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
+        mTimer.setInterval(250); //tick four times per second
+        mTimer.setSingleShot(false); //keep ticking
+        mTimer.start();
     }
 }
 
@@ -970,7 +984,7 @@ void GVRetSerial::handleTick()
     if( CANCon::CONNECTED == getStatus() )
     {
         if (doValidation) validationCounter--;
-        qDebug() << validationCounter;
+        //qDebug() << validationCounter;
         if (validationCounter == 0 && doValidation)
         {
             if (serial == NULL && tcpClient == NULL) return;

@@ -84,6 +84,7 @@ protected:
     bool isAutoRestart;
     bool continuousTimeSync;
     bool useTcp;
+    bool espSerialMode; //special serial mode for ESP32 based boards - no flow control and much slower serial baud speed
     QSerialPort *serial;
     QTcpSocket *tcpClient;
     QUdpSocket *udpClient;
