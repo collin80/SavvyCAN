@@ -342,11 +342,14 @@ void GVRetSerial::connectDevice()
             serial->setBaudRate(115200);
             if (!serial->open(QIODevice::ReadWrite))
             {
-                qDebug() << serial->errorString();
+                //qDebug() << serial->errorString();
             }
-            serial->setDataTerminalReady(false); //ESP32 uses these for bootloader selection and reset so turn them off
-            serial->setRequestToSend(false);
-            QTimer::singleShot(3000, this, SLOT(tcpConnected())); //give ESP32 some time as it probably rebooted
+            else
+            {
+                serial->setDataTerminalReady(false); //ESP32 uses these for bootloader selection and reset so turn them off
+                serial->setRequestToSend(false);
+                QTimer::singleShot(3000, this, SLOT(tcpConnected())); //give ESP32 some time as it probably rebooted
+            }
         }
         else
         {
@@ -354,11 +357,14 @@ void GVRetSerial::connectDevice()
             serial->setBaudRate(1000000);
             if (!serial->open(QIODevice::ReadWrite))
             {
-                qDebug() << serial->errorString();
+                //qDebug() << serial->errorString();
             }
-            serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
-            serial->setRequestToSend(true);
-            tcpConnected(); //well, not a proper function name I guess...
+            else
+            {
+                serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
+                serial->setRequestToSend(true);
+                tcpConnected(); //well, not a proper function name I guess...
+            }
         }
     }
 }
@@ -511,9 +517,13 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
         killConnection = true;
         break;
     }
-    serial->clearError();
-    serial->flush();
-    serial->close();
+    /*
+    if (serial)
+    {
+        serial->clearError();
+        serial->flush();
+        serial->close();
+    }*/
     if (errMessage.length() > 1)
     {
         qDebug() << errMessage;
