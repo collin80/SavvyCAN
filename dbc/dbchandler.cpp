@@ -347,6 +347,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         msg.name = match.captured(2);
         msg.len = match.captured(3).toInt();
         msg.sender = findNodeByName(match.captured(4));
+        if (!msg.sender) msg.sender = findNodeByIdx(0);
         messageHandler->addMessage(msg);
         msgPtr = messageHandler->findMsgByID(msg.ID);
     }
@@ -450,9 +451,12 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         if (match.captured(11 + offset).contains(','))
         {
             QString tmp = match.captured(11 + offset).split(',')[0];
-            sig.receiver = findNodeByName(tmp);
+            sig.receiver = findNodeByName(tmp);            
         }
         else sig.receiver = findNodeByName(match.captured(11 + offset));
+
+        if (!sig.receiver) sig.receiver = findNodeByIdx(0); //apply default if there was no match
+
         sig.parentMessage = msg;
         msg->sigHandler->addSignal(sig);
         if (isMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
