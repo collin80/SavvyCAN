@@ -410,7 +410,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         frames.append(tempFrame);
         if (filters[tempFrame.ID])
         {
-            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
+            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
             filteredFrames.append(tempFrame);
             if (autoRefresh) endInsertRows();
         }
@@ -432,7 +432,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
             frames.append(tempFrame);
             if (filters[tempFrame.ID])
             {
-                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
+                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }

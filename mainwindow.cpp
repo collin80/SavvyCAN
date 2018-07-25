@@ -160,6 +160,10 @@ MainWindow::MainWindow(QWidget *parent) :
     temp.bus = 0;
     temp.ID = 0x100;
     temp.len = 0;
+    temp.extended = false;
+    temp.isReceived = true;
+    temp.remote = false;
+    temp.timestamp = 100000000;
     model->addFrame(temp, true);
     qApp->processEvents();
     tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
