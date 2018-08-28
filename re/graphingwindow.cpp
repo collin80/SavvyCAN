@@ -695,7 +695,7 @@ void GraphingWindow::saveSpreadsheet()
         */
 
         QList<GraphParams>::iterator iter;
-        double xMin = 1000000000, xMax=-1000000000;
+        double xMin = 10000000000000, xMax=-10000000000000;
         int maxCount = 0;
         int numGraphs = 0;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
@@ -731,6 +731,7 @@ void GraphingWindow::saveSpreadsheet()
         for (int j = 1; j < (maxCount - 1); j++)
         {
             currentX = xMin + (j * sliceSize);
+            qDebug() << "X: " << currentX;
             outFile->write(QString::number(currentX).toUtf8());
             for (int k = 0; k < graphParams.count(); k++)
             {
@@ -763,9 +764,10 @@ void GraphingWindow::saveSpreadsheet()
                     double span = graphParams[k].x[indices[k] + 1] - graphParams[k].x[indices[k]];
                     double progress = (currentX - graphParams[k].x[indices[k]]) / span;
                     value = Utility::Lerp(graphParams[k].y[indices[k]], graphParams[k].y[indices[k] + 1], progress);
+                    qDebug() << "Span: " << span << " Prog: " << progress << " Value: " << value;
                 }
 
-                if (currentX >= graphParams[k].x[indices[k] + 1]) indices[k]++;
+                if (currentX >= graphParams[k].x[indices[k]]) indices[k]++;
 
                 outFile->putChar(',');
                 outFile->write(QString::number(value).toUtf8());
