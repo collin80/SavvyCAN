@@ -5,11 +5,11 @@
 
 using namespace CANCon;
 
-CANConnection* CanConFactory::create(type pType, QString pPortName)
+CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName)
 {
     switch(pType) {
-    case SOCKETCAN:
-        return new SerialBusConnection(pPortName);
+    case SERIALBUS:
+        return new SerialBusConnection(pPortName, pDriverName);
     case GVRET_SERIAL:
         return new GVRetSerial(pPortName, false);
     case REMOTE:

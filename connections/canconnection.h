@@ -19,13 +19,15 @@ protected:
     /**
      * @brief CANConnection constructor
      * @param pPort: string containing port name
+     * @param pDriver: string containing driver name - Really only used for SerialBus connections
      * @param pType: the type of connection @ref CANCon::type
      * @param pNumBuses: the number of buses the device has
      * @param pQueueLen: the length of the lock free queue to use
      * @param pUseThread: if set to true, object will be execute in a dedicated thread
      */
     CANConnection(QString pPort,
-                  CANCon::type pType,
+                  QString pDriver,
+                  CANCon::type pType,                  
                   int pNumBuses,
                   int pQueueLen,
                   bool pUseThread);
@@ -49,6 +51,13 @@ public:
      * @return returns the port name of the device
      */
     QString getPort();
+
+    /**
+     * @brief getDriver
+     * @return returns the name of the driver used for this device
+     */
+    QString getDriver();
+
 
     /**
      * @brief getQueue
@@ -294,6 +303,7 @@ protected:
 private:
     LFQueue<CANFrame>   mQueue;
     const QString       mPort;
+    const QString       mDriver;
     const CANCon::type  mType;
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;

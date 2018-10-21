@@ -152,7 +152,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     bool ret;
     if (!conn_p) return QVariant();
     ret = conn_p->getBusSettings(busId, bus);
-    bool isSocketCAN = (conn_p->getType() == CANCon::SOCKETCAN) ? true: false;
+    bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
 
     //qDebug() << "ConnP: " << conn_p << "  ret " << ret;
 
@@ -167,7 +167,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                 if (conn_p)
                     switch (conn_p->getType()) {
                         case CANCon::KVASER: return "KVASER";
-                        case CANCon::SOCKETCAN: return "SocketCAN";
+                        case CANCon::SERIALBUS: return "SerialBus";
                         case CANCon::GVRET_SERIAL: return "GVRET";
                         default: {}
                     }
