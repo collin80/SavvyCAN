@@ -96,7 +96,8 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     }*/
 
     //You cannot set the speed of a socketcan interface, it has to be set with console commands.
-    //mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
+    //But, you can probabaly set the speed of many of the other serialbus devices so go ahead and try
+    mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
 
     /* connect device */
     if (!mDev_p->connectDevice()) {

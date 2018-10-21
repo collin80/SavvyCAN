@@ -87,10 +87,11 @@ Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
     CANConnection *conn_p = getAtIdx(index.row(), busId);
     if (!conn_p) return Qt::ItemFlag::NoItemFlags;
 
-    //you can't set speed, single wire, or listen only on socketcan devices so
-    //detect if we're using GVRET where you can and turn that functionality on
-    bool editParams = false;
-    if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
+    //socketcan is limited for what you can set but the other serialbus
+    //devices should be able to set the stuff. For now let anyone try
+    //and the underlying drivers can do with them as they will
+    bool editParams = true;
+    //if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
 
     switch (Column(index.column()))
     {
