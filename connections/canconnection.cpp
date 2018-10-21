@@ -3,6 +3,7 @@
 #include "canconnection.h"
 
 CANConnection::CANConnection(QString pPort,
+                             QString pDriver,
                              CANCon::type pType,
                              int pNumBuses,
                              int pQueueLen,
@@ -10,6 +11,7 @@ CANConnection::CANConnection(QString pPort,
     mQueue(),
     mNumBuses(pNumBuses),
     mPort(pPort),
+    mDriver(pDriver),
     mType(pType),
     mIsCapSuspended(false),
     mStatus(CANCon::NOT_CONNECTED),
@@ -227,6 +229,10 @@ QString CANConnection::getPort() {
     return mPort;
 }
 
+QString CANConnection::getDriver()
+{
+    return mDriver;
+}
 
 LFQueue<CANFrame>& CANConnection::getQueue() {
     return mQueue;
