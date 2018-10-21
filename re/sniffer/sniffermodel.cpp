@@ -154,7 +154,7 @@ void SnifferModel::clear()
     endResetModel();
 }
 
-
+//Called from window with a timer (currently 200ms)
 void SnifferModel::refresh()
 {
     QMap<quint32, SnifferItem*>::iterator i;
