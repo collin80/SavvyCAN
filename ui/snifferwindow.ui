@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>602</width>
+    <width>710</width>
     <height>752</height>
    </rect>
   </property>
@@ -79,6 +79,27 @@
          </property>
          <property name="text">
           <string>Unnotch</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbNoExpire">
+         <property name="text">
+          <string>Never Expire IDs</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbMuteNotched">
+         <property name="text">
+          <string>Mute notched bits</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="cbFadeInactive">
+         <property name="text">
+          <string>Fade inactive bytes</string>
          </property>
         </widget>
        </item>

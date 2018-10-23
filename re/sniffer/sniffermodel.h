@@ -40,6 +40,13 @@ public:
     void refresh();
     void clear();
     void filter(fltType pType, int pId=0);
+    bool getNeverExpire();
+    bool getFadeInactive();
+    bool getMuteNotched();
+    void setNeverExpire(bool val);
+    void setFadeInactive(bool val);
+    void setMuteNotched(bool val);
+
 
 public slots:
     void update(CANConnection*, QVector<CANFrame>&);
@@ -53,6 +60,10 @@ private:
     QMap<quint32, SnifferItem*> mMap;
     QMap<quint32, SnifferItem*> mFilters;
     bool                        mFilter;
+    bool                        mNeverExpire;
+    bool                        mFadeInactive;
+    bool                        mMuteNotched;
+    quint32                     mTimeSequence;
 };
 
 #endif // SNIFFERMODEL_H

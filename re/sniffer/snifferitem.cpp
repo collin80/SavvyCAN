@@ -4,14 +4,17 @@
 
 
 SnifferItem::SnifferItem(const CANFrame& pFrame):
-    mNotch(0),
     mID(pFrame.ID)
 {
-    mMarker = {0,0};
-    mLastMarker = {0,0};
+    for (int i = 0; i < 8; i++) {
+        mNotch[i] =0;
+        mMarker.data[i] = 0;
+        mMarker.dataTimestamp[i] = 0;
+    }
+    mLastMarker = mMarker;
     /* that's dirty */
-    update(pFrame);
-    update(pFrame);
+    update(pFrame, 0);
+    update(pFrame, 0);
 }
 
 
@@ -33,7 +36,12 @@ float SnifferItem::getDelta() const
 //Get a data byte by index 0-7 (but not more than the length of the actual frame)
 int SnifferItem::getData(uchar i) const
 {
-    return (i >= mCurrent.len) ? -1 : ((uchar*) &mCurrent.data)[i];
+    return (i >= mCurrent.len) ? -1 : mCurrent.data[i];
+}
+
+quint32 SnifferItem::getDataTimestamp(uchar i) const
+{
+    return (i >= mCurrent.len) ? 0 : mCurrent.dataTimestamp[i];
 }
 
 //Return whether a given data byte (by index 0-7) has incremented, deincremented, or stayed the same
@@ -45,10 +53,10 @@ dc SnifferItem::dataChange(uchar i) const
 {
     if (i >= mCurrent.len) return dc::NO;
 
-    uchar notch = ((uchar*) &mNotch)[i];
-    uchar byt = ((uchar*) &mCurrent.data)[i];
-    uchar last = ((uchar*) &mLast.data)[i];
-    uchar lastMark = ((uchar*) &mLastMarker.data)[i];
+    uchar notch = mNotch[i];
+    uchar byt = mCurrent.data[i];
+    uchar last = mLast.data[i];
+    uchar lastMark = mLastMarker.data[i];
     if( lastMark )
     {
         if (!notch) //if no notching is set
@@ -66,27 +74,36 @@ dc SnifferItem::dataChange(uchar i) const
     return dc::NO;
 }
 
+
+
 int SnifferItem::elapsed() const
 {
     return mTime.elapsed();
 }
 
 //called when a new frame comes in that matches our same ID
-void SnifferItem::update(const CANFrame& pFrame)
+void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq)
 {
     /* copy current to last */
     mLast = mCurrent;
     mLastTime = mCurrentTime;
 
     /* copy new value */
-    memcpy(&mCurrent.data, pFrame.data, 8);
+    for (int i = 0; i < 8; i++)
+    {
+        if (mCurrent.data[i] != pFrame.data[i])
+        {
+            mCurrent.data[i] = pFrame.data[i];
+            mCurrent.dataTimestamp[i] = timeSeq;
+        }
+    }
     mCurrent.len = pFrame.len;
     mCurrentTime = pFrame.timestamp;
 
     /* update marker */
     //We "OR" our stored marker with the changed bits.
     //this accumulates changed bits into the marker
-    mMarker.data |= mLast.data ^ mCurrent.data; //XOR causes only changed bits to be 1's
+    for (int i = 0 ; i < 8; i++) mMarker.data[i] |= mLast.data[i] ^ mCurrent.data[i]; //XOR causes only changed bits to be 1's
     mMarker.len  |= mLast.len ^ mCurrent.len;
 
     /* restart timeout */
@@ -98,14 +115,17 @@ void SnifferItem::update(const CANFrame& pFrame)
 void SnifferItem::updateMarker()
 {
     mLastMarker = mMarker;
-    mMarker = {0, 0};
+    for (int i = 0; i < 8; i++) mMarker.data[i] = 0;
 }
 
 //Notch or un-notch this snifferitem / frame
 void SnifferItem::notch(bool pNotch)
 {
     if(pNotch)
-        mNotch |= mLastMarker.data; //add changed bits to notch value
+    {
+        for (int i = 0; i < 8; i++) mNotch[i] |= mLastMarker.data[i]; //add changed bits to notch value
+    }
+
     else
-        mNotch = 0;
+        for (int i = 0; i < 8; i++) mNotch[i] = 0;
 }
