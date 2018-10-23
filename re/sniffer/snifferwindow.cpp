@@ -37,6 +37,9 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     connect(&mModel, &SnifferModel::idChange, this, &SnifferWindow::idChange);
     connect(ui->listWidget, &QListWidget::itemChanged, this, &SnifferWindow::itemChanged);
 
+    connect(ui->cbFadeInactive, &QCheckBox::stateChanged, this, [this](int val){mModel.setFadeInactive(val);});
+    connect(ui->cbMuteNotched, &QCheckBox::stateChanged, this, [this](int val){mModel.setMuteNotched(val);});
+    connect(ui->cbNoExpire, &QCheckBox::stateChanged, this, [this](int val){mModel.setNeverExpire(val);});
 }
 
 SnifferWindow::~SnifferWindow()
