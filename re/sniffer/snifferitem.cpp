@@ -16,8 +16,8 @@ SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
     mLastMarker = mMarker;
     mCurrent.len = pFrame.len;
     /* that's dirty */
-    update(pFrame, seq);
-    update(pFrame, seq);
+    update(pFrame, seq, false);
+    update(pFrame, seq, false);
 }
 
 
@@ -85,8 +85,12 @@ int SnifferItem::elapsed() const
 }
 
 //called when a new frame comes in that matches our same ID
-void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq)
+//timeSeq is stored so we can figure out the last time a specific byte was updated
+//mute is used to specify whether to mask the byte against the notching filter
+//in order to hide any updates of the notched bits. This is toggleable
+void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
 {
+    unsigned char maskedCurr, maskedData;
     //qDebug() << "update with ts: " << timeSeq;
     /* copy current to last */
     mLast = mCurrent;
@@ -95,7 +99,11 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq)
     /* copy new value */
     for (int i = 0; i < 8; i++)
     {
-        if (mCurrent.data[i] != pFrame.data[i])
+        maskedData = pFrame.data[i];
+        if (mute) maskedData &= ~mNotch[i];
+        maskedCurr = mCurrent.data[i];
+        if (mute) maskedCurr &= ~mNotch[i];
+        if (maskedCurr != maskedData)
         {
             mCurrent.data[i] = pFrame.data[i];
             mCurrent.dataTimestamp[i] = timeSeq;

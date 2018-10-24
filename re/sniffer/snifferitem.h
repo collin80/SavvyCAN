@@ -32,7 +32,7 @@ public:
     quint32 getDataTimestamp(uchar i) const;
     dc dataChange(uchar) const;
     int elapsed() const;
-    void update(const CANFrame& pFrame, quint32 timeSeq);
+    void update(const CANFrame& pFrame, quint32 timeSeq, bool mute);
     void updateMarker();
     void notch(bool);
 
