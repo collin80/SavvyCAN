@@ -23,7 +23,7 @@ enum dc
 class SnifferItem
 {
 public:
-    explicit SnifferItem(const CANFrame& pFrame);
+    explicit SnifferItem(const CANFrame& pFrame, quint32 seq);
     virtual ~SnifferItem();
 
     quint64 getId() const;
