@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <QHelpCollectionProject version="1.0">
     <assistant>
-        <title>SavvyCAN 181 documentation</title>
-        <homePage>qthelp://org.sphinx.savvycan.181/doc/index.html</homePage>
-        <startPage>qthelp://org.sphinx.savvycan.181/doc/index.html</startPage>
+        <title>SavvyCAN 189 documentation</title>
+        <homePage>qthelp://org.sphinx.savvycan.189/doc/index.html</homePage>
+        <startPage>qthelp://org.sphinx.savvycan.189/doc/index.html</startPage>
     </assistant>
     <docFiles>
         <generate>
