@@ -3,18 +3,21 @@
 #include "snifferitem.h"
 
 
-SnifferItem::SnifferItem(const CANFrame& pFrame):
+SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
     mID(pFrame.ID)
 {
     for (int i = 0; i < 8; i++) {
         mNotch[i] =0;
         mMarker.data[i] = 0;
         mMarker.dataTimestamp[i] = 0;
+        mCurrent.data[i] = pFrame.data[i];
+        mCurrent.dataTimestamp[i] = seq;
     }
     mLastMarker = mMarker;
+    mCurrent.len = pFrame.len;
     /* that's dirty */
-    update(pFrame, 0);
-    update(pFrame, 0);
+    update(pFrame, seq);
+    update(pFrame, seq);
 }
 
 
@@ -84,6 +87,7 @@ int SnifferItem::elapsed() const
 //called when a new frame comes in that matches our same ID
 void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq)
 {
+    //qDebug() << "update with ts: " << timeSeq;
     /* copy current to last */
     mLast = mCurrent;
     mLastTime = mCurrentTime;
