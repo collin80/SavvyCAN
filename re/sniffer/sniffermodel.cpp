@@ -284,14 +284,14 @@ void SnifferModel::update(CANConnection*, QVector<CANFrame>& pFrames)
             /* add the frame */
             beginInsertRows(QModelIndex(), index, index);
             mMap[frame.ID] = new SnifferItem(frame, mTimeSequence);
-            mMap[frame.ID]->update(frame, mTimeSequence);
+            mMap[frame.ID]->update(frame, mTimeSequence, mMuteNotched);
             endInsertRows();
 
             emit idChange(frame.ID, true);
         }
         else
             //updateData
-            mMap[frame.ID]->update(frame, mTimeSequence);
+            mMap[frame.ID]->update(frame, mTimeSequence, mMuteNotched);
     }
 }
 

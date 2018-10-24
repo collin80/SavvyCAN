@@ -129,7 +129,10 @@ void SnifferWindow::idChange(int pId, bool pAdd)
         QString text = QString("0x") + QString("%1").arg(pId, 3, 16, QLatin1Char('0')).toUpper();
         item = new QListWidgetItem(text);
         item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable);
-        item->setCheckState(mFilter ? Qt::Unchecked : Qt::Checked);
+        //item->setCheckState(mFilter ? Qt::Unchecked : Qt::Checked);
+        //always check new IDs now. Otherwise any that expire then come back will not be selected
+        //and that might be a bigger issue than defaulting them unselected.
+        item->setCheckState(Qt::Checked);
         ui->listWidget->addItem(item);
         mMap[pId] = item;
     }
