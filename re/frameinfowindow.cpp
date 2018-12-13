@@ -4,6 +4,10 @@
 #include "helpwindow.h"
 #include <QtDebug>
 
+const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
+                                                    Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
+QPen FrameInfoWindow::bytePens[8];
+
 FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FrameInfoWindow)
@@ -31,19 +35,40 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     ui->graphHistogram->legend->setVisible(false);
 
+    ui->graphBytes->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                    QCP::iSelectLegend | QCP::iSelectPlottables);
+
+    ui->graphBytes->xAxis->setRange(0, 63);
+    ui->graphBytes->yAxis->setRange(0, 265);
+    ui->graphBytes->axisRect()->setupFullAxesBox();
+
+    ui->graphBytes->xAxis->setLabel("Time");
+    ui->graphBytes->yAxis->setLabel("Value");
+
+    ui->graphBytes->legend->setVisible(false);
+
     if (useOpenGL)
     {
         ui->graphHistogram->setAntialiasedElements(QCP::aeAll);
-        //ui->graphingView->setNoAntialiasingOnDrag(true);
         ui->graphHistogram->setOpenGl(true);
+        ui->graphBytes->setAntialiasedElements(QCP::aeAll);
+        ui->graphBytes->setOpenGl(true);
     }
     else
     {
         ui->graphHistogram->setOpenGl(false);
         ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
+        ui->graphBytes->setOpenGl(false);
+        ui->graphBytes->setAntialiasedElements(QCP::aeNone);
     }
 
     installEventFilter(this);
+
+    for (int i = 0; i < 8; i++)
+    {
+        bytePens[i].setColor(byteGraphColors[i]);
+        bytePens[i].setWidth(1);
+    }
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -93,7 +118,7 @@ void FrameInfoWindow::readSettings()
     QSettings settings;
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
-        resize(settings.value("FrameInfo/WindowSize", QSize(794, 494)).toSize());
+        resize(settings.value("FrameInfo/WindowSize", QSize(794, 694)).toSize());
         move(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint());
     }
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
@@ -187,7 +212,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int maxData[8];
     int dataHistogram[256][8];
     int bitfieldHistogram[64];
-    QVector<double> graphX, graphY;
+    QVector<double> histGraphX, histGraphY;
+    QVector<double> byteGraphX, byteGraphY[8];
     double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
@@ -247,7 +273,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PGN: ") + Utility::formatNumber(jid.pgn));
+            tempItem->setText(0, tr("PGN: ") + Utility::formatNumber(jid.pgn) + "(" + QString::number(jid.pgn) + ")");
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
@@ -286,6 +312,12 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
+            byteGraphX.append(j);
+            for (int bytcnt = 0; bytcnt < frameCache[j].len; bytcnt++)
+            {
+                byteGraphY[bytcnt].append(frameCache[j].data[bytcnt]);
+            }
+
             if (j != 0)
             {
                 thisInterval = (frameCache[j].timestamp - frameCache[j-1].timestamp);
@@ -380,16 +412,17 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                             + QString::number(c % 8) + ") :" + QString::number(bitfieldHistogram[c]));
 
             dataBase->addChild(tempItem);
-            graphX.append(c);
-            graphY.append(bitfieldHistogram[c]);
+            histGraphX.append(c);
+            histGraphY.append(bitfieldHistogram[c]);
             if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
         }
         baseNode->addChild(dataBase);
 
         ui->treeDetails->insertTopLevelItem(0, baseNode);
+
         ui->graphHistogram->clearGraphs();
         ui->graphHistogram->addGraph();
-        ui->graphHistogram->graph()->setData(graphX, graphY);
+        ui->graphHistogram->graph()->setData(histGraphX, histGraphY);
         ui->graphHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
         QBrush graphBrush;
         graphBrush.setColor(Qt::red);
@@ -399,6 +432,16 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->graphHistogram->yAxis->setRange(0, maxY * 1.02);
         ui->graphHistogram->axisRect()->setupFullAxesBox();
         ui->graphHistogram->replot();
+
+        ui->graphBytes->clearGraphs();
+        for (int graphs = 0; graphs < 8; graphs++)
+        {
+            ui->graphBytes->addGraph();
+            ui->graphBytes->graph()->setData(byteGraphX, byteGraphY[graphs]);
+            ui->graphBytes->graph()->setPen(bytePens[graphs]);
+        }
+        ui->graphBytes->xAxis->setRange(0, byteGraphX.count());
+        ui->graphBytes->replot();
     }
     else
     {
