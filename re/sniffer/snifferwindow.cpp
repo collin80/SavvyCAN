@@ -4,6 +4,7 @@
 #include "ui_snifferwindow.h"
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
+#include "SnifferDelegate.h"
 
 SnifferWindow::SnifferWindow(QWidget *parent) :
     QDialog(parent),
@@ -19,8 +20,10 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     ui->treeView->setColumnWidth(tc::ID, 50);
     ui->treeView->setColumnWidth(tc::LAST, 1);
     for(int i=tc::DATA_0 ; i<=tc::DATA_7 ; i++)
-        ui->treeView->setColumnWidth(i, 30);
+        ui->treeView->setColumnWidth(i, 95);
+    ui->treeView->setUniformRowHeights(true);
     ui->treeView->header()->setDefaultAlignment(Qt::AlignCenter);
+    ui->treeView->setItemDelegate(new SnifferDelegate());
 
     /* activate sorting */
     ui->listWidget->setSortingEnabled(true);

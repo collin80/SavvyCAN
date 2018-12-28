@@ -1,7 +1,7 @@
 #include <QDebug>
 #include "sniffermodel.h"
 #include "snifferwindow.h"
-
+#include "SnifferDelegate.h"
 
 SnifferModel::SnifferModel(QObject *parent)
     : QAbstractItemModel(parent),
@@ -60,8 +60,10 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             if(tc::DATA_0<=col && col <=tc::DATA_7)
             {
                 int data = item->getData(col-tc::DATA_0);
-                if(data>=0)
+                if(data >= 0)
+                {
                     return QString("%1").arg(data, 2, 16, QLatin1Char('0')).toUpper();
+                }
             }
             break;
         }
