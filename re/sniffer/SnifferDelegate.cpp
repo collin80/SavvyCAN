@@ -8,9 +8,9 @@ SnifferDelegate::SnifferDelegate(QWidget *parent) : QItemDelegate(parent)
 {
     blackBrush = QBrush(Qt::black);
     whiteBrush = QBrush(Qt::white);
-    //redBrush = QBrush(Qt::red);
-    //greenBrush = QBrush(Qt::green);
-    //grayBrush = QBrush(QColor(230,230,230));
+    redBrush = QBrush(Qt::red);
+    greenBrush = QBrush(Qt::green);
+    grayBrush = QBrush(QColor(230,230,230));
     mainFont.setPointSize(10);
     mainFontInfo = new QFontInfo(mainFont);
 }
@@ -29,7 +29,11 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
     int x, y;
     SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
-    int val = item->getData(index.column() - 2);
+    int idx = index.column() - 2;
+    int val = item->getData(idx);
+    int prevVal = item->getLastData(idx);
+    int notchPattern = item->getNotchPattern(idx);
+    int maskPattern;
     if (val < 0) return;
 
     QRect viewport = option.rect;
@@ -40,23 +44,50 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     //qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
 
     int xSector = xSpan / 8;
-
-    painter->setPen(QPen(Qt::black));
-    painter->setFont(mainFont);
+    int v = item->getSeqInterval(index.column() - 2) * 10;
+    if (v > 225) v = 225;
+    if (v < 0) v = 0;
 
     for (x = 0; x < 8; x++)
     {
-        if (val & (1 << x))
+        maskPattern = 1 << (7-x);
+        //We look to see if each bit has changed since the last update or not. If not we
+        //straight draw it black if set or white if unset. If it changed then draw it green if it is newly set
+        //and red if newly unset
+        //But also, if a bit is notched we just plain draw it gray no matter what it's doing
+        if (notchPattern & maskPattern)
         {
-            painter->setBrush(blackBrush);
+            painter->setBrush(grayBrush);
         }
-        else
+        else if ( (val & maskPattern) == (prevVal & maskPattern) ) //wasn't notched so has it changed? No? Then...
         {
-            painter->setBrush(whiteBrush);
+            if (val & maskPattern)
+            {
+                painter->setBrush(blackBrush);
+            }
+            else
+            {
+                painter->setBrush(whiteBrush);
+            }
         }
+        else //wasn't notched and did change since last time.
+        {
+            if (val & maskPattern)
+            {
+                painter->setBrush(greenBrush);
+            }
+            else
+            {
+                painter->setBrush(redBrush);
+            }
+        }
+        painter->setOpacity((255 - v) / 255.0);
         painter->drawRect(viewport.left() + x * xSector, viewport.top(), xSector, xSector);
     }
 
+    //painter->setPen(QPen(QColor(v,v,v,255)));
+    painter->setPen(Qt::black);
+    painter->setFont(mainFont);
     painter->drawText(QRect(viewport.left(), viewport.top() + xSector, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber(val));
 }
 
