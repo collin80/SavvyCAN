@@ -70,7 +70,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
         case Qt::ForegroundRole:
         {
             if (!mFadeInactive ||  col < 2) return QBrush(Qt::black);
-            int v = (mTimeSequence - item->getDataTimestamp(col - 2)) * 10;
+            int v = item->getSeqInterval(col - 2) * 10;
             //qDebug() << "mTS: " << mTimeSequence << " gDT(" << (col - 2) << ") " << item->getDataTimestamp(col - 2);
             if (v > 225) v = 225;
             if (v < 0) v = 0;

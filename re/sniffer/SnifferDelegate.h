@@ -16,7 +16,7 @@ signals:
 public slots:
 
 private:
-    QBrush blackBrush, whiteBrush;//, redBrush, greenBrush, grayBrush;
+    QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
     QFont mainFont;
     QFontInfo* mainFontInfo;
 };

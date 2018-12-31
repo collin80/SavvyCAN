@@ -29,7 +29,10 @@ public:
     quint64 getId() const;
     float getDelta() const;
     int getData(uchar i) const;
+    quint8 getNotchPattern(uchar i) const;
+    quint8 getLastData(uchar i) const;
     quint32 getDataTimestamp(uchar i) const;
+    quint32 getSeqInterval(uchar i) const;
     dc dataChange(uchar) const;
     int elapsed() const;
     void update(const CANFrame& pFrame, quint32 timeSeq, bool mute);
@@ -45,6 +48,7 @@ private:
     quint8          mNotch[8];
     quint64         mLastTime;
     quint64         mCurrentTime;
+    quint64         mCurrSeqVal;
 
     QTime           mTime;
 };

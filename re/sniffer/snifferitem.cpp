@@ -42,9 +42,24 @@ int SnifferItem::getData(uchar i) const
     return (i >= mCurrent.len) ? -1 : mCurrent.data[i];
 }
 
+quint8 SnifferItem::getNotchPattern(uchar i) const
+{
+    return (i >= mCurrent.len) ? -1 : mNotch[i];
+}
+
+quint8 SnifferItem::getLastData(uchar i) const
+{
+    return (i >= mLast.len) ? -1 : mLast.data[i];
+}
+
 quint32 SnifferItem::getDataTimestamp(uchar i) const
 {
     return (i >= mCurrent.len) ? 0 : mCurrent.dataTimestamp[i];
+}
+
+quint32 SnifferItem::getSeqInterval(uchar i) const
+{
+    return mCurrSeqVal - getDataTimestamp(i);
 }
 
 //Return whether a given data byte (by index 0-7) has incremented, deincremented, or stayed the same
@@ -95,6 +110,7 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
     /* copy current to last */
     mLast = mCurrent;
     mLastTime = mCurrentTime;
+    mCurrSeqVal = timeSeq;
 
     /* copy new value */
     for (int i = 0; i < 8; i++)
