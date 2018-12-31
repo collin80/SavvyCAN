@@ -296,9 +296,14 @@ void FramePlaybackWindow::calculateWhichBus()
 {
     int idx = ui->comboCANBus->currentIndex();
     int maxIdx = ui->comboCANBus->count() - 1;
+    if (maxIdx == 0) maxIdx = 2;
     int out = idx;
+
+    qDebug() << idx << "***" << maxIdx;
+
     if (idx == (maxIdx - 1) ) out = -1;
     if (idx == maxIdx) out = -2;
+    if (idx < 0) out = 0;
 
     playbackObject.setSendingBus(out);
 }
