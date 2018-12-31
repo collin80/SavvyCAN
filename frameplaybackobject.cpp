@@ -12,7 +12,7 @@ FramePlaybackObject::FramePlaybackObject()
     playbackActive = false;
     playbackForward = true;
     useOrigTiming = false;
-    whichBusSend = -1;
+    whichBusSend = 0;
 }
 
 FramePlaybackObject::~FramePlaybackObject()
@@ -289,6 +289,7 @@ void FramePlaybackObject::setUseOriginalTiming(bool state)
 
 void FramePlaybackObject::setSendingBus(int bus)
 {
+    qDebug() << "Setting sending bus to " << bus;
     whichBusSend = bus;
 }
 
