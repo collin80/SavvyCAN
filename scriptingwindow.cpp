@@ -13,6 +13,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui(new Ui::ScriptingWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     editor = new JSEdit();
     editor->setFrameShape(JSEdit::NoFrame);
