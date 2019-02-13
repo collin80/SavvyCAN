@@ -9,6 +9,7 @@ RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *par
     ui(new Ui::RangeStateWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
 
@@ -225,7 +226,7 @@ void RangeStateWindow::recalcButton()
                 if (modelFrames->at(j).ID == id) frameCache.append(modelFrames->at(j));
             }
             //now we've got a list with all the same ID. Time to send it off for processing
-            signalsFactory();            
+            signalsFactory();
         }
     }
 

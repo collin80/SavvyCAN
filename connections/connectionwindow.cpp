@@ -14,6 +14,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui(new Ui::ConnectionWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     QSettings settings;
 

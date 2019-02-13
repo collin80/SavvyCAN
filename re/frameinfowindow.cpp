@@ -9,6 +9,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui(new Ui::FrameInfoWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     readSettings();
 

@@ -13,6 +13,7 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     mFilter(false)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
     ui->treeView->setModel(&mModel);
 
     /* set column width */

@@ -8,6 +8,7 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     ui(new Ui::FileComparatorWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     connect(ui->btnInterestedFile, SIGNAL(clicked(bool)), this, SLOT(loadInterestedFile()));
     connect(ui->btnLoadRefFile, SIGNAL(clicked(bool)), this, SLOT(loadReferenceFile()));
@@ -167,8 +168,8 @@ void FileComparatorWindow::calculateDetails()
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
             interestedIDs.insert(frame.ID, *newData);
-        }        
-    }    
+        }
+    }
 
     for (int x = 0; x < referenceFrames.count(); x++)
     {
@@ -227,7 +228,7 @@ void FileComparatorWindow::calculateDetails()
         {
             interestedHadUnique = false;
             sharedItem = new QTreeWidgetItem();
-            sharedItem->setText(0, Utility::formatHexNum(keyone));            
+            sharedItem->setText(0, Utility::formatHexNum(keyone));
             //if the ID was in both files then we can use the data accumulated above in bitmap
             //and values to figure out what has changed between the two files
 
