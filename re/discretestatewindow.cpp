@@ -8,6 +8,7 @@ DiscreteStateWindow::DiscreteStateWindow(const QVector<CANFrame> *frames, QWidge
     ui(new Ui::DiscreteStateWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
     operatingState = DWStates::IDLE;

@@ -9,6 +9,7 @@ HelpWindow::HelpWindow(QWidget *parent) :
     ui(new Ui::HelpWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     m_helpEngine = new QHelpEngineCore(QApplication::applicationDirPath() +"/SavvyCAN.qhc", this);
     if (!m_helpEngine->setupData()) {

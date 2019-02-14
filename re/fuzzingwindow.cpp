@@ -11,6 +11,7 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     ui(new Ui::FuzzingWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
 
@@ -185,7 +186,7 @@ void FuzzingWindow::setAllFilters()
 void FuzzingWindow::calcNextID()
 {
     if (seqIDScan)
-    {        
+    {
         if (rangeIDSelect)
         {
             currentID++;
@@ -368,7 +369,7 @@ void FuzzingWindow::refreshIDList()
 
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
-    {        
+    {
         CANFrame thisFrame = modelFrames->at(i);
         id = thisFrame.ID;
         if (!foundIDs.contains(id))
