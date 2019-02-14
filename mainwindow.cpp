@@ -470,7 +470,7 @@ void MainWindow::tickGUIUpdate()
             framesPerSec = 0;
 
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
-        if (allowCapture && ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
         ui->lbFPS->setText(QString::number(framesPerSec));
         if (rxFrames > 0)
         {

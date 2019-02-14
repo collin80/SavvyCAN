@@ -231,6 +231,7 @@ void FramePlaybackObject::stepPlaybackForward()
     playbackActive = false;
     updatePosition(true);
     CANConManager::getInstance()->sendFrames(sendingBuffer);
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::stepPlaybackBackward()
@@ -248,6 +249,7 @@ void FramePlaybackObject::stepPlaybackBackward()
 
     updatePosition(false);
     CANConManager::getInstance()->sendFrames(sendingBuffer);
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::stopPlayback()
@@ -262,6 +264,7 @@ void FramePlaybackObject::stopPlayback()
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
     currentPosition = 0;
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::pausePlayback()
@@ -275,6 +278,7 @@ void FramePlaybackObject::pausePlayback()
 
     playbackActive = false;
     playbackTimer->stop();
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::setSequenceObject(SequenceItem *item)
