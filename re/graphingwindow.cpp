@@ -10,6 +10,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui(new Ui::GraphingWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     readSettings();
 
