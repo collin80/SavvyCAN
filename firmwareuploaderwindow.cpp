@@ -8,7 +8,8 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
     QDialog(parent),
     ui(new Ui::FirmwareUploaderWindow)
 {
-    ui->setupUi(this);    
+    ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     transferInProgress = false;
     startedProcess = false;
@@ -25,7 +26,7 @@ FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, 
     updateProgress();
 
     timer = new QTimer();
-    timer->setInterval(100); //100ms without a reply will cause us to attempt a resend    
+    timer->setInterval(100); //100ms without a reply will cause us to attempt a resend
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnLoadFile, SIGNAL(clicked(bool)), this, SLOT(handleLoadFile()));
@@ -136,7 +137,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     output->data[4] = firmwareData[firmwareLocation++];
     output->data[5] = firmwareData[firmwareLocation++];
     for (int i = 0; i < 6; i++) xorByte = xorByte ^ output->data[i];
-    output->data[6] = xorByte;    
+    output->data[6] = xorByte;
     sendCANFrame(output);
     timer->start();
 }
@@ -162,7 +163,7 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
     if (startedProcess) //start the process
     {
         ui->progressBar->setValue(0);
-        ui->btnStartStop->setText("Stop Upload");        
+        ui->btnStartStop->setText("Stop Upload");
         token = Utility::ParseStringToNum(ui->txtToken->text());
         bus = ui->spinBus->value();
         baseAddress = Utility::ParseStringToNum(ui->txtBaseAddr->text());

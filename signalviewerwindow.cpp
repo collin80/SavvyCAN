@@ -7,10 +7,11 @@ SignalViewerWindow::SignalViewerWindow(QWidget *parent) :
     ui(new Ui::SignalViewerWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     QStringList headers;
     headers << "Signal" << "Value";
-    ui->tableViewer->setHorizontalHeaderLabels(headers);    
+    ui->tableViewer->setHorizontalHeaderLabels(headers);
     ui->tableViewer->setColumnWidth(0, 150);
     ui->tableViewer->setColumnWidth(1, 300);
     QHeaderView *HorzHdr = ui->tableViewer->horizontalHeader();
