@@ -41,7 +41,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->lineSend->setEnabled(false);
 
     /* load connection configuration */
-    loadConnections();
+    //loadConnections();
 
     ui->rbSocketCAN->setEnabled(isSerialBusAvailable());
 

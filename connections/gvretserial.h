@@ -65,7 +65,7 @@ private slots:
     void connectionTimeout();
     void readSerialData();
     void serialError(QSerialPort::SerialPortError err);
-    void tcpConnected();
+    void deviceConnected();
     void handleTick();
 
 private:
