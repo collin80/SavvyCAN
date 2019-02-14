@@ -12,6 +12,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui(new Ui::FlowViewWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     readSettings();
 

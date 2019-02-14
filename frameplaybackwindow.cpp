@@ -25,7 +25,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     ui(new Ui::FramePlaybackWindow)
 {
     ui->setupUi(this);
-
+    setWindowFlags(Qt::Window);
 
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->comboCANBus->addItem(QString::number(n));
@@ -558,7 +558,7 @@ void FramePlaybackWindow::btnStopClick()
     {
         ui->tblSequence->setCurrentCell(0, 0);
         refreshIDList();
-    }    
+    }
     updateFrameLabel();
 }
 
@@ -599,7 +599,7 @@ void FramePlaybackWindow::changeSendingBus(int newIdx)
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
 {
     qDebug() << "Changed ID filter " << item->text() << " : " << item->checkState();
-    int ID = Utility::ParseStringToNum(item->text()); 
+    int ID = Utility::ParseStringToNum(item->text());
     currentSeqItem->idFilters[ID] = (item->checkState() == Qt::Checked) ? true : false;
 }
 

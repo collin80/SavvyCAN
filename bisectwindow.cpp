@@ -13,6 +13,7 @@ BisectWindow::BisectWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     ui(new Ui::BisectWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
 

@@ -7,6 +7,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     QDialog(parent),
     ui(new Ui::DBCLoadSaveWindow)
 {
+    setWindowFlags(Qt::Window);
 
     dbcHandler = DBCHandler::getReference();
     referenceFrames = frames;

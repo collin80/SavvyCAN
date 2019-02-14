@@ -9,6 +9,7 @@ MotorControllerConfigWindow::MotorControllerConfigWindow(const QVector<CANFrame>
     ui(new Ui::MotorControllerConfigWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
 
