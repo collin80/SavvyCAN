@@ -17,10 +17,10 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     ui->treeView->setModel(&mModel);
 
     /* set column width */
-    ui->treeView->setColumnWidth(tc::ID, 50);
+    ui->treeView->setColumnWidth(tc::ID, 80);
     ui->treeView->setColumnWidth(tc::LAST, 1);
     for(int i=tc::DATA_0 ; i<=tc::DATA_7 ; i++)
-        ui->treeView->setColumnWidth(i, 95);
+        ui->treeView->setColumnWidth(i, 92);
     ui->treeView->setUniformRowHeights(true);
     ui->treeView->header()->setDefaultAlignment(Qt::AlignCenter);
     ui->treeView->setItemDelegate(new SnifferDelegate());
