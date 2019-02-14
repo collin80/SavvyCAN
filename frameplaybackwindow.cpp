@@ -539,6 +539,7 @@ void FramePlaybackWindow::btnReverseClick()
     forward = false;
     isPlaying = true;
     playbackObject.startPlaybackBackward();
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnStopClick()
@@ -559,7 +560,6 @@ void FramePlaybackWindow::btnStopClick()
         ui->tblSequence->setCurrentCell(0, 0);
         refreshIDList();
     }
-    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnPlayClick()
