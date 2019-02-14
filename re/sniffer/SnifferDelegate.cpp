@@ -19,7 +19,7 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 {
     //qDebug() << "SnifferDelegate Paint Event";
 
-    if (index.column() < 2)
+    if (index.column() < 2) //allow default handling of the first two columns
     {
         QItemDelegate::paint(painter, option, index);
         return;
