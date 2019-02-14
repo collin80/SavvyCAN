@@ -306,7 +306,7 @@ void GVRetSerial::connectDevice()
         tcpClient = new QTcpSocket();
         tcpClient->connectToHost(getPort(), 23);
         connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-        connect(tcpClient, SIGNAL(connected()), this, SLOT(tcpConnected()));
+        connect(tcpClient, SIGNAL(connected()), this, SLOT(deviceConnected()));
         debugOutput("Created TCP Socket");
         // */
         /*
@@ -334,12 +334,11 @@ void GVRetSerial::connectDevice()
         connect(serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(serialError(QSerialPort::SerialPortError)));
 
         /* configure */
+        serial->setBaudRate(1000000); //most GVRET devices ignore baud, ESP32 needs it set explicitly to the proper value
         serial->setDataBits(serial->Data8);
 
         if (espSerialMode)
         {
-            serial->setFlowControl(serial->NoFlowControl);
-            serial->setBaudRate(115200);
             if (!serial->open(QIODevice::ReadWrite))
             {
                 //qDebug() << serial->errorString();
@@ -348,28 +347,28 @@ void GVRetSerial::connectDevice()
             {
                 serial->setDataTerminalReady(false); //ESP32 uses these for bootloader selection and reset so turn them off
                 serial->setRequestToSend(false);
-                QTimer::singleShot(3000, this, SLOT(tcpConnected())); //give ESP32 some time as it probably rebooted
+                serial->setFlowControl(serial->NoFlowControl);
+                QTimer::singleShot(3000, this, SLOT(deviceConnected())); //give ESP32 some time as it could have rebooted
             }
         }
         else
-        {
-            serial->setFlowControl(serial->HardwareControl); //this is important though
-            serial->setBaudRate(1000000);
+        {            
             if (!serial->open(QIODevice::ReadWrite))
             {
                 //qDebug() << serial->errorString();
             }
             else
             {
+                serial->setFlowControl(serial->HardwareControl); //this is important though
                 serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
                 serial->setRequestToSend(true);
-                tcpConnected(); //well, not a proper function name I guess...
+                deviceConnected();
             }
         }
     }
 }
 
-void GVRetSerial::tcpConnected()
+void GVRetSerial::deviceConnected()
 {
     qDebug() << "Connecting to GVRET Device!";
     debugOutput("Connecting to GVRET Device!");
