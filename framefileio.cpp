@@ -555,9 +555,9 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     thisFrame.isReceived = true;
                     thisFrame.bus = 0;
                     if (line.at(28) == ' ') {
-                        thisFrame.extended = true;
-                    } else {
                         thisFrame.extended = false;
+                    } else {
+                        thisFrame.extended = true;
                     }
 
                     if (line.at(41) == 'R') {
