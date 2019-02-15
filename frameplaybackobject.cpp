@@ -13,6 +13,7 @@ FramePlaybackObject::FramePlaybackObject()
     playbackForward = true;
     useOrigTiming = false;
     whichBusSend = 0;
+    currentSeqItem = nullptr;
 }
 
 FramePlaybackObject::~FramePlaybackObject()
@@ -25,6 +26,12 @@ FramePlaybackObject::~FramePlaybackObject()
 quint64 FramePlaybackObject::updatePosition(bool forward)
 {
     //qDebug() << "updatePosition";
+    if (!currentSeqItem) {
+        playbackTimer->stop(); //pushing this button halts automatic playback
+        playbackActive = false;
+        currentPosition = 0;
+        return 0;
+    }
     if (forward)
     {
         if (currentPosition < (currentSeqItem->data.count() - 1)) currentPosition++; //still in same file so keep going
