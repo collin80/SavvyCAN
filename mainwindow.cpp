@@ -184,7 +184,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
     ui->actionSignal_Viewer->setVisible(false);
-    //ui->actionSingle_Multi_State_2->setVisible(false);
+    ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
 }
