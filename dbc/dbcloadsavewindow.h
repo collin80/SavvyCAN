@@ -32,6 +32,7 @@ private slots:
 private:
     Ui::DBCLoadSaveWindow *ui;
     DBCHandler *dbcHandler;
+    DBCFile *currentlyEditingFile;
     const QVector<CANFrame> *referenceFrames;
     DBCMainEditor *editorWindow;
 

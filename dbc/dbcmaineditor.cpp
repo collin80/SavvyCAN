@@ -103,6 +103,7 @@ void DBCMainEditor::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     writeSettings();
+    sigEditor->close();
 }
 
 void DBCMainEditor::readSettings()
@@ -153,7 +154,7 @@ void DBCMainEditor::deleteCurrentNode()
     int thisRow = ui->NodesTable->currentRow();
     QString nodeName = ui->NodesTable->item(thisRow, 0)->text();
     if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
-    {
+    {        
         ui->NodesTable->removeRow(thisRow);
         dbcFile->dbc_nodes.removeAt(thisRow);
         inhibitCellChanged = true;

@@ -34,6 +34,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
 
     editorWindow = new DBCMainEditor(frames);
+    currentlyEditingFile = nullptr;
 
     installEventFilter(this);
 }
@@ -108,10 +109,25 @@ void DBCLoadSaveWindow::saveFile()
 
 void DBCLoadSaveWindow::removeFile()
 {
+    bool bContinue = true;
     int idx = ui->tableFiles->currentRow();
     if (idx < 0) return;
-    dbcHandler->removeDBCFile(idx);
-    ui->tableFiles->removeRow(idx);
+
+    if (currentlyEditingFile == dbcHandler->getFileByIdx(idx))
+    {
+        bContinue = false;
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Confirm Deletion", "This DBC is currently open for editing.\nMake sure you've saved any changes!\nAre you sure you want to remove this DBC?",
+                                          QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes) bContinue = true;
+    }
+
+    if (bContinue)
+    {
+        editorWindow->close();
+        dbcHandler->removeDBCFile(idx);
+        ui->tableFiles->removeRow(idx);
+    }
 }
 
 void DBCLoadSaveWindow::moveUp()
@@ -185,6 +201,7 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
 void DBCLoadSaveWindow::cellDoubleClicked(int row, int col)
 {
     Q_UNUSED(col)
+    currentlyEditingFile = dbcHandler->getFileByIdx(row);
     editorWindow->setFileIdx(row);
     editorWindow->show();
 }
