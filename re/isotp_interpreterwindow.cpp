@@ -179,6 +179,7 @@ void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
 
 void ISOTP_InterpreterWindow::headerClicked(int logicalIndex)
 {
+    ui->tableIsoFrames->setSortingEnabled(false);
     ui->tableIsoFrames->sortByColumn(logicalIndex);
 }
 
@@ -261,9 +262,13 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     messages.append(msg);
 
     rowNum = ui->tableIsoFrames->rowCount();
+
     ui->tableIsoFrames->insertRow(rowNum);
 
-    ui->tableIsoFrames->setItem(rowNum, 0, new QTableWidgetItem(Utility::formatTimestamp(msg.timestamp)));
+    QTableWidgetItem *item = new QTableWidgetItem;
+    item->setData(Qt::EditRole, Utility::formatTimestamp(msg.timestamp));
+    //ui->tableIsoFrames->setItem(rowNum, 0, (double)msg.timestamp, Utility::formatTimestamp(msg.timestamp)));
+    ui->tableIsoFrames->setItem(rowNum, 0, item);
     ui->tableIsoFrames->setItem(rowNum, 1, new QTableWidgetItem(QString::number(msg.ID, 16)));
     ui->tableIsoFrames->setItem(rowNum, 2, new QTableWidgetItem(QString::number(msg.bus)));
     if (msg.isReceived) ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Rx"));
