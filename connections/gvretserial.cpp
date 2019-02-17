@@ -426,7 +426,7 @@ void GVRetSerial::disconnectDevice() {
     {
         if (serial->isOpen())
         {
-            serial->clear();
+            //serial->clear();
             serial->close();
 
         }
@@ -496,9 +496,11 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
         break;
     case QSerialPort::WriteError:
         errMessage = "Write error on serial port";
+        piStop();
         break;
     case QSerialPort::ReadError:
         errMessage = "Read error on serial port";
+        piStop();
         break;
     case QSerialPort::ResourceError:
         errMessage = "Serial port seems to have disappeared.";
@@ -512,6 +514,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
     case QSerialPort::UnknownError:
         errMessage = "Beats me what happened to the serial port.";
         killConnection = true;
+        piStop();
         break;
     case QSerialPort::TimeoutError:
         errMessage = "Timeout error on serial port";
