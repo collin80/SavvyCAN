@@ -344,7 +344,7 @@ void GVRetSerial::connectDevice()
             serial->setFlowControl(serial->NoFlowControl);
             if (!serial->open(QIODevice::ReadWrite))
             {
-                sendDebug("Error returned during port opening: " + serial->errorString());
+                //sendDebug("Error returned during port opening: " + serial->errorString());
             }
             else
             {
@@ -359,7 +359,7 @@ void GVRetSerial::connectDevice()
             serial->setFlowControl(serial->HardwareControl); //Most GVRET style devices use hardware flow control
             if (!serial->open(QIODevice::ReadWrite))
             {
-                sendDebug("Error returned during port opening: " + serial->errorString());
+                //sendDebug("Error returned during port opening: " + serial->errorString());
             }
             else
             {
@@ -473,14 +473,17 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
     case QSerialPort::DeviceNotFoundError:
         errMessage = "Device not found error on serial";
         killConnection = true;
+        piStop();
         break;
     case QSerialPort::PermissionError:
         errMessage =  "Permission error on serial port";
         killConnection = true;
+        piStop();
         break;
     case QSerialPort::OpenError:
         errMessage =  "Open error on serial port";
         killConnection = true;
+        piStop();
         break;
     case QSerialPort::ParityError:
         errMessage = "Parity error on serial port";
@@ -500,6 +503,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
     case QSerialPort::ResourceError:
         errMessage = "Serial port seems to have disappeared.";
         killConnection = true;
+        piStop();
         break;
     case QSerialPort::UnsupportedOperationError:
         errMessage = "Unsupported operation on serial port";
@@ -516,6 +520,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
     case QSerialPort::NotOpenError:
         errMessage = "The serial port isn't open";
         killConnection = true;
+        piStop();
         break;
     }
     /*

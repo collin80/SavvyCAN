@@ -42,7 +42,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->lineSend->setEnabled(false);
 
     /* load connection configuration */
-    //loadConnections();
+    loadConnections();
 
     ui->rbSocketCAN->setEnabled(isSerialBusAvailable());
 
@@ -540,6 +540,9 @@ void ConnectionWindow::loadConnections()
     QVector<QString> portNames = settings.value("connections/portNames").value<QVector<QString>>();
     QVector<QString> driverNames = settings.value("connections/driverNames").value<QVector<QString>>();
     QVector<int>    devTypes = settings.value("connections/types").value<QVector<int>>();
+
+    //don't load the connections if the three setting arrays above aren't all the same size.
+    if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count()) return;
 
     for(int i = 0 ; i < portNames.count() ; i++)
     {
