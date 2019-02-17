@@ -13,8 +13,7 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     useTcp(useTcp),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
-    qDebug() << "GVRetSerial()";
-    debugOutput("GVRetSerial()");
+    sendDebug("GVRetSerial()");
 
     serial = NULL;
     tcpClient = NULL;
@@ -36,33 +35,38 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
 GVRetSerial::~GVRetSerial()
 {
     stop();
-    qDebug() << "~GVRetSerial()";
-    debugOutput("~GVRetSerial()");
+    sendDebug("~GVRetSerial()");
+}
+
+void GVRetSerial::sendDebug(const QString debugText)
+{
+    qDebug() << debugText;
+    debugOutput(debugText);
 }
 
 void GVRetSerial::sendToSerial(const QByteArray &bytes)
 {
     if (serial == NULL && tcpClient == NULL && udpClient == NULL)
     {
-        debugOutput("Attempt to write to serial port when it has not been initialized!");
+        sendDebug("Attempt to write to serial port when it has not been initialized!");
         return;
     }
 
     if (serial && !serial->isOpen())
     {
-        debugOutput("Attempt to write to serial port when it is not open!");
+        sendDebug("Attempt to write to serial port when it is not open!");
         return;
     }
 
     if (tcpClient && !tcpClient->isOpen())
     {
-        debugOutput("Attempt to write to TCP/IP port when it is not open!");
+        sendDebug("Attempt to write to TCP/IP port when it is not open!");
         return;
     }
 
     if (udpClient && !udpClient->isOpen())
     {
-        debugOutput("Attempt to write to UDP Socket when it is not open!");
+        sendDebug("Attempt to write to UDP Socket when it is not open!");
         return;
     }
 
@@ -72,7 +76,7 @@ void GVRetSerial::sendToSerial(const QByteArray &bytes)
         byt = (unsigned char)byt;
         buildDebug = buildDebug % QString::number(byt, 16) % " ";
     }
-    debugOutput(buildDebug);
+    sendDebug(buildDebug);
 
     if (serial) serial->write(bytes);
     if (tcpClient) tcpClient->write(bytes);
@@ -185,8 +189,7 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
     if (pBusIdx < 2) {
         /* update baud rates */
         QByteArray buffer;
-        qDebug() << "Got signal to update bauds. 1: " << (can0Baud & 0xFFFFFFF) <<" 2: " << (can1Baud & 0xFFFFFFF);
-        debugOutput("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)) + " 2: " + QString::number((can1Baud & 0xFFFFFFF)));
+        sendDebug("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)) + " 2: " + QString::number((can1Baud & 0xFFFFFFF)));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 5; //setup canbus
         buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
@@ -204,8 +207,7 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
     {
         /* update baud rates */
         QByteArray buffer;
-        qDebug() << "Got signal to update extended bus speeds SWCAN: " << swcanBaud <<" LIN1: " << lin1Baud << " LIN2: " << lin2Baud;
-        debugOutput("Got signal to update extended bus speeds SWCAN: " + QString::number(swcanBaud) + " LIN1: " + QString::number(lin1Baud) + " LIN2: " + QString::number(lin2Baud));
+        sendDebug("Got signal to update extended bus speeds SWCAN: " + QString::number(swcanBaud) + " LIN1: " + QString::number(lin1Baud) + " LIN2: " + QString::number(lin2Baud));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 14; //setup extended buses
         buffer[2] = (unsigned char)(swcanBaud & 0xFF); //four bytes of ID LSB first
@@ -302,12 +304,12 @@ void GVRetSerial::connectDevice()
     if (useTcp)
     {
         // /*
-        qDebug() << "TCP Connection to a GVRET device";
+        sendDebug("TCP Connection to a GVRET device");
         tcpClient = new QTcpSocket();
         tcpClient->connectToHost(getPort(), 23);
         connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readSerialData()));
         connect(tcpClient, SIGNAL(connected()), this, SLOT(deviceConnected()));
-        debugOutput("Created TCP Socket");
+        sendDebug("Created TCP Socket");
         // */
         /*
         qDebug() << "UDP Connection to a GVRET device";
@@ -320,14 +322,13 @@ void GVRetSerial::connectDevice()
         */
     }
     else {
-        qDebug() << "Serial connection to a GVRET device";
+        sendDebug("Serial connection to a GVRET device");
         serial = new QSerialPort(QSerialPortInfo(getPort()));
         if(!serial) {
-            qDebug() << "can't open serial port " << getPort();
-            debugOutput("can't open serial port " + getPort());
+            sendDebug("can't open serial port " + getPort());
             return;
         }
-        debugOutput("Created Serial Port Object");
+        sendDebug("Created Serial Port Object");
 
         /* connect reading event */
         connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
@@ -339,29 +340,31 @@ void GVRetSerial::connectDevice()
 
         if (espSerialMode)
         {
+            sendDebug("Trying ESP32 Serial Mode");
+            serial->setFlowControl(serial->NoFlowControl);
             if (!serial->open(QIODevice::ReadWrite))
             {
-                //qDebug() << serial->errorString();
+                sendDebug("Error returned during port opening: " + serial->errorString());
             }
             else
             {
                 serial->setDataTerminalReady(false); //ESP32 uses these for bootloader selection and reset so turn them off
-                serial->setRequestToSend(false);
-                serial->setFlowControl(serial->NoFlowControl);
+                serial->setRequestToSend(false);                
                 QTimer::singleShot(3000, this, SLOT(deviceConnected())); //give ESP32 some time as it could have rebooted
             }
         }
         else
         {            
+            sendDebug("Trying Standard Serial Mode");
+            serial->setFlowControl(serial->HardwareControl); //Most GVRET style devices use hardware flow control
             if (!serial->open(QIODevice::ReadWrite))
             {
-                //qDebug() << serial->errorString();
+                sendDebug("Error returned during port opening: " + serial->errorString());
             }
             else
             {
-                serial->setFlowControl(serial->HardwareControl); //this is important though
-                serial->setDataTerminalReady(true); //you do need to set these or the fan gets dirty
-                serial->setRequestToSend(true);
+                //serial->setDataTerminalReady(true); //Seemingly these two lines used to be needed
+                //serial->setRequestToSend(true);     //But, really both ends should automatically handle these
                 deviceConnected();
             }
         }
@@ -370,8 +373,7 @@ void GVRetSerial::connectDevice()
 
 void GVRetSerial::deviceConnected()
 {
-    qDebug() << "Connecting to GVRET Device!";
-    debugOutput("Connecting to GVRET Device!");
+    sendDebug("Connecting to GVRET Device!");
     QByteArray output;
     output.append((unsigned char)0xE7); //this puts the device into binary comm mode
     output.append((unsigned char)0xE7);
@@ -525,8 +527,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
     }*/
     if (errMessage.length() > 1)
     {
-        qDebug() << errMessage;
-        debugOutput(errMessage);
+        sendDebug(errMessage);
     }
     if (killConnection)
     {
@@ -542,7 +543,7 @@ void GVRetSerial::connectionTimeout()
     if (CANCon::NOT_CONNECTED==getStatus()) //no?
     {
         //then emit the the failure signal and see if anyone cares
-        qDebug() << "Failed to connect to GVRET at that com port";
+        sendDebug("Failed to connect to GVRET at that com port");
 
         //toggle the serial mode and try again
         espSerialMode = !espSerialMode;
@@ -570,8 +571,7 @@ void GVRetSerial::readSerialData()
     if (tcpClient) data = tcpClient->readAll();
     if (udpClient) data = udpClient->readAll();
 
-    debugOutput("Got data from serial. Len = " % QString::number(data.length()));
-    //qDebug() << (tr("Got data from serial. Len = %0").arg(data.length()));
+    sendDebug("Got data from serial. Len = " % QString::number(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         c = data.at(i);
@@ -999,7 +999,7 @@ void GVRetSerial::handleTick()
             if (serial == NULL && tcpClient == NULL) return;
             if ( (serial && serial->isOpen()) || (tcpClient && tcpClient->isOpen()) || (udpClient && udpClient->isOpen())) //if it's still false we have a problem...
             {
-                qDebug() << "Comm validation failed. ";
+                sendDebug("Comm validation failed.");
 
                 setStatus(CANCon::NOT_CONNECTED);
                 //emit status(getStatus());
