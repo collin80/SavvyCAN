@@ -74,6 +74,7 @@ private:
     void sendCommValidation();
     void rebuildLocalTimeBasis();
     void sendToSerial(const QByteArray &bytes);
+    void sendDebug(const QString debugText);
 
 protected:
     QTimer             mTimer;
