@@ -160,6 +160,7 @@ void CANFrameModel::setOverwriteMode(bool mode)
 {
     beginResetModel();
     overwriteDups = mode;
+    recalcOverwrite();
     endResetModel();
 }
 
@@ -191,26 +192,20 @@ void CANFrameModel::recalcOverwrite()
 
     mutex.lock();
     beginResetModel();
-    for (int i = 1; i < frames.count(); i++)
-    {
-        found = false;
-        for (int j = 0; j <= lastUnique; j++)
-        {
-            if (frames[i].ID == frames[j].ID)
-            {
-                frames.replace(j, frames[i]);
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-        {
-            lastUnique++;
-            frames.replace(lastUnique, frames[i]);
-        }
-    }
 
-    while (frames.count() > lastUnique) frames.removeLast();
+    //Look at the current list of frames and turn it into just a list of unique IDs
+    QHash<int, CANFrame> overWriteFrames;
+    foreach(CANFrame frame, frames)
+    {
+        if (!overWriteFrames.contains(frame.ID))
+        {
+            overWriteFrames.insert(frame.ID, frame);
+        }
+        else overWriteFrames[frame.ID] = frame;
+    }
+    //Then replace the old list of frames with just the unique list
+    frames.clear();
+    frames.append(overWriteFrames.values().toVector());
 
     filteredFrames.clear();
     filteredFrames.reserve(preallocSize);
