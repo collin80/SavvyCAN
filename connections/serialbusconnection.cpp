@@ -272,6 +272,7 @@ void SerialBusConnection::testConnection() {
                 stats.conStatus = getStatus();
                 stats.numHardwareBuses = mNumBuses;
                 emit status(stats);
+                piStop();
             }
             break;
         case CANCon::NOT_CONNECTED:

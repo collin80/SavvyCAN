@@ -255,6 +255,11 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         return QColor(Qt::white);
     }
 
+    if (role == Qt::TextAlignmentRole)
+    {
+        return Qt::AlignLeft;
+    }
+
     if (role == Qt::TextColorRole)
     {
         if (dbcHandler != NULL && interpretFrames)
@@ -300,7 +305,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 for (int i = 0; i < dLen; i++)
                 {
                     quint8 byt = thisFrame.data[i];
-                    if (byt < 0x20) byt = 0x2E; //A dot
+                    //0x20 through 0x7E are printable characters. Outside of that range they aren't. So use dots instead
+                    if (byt < 0x20) byt = 0x2E; //dot character
                     if (byt > 0x7E) byt = 0x2E;
                     tempString.append(QString::fromUtf8((char *)&byt, 1));
                 }
@@ -326,7 +332,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != NULL)
                 {
-                    tempString.append("\n");
+                    tempString.append("   <Interpreted>\n");
                     tempString.append(msg->name + "\n" + msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {

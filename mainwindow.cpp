@@ -55,6 +55,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
+    QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
+    verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
+    verticalHeader->setDefaultSectionSize(10);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
@@ -297,7 +300,7 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(5, settings.value("Main/BusColumn", 40).toUInt()); //bus
         ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
-        ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
+        //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
     if (settings.value("Main/AutoScroll", false).toBool())
     {
@@ -342,7 +345,7 @@ void MainWindow::writeSettings()
         settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(5));
         settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
-        settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
+        //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
     }
 }
 
@@ -391,6 +394,7 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
 void MainWindow::interpretToggled(bool state)
 {
     model->setInterpetMode(state);
+    //ui->canFramesView->resizeRowsToContents();   //a VERY costly operation!
 }
 
 void MainWindow::overwriteToggled(bool state)
