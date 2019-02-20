@@ -399,7 +399,17 @@ void MainWindow::interpretToggled(bool state)
 
 void MainWindow::overwriteToggled(bool state)
 {
-    model->setOverwriteMode(state);
+    if (state)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes)
+        {
+            model->setOverwriteMode(state);
+        }
+        else ui->cbOverwrite->setCheckState(Qt::Unchecked);
+    }
 }
 
 void MainWindow::updateFilterList()
