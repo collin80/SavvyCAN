@@ -8,6 +8,7 @@
 #include <QApplication>
 #include <QPalette>
 #include "utility.h"
+#include "connections/canconmanager.h"
 
 DBCHandler* DBCHandler::instance = nullptr;
 
@@ -291,8 +292,9 @@ int DBCFile::getAssocBus()
 
 void DBCFile::setAssocBus(int bus)
 {
+    int numBuses = CANConManager::getInstance()->getNumBuses();
     if (bus < -1) return;
-    if (bus > 1) return;
+    if (bus >= numBuses) return;
     assocBuses = bus;
 }
 
