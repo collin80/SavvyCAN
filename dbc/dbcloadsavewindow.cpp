@@ -2,6 +2,7 @@
 #include "ui_dbcloadsavewindow.h"
 #include <QCheckBox>
 #include "helpwindow.h"
+#include "connections/canconmanager.h"
 
 DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -162,7 +163,8 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
     {
         DBCFile *file = dbcHandler->getFileByIdx(row);
         int bus = ui->tableFiles->item(row, col)->text().toInt();
-        if (bus > -2 && bus < 2)
+        int numBuses = CANConManager::getInstance()->getNumBuses();
+        if (bus > -2 && bus < numBuses)
         {
             file->setAssocBus(bus);
         }
