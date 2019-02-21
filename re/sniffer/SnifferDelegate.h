@@ -10,6 +10,8 @@ public:
     explicit SnifferDelegate(QWidget *parent = nullptr);
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+    bool getFadeInactive();
+    void setFadeInactive(bool val);
 
 signals:
 
@@ -19,6 +21,7 @@ private:
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
     QFont mainFont;
     QFontInfo* mainFontInfo;
+    bool                        mFadeInactive;
 };
 
 #endif

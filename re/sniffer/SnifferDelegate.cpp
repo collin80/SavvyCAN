@@ -13,6 +13,17 @@ SnifferDelegate::SnifferDelegate(QWidget *parent) : QItemDelegate(parent)
     grayBrush = QBrush(QColor(230,230,230));
     mainFont.setPointSize(10);
     mainFontInfo = new QFontInfo(mainFont);
+    mFadeInactive = false;
+}
+
+bool SnifferDelegate::getFadeInactive()
+{
+    return mFadeInactive;
+}
+
+void SnifferDelegate::setFadeInactive(bool val)
+{
+    mFadeInactive = val;
 }
 
 void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
@@ -40,6 +51,8 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
     int xSpan = viewport.right() - viewport.left();
     int ySpan = viewport.bottom() - viewport.top();
+    int yOffset = (ySpan - (xSpan / 4)) / 2;
+    if (yOffset < 0) yOffset = 0;
 
     //qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
 
@@ -81,14 +94,16 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
                 painter->setBrush(redBrush);
             }
         }
-        painter->setOpacity((255 - v) / 255.0);
-        painter->drawRect(viewport.left() + x * xSector, viewport.top(), xSector, xSector);
+        if (mFadeInactive) painter->setOpacity((255 - v) / 255.0);
+        else painter->setOpacity(1.0);
+        painter->drawRect(viewport.left() + x * xSector, viewport.top() + yOffset, xSector, xSector);
     }
 
     //painter->setPen(QPen(QColor(v,v,v,255)));
+    painter->setOpacity(1.0);
     painter->setPen(Qt::black);
     painter->setFont(mainFont);
-    painter->drawText(QRect(viewport.left(), viewport.top() + xSector, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber(val));
+    painter->drawText(QRect(viewport.left(), viewport.top() + xSector + yOffset, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber(val));
 }
 
 QSize SnifferDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const
