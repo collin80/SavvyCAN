@@ -62,6 +62,7 @@
                 <section title="Never Expire IDs" ref="sniffer.html#never-expire-ids"/>
                 <section title="Mute notched bits" ref="sniffer.html#mute-notched-bits"/>
                 <section title="Fade inactive bytes" ref="sniffer.html#fade-inactive-bytes"/>
+                <section title="View Bits" ref="sniffer.html#view-bits"/>
                 <section title="Frame Details Window" ref="framedetails.html"/>
                 <section title="The Purpose of Frame Details Window" ref="framedetails.html#the-purpose-of-frame-details-window"/>
                 <section title="File Comparison Window" ref="filecomparison.html"/>
