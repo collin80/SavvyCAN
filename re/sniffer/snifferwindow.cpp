@@ -17,6 +17,9 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     setWindowFlags(Qt::Window);
     ui->treeView->setModel(&mModel);
 
+    sniffDel = new SnifferDelegate();
+    defaultDel = ui->treeView->itemDelegate();
+
     /* set column width */
     ui->treeView->setColumnWidth(tc::ID, 80);
     ui->treeView->setColumnWidth(tc::LAST, 1);
@@ -24,7 +27,7 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
         ui->treeView->setColumnWidth(i, 92);
     ui->treeView->setUniformRowHeights(true);
     ui->treeView->header()->setDefaultAlignment(Qt::AlignCenter);
-    ui->treeView->setItemDelegate(new SnifferDelegate());
+    //ui->treeView->setItemDelegate(new SnifferDelegate());
 
     /* activate sorting */
     ui->listWidget->setSortingEnabled(true);
@@ -41,23 +44,75 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     connect(&mModel, &SnifferModel::idChange, this, &SnifferWindow::idChange);
     connect(ui->listWidget, &QListWidget::itemChanged, this, &SnifferWindow::itemChanged);
 
-    connect(ui->cbFadeInactive, &QCheckBox::stateChanged, this, [this](int val){mModel.setFadeInactive(val);});
+    connect(ui->cbFadeInactive, &QCheckBox::stateChanged, this, [this](int val){mModel.setFadeInactive(val);sniffDel->setFadeInactive(val);});
     connect(ui->cbMuteNotched, &QCheckBox::stateChanged, this, [this](int val){mModel.setMuteNotched(val);});
     connect(ui->cbNoExpire, &QCheckBox::stateChanged, this, [this](int val){mModel.setNeverExpire(val);});
+    connect(ui->cbViewBits, &QCheckBox::stateChanged, this,
+            [this](int val)
+            {
+                if (val) ui->treeView->setItemDelegate(sniffDel);
+                else
+                {
+                    ui->treeView->setItemDelegate(defaultDel);
+                }
+            }
+    );
 }
 
 SnifferWindow::~SnifferWindow()
 {
     closeEvent(NULL);
+    delete sniffDel;
     delete ui;
 }
 
+void SnifferWindow::readSettings()
+{
+    QSettings settings;
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        resize(settings.value("Sniffer/WindowSize", QSize(1100, 750)).toSize());
+        move(settings.value("Sniffer/WindowPos", QPoint(50, 50)).toPoint());
+        ui->treeView->setColumnWidth(0, settings.value("Sniffer/DeltaColumn", 110).toUInt());
+        ui->treeView->setColumnWidth(1, settings.value("Sniffer/IDColumn", 70).toUInt());
+        ui->treeView->setColumnWidth(2, settings.value("Sniffer/Data0Column", 92).toUInt());
+        ui->treeView->setColumnWidth(3, settings.value("Sniffer/Data1Column", 92).toUInt());
+        ui->treeView->setColumnWidth(4, settings.value("Sniffer/Data2Column", 92).toUInt());
+        ui->treeView->setColumnWidth(5, settings.value("Sniffer/Data3Column", 92).toUInt());
+        ui->treeView->setColumnWidth(6, settings.value("Sniffer/Data4Column", 92).toUInt());
+        ui->treeView->setColumnWidth(7, settings.value("Sniffer/Data5Column", 92).toUInt());
+        ui->treeView->setColumnWidth(8, settings.value("Sniffer/Data6Column", 92).toUInt());
+        ui->treeView->setColumnWidth(9, settings.value("Sniffer/Data7Column", 92).toUInt());
+    }
+}
+
+void SnifferWindow::writeSettings()
+{
+    QSettings settings;
+
+    if (settings.value("Main/SaveRestorePositions", false).toBool())
+    {
+        settings.setValue("Sniffer/WindowSize", size());
+        settings.setValue("Sniffer/WindowPos", pos());
+        settings.setValue("Sniffer/DeltaColumn", ui->treeView->columnWidth(0));
+        settings.setValue("Sniffer/IDColumn", ui->treeView->columnWidth(1));
+        settings.setValue("Sniffer/Data0Column", ui->treeView->columnWidth(2));
+        settings.setValue("Sniffer/Data1Column", ui->treeView->columnWidth(3));
+        settings.setValue("Sniffer/Data2Column", ui->treeView->columnWidth(4));
+        settings.setValue("Sniffer/Data3Column", ui->treeView->columnWidth(5));
+        settings.setValue("Sniffer/Data4Column", ui->treeView->columnWidth(6));
+        settings.setValue("Sniffer/Data5Column", ui->treeView->columnWidth(7));
+        settings.setValue("Sniffer/Data6Column", ui->treeView->columnWidth(8));
+        settings.setValue("Sniffer/Data7Column", ui->treeView->columnWidth(9));
+    }
+}
 
 void SnifferWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, &mModel, &SnifferModel::update);
     mTimer.start();
+    readSettings();
     installEventFilter(this);
     qDebug() << "show";
 }
@@ -70,6 +125,7 @@ void SnifferWindow::closeEvent(QCloseEvent *event)
     mTimer.stop();
     /* disconnect reception of frames */
     disconnect(CANConManager::getInstance(), 0, this, 0);
+    writeSettings();
     /* clear model */
     mModel.clear();
     /* clean list */

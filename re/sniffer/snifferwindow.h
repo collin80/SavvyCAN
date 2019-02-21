@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QListWidgetItem>
 #include "sniffermodel.h"
+#include "SnifferDelegate.h"
 
 namespace Ui {
 class snifferWindow;
@@ -46,12 +47,16 @@ public slots:
 private:
     void filter(bool pFilter);
     bool eventFilter(QObject *obj, QEvent *event);
+    void readSettings();
+    void writeSettings();
 
     Ui::snifferWindow*          ui;
     SnifferModel                mModel;
     QTimer                      mTimer;
     QMap<int, QListWidgetItem*> mMap;
     bool                        mFilter;
+    SnifferDelegate             *sniffDel;
+    QAbstractItemDelegate       *defaultDel;
 };
 
 #endif // SNIFFER_H
