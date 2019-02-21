@@ -34,7 +34,7 @@ reset and thus all changes will be colored once again.
 Advanced Options
 ==================
 
-All of the above was valid if you do not check any of the three checkboxes. With the checkboxes
+All of the above was valid if you do not check any of the four checkboxes. With the checkboxes
 unchecked this window is very close to cansniffer on the command line. But, what fun is that?
 These checkboxes modify the way the window works in a variety of ways.
 
@@ -64,3 +64,8 @@ This can be used with mute or without but has a similar purpose. When this is ch
 that haven't updated recently will begin to fade away to white. They never quite get all the way
 to disappearing but will fade to be very light. In this way only data which is actively changing will
 be very visible. This drastically aids in helping you to ignore any bytes that are not changing.
+
+View Bits
+==========
+
+This option changes the view very starkly. This is the view shown in the picture associated with this topic. When View Bits is selected the display will change to show each bit within the bytes as separate blocks that each can separately be black when set and unchanged, white when unset and unchanged, red when freshly unset, and green when freshly set. This allows for a very fine grained view. Fade inactive, and never expire still work as usual. This mode might be a bit "busy" and lowers the number of IDs you can see at once. But, the choice is yours. You give up some density in exchange for verbosity.
