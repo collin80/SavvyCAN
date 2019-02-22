@@ -6,6 +6,7 @@
 #include <QThread>
 #include <QTimer>
 #include <QTcpSocket>
+#include <QUdpSocket>
 
 /*************/
 #include <QDateTime>
@@ -64,7 +65,7 @@ private slots:
     void connectionTimeout();
     void readSerialData();
     void serialError(QSerialPort::SerialPortError err);
-    void tcpConnected();
+    void deviceConnected();
     void handleTick();
 
 private:
@@ -73,18 +74,21 @@ private:
     void sendCommValidation();
     void rebuildLocalTimeBasis();
     void sendToSerial(const QByteArray &bytes);
+    void sendDebug(const QString debugText);
 
 protected:
     QTimer             mTimer;
     QThread            mThread;
 
     bool doValidation;
-    bool gotValidated;
+    int validationCounter;
     bool isAutoRestart;
     bool continuousTimeSync;
     bool useTcp;
+    bool espSerialMode; //special serial mode for ESP32 based boards - no flow control and much slower serial baud speed
     QSerialPort *serial;
     QTcpSocket *tcpClient;
+    QUdpSocket *udpClient;
     int framesRapid;
     STATE rx_state;
     uint32_t rx_step;

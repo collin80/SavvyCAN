@@ -67,7 +67,7 @@ HelpWindow* HelpWindow::getRef()
 void HelpWindow::showHelp(QString help)
 {
     if (m_helpEngine) {
-        QString url = "qthelp://org.sphinx.savvycan.181/doc/" + help;
+        QString url = "qthelp://org.sphinx.savvycan.189/doc/" + help;
         qDebug() << "Searching for " << url;
         QByteArray helpData = m_helpEngine->fileData(QUrl(url));
         qDebug() << "Help file size: " << helpData.length();

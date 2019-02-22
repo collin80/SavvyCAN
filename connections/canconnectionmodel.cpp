@@ -87,10 +87,11 @@ Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
     CANConnection *conn_p = getAtIdx(index.row(), busId);
     if (!conn_p) return Qt::ItemFlag::NoItemFlags;
 
-    //you can't set speed, single wire, or listen only on socketcan devices so
-    //detect if we're using GVRET where you can and turn that functionality on
-    bool editParams = false;
-    if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
+    //socketcan is limited for what you can set but the other serialbus
+    //devices should be able to set the stuff. For now let anyone try
+    //and the underlying drivers can do with them as they will
+    bool editParams = true;
+    //if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
 
     switch (Column(index.column()))
     {
@@ -152,7 +153,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     bool ret;
     if (!conn_p) return QVariant();
     ret = conn_p->getBusSettings(busId, bus);
-    bool isSocketCAN = (conn_p->getType() == CANCon::SOCKETCAN) ? true: false;
+    bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
 
     //qDebug() << "ConnP: " << conn_p << "  ret " << ret;
 
@@ -167,7 +168,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                 if (conn_p)
                     switch (conn_p->getType()) {
                         case CANCon::KVASER: return "KVASER";
-                        case CANCon::SOCKETCAN: return "SocketCAN";
+                        case CANCon::SERIALBUS: return "SerialBus";
                         case CANCon::GVRET_SERIAL: return "GVRET";
                         default: {}
                     }

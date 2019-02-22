@@ -160,6 +160,7 @@ void CANFrameModel::setOverwriteMode(bool mode)
 {
     beginResetModel();
     overwriteDups = mode;
+    recalcOverwrite();
     endResetModel();
 }
 
@@ -191,26 +192,20 @@ void CANFrameModel::recalcOverwrite()
 
     mutex.lock();
     beginResetModel();
-    for (int i = 1; i < frames.count(); i++)
-    {
-        found = false;
-        for (int j = 0; j <= lastUnique; j++)
-        {
-            if (frames[i].ID == frames[j].ID)
-            {
-                frames.replace(j, frames[i]);
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-        {
-            lastUnique++;
-            frames.replace(lastUnique, frames[i]);
-        }
-    }
 
-    while (frames.count() > lastUnique) frames.removeLast();
+    //Look at the current list of frames and turn it into just a list of unique IDs
+    QHash<int, CANFrame> overWriteFrames;
+    foreach(CANFrame frame, frames)
+    {
+        if (!overWriteFrames.contains(frame.ID))
+        {
+            overWriteFrames.insert(frame.ID, frame);
+        }
+        else overWriteFrames[frame.ID] = frame;
+    }
+    //Then replace the old list of frames with just the unique list
+    frames.clear();
+    frames.append(overWriteFrames.values().toVector());
 
     filteredFrames.clear();
     filteredFrames.reserve(preallocSize);
@@ -253,6 +248,11 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         }
         //return QApplication::palette().color(QPalette::Button);
         return QColor(Qt::white);
+    }
+
+    if (role == Qt::TextAlignmentRole)
+    {
+        return Qt::AlignLeft;
     }
 
     if (role == Qt::TextColorRole)
@@ -300,7 +300,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 for (int i = 0; i < dLen; i++)
                 {
                     quint8 byt = thisFrame.data[i];
-                    if (byt < 0x20) byt = 0x2E; //A dot
+                    //0x20 through 0x7E are printable characters. Outside of that range they aren't. So use dots instead
+                    if (byt < 0x20) byt = 0x2E; //dot character
                     if (byt > 0x7E) byt = 0x2E;
                     tempString.append(QString::fromUtf8((char *)&byt, 1));
                 }
@@ -326,7 +327,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != NULL)
                 {
-                    tempString.append("\n");
+                    tempString.append("   <Interpreted>\n");
                     tempString.append(msg->name + "\n" + msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
@@ -410,7 +411,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         frames.append(tempFrame);
         if (filters[tempFrame.ID])
         {
-            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
+            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
             filteredFrames.append(tempFrame);
             if (autoRefresh) endInsertRows();
         }
@@ -432,7 +433,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
             frames.append(tempFrame);
             if (filters[tempFrame.ID])
             {
-                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count() + 1, filteredFrames.count() + 1);
+                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }

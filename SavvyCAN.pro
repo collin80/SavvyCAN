@@ -65,7 +65,8 @@ SOURCES += main.cpp\
     jsedit.cpp \
     frameplaybackobject.cpp \
     helpwindow.cpp \
-    blfhandler.cpp
+    blfhandler.cpp \
+    re/sniffer/SnifferDelegate.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -121,7 +122,8 @@ HEADERS  += mainwindow.h \
     jsedit.h \
     frameplaybackobject.h \
     helpwindow.h \
-    blfhandler.h
+    blfhandler.h \
+    re/sniffer/SnifferDelegate.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \

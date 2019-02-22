@@ -16,7 +16,7 @@ namespace CANCon {
     {
         GVRET_SERIAL,
         KVASER,
-        SOCKETCAN,
+        SERIALBUS,
         REMOTE,
         NONE
     };

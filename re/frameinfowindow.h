@@ -33,6 +33,8 @@ private:
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
     bool useOpenGL;
+    static const QColor byteGraphColors[8];
+    static QPen bytePens[8];
 
     void refreshIDList();
     void closeEvent(QCloseEvent *event);

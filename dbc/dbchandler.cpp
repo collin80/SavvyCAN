@@ -8,21 +8,22 @@
 #include <QApplication>
 #include <QPalette>
 #include "utility.h"
+#include "connections/canconmanager.h"
 
-DBCHandler* DBCHandler::instance = NULL;
+DBCHandler* DBCHandler::instance = nullptr;
 
 DBC_SIGNAL* DBCSignalHandler::findSignalByIdx(int idx)
 {
-    if (sigs.count() == 0) return NULL;
-    if (idx < 0) return NULL;
-    if (idx >= sigs.count()) return NULL;
+    if (sigs.count() == 0) return nullptr;
+    if (idx < 0) return nullptr;
+    if (idx >= sigs.count()) return nullptr;
 
     return &sigs[idx];
 }
 
 DBC_SIGNAL* DBCSignalHandler::findSignalByName(QString name)
 {
-    if (sigs.count() == 0) return NULL;
+    if (sigs.count() == 0) return nullptr;
     for (int i = 0; i < sigs.count(); i++)
     {
         if (sigs[i].name.compare(name, Qt::CaseInsensitive) == 0)
@@ -30,7 +31,7 @@ DBC_SIGNAL* DBCSignalHandler::findSignalByName(QString name)
             return &sigs[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
@@ -82,7 +83,7 @@ int DBCSignalHandler::getCount()
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
 {
-    if (messages.count() == 0) return NULL;
+    if (messages.count() == 0) return nullptr;
     for (int i = 0; i < messages.count(); i++)
     {
         if (isJ1939Handler)
@@ -115,20 +116,20 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByIdx(int idx)
 {
-    if (messages.count() == 0) return NULL;
-    if (idx < 0) return NULL;
-    if (idx >= messages.count()) return NULL;
+    if (messages.count() == 0) return nullptr;
+    if (idx < 0) return nullptr;
+    if (idx >= messages.count()) return nullptr;
     return &messages[idx];
 }
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
 {
-    if (messages.count() == 0) return NULL;
+    if (messages.count() == 0) return nullptr;
     for (int i = 0; i < messages.count(); i++)
     {
         if (messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
@@ -136,7 +137,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
             return &messages[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
@@ -251,14 +252,14 @@ DBCFile& DBCFile::operator=(const DBCFile& cpy)
 
 DBC_NODE* DBCFile::findNodeByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= dbc_nodes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= dbc_nodes.count()) return nullptr;
     return &dbc_nodes[idx];
 }
 
 DBC_NODE* DBCFile::findNodeByName(QString name)
 {
-    if (dbc_nodes.length() == 0) return NULL;
+    if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
         if (dbc_nodes[i].name.compare(name, Qt::CaseInsensitive) == 0)
@@ -266,7 +267,7 @@ DBC_NODE* DBCFile::findNodeByName(QString name)
             return &dbc_nodes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 QString DBCFile::getFullFilename()
@@ -291,14 +292,15 @@ int DBCFile::getAssocBus()
 
 void DBCFile::setAssocBus(int bus)
 {
+    int numBuses = CANConManager::getInstance()->getNumBuses();
     if (bus < -1) return;
-    if (bus > 1) return;
+    if (bus >= numBuses) return;
     assocBuses = bus;
 }
 
 DBC_ATTRIBUTE *DBCFile::findAttributeByName(QString name)
 {
-    if (dbc_attributes.length() == 0) return NULL;
+    if (dbc_attributes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_attributes.length(); i++)
     {
         if (dbc_attributes[i].name.compare(name, Qt::CaseInsensitive) == 0)
@@ -306,13 +308,13 @@ DBC_ATTRIBUTE *DBCFile::findAttributeByName(QString name)
             return &dbc_attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE *DBCFile::findAttributeByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= dbc_attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= dbc_attributes.count()) return nullptr;
     return &dbc_attributes[idx];
 }
 
@@ -345,8 +347,9 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         DBC_MESSAGE msg;
         msg.ID = match.captured(1).toULong() & 0x7FFFFFFFul; //the ID is always stored in decimal format
         msg.name = match.captured(2);
-        msg.len = match.captured(3).toInt();
+        msg.len = match.captured(3).toUInt();
         msg.sender = findNodeByName(match.captured(4));
+        if (!msg.sender) msg.sender = findNodeByIdx(0);
         messageHandler->addMessage(msg);
         msgPtr = messageHandler->findMsgByID(msg.ID);
     }
@@ -450,9 +453,12 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         if (match.captured(11 + offset).contains(','))
         {
             QString tmp = match.captured(11 + offset).split(',')[0];
-            sig.receiver = findNodeByName(tmp);
+            sig.receiver = findNodeByName(tmp);            
         }
         else sig.receiver = findNodeByName(match.captured(11 + offset));
+
+        if (!sig.receiver) sig.receiver = findNodeByIdx(0); //apply default if there was no match
+
         sig.parentMessage = msg;
         msg->sigHandler->addSignal(sig);
         if (isMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
@@ -476,11 +482,11 @@ bool DBCFile::parseValueLine(QString line)
     if (match.hasMatch())
     {
         //qDebug() << "Data was: " << match.captured(3);
-        DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
-        if (msg != NULL)
+        DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toUInt());
+        if (msg != nullptr)
         {
             DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
-            if (sig != NULL)
+            if (sig != nullptr)
             {
                 QString tokenString = match.captured(3);
                 DBC_VAL_ENUM_ENTRY val;
@@ -525,7 +531,7 @@ bool DBCFile::parseAttributeLine(QString line)
         if (foundAttr)
         {
             qDebug() << "That attribute does exist";
-            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
+            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt());
             if (foundMsg)
             {
                 qDebug() << "It references a valid, registered message";
@@ -557,7 +563,7 @@ bool DBCFile::parseAttributeLine(QString line)
         if (foundAttr)
         {
             qDebug() << "That attribute does exist";
-            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toInt());
+            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt());
             if (foundMsg)
             {
                 qDebug() << "It references a valid, registered message";
@@ -662,7 +668,7 @@ void DBCFile::loadFile(QString fileName)
     QString line, rawLine;
     QRegularExpression regex;
     QRegularExpressionMatch match;
-    DBC_MESSAGE *currentMessage = NULL;
+    DBC_MESSAGE *currentMessage = nullptr;
     DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
 
@@ -746,11 +752,11 @@ void DBCFile::loadFile(QString fileName)
                 if (match.hasMatch())
                 {
                     //qDebug() << "Comment was: " << match.captured(3);
-                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
-                    if (msg != NULL)
+                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toUInt());
+                    if (msg != nullptr)
                     {
                         DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
-                        if (sig != NULL)
+                        if (sig != nullptr)
                         {
                             sig->comment = match.captured(3);
                         }
@@ -767,8 +773,8 @@ void DBCFile::loadFile(QString fileName)
                 if (match.hasMatch())
                 {
                     //qDebug() << "Comment was: " << match.captured(2);
-                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toInt());
-                    if (msg != NULL)
+                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toUInt());
+                    if (msg != nullptr)
                     {
                         msg->comment = match.captured(2);
                     }
@@ -785,7 +791,7 @@ void DBCFile::loadFile(QString fileName)
                 {
                     //qDebug() << "Comment was: " << match.captured(2);
                     DBC_NODE *node = findNodeByName(match.captured(1));
-                    if (node != NULL)
+                    if (node != nullptr)
                     {
                         node->comment = match.captured(2);
                     }
@@ -1036,6 +1042,9 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
 
 void DBCFile::saveFile(QString fileName)
 {
+    int nodeNumber = 1;
+    int msgNumber = 1;
+    int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
     QString defaultsOutput, attrValOutput;
@@ -1089,6 +1098,11 @@ void DBCFile::saveFile(QString fileName)
         DBC_NODE node = dbc_nodes[x];
         if (node.name.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
         {
+            if (node.name.length() < 1) //detect an empty string and fill it out with something
+            {
+                node.name = "NODE" + QString::number(nodeNumber);
+                nodeNumber++;
+            }
             nodesOutput.append(node.name + " ");
             if (node.comment.length() > 0)
             {
@@ -1119,6 +1133,12 @@ void DBCFile::saveFile(QString fileName)
     {
         DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
 
+        if (msg->name.length() < 1) //detect an empty string and fill it out with something
+        {
+            msg->name = "MSG" + QString::number(msgNumber);
+            msgNumber++;
+        }
+
         msgOutput.append("BO_ " + QString::number(msg->ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
         if (msg->comment.length() > 0)
@@ -1146,6 +1166,13 @@ void DBCFile::saveFile(QString fileName)
         for (int s = 0; s < msg->sigHandler->getCount(); s++)
         {
             DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+
+            if (sig->name.length() < 1) //detect an empty string and fill it out with something
+            {
+                sig->name = "SIG" + QString::number(sigNumber);
+                sigNumber++;
+            }
+
             msgOutput.append("   SG_ " + sig->name);
 
             if (sig->isMultiplexor) msgOutput.append(" M");
@@ -1399,7 +1426,7 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
         return &loadedFiles.last();
     }
 
-    return NULL;
+    return nullptr;
 }
 
 void DBCHandler::removeDBCFile(int idx)
@@ -1439,10 +1466,10 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
         if (loadedFiles[i].getAssocBus() == -1 || frame.bus == (unsigned int)loadedFiles[i].getAssocBus())
         {
             DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.ID);
-            if (msg != NULL) return msg;
+            if (msg != nullptr) return msg;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 int DBCHandler::getFileCount()
@@ -1452,15 +1479,15 @@ int DBCHandler::getFileCount()
 
 DBCFile* DBCHandler::getFileByIdx(int idx)
 {
-    if (loadedFiles.count() == 0) return NULL;
-    if (idx < 0) return NULL;
-    if (idx >= loadedFiles.count()) return NULL;
+    if (loadedFiles.count() == 0) return nullptr;
+    if (idx < 0) return nullptr;
+    if (idx >= loadedFiles.count()) return nullptr;
     return &loadedFiles[idx];
 }
 
 DBCFile* DBCHandler::getFileByName(QString name)
 {
-    if (loadedFiles.count() == 0) return NULL;
+    if (loadedFiles.count() == 0) return nullptr;
     for (int i = 0; i < loadedFiles.count(); i++)
     {
         if (loadedFiles[i].getFilename().compare(name, Qt::CaseInsensitive) == 0)
@@ -1468,7 +1495,7 @@ DBCFile* DBCHandler::getFileByName(QString name)
             return &loadedFiles[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBCHandler::DBCHandler()

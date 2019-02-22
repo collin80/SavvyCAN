@@ -555,9 +555,9 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     thisFrame.isReceived = true;
                     thisFrame.bus = 0;
                     if (line.at(28) == ' ') {
-                        thisFrame.extended = true;
-                    } else {
                         thisFrame.extended = false;
+                    } else {
+                        thisFrame.extended = true;
                     }
 
                     if (line.at(41) == 'R') {
@@ -655,25 +655,28 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
         }
         if (inHeader) continue;
         if (line.length() > 2)
-        {
+        {            
             QList<QByteArray> tokens = line.simplified().split(' ');
-            thisFrame.timestamp = (uint32_t)(tokens[0].toFloat() * 1000000.0);
-            thisFrame.ID = tokens[2].toUInt(NULL, 16);
-            thisFrame.len = tokens[5].toUInt();
-            thisFrame.isReceived = tokens[3].toUpper().contains("RX");
-            thisFrame.bus = tokens[1].toUInt();
-            thisFrame.extended = (thisFrame.ID > 0x7FF);
-            thisFrame.remote = false;
-            for (unsigned int d = 6; d < (6 + thisFrame.len); d++)
+            if (tokens.length() > 4)
             {
-                if (tokens.count() > d)
+                thisFrame.timestamp = (uint32_t)(tokens[0].toFloat() * 1000000.0);
+                thisFrame.ID = tokens[2].toUInt(NULL, 16);
+                thisFrame.len = tokens[5].toUInt();
+                thisFrame.isReceived = tokens[3].toUpper().contains("RX");
+                thisFrame.bus = tokens[1].toUInt();
+                thisFrame.extended = (thisFrame.ID > 0x7FF);
+                thisFrame.remote = false;
+                for (unsigned int d = 6; d < (6 + thisFrame.len); d++)
                 {
-                    thisFrame.data[d - 6] = tokens[d].toInt(NULL, 16);
-                }
-                else //expected byte wasn't there to read. Set it zero and set error flag
-                {
+                    if (tokens.count() > d)
+                    {
+                        thisFrame.data[d - 6] = tokens[d].toInt(NULL, 16);
+                    }
+                    else //expected byte wasn't there to read. Set it zero and set error flag
+                    {
                     thisFrame.data[d - 6] = 0;
                     foundErrors = true;
+                    }
                 }
             }
             frames->append(thisFrame);
