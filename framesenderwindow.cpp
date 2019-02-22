@@ -820,6 +820,8 @@ void FrameSenderWindow::processCellChange(int line, int col)
 
     sendingData[line].count = 0;
 
+    int numBuses = CANConManager::getInstance()->getNumBuses();
+
     switch (col)
     {
         case 0: //Enable check box
@@ -831,9 +833,9 @@ void FrameSenderWindow::processCellChange(int line, int col)
             qDebug() << "Setting enabled to " << sendingData[line].enabled;
             break;
         case 1: //Bus designation
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 1)->text());
-            if (tempVal < 0) tempVal = 0;
-            if (tempVal > 1) tempVal = 1;
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 1)->text());            
+            if (tempVal < -1) tempVal = -1;
+            if (tempVal >= numBuses) tempVal = numBuses - 1;
             sendingData[line].bus = tempVal;
             qDebug() << "Setting bus to " << tempVal;
             break;

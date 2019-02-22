@@ -128,13 +128,13 @@ public:
         return output;
     }
 
-    static QString formatTimestamp(uint64_t timestamp)
+    static QVariant formatTimestamp(uint64_t timestamp)
     {
         if (!sysTimeMode) {
-            if (!secondsMode) return QString::number(timestamp);
-            else return QString::number((double)timestamp / 1000000.0, 'f', 6);
+            if (!secondsMode) return (unsigned long long)(timestamp);
+            else return (double)timestamp / 1000000.0;
         }
-        else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000).toString(timeFormat);
+        else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric

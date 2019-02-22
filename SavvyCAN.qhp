@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <QtHelpProject version="1.0">
-    <namespace>org.sphinx.savvycan.181</namespace>
+    <namespace>org.sphinx.savvycan.189</namespace>
     <virtualFolder>doc</virtualFolder>
-    <customFilter name="SavvyCAN 181">
+    <customFilter name="SavvyCAN 189">
         <filterAttribute>SavvyCAN</filterAttribute>
-        <filterAttribute>181</filterAttribute>
+        <filterAttribute>189</filterAttribute>
     </customFilter>
     <filterSection>
         <filterAttribute>SavvyCAN</filterAttribute>
-        <filterAttribute>181</filterAttribute>
+        <filterAttribute>189</filterAttribute>
         <toc>
-            <section title="SavvyCAN 181 documentation" ref="index.html">
+            <section title="SavvyCAN 189 documentation" ref="index.html">
                 <section title="Main / Start Up Screen" ref="mainscreen.html"/>
                 <section title="The Main Frame List" ref="mainscreen.html#the-main-frame-list"/>
                 <section title="The Bottom Statusbar" ref="mainscreen.html#the-bottom-statusbar"/>
@@ -58,6 +58,11 @@
                 <section title="Sniffer Window" ref="sniffer.html"/>
                 <section title="Using the Sniffer Window" ref="sniffer.html#using-the-sniffer-window"/>
                 <section title="Notching and Unnotching" ref="sniffer.html#notching-and-unnotching"/>
+                <section title="Advanced Options" ref="sniffer.html#advanced-options"/>
+                <section title="Never Expire IDs" ref="sniffer.html#never-expire-ids"/>
+                <section title="Mute notched bits" ref="sniffer.html#mute-notched-bits"/>
+                <section title="Fade inactive bytes" ref="sniffer.html#fade-inactive-bytes"/>
+                <section title="View Bits" ref="sniffer.html#view-bits"/>
                 <section title="Frame Details Window" ref="framedetails.html"/>
                 <section title="The Purpose of Frame Details Window" ref="framedetails.html#the-purpose-of-frame-details-window"/>
                 <section title="File Comparison Window" ref="filecomparison.html"/>
@@ -101,63 +106,65 @@
 
         </keywords>
         <files>
-            <file>flowview.html</file>
-            <file>dbc_manager.html</file>
-            <file>graphwindow.html</file>
-            <file>framedetails.html</file>
-            <file>rangestate.html</file>
-            <file>filecomparison.html</file>
-            <file>connectionwindow.html</file>
-            <file>fuzzingwindow.html</file>
-            <file>mainscreen.html</file>
-            <file>signaleditor.html</file>
-            <file>uds_scanner.html</file>
-            <file>customsender.html</file>
-            <file>graphsetup.html</file>
-            <file>playbackwindow.html</file>
-            <file>index.html</file>
-            <file>scriptingwindow.html</file>
             <file>bisector.html</file>
-            <file>firmwareuploader.html</file>
-            <file>genindex.html</file>
-            <file>sniffer.html</file>
-            <file>isotp_decoder.html</file>
-            <file>preferences.html</file>
+            <file>connectionwindow.html</file>
+            <file>customsender.html</file>
             <file>dbc_editor.html</file>
-            <file>_static/file.png</file>
-            <file>_static/down.png</file>
+            <file>dbc_manager.html</file>
+            <file>filecomparison.html</file>
+            <file>firmwareuploader.html</file>
+            <file>flowview.html</file>
+            <file>framedetails.html</file>
+            <file>fuzzingwindow.html</file>
+            <file>genindex.html</file>
+            <file>graphsetup.html</file>
+            <file>graphwindow.html</file>
+            <file>index.html</file>
+            <file>isotp_decoder.html</file>
+            <file>mainscreen.html</file>
+            <file>playbackwindow.html</file>
+            <file>preferences.html</file>
+            <file>rangestate.html</file>
+            <file>scriptingwindow.html</file>
+            <file>search.html</file>
+            <file>signaleditor.html</file>
+            <file>sniffer.html</file>
+            <file>uds_scanner.html</file>
             <file>_static/ajax-loader.gif</file>
-            <file>_static/comment-close.png</file>
-            <file>_static/minus.png</file>
-            <file>_static/comment-bright.png</file>
-            <file>_static/up-pressed.png</file>
-            <file>_static/pygments.css</file>
-            <file>_static/plus.png</file>
-            <file>_static/nonav.css</file>
+            <file>_static/alabaster.css</file>
             <file>_static/basic.css</file>
-            <file>_static/down-pressed.png</file>
-            <file>_static/up.png</file>
+            <file>_static/comment-bright.png</file>
+            <file>_static/comment-close.png</file>
             <file>_static/comment.png</file>
-            <file>_images/SignalEditor.png</file>
-            <file>_images/FrameInfoWindow.png</file>
-            <file>_images/DBCEditor.png</file>
-            <file>_images/UDS_Scanner.png</file>
-            <file>_images/Sniffer.png</file>
+            <file>_static/down-pressed.png</file>
+            <file>_static/down.png</file>
+            <file>_static/file.png</file>
+            <file>_static/minus.png</file>
+            <file>_static/nonav.css</file>
+            <file>_static/plus.png</file>
+            <file>_static/pygments.css</file>
+            <file>_static/up-pressed.png</file>
+            <file>_static/up.png</file>
             <file>_images/Bisector.png</file>
-            <file>_images/FuzzingWindow.png</file>
-            <file>_images/GraphingView.png</file>
-            <file>_images/ScriptingWindow.png</file>
-            <file>_images/DBCManager.png</file>
-            <file>_images/GraphSetup.png</file>
-            <file>_images/RangeState.png</file>
-            <file>_images/Preferences.png</file>
             <file>_images/ConnectionWindow.png</file>
+            <file>_images/CustomSender.png</file>
+            <file>_images/DBCEditor.png</file>
+            <file>_images/DBCManager.png</file>
             <file>_images/FileComparator.png</file>
+            <file>_images/FlowView.png</file>
+            <file>_images/FrameInfoWindow.png</file>
+            <file>_images/FuzzingWindow.png</file>
+            <file>_images/GraphSetup.png</file>
+            <file>_images/GraphingView.png</file>
             <file>_images/ISOTPDecoder.png</file>
             <file>_images/MainScreen.png</file>
-            <file>_images/FlowView.png</file>
-            <file>_images/CustomSender.png</file>
             <file>_images/Playback.png</file>
+            <file>_images/Preferences.png</file>
+            <file>_images/RangeState.png</file>
+            <file>_images/ScriptingWindow.png</file>
+            <file>_images/SignalEditor.png</file>
+            <file>_images/Sniffer.png</file>
+            <file>_images/UDS_Scanner.png</file>
         </files>
     </filterSection>
 </QtHelpProject>

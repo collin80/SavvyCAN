@@ -81,16 +81,6 @@
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
        </property>
        <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="1">
-         <widget class="QRadioButton" name="rbKvaser">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="text">
-           <string>Kvaser</string>
-          </property>
-         </widget>
-        </item>
         <item row="0" column="0">
          <widget class="QRadioButton" name="rbGVRET">
           <property name="text">
@@ -101,17 +91,17 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QRadioButton" name="rbSocketCAN">
           <property name="enabled">
            <bool>false</bool>
           </property>
           <property name="text">
-           <string>SocketCAN</string>
+           <string>QT SerialBus Devices (SocketCAN, PeakCAN, etc)</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="1">
+        <item row="1" column="0">
          <widget class="QRadioButton" name="rbRemote">
           <property name="text">
            <string>Remote Host</string>
@@ -120,6 +110,16 @@
         </item>
        </layout>
       </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="lblDeviceType">
+       <property name="text">
+        <string>Device Type:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cbDeviceType"/>
      </item>
      <item>
       <widget class="QLabel" name="lPort">

@@ -696,7 +696,7 @@ void GraphingWindow::saveSpreadsheet()
         */
 
         QList<GraphParams>::iterator iter;
-        double xMin = 1000000000, xMax=-1000000000;
+        double xMin = 10000000000000, xMax=-10000000000000;
         int maxCount = 0;
         int numGraphs = 0;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
@@ -732,6 +732,7 @@ void GraphingWindow::saveSpreadsheet()
         for (int j = 1; j < (maxCount - 1); j++)
         {
             currentX = xMin + (j * sliceSize);
+            qDebug() << "X: " << currentX;
             outFile->write(QString::number(currentX).toUtf8());
             for (int k = 0; k < graphParams.count(); k++)
             {
@@ -764,9 +765,10 @@ void GraphingWindow::saveSpreadsheet()
                     double span = graphParams[k].x[indices[k] + 1] - graphParams[k].x[indices[k]];
                     double progress = (currentX - graphParams[k].x[indices[k]]) / span;
                     value = Utility::Lerp(graphParams[k].y[indices[k]], graphParams[k].y[indices[k] + 1], progress);
+                    qDebug() << "Span: " << span << " Prog: " << progress << " Value: " << value;
                 }
 
-                if (currentX >= graphParams[k].x[indices[k] + 1]) indices[k]++;
+                if (currentX >= graphParams[k].x[indices[k]]) indices[k]++;
 
                 outFile->putChar(',');
                 outFile->write(QString::number(value).toUtf8());
@@ -845,7 +847,7 @@ void GraphingWindow::loadDefinitions()
     QStringList filters;
     filters.append(QString(tr("Graph definition (*.gdf)")));
 
-    if (dbcHandler == NULL) return;
+    if (dbcHandler == nullptr) return;
     if (dbcHandler->getFileCount() == 0) dbcHandler->createBlankFile();
 
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -871,11 +873,14 @@ void GraphingWindow::loadDefinitions()
 
                 if (tokens[0] == "X") //newest format based around signals
                 {
-                    gp.ID = tokens[1].toInt(NULL, 16);
-                    gp.mask = tokens[2].toULongLong(NULL, 16);
+                    gp.ID = tokens[1].toUInt(nullptr, 16);
+                    gp.mask = tokens[2].toULongLong(nullptr, 16);
                     gp.startBit = tokens[3].toInt();
-                    if (gp.startBit < 0) gp.intelFormat = false;
-                        else gp.intelFormat = true;
+                    if (gp.startBit < 0) {
+                        gp.intelFormat = false;
+                        gp.startBit *= -1;
+                    }
+                    else gp.intelFormat = true;
                     gp.numBits = tokens[4].toInt();
                     if (tokens[5] == "Y") gp.isSigned = true;
                         else gp.isSigned = false;
@@ -894,18 +899,18 @@ void GraphingWindow::loadDefinitions()
                 }
                 else //one of the two older formats then
                 {
-                    gp.ID = tokens[0].toInt(NULL, 16);
+                    gp.ID = tokens[0].toUInt(nullptr, 16);
                     if (tokens[1] == "S") //old signal based graph definition
                     {
                         //tokens[2] is the signal name. Need to use the message ID and this name to look it up
                         DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByID(gp.ID);
-                        if (msg != NULL)
+                        if (msg != nullptr)
                         {
                             DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(tokens[2]);
                             if (sig)
                             {
                                 gp.mask = 0xFFFFFFFF;
-                                gp.bias = sig->bias;
+                                gp.bias = (float)sig->bias;
                                 gp.color.setRed(tokens[3].toInt());
                                 gp.color.setGreen(tokens[4].toInt());
                                 gp.color.setBlue(tokens[5].toInt());
@@ -914,7 +919,7 @@ void GraphingWindow::loadDefinitions()
                                 if (sig->valType == SIGNED_INT) gp.isSigned = true;
                                     else gp.isSigned = false;
                                 gp.numBits = sig->signalSize;
-                                gp.scale = sig->factor;
+                                gp.scale = (float)sig->factor;
                                 gp.startBit = sig->startBit;
                                 gp.stride = 1;
                                 createGraph(gp, true);
@@ -926,7 +931,7 @@ void GraphingWindow::loadDefinitions()
                         //hard part - this all changed drastically
                         //the difference between intel and motorola format is whether
                         //start is larger than end byte or not.
-                        uint64_t oldMask = tokens[1].toULongLong(NULL, 16);
+                        uint64_t oldMask = tokens[1].toULongLong(nullptr, 16);
                         int oldStart = tokens[2].toInt();
                         int oldEnd = tokens[3].toInt();
 

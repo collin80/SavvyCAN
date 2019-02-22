@@ -1,11 +1,15 @@
 #include <QDebug>
 #include "sniffermodel.h"
 #include "snifferwindow.h"
-
+#include "SnifferDelegate.h"
 
 SnifferModel::SnifferModel(QObject *parent)
     : QAbstractItemModel(parent),
-      mFilter(false)
+      mFilter(false),
+      mNeverExpire(false),
+      mFadeInactive(false),
+      mMuteNotched(false),
+      mTimeSequence(0)
 {
 }
 
@@ -56,16 +60,29 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             if(tc::DATA_0<=col && col <=tc::DATA_7)
             {
                 int data = item->getData(col-tc::DATA_0);
-                if(data>=0)
+                if(data >= 0)
+                {
                     return QString("%1").arg(data, 2, 16, QLatin1Char('0')).toUpper();
+                }
             }
             break;
         }
+        case Qt::ForegroundRole:
+        {
+            if (!mFadeInactive ||  col < 2) return QBrush(Qt::black);
+            int v = item->getSeqInterval(col - 2) * 10;
+            //qDebug() << "mTS: " << mTimeSequence << " gDT(" << (col - 2) << ") " << item->getDataTimestamp(col - 2);
+            if (v > 225) v = 225;
+            if (v < 0) v = 0;
+            return QBrush(QColor(v,v,v,255));
+            break;
+        }
+
         case Qt::BackgroundRole:
         {
             if(tc::ID==col)
             {
-                if(item->elapsed()>4000)
+                if(item->elapsed() > 4000)
                     return QBrush(Qt::red);
             }
             else if(tc::DATA_0<=col && col<=tc::DATA_7)
@@ -143,6 +160,35 @@ QModelIndex SnifferModel::parent(const QModelIndex &) const
     return QModelIndex();
 }
 
+bool SnifferModel::getNeverExpire()
+{
+    return mNeverExpire;
+}
+
+bool SnifferModel::getFadeInactive()
+{
+    return mFadeInactive;
+}
+
+bool SnifferModel::getMuteNotched()
+{
+    return mMuteNotched;
+}
+
+void SnifferModel::setNeverExpire(bool val)
+{
+    mNeverExpire = val;
+}
+
+void SnifferModel::setFadeInactive(bool val)
+{
+    mFadeInactive = val;
+}
+
+void SnifferModel::setMuteNotched(bool val)
+{
+    mMuteNotched = val;
+}
 
 void SnifferModel::clear()
 {
@@ -154,12 +200,14 @@ void SnifferModel::clear()
     endResetModel();
 }
 
-
+//Called from window with a timer (currently 200ms)
 void SnifferModel::refresh()
 {
     QMap<quint32, SnifferItem*>::iterator i;
     QVector<quint32> toRemove;
     SnifferItem* item;
+
+    mTimeSequence++;
 
     /* update markers */
 
@@ -167,7 +215,7 @@ void SnifferModel::refresh()
     for (i = mMap.begin(); i != mMap.end(); ++i)
     {
         i.value()->updateMarker();
-        if(i.value()->elapsed()>5000)
+        if(i.value()->elapsed()>5000 && !mNeverExpire)
             toRemove.append(i.key());
     }
 
@@ -237,14 +285,15 @@ void SnifferModel::update(CANConnection*, QVector<CANFrame>& pFrames)
             int index = std::distance(mMap.begin(), mMap.lowerBound(frame.ID));
             /* add the frame */
             beginInsertRows(QModelIndex(), index, index);
-            mMap[frame.ID] = new SnifferItem(frame);
+            mMap[frame.ID] = new SnifferItem(frame, mTimeSequence);
+            mMap[frame.ID]->update(frame, mTimeSequence, mMuteNotched);
             endInsertRows();
 
             emit idChange(frame.ID, true);
         }
         else
             //updateData
-            mMap[frame.ID]->update(frame);
+            mMap[frame.ID]->update(frame, mTimeSequence, mMuteNotched);
     }
 }
 

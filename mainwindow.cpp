@@ -55,31 +55,34 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
+    QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
+    verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
+    verticalHeader->setDefaultSectionSize(10);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 
-    graphingWindow = NULL;
-    frameInfoWindow = NULL;
-    playbackWindow = NULL;
-    flowViewWindow = NULL;
-    frameSenderWindow = NULL;
-    dbcMainEditor = NULL;
-    comparatorWindow = NULL;
-    settingsDialog = NULL;
-    firmwareUploaderWindow = NULL;
-    discreteStateWindow = NULL;
-    connectionWindow = NULL;
-    scriptingWindow = NULL;
-    rangeWindow = NULL;
-    dbcFileWindow = NULL;
-    fuzzingWindow = NULL;
-    udsScanWindow = NULL;
-    motorctrlConfigWindow = NULL;
-    isoWindow = NULL;
-    snifferWindow = NULL;
-    bisectWindow = NULL;
-    signalViewerWindow = NULL;
+    graphingWindow = nullptr;
+    frameInfoWindow = nullptr;
+    playbackWindow = nullptr;
+    flowViewWindow = nullptr;
+    frameSenderWindow = nullptr;
+    dbcMainEditor = nullptr;
+    comparatorWindow = nullptr;
+    settingsDialog = nullptr;
+    firmwareUploaderWindow = nullptr;
+    discreteStateWindow = nullptr;
+    connectionWindow = nullptr;
+    scriptingWindow = nullptr;
+    rangeWindow = nullptr;
+    dbcFileWindow = nullptr;
+    fuzzingWindow = nullptr;
+    udsScanWindow = nullptr;
+    motorctrlConfigWindow = nullptr;
+    isoWindow = nullptr;
+    snifferWindow = nullptr;
+    bisectWindow = nullptr;
+    signalViewerWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -160,6 +163,10 @@ MainWindow::MainWindow(QWidget *parent) :
     temp.bus = 0;
     temp.ID = 0x100;
     temp.len = 0;
+    temp.extended = false;
+    temp.isReceived = true;
+    temp.remote = false;
+    temp.timestamp = 100000000;
     model->addFrame(temp, true);
     qApp->processEvents();
     tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
@@ -180,7 +187,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
     ui->actionSignal_Viewer->setVisible(false);
-    //ui->actionSingle_Multi_State_2->setVisible(false);
+    ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
 }
@@ -293,7 +300,7 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(5, settings.value("Main/BusColumn", 40).toUInt()); //bus
         ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
-        ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
+        //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
     if (settings.value("Main/AutoScroll", false).toBool())
     {
@@ -338,7 +345,7 @@ void MainWindow::writeSettings()
         settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(5));
         settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
-        settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
+        //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
     }
 }
 
@@ -387,11 +394,22 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
 void MainWindow::interpretToggled(bool state)
 {
     model->setInterpetMode(state);
+    //ui->canFramesView->resizeRowsToContents();   //a VERY costly operation!
 }
 
 void MainWindow::overwriteToggled(bool state)
 {
-    model->setOverwriteMode(state);
+    if (state)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes)
+        {
+            model->setOverwriteMode(state);
+        }
+        else ui->cbOverwrite->setCheckState(Qt::Unchecked);
+    }
 }
 
 void MainWindow::updateFilterList()
@@ -466,7 +484,7 @@ void MainWindow::tickGUIUpdate()
             framesPerSec = 0;
 
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
-        if (allowCapture && ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
         ui->lbFPS->setText(QString::number(framesPerSec));
         if (rxFrames > 0)
         {

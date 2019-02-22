@@ -12,7 +12,8 @@ FramePlaybackObject::FramePlaybackObject()
     playbackActive = false;
     playbackForward = true;
     useOrigTiming = false;
-    whichBusSend = -1;
+    whichBusSend = 0;
+    currentSeqItem = nullptr;
 }
 
 FramePlaybackObject::~FramePlaybackObject()
@@ -25,6 +26,12 @@ FramePlaybackObject::~FramePlaybackObject()
 quint64 FramePlaybackObject::updatePosition(bool forward)
 {
     //qDebug() << "updatePosition";
+    if (!currentSeqItem) {
+        playbackTimer->stop(); //pushing this button halts automatic playback
+        playbackActive = false;
+        currentPosition = 0;
+        return 0;
+    }
     if (forward)
     {
         if (currentPosition < (currentSeqItem->data.count() - 1)) currentPosition++; //still in same file so keep going
@@ -231,6 +238,7 @@ void FramePlaybackObject::stepPlaybackForward()
     playbackActive = false;
     updatePosition(true);
     CANConManager::getInstance()->sendFrames(sendingBuffer);
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::stepPlaybackBackward()
@@ -248,6 +256,7 @@ void FramePlaybackObject::stepPlaybackBackward()
 
     updatePosition(false);
     CANConManager::getInstance()->sendFrames(sendingBuffer);
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::stopPlayback()
@@ -262,6 +271,7 @@ void FramePlaybackObject::stopPlayback()
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
     currentPosition = 0;
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::pausePlayback()
@@ -275,6 +285,7 @@ void FramePlaybackObject::pausePlayback()
 
     playbackActive = false;
     playbackTimer->stop();
+    emit statusUpdate(currentPosition);
 }
 
 void FramePlaybackObject::setSequenceObject(SequenceItem *item)
@@ -289,6 +300,7 @@ void FramePlaybackObject::setUseOriginalTiming(bool state)
 
 void FramePlaybackObject::setSendingBus(int bus)
 {
+    qDebug() << "Setting sending bus to " << bus;
     whichBusSend = bus;
 }
 

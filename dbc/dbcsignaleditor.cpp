@@ -156,7 +156,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             [=]()
             {
                 if (currentSignal == NULL) return;
-                currentSignal->name = ui->txtName->text().simplified().replace(' ', '_');
+                QString tempNameStr = ui->txtName->text().simplified().replace(' ', '_');
+                if (tempNameStr.length() > 0) currentSignal->name = tempNameStr;
                 //need to update the list too.
                 ui->signalsList->currentItem()->setText(currentSignal->name);
             });
@@ -256,7 +257,7 @@ void DBCSignalEditor::readSettings()
     QSettings settings;
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
-        resize(settings.value("DBCSignalEditor/WindowSize", QSize(800, 572)).toSize());
+        resize(settings.value("DBCSignalEditor/WindowSize", QSize(1000, 600)).toSize());
         move(settings.value("DBCSignalEditor/WindowPos", QPoint(100, 100)).toPoint());
     }
 }
@@ -371,8 +372,8 @@ void DBCSignalEditor::deleteCurrentSignal()
 {
     int currIdx = ui->signalsList->currentRow();
 
-    if(currIdx==ui->signalsList->count()-1)
-        return;
+    //if(currIdx==ui->signalsList->count()-1)
+        //return;
 
     if (currIdx > -1)
     {

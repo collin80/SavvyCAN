@@ -9,6 +9,7 @@
 #include <QSettings>
 #include <QTimer>
 #include <QItemSelection>
+#include <QCanBusDeviceInfo>
 #include "canconnectionmodel.h"
 #include "connections/canconnection.h"
 
@@ -47,6 +48,7 @@ public slots:
 private slots:
     void handleOKButton();
     void handleConnTypeChanged();
+    void handleDeviceTypeChanged();
     void currentRowChanged(const QModelIndex &current, const QModelIndex &previous);
     void consoleEnableChanged(bool checked);
     void handleRemoveConn();
@@ -63,6 +65,7 @@ private slots:
 private:
     Ui::ConnectionWindow *ui;
     QList<QSerialPortInfo> ports;
+    QList<QCanBusDeviceInfo> canDevices;
     QSettings *settings;
     CANConnectionModel *connModel;
 
@@ -70,13 +73,14 @@ private:
     void selectKvaser();
     void selectSocketCan();
     void selectRemote();
-    bool isSocketCanAvailable();
+    bool isSerialBusAvailable();
     int getSpeed();
     QString getPortName();
-    void setPortName(CANCon::type pType, QString pPortName);
+    QString getDriverName();
+    void setPortName(CANCon::type pType, QString pPortName, QString pDriver);
 
     void setActiveAll(bool pActive);
-    CANConnection* create(CANCon::type pTye, QString pPortName);
+    CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver);
     void loadConnections();
     void saveConnections();
     void showEvent(QShowEvent *);

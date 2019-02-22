@@ -103,6 +103,7 @@ void DBCMainEditor::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     writeSettings();
+    sigEditor->close();
 }
 
 void DBCMainEditor::readSettings()
@@ -153,7 +154,7 @@ void DBCMainEditor::deleteCurrentNode()
     int thisRow = ui->NodesTable->currentRow();
     QString nodeName = ui->NodesTable->item(thisRow, 0)->text();
     if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
-    {
+    {        
         ui->NodesTable->removeRow(thisRow);
         dbcFile->dbc_nodes.removeAt(thisRow);
         inhibitCellChanged = true;
@@ -283,6 +284,9 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             newMsg.name = "";
             newMsg.sender = node;
             newMsg.len = 0;
+            newMsg.fgColor = ui->MessagesTable->item(row, 4)->backgroundColor();
+            newMsg.bgColor = ui->MessagesTable->item(row, 5)->backgroundColor();
+
             for (int i = 0; i < referenceFrames->length(); i++)
             {
                 if ((uint) referenceFrames->at(i).ID == msgID)
@@ -547,7 +551,7 @@ void DBCMainEditor::insertBlankRow()
     {
         QTableWidgetItem *item = new QTableWidgetItem("");
         if (i == 4) item->setBackgroundColor(QApplication::palette().color(QPalette::WindowText)); //foreground color
-        //if (i == 5) item->setBackgroundColor(ui->MessagesTable->palette().color(ui->MessagesTable->backgroundRole())); //background color
+        if (i == 5) item->setBackgroundColor(QApplication::palette().color(QPalette::Base));
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
         ui->MessagesTable->setItem(rowIdx, i, item);
     }

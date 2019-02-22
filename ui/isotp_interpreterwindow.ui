@@ -89,7 +89,11 @@
         </widget>
        </item>
        <item>
-        <widget class="QListWidget" name="listFilter"/>
+        <widget class="QListWidget" name="listFilter">
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">

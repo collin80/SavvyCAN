@@ -11,8 +11,8 @@
 /****    class definition       ****/
 /***********************************/
 
-SerialBusConnection::SerialBusConnection(QString portName) :
-    CANConnection(portName, CANCon::SOCKETCAN, 1, 4000, true),
+SerialBusConnection::SerialBusConnection(QString portName, QString driverName) :
+    CANConnection(portName, driverName, CANCon::SERIALBUS, 1, 4000, true),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
@@ -26,6 +26,22 @@ SerialBusConnection::~SerialBusConnection()
 
 void SerialBusConnection::piStarted()
 {
+    qDebug() << "piStarted()";
+    /* create device */
+    QString errorString;
+    qDebug() << "Creating device instance";
+    mDev_p = QCanBus::instance()->createDevice(getDriver(), getPort(), &errorString);
+    if (!mDev_p) {
+        disconnectDevice();
+        qDebug() << "Error: createDevice(" << getType() << getDriver() << getPort() << "):" << errorString;
+        return;
+    }
+
+    /* connect slots */
+    connect(mDev_p, &QCanBusDevice::errorOccurred, this, &SerialBusConnection::errorReceived);
+    connect(mDev_p, &QCanBusDevice::framesWritten, this, &SerialBusConnection::framesWritten);
+    connect(mDev_p, &QCanBusDevice::framesReceived, this, &SerialBusConnection::framesReceived);
+
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
     mTimer.setInterval(1000);
     mTimer.setSingleShot(false); //keep ticking
@@ -47,6 +63,7 @@ void SerialBusConnection::piSuspend(bool pSuspend)
 
 
 void SerialBusConnection::piStop() {
+    qDebug() << "piStop()";
     mTimer.stop();
     disconnectDevice();
 }
@@ -65,6 +82,8 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     if(0 != pBusIdx)
         return;
 
+    if (!mDev_p) return;
+
     /* disconnect device if we have one connected */
     disconnectDevice();
 
@@ -75,20 +94,6 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     if(!bus.active)
         return;
 
-    /* create device */
-    QString errorString;
-    mDev_p = QCanBus::instance()->createDevice("socketcan", getPort(), &errorString);
-    if (!mDev_p) {
-        disconnectDevice();
-        qDebug() << "Error: createDevice(" << getType() << getPort() << "):" << errorString;
-        return;
-    }
-
-    /* connect slots */
-    connect(mDev_p, &QCanBusDevice::errorOccurred, this, &SerialBusConnection::errorReceived);
-    connect(mDev_p, &QCanBusDevice::framesWritten, this, &SerialBusConnection::framesWritten);
-    connect(mDev_p, &QCanBusDevice::framesReceived, this, &SerialBusConnection::framesReceived);
-
     /* set configuration */
     /*if (p.useConfigurationEnabled) {
      foreach (const SettingsDialog::ConfigurationItem &item, p.configurations)
@@ -96,7 +101,8 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     }*/
 
     //You cannot set the speed of a socketcan interface, it has to be set with console commands.
-    //mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
+    //But, you can probabaly set the speed of many of the other serialbus devices so go ahead and try
+    mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
 
     /* connect device */
     if (!mDev_p->connectDevice()) {
@@ -115,8 +121,8 @@ bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
 
     /* fill frame */
     QCanBusFrame frame;
-    frame.setFrameId(pFrame.ID);
     frame.setExtendedFrameFormat(pFrame.extended);
+    frame.setFrameId(pFrame.ID);
     if (pFrame.remote) {
         frame.setFrameType(QCanBusFrame::FrameType::RemoteRequestFrame);
     } else {
@@ -137,8 +143,6 @@ bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
 void SerialBusConnection::disconnectDevice() {
     if(mDev_p) {
         mDev_p->disconnectDevice();
-        delete mDev_p;
-        mDev_p = nullptr;
     }
 }
 
@@ -255,13 +259,12 @@ void SerialBusConnection::framesReceived()
 
 
 void SerialBusConnection::testConnection() {
-    QCanBusDevice*  dev_p = QCanBus::instance()->createDevice("socketcan", getPort());
     CANConStatus stats;
 
     switch(getStatus())
     {
         case CANCon::CONNECTED:
-            if (!dev_p || !dev_p->connectDevice()) {
+            if (!mDev_p || mDev_p->state() == QCanBusDevice::UnconnectedState) {
                 /* we have lost connectivity */
                 disconnectDevice();
 
@@ -269,21 +272,18 @@ void SerialBusConnection::testConnection() {
                 stats.conStatus = getStatus();
                 stats.numHardwareBuses = mNumBuses;
                 emit status(stats);
+                piStop();
             }
             break;
         case CANCon::NOT_CONNECTED:
-            if (dev_p && dev_p->connectDevice()) {
-                if(!mDev_p) {
-                    /* try to reconnect */
-                    CANBus bus;
-                    if(getBusConfig(0, bus))
-                    {
-                        bus.setEnabled(true);
-                        setBusSettings(0, bus);
-                    }
+            if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
+                /* try to reconnect */
+                CANBus bus;
+                if(getBusConfig(0, bus))
+                {
+                    bus.setEnabled(true);
+                    setBusSettings(0, bus);
                 }
-                /* disconnect test instance */
-                dev_p->disconnectDevice();
 
                 setStatus(CANCon::CONNECTED);
                 stats.conStatus = getStatus();
@@ -293,7 +293,4 @@ void SerialBusConnection::testConnection() {
             break;
         default: {}
     }
-
-    if(dev_p)
-        delete dev_p;
 }
