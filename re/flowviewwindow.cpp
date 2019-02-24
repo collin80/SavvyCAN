@@ -444,7 +444,8 @@ void FlowViewWindow::updatedFrames(int numFrames)
         {
             for (int k = 0; k < 8; k++)
             {
-                graphRef[k]->addData(newX[k], newY[k]);
+                if (graphRef[k] && graphRef[k]->data())
+                    graphRef[k]->addData(newX[k], newY[k]);
             }
             ui->graphView->replot();
             updateDataView();
@@ -464,6 +465,8 @@ void FlowViewWindow::createGraph(int byteNum)
 {
     int tempVal;
     float minval=1000000, maxval = -100000;
+
+    qDebug() << "Create Graph " << byteNum;
 
     bool graphByTime = ui->cbTimeGraph->isChecked();
 
@@ -533,6 +536,7 @@ void FlowViewWindow::updateFrameLabel()
 
 void FlowViewWindow::changeID(QString newID)
 {
+    qDebug() << "change id " << newID;
     //parse the ID and then load up the frame cache with just messages with that ID.
     uint32_t id = (uint32_t)Utility::ParseStringToNum(newID);
     frameCache.clear();
@@ -555,7 +559,8 @@ void FlowViewWindow::changeID(QString newID)
     if (frameCache.count() == 0) return;
 
     removeAllGraphs();
-    for (uint32_t c = 0; c < frameCache.at(0).len; c++)
+    //for (uint32_t c = 0; c < frameCache.at(0).len; c++)
+    for (uint32_t c = 0; c < 8; c++)
     {
         createGraph(c);
     }
