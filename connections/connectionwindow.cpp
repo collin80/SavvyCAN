@@ -8,6 +8,7 @@
 #include "connections/canconfactory.h"
 #include "connections/canconmanager.h"
 #include "canbus.h"
+#include <QSettings>
 
 ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QDialog(parent),
@@ -41,8 +42,11 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->btnSendText->setEnabled(false);
     ui->lineSend->setEnabled(false);
 
-    /* load connection configuration */
-    loadConnections();
+    if (settings.value("Main/SaveRestoreConnections", false).toBool())
+    {
+        /* load connection configuration */
+        loadConnections();
+    }
 
     ui->rbSocketCAN->setEnabled(isSerialBusAvailable());
 

@@ -31,6 +31,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->lineRemoteHost->setText(settings->value("Remote/Host", "api.savvycan.com").toString());
     ui->lineRemotePort->setText(settings->value("Remote/Port", "21315").toString()); // = 0x5343 = SC. Yep, really creative port number
     ui->cbAutoStartRemote->setChecked(settings->value("Remote/AutoStart", false).toBool());
+    ui->cbLoadConnections->setChecked(settings->value("Main/SaveRestoreConnections", false).toBool());
 
     ui->spinFontSize->setValue(settings->value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
 
@@ -82,6 +83,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbAutoStartRemote, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->lineRemotePort, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    connect(ui->cbLoadConnections, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     installEventFilter(this);
 }
 
@@ -127,6 +129,7 @@ void MainSettingsDialog::updateSettings()
     settings->setValue("Main/AutoScroll", ui->cbMainAutoScroll->isChecked());
     settings->setValue("Playback/AutoLoop", ui->cbPlaybackLoop->isChecked());
     settings->setValue("Main/SaveRestorePositions", ui->cbRestorePositions->isChecked());
+    settings->setValue("Main/SaveRestoreConnections", ui->cbLoadConnections->isChecked());
     settings->setValue("Main/ValidateComm", ui->cbValidate->isChecked());
     settings->setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
     settings->setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
