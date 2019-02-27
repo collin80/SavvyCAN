@@ -260,6 +260,7 @@ void ConnectionWindow::handleOKButton()
     if( ! CANConManager::getInstance()->getByName(getPortName()) )
     {
         /* create connection */
+        //qDebug() << "Create connection type: " << getConnectionType() << " port: " << getPortName() << " driver: " << getDriverName();
         conn_p = create(getConnectionType(), getPortName(), getDriverName());
         if(!conn_p)
             return;
