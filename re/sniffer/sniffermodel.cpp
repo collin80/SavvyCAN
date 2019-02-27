@@ -1,4 +1,6 @@
 #include <QDebug>
+#include <Qt>
+#include <QApplication>
 #include "sniffermodel.h"
 #include "snifferwindow.h"
 #include "SnifferDelegate.h"
@@ -69,13 +71,20 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
         }
         case Qt::ForegroundRole:
         {
-            if (!mFadeInactive ||  col < 2) return QBrush(Qt::black);
+            if (!mFadeInactive ||  col < 2) return QApplication::palette().brush(QPalette::Text);
             int v = item->getSeqInterval(col - 2) * 10;
             //qDebug() << "mTS: " << mTimeSequence << " gDT(" << (col - 2) << ") " << item->getDataTimestamp(col - 2);
             if (v > 225) v = 225;
             if (v < 0) v = 0;
-            return QBrush(QColor(v,v,v,255));
-            break;
+            QColor TextColor = QApplication::palette().color(QPalette::Text);
+            if (TextColor.red() + TextColor.green() + TextColor.blue() < 200) //text defaults to being dark
+            {
+                return QBrush(QColor(v,v,v,255));
+            }
+            else //text defaults to being light
+            {
+                return QBrush(QColor(255-v,255-v,255-v,255));
+            }
         }
 
         case Qt::BackgroundRole:
@@ -95,7 +104,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                     case dc::DEINC:
                         return QBrush(Qt::red);
                     default:
-                        break;
+                        return QApplication::palette().brush(QPalette::Base);
                 }
             }
             break;

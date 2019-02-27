@@ -1,5 +1,6 @@
 #include "SnifferDelegate.h"
 #include <QPainter>
+#include <QApplication>
 #include <QDebug>
 #include "utility.h"
 #include "re/sniffer/snifferitem.h"
@@ -101,7 +102,7 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
     //painter->setPen(QPen(QColor(v,v,v,255)));
     painter->setOpacity(1.0);
-    painter->setPen(Qt::black);
+    painter->setPen(QApplication::palette().color(QPalette::Text));
     painter->setFont(mainFont);
     painter->drawText(QRect(viewport.left(), viewport.top() + xSector + yOffset, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber(val));
 }
