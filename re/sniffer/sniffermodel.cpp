@@ -13,6 +13,12 @@ SnifferModel::SnifferModel(QObject *parent)
       mMuteNotched(false),
       mTimeSequence(0)
 {
+    QColor TextColor = QApplication::palette().color(QPalette::Text);
+    if (TextColor.red() + TextColor.green() + TextColor.blue() < 200)
+    {
+        mDarkMode = false;
+    }
+    else mDarkMode = true;
 }
 
 SnifferModel::~SnifferModel()
@@ -76,8 +82,8 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             //qDebug() << "mTS: " << mTimeSequence << " gDT(" << (col - 2) << ") " << item->getDataTimestamp(col - 2);
             if (v > 225) v = 225;
             if (v < 0) v = 0;
-            QColor TextColor = QApplication::palette().color(QPalette::Text);
-            if (TextColor.red() + TextColor.green() + TextColor.blue() < 200) //text defaults to being dark
+
+            if (!mDarkMode) //text defaults to being dark
             {
                 return QBrush(QColor(v,v,v,255));
             }
@@ -92,7 +98,10 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             if(tc::ID==col)
             {
                 if(item->elapsed() > 4000)
-                    return QBrush(Qt::red);
+                {
+                    if (!mDarkMode) return QBrush(Qt::red);
+                    return QBrush(QColor(128,0,0));
+                }
             }
             else if(tc::DATA_0<=col && col<=tc::DATA_7)
             {
@@ -100,9 +109,11 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 switch(change)
                 {
                     case dc::INC:
-                        return QBrush(Qt::green);
+                        if (!mDarkMode) return QBrush(Qt::green);
+                        return QBrush(QColor(0,128,0));
                     case dc::DEINC:
-                        return QBrush(Qt::red);
+                        if (!mDarkMode) return QBrush(Qt::red);
+                        return QBrush(QColor(128,0,0));
                     default:
                         return QApplication::palette().brush(QPalette::Base);
                 }

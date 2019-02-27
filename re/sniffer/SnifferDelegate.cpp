@@ -7,14 +7,26 @@
 
 SnifferDelegate::SnifferDelegate(QWidget *parent) : QItemDelegate(parent)
 {
+    QColor TextColor = QApplication::palette().color(QPalette::Text);
+    if (TextColor.red() + TextColor.green() + TextColor.blue() < 200)
+    {
+        mDarkMode = false;
+        redBrush = QBrush(Qt::red);
+        greenBrush = QBrush(Qt::green);
+    }
+    else
+    {
+        mDarkMode = true;
+        redBrush = QBrush(QColor(128,0,0));
+        greenBrush = QBrush(QColor(0,128,0));
+    }
     blackBrush = QBrush(Qt::black);
     whiteBrush = QBrush(Qt::white);
-    redBrush = QBrush(Qt::red);
-    greenBrush = QBrush(Qt::green);
     grayBrush = QBrush(QColor(230,230,230));
     mainFont.setPointSize(10);
     mainFontInfo = new QFontInfo(mainFont);
     mFadeInactive = false;
+
 }
 
 bool SnifferDelegate::getFadeInactive()
