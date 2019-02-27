@@ -77,7 +77,9 @@ private:
     QElapsedTimer          mElapsedTimer;
     uint64_t               mTimestampBasis;
     uint32_t               mNumActiveBuses;
-    bool useSystemTime;
+    bool                   useSystemTime;
+    QVector<CANFrame>      buslessFrames;
+    QVector<CANFrame>      tempFrames;
 };
 
 #endif // CANCONNECTIONMODEL_H
