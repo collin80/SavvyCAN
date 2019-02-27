@@ -247,7 +247,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return msg->bgColor;
             }
         }
-        rowFlip = !rowFlip;
+        rowFlip = (index.row() % 2);
         if (rowFlip) return QApplication::palette().color(QPalette::Base);
         else return QApplication::palette().color(QPalette::AlternateBase);
     }
