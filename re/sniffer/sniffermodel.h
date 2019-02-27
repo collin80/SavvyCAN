@@ -63,6 +63,7 @@ private:
     bool                        mNeverExpire;
     bool                        mFadeInactive;
     bool                        mMuteNotched;
+    bool                        mDarkMode;
     quint32                     mTimeSequence;
 };
 
