@@ -56,7 +56,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     //ui->graphView->xAxis->setAutoSubTicks(false);
     //ui->graphView->xAxis->setAutoTicks(false);
     QCPAxisTicker *xTicker = new QCPAxisTicker();
-    xTicker->setTickCount(10);
+    xTicker->setTickCount(5);
+    xTicker->setTickStepStrategy(QCPAxisTicker::tssReadability);
     ui->graphView->xAxis->setTicker(QSharedPointer<QCPAxisTicker>(xTicker));
     //ui->graphView->xAxis->setAutoTickStep(false);
     //ui->graphView->xAxis->setAutoSubTicks(false);
