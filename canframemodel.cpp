@@ -227,6 +227,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     int dLen;
     QString tempString;
     CANFrame thisFrame;
+    static bool rowFlip = false;
 
     if (!index.isValid())
         return QVariant();
@@ -246,8 +247,9 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return msg->bgColor;
             }
         }
-        //return QApplication::palette().color(QPalette::Button);
-        return QColor(Qt::white);
+        rowFlip = !rowFlip;
+        if (rowFlip) return QApplication::palette().color(QPalette::Base);
+        else return QApplication::palette().color(QPalette::AlternateBase);
     }
 
     if (role == Qt::TextAlignmentRole)
