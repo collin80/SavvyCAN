@@ -1,4 +1,5 @@
 #include <QCanBus>
+#include <QNetworkDatagram>
 #include <QThread>
 
 #include "connectionwindow.h"
@@ -67,8 +68,24 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
+
+    rxBroadcast = new QUdpSocket(this);
+    rxBroadcast->bind(QHostAddress::AnyIPv4, 17222);
+
+    connect(rxBroadcast, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
 }
 
+
+void ConnectionWindow::readPendingDatagrams()
+{
+    while (rxBroadcast->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = rxBroadcast->receiveDatagram();
+        if (!remoteDeviceIP.contains(datagram.senderAddress().toString()))
+        {
+            remoteDeviceIP.append(datagram.senderAddress().toString());
+        }
+    }
+}
 ConnectionWindow::~ConnectionWindow()
 {
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
@@ -373,9 +390,14 @@ void ConnectionWindow::selectSocketCan()
 void ConnectionWindow::selectRemote()
 {
     ui->lPort->setText("IP Address:");
-    ui->stPort->setCurrentWidget(ui->etPage);
+    ui->stPort->setCurrentWidget(ui->cbPage);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
+    ui->cbPort->clear();
+    foreach(QString pName, remoteDeviceIP)
+    {
+        ui->cbPort->addItem(pName);
+    }
 }
 
 void ConnectionWindow::setSpeed(int speed0)
@@ -421,7 +443,9 @@ void ConnectionWindow::setPortName(CANCon::type pType, QString pPortName, QStrin
         }
         case CANCon::REMOTE:
         {
-            ui->lePort->setText(pPortName);
+            int idx = ui->cbPort->findText(pPortName);
+            if (idx > -1) ui->cbPort->setCurrentIndex(idx);
+            else ui->cbPort->addItem(pPortName);
             break;
         }
         default: {}
@@ -440,9 +464,8 @@ QString ConnectionWindow::getPortName()
     switch( getConnectionType() ) {
     case CANCon::GVRET_SERIAL:
     case CANCon::SERIALBUS:
-        return ui->cbPort->currentText();
     case CANCon::REMOTE:
-        return ui->lePort->text();
+        return ui->cbPort->currentText();
     default:
         qDebug() << "getPortName: can't get port";
     }

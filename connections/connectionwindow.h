@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QItemSelection>
 #include <QCanBusDeviceInfo>
+#include <QUdpSocket>
 #include "canconnectionmodel.h"
 #include "connections/canconnection.h"
 
@@ -61,6 +62,7 @@ private slots:
     void handleSendHex();
     void handleSendText();
     void connectionStatus(CANConStatus);
+    void readPendingDatagrams();
 
 private:
     Ui::ConnectionWindow *ui;
@@ -68,6 +70,8 @@ private:
     QList<QCanBusDeviceInfo> canDevices;
     QSettings *settings;
     CANConnectionModel *connModel;
+    QUdpSocket *rxBroadcast;
+    QVector<QString> remoteDeviceIP;
 
     void selectSerial();
     void selectKvaser();

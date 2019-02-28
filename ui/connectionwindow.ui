@@ -152,7 +152,7 @@
         <enum>Qt::LeftToRight</enum>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <widget class="QWidget" name="cbPage">
         <property name="sizePolicy">
@@ -178,6 +178,9 @@
              <width>341</width>
              <height>16777215</height>
             </size>
+           </property>
+           <property name="editable">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
