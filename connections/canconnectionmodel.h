@@ -21,15 +21,12 @@ public:
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    Qt::ItemFlags flags(const QModelIndex &index) const override;
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
-
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
 
-    CANConnection* getAtIdx(int, int&) const;
+    CANConnection* getAtIdx(int) const;
     void refresh(int pIndex=-1);
 };
 

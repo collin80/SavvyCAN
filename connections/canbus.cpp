@@ -40,7 +40,7 @@ void CANBus::setSingleWire(bool mode){
     singleWire = mode;
 }
 
-void CANBus::setEnabled(bool mode){
+void CANBus::setActive(bool mode){
     //qDebug() << "CANBUS SetEnabled = " << mode;
     active = mode;
 }

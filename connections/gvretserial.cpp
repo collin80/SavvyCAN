@@ -819,8 +819,8 @@ void GVRetSerial::procRXChar(unsigned char c)
             qDebug() << "Baud 1 = " << can1Baud;
             mBusData[0].mBus.setSpeed(can0Baud);
             mBusData[1].mBus.setSpeed(can1Baud);
-            mBusData[0].mBus.setEnabled(can0Enabled);
-            mBusData[1].mBus.setEnabled(can1Enabled);
+            mBusData[0].mBus.setActive(can0Enabled);
+            mBusData[1].mBus.setActive(can1Enabled);
             mBusData[0].mConfigured = true;
             mBusData[1].mConfigured = true;
 
@@ -962,7 +962,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             if (getNumBuses() > 2)
             {
                 mBusData[2].mBus.setSpeed(swcanBaud);
-                mBusData[2].mBus.setEnabled(swcanEnabled);
+                mBusData[2].mBus.setActive(swcanEnabled);
             }
 
             setStatus(CANCon::CONNECTED);

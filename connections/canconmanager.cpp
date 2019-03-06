@@ -77,6 +77,17 @@ int CANConManager::getNumBuses()
     return buses;
 }
 
+int CANConManager::getBusBase(CANConnection *which)
+{
+    int buses = 0;
+    foreach(CANConnection* conn_p, mConns)
+    {
+        if (conn_p != which) buses += conn_p->getNumBuses();
+        else return buses;
+    }
+    return -1;
+}
+
 void CANConManager::refreshCanList()
 {
     QObject* sender_p = QObject::sender();

@@ -20,7 +20,7 @@ public:
     void setSpeed(int); // new speed
     void setListenOnly(bool); //bool for whether to only listen
     void setSingleWire(bool); //bool for whether to use single wire mode
-    void setEnabled(bool); //whether this bus should be enabled or not.
+    void setActive(bool); //whether this bus should be enabled or not.
     int getSpeed();
     bool isListenOnly();
     bool isSingleWire();

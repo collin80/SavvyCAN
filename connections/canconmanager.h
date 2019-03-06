@@ -26,6 +26,7 @@ public:
     void resetTimeBasis();
 
     int getNumBuses();
+    int getBusBase(CANConnection *);
 
     /**
      * @brief sendFrame sends a single frame out the desired bus
