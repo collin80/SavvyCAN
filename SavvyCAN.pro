@@ -66,7 +66,8 @@ SOURCES += main.cpp\
     frameplaybackobject.cpp \
     helpwindow.cpp \
     blfhandler.cpp \
-    re/sniffer/SnifferDelegate.cpp
+    re/sniffer/SnifferDelegate.cpp \
+    connections/newconnectiondialog.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -123,7 +124,8 @@ HEADERS  += mainwindow.h \
     frameplaybackobject.h \
     helpwindow.h \
     blfhandler.h \
-    re/sniffer/SnifferDelegate.h
+    re/sniffer/SnifferDelegate.h \
+    connections/newconnectiondialog.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
@@ -150,7 +152,8 @@ FORMS    += ui/candatagrid.ui \
     ui/udsscanwindow.ui \
     ui/bisectwindow.ui \
     ui/signalviewerwindow.ui \
-    helpwindow.ui
+    helpwindow.ui \
+    ui/newconnectiondialog.ui
 
 DISTFILES +=
 
