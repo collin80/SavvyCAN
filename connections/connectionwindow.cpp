@@ -31,7 +31,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->tableConnections->setModel(connModel);
     ui->tableConnections->setColumnWidth(0, 100);
     ui->tableConnections->setColumnWidth(1, 100);
-    ui->tableConnections->setColumnWidth(2, 100);
+    ui->tableConnections->setColumnWidth(2, 130);
     ui->tableConnections->setColumnWidth(3, 70);
     ui->tableConnections->setColumnWidth(4, 200);
     QHeaderView *HorzHdr = ui->tableConnections->horizontalHeader();
@@ -67,7 +67,9 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbBusSpeed->addItem("1000000");
 
     rxBroadcast = new QUdpSocket(this);
-    rxBroadcast->bind(QHostAddress::AnyIPv4, 17222);
+    //Need to make sure it tries to share the address in case there are
+    //multiple instances of SavvyCAN running.
+    rxBroadcast->bind(QHostAddress::AnyIPv4, 17222, QAbstractSocket::ShareAddress);
 
     connect(rxBroadcast, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
 
@@ -76,11 +78,13 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 
 void ConnectionWindow::readPendingDatagrams()
 {
+    //qDebug() << "Got a UDP frame!";
     while (rxBroadcast->hasPendingDatagrams()) {
         QNetworkDatagram datagram = rxBroadcast->receiveDatagram();
         if (!remoteDeviceIP.contains(datagram.senderAddress().toString()))
         {
             remoteDeviceIP.append(datagram.senderAddress().toString());
+            //qDebug() << "Add new remote IP " << datagram.senderAddress().toString();
         }
     }
 }

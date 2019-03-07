@@ -20,6 +20,8 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* ips, QWidget *parent)
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     selectSerial();
+
+    qDebug() << "Was passed " << remoteDeviceIP->count() << " remote IPs";
 }
 
 NewConnectionDialog::~NewConnectionDialog()
