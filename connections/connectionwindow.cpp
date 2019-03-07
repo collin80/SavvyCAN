@@ -167,18 +167,20 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
     ui->btnSendText->setEnabled(checked);
     ui->lineSend->setEnabled(checked);
 
-    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
+    int selIdx = ui->tableConnections->currentIndex().row();
 
-    foreach(CANConnection* conn_p, conns)
-    {
-        if (checked) { //enable console
-            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
-            connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
-        }
-        else { //turn it off
-            disconnect(conn_p, SIGNAL(debugOutput(QString)), nullptr, nullptr);
-            disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
-        }
+    if (selIdx == -1)
+        return;
+
+    CANConnection* conn_p = connModel->getAtIdx(selIdx);
+
+    if (checked) { //enable console
+        connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+        connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+    }
+    else { //turn it off
+        disconnect(conn_p, SIGNAL(debugOutput(QString)), nullptr, nullptr);
+        disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
     }
 }
 
@@ -315,6 +317,11 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         if (numBuses > 1) for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(i+1));
 
         populateBusDetails(0);
+        if (ui->ckEnableConsole->isChecked())
+        {
+            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+            connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        }
     }
 }
 
