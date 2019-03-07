@@ -309,14 +309,11 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         if(!conn_p) return;
 
         numBuses = conn_p->getNumBuses();
-        if (numBuses == 1) //remove all tabs if there is only one bus
-        {
-            for (int i = 0; i < ui->tabBuses->count(); i++) ui->tabBuses->removeTab(0);
-        }
-        else
-        {
-            for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(i+1));
-        }
+        int numB = ui->tabBuses->count();
+        for (int i = 0; i < numB; i++) ui->tabBuses->removeTab(0);
+
+        if (numBuses > 1) for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(i+1));
+
         populateBusDetails(0);
     }
 }
