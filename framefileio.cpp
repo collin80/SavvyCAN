@@ -1978,8 +1978,9 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
-    int fileVersion = 1;
-    long long timeStamp = Utility::GetTimeMS();
+    bool timeStampBaseSet = false;
+    uint64_t timeStampBase = 0;
+    uint64_t lastTimeStamp = 0;
     int lineCounter = 0;
     bool foundErrors = false;
     thisFrame.remote = false;
@@ -2006,15 +2007,30 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
             QList<QByteArray> tokens = line.split(',');
             if (tokens.length() >= 3)
             {
-                if (tokens[0].length() > 3)
+                if (tokens[0].length() > 1)
                 {
-                    long long temp = tokens[0].toLongLong();
-                    thisFrame.timestamp = temp;
+                    double temp = tokens[0].toDouble();
+                    temp = temp * 1000000;
+
+                    if(!timeStampBaseSet)
+                    {
+                        timeStampBase = (uint64_t)(temp);
+                        timeStampBaseSet = true;
+                    }
+
+                    if(timeStampBaseSet) {
+                        thisFrame.timestamp = ((uint64_t)(temp) - timeStampBase);
+                        lastTimeStamp = thisFrame.timestamp;
+                    } else {
+                        thisFrame.timestamp = (lastTimeStamp + 1);
+                        lastTimeStamp = thisFrame.timestamp;
+                    }
+
                 }
                 else
                 {
-                    timeStamp += 5;
-                    thisFrame.timestamp = timeStamp;
+                    thisFrame.timestamp = (lastTimeStamp + 1);
+                    lastTimeStamp = thisFrame.timestamp;
                 }
 
                 thisFrame.ID = tokens[1].toInt();
@@ -2073,10 +2089,14 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
             lineCounter = 0;
         }
 
-        outFile->write(QString::number(frames->at(c).timestamp).toUtf8());
+        double tempTimeStamp = frames->at(c).timestamp;
+        tempTimeStamp /= 1000000;
+
+        outFile->write(QString::number(tempTimeStamp, 'f').toUtf8());
+        outFile->write(".0");
         outFile->putChar(44);
 
-        outFile->write(QString::number(frames->at(c).ID, 10).toUpper().rightJustified(8, '0').toUtf8());
+        outFile->write(QString::number(frames->at(c).ID, 10).toUpper().toUtf8());
         outFile->putChar(44);
 
         outFile->write(QString::number(frames->at(c).bus).toUtf8());
@@ -2089,7 +2109,6 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
             else
                 outFile->write("00");
         }
-        outFile->putChar(44);
 
         outFile->write("\n");
 

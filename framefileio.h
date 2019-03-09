@@ -45,7 +45,7 @@ public:
     static bool loadCanalyzerASC(QString, QVector<CANFrame>*);
     static bool loadCanalyzerBLF(QString, QVector<CANFrame>*);
     static bool loadCANHackerFile(QString filename, QVector<CANFrame>* frames);
-    static bool loadCabanaFile(QSting filename, QVector<CANFrame>* frames);
+    static bool loadCabanaFile(QString filename, QVector<CANFrame>* frames);
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);
@@ -56,7 +56,7 @@ public:
     static bool saveCANDOFile(QString, const QVector<CANFrame>*);
     static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
     static bool saveCanDumpFile(QString filename, const QVector<CANFrame> * frames);
-    static bool saveCabanaFile(QSting filename, const QVector<CANFrame>* frames);
+    static bool saveCabanaFile(QString filename, const QVector<CANFrame>* frames);
     static bool openContinuousNative();
     static bool closeContinuousNative();
     static bool writeContinuousNative(const QVector<CANFrame>*, int);
