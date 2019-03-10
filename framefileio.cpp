@@ -2044,7 +2044,7 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.len = 8;
                 
                 {
-                    unsigned long long int tempData = tokens[3].toLongLong(NULL, 16);
+                    unsigned long long int tempData = tokens[3].toULongLong(NULL, 16);
                     thisFrame.data[0] = ((tempData >> 56) & 0xFF);
                     thisFrame.data[1] = ((tempData >> 48) & 0xFF);
                     thisFrame.data[2] = ((tempData >> 40) & 0xFF);
