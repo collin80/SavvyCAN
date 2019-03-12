@@ -232,6 +232,9 @@ bool DBCSignalEditor::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_F1:
             HelpWindow::getRef()->showHelp("signaleditor.html");
             break;
+        case Qt::Key_F2:
+            cloneSignal();
+            break;
         }
         return true;
     } else {
@@ -324,7 +327,11 @@ void DBCSignalEditor::onCustomMenuSignals(QPoint point)
     menu->setAttribute(Qt::WA_DeleteOnClose);
 
     menu->addAction(tr("Add a new signal"), this, SLOT(addNewSignal()));
-    menu->addAction(tr("Delete currently selected signal"), this, SLOT(deleteCurrentSignal()));
+    if (ui->signalsList->currentRow() != -1)
+    {
+        menu->addAction(tr("Clone currently selected signal"), this, SLOT(cloneSignal()));
+        menu->addAction(tr("Delete currently selected signal"), this, SLOT(deleteCurrentSignal()));
+    }
 
     menu->popup(ui->signalsList->mapToGlobal(point));
 }
@@ -365,7 +372,43 @@ void DBCSignalEditor::addNewSignal()
     /* this will call clickSignalList */
     ui->signalsList->addItem(newName);
     ui->signalsList->setCurrentRow(ui->signalsList->count()-1);
+}
 
+void DBCSignalEditor::cloneSignal()
+{
+    int num = qrand() % 100;
+
+    int idx = ui->signalsList->currentRow();
+    if (idx < 0) return;
+
+    DBC_SIGNAL *oldSig = dbcMessage->sigHandler->findSignalByIdx(idx);
+    if (!oldSig) return;
+
+    QString newName = oldSig->name + QString::number(num);
+    DBC_SIGNAL newSig;
+    newSig.name = newName;
+    newSig.bias = oldSig->bias;
+    newSig.factor = oldSig->factor;
+    newSig.intelByteOrder = oldSig->intelByteOrder;
+    newSig.max = oldSig->max;
+    newSig.min = oldSig->min;
+    newSig.receiver = oldSig->receiver;
+    newSig.signalSize = oldSig->signalSize;
+    newSig.startBit = oldSig->startBit;
+    newSig.valType = oldSig->valType;
+    newSig.valList.append(oldSig->valList);
+    newSig.isMultiplexed = oldSig->isMultiplexed;
+    newSig.isMultiplexor = oldSig->isMultiplexor; //maybe should force this false since you can't have two or more!
+    newSig.multiplexValue = oldSig->multiplexValue;
+    newSig.parentMessage = dbcMessage;
+
+    dbcMessage->sigHandler->addSignal(newSig);
+
+    /* add item at the end of the list */
+    ui->signalsList->addItem(newName);
+
+    //unlike adding a signal we don't want to select the new signal here.
+    //ui->signalsList->setCurrentRow(ui->signalsList->count()-1);
 }
 
 void DBCSignalEditor::deleteCurrentSignal()
