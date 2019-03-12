@@ -94,6 +94,7 @@ void CANConManager::refreshCanList()
 
     if (mConns.count() == 0)
     {
+        //TODO: Seems to crash under heavy load. Find out why.
         if(buslessFrames.size()) {
             tempFrames.clear();
             tempFrames.append(buslessFrames); //make a copy and pass that copy
