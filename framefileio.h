@@ -57,6 +57,7 @@ public:
     static bool saveVehicleSpyFile(QString, const QVector<CANFrame>*);
     static bool saveCanDumpFile(QString filename, const QVector<CANFrame> * frames);
     static bool saveCabanaFile(QString filename, const QVector<CANFrame>* frames);
+    static bool saveCanalyzerASC(QString filename, const QVector<CANFrame>* frames);
     static bool openContinuousNative();
     static bool closeContinuousNative();
     static bool writeContinuousNative(const QVector<CANFrame>*, int);
