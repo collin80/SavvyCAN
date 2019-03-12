@@ -97,12 +97,14 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     DBC_MESSAGE *parentMessage;
     QString unitName;
     QString comment;
+    QVariant cachedValue;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     QList<DBC_VAL_ENUM_ENTRY> valList;
 
     bool processAsText(const CANFrame &frame, QString &outString);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
+    QString makePrettyOutput(double floatVal, int64_t intVal);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };

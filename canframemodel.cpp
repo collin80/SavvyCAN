@@ -334,9 +334,15 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
                         QString sigString;
-                        if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, sigString))
+                        DBC_SIGNAL* sig = msg->sigHandler->findSignalByIdx(j);
+                        if (sig->processAsText(thisFrame, sigString))
                         {
                             tempString.append(sigString);
+                            tempString.append("\n");
+                        }
+                        else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
+                        {
+                            tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong()));
                             tempString.append("\n");
                         }
                     }
