@@ -2,6 +2,7 @@
 
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QDateTime>
 
 #include <iostream>
 
@@ -32,6 +33,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
     filters.append(QString(tr("Candump/Kayak(*.log)")));
     filters.append(QString(tr("Cabana Log(*.csv *.CSV)")));
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -111,6 +113,12 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
             if (!filename.contains('.')) filename += ".csv";
             result = saveCabanaFile(filename, frameCache);
         }
+        if (dialog.selectedNameFilter() == filters[11])
+        {
+            if (!filename.contains('.')) filename += ".asc";
+            result = saveCanalyzerASC(filename, frameCache);
+        }
+
         progress.cancel();
 
         if (result)
@@ -555,7 +563,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
         {
             if (fileVersion == 1)
             {
-                thisFrame.timestamp = (uint32_t)(line.mid(10, 8).simplified().toFloat() * 1000.0);
+                thisFrame.timestamp = (uint64_t)(line.mid(10, 8).simplified().toDouble() * 1000.0);
                 thisFrame.ID = line.mid(28, 8).simplified().toUInt(NULL, 16);
                 if (thisFrame.ID < 0x1FFFFFFF)
                 {
@@ -587,7 +595,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             }
             else if (fileVersion == 2)
             {
-                thisFrame.timestamp = (uint32_t)(line.mid(8, 13).simplified().toFloat() * 1000.0);
+                thisFrame.timestamp = (uint64_t)(line.mid(8, 13).simplified().toDouble() * 1000.0);
                 thisFrame.ID = line.mid(25, 8).simplified().toUInt(NULL, 16);
                 if (thisFrame.ID < 0x1FFFFFFF)
                 {
@@ -667,7 +675,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             QList<QByteArray> tokens = line.simplified().split(' ');
             if (tokens.length() > 4)
             {
-                thisFrame.timestamp = (uint32_t)(tokens[0].toFloat() * 1000000.0);
+                thisFrame.timestamp = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
                 thisFrame.ID = tokens[2].toUInt(NULL, 16);
                 thisFrame.len = tokens[5].toUInt();
                 thisFrame.isReceived = tokens[3].toUpper().contains("RX");
@@ -696,6 +704,67 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* frames)
+{
+    QFile *outFile = new QFile(filename);
+    int lineCounter = 0;
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+
+    QDateTime now;
+    now = QDateTime::currentDateTime();
+    outFile->write("date " + now.toString("MMM-dd HH:mm:ss.zzz").toUtf8());
+    outFile->write("\nbase hex  timestamps absolute\n");
+    outFile->write("no internal event logging\n");
+    outFile->write("// version 11.0.0\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        outFile->write(QString::number(frames->at(c).timestamp / 1000000.0, 'f', 6).toUtf8());
+        outFile->putChar(' ');
+        outFile->write(QString::number(frames->at(c).bus).toUtf8());
+        outFile->write("  ");
+        if (frames->at(c).extended)
+            outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        else
+        {
+            outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(3, '0').toUtf8());
+            outFile->write("     ");
+        }
+        outFile->write("        ");
+
+        if (frames->at(c).isReceived) outFile->write("Rx   d ");
+        else outFile->write("Tx   d ");
+
+        outFile->write(QString::number(frames->at(c).len).toUtf8());
+        outFile->putChar(' ');
+
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->putChar(' ');
+        }
+
+        outFile->write("\n");
+    }
+    outFile->close();
+    delete outFile;
+
+    return true;
+}
+
+//this one is pretty complicated and handled by it's own class
 bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
 {
     BLFHandler blf;
@@ -1819,12 +1888,21 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
     delete outFile;
     return true;
 }
-/* (0.003800) vcan0 164#0000c01aa8000013 */
+
+/*
+   (0.003800) vcan0 164#0000c01aa8000013
+                       or
+   (1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+*/
 bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    QList<QByteArray> tokens;
+    QRegExp timeExp("^\\((\\S+)\\)$");
+    QRegExp IdValExp("^(\\S+)#(\\S+)$");
+    QRegExp valExp("(\\S{2})");
     int lineCounter = 0;
     int pos = 0;
     bool ret;
@@ -1847,50 +1925,68 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 1)
         {
             /* tokenize */
-            QList<QByteArray> tokens = line.split(' ');
+            tokens.clear();
+            tokens = line.simplified().split(' ');
             if(tokens.count()<3) continue;
 
             /* timestamp */
-            QRegExp timeExp("^\\((\\S+)\\)$");
             ret = timeExp.exactMatch(tokens[0]);
             if(!ret) continue;
 
-            thisFrame.timestamp = timeExp.cap(1).toDouble(&ret) * 1000000;
+            thisFrame.timestamp = (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0);
             if(!ret) continue;
 
-            /* ID & value */
-            QRegExp IdValExp("^(\\S+)#(\\S+)\n$");
-            qDebug() << tokens[2];
-            ret = IdValExp.exactMatch(tokens[2]);
-            if(!ret) continue;
-
-            /* ID */
-            thisFrame.ID = IdValExp.cap(1).toInt(&ret, 16);
-            if (IdValExp.cap(1).length() > 3) {
-                thisFrame.extended = true;
-            } else {
-                thisFrame.extended = false;
-            }
-            if(!ret) continue;
-
-            QString val= IdValExp.cap(2);
-            QRegExp valExp("(\\S{2})");
-
-            pos = 0;
-            thisFrame.len = 0;
-            if (val.startsWith("R") && val.at(1).isDigit()) {
-                thisFrame.len = val.at(1).toLatin1() - '0';
-                thisFrame.remote = true;
-            } else {
+            if (line.contains('[')) //the expanded format (second one from the above list)
+            {
+                //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+                //     0               1     2   3  4 5  6  7  8  9  10 11
+                thisFrame.ID = tokens[2].toULong(nullptr, 16);
+                if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
+                else thisFrame.extended = false;
                 thisFrame.remote = false;
-                /* val byte per byte */
-                while ((pos = valExp.indexIn(val, pos)) != -1)
+                thisFrame.len = tokens[3].at(1) - '0';
+                for (int c = 0; c < thisFrame.len; c++)
                 {
-                    thisFrame.data[thisFrame.len] = valExp.cap(1).toInt(&ret, 16);
-                    if(!ret) continue;
+                    thisFrame.data[c] = tokens[4 + c].toInt(nullptr, 16);
+                }
+            }
+            else  //the more concise format (first one from list above)
+            {
+                /* ID & value */
+                //qDebug() << tokens[2];
+                ret = IdValExp.exactMatch(tokens[2]);
+                if(!ret)
+                {
+                    qDebug() << "ID regex didn't match!";
+                    continue;
+                }
 
-                    thisFrame.len++;
-                    pos += valExp.matchedLength();
+                /* ID */
+                thisFrame.ID = IdValExp.cap(1).toInt(&ret, 16);
+                if (IdValExp.cap(1).length() > 3) {
+                    thisFrame.extended = true;
+                } else {
+                    thisFrame.extended = false;
+                }
+
+                QString val= IdValExp.cap(2);
+
+                pos = 0;
+                thisFrame.len = 0;
+                if (val.startsWith("R") && val.at(1).isDigit()) {
+                    thisFrame.len = val.at(1).toLatin1() - '0';
+                    thisFrame.remote = true;
+                } else {
+                    thisFrame.remote = false;
+                    /* val byte per byte */
+                    while ((pos = valExp.indexIn(val, pos)) != -1)
+                    {
+                        thisFrame.data[thisFrame.len] = valExp.cap(1).toInt(&ret, 16);
+                        if(!ret) continue;
+
+                        thisFrame.len++;
+                        pos += valExp.matchedLength();
+                    }
                 }
             }
 
