@@ -16,7 +16,7 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     connect(ui->btnClear, SIGNAL(clicked(bool)), this, SLOT(clearReference()));
 
     ui->lblFirstFile->setText("");
-    ui->lblRefFrames->setText("0");
+    ui->lblRefFrames->setText("Loaded frames: 0");
 
     installEventFilter(this);
 }
@@ -95,7 +95,7 @@ void FileComparatorWindow::loadReferenceFile()
     QString resultingFileName;
     if (FrameFileIO::loadFrameFile(resultingFileName, &referenceFrames))
     {
-        ui->lblRefFrames->setText(QString::number(referenceFrames.length()));
+        ui->lblRefFrames->setText("Loaded frames: " + QString::number(referenceFrames.length()));
         if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
 }
@@ -123,10 +123,10 @@ void FileComparatorWindow::calculateDetails()
     if (!uniqueInterested)
     {
         referenceOnlyBase = new QTreeWidgetItem();
-        referenceOnlyBase->setText(0, "IDs found only in reference frames");
+        referenceOnlyBase->setText(0, "IDs found only in Side 2 - Reference frames");
     }
     sharedBase = new QTreeWidgetItem();
-    sharedBase->setText(0,"IDs found in both places");
+    sharedBase->setText(0,"IDs found on both sides");
 
     //first we have to fill out the data structures to get ready to do the report
     for (int x = 0; x < interestedFrames.count(); x++)
@@ -240,7 +240,7 @@ void FileComparatorWindow::calculateDetails()
             if (!uniqueInterested)
             {
                 bitmapBaseReference = new QTreeWidgetItem();
-                bitmapBaseReference->setText(0, "Bits set only in reference frames");
+                bitmapBaseReference->setText(0, "Bits set only in Side 2 - Reference frames");
             }
             sharedItem->addChild(bitmapBaseInterested);
             if (!uniqueInterested) sharedItem->addChild(bitmapBaseReference);
@@ -277,7 +277,7 @@ void FileComparatorWindow::calculateDetails()
                 if (!uniqueInterested)
                 {
                     valuesReference = new QTreeWidgetItem();
-                    valuesReference->setText(0, "Values found only in reference frames");
+                    valuesReference->setText(0, "Values found only in Side 2 - Reference frames");
                 }
                 valuesBase->addChild(valuesInterested);
                 if (!uniqueInterested) valuesBase->addChild(valuesReference);
