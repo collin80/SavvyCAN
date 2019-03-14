@@ -216,6 +216,16 @@ void ConnectionWindow::connectionStatus(CANConStatus pStatus)
     connModel->refresh();
 }
 
+void ConnectionWindow::setSuspendAll(bool pSuspend)
+{
+    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
+
+    foreach(CANConnection* conn_p, conns)
+        conn_p->suspend(pSuspend);
+
+    connModel->refresh();
+}
+
 void ConnectionWindow::saveBusSettings()
 {
     int selIdx = ui->tableConnections->currentIndex().row();

@@ -37,6 +37,8 @@ signals:
 
 public slots:
     void getDebugText(QString debugText);
+    void setSuspendAll(bool pSuspend);
+
 
 private slots:
     void currentRowChanged(const QModelIndex &current, const QModelIndex &previous);
