@@ -134,25 +134,33 @@ void CANFrameModel::setTimeFormat(QString format)
     endResetModel();
 }
 
+/*
+ * Scan all frames for the smallest timestamp and offset all timestamps so that smallest one is at 0
+*/
 void CANFrameModel::normalizeTiming()
 {
     mutex.lock();
     if (frames.count() == 0) return;
     timeOffset = frames[0].timestamp;
+
+    //find the absolute lowest timestamp in the whole time. Needed because maybe timestamp was reset in the middle.
     for (int j = 0; j < frames.count(); j++)
     {
         if (frames[j].timestamp < timeOffset) timeOffset = frames[j].timestamp;
     }
+
     for (int i = 0; i < frames.count(); i++)
     {
         frames[i].timestamp -= timeOffset;
     }
+
     this->beginResetModel();
     for (int i = 0; i < filteredFrames.count(); i++)
     {
         filteredFrames[i].timestamp -= timeOffset;
     }
     this->endResetModel();
+
     mutex.unlock();
 }
 
@@ -228,6 +236,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     QString tempString;
     CANFrame thisFrame;
     static bool rowFlip = false;
+    QVariant ts;
 
     if (!index.isValid())
         return QVariant();
@@ -274,7 +283,11 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         switch (Column(index.column()))
         {
         case Column::TimeStamp:
-            return Utility::formatTimestamp(thisFrame.timestamp);
+            //Reformatting the output a bit with custom code
+            ts = Utility::formatTimestamp(thisFrame.timestamp);
+            if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
+            if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
+            if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         case Column::Extended:
