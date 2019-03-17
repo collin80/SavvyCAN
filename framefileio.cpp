@@ -708,6 +708,11 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
 {
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
+    uint64_t offsetTime = frames->at(0).timestamp;
+    for (int c = 0; c < frames->count(); c++)
+    {
+        if (frames->at(c).timestamp < offsetTime) offsetTime = frames->at(c).timestamp;
+    }
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -717,7 +722,12 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
 
     QDateTime now;
     now = QDateTime::currentDateTime();
-    outFile->write("date " + now.toString("MMM-dd HH:mm:ss.zzz").toUtf8());
+    if (offsetTime > 10000000000) //chances are the input file had times as system time so load it
+    {
+        now.setMSecsSinceEpoch(offsetTime / 1000); //offsetTime was in microseconds
+    }
+    outFile->write("date " + now.toString("ddd MMM dd h:mm:ss.zzz a yyyy").toUtf8());
+
     outFile->write("\nbase hex  timestamps absolute\n");
     outFile->write("no internal event logging\n");
     outFile->write("// version 11.0.0\n");
@@ -731,7 +741,7 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
             lineCounter = 0;
         }
 
-        outFile->write(QString::number(frames->at(c).timestamp / 1000000.0, 'f', 6).toUtf8());
+        outFile->write(QString::number((frames->at(c).timestamp - offsetTime) / 1000000.0, 'f', 5).toUtf8());
         outFile->putChar(' ');
         outFile->write(QString::number(frames->at(c).bus).toUtf8());
         outFile->write("  ");
