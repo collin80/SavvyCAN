@@ -156,6 +156,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)")));
     filters.append(QString(tr("CANHacker Trace Files (*.trc *.TRC)")));
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
+    filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -192,6 +193,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerBLF(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[15]) result = loadCANHackerFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[16]) result = loadCabanaFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[17]) result = loadCANOpenFile(filename, frameCache);
 
         progress.cancel();
 
@@ -444,6 +446,70 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
                     if (tokens[d + 3] != "")
                     {
                         thisFrame.data[d] = tokens[d + 3].toInt(NULL, 16);
+                    }
+                    else thisFrame.data[d] = 0;
+                }
+                frames->append(thisFrame);
+            }
+            else foundErrors = true;
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
+
+
+//"Message Number","Time (ms)","Time","Excel Time","Count","ID","Flags","Message Type","Node","Details","Process Data","Data (Hex)","Data (Text)","Data (Decimal)","Length","Raw Message"
+//"0","0.000","8:09:42:48.7953090'",43447.7100146116,"","0x2E1","","Default: PDO","","Default: TPDO 2 of Node 0x61 (97)","","10 21 04 00 00 00 00 00 ",". ! . . . . . . ","U:0 S:0","8","10 21 04 00 00 00 00 00"
+bool FrameFileIO::loadCANOpenFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        qDebug() << "Could not open the file!";
+        return false;
+    }
+
+    line = inFile->readLine(); //read out the header first and discard it.
+    line = inFile->readLine();
+    line = inFile->readLine();
+    line = inFile->readLine();
+    line = inFile->readLine();
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        line = inFile->readLine().replace('\"', ' ').simplified();
+        if (line.length() > 2)
+        {
+            QList<QByteArray> tokens = line.split(',');
+            if (tokens.length() > 11)
+            {
+                thisFrame.timestamp = (int64_t)(tokens[1].simplified().toDouble() * 1000.0);
+                thisFrame.ID = Utility::ParseStringToNum(tokens[5].simplified());
+                thisFrame.extended = (thisFrame.ID > 0x7FF);
+                thisFrame.isReceived = true;
+                thisFrame.remote = false;
+                thisFrame.bus = 0;
+                QList<QByteArray> dataTok = tokens[11].simplified().split(' ');
+                thisFrame.len = dataTok.length();
+                for (unsigned int d = 0; d < thisFrame.len; d++)
+                {
+                    if (dataTok[d] != "")
+                    {
+                        thisFrame.data[d] = dataTok[d].simplified().toInt(NULL, 16);
                     }
                     else thisFrame.data[d] = 0;
                 }
