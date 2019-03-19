@@ -46,6 +46,7 @@ public:
     static bool loadCanalyzerBLF(QString, QVector<CANFrame>*);
     static bool loadCANHackerFile(QString filename, QVector<CANFrame>* frames);
     static bool loadCabanaFile(QString filename, QVector<CANFrame>* frames);
+    static bool loadCANOpenFile(QString filename, QVector<CANFrame>* frames);
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);
     static bool saveGenericCSVFile(QString, const QVector<CANFrame>*);
