@@ -649,6 +649,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
     bool foundErrors = false;
     bool inHeader = true;
     thisFrame.remote = false;
+    QList<QByteArray> tokens;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -664,16 +665,19 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
-        if (line.startsWith("//"))
+        if (inHeader)
         {
-            inHeader = false;
-            continue;
+            if (line.startsWith("//") ||  lineCounter > 4)
+            {
+                inHeader = false;
+                continue;
+            }
         }
         if (inHeader) continue;
         if (line.length() > 2)
         {            
-            QList<QByteArray> tokens = line.simplified().split(' ');
-            if (tokens.length() > 4)
+            tokens = line.simplified().split(' ');
+            if (tokens.length() > 5)
             {
                 thisFrame.timestamp = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
                 thisFrame.ID = tokens[2].toUInt(NULL, 16);
