@@ -786,6 +786,8 @@ bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
 }
 
 //The "native" file format for this program
+//Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
+//39747828,000005EB,false,Rx,0,8,E8,45,85,4B,4A,28,36,69,
 bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -842,7 +844,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     thisFrame.isReceived = true;
                     thisFrame.bus = tokens[3].toInt();
                     thisFrame.len = tokens[4].toUInt();
+                    if (thisFrame.len > 8) thisFrame.len = 8;
                     for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
+                    if (thisFrame.len + 5 > (unsigned int) tokens.length()) thisFrame.len = tokens.length() - 5;
                     for (unsigned int d = 0; d < thisFrame.len; d++)
                         thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
                 }
@@ -852,6 +856,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     else thisFrame.isReceived = false;
                     thisFrame.bus = tokens[4].toInt();
                     thisFrame.len = tokens[5].toUInt();
+                    if (thisFrame.len > 8) thisFrame.len = 8;
                     if (thisFrame.len + 6 > (unsigned int) tokens.length()) thisFrame.len = tokens.length() - 6;
                     for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
                     for (unsigned int d = 0; d < thisFrame.len; d++)
