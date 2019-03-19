@@ -81,18 +81,25 @@ void FileComparatorWindow::loadInterestedFile()
 {
     interestedFrames.clear();
     QString resultingFileName;
+
+    qApp->processEvents();
+
     if (FrameFileIO::loadFrameFile(resultingFileName, &interestedFrames))
     {
         ui->lblFirstFile->setText(resultingFileName);
         interestedFilename = resultingFileName;
         if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
+
 }
 
 void FileComparatorWindow::loadReferenceFile()
 {
     //secondFileFrames.clear();
     QString resultingFileName;
+
+    qApp->processEvents();
+
     if (FrameFileIO::loadFrameFile(resultingFileName, &referenceFrames))
     {
         ui->lblRefFrames->setText("Loaded frames: " + QString::number(referenceFrames.length()));
@@ -104,6 +111,7 @@ void FileComparatorWindow::clearReference()
 {
     referenceFrames.clear();
     ui->treeDetails->clear();
+    ui->lblRefFrames->setText("Loaded frames: " + QString::number(referenceFrames.length()));
 }
 
 void FileComparatorWindow::calculateDetails()
@@ -115,6 +123,16 @@ void FileComparatorWindow::calculateDetails()
     uint64_t tmp;
 
     bool uniqueInterested = ui->ckUniqueToInterested->isChecked();
+
+    QProgressDialog progress(this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Calculating differences");
+    progress.setCancelButton(0);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
+
+    qApp->processEvents();
 
     ui->treeDetails->clear();
 
@@ -171,6 +189,8 @@ void FileComparatorWindow::calculateDetails()
         }
     }
 
+    qApp->processEvents();
+
     for (int x = 0; x < referenceFrames.count(); x++)
     {
         CANFrame frame = referenceFrames.at(x);
@@ -211,17 +231,27 @@ void FileComparatorWindow::calculateDetails()
         }
     }
 
+    qApp->processEvents();
+
     //now we iterate through the IDs within both files and see which are unique to one file and which
     //are shared
     bool interestedHadUnique = false;
     QMap<int, FrameData>::iterator i;
+    int framesCounter = 0;
     for (i = interestedIDs.begin(); i != interestedIDs.end(); ++i)
     {
+        framesCounter++;
+        if (framesCounter > 10000)
+        {
+            framesCounter = 0;
+            qApp->processEvents();
+        }
+
         int keyone = i.key();
         if (!referenceIDs.contains(keyone))
         {
             valuesBase = new QTreeWidgetItem();
-            valuesBase->setText(0, QString::number(keyone, 16));
+            valuesBase->setText(0, Utility::formatHexNum(keyone));
             interestedOnlyBase->addChild(valuesBase);
         }
         else //ID was in both files
@@ -300,6 +330,8 @@ void FileComparatorWindow::calculateDetails()
         }
     }
 
+    qApp->processEvents();
+
     if (!uniqueInterested)
     {
         QMap<int, FrameData>::iterator itwo;
@@ -327,6 +359,8 @@ void FileComparatorWindow::calculateDetails()
     {
         ui->treeDetails->expandAll();
     }
+
+    progress.cancel();
 }
 
 void FileComparatorWindow::saveDetails()
