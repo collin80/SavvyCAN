@@ -809,7 +809,7 @@ void DBCFile::loadFile(QString fileName)
 
                 if (parseAttribute(line.right(line.length() - 12), attr))
                 {
-                    qDebug() << "Success";
+                    //qDebug() << "Success";
                     attr.attrType = SIG;
                     dbc_attributes.append(attr);
                 }
@@ -831,7 +831,7 @@ void DBCFile::loadFile(QString fileName)
 
                 if (parseAttribute(line.right(line.length() - 12), attr))
                 {
-                    qDebug() << "Success";
+                    //qDebug() << "Success";
                     attr.attrType = NODE;
                     dbc_attributes.append(attr);
                 }
@@ -855,7 +855,7 @@ void DBCFile::loadFile(QString fileName)
     if (!bgAttr)
     {
         attr.attrType = MESSAGE;
-        attr.defaultValue = QColor(Qt::white).name();
+        attr.defaultValue = QApplication::palette().color(QPalette::Base).name();
         attr.enumVals.clear();
         attr.lower = 0;
         attr.upper = 0;
@@ -1366,7 +1366,7 @@ int DBCHandler::createBlankFile()
 
     //add our custom attributes to the new file so that we know they're already there.
     attr.attrType = MESSAGE;
-    attr.defaultValue = QColor(Qt::white).name();
+    attr.defaultValue = QApplication::palette().color(QPalette::Base).name();
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
