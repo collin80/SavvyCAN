@@ -811,9 +811,15 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
             lineCounter = 0;
         }
 
-        outFile->write(QString::number((frames->at(c).timestamp - offsetTime) / 1000000.0, 'f', 5).toUtf8());
+        uint64_t timeStamp = (frames->at(c).timestamp - offsetTime) / 1000000ull;
+        int tsLen = QString::number(timeStamp).length();
+        int precision = 6;
+        //vector seems to keep 10 bytes at the start of the line for the timestamp. It should never exceed this
+        //and there should never be a precision over 6 digits after the decimal
+        if (tsLen > 3) precision = 9 - tsLen;
+        outFile->write(QString::number((frames->at(c).timestamp - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
         outFile->putChar(' ');
-        outFile->write(QString::number(frames->at(c).bus).toUtf8());
+        outFile->write(QString::number(frames->at(c).bus + 1).toUtf8());
         outFile->write("  ");
         if (frames->at(c).extended)
             outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
@@ -822,18 +828,18 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
             outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(3, '0').toUtf8());
             outFile->write("     ");
         }
-        outFile->write("        ");
+        outFile->write("   ");
 
-        if (frames->at(c).isReceived) outFile->write("Rx   d ");
-        else outFile->write("Tx   d ");
+        if (frames->at(c).isReceived) outFile->write("Rx D ");
+        else outFile->write("Tx D ");
 
         outFile->write(QString::number(frames->at(c).len).toUtf8());
-        outFile->putChar(' ');
+        outFile->write("  ");
 
         for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
         {
             outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
-            outFile->putChar(' ');
+            outFile->write("  ");
         }
 
         outFile->write("\n");
