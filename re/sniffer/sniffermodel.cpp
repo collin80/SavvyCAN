@@ -1,4 +1,6 @@
 #include <QDebug>
+#include <Qt>
+#include <QApplication>
 #include "sniffermodel.h"
 #include "snifferwindow.h"
 #include "SnifferDelegate.h"
@@ -11,6 +13,12 @@ SnifferModel::SnifferModel(QObject *parent)
       mMuteNotched(false),
       mTimeSequence(0)
 {
+    QColor TextColor = QApplication::palette().color(QPalette::Text);
+    if (TextColor.red() + TextColor.green() + TextColor.blue() < 200)
+    {
+        mDarkMode = false;
+    }
+    else mDarkMode = true;
 }
 
 SnifferModel::~SnifferModel()
@@ -69,13 +77,20 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
         }
         case Qt::ForegroundRole:
         {
-            if (!mFadeInactive ||  col < 2) return QBrush(Qt::black);
+            if (!mFadeInactive ||  col < 2) return QApplication::palette().brush(QPalette::Text);
             int v = item->getSeqInterval(col - 2) * 10;
             //qDebug() << "mTS: " << mTimeSequence << " gDT(" << (col - 2) << ") " << item->getDataTimestamp(col - 2);
             if (v > 225) v = 225;
             if (v < 0) v = 0;
-            return QBrush(QColor(v,v,v,255));
-            break;
+
+            if (!mDarkMode) //text defaults to being dark
+            {
+                return QBrush(QColor(v,v,v,255));
+            }
+            else //text defaults to being light
+            {
+                return QBrush(QColor(255-v,255-v,255-v,255));
+            }
         }
 
         case Qt::BackgroundRole:
@@ -83,7 +98,10 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             if(tc::ID==col)
             {
                 if(item->elapsed() > 4000)
-                    return QBrush(Qt::red);
+                {
+                    if (!mDarkMode) return QBrush(Qt::red);
+                    return QBrush(QColor(128,0,0));
+                }
             }
             else if(tc::DATA_0<=col && col<=tc::DATA_7)
             {
@@ -91,11 +109,13 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 switch(change)
                 {
                     case dc::INC:
-                        return QBrush(Qt::green);
+                        if (!mDarkMode) return QBrush(Qt::green);
+                        return QBrush(QColor(0,128,0));
                     case dc::DEINC:
-                        return QBrush(Qt::red);
+                        if (!mDarkMode) return QBrush(Qt::red);
+                        return QBrush(QColor(128,0,0));
                     default:
-                        break;
+                        return QApplication::palette().brush(QPalette::Base);
                 }
             }
             break;

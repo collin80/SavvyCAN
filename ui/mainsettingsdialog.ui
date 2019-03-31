@@ -46,6 +46,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="cbLoadConnections">
+          <property name="text">
+           <string>Save/Restore CAN bus connections</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbDisplayHex">
           <property name="text">
            <string>Display values as hexadecimal</string>
@@ -337,20 +344,27 @@
   </layout>
  </widget>
  <tabstops>
+  <tabstop>cbMainAutoScroll</tabstop>
   <tabstop>cbRestorePositions</tabstop>
+  <tabstop>cbLoadConnections</tabstop>
   <tabstop>cbDisplayHex</tabstop>
   <tabstop>cbValidate</tabstop>
+  <tabstop>cbUseFiltered</tabstop>
+  <tabstop>cbUseOpenGL</tabstop>
   <tabstop>rbSeconds</tabstop>
   <tabstop>rbMicros</tabstop>
   <tabstop>rbSysClock</tabstop>
   <tabstop>lineClockFormat</tabstop>
-  <tabstop>cbMainAutoScroll</tabstop>
+  <tabstop>spinFontSize</tabstop>
   <tabstop>cbFlowUseTimestamp</tabstop>
   <tabstop>cbFlowAutoRef</tabstop>
   <tabstop>cbPlaybackLoop</tabstop>
   <tabstop>spinPlaybackSpeed</tabstop>
   <tabstop>comboSendingBus</tabstop>
   <tabstop>cbInfoAutoExpand</tabstop>
+  <tabstop>lineRemoteHost</tabstop>
+  <tabstop>lineRemotePort</tabstop>
+  <tabstop>cbAutoStartRemote</tabstop>
  </tabstops>
  <resources/>
  <connections/>

@@ -2,6 +2,7 @@
 #include <QSettings>
 
 #include "canconmanager.h"
+#include "canconfactory.h"
 
 CANConManager* CANConManager::mInstance = NULL;
 
@@ -76,9 +77,32 @@ int CANConManager::getNumBuses()
     return buses;
 }
 
+int CANConManager::getBusBase(CANConnection *which)
+{
+    int buses = 0;
+    foreach(CANConnection* conn_p, mConns)
+    {
+        if (conn_p != which) buses += conn_p->getNumBuses();
+        else return buses;
+    }
+    return -1;
+}
+
 void CANConManager::refreshCanList()
 {
     QObject* sender_p = QObject::sender();
+
+    if (mConns.count() == 0)
+    {
+        //TODO: Seems to crash under heavy load. Find out why.
+        if(buslessFrames.size()) {
+            tempFrames.clear();
+            tempFrames.append(buslessFrames); //make a copy and pass that copy
+            buslessFrames.clear(); //delete all frames from the original
+            emit framesReceived(nullptr, tempFrames);
+        }
+        return;
+    }
 
     if( sender_p != &mTimer)
     {
@@ -175,6 +199,12 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     int busBase = 0;
     CANFrame workingFrame = pFrame;
     CANFrame *txFrame;
+
+    if (mConns.count() == 0)
+    {
+        buslessFrames.append(pFrame);
+        return true;
+    }
 
     foreach (CANConnection* conn, mConns)
     {

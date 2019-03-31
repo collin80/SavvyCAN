@@ -134,25 +134,33 @@ void CANFrameModel::setTimeFormat(QString format)
     endResetModel();
 }
 
+/*
+ * Scan all frames for the smallest timestamp and offset all timestamps so that smallest one is at 0
+*/
 void CANFrameModel::normalizeTiming()
 {
     mutex.lock();
     if (frames.count() == 0) return;
     timeOffset = frames[0].timestamp;
+
+    //find the absolute lowest timestamp in the whole time. Needed because maybe timestamp was reset in the middle.
     for (int j = 0; j < frames.count(); j++)
     {
         if (frames[j].timestamp < timeOffset) timeOffset = frames[j].timestamp;
     }
+
     for (int i = 0; i < frames.count(); i++)
     {
         frames[i].timestamp -= timeOffset;
     }
+
     this->beginResetModel();
     for (int i = 0; i < filteredFrames.count(); i++)
     {
         filteredFrames[i].timestamp -= timeOffset;
     }
     this->endResetModel();
+
     mutex.unlock();
 }
 
@@ -227,6 +235,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     int dLen;
     QString tempString;
     CANFrame thisFrame;
+    static bool rowFlip = false;
+    QVariant ts;
 
     if (!index.isValid())
         return QVariant();
@@ -246,8 +256,9 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return msg->bgColor;
             }
         }
-        //return QApplication::palette().color(QPalette::Button);
-        return QColor(Qt::white);
+        rowFlip = (index.row() % 2);
+        if (rowFlip) return QApplication::palette().color(QPalette::Base);
+        else return QApplication::palette().color(QPalette::AlternateBase);
     }
 
     if (role == Qt::TextAlignmentRole)
@@ -332,9 +343,15 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
                         QString sigString;
-                        if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, sigString))
+                        DBC_SIGNAL* sig = msg->sigHandler->findSignalByIdx(j);
+                        if (sig->processAsText(thisFrame, sigString))
                         {
                             tempString.append(sigString);
+                            tempString.append("\n");
+                        }
+                        else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
+                        {
+                            tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong()));
                             tempString.append("\n");
                         }
                     }

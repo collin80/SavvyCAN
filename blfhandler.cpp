@@ -94,7 +94,8 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                                 frame.remote = false;
                                 for (int i = 0; i < 8; i++) frame.data[i] = canObject.data[i];
                             }
-                            frame.timestamp = obj.header.uncompSize / 1000000.0; //uncompsize field also used for timestamp oddly enough
+                            //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
+                            frame.timestamp = obj.header.uncompSize / 1000.0; //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
                         }
                         else

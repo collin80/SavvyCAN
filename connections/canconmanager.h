@@ -26,6 +26,7 @@ public:
     void resetTimeBasis();
 
     int getNumBuses();
+    int getBusBase(CANConnection *);
 
     /**
      * @brief sendFrame sends a single frame out the desired bus
@@ -77,7 +78,9 @@ private:
     QElapsedTimer          mElapsedTimer;
     uint64_t               mTimestampBasis;
     uint32_t               mNumActiveBuses;
-    bool useSystemTime;
+    bool                   useSystemTime;
+    QVector<CANFrame>      buslessFrames;
+    QVector<CANFrame>      tempFrames;
 };
 
 #endif // CANCONNECTIONMODEL_H

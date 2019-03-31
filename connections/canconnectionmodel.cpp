@@ -12,14 +12,11 @@ CANConnectionModel::~CANConnectionModel()
 }
 
 enum class Column {
-    Bus        = 0, ///< A sequential number describing the bus
-    Type       = 1, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
+    Type       = 0, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
+    Subtype    = 1, ///< Mostly used by SerialBus devices to pick the sub type
     Port       = 2, ///< The CAN hardware port, e.g. can0 for socketcan
-    Speed      = 3, ///< The bus speed in bit/second
-    ListenOnly = 4, ///< True if the bus is in listen-only mode
-    SingleWire = 5, ///< True if the bus operates in single-wire mode
-    Active     = 6, ///< True if the bus is activated for sending and receiving
-    Status     = 7  ///< The bus status as text message
+    NumBuses   = 3, ///< Number of buses exposed by this device. Usually non-GVRET devices will just have one
+    Status     = 4  ///< The bus status as text message
 };
 
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -31,20 +28,14 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
     {
         switch (Column(section))
         {
-        case Column::Bus:
-            return QString(tr("Bus"));
         case Column::Type:
             return QString(tr("Type"));
+        case Column::Subtype:
+            return QString(tr("Subtype"));
         case Column::Port:
             return QString(tr("Port"));
-        case Column::Speed:
-            return QString(tr("Speed"));
-        case Column::ListenOnly:
-            return QString(tr("Listen Only"));
-        case Column::SingleWire:
-            return QString(tr("Single Wire"));
-        case Column::Active:
-            return QString(tr("Active"));
+        case Column::NumBuses:
+            return QString(tr("Buses"));
         case Column::Status:
             return QString(tr("Status"));
         }
@@ -59,7 +50,7 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
 int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 8;
+    return 5;
 }
 
 
@@ -67,78 +58,9 @@ int CANConnectionModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
 
-    int rows = 0;
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
-    foreach(const CANConnection* conn_p, conns)
-        rows += conn_p->getNumBuses();
-
-    //qDebug() << "Num Rows: " << rows;
-
-    return rows;
-}
-
-Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
-{
-    if (!index.isValid())
-        return Qt::ItemFlag::NoItemFlags;
-
-    int busId;
-    CANConnection *conn_p = getAtIdx(index.row(), busId);
-    if (!conn_p) return Qt::ItemFlag::NoItemFlags;
-
-    //socketcan is limited for what you can set but the other serialbus
-    //devices should be able to set the stuff. For now let anyone try
-    //and the underlying drivers can do with them as they will
-    bool editParams = true;
-    //if (conn_p->getType() == CANCon::GVRET_SERIAL) editParams = true;
-
-    switch (Column(index.column()))
-    {
-    case Column::Speed:
-        if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled;
-        return Qt::ItemFlag::NoItemFlags;
-    case Column::ListenOnly:
-    case Column::SingleWire:
-        if (editParams) return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
-        return Qt::ItemFlag::NoItemFlags;
-    case Column::Active:
-        return Qt::ItemFlag::ItemIsEditable | Qt::ItemFlag::ItemIsEnabled | Qt::ItemFlag::ItemIsUserCheckable;
-    default:
-        return Qt::ItemFlag::ItemIsEnabled;
-    }
-}
-
-bool CANConnectionModel::setData(const QModelIndex &index, const QVariant &value, int role)
-{
-    qDebug() << "setData: " << index.row() << ":" << index.column() << " role: " << role << " Val: " << value;
-
-    int busId;
-    CANConnection *conn_p = getAtIdx(index.row(), busId);
-    if (!conn_p) return false;
-    CANBus bus;
-    bool ret;
-    ret = conn_p->getBusSettings(busId, bus);
-    if (!ret) return false;
-
-    switch (Column(index.column()))
-    {
-    case Column::Speed:
-        bus.speed = value.toInt();
-        break;
-    case Column::ListenOnly:
-        bus.listenOnly = value.toBool();
-        break;
-    case Column::SingleWire:
-        bus.singleWire = value.toBool();
-        break;
-    case Column::Active:
-        bus.active = value.toBool();
-        break;
-    default: {}
-    }
-    conn_p->setBusSettings(busId, bus);
-    return true;
+    return conns.count();
 }
 
 QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
@@ -147,23 +69,16 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
         return QVariant();
     //qDebug() << "Row: " << index.row();
 
-    int busId;
-    CANConnection *conn_p = getAtIdx(index.row(), busId);
-    CANBus bus;
+    CANConnection *conn_p = getAtIdx(index.row());
     bool ret;
     if (!conn_p) return QVariant();
-    ret = conn_p->getBusSettings(busId, bus);
-    bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
 
-    //qDebug() << "ConnP: " << conn_p << "  ret " << ret;
+    bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
 
     if (role == Qt::DisplayRole) {
 
         switch (Column(index.column()))
         {
-            case Column::Bus:
-                //return QString::number(busId);
-                return QString::number(index.row());
             case Column::Type:
                 if (conn_p)
                     switch (conn_p->getType()) {
@@ -178,34 +93,16 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                 if (conn_p) return conn_p->getPort();
                 else qDebug() << "Tried to show connection port but connection was NULL";
                 break;
-            case Column::Speed:
-                if(!ret) return QVariant();
-                if (!isSocketCAN) return QString::number(bus.speed);
-                else return QString("N/A");
-            case Column::ListenOnly:
-                return QVariant();
-            case Column::SingleWire:
-                return QVariant();
-            case Column::Active:
-                return QVariant();
+            case Column::Subtype:
+                return conn_p->getDriver();
+                break;
+            case Column::NumBuses:
+                return conn_p->getNumBuses();
+                break;
             case Column::Status:
                  return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
         }
     }
-    if (role == Qt::CheckStateRole)
-    {
-        switch (Column(index.column()))
-        {
-        case Column::ListenOnly:
-            return (bus.listenOnly) ? Qt::Checked : Qt::Unchecked;
-        case Column::SingleWire:
-            return (bus.singleWire) ? Qt::Checked : Qt::Unchecked;
-        case Column::Active:
-            return (bus.active) ? Qt::Checked : Qt::Unchecked;
-        default: {}
-        }
-    }
-
     return QVariant();
 }
 
@@ -230,25 +127,14 @@ void CANConnectionModel::remove(CANConnection* pConn_p)
 }
 
 
-CANConnection* CANConnectionModel::getAtIdx(int pIdx, int& pBusId) const
+CANConnection* CANConnectionModel::getAtIdx(int pIdx) const
 {
     if (pIdx < 0)
         return NULL;
 
-    int i=0;
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
-    foreach(CANConnection* conn_p, conns)
-    {
-        if( i <= pIdx && pIdx < i+conn_p->getNumBuses() ) {
-            pBusId = pIdx - i;
-            return conn_p;
-        }
-
-        i+= conn_p->getNumBuses();
-    }
-
-    return NULL;
+    return conns.at(pIdx);
 }
 
 void CANConnectionModel::refresh(int pIndex)

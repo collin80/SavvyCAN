@@ -46,7 +46,7 @@ void SerialBusConnection::piStarted()
     mTimer.setInterval(1000);
     mTimer.setSingleShot(false); //keep ticking
     mTimer.start();
-    mBusData[0].mBus.setEnabled(true);
+    mBusData[0].mBus.setActive(true);
     mBusData[0].mConfigured = true;
 }
 
@@ -281,7 +281,7 @@ void SerialBusConnection::testConnection() {
                 CANBus bus;
                 if(getBusConfig(0, bus))
                 {
-                    bus.setEnabled(true);
+                    bus.setActive(true);
                     setBusSettings(0, bus);
                 }
 

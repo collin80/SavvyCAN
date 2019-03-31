@@ -73,7 +73,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     //The left most column has "BYTES" written vertically down it
     //the next left most column has "0 1 2 3 4 5 6 7" written down along the grid
 
-    painter.setPen(QPen(Qt::black));
+    painter.setPen(QPen(QApplication::palette().color(QPalette::Text)));
     QFont mainFont;
     mainFont.setPixelSize(qMin(xSector, ySector) - 10);
     painter.setFont(mainFont);

@@ -2,6 +2,7 @@
 
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QDateTime>
 
 #include <iostream>
 
@@ -32,6 +33,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
     filters.append(QString(tr("Candump/Kayak(*.log)")));
     filters.append(QString(tr("Cabana Log(*.csv *.CSV)")));
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
 
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
@@ -111,6 +113,12 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
             if (!filename.contains('.')) filename += ".csv";
             result = saveCabanaFile(filename, frameCache);
         }
+        if (dialog.selectedNameFilter() == filters[11])
+        {
+            if (!filename.contains('.')) filename += ".asc";
+            result = saveCanalyzerASC(filename, frameCache);
+        }
+
         progress.cancel();
 
         if (result)
@@ -148,6 +156,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)")));
     filters.append(QString(tr("CANHacker Trace Files (*.trc *.TRC)")));
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
+    filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
 
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
@@ -184,6 +193,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerBLF(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[15]) result = loadCANHackerFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[16]) result = loadCabanaFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[17]) result = loadCANOpenFile(filename, frameCache);
 
         progress.cancel();
 
@@ -449,6 +459,70 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+
+//"Message Number","Time (ms)","Time","Excel Time","Count","ID","Flags","Message Type","Node","Details","Process Data","Data (Hex)","Data (Text)","Data (Decimal)","Length","Raw Message"
+//"0","0.000","8:09:42:48.7953090'",43447.7100146116,"","0x2E1","","Default: PDO","","Default: TPDO 2 of Node 0x61 (97)","","10 21 04 00 00 00 00 00 ",". ! . . . . . . ","U:0 S:0","8","10 21 04 00 00 00 00 00"
+bool FrameFileIO::loadCANOpenFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        qDebug() << "Could not open the file!";
+        return false;
+    }
+
+    line = inFile->readLine(); //read out the header first and discard it.
+    line = inFile->readLine();
+    line = inFile->readLine();
+    line = inFile->readLine();
+    line = inFile->readLine();
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        line = inFile->readLine().replace('\"', ' ').simplified();
+        if (line.length() > 2)
+        {
+            QList<QByteArray> tokens = line.split(',');
+            if (tokens.length() > 11)
+            {
+                thisFrame.timestamp = (int64_t)(tokens[1].simplified().toDouble() * 1000.0);
+                thisFrame.ID = Utility::ParseStringToNum(tokens[5].simplified());
+                thisFrame.extended = (thisFrame.ID > 0x7FF);
+                thisFrame.isReceived = true;
+                thisFrame.remote = false;
+                thisFrame.bus = 0;
+                QList<QByteArray> dataTok = tokens[11].simplified().split(' ');
+                thisFrame.len = dataTok.length();
+                for (unsigned int d = 0; d < thisFrame.len; d++)
+                {
+                    if (dataTok[d] != "")
+                    {
+                        thisFrame.data[d] = dataTok[d].simplified().toInt(NULL, 16);
+                    }
+                    else thisFrame.data[d] = 0;
+                }
+                frames->append(thisFrame);
+            }
+            else foundErrors = true;
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
+
 bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
@@ -555,7 +629,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
         {
             if (fileVersion == 1)
             {
-                thisFrame.timestamp = (uint32_t)(line.mid(10, 8).simplified().toFloat() * 1000.0);
+                thisFrame.timestamp = (uint64_t)(line.mid(10, 8).simplified().toDouble() * 1000.0);
                 thisFrame.ID = line.mid(28, 8).simplified().toUInt(NULL, 16);
                 if (thisFrame.ID < 0x1FFFFFFF)
                 {
@@ -587,7 +661,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             }
             else if (fileVersion == 2)
             {
-                thisFrame.timestamp = (uint32_t)(line.mid(8, 13).simplified().toFloat() * 1000.0);
+                thisFrame.timestamp = (uint64_t)(line.mid(8, 13).simplified().toDouble() * 1000.0);
                 thisFrame.ID = line.mid(25, 8).simplified().toUInt(NULL, 16);
                 if (thisFrame.ID < 0x1FFFFFFF)
                 {
@@ -641,6 +715,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
     bool foundErrors = false;
     bool inHeader = true;
     thisFrame.remote = false;
+    QList<QByteArray> tokens;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -656,18 +731,21 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
-        if (line.startsWith("//"))
+        if (inHeader)
         {
-            inHeader = false;
-            continue;
+            if (line.startsWith("//") ||  lineCounter > 4)
+            {
+                inHeader = false;
+                continue;
+            }
         }
         if (inHeader) continue;
         if (line.length() > 2)
         {            
-            QList<QByteArray> tokens = line.simplified().split(' ');
-            if (tokens.length() > 4)
+            tokens = line.simplified().split(' ');
+            if (tokens.length() > 5)
             {
-                thisFrame.timestamp = (uint32_t)(tokens[0].toFloat() * 1000000.0);
+                thisFrame.timestamp = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
                 thisFrame.ID = tokens[2].toUInt(NULL, 16);
                 thisFrame.len = tokens[5].toUInt();
                 thisFrame.isReceived = tokens[3].toUpper().contains("RX");
@@ -696,6 +774,83 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* frames)
+{
+    QFile *outFile = new QFile(filename);
+    int lineCounter = 0;
+    uint64_t offsetTime = frames->at(0).timestamp;
+    for (int c = 0; c < frames->count(); c++)
+    {
+        if (frames->at(c).timestamp < offsetTime) offsetTime = frames->at(c).timestamp;
+    }
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+
+    QDateTime now;
+    now = QDateTime::currentDateTime();
+    if (offsetTime > 10000000000) //chances are the input file had times as system time so load it
+    {
+        now.setMSecsSinceEpoch(offsetTime / 1000); //offsetTime was in microseconds
+    }
+    outFile->write("date " + now.toString("ddd MMM dd h:mm:ss.zzz a yyyy").toUtf8());
+
+    outFile->write("\nbase hex  timestamps absolute\n");
+    outFile->write("no internal event logging\n");
+    outFile->write("// version 11.0.0\n");
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        uint64_t timeStamp = (frames->at(c).timestamp - offsetTime) / 1000000ull;
+        int tsLen = QString::number(timeStamp).length();
+        int precision = 6;
+        //vector seems to keep 10 bytes at the start of the line for the timestamp. It should never exceed this
+        //and there should never be a precision over 6 digits after the decimal
+        if (tsLen > 3) precision = 9 - tsLen;
+        outFile->write(QString::number((frames->at(c).timestamp - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
+        outFile->putChar(' ');
+        outFile->write(QString::number(frames->at(c).bus + 1).toUtf8());
+        outFile->write("  ");
+        if (frames->at(c).extended)
+            outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+        else
+        {
+            outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(3, '0').toUtf8());
+            outFile->write("     ");
+        }
+        outFile->write("   ");
+
+        if (frames->at(c).isReceived) outFile->write("Rx D ");
+        else outFile->write("Tx D ");
+
+        outFile->write(QString::number(frames->at(c).len).toUtf8());
+        outFile->write("  ");
+
+        for (unsigned int temp = 0; temp < frames->at(c).len; temp++)
+        {
+            outFile->write(QString::number(frames->at(c).data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write("  ");
+        }
+
+        outFile->write("\n");
+    }
+    outFile->close();
+    delete outFile;
+
+    return true;
+}
+
+//this one is pretty complicated and handled by it's own class
 bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
 {
     BLFHandler blf;
@@ -703,6 +858,8 @@ bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
 }
 
 //The "native" file format for this program
+//Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
+//39747828,000005EB,false,Rx,0,8,E8,45,85,4B,4A,28,36,69,
 bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -759,7 +916,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     thisFrame.isReceived = true;
                     thisFrame.bus = tokens[3].toInt();
                     thisFrame.len = tokens[4].toUInt();
+                    if (thisFrame.len > 8) thisFrame.len = 8;
                     for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
+                    if (thisFrame.len + 5 > (unsigned int) tokens.length()) thisFrame.len = tokens.length() - 5;
                     for (unsigned int d = 0; d < thisFrame.len; d++)
                         thisFrame.data[d] = tokens[5 + d].toInt(NULL, 16);
                 }
@@ -769,6 +928,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     else thisFrame.isReceived = false;
                     thisFrame.bus = tokens[4].toInt();
                     thisFrame.len = tokens[5].toUInt();
+                    if (thisFrame.len > 8) thisFrame.len = 8;
                     if (thisFrame.len + 6 > (unsigned int) tokens.length()) thisFrame.len = tokens.length() - 6;
                     for (int c = 0; c < 8; c++) thisFrame.data[c] = 0;
                     for (unsigned int d = 0; d < thisFrame.len; d++)
@@ -1819,12 +1979,21 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
     delete outFile;
     return true;
 }
-/* (0.003800) vcan0 164#0000c01aa8000013 */
+
+/*
+   (0.003800) vcan0 164#0000c01aa8000013
+                       or
+   (1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+*/
 bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
+    QList<QByteArray> tokens;
+    QRegExp timeExp("^\\((\\S+)\\)$");
+    QRegExp IdValExp("^(\\S+)#(\\S+)$");
+    QRegExp valExp("(\\S{2})");
     int lineCounter = 0;
     int pos = 0;
     bool ret;
@@ -1847,50 +2016,68 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 1)
         {
             /* tokenize */
-            QList<QByteArray> tokens = line.split(' ');
+            tokens.clear();
+            tokens = line.simplified().split(' ');
             if(tokens.count()<3) continue;
 
             /* timestamp */
-            QRegExp timeExp("^\\((\\S+)\\)$");
             ret = timeExp.exactMatch(tokens[0]);
             if(!ret) continue;
 
-            thisFrame.timestamp = timeExp.cap(1).toDouble(&ret) * 1000000;
+            thisFrame.timestamp = (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0);
             if(!ret) continue;
 
-            /* ID & value */
-            QRegExp IdValExp("^(\\S+)#(\\S+)\n$");
-            qDebug() << tokens[2];
-            ret = IdValExp.exactMatch(tokens[2]);
-            if(!ret) continue;
-
-            /* ID */
-            thisFrame.ID = IdValExp.cap(1).toInt(&ret, 16);
-            if (IdValExp.cap(1).length() > 3) {
-                thisFrame.extended = true;
-            } else {
-                thisFrame.extended = false;
-            }
-            if(!ret) continue;
-
-            QString val= IdValExp.cap(2);
-            QRegExp valExp("(\\S{2})");
-
-            pos = 0;
-            thisFrame.len = 0;
-            if (val.startsWith("R") && val.at(1).isDigit()) {
-                thisFrame.len = val.at(1).toLatin1() - '0';
-                thisFrame.remote = true;
-            } else {
+            if (line.contains('[')) //the expanded format (second one from the above list)
+            {
+                //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+                //     0               1     2   3  4 5  6  7  8  9  10 11
+                thisFrame.ID = tokens[2].toULong(nullptr, 16);
+                if (thisFrame.ID > 0x7FF) thisFrame.extended = true;
+                else thisFrame.extended = false;
                 thisFrame.remote = false;
-                /* val byte per byte */
-                while ((pos = valExp.indexIn(val, pos)) != -1)
+                thisFrame.len = tokens[3].at(1) - '0';
+                for (int c = 0; c < thisFrame.len; c++)
                 {
-                    thisFrame.data[thisFrame.len] = valExp.cap(1).toInt(&ret, 16);
-                    if(!ret) continue;
+                    thisFrame.data[c] = tokens[4 + c].toInt(nullptr, 16);
+                }
+            }
+            else  //the more concise format (first one from list above)
+            {
+                /* ID & value */
+                //qDebug() << tokens[2];
+                ret = IdValExp.exactMatch(tokens[2]);
+                if(!ret)
+                {
+                    qDebug() << "ID regex didn't match!";
+                    continue;
+                }
 
-                    thisFrame.len++;
-                    pos += valExp.matchedLength();
+                /* ID */
+                thisFrame.ID = IdValExp.cap(1).toInt(&ret, 16);
+                if (IdValExp.cap(1).length() > 3) {
+                    thisFrame.extended = true;
+                } else {
+                    thisFrame.extended = false;
+                }
+
+                QString val= IdValExp.cap(2);
+
+                pos = 0;
+                thisFrame.len = 0;
+                if (val.startsWith("R") && val.at(1).isDigit()) {
+                    thisFrame.len = val.at(1).toLatin1() - '0';
+                    thisFrame.remote = true;
+                } else {
+                    thisFrame.remote = false;
+                    /* val byte per byte */
+                    while ((pos = valExp.indexIn(val, pos)) != -1)
+                    {
+                        thisFrame.data[thisFrame.len] = valExp.cap(1).toInt(&ret, 16);
+                        if(!ret) continue;
+
+                        thisFrame.len++;
+                        pos += valExp.matchedLength();
+                    }
                 }
             }
 
