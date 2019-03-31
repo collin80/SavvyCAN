@@ -21,7 +21,8 @@ private:
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
     QFont mainFont;
     QFontInfo* mainFontInfo;
-    bool                        mFadeInactive;
+    bool  mFadeInactive;
+    bool  mDarkMode;
 };
 
 #endif

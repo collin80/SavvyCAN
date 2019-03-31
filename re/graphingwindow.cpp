@@ -458,7 +458,7 @@ bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
 void GraphingWindow::resetView()
 {
     double yminval=10000000.0, ymaxval = -1000000.0;
-    double xminval=10000000000.0, xmaxval = -10000000000.0;
+    double xminval=100000000000, xmaxval = -10000000000.0;
     for (int i = 0; i < graphParams.count(); i++)
     {
         for (int j = 0; j < graphParams[i].x.count(); j++)
@@ -1076,8 +1076,8 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
     int64_t tempVal; //64 bit temp value.
-    float yminval=10000000.0, ymaxval = -1000000.0;
-    float xminval=10000000000.0, xmaxval = -10000000000.0;
+    double yminval=10000000.0, ymaxval = -1000000.0;
+    double xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
     int sBit, bits;
     bool intelFormat, isSigned;

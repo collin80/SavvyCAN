@@ -49,6 +49,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
         int bytes = signalSize / 8;
         for (int x = 0; x < bytes; x++) buildString.append(frame.data[startByte + x]);
         outString = buildString;
+        cachedValue = outString;
         return true;
     }
 
@@ -69,7 +70,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
     {
         result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
-        result = (int64_t)endResult;
+        result = (int64_t)endResult;        
     }
     else if (valType == SP_FLOAT)
     {
@@ -94,6 +95,13 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
         endResult = (*((double *)(&result)) * factor) + bias;
     }
 
+    outString = makePrettyOutput(endResult, result);
+    cachedValue = endResult;
+    return true;
+}
+
+QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal)
+{
     QString outputString;
 
     outputString = name + ": ";
@@ -103,22 +111,20 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString)
         bool foundVal = false;
         for (int x = 0; x < valList.count(); x++)
         {
-            if (valList.at(x).value == result)
+            if (valList.at(x).value == intVal)
             {
                 outputString += valList.at(x).descript;
                 foundVal = true;
                 break;
             }
         }
-        if (!foundVal) outputString += QString::number(endResult) + unitName;
+        if (!foundVal) outputString += QString::number(intVal) + unitName;
     }
     else //otherwise display the actual number and unit (if it exists)
     {
-       outputString += QString::number(endResult) + unitName;
+       outputString += QString::number(floatVal) + unitName;
     }
-
-    outString = outputString;
-    return true;
+    return outputString;
 }
 
 //Works quite a bit like the above version but this one is cut down and only will return int32_t which is perfect for
@@ -158,7 +164,7 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
 
     double endResult = ((double)result * factor) + bias;
     result = (int32_t)endResult;
-
+    cachedValue = result;
     outValue = result;
     return true;
 }
@@ -230,7 +236,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
-
+    cachedValue = endResult;
     outValue = endResult;
     return true;
 }

@@ -210,7 +210,7 @@ void CANConnection::setConfigured(int pBusId, bool pConfigured) {
 bool CANConnection::getBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses() || !isConfigured(pBusId))
         return false;
-
+    qDebug() << "getBusConfig id: " << pBusId;
     pBus = mBusData[pBusId].mBus;
     return true;
 }
