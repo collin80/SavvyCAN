@@ -406,9 +406,13 @@ void MainWindow::overwriteToggled(bool state)
                                       QMessageBox::Yes|QMessageBox::No);
         if (confirmDialog == QMessageBox::Yes)
         {
-            model->setOverwriteMode(state);
+            model->setOverwriteMode(true);
         }
         else ui->cbOverwrite->setCheckState(Qt::Unchecked);
+    }
+    else
+    {
+        model->setOverwriteMode(false);
     }
 }
 
