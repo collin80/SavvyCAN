@@ -293,7 +293,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case Column::Extended:
             return QString::number(thisFrame.extended);
         case Column::Remote:
-            return QString::number(thisFrame.remote);
+            if (!overwriteDups) return QString::number(thisFrame.remote);
+            return QString::number(thisFrame.frameCount);
         case Column::Direction:
             if (thisFrame.isReceived) return QString(tr("Rx"));
             return QString(tr("Tx"));
@@ -387,7 +388,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         case Column::Extended:
             return QString(tr("Ext"));
         case Column::Remote:
-            return QString(tr("Rem"));
+            if (!overwriteDups) return QString(tr("Rem"));
+            return QString(tr("Cnt"));
         case Column::Direction:
             return QString(tr("Dir"));
         case Column::Bus:
@@ -433,6 +435,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         if (filters[tempFrame.ID])
         {
             if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+            tempFrame.frameCount = 1;
             filteredFrames.append(tempFrame);
             if (autoRefresh) endInsertRows();
         }
@@ -444,6 +447,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             if (frames[i].ID == tempFrame.ID)
             {
+                tempFrame.frameCount = frames[i].frameCount + 1;
                 frames.replace(i, tempFrame);
                 found = true;
                 break;
@@ -455,6 +459,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
             if (filters[tempFrame.ID])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+                tempFrame.frameCount = 1;
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }

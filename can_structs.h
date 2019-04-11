@@ -16,10 +16,23 @@ public:
     uint32_t len;
     unsigned char data[8];
     uint64_t timestamp;
+    uint32_t frameCount; //used in overwrite mode
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
     {
         return l.timestamp < r.timestamp;
+    }
+
+    CANFrame()
+    {
+        ID = 0;
+        bus = 0;
+        extended = false;
+        remote = false;
+        isReceived = true;
+        len = 0;
+        timestamp = 0;
+        frameCount = 1;
     }
 };
 
