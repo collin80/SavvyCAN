@@ -283,11 +283,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         switch (Column(index.column()))
         {
         case Column::TimeStamp:
-            //Reformatting the output a bit with custom code
-            ts = Utility::formatTimestamp(thisFrame.timestamp);
-            if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
-            if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
-            if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
+            return Utility::formatTimestamp(thisFrame.timestamp);
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         case Column::Extended:
