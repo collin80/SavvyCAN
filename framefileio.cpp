@@ -3,7 +3,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QDateTime>
-
+#include <QtEndian>
 #include <iostream>
 
 #include "utility.h"
@@ -139,6 +139,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     bool result = false;
 
     QStringList filters;
+    filters.append(QString(tr("Autodetect File Type (*.*)")));
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
     filters.append(QString(tr("CRTD Logs (*.txt *.TXT)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
@@ -176,24 +177,25 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
 
         qApp->processEvents();
 
-        if (dialog.selectedNameFilter() == filters[0]) result = loadNativeCSVFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[1]) result = loadCRTDFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[2]) result = loadGenericCSVFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[3]) result = loadLogFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[4]) result = loadMicrochipFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[5]) result = loadTraceFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[6]) result = loadIXXATFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[7]) result = loadCANDOFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[9]) result = loadCanDumpFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[10]) result = loadPCANFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[11]) result = loadKvaserFile(filename, frameCache, false);
-        if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, true);
-        if (dialog.selectedNameFilter() == filters[13]) result = loadCanalyzerASC(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerBLF(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[15]) result = loadCANHackerFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[16]) result = loadCabanaFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[17]) result = loadCANOpenFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[0]) result = autoDetectLoadFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[1]) result = loadNativeCSVFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[2]) result = loadCRTDFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[3]) result = loadGenericCSVFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[4]) result = loadLogFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[5]) result = loadMicrochipFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[6]) result = loadTraceFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[7]) result = loadIXXATFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[8]) result = loadCANDOFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[9]) result = loadVehicleSpyFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[10]) result = loadCanDumpFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[11]) result = loadPCANFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, false);
+        if (dialog.selectedNameFilter() == filters[13]) result = loadKvaserFile(filename, frameCache, true);
+        if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerASC(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[15]) result = loadCanalyzerBLF(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[16]) result = loadCANHackerFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[17]) result = loadCabanaFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[18]) result = loadCANOpenFile(filename, frameCache);
 
         progress.cancel();
 
@@ -212,6 +214,220 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         }
     }
     return false;
+}
+
+
+//Try every format by first uses the "is" functions which try to detect whether a given file is a good match to that
+//file format or not. Those functions are much less tolerant than the load functions and so should help to discriminate
+//whether a file could be loaded or not by a given loader. The loader return is still used in case the guess was wrong.
+bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames)
+{
+    if (isCanalyzerBLF(filename))
+    {
+        if (loadCanalyzerBLF(filename, frames))
+        {
+            qDebug() << "Loaded as Canalyzer BLF successfully!";
+            return true;
+        }
+    }
+
+    if (isNativeCSVFile(filename))
+    {
+        if (loadNativeCSVFile(filename, frames))
+        {
+            qDebug() << "Loaded as native CSV successfully!";
+            return true;
+        }
+    }
+
+    if (isCanalyzerASC(filename))
+    {
+        if (loadCanalyzerASC(filename, frames))
+        {
+            qDebug() << "Loaded as Canalyzer ASC successfully!";
+            return true;
+        }
+    }
+
+    if (isCRTDFile(filename))
+    {
+        if (loadCRTDFile(filename, frames))
+        {
+            qDebug() << "Loaded as CRTD successfully!";
+            return true;
+        }
+    }
+
+
+    if (isTraceFile(filename))
+    {
+        if (loadTraceFile(filename, frames))
+        {
+            qDebug() << "Loaded as trace successfully!";
+            return true;
+        }
+    }
+
+    if (isVehicleSpyFile(filename))
+    {
+        if (loadVehicleSpyFile(filename, frames))
+        {
+            qDebug() << "Loaded as vehicle spy successfully!";
+            return true;
+        }
+    }
+
+    if (isCanDumpFile(filename))
+    {
+        if (loadCanDumpFile(filename, frames))
+        {
+            qDebug() << "Loaded as candump successfully!";
+            return true;
+        }
+    }
+
+    if (isCANHackerFile(filename))
+    {
+        if (loadCANHackerFile(filename, frames))
+        {
+            qDebug() << "Loaded as CANHacker successfully!";
+            return true;
+        }
+    }
+
+    if (isCabanaFile(filename))
+    {
+        if (loadCabanaFile(filename, frames))
+        {
+            qDebug() << "Loaded as Cabana successfully!";
+            return true;
+        }
+    }
+
+    if (isCANOpenFile(filename))
+    {
+        if (loadCANOpenFile(filename, frames))
+        {
+            qDebug() << "Loaded as CANOpen Magic successfully!";
+            return true;
+        }
+    }
+
+    if (isLogFile(filename))
+    {
+        if (loadLogFile(filename, frames))
+        {
+            qDebug() << "Loaded as Busmaster Log successfully!";
+            return true;
+        }
+    }
+
+    if (isPCANFile(filename))
+    {
+        if (loadPCANFile(filename, frames))
+        {
+            qDebug() << "Loaded as PCAN successfully!";
+            return true;
+        }
+    }
+
+    if (isIXXATFile(filename))
+    {
+        if (loadIXXATFile(filename, frames))
+        {
+            qDebug() << "Loaded as IXXAT successfully!";
+            return true;
+        }
+    }
+
+    if (isMicrochipFile(filename))
+    {
+        if (loadMicrochipFile(filename, frames))
+        {
+            qDebug() << "Loaded as microchip successfully!";
+            return true;
+        }
+    }
+
+    if (isCANDOFile(filename))
+    {
+        if (loadCANDOFile(filename, frames))
+        {
+            qDebug() << "Loaded as CANDO successfully!";
+            return true;
+        }
+    }
+
+    if (isKvaserFile(filename))
+    {
+        if (loadKvaserFile(filename, frames,true))
+        {
+            qDebug() << "Loaded as Kvaser HEX successfully!";
+            return true;
+        }
+        if (loadKvaserFile(filename, frames,false))
+        {
+            qDebug() << "Loaded as KVaser Decimal successfully!";
+            return true;
+        }
+    }
+
+    if (isGenericCSVFile(filename))
+    {
+        if (loadGenericCSVFile(filename, frames))
+        {
+            qDebug() << "Loaded as generic CSV successfully!";
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
+bool FrameFileIO::isVehicleSpyFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    bool foundProbableHeader = false;
+    bool isMatch = false;
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try {
+        for (int i = 0; i < 10; i++)
+        {
+            if (!inFile->atEnd())
+            {
+                line = inFile->readLine().simplified().toUpper();
+                if (line.startsWith("LINE") && line.contains("TIME") && line.contains("B1"))
+                {
+                    foundProbableHeader = true;
+                }
+            }
+        }
+        if (foundProbableHeader)
+        {
+            if (!inFile->atEnd())
+            {
+                line = inFile->readLine().simplified().toUpper();
+                inFile->close();
+                QList<QByteArray> tokens = line.split(',');
+                if (tokens.length() > 20)
+                {
+                    if (tokens[9].toInt(NULL, 16) > 0) isMatch = true;
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    return isMatch;
 }
 
 
@@ -292,6 +508,52 @@ bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CANFrame> *
     Q_UNUSED(filename);
     Q_UNUSED(frames);
     return true;
+}
+
+bool FrameFileIO::isCRTDFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        line = inFile->readLine().toUpper(); //read out the header first and discard it.
+
+        while (!inFile->atEnd() && lineCounter < 100) {
+            lineCounter++;
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(' ');
+                if (tokens.length() > 2)
+                {
+                    char firstChar = tokens[1].left(1)[0];
+                    if (firstChar == 'R' || firstChar == 'T')
+                    {
+                        if (tokens[1] == "R29" || tokens[1] == "T29") isMatch = true;
+                        if (tokens[1] == "R11" || tokens[1] == "T11") isMatch = true;
+                    }
+                }
+                else isMatch = false;
+            }
+            if (lineCounter > 10) break;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project
@@ -389,6 +651,55 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+
+bool FrameFileIO::isCANHackerFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        line = inFile->readLine().toUpper(); //read out the header first and discard it.
+        if (!line.contains("CANHACKER")) return false;
+
+        while (!inFile->atEnd()) {
+            lineCounter++;
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(' ');
+                if (tokens.length() > 3)
+                {
+                    if (tokens[1].toInt(NULL, 16) > 0)
+                    {
+                        int len = tokens[2].toInt();
+                        if (len > -1 && len < 9)
+                        {
+                            isMatch = true;
+                        }
+                    }
+                }
+                else isMatch = false;
+            }
+            if (lineCounter > 10) break;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
 // CANHacker trace format
 // Time   ID     DLC Data                    Comment
 // 00.000 00004000 8 36 47 19 43 01 00 00 80 
@@ -459,6 +770,59 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+bool FrameFileIO::isCANOpenFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        line = inFile->readLine().toUpper();
+        if (!line.contains("CANOPEN MAGIC")) return false;
+        line = inFile->readLine();
+        line = inFile->readLine();
+        line = inFile->readLine();
+        line = inFile->readLine();
+
+        while (!inFile->atEnd()) {
+            lineCounter++;
+            if (lineCounter > 10)
+            {
+                break;
+            }
+
+            line = inFile->readLine().replace('\"', ' ').simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(',');
+                if (tokens.length() > 11)
+                {
+                    if (Utility::ParseStringToNum(tokens[5].simplified()) > 0)
+                    {
+                        QList<QByteArray> dataTok = tokens[11].simplified().split(' ');
+                        if ( dataTok.length() > -1 && dataTok.length() < 9) isMatch = true;
+                    }
+                }
+                else isMatch = false;
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
 
 //"Message Number","Time (ms)","Time","Excel Time","Count","ID","Flags","Message Type","Node","Details","Process Data","Data (Hex)","Data (Text)","Data (Decimal)","Length","Raw Message"
 //"0","0.000","8:09:42:48.7953090'",43447.7100146116,"","0x2E1","","Default: PDO","","Default: TPDO 2 of Node 0x61 (97)","","10 21 04 00 00 00 00 00 ",". ! . . . . . . ","U:0 S:0","8","10 21 04 00 00 00 00 00"
@@ -575,6 +939,69 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
     return true;
 }
 
+
+bool FrameFileIO::isPCANFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    int fileVersion = 1;
+    bool isMatch = false;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        while (!inFile->atEnd()) {
+            lineCounter++;
+            if (lineCounter > 10)
+            {
+                break;
+            }
+            line = inFile->readLine();
+            if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 2;
+            if (line.startsWith(';')) continue;
+            if (line.length() > 2)
+            {
+                if (fileVersion == 1)
+                {
+                    int id = line.mid(28, 8).simplified().toUInt(NULL, 16);
+                    if (id > 0 && id < 0x1FFFFFFF)
+                    {
+                        int len = line.mid(38,1).toInt();
+                        if (len > - 1 && len < 9) isMatch = true;
+                    }
+                }
+
+                else if (fileVersion == 2)
+                {
+                    int id = line.mid(25, 8).simplified().toUInt(NULL, 16);
+                    if (id > 0 && id < 0x1FFFFFFF)
+                    {
+                        int len = line.mid(37,2).trimmed().toInt();
+                        if (len > -1 && len < 9)
+                        {
+                            QList<QByteArray> tokens = line.mid(40, len * 3).split(' ');
+                            if (tokens.length() == len) isMatch = true;
+                        }
+                    }
+                }
+            }
+            //else foundErrors = true;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
 
 /*Fixed length lines
     Version 1.1
@@ -699,6 +1126,66 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+bool FrameFileIO::isCanalyzerASC(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = false;
+    bool inHeader = true;
+    QList<QByteArray> tokens;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        while (!inFile->atEnd() && lineCounter < 10) {
+            lineCounter++;
+            if (lineCounter > 10)
+            {
+                qApp->processEvents();
+                lineCounter = 0;
+            }
+            line = inFile->readLine();
+            if (inHeader)
+            {
+                if (line.startsWith("//") ||  lineCounter > 4)
+                {
+                    inHeader = false;
+                    continue;
+                }
+            }
+            if (inHeader) continue;
+            if (line.length() > 2)
+            {
+                tokens = line.simplified().split(' ');
+                if (tokens.length() > 5)
+                {
+                    uint64_t time = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
+                    if (time <= 0) continue;
+                    int id = tokens[2].toUInt(NULL, 16);
+                    if (id < 1) continue;
+                    int len = tokens[5].toUInt();
+                    if (len < 0 || len > 8) continue;
+                    if (tokens.count() > len + 6) isMatch = true;
+                }
+                else isMatch = false;
+            }
+            else isMatch = false;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
 //There tends to be four lines of header first. The last of which starts with // so first burn off lines
 //until a line starting with // is seen, then the rest are formatted like this:
 //  47.971842 2  248             Rx   d 8 FF FF FF FF FF FF FF FF
@@ -748,6 +1235,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                 thisFrame.timestamp = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
                 thisFrame.ID = tokens[2].toUInt(NULL, 16);
                 thisFrame.len = tokens[5].toUInt();
+                if (thisFrame.len > 8) return false;
                 thisFrame.isReceived = tokens[3].toUpper().contains("RX");
                 thisFrame.bus = tokens[1].toUInt();
                 thisFrame.extended = (thisFrame.ID > 0x7FF);
@@ -850,11 +1338,89 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
     return true;
 }
 
+bool FrameFileIO::isCanalyzerBLF(QString filename)
+{
+    BLF_FILE_HEADER header;
+
+    QFile *inFile = new QFile(filename);
+    bool isMatch = false;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+    inFile->read((char *)&header, sizeof(header));
+    if (qFromLittleEndian(header.sig) == 0x47474F4C)
+    {
+        qDebug() << "Proper BLF file header token";
+        isMatch = true;
+    }
+    else isMatch = false;
+
+    inFile->close();
+    delete inFile;
+
+    return isMatch;
+}
+
 //this one is pretty complicated and handled by it's own class
 bool FrameFileIO::loadCanalyzerBLF(QString filename, QVector<CANFrame> *frames)
 {
     BLFHandler blf;
     return blf.loadBLF(filename, frames);
+}
+
+bool FrameFileIO::isNativeCSVFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int fileVersion = 1;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        line = inFile->readLine().toUpper(); //read out the header first and discard it.
+        if (line.length() < 23) isMatch = false;
+        else if (line.at(23) == 'D') fileVersion = 2; //Dir is found starting at position 23 if this is a V2 file
+
+        if (!line.contains("TIME STAMP")) isMatch = false;
+        if (!line.contains("EXTENDED")) isMatch = false;
+        if (!line.contains("D1")) isMatch = false;
+
+        if (!inFile->atEnd()) {
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(',');
+                if (tokens.length() >= 5)
+                {
+                    if (fileVersion == 1)
+                    {
+                        if (tokens[4].toUInt() > 8) isMatch = false;
+                    }
+                    else if (fileVersion == 2)
+                    {
+                        if ( tokens[5].toUInt() > 8) isMatch = false;
+                    }
+                }
+                else isMatch = false;
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+
+    return isMatch;
 }
 
 //The "native" file format for this program
@@ -1089,6 +1655,56 @@ bool FrameFileIO::flushContinuousNative()
     return false;
 }
 
+
+bool FrameFileIO::isGenericCSVFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        line = inFile->readLine(); //read out the header first and discard it.
+
+        if (!inFile->atEnd()) {
+            line = inFile->readLine();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(',');
+
+                int ID = tokens[0].toInt(NULL, 16);
+                if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
+
+                if (tokens.count() < 2)
+                {
+                    isMatch = false;
+                }
+
+                if (isMatch)
+                {
+                    QList<QByteArray> dataTok = tokens[1].split(' ');
+                    int len = dataTok.length();
+                    if (len > 8) isMatch = false;
+                    if (len < 2) isMatch = false;
+                }
+            }
+            else isMatch = false;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
 bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -1180,6 +1796,58 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
     outFile->close();
     delete outFile;
     return true;
+}
+
+bool FrameFileIO::isLogFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        line = inFile->readLine().toUpper();
+        if (!line.contains("BUSMASTER")) isMatch = false;
+
+        while (!inFile->atEnd() && line.startsWith("***")) {
+            line = inFile->readLine().toUpper();
+        }
+
+        if (!inFile->atEnd())
+        {
+            line = inFile->readLine().toUpper();
+            if (line.length() > 1)
+            {
+                QList<QByteArray> tokens = line.split(' ');
+                if (tokens.length() >= 6)
+                {
+                    QList<QByteArray> timeToks = tokens[0].split(':');
+                    if (timeToks.count() != 4) isMatch = false;
+
+                    int ID = tokens[3].right(tokens[3].length() - 2).toInt(NULL, 16);
+                    if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
+                    if (tokens[4] != "S" && tokens[4] != "X" && tokens[4] != "SR" && tokens[4] != "XR") isMatch = false;
+                    int len = tokens[5].toUInt();
+                    if (len > 8) isMatch = false;
+                }
+                else isMatch = false;
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
 }
 
 //busmaster log file
@@ -1356,6 +2024,41 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
     return true;
 }
 
+bool FrameFileIO::isIXXATFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        line = inFile->readLine().toUpper();
+        if (!line.contains("IXXAT")) isMatch = false;
+
+        for (int i = 0; i < 6; i++)
+        {
+            if (!inFile->atEnd()) line = inFile->readLine().toUpper();
+            else isMatch = false;
+        }
+
+        if (!line.contains("FORMAT")) isMatch = false;
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
 //"00:01:03.03","223","Std","","00 00 00 00 49 00 00 01 "
 bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
 {
@@ -1400,6 +2103,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
                 {
                     timeStamp = 0;
                     foundErrors = true;
+                    return false;
                 }
                 thisFrame.timestamp = timeStamp;
                 thisFrame.ID = Utility::unQuote(tokens[1]).toInt(NULL, 16);
@@ -1413,6 +2117,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
                 {
                     thisFrame.extended = false;
                     foundErrors = true;
+                    return false;
                 }
 
                 thisFrame.isReceived = true;
@@ -1421,10 +2126,11 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
 
                 QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
                 thisFrame.len = dataToks.length();
+                if (thisFrame.len > 8) return false;
                 for (unsigned int d = 0; d < thisFrame.len; d++) thisFrame.data[d] = dataToks[d].toInt(NULL, 16);
                 frames->append(thisFrame);
             }
-            else foundErrors = true;
+            else return false;
         }
     }
     inFile->close();
@@ -1483,6 +2189,54 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
     outFile->close();
     delete outFile;
     return true;
+}
+
+bool FrameFileIO::isCANDOFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    int lineCounter = 0;
+    QByteArray data;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+
+    //this file format is in static 12 byte blocks.
+    //Bytes 0 - 1 are a time stamp
+    //Bytes 2 - 3 are the data length (top 4 bits) then ID (bottom 11 bits)
+    //Bytes 4 - 11 are the data bytes (padded with FF for bytes not used)
+    try
+    {
+        while (!inFile->atEnd() && lineCounter < 200)
+        {
+            lineCounter++;
+
+            data = inFile->read(12);
+
+            int ID = (((unsigned int)data[3] & 0x0F) * 256 + (unsigned int)data[2]);
+            int len = (unsigned char)data[3] >> 4;
+
+            if (len <= 8 && ID <= 0x7FF)
+            {
+                if (len < 8)
+                {
+                    if (data[4 + len] != (char)0xFF) isMatch = false;
+                }
+            }
+            else isMatch = false;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
 }
 
 bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
@@ -1599,6 +2353,59 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
     outFile->close();
     delete outFile;
     return true;
+}
+
+bool FrameFileIO::isMicrochipFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    bool inComment = false;
+    int lineCounter = 0;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        while (!inFile->atEnd() && lineCounter < 100) {
+            lineCounter++;
+
+            line = inFile->readLine();
+            if (line.length() > 2)
+            {
+                if (line.startsWith("//"))
+                {
+                    inComment = !inComment;
+                }
+                else
+                {
+                    if (!inComment)
+                    {
+                        QList<QByteArray> tokens = line.split(';');
+                        if (tokens.length() >= 4)
+                        {
+                            int ID = Utility::ParseStringToNum(tokens[2]);
+                            if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
+                            int len = tokens[3].toInt();
+                            if ( len > 8 || len < 0 ) isMatch = false;
+                            if ( (len + 4)  < tokens.length() ) isMatch = false;
+                        }
+                        else isMatch = false;
+                    }
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
 }
 
 //log file from microchip tool
@@ -1739,6 +2546,61 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
     return true;
 }
 
+bool FrameFileIO::isTraceFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        while (!inFile->atEnd() && lineCounter < 100) {
+            lineCounter++;
+
+            line = inFile->readLine();
+            line = line.trimmed();
+            if (line.length() > 2)
+            {
+                if (line.startsWith(";"))
+                {
+                    // a comment. Ignore it.
+                }
+                else
+                {
+                    QList<QByteArray> tokens = line.split('\t');
+                    if (tokens.length() > 3)
+                    {
+                        QList<QByteArray> timestampToks = tokens[1].split(':');
+                        if (timestampToks.count() != 4) isMatch = false;
+
+                        int ID = tokens[2].toLong(NULL, 16);
+                        if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
+                        int len = tokens[3].toInt();
+                        if (len > 8 || len < 0) isMatch = false;
+                        QList<QByteArray> dataToks = tokens[4].split(' ');
+                        if (len > (unsigned int) dataToks.length()) isMatch = false;
+                    }
+                    else isMatch = false;
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
 
 /*
 ;  CAN Logger trace file
@@ -1980,6 +2842,123 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
     return true;
 }
 
+bool FrameFileIO::isCanDumpFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    QList<QByteArray> tokens;
+    QRegExp timeExp("^\\((\\S+)\\)$");
+    QRegExp IdValExp("^(\\S+)#(\\S+)$");
+    QRegExp valExp("(\\S{2})");
+    int lineCounter = 0;
+    int pos = 0;
+    bool isMatch = true;
+    bool ret;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        while (!inFile->atEnd() && lineCounter < 100) {
+            lineCounter++;
+
+            line = inFile->readLine().toUpper();
+            if (line.length() > 1)
+            {
+                /* tokenize */
+                tokens.clear();
+                tokens = line.simplified().split(' ');
+                if(tokens.count() < 3) isMatch = false;
+
+                /* timestamp */
+                ret = timeExp.exactMatch(tokens[0]);
+                if(!ret) isMatch = false;
+
+                uint64_t timestamp = (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0);
+                if(!ret) isMatch = false;
+
+                if (line.contains('[')) //the expanded format
+                {
+                    //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+                    //     0               1     2   3  4 5  6  7  8  9  10 11
+                    if (tokens.count() < 3)
+                    {
+                        isMatch = false;
+                        continue;
+                    }
+                    int ID = tokens[2].toULong(nullptr, 16);
+                    if (ID > 0x1FFFFFFF || ID == 0) isMatch = false;
+                    int len = tokens[3].at(1) - '0';
+                    if (len < 0 || len > 8) isMatch = false;
+                }
+                else  //the more concise format
+                {
+                    /* ID & value */
+                    //qDebug() << tokens[2];
+                    if (tokens.count() < 3)
+                    {
+                        isMatch = false;
+                        continue;
+                    }
+                    ret = IdValExp.exactMatch(tokens[2]);
+                    if(!ret)
+                    {
+                        isMatch = false;
+                        continue;
+                    }
+
+                    /* ID */
+                    int ID = IdValExp.cap(1).toInt(&ret, 16);
+
+                    QString val= IdValExp.cap(2);
+
+                    pos = 0;
+                    int len = 0;
+                    if (val.startsWith("R") && val.at(1).isDigit()) {
+                        len = val.at(1).toLatin1() - '0';
+                        if (len < 0 || len > 8)
+                        {
+                            isMatch = false;
+                            continue;
+                        }
+                    } else {
+                        /* val byte per byte */
+                        int lng = 0;
+                        while ((pos = valExp.indexIn(val, pos)) != -1)
+                        {
+                            lng++;
+                            if (lng > 8)
+                            {
+                                isMatch = false;
+                                break;
+                            }
+                            int data = valExp.cap(1).toInt(&ret, 16);
+                            if(!ret)
+                            {
+                                isMatch = false;
+                                break;
+                            }
+
+                            pos += valExp.matchedLength();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
 /*
    (0.003800) vcan0 164#0000c01aa8000013
                        or
@@ -2092,6 +3071,51 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
+
+bool FrameFileIO::isKvaserFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        line = inFile->readLine().simplified().toUpper();
+        if (!line.contains("CHN")) isMatch = false;
+        if (!line.contains("FLG")) isMatch = false;
+        if (!line.contains("D0")) isMatch = false;
+
+        if (inFile->atEnd()) isMatch = false;
+
+        while (!inFile->atEnd() && lineCounter < 10) {
+            lineCounter++;
+
+            line = inFile->readLine().toUpper();
+
+            if (line.length() > 70) {
+                //Chn Identifier Flg   DLC  D0...1...2...3...4...5...6..D7       Time     Dir
+                // 0    000000AD         8  FF  FF  00  00  00  00  00  00     154.266550 R
+                int len = line.mid(21, 3).simplified().toInt();
+                if (len > 8 || len < 0) isMatch = false;
+            }
+            else isMatch = false;
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
 //Chn Identifier Flg   DLC  D0...1...2...3...4...5...6..D7       Time     Dir
 // 0    000000AD         8  FF  FF  00  00  00  00  00  00     154.266550 R
 bool FrameFileIO::loadKvaserFile(QString filename, QVector<CANFrame> *frames, bool useHex)
@@ -2151,6 +3175,50 @@ bool FrameFileIO::loadKvaserFile(QString filename, QVector<CANFrame> *frames, bo
     inFile->close();
     delete inFile;
     return !foundErrors;
+}
+
+bool FrameFileIO::isCabanaFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = true;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        line = inFile->readLine().toUpper(); //read out the header first and discard it.
+        if (!line.contains("TIME")) isMatch = false;
+        if (!line.contains("ADDR")) isMatch = false;
+
+        while (!inFile->atEnd() || lineCounter < 100) {
+            lineCounter++;
+
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(',');
+                if (tokens.length() >= 3 && tokens.length() < 5)
+                {
+                    int ID = tokens[1].toInt();
+                    if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
+                }
+                else isMatch = false;
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
 }
 
 //Cabana uses a CSV file with four columns
@@ -2264,7 +3332,6 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
     }
     
     outFile->write("time,addr,bus,data");
-    //outFile->write("Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
     outFile->write("\n");
 
     for (int c = 0; c < frames->count(); c++)
