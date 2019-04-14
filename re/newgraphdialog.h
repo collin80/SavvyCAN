@@ -36,6 +36,7 @@ private:
 
     Ui::NewGraphDialog *ui;
     DBCHandler *dbcHandler;
+    DBC_SIGNAL *assocSignal;
     int startBit, dataLen;
 };
 

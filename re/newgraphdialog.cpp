@@ -32,6 +32,7 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
 
     startBit = 0;
     dataLen = 1;
+    assocSignal = nullptr;
 
     loadMessages();
 
@@ -104,6 +105,9 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->cbSigned->setChecked(params.isSigned);
     ui->cbIntel->setChecked(params.intelFormat);
 
+    assocSignal = params.associatedSignal;
+    qDebug() << "Signal addr: " << params.associatedSignal;
+
     startBit = params.startBit;
     dataLen = params.numBits;
     ui->txtDataLen->setText(QString::number(dataLen));
@@ -113,6 +117,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     p.setColor(QPalette::Button, params.color);
     ui->colorSwatch->setPalette(p);
     loadMessages();
+    loadSignals(0);
     drawBitfield();
 }
 
@@ -132,6 +137,8 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.startBit = startBit;
     params.numBits = dataLen;
 
+    params.associatedSignal = assocSignal;
+
     //now catch stupidity and bring it to defaults
     if (params.mask == 0) params.mask = 0xFFFFFFFF;
     if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
@@ -140,6 +147,7 @@ void NewGraphDialog::getParams(GraphParams &params)
 
 void NewGraphDialog::loadMessages()
 {
+    DBC_MESSAGE *msg;
     ui->cbMessages->clear();
     if (dbcHandler == NULL) return;
     if (dbcHandler->getFileCount() == 0) return;
@@ -147,7 +155,16 @@ void NewGraphDialog::loadMessages()
     {
         for (int x = 0; x < dbcHandler->getFileByIdx(y)->messageHandler->getCount(); x++)
         {
-            ui->cbMessages->addItem(dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x)->name);
+            msg = dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x);
+            if (msg)
+            {
+                ui->cbMessages->addItem(msg->name);
+                if (assocSignal && msg->name == assocSignal->parentMessage->name)
+                {
+                    ui->cbMessages->setCurrentIndex(ui->cbMessages->count() -1);
+                    qDebug() << "Found my parent";
+                }
+            }
         }
     }
 }
@@ -160,12 +177,23 @@ void NewGraphDialog::loadSignals(int idx)
     //look it up based on index but by name is probably safer and this operation
     //is not time critical at all.
     DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
+    DBC_SIGNAL *sig;
 
     if (msg == NULL) return;
+
     ui->cbSignals->clear();
     for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
-        ui->cbSignals->addItem(msg->sigHandler->findSignalByIdx(x)->name);
+        sig = msg->sigHandler->findSignalByIdx(x);
+        if (sig)
+        {
+            ui->cbSignals->addItem(sig->name);
+            if (assocSignal && sig->name == assocSignal->name)
+            {
+                ui->cbSignals->setCurrentIndex(ui->cbSignals->count() - 1);
+                qDebug() << "Found me";
+            }
+        }
     }
 }
 
@@ -242,4 +270,5 @@ void NewGraphDialog::copySignalToParamsUI()
     if (sig->valType == SIGNED_INT) ui->cbSigned->setChecked(true);
         else ui->cbSigned->setChecked(false);
     drawBitfield();
+    assocSignal = sig;
 }

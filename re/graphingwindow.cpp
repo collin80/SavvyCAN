@@ -1020,7 +1020,7 @@ void GraphingWindow::showParamsDialog(int idx = -1)
 {
     dbcHandler = DBCHandler::getReference();
 
-    NewGraphDialog *thisDialog = new NewGraphDialog(dbcHandler);
+    NewGraphDialog *thisDialog = new NewGraphDialog(dbcHandler, this);
 
     if (idx > -1)
     {
@@ -1096,7 +1096,23 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
     }
 
+    //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
+    //we'll check for the condition that there is nothing to graph and add a single dummy frame to the cache
+    //that has all data bytes = 0. This allows the graph to be edited and deleted. No idea why you can't otherwise.
+    if (frameCache.count() == 0)
+    {
+        CANFrame dummy;
+        dummy.ID = params.ID;
+        dummy.bus = 0;
+        dummy.len = 8;
+        dummy.remote = false;
+        dummy.timestamp = 0;
+        for (int i = 0; i < 8; i++) dummy.data[i] = 0;
+        frameCache.append(dummy);
+    }
+
     int numEntries = frameCache.count() / params.stride;
+    if (numEntries < 1) numEntries = 1; //could happen if stride is larger than frame count
 
     params.x.reserve(numEntries);
     params.y.reserve(numEntries);
