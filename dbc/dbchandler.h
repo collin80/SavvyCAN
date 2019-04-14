@@ -96,6 +96,7 @@ public:
     void removeAllFiles();
     void swapFiles(int pos1, int pos2);
     DBC_MESSAGE* findMessage(const CANFrame &frame);
+    DBC_MESSAGE* findMessage(const QString msgName);
     int getFileCount();
     DBCFile* getFileByIdx(int idx);
     DBCFile* getFileByName(QString name);
