@@ -29,6 +29,7 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtDataLen, SIGNAL(textChanged(QString)), this, SLOT(handleDataLenUpdate()));
     connect(ui->cbIntel, SIGNAL(toggled(bool)), this, SLOT(drawBitfield()));
     connect(ui->btnCopySignal, SIGNAL(clicked(bool)), this, SLOT(copySignalToParamsUI()));
+    connect(ui->cbSignals, SIGNAL(currentIndexChanged(int)), this, SLOT(drawBitfield()));
 
     startBit = 0;
     dataLen = 1;
@@ -86,6 +87,56 @@ void NewGraphDialog::colorSwatchClick()
 
 }
 
+//check whether the current values on the left match the signal selected on the right
+void NewGraphDialog::checkSignalAgreement()
+{
+    GraphParams testingParams;
+    bool bAgree = true;
+    bool sigSigned = false;
+    DBC_SIGNAL *sig;
+    DBC_MESSAGE *msg;
+
+    if (dbcHandler == nullptr) return;
+    if (dbcHandler->getFileCount() == 0) return;
+
+    msg = dbcHandler->findMessage(ui->cbMessages->currentText());
+    if (msg)
+    {
+        sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
+    }
+
+    if (sig)
+    {
+        if (sig->valType == SIGNED_INT) sigSigned = true;
+
+        testingParams.ID = Utility::ParseStringToNum(ui->txtID->text());
+        testingParams.bias = ui->txtBias->text().toFloat();
+        testingParams.isSigned = ui->cbSigned->isChecked();
+        testingParams.intelFormat = ui->cbIntel->isChecked();
+        testingParams.scale = ui->txtScale->text().toFloat();
+        testingParams.startBit = startBit;
+        testingParams.numBits = dataLen;
+
+        if (testingParams.ID != msg->ID) bAgree = false;
+        if (abs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
+        if (testingParams.isSigned != sigSigned) bAgree = false;
+        if (testingParams.intelFormat != sig->intelByteOrder) bAgree = false;
+        if (abs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
+        if (testingParams.startBit != sig->startBit) bAgree = false;
+        if (testingParams.numBits != sig->signalSize) bAgree = false;
+    }
+    if (bAgree)
+    {
+        ui->lblMsgStatus->setText("Graph params match this signal");
+        //assocSignal = sig;
+    }
+    else
+    {
+        ui->lblMsgStatus->setText("Signal and Graph Params do not match");
+        //assocSignal = nullptr; //ya done broke it, null the associated signal since the user is changing things
+    }
+}
+
 void NewGraphDialog::clearParams()
 {
     ui->txtID->clear();
@@ -105,9 +156,6 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->cbSigned->setChecked(params.isSigned);
     ui->cbIntel->setChecked(params.intelFormat);
 
-    assocSignal = params.associatedSignal;
-    qDebug() << "Signal addr: " << params.associatedSignal;
-
     startBit = params.startBit;
     dataLen = params.numBits;
     ui->txtDataLen->setText(QString::number(dataLen));
@@ -116,9 +164,13 @@ void NewGraphDialog::setParams(GraphParams &params)
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
     ui->colorSwatch->setPalette(p);
+
+    assocSignal = params.associatedSignal;
+
     loadMessages();
     loadSignals(0);
     drawBitfield();
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::getParams(GraphParams &params)
@@ -195,6 +247,7 @@ void NewGraphDialog::loadSignals(int idx)
             }
         }
     }
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::bitfieldClicked(int x,int y)
@@ -203,7 +256,7 @@ void NewGraphDialog::bitfieldClicked(int x,int y)
 
     qDebug() << "Clicked bit: " << bit;
     startBit = bit;
-    drawBitfield();
+    drawBitfield();    
 }
 
 void NewGraphDialog::drawBitfield()
@@ -241,6 +294,8 @@ void NewGraphDialog::drawBitfield()
     }
 
     ui->gridData->updateData((unsigned char *)&bitField, true);
+
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::handleDataLenUpdate()
@@ -249,6 +304,7 @@ void NewGraphDialog::handleDataLenUpdate()
     if (dataLen < 1) dataLen = 1;
     if (dataLen > 63) dataLen = 63;
     drawBitfield();
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::copySignalToParamsUI()
@@ -271,4 +327,5 @@ void NewGraphDialog::copySignalToParamsUI()
         else ui->cbSigned->setChecked(false);
     drawBitfield();
     assocSignal = sig;
+    checkSignalAgreement();
 }
