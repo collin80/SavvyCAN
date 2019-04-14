@@ -200,7 +200,6 @@ MainWindow::~MainWindow()
     delete model;
     delete elapsedTime;
     delete dbcHandler;
-
 }
 
 //kill every sub window that could be open. At the moment a hard coded list
@@ -249,6 +248,7 @@ void MainWindow::killWindow(QDialog *win)
 void MainWindow::exitApp()
 {
     this->close();
+    QApplication::quit(); //forces the whole application to terminate when the main window is closed
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
