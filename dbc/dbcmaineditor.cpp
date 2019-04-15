@@ -49,7 +49,7 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     connect(ui->MessagesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuMessage(QPoint)));
     ui->MessagesTable->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    sigEditor = new DBCSignalEditor();
+    sigEditor = new DBCSignalEditor(this);
 
     installEventFilter(this);
 }

@@ -26,6 +26,7 @@ public:
     QColor color;
     QCPGraph *ref;
     QString graphName;
+    DBC_SIGNAL *associatedSignal;
     //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;

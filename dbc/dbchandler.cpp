@@ -1472,6 +1472,21 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
     return nullptr;
 }
 
+/*
+ * As above, a real shortcut function that searches all files in order to try to find a message with the given name
+*/
+DBC_MESSAGE* DBCHandler::findMessage(const QString msgName)
+{
+    DBC_MESSAGE *msg = nullptr;
+    for(int i = 0; i < loadedFiles.count(); i++)
+    {
+        DBCFile * file = getFileByIdx(i);
+        msg = file->messageHandler->findMsgByName(msgName);
+        if (msg) return msg; //if it's not null then we have a match so return it
+    }
+    return nullptr; //no match, tough luck, return null
+}
+
 int DBCHandler::getFileCount()
 {
     return loadedFiles.count();
