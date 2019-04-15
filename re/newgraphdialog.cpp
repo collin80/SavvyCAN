@@ -29,9 +29,11 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     connect(ui->txtDataLen, SIGNAL(textChanged(QString)), this, SLOT(handleDataLenUpdate()));
     connect(ui->cbIntel, SIGNAL(toggled(bool)), this, SLOT(drawBitfield()));
     connect(ui->btnCopySignal, SIGNAL(clicked(bool)), this, SLOT(copySignalToParamsUI()));
+    connect(ui->cbSignals, SIGNAL(currentIndexChanged(int)), this, SLOT(drawBitfield()));
 
     startBit = 0;
     dataLen = 1;
+    assocSignal = nullptr;
 
     loadMessages();
 
@@ -85,6 +87,56 @@ void NewGraphDialog::colorSwatchClick()
 
 }
 
+//check whether the current values on the left match the signal selected on the right
+void NewGraphDialog::checkSignalAgreement()
+{
+    GraphParams testingParams;
+    bool bAgree = true;
+    bool sigSigned = false;
+    DBC_SIGNAL *sig;
+    DBC_MESSAGE *msg;
+
+    if (dbcHandler == nullptr) return;
+    if (dbcHandler->getFileCount() == 0) return;
+
+    msg = dbcHandler->findMessage(ui->cbMessages->currentText());
+    if (msg)
+    {
+        sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
+    }
+
+    if (sig)
+    {
+        if (sig->valType == SIGNED_INT) sigSigned = true;
+
+        testingParams.ID = Utility::ParseStringToNum(ui->txtID->text());
+        testingParams.bias = ui->txtBias->text().toFloat();
+        testingParams.isSigned = ui->cbSigned->isChecked();
+        testingParams.intelFormat = ui->cbIntel->isChecked();
+        testingParams.scale = ui->txtScale->text().toFloat();
+        testingParams.startBit = startBit;
+        testingParams.numBits = dataLen;
+
+        if (testingParams.ID != msg->ID) bAgree = false;
+        if (abs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
+        if (testingParams.isSigned != sigSigned) bAgree = false;
+        if (testingParams.intelFormat != sig->intelByteOrder) bAgree = false;
+        if (abs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
+        if (testingParams.startBit != sig->startBit) bAgree = false;
+        if (testingParams.numBits != sig->signalSize) bAgree = false;
+    }
+    if (bAgree)
+    {
+        ui->lblMsgStatus->setText("Graph params match this signal");
+        //assocSignal = sig;
+    }
+    else
+    {
+        ui->lblMsgStatus->setText("Signal and Graph Params do not match");
+        //assocSignal = nullptr; //ya done broke it, null the associated signal since the user is changing things
+    }
+}
+
 void NewGraphDialog::clearParams()
 {
     ui->txtID->clear();
@@ -112,8 +164,13 @@ void NewGraphDialog::setParams(GraphParams &params)
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.color);
     ui->colorSwatch->setPalette(p);
+
+    assocSignal = params.associatedSignal;
+
     loadMessages();
+    loadSignals(0);
     drawBitfield();
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::getParams(GraphParams &params)
@@ -132,6 +189,8 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.startBit = startBit;
     params.numBits = dataLen;
 
+    params.associatedSignal = assocSignal;
+
     //now catch stupidity and bring it to defaults
     if (params.mask == 0) params.mask = 0xFFFFFFFF;
     if (fabs(params.scale) < 0.00000001) params.scale = 1.0f;
@@ -140,6 +199,7 @@ void NewGraphDialog::getParams(GraphParams &params)
 
 void NewGraphDialog::loadMessages()
 {
+    DBC_MESSAGE *msg;
     ui->cbMessages->clear();
     if (dbcHandler == NULL) return;
     if (dbcHandler->getFileCount() == 0) return;
@@ -147,7 +207,16 @@ void NewGraphDialog::loadMessages()
     {
         for (int x = 0; x < dbcHandler->getFileByIdx(y)->messageHandler->getCount(); x++)
         {
-            ui->cbMessages->addItem(dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x)->name);
+            msg = dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x);
+            if (msg)
+            {
+                ui->cbMessages->addItem(msg->name);
+                if (assocSignal && msg->name == assocSignal->parentMessage->name)
+                {
+                    ui->cbMessages->setCurrentIndex(ui->cbMessages->count() -1);
+                    qDebug() << "Found my parent";
+                }
+            }
         }
     }
 }
@@ -160,13 +229,25 @@ void NewGraphDialog::loadSignals(int idx)
     //look it up based on index but by name is probably safer and this operation
     //is not time critical at all.
     DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
+    DBC_SIGNAL *sig;
 
     if (msg == NULL) return;
+
     ui->cbSignals->clear();
     for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
-        ui->cbSignals->addItem(msg->sigHandler->findSignalByIdx(x)->name);
+        sig = msg->sigHandler->findSignalByIdx(x);
+        if (sig)
+        {
+            ui->cbSignals->addItem(sig->name);
+            if (assocSignal && sig->name == assocSignal->name)
+            {
+                ui->cbSignals->setCurrentIndex(ui->cbSignals->count() - 1);
+                qDebug() << "Found me";
+            }
+        }
     }
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::bitfieldClicked(int x,int y)
@@ -175,7 +256,7 @@ void NewGraphDialog::bitfieldClicked(int x,int y)
 
     qDebug() << "Clicked bit: " << bit;
     startBit = bit;
-    drawBitfield();
+    drawBitfield();    
 }
 
 void NewGraphDialog::drawBitfield()
@@ -213,6 +294,8 @@ void NewGraphDialog::drawBitfield()
     }
 
     ui->gridData->updateData((unsigned char *)&bitField, true);
+
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::handleDataLenUpdate()
@@ -221,6 +304,7 @@ void NewGraphDialog::handleDataLenUpdate()
     if (dataLen < 1) dataLen = 1;
     if (dataLen > 63) dataLen = 63;
     drawBitfield();
+    checkSignalAgreement();
 }
 
 void NewGraphDialog::copySignalToParamsUI()
@@ -242,4 +326,6 @@ void NewGraphDialog::copySignalToParamsUI()
     if (sig->valType == SIGNED_INT) ui->cbSigned->setChecked(true);
         else ui->cbSigned->setChecked(false);
     drawBitfield();
+    assocSignal = sig;
+    checkSignalAgreement();
 }

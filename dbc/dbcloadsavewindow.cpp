@@ -34,7 +34,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
 
-    editorWindow = new DBCMainEditor(frames);
+    editorWindow = new DBCMainEditor(frames, this);
     currentlyEditingFile = nullptr;
 
     installEventFilter(this);
