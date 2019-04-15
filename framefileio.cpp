@@ -965,7 +965,7 @@ bool FrameFileIO::isPCANFile(QString filename)
             line = inFile->readLine();
             if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 2;
             if (line.startsWith(';')) continue;
-            if (line.length() > 2)
+            if (line.length() > 41)
             {
                 if (fileVersion == 1)
                 {
@@ -975,6 +975,7 @@ bool FrameFileIO::isPCANFile(QString filename)
                         int len = line.mid(38,1).toInt();
                         if (len > - 1 && len < 9) isMatch = true;
                     }
+                    else isMatch = false;
                 }
 
                 else if (fileVersion == 2)
@@ -983,11 +984,12 @@ bool FrameFileIO::isPCANFile(QString filename)
                     if (id > 0 && id < 0x1FFFFFFF)
                     {
                         int len = line.mid(37,2).trimmed().toInt();
-                        if (len > -1 && len < 9)
+                        if (len > 0 && len < 9)
                         {
                             QList<QByteArray> tokens = line.mid(40, len * 3).split(' ');
                             if (tokens.length() == len) isMatch = true;
                         }
+                        else isMatch = false;
                     }
                 }
             }
@@ -1052,7 +1054,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
         line = inFile->readLine();
         if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 2;
         if (line.startsWith(';')) continue;
-        if (line.length() > 2)
+        if (line.length() > 41)
         {
             if (fileVersion == 1)
             {
@@ -1131,7 +1133,7 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
     QFile *inFile = new QFile(filename);
     QByteArray line;
     int lineCounter = 0;
-    bool isMatch = false;
+    bool isMatch = true;
     bool inHeader = true;
     QList<QByteArray> tokens;
 
@@ -1165,12 +1167,12 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
                 if (tokens.length() > 5)
                 {
                     uint64_t time = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
-                    if (time <= 0) continue;
+                    if (time <= 0) isMatch = false;
                     int id = tokens[2].toUInt(NULL, 16);
-                    if (id < 1) continue;
+                    if (id < 1 || id > 0x1FFFFFFF) isMatch = false;
                     int len = tokens[5].toUInt();
-                    if (len < 0 || len > 8) continue;
-                    if (tokens.count() > len + 6) isMatch = true;
+                    if (len < 0 || len > 8) isMatch = false;
+                    if (tokens.count() < (len + 6)) isMatch = false;
                 }
                 else isMatch = false;
             }
