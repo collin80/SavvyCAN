@@ -186,7 +186,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //so if you want to enable them and play with them then go for it.
     ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
-    ui->actionSignal_Viewer->setVisible(false);
+    //ui->actionSignal_Viewer->setVisible(false);
     ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
@@ -1015,7 +1015,10 @@ void MainWindow::showSignalViewer()
 {
     if (!signalViewerWindow)
     {
-        signalViewerWindow = new SignalViewerWindow();
+        if (!useFiltered)
+            signalViewerWindow = new SignalViewerWindow(model->getListReference());
+        else
+            signalViewerWindow = new SignalViewerWindow(model->getFilteredListReference());
     }
     signalViewerWindow->show();
 }
