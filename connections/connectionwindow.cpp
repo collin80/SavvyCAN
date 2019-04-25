@@ -277,8 +277,8 @@ void ConnectionWindow::populateBusDetails(int offset)
             return;
         }
 
-        int busBase = CANConManager::getInstance()->getBusBase(conn_p);
-        ui->lblBusNum->setText(QString::number(busBase + offset));
+        //int busBase = CANConManager::getInstance()->getBusBase(conn_p);
+        //ui->lblBusNum->setText(QString::number(busBase + offset));
         ui->ckListenOnly->setChecked(bus.isListenOnly());
         ui->ckEnable->setChecked(bus.isActive());
 
@@ -328,7 +328,9 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         int numB = ui->tabBuses->count();
         for (int i = 0; i < numB; i++) ui->tabBuses->removeTab(0);
 
-        if (numBuses > 1) for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(i+1));
+        int busBase = CANConManager::getInstance()->getBusBase(conn_p);
+
+        /*if (numBuses > 1)*/ for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(busBase + i));
 
         populateBusDetails(0);
         if (ui->ckEnableConsole->isChecked())
