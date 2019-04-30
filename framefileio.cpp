@@ -2887,7 +2887,7 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                 {
                     //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
                     //     0               1     2   3  4 5  6  7  8  9  10 11
-                    if (tokens.count() < 3)
+                    if (tokens.count() < 4)
                     {
                         isMatch = false;
                         continue;
