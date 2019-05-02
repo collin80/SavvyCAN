@@ -6,26 +6,12 @@
 #include <QDateTime>
 #include "utility.h"
 
-enum class Column {
-    TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
-    FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
-    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
-    Remote    = 3, ///< True if the frames is a remote frame
-    Direction = 4, ///< Whether the frame was transmitted or received
-    Bus       = 5, ///< The bus where the frame was transmitted or received
-    Length    = 6, ///< The frames payload data length
-    ASCII     = 7, ///< The payload interpreted as ASCII characters
-    Data      = 8, ///< The frames payload data
-    NUM_COLUMN
-};
-
 CANFrameModel::~CANFrameModel()
 {
     frames.clear();
     filteredFrames.clear();
     filters.clear();
 }
-
 
 int CANFrameModel::rowCount(const QModelIndex &parent) const
 {
@@ -82,6 +68,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     needFilterRefresh = false;
     lastUpdateNumFrames = 0;
     timeFormat =  "MMM-dd HH:mm:ss.zzz";
+    sortDirAsc = false;
 }
 
 void CANFrameModel::setHexMode(bool mode)
@@ -189,6 +176,110 @@ void CANFrameModel::setAllFilters(bool state)
     sendRefresh();
 }
 
+uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
+{
+    uint64_t temp = 0;
+    if (row >= frames.count()) return 0;
+    CANFrame frame = frames[row];
+    switch (col)
+    {
+    case Column::TimeStamp:
+        return frame.timestamp;
+    case Column::FrameId:
+        return frame.ID;
+    case Column::Extended:
+        if (frame.extended) return 1;
+        return 0;
+    case Column::Remote:
+        if (frame.remote) return 1;
+        return 0;
+    case Column::Direction:
+        if (frame.isReceived) return 1;
+        return 0;
+    case Column::Bus:
+        return frame.bus;
+    case Column::Length:
+        return frame.len;
+    case Column::ASCII: //sort both the same for now
+    case Column::Data:
+        for (int i = 0; i < frame.len; i++) temp += ((uint64_t)frame.data[i] << (56 - (8 * i)));
+        //qDebug() << temp;
+        return temp;
+    }
+}
+
+void CANFrameModel::qSortCANFrameAsc(QVector<CANFrame> *frames, Column column, int lowerBound, int upperBound)
+{
+    int p, i, j;
+    qDebug() << "Lower " << lowerBound << " Upper" << upperBound;
+    if (lowerBound < upperBound)
+    {
+        uint64_t piv = getCANFrameVal(lowerBound + (upperBound - lowerBound) / 2, column);
+        i = lowerBound - 1;
+        j = upperBound + 1;
+        for (;;){
+            do {
+                i++;
+            } while ((i < upperBound) && getCANFrameVal(i, column) < piv);
+
+            do
+            {
+                j--;
+            } while ((j > lowerBound) && getCANFrameVal(j, column) > piv);
+            if (i < j) {
+                CANFrame temp = frames->at(i);
+                frames->replace(i, frames->at(j));
+                frames->replace(j, temp);
+            }
+            else {p = j; break;}
+        }
+
+        qSortCANFrameAsc(frames, column, lowerBound, p);
+        qSortCANFrameAsc(frames, column, p+1, upperBound);
+    }
+}
+
+void CANFrameModel::qSortCANFrameDesc(QVector<CANFrame> *frames, Column column, int lowerBound, int upperBound)
+{
+    int p, i, j;
+    qDebug() << "Lower " << lowerBound << " Upper" << upperBound;
+    if (lowerBound < upperBound)
+    {
+        uint64_t piv = getCANFrameVal(lowerBound + (upperBound - lowerBound) / 2, column);
+        i = lowerBound - 1;
+        j = upperBound + 1;
+        for (;;){
+            do {
+                i++;
+            } while ((i < upperBound) && getCANFrameVal(i, column) > piv);
+
+            do
+            {
+                j--;
+            } while ((j > lowerBound) && getCANFrameVal(j, column) < piv);
+            if (i < j) {
+                CANFrame temp = frames->at(i);
+                frames->replace(i, frames->at(j));
+                frames->replace(j, temp);
+            }
+            else {p = j; break;}
+        }
+
+        qSortCANFrameDesc(frames, column, lowerBound, p);
+        qSortCANFrameDesc(frames, column, p+1, upperBound);
+    }
+}
+
+void CANFrameModel::sortByColumn(int column)
+{
+    sortDirAsc = !sortDirAsc;
+    //beginResetModel();
+    if (sortDirAsc) qSortCANFrameAsc(&frames, Column(column), 0, frames.count()-1);
+    else qSortCANFrameDesc(&frames, Column(column), 0, frames.count()-1);
+    //endResetModel();
+    sendRefresh();
+}
+
 void CANFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
@@ -283,6 +374,11 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         switch (Column(index.column()))
         {
         case Column::TimeStamp:
+            //Reformatting the output a bit with custom code
+            ts = Utility::formatTimestamp(thisFrame.timestamp);
+            if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
+            if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
+            if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
             return Utility::formatTimestamp(thisFrame.timestamp);
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.ID, thisFrame.extended);
