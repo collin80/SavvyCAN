@@ -55,9 +55,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
-    verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
-    verticalHeader->setDefaultSectionSize(10);
+    //QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
+    //verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
+    //verticalHeader->setDefaultSectionSize(10);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
@@ -186,7 +186,6 @@ MainWindow::MainWindow(QWidget *parent) :
     //so if you want to enable them and play with them then go for it.
     ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
-    //ui->actionSignal_Viewer->setVisible(false);
     ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
@@ -368,7 +367,8 @@ void MainWindow::updateConnectionSettings(QString connectionType, QString port, 
 
 void MainWindow::headerClicked(int logicalIndex)
 {
-    ui->canFramesView->sortByColumn(logicalIndex);
+    //ui->canFramesView->sortByColumn(logicalIndex);
+    model->sortByColumn(logicalIndex);
 }
 
 void MainWindow::gridClicked(QModelIndex idx)
