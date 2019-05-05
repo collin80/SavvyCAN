@@ -38,7 +38,7 @@ private:
     bool useOpenGL;
     bool followGraphEnd;
     QCPGraph *graph;
-
+    double xminval, xmaxval, yminval, ymaxval;
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
