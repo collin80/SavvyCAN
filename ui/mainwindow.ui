@@ -282,6 +282,7 @@
     <addaction name="actionSniffer"/>
     <addaction name="actionCapture_Bisector"/>
     <addaction name="actionSignal_Viewer"/>
+    <addaction name="actionTemporal_Graph"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -495,6 +496,11 @@
   <action name="actionSave_Continuous_Logfile">
    <property name="text">
     <string>Start Continuous Logging</string>
+   </property>
+  </action>
+  <action name="actionTemporal_Graph">
+   <property name="text">
+    <string>Temporal Graph</string>
    </property>
   </action>
  </widget>

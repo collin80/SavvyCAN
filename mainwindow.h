@@ -31,6 +31,7 @@
 #include "re/isotp_interpreterwindow.h"
 #include "motorcontrollerconfigwindow.h"
 #include "signalviewerwindow.h"
+#include "re/temporalgraphwindow.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -81,6 +82,7 @@ private slots:
     void showSnifferWindow();
     void showBisectWindow();
     void showSignalViewer();
+    void showTemporalGraphWindow();
     void exitApp();
     void handleSaveDecoded();
     void connectionStatusUpdated(int conns);
@@ -159,6 +161,7 @@ private:
     MotorControllerConfigWindow *motorctrlConfigWindow;
     BisectWindow* bisectWindow;
     SignalViewerWindow *signalViewerWindow;
+    TemporalGraphWindow *temporalGraphWindow;
 
     //various private storage
     QLabel lbStatusConnected;
