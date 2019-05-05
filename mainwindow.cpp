@@ -83,6 +83,7 @@ MainWindow::MainWindow(QWidget *parent) :
     snifferWindow = nullptr;
     bisectWindow = nullptr;
     signalViewerWindow = nullptr;
+    temporalGraphWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -131,6 +132,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
+    connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -226,6 +228,7 @@ void MainWindow::killEmAll()
     killWindow(motorctrlConfigWindow);
     killWindow(signalViewerWindow);
     killWindow(connectionWindow);
+    killWindow(temporalGraphWindow);
 }
 
 //forcefully close the window, kill it, and salt the earth
@@ -835,6 +838,19 @@ void MainWindow::showGraphingWindow()
         connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
     graphingWindow->show();
+}
+
+void MainWindow::showTemporalGraphWindow()
+{
+    //only create an instance of the object if we dont have one. Otherwise just display the existing one.
+    if (!temporalGraphWindow)
+    {
+        if (!useFiltered)
+            temporalGraphWindow = new TemporalGraphWindow(model->getListReference());
+        else
+            temporalGraphWindow = new TemporalGraphWindow(model->getFilteredListReference());
+    }
+    temporalGraphWindow->show();
 }
 
 void MainWindow::showFrameDataAnalysis()
