@@ -117,6 +117,7 @@ void TemporalGraphWindow::updatedFrames(int numFrames)
         //now instead of removing the graphs regenerate them which will blank them out but leave them there in case
         //more traffic that matches comes in or someone otherwise loads more data
         ui->graphingView->clearGraphs(); //temporarily remove the graphs from the graph view
+        ui->graphingView->clearPlottables();
         ui->graphingView->replot(); //now, redisplay them all
 
     }
@@ -178,12 +179,15 @@ void TemporalGraphWindow::updatedFrames(int numFrames)
 void TemporalGraphWindow::generateGraph()
 {
     if (modelFrames->count() == 0) return;
+
+    ui->graphingView->clearGraphs();
+    ui->graphingView->clearPlottables();
+
     qDebug() << "Regenerating the graph";
     ui->graphingView->addGraph();
     graph = ui->graphingView->graph();
 
     QVector<double> x, y;
-    double xminval = 0, xmaxval = 0, yminval = 0, ymaxval = 0;
     int frameCount = modelFrames->count();
 
     x.reserve(frameCount);
@@ -204,10 +208,10 @@ void TemporalGraphWindow::generateGraph()
 
     ui->graphingView->graph()->setData(x,y);
     ui->graphingView->graph()->setLineStyle(QCPGraph::lsNone); //no lines
-    ui->graphingView->graph()->setScatterStyle(QCPScatterStyle::ssPlus);
+    ui->graphingView->graph()->setScatterStyle(QCPScatterStyle::ssCircle);
     QPen graphPen;
     graphPen.setColor(Qt::blue);
-    graphPen.setWidth(1);
+    graphPen.setWidth(2);
     ui->graphingView->graph()->setPen(graphPen);
 
     qDebug() << "xmin: " << xminval;
@@ -219,6 +223,40 @@ void TemporalGraphWindow::generateGraph()
     ui->graphingView->yAxis->setRange(yminval, ymaxval);
     ui->graphingView->axisRect()->setupFullAxesBox();
 
+    ui->graphingView->replot();
+
+
+    QCPColorMap *colorMap = new QCPColorMap(ui->graphingView->xAxis, ui->graphingView->yAxis);
+
+    int ySize = static_cast<int>(ymaxval - yminval) / 30 + 1;
+    int xSize = static_cast<int>((xmaxval - xminval) * 4.0) + 1;
+    colorMap->data()->setSize(xSize, ySize);
+    colorMap->data()->setRange(QCPRange(xminval, xmaxval), QCPRange(yminval, ymaxval));
+    for (int x = 0; x < xSize; ++x)
+    {
+      for (int y = 0; y < ySize; ++y)
+      {
+        colorMap->data()->setAlpha(x, y, 180);
+        colorMap->data()->setCell(x, y, 0.0);
+      }
+    }
+
+    for (int i = 0; i < frameCount; i++)
+    {
+        int x = static_cast<int>(((modelFrames->at(i).timestamp / 1000000.0) - xminval) * 4.0);
+        int y = static_cast<int>(modelFrames->at(i).ID - yminval) / 30;
+        double val = colorMap->data()->cell(x, y);
+        double inc;
+        inc = 1 / (val + 1); //logarithmic decay
+        inc = inc * inc; //square the increment to make it even more stark
+        val = val + inc;
+        qDebug() << "X: " << x << " Y: " << y << "Val: " << val;
+        colorMap->data()->setCell(x, y, val);
+    }
+
+    colorMap->setGradient(QCPColorGradient::gpJet);
+    colorMap->rescaleDataRange(true);
+    ui->graphingView->rescaleAxes();
     ui->graphingView->replot();
 }
 
@@ -300,6 +338,9 @@ bool TemporalGraphWindow::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_Minus:
             zoomOut();
             break;
+        case Qt::Key_R:
+            resetView();
+            break;
         case Qt::Key_F1:
             HelpWindow::getRef()->showHelp("temporalwindow.html");
             break;
@@ -315,26 +356,11 @@ bool TemporalGraphWindow::eventFilter(QObject *obj, QEvent *event)
 
 void TemporalGraphWindow::resetView()
 {
-    double yminval=10000000.0, ymaxval = -1000000.0;
-    double xminval=100000000000, xmaxval = -10000000000.0;
-    /*
-    for (int i = 0; i < graphParams.count(); i++)
-    {
-        for (int j = 0; j < graphParams[i].x.count(); j++)
-        {
-            if (graphParams[i].x[j] < xminval) xminval = graphParams[i].x[j];
-            if (graphParams[i].x[j] > xmaxval) xmaxval = graphParams[i].x[j];
-            if (graphParams[i].y[j] < yminval) yminval = graphParams[i].y[j];
-            if (graphParams[i].y[j] > ymaxval) ymaxval = graphParams[i].y[j];
-        }
-    }
-
     ui->graphingView->xAxis->setRange(xminval, xmaxval);
     ui->graphingView->yAxis->setRange(yminval, ymaxval);
     ui->graphingView->axisRect()->setupFullAxesBox();
 
     ui->graphingView->replot();
-    */
 }
 
 void TemporalGraphWindow::zoomIn()
