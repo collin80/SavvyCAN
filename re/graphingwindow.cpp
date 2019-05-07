@@ -245,11 +245,15 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     double x, y;
     QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
     graph->pixelsToCoords(event->localPos(), x, y);
-    locationText->setText("X: " + QString::number(x) + " Y: " + QString::number(y));
+    x = ui->graphingView->xAxis->pixelToCoord(event->localPos().x());
 
     itemTracer->setGraph(graph);
     itemTracer->setVisible(true);
+    itemTracer->setInterpolating(true);
     itemTracer->setGraphKey(x);
+    itemTracer->updatePosition();
+    qDebug() << "val " << itemTracer->position->value();
+    locationText->setText("X: " + QString::number(x) + " Y: " + QString::number(itemTracer->position->value()));
 }
 
 void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
