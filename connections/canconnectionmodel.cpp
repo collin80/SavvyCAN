@@ -126,6 +126,14 @@ void CANConnectionModel::remove(CANConnection* pConn_p)
     endResetModel();
 }
 
+void CANConnectionModel::replace(int idx , CANConnection* pConn_p)
+{
+    CANConManager* manager = CANConManager::getInstance();
+
+    beginResetModel();
+    manager->replace(idx, pConn_p);
+    endResetModel();
+}
 
 CANConnection* CANConnectionModel::getAtIdx(int pIdx) const
 {

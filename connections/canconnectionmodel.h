@@ -25,6 +25,7 @@ public:
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
+    void replace(int idx , CANConnection* pConn_p);
 
     CANConnection* getAtIdx(int) const;
     void refresh(int pIndex=-1);

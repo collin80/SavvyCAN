@@ -44,6 +44,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnResetConn">
+       <property name="text">
+        <string>Reset Selected Device</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnDisconnect">
        <property name="text">
         <string>Disconnect Selected Device</string>
