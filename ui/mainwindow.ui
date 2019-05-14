@@ -425,7 +425,7 @@
   </action>
   <action name="actionSetup">
    <property name="text">
-    <string>Open Connection WIndow</string>
+    <string>Open Connection Window</string>
    </property>
   </action>
   <action name="actionConnect">
