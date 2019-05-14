@@ -17,6 +17,7 @@ public:
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
+    void replace(int idx, CANConnection* pConn_p);
     QList<CANConnection*>& getConnections();
     void stopAllConnections();
 

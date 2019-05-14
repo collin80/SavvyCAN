@@ -46,6 +46,7 @@ private slots:
     void consoleEnableChanged(bool checked);
     void handleRemoveConn();
     void handleNewConn();
+    void handleResetConn();
     void handleClearDebugText();
     void handleSendHex();
     void handleSendText();
