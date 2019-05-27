@@ -81,7 +81,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     selectedPen.setWidth(1);
     selectedPen.setColor(Qt::blue);
 
-    ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
+    //ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
 
     if (useOpenGL)
     {

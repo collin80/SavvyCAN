@@ -93,8 +93,8 @@ void NewGraphDialog::checkSignalAgreement()
     GraphParams testingParams;
     bool bAgree = true;
     bool sigSigned = false;
-    DBC_SIGNAL *sig;
-    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig = nullptr;
+    DBC_MESSAGE *msg = nullptr;
 
     if (dbcHandler == nullptr) return;
     if (dbcHandler->getFileCount() == 0) return;
@@ -103,6 +103,11 @@ void NewGraphDialog::checkSignalAgreement()
     if (msg)
     {
         sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
+    }
+    else
+    {
+        ui->lblMsgStatus->setText("Msg ID doesn't exist in DBC");
+        return;
     }
 
     if (sig)
@@ -125,6 +130,12 @@ void NewGraphDialog::checkSignalAgreement()
         if (testingParams.startBit != sig->startBit) bAgree = false;
         if (testingParams.numBits != sig->signalSize) bAgree = false;
     }
+    else
+    {
+        ui->lblMsgStatus->setText("Signal name doesn't exist in DBC");
+        return;
+    }
+
     if (bAgree)
     {
         ui->lblMsgStatus->setText("Graph params match this signal");
