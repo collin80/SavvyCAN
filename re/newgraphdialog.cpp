@@ -225,21 +225,19 @@ void NewGraphDialog::loadMessages()
                 if (assocSignal && msg->name == assocSignal->parentMessage->name)
                 {
                     ui->cbMessages->setCurrentIndex(ui->cbMessages->count() -1);
-                    qDebug() << "Found my parent";
+                    //qDebug() << "Found my parent";
                 }
             }
         }
     }
+    ui->cbMessages->model()->sort(0);
 }
 
 void NewGraphDialog::loadSignals(int idx)
 {
     Q_UNUSED(idx);
-    //messages were placed into the list in the same order as they exist
-    //in the data structure so it should have been possible to just
-    //look it up based on index but by name is probably safer and this operation
-    //is not time critical at all.
-    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
+    //search through all DBC files in order to try to find a message with the given name
+    DBC_MESSAGE *msg = dbcHandler->findMessage(ui->cbMessages->currentText());
     DBC_SIGNAL *sig;
 
     if (msg == NULL) return;
@@ -254,10 +252,11 @@ void NewGraphDialog::loadSignals(int idx)
             if (assocSignal && sig->name == assocSignal->name)
             {
                 ui->cbSignals->setCurrentIndex(ui->cbSignals->count() - 1);
-                qDebug() << "Found me";
+                //qDebug() << "Found me";
             }
         }
     }
+    ui->cbSignals->model()->sort(0);
     checkSignalAgreement();
 }
 
