@@ -460,9 +460,13 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         if (!sig.receiver) sig.receiver = findNodeByIdx(0); //apply default if there was no match
 
         sig.parentMessage = msg;
-        msg->sigHandler->addSignal(sig);
-        if (isMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
-        return msg->sigHandler->findSignalByName(sig.name);
+        if (msg)
+        {
+            msg->sigHandler->addSignal(sig);
+            if (isMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
+            return msg->sigHandler->findSignalByName(sig.name);
+        }
+        else return nullptr;
     }
 
     return nullptr;
