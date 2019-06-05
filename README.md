@@ -71,6 +71,14 @@ Now run SavvyCAN
 ./SavvyCAN
 ```
 
+### Compiling in debug mode for additional information
+
+```sh
+qmake CONFIG+=debug
+
+make
+```
+
 ## What to do if your compile failed?
 
 The very first thing to do is try:
@@ -86,3 +94,6 @@ make
 Did that fix it? Great! If not, ensure that you selected SerialBUS support
 when you installed Qt.
 
+### What to do if `qmake` fails with error `Project ERROR: Unknown module(s) in QT: qml serialbus help` on Ubuntu? :
+
+`sudo apt install libqt5serialbus5-dev qtdeclarative5-dev qttools5-dev`
