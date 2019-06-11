@@ -537,7 +537,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         bool found = false;
         for (int i = 0; i < frames.count(); i++)
         {
-            if (frames[i].ID == tempFrame.ID)
+            if (frames[i].ID == tempFrame.ID && frames[i].bus == tempFrame.bus)
             {
                 tempFrame.frameCount = frames[i].frameCount + 1;
                 frames.replace(i, tempFrame);
@@ -560,7 +560,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
-                if (filteredFrames[j].ID == tempFrame.ID)
+                if (filteredFrames[j].ID == tempFrame.ID && filteredFrames[j].bus == tempFrame.bus)
                 {
                     if (autoRefresh) beginResetModel();
                     filteredFrames.replace(j, tempFrame);
