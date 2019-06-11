@@ -328,6 +328,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     CANFrame thisFrame;
     static bool rowFlip = false;
     QVariant ts;
+    uint64_t timestamp;
 
     if (!index.isValid())
         return QVariant();
@@ -375,11 +376,15 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         {
         case Column::TimeStamp:
             //Reformatting the output a bit with custom code
-            ts = Utility::formatTimestamp(thisFrame.timestamp);
+            if (!overwriteDups) timestamp = thisFrame.timestamp;
+            else timestamp = thisFrame.timestamp - thisFrame.prev_timestamp;
+            
+            ts = Utility::formatTimestamp(timestamp);
             if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
             if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
             if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
-            return Utility::formatTimestamp(thisFrame.timestamp);
+            return Utility::formatTimestamp(timestamp);
+
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         case Column::Extended:
@@ -474,7 +479,8 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         switch (Column(section))
         {
         case Column::TimeStamp:
-            return QString(tr("Timestamp"));
+            if (!overwriteDups) return QString(tr("Timestamp"));
+            return QString(tr("Cycle Time"));
         case Column::FrameId:
             return QString(tr("ID"));
         case Column::Extended:
@@ -563,6 +569,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
                 if (filteredFrames[j].ID == tempFrame.ID)
                 {
                     if (autoRefresh) beginResetModel();
+                    tempFrame.prev_timestamp = filteredFrames[j].timestamp;
                     filteredFrames.replace(j, tempFrame);
                     if (autoRefresh) endResetModel();
                 }

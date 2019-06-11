@@ -16,6 +16,7 @@ public:
     uint32_t len;
     unsigned char data[8];
     uint64_t timestamp;
+    uint64_t prev_timestamp;
     uint32_t frameCount; //used in overwrite mode
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
@@ -32,6 +33,7 @@ public:
         isReceived = true;
         len = 0;
         timestamp = 0;
+        prev_timestamp = 0;
         frameCount = 1;
     }
 };
