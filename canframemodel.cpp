@@ -503,6 +503,18 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
+bool CANFrameModel::any_filters_are_configured(void)
+{
+    for (auto const &val : filters)
+    {
+        if (val == true)
+            continue;
+        else
+            return true;
+    }
+    return false;
+}
+
 
 void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 {
@@ -517,7 +529,11 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     //if this ID isn't found in the filters list then add it and show it by default
     if (!filters.contains(tempFrame.ID))
     {
-        filters.insert(tempFrame.ID, true);
+        // if there are any filters already configured, leave the new filter disabled
+        if (any_filters_are_configured())
+            filters.insert(tempFrame.ID, false);
+        else
+            filters.insert(tempFrame.ID, true);
         needFilterRefresh = true;
     }
 
