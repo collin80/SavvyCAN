@@ -7,6 +7,7 @@
 #include <QFileDialog>
 #include <QApplication>
 #include <QPalette>
+#include <QSettings>
 #include "utility.h"
 #include "connections/canconmanager.h"
 
@@ -1409,12 +1410,15 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
 {
    if (idx > -1 && idx < loadedFiles.count()) removeDBCFile(idx);
 
+    const QString PREVIOUS_LOAD_DIR_KEY("DBC/PreviousLoadDirectory");
     QString filename;
     QFileDialog dialog;
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("DBC File (*.dbc)")));
 
+    dialog.setDirectory(settings.value(PREVIOUS_LOAD_DIR_KEY, dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -1426,7 +1430,7 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
         DBCFile newFile;
         newFile.loadFile(filename);
         loadedFiles.append(newFile);
-
+        settings.setValue(PREVIOUS_LOAD_DIR_KEY, dialog.directory().path());
         return &loadedFiles.last();
     }
 
