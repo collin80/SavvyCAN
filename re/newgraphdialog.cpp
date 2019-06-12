@@ -123,10 +123,10 @@ void NewGraphDialog::checkSignalAgreement()
         testingParams.numBits = dataLen;
 
         if (testingParams.ID != msg->ID) bAgree = false;
-        if (abs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
+        if (fabs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
         if (testingParams.isSigned != sigSigned) bAgree = false;
         if (testingParams.intelFormat != sig->intelByteOrder) bAgree = false;
-        if (abs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
+        if (fabs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
         if (testingParams.startBit != sig->startBit) bAgree = false;
         if (testingParams.numBits != sig->signalSize) bAgree = false;
     }
