@@ -73,6 +73,7 @@ private:
     void qSortCANFrameAsc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
     void qSortCANFrameDesc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
     uint64_t getCANFrameVal(int row, Column col);
+    bool any_filters_are_configured(void);
 
     QVector<CANFrame> frames;
     QVector<CANFrame> filteredFrames;
