@@ -176,6 +176,11 @@ void CANFrameModel::setAllFilters(bool state)
     sendRefresh();
 }
 
+/*
+ * There is probably a more correct way to have done this but below are several functions that collectively implement
+ * quicksort on the columns and interpret the columns numerically. But, correct or not, this implementation is quite fast
+ * and sorts the columns properly.
+*/
 uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
 {
     uint64_t temp = 0;
@@ -184,6 +189,7 @@ uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
     switch (col)
     {
     case Column::TimeStamp:
+        if (overwriteDups) return frame.timedelta;
         return frame.timestamp;
     case Column::FrameId:
         return frame.ID;
@@ -191,6 +197,7 @@ uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
         if (frame.extended) return 1;
         return 0;
     case Column::Remote:
+        if (overwriteDups) return frame.frameCount;
         if (frame.remote) return 1;
         return 0;
     case Column::Direction:
@@ -280,6 +287,8 @@ void CANFrameModel::sortByColumn(int column)
     sendRefresh();
 }
 
+//End of custom sorting code
+
 void CANFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
@@ -293,14 +302,24 @@ void CANFrameModel::recalcOverwrite()
     beginResetModel();
 
     //Look at the current list of frames and turn it into just a list of unique IDs
-    QHash<int, CANFrame> overWriteFrames;
+    QHash<uint64_t, CANFrame> overWriteFrames;
+    uint64_t idAugmented; //id in lower 29 bits, bus number shifted up 29 bits
     foreach(CANFrame frame, frames)
     {
-        if (!overWriteFrames.contains(frame.ID))
+        idAugmented = frame.ID;
+        idAugmented = idAugmented + (frame.bus << 29ull);
+        if (!overWriteFrames.contains(idAugmented))
         {
-            overWriteFrames.insert(frame.ID, frame);
+            frame.timedelta = 0;
+            frame.frameCount = 1;
+            overWriteFrames.insert(idAugmented, frame);
         }
-        else overWriteFrames[frame.ID] = frame;
+        else
+        {
+            frame.timedelta = frame.timestamp - overWriteFrames[idAugmented].timestamp;
+            frame.frameCount = overWriteFrames[idAugmented].frameCount + 1;
+            overWriteFrames[idAugmented] = frame;
+        }
     }
     //Then replace the old list of frames with just the unique list
     frames.clear();
@@ -373,9 +392,14 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     if (role == Qt::DisplayRole) {
         switch (Column(index.column()))
         {
-        case Column::TimeStamp:
+        case Column::TimeStamp:            
             //Reformatting the output a bit with custom code
-            ts = Utility::formatTimestamp(thisFrame.timestamp);
+            if (overwriteDups)
+            {
+                if (timeSeconds) return QString::number(thisFrame.timedelta / 1000000.0, 'f', 5);
+                return QString::number(thisFrame.timedelta);
+            }
+            else ts = Utility::formatTimestamp(thisFrame.timestamp);
             if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
             if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
             if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
@@ -474,13 +498,14 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         switch (Column(section))
         {
         case Column::TimeStamp:
+            if (overwriteDups) return QString(tr("Time Delta"));
             return QString(tr("Timestamp"));
         case Column::FrameId:
             return QString(tr("ID"));
         case Column::Extended:
             return QString(tr("Ext"));
         case Column::Remote:
-            if (!overwriteDups) return QString(tr("Rem"));
+            if (!overwriteDups) return QString(tr("RTR"));
             return QString(tr("Cnt"));
         case Column::Direction:
             return QString(tr("Dir"));
@@ -537,9 +562,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         bool found = false;
         for (int i = 0; i < frames.count(); i++)
         {
-            if (frames[i].ID == tempFrame.ID)
+            if ( (frames[i].ID == tempFrame.ID) && (frames[i].bus == tempFrame.bus) )
             {
                 tempFrame.frameCount = frames[i].frameCount + 1;
+                tempFrame.timedelta = tempFrame.timestamp - frames[i].timestamp;
                 frames.replace(i, tempFrame);
                 found = true;
                 break;
@@ -552,6 +578,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                 tempFrame.frameCount = 1;
+                tempFrame.timedelta = 0;
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
@@ -560,7 +587,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
-                if (filteredFrames[j].ID == tempFrame.ID)
+                if ( (filteredFrames[j].ID == tempFrame.ID) && (filteredFrames[j].bus == tempFrame.bus) )
                 {
                     if (autoRefresh) beginResetModel();
                     filteredFrames.replace(j, tempFrame);
