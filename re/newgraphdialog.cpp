@@ -93,8 +93,8 @@ void NewGraphDialog::checkSignalAgreement()
     GraphParams testingParams;
     bool bAgree = true;
     bool sigSigned = false;
-    DBC_SIGNAL *sig;
-    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig = nullptr;
+    DBC_MESSAGE *msg = nullptr;
 
     if (dbcHandler == nullptr) return;
     if (dbcHandler->getFileCount() == 0) return;
@@ -103,6 +103,11 @@ void NewGraphDialog::checkSignalAgreement()
     if (msg)
     {
         sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
+    }
+    else
+    {
+        ui->lblMsgStatus->setText("Msg ID doesn't exist in DBC");
+        return;
     }
 
     if (sig)
@@ -118,13 +123,19 @@ void NewGraphDialog::checkSignalAgreement()
         testingParams.numBits = dataLen;
 
         if (testingParams.ID != msg->ID) bAgree = false;
-        if (abs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
+        if (fabs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
         if (testingParams.isSigned != sigSigned) bAgree = false;
         if (testingParams.intelFormat != sig->intelByteOrder) bAgree = false;
-        if (abs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
+        if (fabs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
         if (testingParams.startBit != sig->startBit) bAgree = false;
         if (testingParams.numBits != sig->signalSize) bAgree = false;
     }
+    else
+    {
+        ui->lblMsgStatus->setText("Signal name doesn't exist in DBC");
+        return;
+    }
+
     if (bAgree)
     {
         ui->lblMsgStatus->setText("Graph params match this signal");
@@ -214,21 +225,19 @@ void NewGraphDialog::loadMessages()
                 if (assocSignal && msg->name == assocSignal->parentMessage->name)
                 {
                     ui->cbMessages->setCurrentIndex(ui->cbMessages->count() -1);
-                    qDebug() << "Found my parent";
+                    //qDebug() << "Found my parent";
                 }
             }
         }
     }
+    ui->cbMessages->model()->sort(0);
 }
 
 void NewGraphDialog::loadSignals(int idx)
 {
     Q_UNUSED(idx);
-    //messages were placed into the list in the same order as they exist
-    //in the data structure so it should have been possible to just
-    //look it up based on index but by name is probably safer and this operation
-    //is not time critical at all.
-    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
+    //search through all DBC files in order to try to find a message with the given name
+    DBC_MESSAGE *msg = dbcHandler->findMessage(ui->cbMessages->currentText());
     DBC_SIGNAL *sig;
 
     if (msg == NULL) return;
@@ -243,10 +252,11 @@ void NewGraphDialog::loadSignals(int idx)
             if (assocSignal && sig->name == assocSignal->name)
             {
                 ui->cbSignals->setCurrentIndex(ui->cbSignals->count() - 1);
-                qDebug() << "Found me";
+                //qDebug() << "Found me";
             }
         }
     }
+    ui->cbSignals->model()->sort(0);
     checkSignalAgreement();
 }
 

@@ -15,6 +15,8 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
 
     ui->setupUi(this);
 
+    inhibitCellProcessing = false;
+
     QStringList header;
     header << "Filename" << "Associated Bus" << "J1939";
     ui->tableFiles->setColumnCount(3);
@@ -159,6 +161,7 @@ void DBCLoadSaveWindow::editFile()
 
 void DBCLoadSaveWindow::cellChanged(int row, int col)
 {
+    if (inhibitCellProcessing) return;
     if (col == 1) //the bus column
     {
         DBCFile *file = dbcHandler->getFileByIdx(row);
@@ -214,6 +217,7 @@ void DBCLoadSaveWindow::swapTableRows(bool up)
     const int destIdx = (up ? idx-1 : idx+1);
     Q_ASSERT(destIdx >= 0 && destIdx < ui->tableFiles->rowCount());
 
+    inhibitCellProcessing = true;
     // take whole rows
     QList<QTableWidgetItem*> sourceItems = takeRow(idx);
     QList<QTableWidgetItem*> destItems = takeRow(destIdx);
@@ -221,6 +225,8 @@ void DBCLoadSaveWindow::swapTableRows(bool up)
     // set back in reverse order
     setRow(idx, destItems);
     setRow(destIdx, sourceItems);
+
+    inhibitCellProcessing = false;
 }
 
 QList<QTableWidgetItem*> DBCLoadSaveWindow::takeRow(int row)

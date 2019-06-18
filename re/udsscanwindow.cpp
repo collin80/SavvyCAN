@@ -145,6 +145,7 @@ void UDSScanWindow::saveResults()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
@@ -153,10 +154,13 @@ void UDSScanWindow::saveResults()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("UDSScan/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("UDSScan/LoadSaveDirectory", dialog.directory().path());
+
         if (!filename.contains('.')) filename += ".txt";
         if (dialog.selectedNameFilter() == filters[0])
         {

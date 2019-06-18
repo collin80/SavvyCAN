@@ -101,10 +101,10 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     QList<DBC_VAL_ENUM_ENTRY> valList;
 
-    bool processAsText(const CANFrame &frame, QString &outString);
+    bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
-    QString makePrettyOutput(double floatVal, int64_t intVal);
+    QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };

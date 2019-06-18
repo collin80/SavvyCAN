@@ -34,11 +34,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     useHex = true;
 
-    //These things are used by QSettings to set up setting storage
-    QCoreApplication::setOrganizationName("EVTV");
-    QCoreApplication::setOrganizationDomain("evtv.me");
-    QCoreApplication::setApplicationName("SavvyCAN");
-
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
@@ -55,9 +50,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
-    verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
-    verticalHeader->setDefaultSectionSize(10);
+    //QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
+    //verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
+    //verticalHeader->setDefaultSectionSize(10);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
@@ -83,6 +78,7 @@ MainWindow::MainWindow(QWidget *parent) :
     snifferWindow = nullptr;
     bisectWindow = nullptr;
     signalViewerWindow = nullptr;
+    temporalGraphWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -131,6 +127,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
+    connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -186,7 +183,6 @@ MainWindow::MainWindow(QWidget *parent) :
     //so if you want to enable them and play with them then go for it.
     ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
-    ui->actionSignal_Viewer->setVisible(false);
     ui->actionSingle_Multi_State_2->setVisible(false);
 
     installEventFilter(this);
@@ -227,6 +223,7 @@ void MainWindow::killEmAll()
     killWindow(motorctrlConfigWindow);
     killWindow(signalViewerWindow);
     killWindow(connectionWindow);
+    killWindow(temporalGraphWindow);
 }
 
 //forcefully close the window, kill it, and salt the earth
@@ -368,7 +365,8 @@ void MainWindow::updateConnectionSettings(QString connectionType, QString port, 
 
 void MainWindow::headerClicked(int logicalIndex)
 {
-    ui->canFramesView->sortByColumn(logicalIndex);
+    //ui->canFramesView->sortByColumn(logicalIndex);
+    model->sortByColumn(logicalIndex);
 }
 
 void MainWindow::gridClicked(QModelIndex idx)
@@ -647,10 +645,12 @@ void MainWindow::handleSaveFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter list (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -661,6 +661,7 @@ void MainWindow::handleSaveFilters()
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".ftl";
         if (dialog.selectedNameFilter() == filters[0]) model->saveFilterFile(filename);
+        settings.setValue("Filters/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -668,10 +669,12 @@ void MainWindow::handleLoadFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter List (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -681,19 +684,20 @@ void MainWindow::handleLoadFilters()
         filename = dialog.selectedFiles()[0];
         //right now there is only one file type that can be loaded here so just do it.
         model->loadFilterFile(filename);
+        settings.setValue("Filters/LoadSaveDirectory", dialog.directory().path());
     }
 }
-
-//lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 
 void MainWindow::handleSaveDecoded()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
 
+    dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -704,6 +708,7 @@ void MainWindow::handleSaveDecoded()
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".txt";
         saveDecodedTextFile(filename);
+        settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -835,6 +840,19 @@ void MainWindow::showGraphingWindow()
         connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
     graphingWindow->show();
+}
+
+void MainWindow::showTemporalGraphWindow()
+{
+    //only create an instance of the object if we dont have one. Otherwise just display the existing one.
+    if (!temporalGraphWindow)
+    {
+        if (!useFiltered)
+            temporalGraphWindow = new TemporalGraphWindow(model->getListReference());
+        else
+            temporalGraphWindow = new TemporalGraphWindow(model->getFilteredListReference());
+    }
+    temporalGraphWindow->show();
 }
 
 void MainWindow::showFrameDataAnalysis()
@@ -1015,7 +1033,10 @@ void MainWindow::showSignalViewer()
 {
     if (!signalViewerWindow)
     {
-        signalViewerWindow = new SignalViewerWindow();
+        if (!useFiltered)
+            signalViewerWindow = new SignalViewerWindow(model->getListReference());
+        else
+            signalViewerWindow = new SignalViewerWindow(model->getFilteredListReference());
     }
     signalViewerWindow->show();
 }

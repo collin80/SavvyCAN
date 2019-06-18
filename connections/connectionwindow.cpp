@@ -55,6 +55,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->ckEnableConsole, &QCheckBox::toggled, this, &ConnectionWindow::consoleEnableChanged);
     connect(ui->btnClearDebug, &QPushButton::clicked, this, &ConnectionWindow::handleClearDebugText);
     connect(ui->btnNewConnection, &QPushButton::clicked, this, &ConnectionWindow::handleNewConn);
+    connect(ui->btnResetConn, &QPushButton::clicked, this, &ConnectionWindow::handleResetConn);
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
     connect(ui->tabBuses, &QTabBar::currentChanged, this, &ConnectionWindow::currentTabChanged);
     connect(ui->btnSaveBus, &QPushButton::clicked, this, &ConnectionWindow::saveBusSettings);
@@ -207,6 +208,53 @@ void ConnectionWindow::handleNewConn()
     delete thisDialog;
 }
 
+void ConnectionWindow::handleRemoveConn()
+{
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx <0) return;
+
+    qDebug() << "remove connection at index: " << selIdx;
+
+    CANConnection* conn_p = connModel->getAtIdx(selIdx);
+    if(!conn_p) return;
+
+    /* remove connection from model & manager */
+    connModel->remove(conn_p);
+
+    /* stop and delete connection */
+    conn_p->stop();
+    delete conn_p;
+
+    /* select first connection in list */
+    ui->tableConnections->selectRow(0);
+}
+
+void ConnectionWindow::handleResetConn()
+{
+    QString port, driver;
+    CANCon::type type;
+
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx <0) return;
+
+    qDebug() << "remove connection at index: " << selIdx;
+
+    CANConnection* conn_p = connModel->getAtIdx(selIdx);
+    if(!conn_p) return;
+
+    type = conn_p->getType();
+    port = conn_p->getPort();
+    driver = conn_p->getDriver();
+
+    /* stop and delete connection */
+    conn_p->stop();
+
+    conn_p = nullptr;
+
+    conn_p = create(type, port, driver);
+    if (conn_p) connModel->replace(selIdx, conn_p);
+}
+
 /* status */
 void ConnectionWindow::connectionStatus(CANConStatus pStatus)
 {
@@ -277,8 +325,8 @@ void ConnectionWindow::populateBusDetails(int offset)
             return;
         }
 
-        int busBase = CANConManager::getInstance()->getBusBase(conn_p);
-        ui->lblBusNum->setText(QString::number(busBase + offset));
+        //int busBase = CANConManager::getInstance()->getBusBase(conn_p);
+        //ui->lblBusNum->setText(QString::number(busBase + offset));
         ui->ckListenOnly->setChecked(bus.isListenOnly());
         ui->ckEnable->setChecked(bus.isActive());
 
@@ -328,7 +376,9 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         int numB = ui->tabBuses->count();
         for (int i = 0; i < numB; i++) ui->tabBuses->removeTab(0);
 
-        if (numBuses > 1) for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(i+1));
+        int busBase = CANConManager::getInstance()->getBusBase(conn_p);
+
+        /*if (numBuses > 1)*/ for (int i = 0; i < numBuses; i++) ui->tabBuses->addTab(QString::number(busBase + i));
 
         populateBusDetails(0);
         if (ui->ckEnableConsole->isChecked())
@@ -361,27 +411,6 @@ void ConnectionWindow::handleSendText() {
     bytes = ui->lineSend->text().toLatin1();
     bytes.append('\r'); //add carriage return for line ending
     emit sendDebugData(bytes);
-}
-
-void ConnectionWindow::handleRemoveConn()
-{
-    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
-    if (selIdx <0) return;
-
-    qDebug() << "remove connection at index: " << selIdx;
-
-    CANConnection* conn_p = connModel->getAtIdx(selIdx);
-    if(!conn_p) return;
-
-    /* remove connection from model & manager */
-    connModel->remove(conn_p);
-
-    /* stop and delete connection */
-    conn_p->stop();
-    delete conn_p;
-
-    /* select first connection in list */
-    ui->tableConnections->selectRow(0);
 }
 
 CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver)

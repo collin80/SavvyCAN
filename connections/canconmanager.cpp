@@ -66,6 +66,11 @@ void CANConManager::remove(CANConnection* pConn_p)
     mConns.removeOne(pConn_p);
 }
 
+void CANConManager::replace(int idx, CANConnection* pConn_p)
+{
+    mConns.replace(idx, pConn_p);
+}
+
 //Get total number of buses currently registered with the program
 int CANConManager::getNumBuses()
 {
