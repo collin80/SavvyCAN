@@ -24,7 +24,6 @@ public slots:
 
 private:
     Ui::MainSettingsDialog *ui;
-    QSettings *settings;
 
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);

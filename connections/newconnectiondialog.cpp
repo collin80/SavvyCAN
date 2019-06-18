@@ -9,7 +9,18 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* ips, QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->rbSocketCAN->setEnabled(isSerialBusAvailable());
+    if (isSerialBusAvailable())
+    {
+        ui->rbSocketCAN->setEnabled(true);
+    }
+    else
+    {
+        ui->rbSocketCAN->setEnabled(false);
+        QString errorString;
+        const QList<QCanBusDeviceInfo> devices = QCanBus::instance()->availableDevices(QStringLiteral("socketcan"), &errorString);
+        if (!errorString.isEmpty()) ui->rbSocketCAN->setToolTip(errorString);
+    }
+
 
     connect(ui->rbGVRET, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbSocketCAN, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);

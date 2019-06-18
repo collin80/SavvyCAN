@@ -34,11 +34,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
     useHex = true;
 
-    //These things are used by QSettings to set up setting storage
-    QCoreApplication::setOrganizationName("EVTV");
-    QCoreApplication::setOrganizationDomain("evtv.me");
-    QCoreApplication::setApplicationName("SavvyCAN");
-
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION));
