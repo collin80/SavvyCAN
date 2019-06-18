@@ -650,10 +650,12 @@ void MainWindow::handleSaveFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter list (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -664,6 +666,7 @@ void MainWindow::handleSaveFilters()
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".ftl";
         if (dialog.selectedNameFilter() == filters[0]) model->saveFilterFile(filename);
+        settings.setValue("Filters/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -671,10 +674,12 @@ void MainWindow::handleLoadFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter List (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -684,19 +689,20 @@ void MainWindow::handleLoadFilters()
         filename = dialog.selectedFiles()[0];
         //right now there is only one file type that can be loaded here so just do it.
         model->loadFilterFile(filename);
+        settings.setValue("Filters/LoadSaveDirectory", dialog.directory().path());
     }
 }
-
-//lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 
 void MainWindow::handleSaveDecoded()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
 
+    dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -707,6 +713,7 @@ void MainWindow::handleSaveDecoded()
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".txt";
         saveDecodedTextFile(filename);
+        settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
     }
 }
 

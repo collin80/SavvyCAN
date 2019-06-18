@@ -7,6 +7,7 @@
 #include <QFileDialog>
 #include <QApplication>
 #include <QPalette>
+#include <QSettings>
 #include "utility.h"
 #include "connections/canconmanager.h"
 
@@ -1339,6 +1340,8 @@ void DBCFile::saveFile(QString fileName)
 
 void DBCHandler::saveDBCFile(int idx)
 {
+    QSettings settings;
+
     if (loadedFiles.count() == 0) return;
     if (idx < 0) return;
     if (idx >= loadedFiles.count()) return;
@@ -1349,6 +1352,7 @@ void DBCHandler::saveDBCFile(int idx)
     QStringList filters;
     filters.append(QString(tr("DBC File (*.dbc)")));
 
+    dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -1360,6 +1364,7 @@ void DBCHandler::saveDBCFile(int idx)
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".dbc";
         loadedFiles[idx].saveFile(filename);
+        settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -1411,10 +1416,12 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
 
     QString filename;
     QFileDialog dialog;
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("DBC File (*.dbc)")));
 
+    dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -1426,7 +1433,7 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
         DBCFile newFile;
         newFile.loadFile(filename);
         loadedFiles.append(newFile);
-
+        settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
         return &loadedFiles.last();
     }
 

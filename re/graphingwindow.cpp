@@ -633,6 +633,7 @@ void GraphingWindow::saveGraphs()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("PDF Files (*.pdf)")));
@@ -643,10 +644,12 @@ void GraphingWindow::saveGraphs()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("Graphing/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (dialog.selectedNameFilter() == filters[0])
         {
@@ -670,6 +673,7 @@ void GraphingWindow::saveSpreadsheet()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Spreadsheet (*.csv)")));
@@ -678,10 +682,13 @@ void GraphingWindow::saveSpreadsheet()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("Graphing/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
+
         if (!filename.contains('.')) filename += ".csv";
 
         QFile *outFile = new QFile(filename);
@@ -789,6 +796,7 @@ void GraphingWindow::saveDefinitions()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Graph definition (*.gdf)")));
@@ -797,10 +805,13 @@ void GraphingWindow::saveDefinitions()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("Graphing/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
+
         if (!filename.contains('.')) filename += ".gdf";
 
         QFile *outFile = new QFile(filename);
@@ -847,6 +858,7 @@ void GraphingWindow::loadDefinitions()
 {
     QString filename;
     QFileDialog dialog;
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Graph definition (*.gdf)")));
@@ -857,10 +869,13 @@ void GraphingWindow::loadDefinitions()
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
+    dialog.setDirectory(settings.value("Graphing/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
+
         QFile *inFile = new QFile(filename);
         QByteArray line;
 

@@ -173,10 +173,12 @@ void FramePlaybackWindow::saveFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter list (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -203,6 +205,7 @@ void FramePlaybackWindow::saveFilters()
             }
 
             outFile->close();
+            dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
         }
     }
 
@@ -212,10 +215,12 @@ void FramePlaybackWindow::loadFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter List (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -264,6 +269,7 @@ void FramePlaybackWindow::loadFilters()
             }
         }
         inFile->close();
+        dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     }
 }
 

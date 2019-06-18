@@ -367,6 +367,7 @@ void FileComparatorWindow::saveDetails()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
@@ -375,10 +376,12 @@ void FileComparatorWindow::saveDetails()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FileComparator/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("FileComparator/LoadSaveDirectory", dialog.directory().path());
         if (!filename.contains('.')) filename += ".txt";
         QFile *outFile = new QFile(filename);
 
