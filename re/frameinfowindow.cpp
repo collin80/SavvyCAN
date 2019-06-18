@@ -477,6 +477,7 @@ void FrameInfoWindow::saveDetails()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
@@ -485,9 +486,11 @@ void FrameInfoWindow::saveDetails()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FrameInfo/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
+        settings.setValue("FrameInfo/LoadSaveDirectory", dialog.directory().path());
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".txt";
         if (dialog.selectedNameFilter() == filters[0])

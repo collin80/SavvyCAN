@@ -4,6 +4,7 @@
 #include <QProgressDialog>
 #include <QDateTime>
 #include <QtEndian>
+#include <QSettings>
 #include <iostream>
 
 #include "utility.h"
@@ -19,6 +20,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
 {
     QString filename;
     QFileDialog dialog(qApp->activeWindow());
+    QSettings settings;
     bool result = false;
 
     QStringList filters;
@@ -35,6 +37,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("Cabana Log(*.csv *.CSV)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
 
+    dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -125,6 +128,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
         {
             QStringList fileList = filename.split('/');
             fileName = fileList[fileList.length() - 1];
+            settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
             return true;
         }
         return false;
@@ -136,6 +140,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
 {
     QString filename;
     QFileDialog dialog;
+    QSettings settings;
     bool result = false;
 
     QStringList filters;
@@ -159,6 +164,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
 
+    dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -203,6 +209,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         {
             QStringList fileList = filename.split('/');
             fileName = fileList[fileList.length() - 1];
+            settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
             return true;
         }
         else
@@ -1575,10 +1582,12 @@ bool FrameFileIO::openContinuousNative()
 {
     QString filename;
     QFileDialog dialog(qApp->activeWindow());
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
 
+    dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -1595,6 +1604,7 @@ bool FrameFileIO::openContinuousNative()
         }
         continuousFile.write("Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
         continuousFile.write("\n");
+        settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
         return true;
     }
     return false;
