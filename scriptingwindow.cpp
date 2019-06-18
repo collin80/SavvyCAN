@@ -180,11 +180,13 @@ void ScriptingWindow::loadNewScript()
 {
     QString filename;
     QFileDialog dialog;
+    QSettings settings;
     ScriptContainer *container;
 
     QStringList filters;
     filters.append(QString(tr("Javascript File (*.js)")));
 
+    dialog.setDirectory(settings.value("ScriptingWindow/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -215,6 +217,7 @@ void ScriptingWindow::loadNewScript()
 
                 ui->listLoadedScripts->setCurrentRow(ui->listLoadedScripts->count() - 1);
                 changeCurrentScript();
+                settings.setValue("ScriptingWindow/LoadSaveDirectory", dialog.directory().path());
             }
         }
     }
@@ -287,10 +290,12 @@ void ScriptingWindow::saveScript()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Javascript File (*.js)")));
 
+    dialog.setDirectory(settings.value("ScriptingWindow/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -312,6 +317,7 @@ void ScriptingWindow::saveScript()
             outFile->write(editor->toPlainText().toUtf8());
             outFile->close();
             delete outFile;
+            settings.setValue("ScriptingWindow/LoadSaveDirectory", dialog.directory().path());
         }
     }
 }

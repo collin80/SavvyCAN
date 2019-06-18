@@ -241,10 +241,12 @@ void FrameSenderWindow::saveGrid()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Frame Sender Definition (*.fsd)")));
 
+    dialog.setDirectory(settings.value("FrameSender/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -258,6 +260,7 @@ void FrameSenderWindow::saveGrid()
         {
             if (!filename.contains('.')) filename += ".fsd";
             saveSenderFile(filename);
+            settings.setValue("FrameSender/LoadSaveDirectory", dialog.directory().path());
         }
     }
 }
@@ -266,10 +269,12 @@ void FrameSenderWindow::loadGrid()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Frame Sender Definition (*.fsd)")));
 
+    dialog.setDirectory(settings.value("FrameSender/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -281,6 +286,7 @@ void FrameSenderWindow::loadGrid()
         if (dialog.selectedNameFilter() == filters[0])
         {
             loadSenderFile(filename);
+            settings.setValue("FrameSender/LoadSaveDirectory", dialog.directory().path());
         }
     }
 
@@ -325,7 +331,6 @@ void FrameSenderWindow::saveSenderFile(QString filename)
 
     outFile->close();
     delete outFile;
-
 }
 
 void FrameSenderWindow::loadSenderFile(QString filename)

@@ -297,6 +297,7 @@ void FlowViewWindow::saveFileGraph()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("PDF Files (*.pdf)")));
@@ -307,6 +308,7 @@ void FlowViewWindow::saveFileGraph()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FlowView/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -327,6 +329,7 @@ void FlowViewWindow::saveFileGraph()
             if (!filename.contains('.')) filename += ".jpg";
             ui->graphView->saveJpg(filename, 1024, 768);
         }
+        settings.setValue("FlowView/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -334,6 +337,7 @@ void FlowViewWindow::saveFileFlow()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("PNG Files (*.png)")));
@@ -343,6 +347,7 @@ void FlowViewWindow::saveFileFlow()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FlowView/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -358,6 +363,7 @@ void FlowViewWindow::saveFileFlow()
             if (!filename.contains('.')) filename += ".jpg";
             ui->flowView->saveImage(filename, 1024, 768);
         }
+        settings.setValue("FlowView/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
