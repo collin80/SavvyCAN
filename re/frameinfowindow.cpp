@@ -205,10 +205,10 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 {
     int targettedID;
     int minLen, maxLen, thisLen;
-    int avgInterval;
-    int minInterval;
-    int maxInterval;
-    int thisInterval;
+    uint64_t avgInterval;
+    uint64_t minInterval;
+    uint64_t maxInterval;
+    uint64_t thisInterval;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
