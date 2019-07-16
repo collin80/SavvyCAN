@@ -3,10 +3,13 @@
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include <QtDebug>
+#include <vector>
 
 const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                     Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
 QPen FrameInfoWindow::bytePens[8];
+
+const int numIntervalHistBars = 20;
 
 FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -48,12 +51,26 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     ui->graphBytes->legend->setVisible(false);
 
+    ui->timeHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                        QCP::iSelectLegend | QCP::iSelectPlottables);
+
+    ui->timeHistogram->xAxis->setRange(0, numIntervalHistBars);
+    ui->timeHistogram->yAxis->setRange(0, 100);
+    ui->timeHistogram->axisRect()->setupFullAxesBox();
+
+    ui->timeHistogram->xAxis->setLabel("Interval");
+    ui->timeHistogram->yAxis->setLabel("Occurrences");
+
+    ui->timeHistogram->legend->setVisible(false);
+
     if (useOpenGL)
     {
         ui->graphHistogram->setAntialiasedElements(QCP::aeAll);
         ui->graphHistogram->setOpenGl(true);
         ui->graphBytes->setAntialiasedElements(QCP::aeAll);
         ui->graphBytes->setOpenGl(true);
+        ui->timeHistogram->setAntialiasedElements(QCP::aeAll);
+        ui->timeHistogram->setOpenGl(true);
     }
     else
     {
@@ -61,6 +78,8 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
         ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
         ui->graphBytes->setOpenGl(false);
         ui->graphBytes->setAntialiasedElements(QCP::aeNone);
+        ui->timeHistogram->setOpenGl(false);
+        ui->timeHistogram->setAntialiasedElements(QCP::aeNone);
     }
 
     installEventFilter(this);
@@ -205,16 +224,17 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 {
     int targettedID;
     int minLen, maxLen, thisLen;
-    int avgInterval;
-    int minInterval;
-    int maxInterval;
-    int thisInterval;
+    uint64_t avgInterval;
+    uint64_t minInterval;
+    uint64_t maxInterval;
+    uint64_t thisInterval;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
     int bitfieldHistogram[64];
     QVector<double> histGraphX, histGraphY;
     QVector<double> byteGraphX, byteGraphY[8];
+    QVector<double> timeGraphX, timeGraphY;
     double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
@@ -310,6 +330,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             qDebug() << referenceBits[c];
         }
 
+        std::vector<uint64_t> sortedIntervals;
+        uint64_t intervalSum = 0;
+
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
@@ -322,6 +345,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (j != 0)
             {
                 thisInterval = (frameCache[j].timestamp - frameCache[j-1].timestamp);
+                sortedIntervals.push_back(thisInterval);
+                intervalSum += thisInterval;
                 if (thisInterval > maxInterval) maxInterval = thisInterval;
                 if (thisInterval < minInterval) minInterval = thisInterval;
                 avgInterval += thisInterval;
@@ -345,6 +370,41 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 }
                 changedBits[c] |= referenceBits[c] ^ dat;
             }
+        }
+
+        std::sort(sortedIntervals.begin(), sortedIntervals.end());
+        uint64_t intervalStdDiv, intervalPctl5, intervalPctl95, intervalMean, intervalVariance = 0;
+
+        intervalMean = intervalSum / sortedIntervals.size();
+
+        for(int l = 0; l < sortedIntervals.size(); l++) {
+        	intervalVariance += ((sortedIntervals[l] - intervalMean) * (sortedIntervals[l] - intervalMean));
+        }
+
+        intervalVariance /= sortedIntervals.size();
+        intervalStdDiv = sqrt(intervalVariance);
+
+        intervalPctl5 = sortedIntervals[floor(0.05 * sortedIntervals.size())];
+        intervalPctl95 = sortedIntervals[floor(0.95 * sortedIntervals.size())];
+
+        uint64_t step = ceil((maxInterval - minInterval) / numIntervalHistBars);
+        int index = 0;
+        int counter = 0;
+        int maxTimeCounter = -1;
+        for(int l = 0; l <= numIntervalHistBars; l++) {
+        	uint64_t currentMax = maxInterval - ((numIntervalHistBars - l) * step);	// avoid missing the biggest value due to rounding errors
+        	while(index < sortedIntervals.size()) {
+        		if(sortedIntervals[index] <= currentMax) {
+        			counter++;
+        			index++;
+        		} else {
+        			break;
+        		}
+        	}
+        	timeGraphX.append(l);
+        	timeGraphY.append(counter);
+        	if(counter > maxTimeCounter) maxTimeCounter = counter;
+        	counter = 0;
         }
 
         if (frameCache.count() > 1)
@@ -372,7 +432,12 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         tempItem = new QTreeWidgetItem();
         tempItem->setText(0, tr("Inter-frame interval variation: ") + QString::number((maxInterval - minInterval) / 1000.0f) + "ms");
         baseNode->addChild(tempItem);
-
+        tempItem = new QTreeWidgetItem();
+        tempItem->setText(0, tr("Interval standard deviation: ") + QString::number(intervalStdDiv / 1000.0f) + "ms");
+        baseNode->addChild(tempItem);
+        tempItem = new QTreeWidgetItem();
+        tempItem->setText(0, tr("Minimum range to fit 90% of inter-frame intervals: ") + QString::number((intervalPctl95 - intervalPctl5) / 1000.0f) + "ms");
+        baseNode->addChild(tempItem);
         for (int c = 0; c < maxLen; c++)
         {
             dataBase = new QTreeWidgetItem();
@@ -443,6 +508,19 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
         ui->graphBytes->xAxis->setRange(0, byteGraphX.count());
         ui->graphBytes->replot();
+
+        ui->timeHistogram->clearGraphs();
+        ui->timeHistogram->addGraph();
+        ui->timeHistogram->graph()->setData(timeGraphX, timeGraphY);
+        ui->timeHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
+        //QBrush graphBrush;
+        graphBrush.setColor(Qt::red);
+        graphBrush.setStyle(Qt::SolidPattern);
+        ui->timeHistogram->graph()->setPen(Qt::NoPen);
+        ui->timeHistogram->graph()->setBrush(graphBrush);
+        ui->timeHistogram->yAxis->setRange(0, maxTimeCounter * 1.1);
+        ui->timeHistogram->axisRect()->setupFullAxesBox();
+        ui->timeHistogram->replot();
     }
     else
     {
