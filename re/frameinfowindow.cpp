@@ -373,38 +373,41 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
 
         std::sort(sortedIntervals.begin(), sortedIntervals.end());
-        uint64_t intervalStdDiv, intervalPctl5, intervalPctl95, intervalMean, intervalVariance = 0;
+        uint64_t intervalStdDiv = 0, intervalPctl5 = 0, intervalPctl95 = 0, intervalMean = 0, intervalVariance = 0;
 
-        intervalMean = intervalSum / sortedIntervals.size();
-
-        for(int l = 0; l < sortedIntervals.size(); l++) {
-        	intervalVariance += ((sortedIntervals[l] - intervalMean) * (sortedIntervals[l] - intervalMean));
-        }
-
-        intervalVariance /= sortedIntervals.size();
-        intervalStdDiv = sqrt(intervalVariance);
-
-        intervalPctl5 = sortedIntervals[floor(0.05 * sortedIntervals.size())];
-        intervalPctl95 = sortedIntervals[floor(0.95 * sortedIntervals.size())];
-
-        uint64_t step = ceil((maxInterval - minInterval) / numIntervalHistBars);
-        int index = 0;
-        int counter = 0;
         int maxTimeCounter = -1;
-        for(int l = 0; l <= numIntervalHistBars; l++) {
-        	uint64_t currentMax = maxInterval - ((numIntervalHistBars - l) * step);	// avoid missing the biggest value due to rounding errors
-        	while(index < sortedIntervals.size()) {
-        		if(sortedIntervals[index] <= currentMax) {
-        			counter++;
-        			index++;
-        		} else {
-        			break;
-        		}
-        	}
-        	timeGraphX.append(l);
-        	timeGraphY.append(counter);
-        	if(counter > maxTimeCounter) maxTimeCounter = counter;
-        	counter = 0;
+        if (sortedIntervals.size() > 0)
+        {
+            intervalMean = intervalSum / sortedIntervals.size();
+
+            for(int l = 0; l < sortedIntervals.size(); l++) {
+                intervalVariance += ((sortedIntervals[l] - intervalMean) * (sortedIntervals[l] - intervalMean));
+            }
+
+            intervalVariance /= sortedIntervals.size();
+            intervalStdDiv = sqrt(intervalVariance);
+
+            intervalPctl5 = sortedIntervals[floor(0.05 * sortedIntervals.size())];
+            intervalPctl95 = sortedIntervals[floor(0.95 * sortedIntervals.size())];
+
+            uint64_t step = ceil((maxInterval - minInterval) / numIntervalHistBars);
+            int index = 0;
+            int counter = 0;
+            for(int l = 0; l <= numIntervalHistBars; l++) {
+                uint64_t currentMax = maxInterval - ((numIntervalHistBars - l) * step);	// avoid missing the biggest value due to rounding errors
+                while(index < sortedIntervals.size()) {
+                    if(sortedIntervals[index] <= currentMax) {
+                        counter++;
+                        index++;
+                    } else {
+                        break;
+                    }
+                }
+                timeGraphX.append(l);
+                timeGraphY.append(counter);
+                if(counter > maxTimeCounter) maxTimeCounter = counter;
+                counter = 0;
+            }
         }
 
         if (frameCache.count() > 1)
@@ -519,7 +522,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->timeHistogram->graph()->setPen(Qt::NoPen);
         ui->timeHistogram->graph()->setBrush(graphBrush);
         ui->timeHistogram->yAxis->setRange(0, maxTimeCounter * 1.1);
+        //ui->timeHistogram->xAxis->setRange(minInterval / 1000, maxInterval / 1000); //graph is in ms while intervals are in us
         ui->timeHistogram->axisRect()->setupFullAxesBox();
+        ui->timeHistogram->rescaleAxes();
         ui->timeHistogram->replot();
     }
     else
