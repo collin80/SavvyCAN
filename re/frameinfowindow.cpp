@@ -58,7 +58,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui->timeHistogram->yAxis->setRange(0, 100);
     ui->timeHistogram->axisRect()->setupFullAxesBox();
 
-    ui->timeHistogram->xAxis->setLabel("Interval");
+    ui->timeHistogram->xAxis->setLabel("Interval (ms)");
     ui->timeHistogram->yAxis->setLabel("Occurrences");
 
     ui->timeHistogram->legend->setVisible(false);
@@ -327,7 +327,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         {
             changedBits[c] = 0;
             referenceBits[c] = frameCache.at(0).data[c];
-            qDebug() << referenceBits[c];
+            //qDebug() << referenceBits[c];
         }
 
         std::vector<uint64_t> sortedIntervals;
@@ -344,7 +344,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
             if (j != 0)
             {
-                thisInterval = (frameCache[j].timestamp - frameCache[j-1].timestamp);
+                //TODO - we try the interval whichever way doesn't go negative. But, we should probably sort the frame list before
+                //starting so that the intervals are all correct.
+                if (frameCache[j].timestamp > frameCache[j-1].timestamp)
+                    thisInterval = (frameCache[j].timestamp - frameCache[j-1].timestamp);
+                else
+                    thisInterval = (frameCache[j-1].timestamp - frameCache[j].timestamp);
+
                 sortedIntervals.push_back(thisInterval);
                 intervalSum += thisInterval;
                 if (thisInterval > maxInterval) maxInterval = thisInterval;
@@ -391,19 +397,22 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             intervalPctl95 = sortedIntervals[floor(0.95 * sortedIntervals.size())];
 
             uint64_t step = ceil((maxInterval - minInterval) / numIntervalHistBars);
+            qDebug() << "Step: " << step << " minInt: " << minInterval << " maxInt: " << maxInterval;
             int index = 0;
             int counter = 0;
             for(int l = 0; l <= numIntervalHistBars; l++) {
                 uint64_t currentMax = maxInterval - ((numIntervalHistBars - l) * step);	// avoid missing the biggest value due to rounding errors
+                qDebug() << "CurrentMax: " << currentMax;
                 while(index < sortedIntervals.size()) {
                     if(sortedIntervals[index] <= currentMax) {
                         counter++;
                         index++;
-                    } else {
+                    }
+                    else {
                         break;
                     }
                 }
-                timeGraphX.append(l);
+                timeGraphX.append(currentMax / 1000.0);
                 timeGraphY.append(counter);
                 if(counter > maxTimeCounter) maxTimeCounter = counter;
                 counter = 0;
@@ -516,13 +525,19 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->timeHistogram->addGraph();
         ui->timeHistogram->graph()->setData(timeGraphX, timeGraphY);
         ui->timeHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
+        ui->timeHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
+        QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
+        ui->timeHistogram->yAxis->setTicker(logTicker);
+        ui->timeHistogram->yAxis2->setTicker(logTicker);
+        ui->timeHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
+        ui->timeHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
         //QBrush graphBrush;
         graphBrush.setColor(Qt::red);
         graphBrush.setStyle(Qt::SolidPattern);
         ui->timeHistogram->graph()->setPen(Qt::NoPen);
         ui->timeHistogram->graph()->setBrush(graphBrush);
-        ui->timeHistogram->yAxis->setRange(0, maxTimeCounter * 1.1);
-        //ui->timeHistogram->xAxis->setRange(minInterval / 1000, maxInterval / 1000); //graph is in ms while intervals are in us
+        //ui->timeHistogram->yAxis->setRange(0, maxTimeCounter * 1.1);
+        //ui->timeHistogram->xAxis->setRange(minInterval / 1000.0, maxInterval / 1000.0); //graph is in ms while intervals are in us
         ui->timeHistogram->axisRect()->setupFullAxesBox();
         ui->timeHistogram->rescaleAxes();
         ui->timeHistogram->replot();
