@@ -72,7 +72,7 @@ What CANBus analysis tool would be complete without an easy way to load and save
 
 SavvyCAN can load and save in several formats (a few of which are listed below):
 	- CRTD: This format was made by Mark Webb-Johnson for OVMS (open vehicle monitoring system) and other related tools. It is a reasonably 
-	  readable and compact format. One reason one might not want to use CRTD is if knowing which bus a frame originated on is important. CRTD does not save that information.
+	  readable and compact format.
 	- GVRET: This is the native format for GVRET and SavvyCAN. The GVRET format saves more information such as the bus a frame originated on. This format is in CSV 
 	  (comma delimited) format and as such can easily be loaded into your favorite spreadsheet program as well.
 	- Generic ID/DATA - Another CSV format. This is a very cut down format with limited information.
