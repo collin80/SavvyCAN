@@ -25,7 +25,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
 
     QStringList filters;
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
-    filters.append(QString(tr("CRTD Logs (*.txt *.TXT)")));
+    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
     filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
@@ -146,7 +146,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     QStringList filters;
     filters.append(QString(tr("Autodetect File Type (*.*)")));
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
-    filters.append(QString(tr("CRTD Logs (*.txt *.TXT)")));
+    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
     filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
@@ -543,6 +543,11 @@ bool FrameFileIO::isCRTDFile(QString filename)
                 if (tokens.length() > 2)
                 {
                     char firstChar = tokens[1].left(1)[0];
+                    if (firstChar >= '1' && firstChar <= '9')
+                    {
+                        tokens[1].remove(0,1); // Remove leading digit (bus number)
+                        firstChar = tokens[1].left(1)[0];
+                    }
                     if (firstChar == 'R' || firstChar == 'T')
                     {
                         if (tokens[1] == "R29" || tokens[1] == "T29") isMatch = true;
@@ -564,6 +569,7 @@ bool FrameFileIO::isCRTDFile(QString filename)
 }
 
 //CRTD format from Mark Webb-Johnson / OVMS project
+// Specification at: https://docs.openvehicles.com/en/latest/crtd/
 /*
 Sample data in CRTD format
 Timestamp appears to be seconds since the epoch
@@ -578,6 +584,10 @@ Timestamp appears to be seconds since the epoch
 1320745424.106 CEV Open charge port door
 1320745424.106 R11 100 9B 97 A6 31 03 15 05 06
 1320745424.107 R11 100 07 64
+123.431 2R11 27E 00 00 00 00 00 00 00 00
+123.441 2R11 7C8 00 00 00 00 00 00 00 00
+123.451 2R11 402 FD 04 04 0F 10 00 00 07
+123.461 2R11 318 92 08 33 0D 07 00 00 00
 
 tokens:
 0 = timestamp
@@ -628,7 +638,14 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
                 }
                 //qDebug() << "decimal places " << decimalPlaces;
                 thisFrame.timestamp = (int64_t)(tokens[0].toDouble() * multiplier);
+                thisFrame.bus = 0;
                 char firstChar = tokens[1].left(1)[0];
+                if (firstChar >= '1' && firstChar <= '9')
+                {
+                    thisFrame.bus = tokens[1].left(1)[0] - '1';
+                    tokens[1].remove(0,1); // Remove leading digit (bus number)
+                    firstChar = tokens[1].left(1)[0];
+                }
                 if (firstChar == 'R' || firstChar == 'T')
                 {
                     thisFrame.ID = tokens[2].toInt(NULL, 16);
@@ -636,7 +653,6 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
                         else thisFrame.extended = false;
                     if (firstChar == 'T') thisFrame.isReceived = false;
                         else thisFrame.isReceived = true;
-                    thisFrame.bus = 0;
                     thisFrame.len = tokens.length() - 3;
                     thisFrame.remote = false;
                     for (unsigned int d = 0; d < thisFrame.len; d++)
@@ -921,6 +937,7 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
         outFile->write(QString::number(frames->at(c).timestamp / 1000000.0, 'f', 6).toUtf8());
         outFile->putChar(' ');
 
+        outFile->write(QString::number(frames->at(c).bus + 1).toUtf8());
         if (frames->at(c).isReceived) outFile->putChar('R');
         else outFile->putChar('T');
 
