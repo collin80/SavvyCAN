@@ -275,7 +275,11 @@ void FramePlaybackWindow::loadFilters()
 
 void FramePlaybackWindow::refreshIDList()
 {
-    if (currentSeqNum < 0 || currentSeqItem == NULL) return;
+    if (currentSeqNum < 0 || currentSeqItem == NULL)
+    {
+        ui->listID->clear();
+        return;
+    }
 
     ui->tblSequence->setCurrentCell(currentSeqNum, 0);
 
@@ -461,6 +465,7 @@ void FramePlaybackWindow::btnDeleteCurrSeq()
         currentSeqNum = -1;
         currentSeqItem = NULL;
     }
+    refreshIDList();
     updateFrameLabel();
 }
 
