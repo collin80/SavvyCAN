@@ -152,7 +152,9 @@ void DBCMainEditor::onCustomMenuMessage(QPoint point)
 void DBCMainEditor::deleteCurrentNode()
 {
     int thisRow = ui->NodesTable->currentRow();
-    QString nodeName = ui->NodesTable->item(thisRow, 0)->text();
+    QTableWidgetItem* thisItem = ui->NodesTable->item(thisRow, 0);
+    if (!thisItem) return;
+    QString nodeName = thisItem->text();
     if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
     {        
         ui->NodesTable->removeRow(thisRow);
@@ -167,7 +169,9 @@ void DBCMainEditor::deleteCurrentNode()
 void DBCMainEditor::deleteCurrentMessage()
 {
     int thisRow = ui->MessagesTable->currentRow();
-    if (ui->MessagesTable->item(thisRow, 0)->text().length() > 0)
+    QTableWidgetItem* thisItem = ui->MessagesTable->item(thisRow, 0);
+    if (!thisItem) return;
+    if (thisItem->text().length() > 0)
     {
         ui->MessagesTable->removeRow(thisRow);
         dbcFile->messageHandler->removeMessageByIndex(thisRow);
