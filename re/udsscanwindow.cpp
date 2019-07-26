@@ -370,7 +370,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
         if (serviceShortName.length() < 3) serviceShortName = QString::number(sentFrame.service, 16);
         if (msg.service == 0x40 + sendingFrames[currIdx].service)
         {
-            setupNodes();
+            setupNodes(id);
 
             QTreeWidgetItem *nodePositive = new QTreeWidgetItem();
             QString reply = "POSITIVE ";
@@ -389,7 +389,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
         {
             if (msg.data.length())
             {
-                setupNodes();
+                setupNodes(id);
                 QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
                 qDebug() << ui->spinNumBytes->value();
                 nodeNegative->setText(0, "NEGATIVE - " + udsHandler->getNegativeResponseShort(msg.data[0]));
@@ -407,23 +407,56 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
     }
 }
 
-void UDSScanWindow::setupNodes()
+void UDSScanWindow::setupNodes(uint32_t replyID)
 {
     QString serviceShortName = udsHandler->getServiceShortDesc(sendingFrames[currIdx].service);
     if (serviceShortName.length() < 3) serviceShortName = QString::number(sendingFrames[currIdx].service, 16);
+    QTreeWidgetItem *replyNode = nullptr;
 
     if (!nodeID || nodeID->text(0) != Utility::formatHexNum(sendingFrames[currIdx].ID))
     {
         nodeID = new QTreeWidgetItem();
-        nodeID->setText(0, Utility::formatHexNum(sendingFrames[currIdx].ID));
+        nodeID->setText(0, Utility::formatHexNum(sendingFrames[currIdx].ID));        
         ui->treeResults->addTopLevelItem(nodeID);
-        nodeService = NULL;
+        nodeService = nullptr;
     }
-    if (!nodeService || nodeService->text(0) != serviceShortName)
+
+    bool foundReplyMatch = false;
+    for (int i = 0; i < nodeID->childCount(); i++)
+    {
+        if (nodeID->child(i)->text(0) == Utility::formatHexNum(replyID) || ((replyID == 0xDEAD5EA1) && (nodeID->child(i)->text(0) == "NO REPLY")))
+        {
+            foundReplyMatch = true;
+            replyNode = nodeID->child(i);
+            break;
+        }
+    }
+    if (!foundReplyMatch)
+    {
+        QTreeWidgetItem *replyItem = new QTreeWidgetItem();
+        if (replyID != 0xDEAD5EA1) replyItem->setText(0, Utility::formatHexNum(replyID));
+        else replyItem->setText(0, "NO REPLY");
+        nodeID->addChild(replyItem);
+        replyNode = replyItem;
+        nodeService = nullptr;
+    }
+
+    bool foundServiceMatch = false;
+
+    for (int i = 0; i < replyNode->childCount(); i++)
+    {
+        if ( replyNode->child(i)->text(0) == serviceShortName)
+        {
+            foundServiceMatch = true;
+            nodeService = replyNode->child(i);
+            break;
+        }
+    }
+    if (!foundServiceMatch)
     {
         nodeService = new QTreeWidgetItem();
         nodeService->setText(0, serviceShortName);
-        nodeID->addChild(nodeService);
+        replyNode->addChild(nodeService);
     }
 
     nodeSubFunc = new QTreeWidgetItem();
@@ -435,11 +468,7 @@ void UDSScanWindow::timeOut()
 {
     if (ui->ckShowNoReply->isChecked())
     {
-        setupNodes();
-        QTreeWidgetItem *nodeNoReply = new QTreeWidgetItem();
-        nodeNoReply->setText(0, "No Reply");
-        nodeNoReply->setForeground(0, QBrush(Qt::gray));
-        nodeSubFunc->addChild(nodeNoReply);
+        setupNodes(0xDEAD5EA1);
         nodeSubFunc->setForeground(0, QBrush(Qt::gray));
     }
 
