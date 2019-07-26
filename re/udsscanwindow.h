@@ -49,7 +49,7 @@ private:
 
     void sendNextMsg();
     void sendOnBuses(UDS_MESSAGE frame, int buses);
-    void setupNodes();
+    void setupNodes(uint32_t replyID);
     void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);
     bool eventFilter(QObject *obj, QEvent *event);
 };
