@@ -14,8 +14,10 @@ BLFHandler::BLFHandler()
 /*
  Written while peeking at source code here:
 https://python-can.readthedocs.io/en/latest/_modules/can/io/blf.html
+https://bitbucket.org/tobylorenz/vector_blf/
 
-All the code actually below is freshly written though.
+All the code actually below is freshly written but heavily based upon things seen in those
+two source repos.
 */
 bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
 {
@@ -26,6 +28,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
     BLF_OBJECT obj;
     uint32_t pos;
     BLF_CAN_OBJ canObject;
+    BLF_CAN_OBJ2 canObject2;
 
     QFile *inFile = new QFile(filename);
 
@@ -44,22 +47,35 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
     while (!inFile->atEnd())
     {
         qDebug() << "Position within file: " << inFile->pos();
-        inFile->read((char *)&objHeader, sizeof(objHeader));
-        if (qFromLittleEndian(objHeader.sig) == 0x4A424F4C)
+        inFile->read((char *)&objHeader.base, sizeof(BLF_OBJ_HEADER_BASE));
+        if (qFromLittleEndian(objHeader.base.sig) == 0x4A424F4C)
         {
-            int readSize = objHeader.objSize - sizeof(BLF_OBJ_HEADER);
+            int readSize = objHeader.base.objSize - sizeof(BLF_OBJ_HEADER_BASE);
             qDebug() << "Proper object header token. Read Size: " << readSize;
             fileData = inFile->read(readSize);
             junk = inFile->read(readSize % 4); //file is padded so sizes must always end up on even multiple of 4
             //qDebug() << "Fudge bytes in readSize: " << (readSize % 4);
-            if (objHeader.objType == BLF_CONTAINER)
+
+            switch (objHeader.base.objType)
             {
-                qDebug() << "Object is a container. Uncompressing it";
-                fileData.prepend(objHeader.uncompSize & 0xFF);
-                fileData.prepend((objHeader.uncompSize >> 8) & 0xFF);
-                fileData.prepend((objHeader.uncompSize >> 16) & 0xFF);
-                fileData.prepend((objHeader.uncompSize >> 24) & 0xFF);
-                uncompressedData += qUncompress(fileData);
+                case BLF_CONTAINER:
+                qDebug() << "Object is a container.";
+                memcpy(&objHeader.containerObj, fileData.constData(), sizeof(BLF_OBJ_HEADER_CONTAINER));
+                fileData.remove(0, sizeof(BLF_OBJ_HEADER_CONTAINER));
+                if (objHeader.containerObj.compressionMethod == BLF_CONT_NO_COMPRESSION)
+                {
+                    qDebug() << "Container is not compressed";
+                    uncompressedData = fileData;
+                }
+                if (objHeader.containerObj.compressionMethod == BLF_CONT_ZLIB_COMPRESSION)
+                {
+                    qDebug() << "Compressed container. Unpacking it.";
+                    fileData.prepend(objHeader.containerObj.uncompressedSize & 0xFF);
+                    fileData.prepend((objHeader.containerObj.uncompressedSize >> 8) & 0xFF);
+                    fileData.prepend((objHeader.containerObj.uncompressedSize >> 16) & 0xFF);
+                    fileData.prepend((objHeader.containerObj.uncompressedSize >> 24) & 0xFF);
+                    uncompressedData += qUncompress(fileData);
+                }
                 qDebug() << "Uncompressed size: " << uncompressedData.count();
                 pos = 0;
                 bool foundHeader = false;
@@ -73,12 +89,13 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                 //then process all the objects
                 while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.count())
                 {
-                    memcpy(&obj.header, (uncompressedData.constData() + pos), sizeof(BLF_OBJ_HEADER));
-                    qDebug() << "Pos: " << pos << " Type: " << obj.header.objType << "Obj Size: " << obj.header.objSize;
-                    if (qFromLittleEndian(objHeader.sig) == 0x4A424F4C)
+                    memcpy(&obj.header.base, (uncompressedData.constData() + pos), sizeof(BLF_OBJ_HEADER_BASE));
+                    memcpy(&obj.header.v1Obj, (uncompressedData.constData() + pos) + sizeof(BLF_OBJ_HEADER_BASE), sizeof(BLF_OBJ_HEADER_V1));
+                    qDebug() << "Pos: " << pos << " Type: " << obj.header.base.objType << "Obj Size: " << obj.header.base.objSize;
+                    if (qFromLittleEndian(objHeader.base.sig) == 0x4A424F4C)
                     {
-                        fileData = uncompressedData.mid(pos + sizeof(BLF_OBJ_HEADER), obj.header.objSize - sizeof(BLF_OBJ_HEADER));
-                        if (obj.header.objType == BLF_CAN_MSG)
+                        fileData = uncompressedData.mid(pos + sizeof(BLF_OBJ_HEADER_BASE) + sizeof(BLF_OBJ_HEADER_V1), obj.header.base.objSize - sizeof(BLF_OBJ_HEADER_BASE) - sizeof(BLF_OBJ_HEADER_V1));
+                        if (obj.header.base.objType == BLF_CAN_MSG)
                         {
                             memcpy(&canObject, fileData.constData(), sizeof(BLF_CAN_OBJ));
                             CANFrame frame;
@@ -95,16 +112,36 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                                 for (int i = 0; i < 8; i++) frame.data[i] = canObject.data[i];
                             }
                             //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
-                            frame.timestamp = obj.header.uncompSize / 1000.0; //uncompsize field also used for timestamp oddly enough
+                            frame.timestamp = obj.header.v1Obj.uncompSize / 1000.0; //uncompsize field also used for timestamp oddly enough
+                            frames->append(frame);
+                        }
+                        else if (obj.header.base.objType == BLF_CAN_MSG2)
+                        {
+                            memcpy(&canObject2, fileData.constData(), sizeof(BLF_CAN_OBJ2));
+                            CANFrame frame;
+                            frame.bus = canObject2.channel;
+                            frame.extended = (canObject2.id & 0x80000000ull)?true:false;
+                            frame.ID = canObject2.id & 0x1FFFFFFFull;
+                            frame.isReceived = true;
+                            frame.len = canObject2.dlc;
+
+                            if (canObject2.flags & BLF_REMOTE_FLAG) {
+                                frame.remote = true;
+                            } else {
+                                frame.remote = false;
+                                for (int i = 0; i < 8; i++) frame.data[i] = canObject2.data[i];
+                            }
+                            //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
+                            frame.timestamp = obj.header.v1Obj.uncompSize / 1000.0; //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
                         }
                         else
                         {
                             //qDebug() << "Not a can frame! ObjType: " << obj.header.objType;
-                            if (obj.header.objType > 0xFFFF)
+                            if (obj.header.base.objType > 0xFFFF)
                                 return false;
                         }
-                        pos += obj.header.objSize + (obj.header.objSize % 4);
+                        pos += obj.header.base.objSize + (obj.header.base.objSize % 4);
                     }
                     else
                     {
@@ -114,6 +151,8 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                 }
                 uncompressedData.remove(0, pos);
                 qDebug() << "After removing used data uncompressedData is now this big: " << uncompressedData.count();
+
+                break;
             }
         }
         else return false;
