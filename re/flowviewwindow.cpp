@@ -27,6 +27,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     memset(refBytes, 0, 8);
     memset(currBytes, 0, 8);
     memset(triggerValues, -1, sizeof(int) * 8);
+    triggerBits = 0;
 
     //ui->graphView->setInteractions();
 
@@ -102,6 +103,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->graphView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestGraph(QPoint)));
     ui->flowView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
+    connect(ui->flowView, SIGNAL(gridClicked(int,int)), this, SLOT(gotCellClick(int, int)));
 
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 }
@@ -205,6 +207,15 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
         // standard event processing
         return QObject::eventFilter(obj, event);
     }
+}
+
+void FlowViewWindow::gotCellClick(int x, int y)
+{
+    int bitnum = (7-x) + (8 * y);
+    triggerBits = triggerBits ^ (1ull << bitnum);
+    if (triggerBits & (1ull << bitnum)) ui->flowView->setCellTextState(x, y, GridTextState::BOLD_BLUE);
+    else ui->flowView->setCellTextState(x, y, GridTextState::NORMAL);
+    qDebug() << "Bit Num: " << bitnum << "   Hex of trigger bits: " << QString::number(triggerBits, 16);
 }
 
 void FlowViewWindow::updateTriggerValues()
@@ -723,6 +734,26 @@ void FlowViewWindow::updatePosition(bool forward)
     if (ui->cbAutoRef->isChecked())
     {
         memcpy(refBytes, currBytes, 8);
+    }
+
+    //figure out which bits changed since the previous frame and then AND that with the trigger bits. If any bits
+    //get through that then they're changed and a trigger so we stop playback at this frame.
+    uint64_t changedBits = 0;
+    uint8_t cngByte;
+    for (int i = 0; i < 8; i++)
+    {
+        cngByte = currBytes[i] ^ frameCache.at(currentPosition).data[i];
+        changedBits |= (uint64_t)cngByte << (8ull * i);
+    }
+
+    qDebug() << "ChangedBits: " << QString::number(changedBits, 16);
+    qDebug() << "TriggerBits: " << QString::number(triggerBits, 16);
+    changedBits &= triggerBits;
+    qDebug() << "Final ChangedBits: " << QString::number(changedBits, 16);
+    if (changedBits)
+    {
+        playbackActive = false;
+        playbackTimer->stop();
     }
 
     memcpy(currBytes, frameCache.at(currentPosition).data, 8);
