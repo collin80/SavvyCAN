@@ -37,6 +37,7 @@ private slots:
     void plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event);
     void gotCenterTimeID(int32_t ID, double timestamp);
     void updateTriggerValues();
+    void gotCellClick(int x, int y);
 
 signals:
     void sendCenterTimeID(int32_t ID, double timestamp);
@@ -49,6 +50,7 @@ private:
     unsigned char refBytes[8];
     unsigned char currBytes[8];
     int triggerValues[8];
+    uint64_t triggerBits;
     int currentPosition;
     QTimer *playbackTimer;
     bool playbackActive;
