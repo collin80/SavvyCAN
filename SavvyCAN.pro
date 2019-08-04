@@ -157,17 +157,7 @@ FORMS    += ui/candatagrid.ui \
     helpwindow.ui \
     ui/newconnectiondialog.ui \
     ui/temporalgraphwindow.ui
-
-DISTFILES += \
-    SavvyCAN.qch \
-    SavvyCAN.qhc \
-    SavvyCAN.qhcp \
-    SavvyCAN.qhp \
-    examples \
-    icon \
     
-    
-
 RESOURCES += \
     icons.qrc \
     images.qrc
@@ -187,6 +177,18 @@ unix {
    INSTALLS += shortcutfiles
    DISTFILES += SavvyCAN.desktop
 }
+
+examplefiles.files=examples
+examplefiles.path = $$PREFIX/share/savvycan/examples
+INSTALLS += examplefiles
+
+iconfiles.files=icons
+iconfiles.path = $$PREFIX/share/icons
+INSTALLS += iconfiles
+
+helpfiles.files=SavvyCAN.q*
+helpfiles.path = $$PREFIX/share/applications
+INSTALLS += helpfiles
 
 INSTALLS += target
 
