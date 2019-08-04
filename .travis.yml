@@ -8,7 +8,7 @@ before_install:
   - sudo apt-get update -qq
 
 install:
-  - sudo apt-get -y install qt512base qt512connectivity qt512imageformats qt512serialport qt512serialbus libgl1-mesa-dev
+  - sudo apt-get -y install qt512base qt512connectivity qt512imageformats qt512serialport qt512serialbus qt512doc qt512tools libgl1-mesa-dev
   - source /opt/qt*/bin/qt*-env.sh
 
 script:
