@@ -158,7 +158,15 @@ FORMS    += ui/candatagrid.ui \
     ui/newconnectiondialog.ui \
     ui/temporalgraphwindow.ui
 
-DISTFILES +=
+DISTFILES += \
+    SavvyCAN.qch \
+    SavvyCAN.qhc \
+    SavvyCAN.qhcp \
+    SavvyCAN.qhp \
+    examples \
+    icon \
+    
+    
 
 RESOURCES += \
     icons.qrc \
@@ -167,3 +175,18 @@ RESOURCES += \
 win32 {
    LIBS += opengl32.lib
 }
+
+unix {
+   isEmpty(PREFIX)
+   {
+      PREFIX=/usr/local
+   }
+   target.path = $$PREFIX/bin
+   shortcutfiles.files=SavvyCAN.desktop
+   shortcutfiles.path = $$PREFIX/share/applications
+   INSTALLS += shortcutfiles
+   DISTFILES += SavvyCAN.desktop
+}
+
+INSTALLS += target
+
