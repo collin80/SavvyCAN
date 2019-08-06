@@ -1,10 +1,5 @@
 language: cpp
 
-branches:
-  except:
-    - # Do not build tags that we create when we upload to GitHub Releases
-    - /^(?i:continuous)/
-
 matrix:
    include
       - os: linux
@@ -52,3 +47,8 @@ matrix:
            - ls -la C:/Qt/5.12.3/msvc2017/bin/qtenv2.bat
         script:
            - cmd.exe /C 'cd && "C:\Qt\5.12.3\msvc2017\bin\qtenv2.bat" && cd && "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" x86 && cd && qmake CONFIG+=RELEASE SavvyCAN.pro && nmake'
+
+branches:
+  except:
+    - # Do not build tags that we create when we upload to GitHub Releases
+    - /^(?i:continuous)/
