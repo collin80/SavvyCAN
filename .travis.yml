@@ -49,14 +49,6 @@ matrix:
            - "qmake CONFIG+=RELEASE SavvyCAN.pro"
            - nmake
 
-           
-           
-    script:
-    - cmd.exe /C '"C:\Qt\5.12.3\msvc2017_64\bin\qtenv2.bat"' 
-    - cmd.exe /C '"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat"'
-    - cmd.exe /C '"qmake SavvyCAN.pro"'
-    - cmd.exe /C  'nmake'
-           
 branches:
   except:
     - # Do not build tags that we create when we upload to GitHub Releases
