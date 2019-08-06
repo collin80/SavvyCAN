@@ -40,12 +40,15 @@ matrix:
 #           - macdeployqt Release/SavvyCAN.app -dmg
       - os: windows
         before_install:
-           - cmd.exe /C 'cd && "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cd && dir'
+           - "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
            - curl -vLO http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe
            - "./qt-unified-windows-x86-online.exe --verbose --script qt-installer-windows.qs"
            - ls -la C:/Qt/5.12.3/msvc2017/bin/qtenv2.bat
         script:
-           - cmd.exe /C 'cd && "C:\Qt\5.12.3\msvc2017\bin\qtenv2.bat" && cd && "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat" && cd && qmake CONFIG+=RELEASE SavvyCAN.pro && nmake'
+           - "C:\Qt\5.12.3\msvc2017\bin\qtenv2.bat" 
+           - "C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvars64.bat" 
+           - "qmake CONFIG+=RELEASE SavvyCAN.pro"
+           - nmake
 
 branches:
   except:
