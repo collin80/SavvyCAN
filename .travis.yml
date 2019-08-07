@@ -32,7 +32,7 @@ matrix:
         deploy:
            provider: releases
            skip_cleanup: true
-           github_token: $GITHUB_TOKEN
+           api_key: $GITHUB_TOKEN
            file_glob: true
            file: SavvyCAN*.AppImage
            on:
@@ -51,7 +51,7 @@ matrix:
         deploy:
            provider: releases
            skip_cleanup: true
-           github_token: $GITHUB_TOKEN
+           api_key: $GITHUB_TOKEN
            file: SavvyCAN.dmg
            on:
               branch: WIP
@@ -73,7 +73,7 @@ matrix:
         deploy:
            provider: releases
            skip_cleanup: true
-           github_token: $GITHUB_TOKEN
+           api_key: $GITHUB_TOKEN
            file: SavvyCAN32.zip
            on:
               branch: WIP
