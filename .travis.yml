@@ -67,6 +67,7 @@ matrix:
            - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" && cd && "C:/Qt/5.12.3/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro && cd && nmake'
            - ls
            - cmd.exe /C 'cd release && "C:/Qt/5.12.3/msvc2017/bin/windeployqt.exe" ./SavvyCAN.exe'
+           - cd release
            - ls
            - rm *.cpp
            - rm *.h
