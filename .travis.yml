@@ -35,19 +35,28 @@ matrix:
            github_token: $GITHUB_TOKEN
            file_glob: true
            file: SavvyCAN*.AppImage
- #          on:
- #             branch: master
+           on:
+              branch: WIP
            draft: true
   
-#      - os: osx
-#        osx_image: xcode10
-#        before_install:
-#           - brew install qt5
-#           - brew link qt5 --force
-#        script:
-#           - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
-#           - xcodebuild
-#           - macdeployqt Release/SavvyCAN.app -dmg
+      - os: osx
+        osx_image: xcode10
+        before_install:
+           - brew install qt5
+           - brew link qt5 --force
+        script:
+           - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
+           - xcodebuild
+           - macdeployqt Release/SavvyCAN.app -dmg
+        deploy:
+           provider: releases
+           skip_cleanup: true
+           github_token: $GITHUB_TOKEN
+           file: SavvyCAN.dmg
+           on:
+              branch: WIP
+           draft: true
+
       - os: windows
         before_install:
            - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat"'
@@ -55,6 +64,21 @@ matrix:
            - "./qt-unified-windows-x86-online.exe --verbose --script qt-installer-windows.qs"
         script:
            - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" && cd && "C:/Qt/5.12.3/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro && cd && nmake'
+           - cmd.exe /C 'cd && "C:/Qt/5.12.3/msvc2017/bin/windeployqt.exe" ./SavvyCAN.exe'
+           - rm *.cpp
+           - rm *.h
+           - rm *.obj
+           - zip SavvyCAN32.zip *.*
+           
+        deploy:
+           provider: releases
+           skip_cleanup: true
+           github_token: $GITHUB_TOKEN
+           file: SavvyCAN32.zip
+           on:
+              branch: WIP
+           draft: true
+           
 
 branches:
   except:
