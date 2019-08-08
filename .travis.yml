@@ -47,8 +47,10 @@ matrix:
         script:
            - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
            - xcodebuild
-           - cp *.q* ./Release/SavvyCAN.app/
-           - macdeployqt Release/SavvyCAN.app -dmg
+           - cp *.q* Release/SavvyCAN.app/Contents/MacOS/
+           - cd Release
+           - ls SavvyCAN.app/Contents/MacOS
+           - macdeployqt SavvyCAN.app -dmg
         deploy:
            provider: releases
            skip_cleanup: true
@@ -75,7 +77,7 @@ matrix:
            - rm *.obj
            - cp ../*.q* .
            - cp -r ../examples .
-           - zip -r SavvyCAN32.zip *.*
+           - 7z a -tzip SavvyCAN32.zip -r *
            
         deploy:
            provider: releases
