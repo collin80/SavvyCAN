@@ -4,14 +4,14 @@
 #include "isotp_handler.h"
 #include <QDebug>
 
-QVector<CODE_STRUCT> UDS_DIAG_CTRL_SUB = {
+static QVector<CODE_STRUCT> UDS_DIAG_CTRL_SUB = {
     {1,"DFLT_SESS", "Default session"},
     {2,"PROG_SESS", "Programming Session"},
     {3,"EXT_SESS", "Extended Diagnostics Session"},
     {4,"SAFETY_SESS", "Safety System Diagnostics Session"},
 };
 
-QVector<CODE_STRUCT> UDS_ECU_RESET_SUB = {
+static QVector<CODE_STRUCT> UDS_ECU_RESET_SUB = {
     {1,"HARD_RESET", "Hard reset of ECU"},
     {2,"KEYOFFON_RESET", "Simulated key off then on reset"},
     {3,"SOFT_RESET", "Soft reset - leaving RAM intact"},
@@ -19,7 +19,7 @@ QVector<CODE_STRUCT> UDS_ECU_RESET_SUB = {
     {5,"DIS_POWERDOWN_RESET", "Disable sleep mode"},
 };
 
-QVector<CODE_STRUCT> UDS_COMM_CTRL_SUB = {
+static QVector<CODE_STRUCT> UDS_COMM_CTRL_SUB = {
     {0,"COMM_NORMAL", "Enable both Rx and Tx of normal messages"},
     {1,"COMM_DIS_TX", "Enable reception of normal messages but don't Tx them"},
     {3,"COMM_DIS_ALL", "Disable both Rx and Tx of non-diagnostics messages"},
@@ -27,13 +27,13 @@ QVector<CODE_STRUCT> UDS_COMM_CTRL_SUB = {
     {5,"COMM_ENHANC", "Addressed bus master should set related sub-bus to app scheduling mode"},
 };
 
-QVector<CODE_STRUCT> UDS_ROUTINE_SUB = {
+static QVector<CODE_STRUCT> UDS_ROUTINE_SUB = {
     {1,"START_ROUTINE", "Start routine by given ID"},
     {2,"STOP_ROUTINE", "Stop routine by given ID"},
     {3,"GET_ROUTINE_RESULTS", "Get results from routine specified by ID"},
 };
 
-QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
+static QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
     {1, "OBDII_SHOW_CURRENT", "OBDII - Show current data"},
     {2, "OBDII_SHOW_FREEZE", "OBDII - Show freeze data"},
     {3, "OBDII_SHOW_STORED_DTC", "OBDII - Show stored DTC codes"},
@@ -84,7 +84,7 @@ QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
     {0xFF, "UNKNOWN_CODE", "Unknown, likely proprietary UDS function code"}
 };
 
-QVector<CODE_STRUCT> UDS_NEG_RESPONSE =
+static QVector<CODE_STRUCT> UDS_NEG_RESPONSE =
 {
     {0x10, "GENERAL_REJECT", "General rejection (no other codes matched)"},
     {0x11, "SERVICE_NOTSUPP", "ECU does not support this service code"},

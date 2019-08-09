@@ -9,8 +9,8 @@ public:
     int bus;
     bool extended;
     bool isReceived;
-    uint32_t len; //# of bytes this message should have (as reported)
-    uint32_t actualSize; //# we actually got
+    int len; //# of bytes this message should have (as reported)
+    int actualSize; //# we actually got
     QVector<unsigned char> data;
     uint64_t timestamp;
 };

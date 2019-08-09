@@ -253,13 +253,13 @@ bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
 //the bus numbers if bus wasn't -1 so that they're local to the device
 bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-    int tempBusVal;
+    //int tempBusVal;
     int busBase = 0;
 
     foreach (CANConnection* conn, mConns)
     {
         if (pBusId == -1) conn->addTargettedFrame(pBusId, ID, mask, receiver);
-        else if (pBusId < (uint32_t)(busBase + conn->getNumBuses()))
+        else if (pBusId < (busBase + conn->getNumBuses()))
         {
             qDebug() << "Forwarding targetted frame setting to a connection object";
             conn->addTargettedFrame(pBusId - busBase, ID, mask, receiver);
@@ -272,13 +272,13 @@ bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
 
 bool CANConManager::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-    int tempBusVal;
+    //int tempBusVal;
     int busBase = 0;
 
     foreach (CANConnection* conn, mConns)
     {
         if (pBusId == -1) conn->removeTargettedFrame(pBusId, ID, mask, receiver);
-        else if (pBusId < (uint32_t)(busBase + conn->getNumBuses()))
+        else if (pBusId < (busBase + conn->getNumBuses()))
         {
             qDebug() << "Forwarding targetted frame setting to a connection object";
             conn->removeTargettedFrame(pBusId - busBase, ID, mask, receiver);

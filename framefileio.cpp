@@ -1258,7 +1258,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             tokens = line.simplified().split(' ');
             if (tokens.length() > 5)
             {
-                thisFrame.timestamp = (uint64_t)(tokens[0].toDouble() * (double)1000000.0);
+                thisFrame.timestamp = static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0);
                 thisFrame.ID = tokens[2].toUInt(nullptr, 16);
                 thisFrame.len = tokens[5].toUInt();
                 if (thisFrame.len > 8) return false;
@@ -1266,11 +1266,11 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                 thisFrame.bus = tokens[1].toUInt();
                 thisFrame.extended = (thisFrame.ID > 0x7FF);
                 thisFrame.remote = false;
-                for (unsigned int d = 6; d < (6 + thisFrame.len); d++)
+                for (int d = 6; d < (6 + static_cast<int>(thisFrame.len)); d++)
                 {
                     if (tokens.count() > d)
                     {
-                        thisFrame.data[d - 6] = tokens[d].toInt(nullptr, 16);
+                        thisFrame.data[d - 6] = static_cast<unsigned char>(tokens[d].toInt(nullptr, 16));
                     }
                     else //expected byte wasn't there to read. Set it zero and set error flag
                     {
@@ -2907,7 +2907,7 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                 ret = timeExp.exactMatch(tokens[0]);
                 if(!ret) isMatch = false;
 
-                uint64_t timestamp = (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0);
+                /*uint64_t timestamp = (uint64_t)*/(timeExp.cap(1).toDouble(&ret) /** (double)1000000.0*/);
                 if(!ret) isMatch = false;
 
                 if (line.contains('[')) //the expanded format
@@ -2941,7 +2941,7 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                     }
 
                     /* ID */
-                    int ID = IdValExp.cap(1).toInt(&ret, 16);
+                    /*int ID = */IdValExp.cap(1).toInt(&ret, 16);
 
                     QString val= IdValExp.cap(2);
 
@@ -2965,7 +2965,7 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                                 isMatch = false;
                                 break;
                             }
-                            int data = valExp.cap(1).toInt(&ret, 16);
+                            /*int data = */valExp.cap(1).toInt(&ret, 16);
                             if(!ret)
                             {
                                 isMatch = false;

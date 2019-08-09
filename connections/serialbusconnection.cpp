@@ -77,7 +77,7 @@ bool SerialBusConnection::piGetBusSettings(int pBusIdx, CANBus& pBus)
 
 void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 {
-    CANConStatus stats;
+    //CANConStatus stats;
     /* sanity checks */
     if(0 != pBusIdx)
         return;
