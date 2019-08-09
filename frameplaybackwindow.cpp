@@ -604,6 +604,7 @@ void FramePlaybackWindow::changeLooping(bool check)
 
 void FramePlaybackWindow::changeSendingBus(int newIdx)
 {
+    Q_UNUSED(newIdx);
     calculateWhichBus();
 }
 

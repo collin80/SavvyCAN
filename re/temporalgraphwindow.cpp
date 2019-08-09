@@ -5,6 +5,9 @@
 
 QString HexTicker::getTickLabel (double tick, const QLocale& locale, QChar formatChar, int precision)
 {
+    Q_UNUSED(formatChar);
+    Q_UNUSED(precision);
+    Q_UNUSED(locale);
     int valu = static_cast<int>(tick);
     //qDebug() << valu;
     return "0x" + QString::number(valu, 16).toUpper().rightJustified(3,'0');
