@@ -9,11 +9,11 @@ struct CANFrame
 {
 public:
     uint32_t ID;
-    uint32_t bus;
+    int bus;
     bool extended;
     bool remote;
     bool isReceived; //did we receive this or send it?
-    uint32_t len;
+    int len;
     unsigned char data[8];
     uint64_t timestamp;
     uint64_t timedelta;

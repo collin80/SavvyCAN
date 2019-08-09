@@ -941,6 +941,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 9:
             lin1Baud |= c << 24;
+            break;
         case 10:
             lin2Enabled = (c & 0xF);
             break;
@@ -1018,7 +1019,10 @@ void GVRetSerial::handleTick()
                 return;
             }
         }
-        else if (doValidation); //qDebug()  << "Comm connection validated";
+        else if (doValidation)
+        {
+            //qDebug()  << "Comm connection validated";
+        }
     }
     if (doValidation && serial && serial->isOpen()) sendCommValidation();
     if (doValidation && tcpClient && tcpClient->isOpen()) sendCommValidation();

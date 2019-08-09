@@ -118,7 +118,6 @@ bool FrameInfoWindow::eventFilter(QObject *obj, QEvent *event)
         // standard event processing
         return QObject::eventFilter(obj, event);
     }
-    return false;
 }
 
 FrameInfoWindow::~FrameInfoWindow()
@@ -186,12 +185,12 @@ void FrameInfoWindow::updatedFrames(int numFrames)
 
         unsigned int currID = 0;
         if (ui->listFrameID->currentItem())
-            currID = (unsigned int)ui->listFrameID->currentItem()->text().toInt(nullptr, 16);
+            currID = static_cast<unsigned int>(ui->listFrameID->currentItem()->text().toInt(nullptr, 16));
         bool thisID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
             CANFrame thisFrame = modelFrames->at(x);
-            unsigned int id = thisFrame.ID;
+            int32_t id = static_cast<int32_t>(thisFrame.ID);
             if (!foundID.contains(id))
             {
                 foundID.append(id);
@@ -240,7 +239,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     uint8_t referenceBits[8];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
-    targettedID = Utility::ParseStringToNum(newID);
+    targettedID = static_cast<int>(Utility::ParseStringToNum(newID));
 
     if (modelFrames->count() == 0) return;
 
@@ -255,7 +254,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int i = 0; i < modelFrames->count(); i++)
         {
             CANFrame thisFrame = modelFrames->at(i);
-            if (thisFrame.ID == (unsigned int)targettedID) frameCache.append(thisFrame);
+            if (thisFrame.ID == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
 
         ui->treeDetails->clear();
@@ -286,23 +285,23 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             {
                 jid.dest = jid.ps;
                 tempItem = new QTreeWidgetItem();
-                tempItem->setText(0, tr("Destination ID: ") + Utility::formatNumber(jid.dest));
+                tempItem->setText(0, tr("Destination ID: ") + Utility::formatNumber(static_cast<uint64_t>(jid.dest)));
                 baseNode->addChild(tempItem);
             }
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("SRC: ") + Utility::formatNumber(jid.src));
+            tempItem->setText(0, tr("SRC: ") + Utility::formatNumber(static_cast<uint64_t>(jid.src)));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PGN: ") + Utility::formatNumber(jid.pgn) + "(" + QString::number(jid.pgn) + ")");
+            tempItem->setText(0, tr("PGN: ") + Utility::formatNumber(static_cast<uint64_t>(jid.pgn)) + "(" + QString::number(jid.pgn) + ")");
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PF: ") + Utility::formatNumber(jid.pf));
+            tempItem->setText(0, tr("PF: ") + Utility::formatNumber(static_cast<uint64_t>(jid.pf)));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PS: ") + Utility::formatNumber(jid.ps));
+            tempItem->setText(0, tr("PS: ") + Utility::formatNumber(static_cast<uint64_t>(jid.ps)));
             baseNode->addChild(tempItem);
         }
 
@@ -337,7 +336,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int j = 0; j < frameCache.count(); j++)
         {
             byteGraphX.append(j);
-            for (int bytcnt = 0; bytcnt < frameCache[j].len; bytcnt++)
+            for (uint32_t bytcnt = 0; bytcnt < frameCache[j].len; bytcnt++)
             {
                 byteGraphY[bytcnt].append(frameCache[j].data[bytcnt]);
             }
@@ -386,7 +385,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         {
             intervalMean = intervalSum / sortedIntervals.size();
 
-            for(int l = 0; l < sortedIntervals.size(); l++) {
+            for(int l = 0; l < static_cast<int>(sortedIntervals.size()); l++) {
                 intervalVariance += ((sortedIntervals[l] - intervalMean) * (sortedIntervals[l] - intervalMean));
             }
 
