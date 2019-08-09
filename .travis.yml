@@ -26,6 +26,7 @@ matrix:
         after_success:
            # find appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq # for debugging
            # curl --upload-file APPNAME*.AppImage https://transfer.sh/APPNAME-git.$(git rev-parse --short HEAD)-x86_64.AppImage
+           # these next two lines make a continuous integration build of the linux version of SavvyCAN each time a commit is done
            - wget -c https://github.com/probonopd/uploadtool/raw/master/upload.sh
            - bash upload.sh SavvyCAN*.AppImage*
 
@@ -35,9 +36,9 @@ matrix:
            api_key: $GITHUB_TOKEN
            file_glob: true
            file: SavvyCAN*.AppImage
-           on:
-              branch: WIP
-           draft: true
+           on:              
+              tags: true #deploy is only done on tagged builds
+           draft: false
   
       - os: osx
         osx_image: xcode10
@@ -55,10 +56,10 @@ matrix:
            provider: releases
            skip_cleanup: true
            api_key: $GITHUB_TOKEN
-           file: Release/SavvyCAN.dmg
+           file: SavvyCAN.dmg
            on:
-              branch: WIP
-           draft: true
+              tags: true
+           draft: false
 
       - os: windows
         before_install:
@@ -85,11 +86,10 @@ matrix:
            api_key: $GITHUB_TOKEN
            file: SavvyCAN32.zip
            on:
-              branch: WIP
-           draft: true
+              tags: true
+           draft: false
            
-
 branches:
-  except:
-    - # Do not build tags that we create when we upload to GitHub Releases
-    - /^(?i:continuous)/
+  only:
+  - master
+  - WIP
