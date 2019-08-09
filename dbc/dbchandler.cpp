@@ -1468,7 +1468,7 @@ void DBCHandler::swapFiles(int pos1, int pos2)
  * Convenience function that encapsulates a whole lot of the details.
  * You give it a canbus frame and it'll tell you whether there is a loaded DBC file that can
  * interpret that frame for you.
- * Returns NULL if there is no message definition that matches.
+ * Returns nullptr if there is no message definition that matches.
 */
 DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
 {

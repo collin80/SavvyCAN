@@ -15,9 +15,9 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
 {
     sendDebug("GVRetSerial()");
 
-    serial = NULL;
-    tcpClient = NULL;
-    udpClient = NULL;
+    serial = nullptr;
+    tcpClient = nullptr;
+    udpClient = nullptr;
     rx_state = IDLE;
     rx_step = 0;
     validationCounter = 10; //how many times we can miss validation before we die
@@ -46,7 +46,7 @@ void GVRetSerial::sendDebug(const QString debugText)
 
 void GVRetSerial::sendToSerial(const QByteArray &bytes)
 {
-    if (serial == NULL && tcpClient == NULL && udpClient == NULL)
+    if (serial == nullptr && tcpClient == nullptr && udpClient == nullptr)
     {
         sendDebug("Attempt to write to serial port when it has not been initialized!");
         return;
@@ -238,7 +238,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
 
     framesRapid++;
 
-    if (serial == NULL && tcpClient == NULL && udpClient == NULL) return false;
+    if (serial == nullptr && tcpClient == nullptr && udpClient == nullptr) return false;
     if (serial && !serial->isOpen()) return false;
     if (tcpClient && !tcpClient->isOpen()) return false;
     if (udpClient && !udpClient->isOpen()) return false;
@@ -422,7 +422,7 @@ void GVRetSerial::deviceConnected()
 }
 
 void GVRetSerial::disconnectDevice() {
-    if (serial != NULL)
+    if (serial != nullptr)
     {
         if (serial->isOpen())
         {
@@ -432,9 +432,9 @@ void GVRetSerial::disconnectDevice() {
         }
         serial->disconnect(); //disconnect all signals
         delete serial;
-        serial = NULL;
+        serial = nullptr;
     }
-    if (tcpClient != NULL)
+    if (tcpClient != nullptr)
     {
         if (tcpClient->isOpen())
         {
@@ -442,9 +442,9 @@ void GVRetSerial::disconnectDevice() {
         }
         tcpClient->disconnect();
         delete tcpClient;
-        tcpClient = NULL;
+        tcpClient = nullptr;
     }
-    if (udpClient != NULL)
+    if (udpClient != nullptr)
     {
         if (udpClient->isOpen())
         {
@@ -452,7 +452,7 @@ void GVRetSerial::disconnectDevice() {
         }
         udpClient->disconnect();
         delete udpClient;
-        udpClient = NULL;
+        udpClient = nullptr;
     }
 
     setStatus(CANCon::NOT_CONNECTED);
@@ -1004,7 +1004,7 @@ void GVRetSerial::handleTick()
         //qDebug() << validationCounter;
         if (validationCounter == 0 && doValidation)
         {
-            if (serial == NULL && tcpClient == NULL) return;
+            if (serial == nullptr && tcpClient == nullptr) return;
             if ( (serial && serial->isOpen()) || (tcpClient && tcpClient->isOpen()) || (udpClient && udpClient->isOpen())) //if it's still false we have a problem...
             {
                 sendDebug("Comm validation failed.");

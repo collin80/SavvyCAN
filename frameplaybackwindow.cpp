@@ -40,7 +40,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
 
     modelFrames = frames;
 
-    currentSeqItem = NULL;
+    currentSeqItem = nullptr;
     currentSeqNum = -1;
     currentPosition = 0;
     forward = true;
@@ -197,7 +197,7 @@ void FramePlaybackWindow::saveFilters()
 
             for (int c = 0; c < ui->listID->count(); c++)
             {
-                outFile->write(QString::number(ui->listID->item(c)->text().toInt(NULL, 16), 16).toUtf8());
+                outFile->write(QString::number(ui->listID->item(c)->text().toInt(nullptr, 16), 16).toUtf8());
                 outFile->putChar(',');
                 if (ui->listID->item(c)->checkState() == Qt::Checked) outFile->putChar('T');
                 else outFile->putChar('F');
@@ -244,7 +244,7 @@ void FramePlaybackWindow::loadFilters()
             if (line.length() > 2)
             {
                 QList<QByteArray> tokens = line.split(',');
-                ID = tokens[0].toInt(NULL, 16);
+                ID = tokens[0].toInt(nullptr, 16);
                 if (tokens[1].toUpper() == "T") checked = true;
                     else checked = false;
                 if (checked)
@@ -260,7 +260,7 @@ void FramePlaybackWindow::loadFilters()
                     for (int c = 0; c < ui->listID->count(); c++)
                     {
                         QListWidgetItem *item = ui->listID->item(c);
-                        if (item->text().toInt(NULL, 16) == ID)
+                        if (item->text().toInt(nullptr, 16) == ID)
                         {
                             item->setCheckState(Qt::Checked);
                         }
@@ -275,7 +275,7 @@ void FramePlaybackWindow::loadFilters()
 
 void FramePlaybackWindow::refreshIDList()
 {
-    if (currentSeqNum < 0 || currentSeqItem == NULL)
+    if (currentSeqNum < 0 || currentSeqItem == nullptr)
     {
         ui->listID->clear();
         return;
@@ -463,7 +463,7 @@ void FramePlaybackWindow::btnDeleteCurrSeq()
     else
     {
         currentSeqNum = -1;
-        currentSeqItem = NULL;
+        currentSeqItem = nullptr;
     }
     refreshIDList();
     updateFrameLabel();
@@ -564,7 +564,7 @@ void FramePlaybackWindow::btnStopClick()
     }
     else {
         currentSeqNum = -1;
-        currentSeqItem = NULL;
+        currentSeqItem = nullptr;
     }
     if (ui->tblSequence->rowCount() > 0)
     {

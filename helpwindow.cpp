@@ -1,8 +1,8 @@
-#include <QDebug>
+#include <QtDebug>
 #include "helpwindow.h"
 #include "ui_helpwindow.h"
 
-HelpWindow* HelpWindow::self = 0;
+HelpWindow* HelpWindow::self = nullptr;
 
 HelpWindow::HelpWindow(QWidget *parent) :
     QDialog(parent),
@@ -14,7 +14,7 @@ HelpWindow::HelpWindow(QWidget *parent) :
     m_helpEngine = new QHelpEngineCore(QApplication::applicationDirPath() +"/SavvyCAN.qhc", this);
     if (!m_helpEngine->setupData()) {
         delete m_helpEngine;
-        m_helpEngine = 0;
+        m_helpEngine = nullptr;
         qDebug() << "Could not load help file!";
     }
 

@@ -517,7 +517,7 @@ void FrameSenderWindow::doModifiers(int idx)
 
 int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 {
-    CANFrame *tempFrame = NULL;
+    CANFrame *tempFrame = nullptr;
     if (op.ID == 0) //numeric constant
     {
         if (op.notOper) return ~op.databyte;
@@ -531,7 +531,7 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
     else //look up external data byte
     {
         tempFrame = lookupFrame(op.ID, op.bus);
-        if (tempFrame != NULL)
+        if (tempFrame != nullptr)
         {
             if (op.notOper) return ~tempFrame->data[op.databyte];
             else return tempFrame->data[op.databyte];
@@ -548,11 +548,11 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 /// <returns></returns>
 CANFrame* FrameSenderWindow::lookupFrame(int ID, int bus)
 {
-    if (!frameCache.contains(ID)) return NULL;
+    if (!frameCache.contains(ID)) return nullptr;
 
     if (bus == -1 || frameCache[ID].bus == (unsigned int)bus) return &frameCache[ID];
 
-    return NULL;
+    return nullptr;
 }
 
 /// <summary>
@@ -791,7 +791,7 @@ void FrameSenderWindow::updateGridRow(int idx)
     int gridLine = idx;
     QString dataString;
     QTableWidgetItem *item = ui->tableSender->item(gridLine, 9);
-    if (item == NULL) item = new QTableWidgetItem();
+    if (item == nullptr) item = new QTableWidgetItem();
     item->setText(QString::number(temp->count));
     if (!temp->remote) {
         for (unsigned int i = 0; i < temp->len; i++)

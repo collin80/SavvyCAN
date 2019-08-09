@@ -209,10 +209,13 @@ uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
         return frame.len;
     case Column::ASCII: //sort both the same for now
     case Column::Data:
-        for (int i = 0; i < frame.len; i++) temp += ((uint64_t)frame.data[i] << (56 - (8 * i)));
+        for (uint32_t i = 0; i < frame.len; i++) temp += ((uint64_t)frame.data[i] << (56 - (8 * i)));
         //qDebug() << temp;
         return temp;
+    case Column::NUM_COLUMN:
+        return 0;
     }
+    return 0;
 }
 
 void CANFrameModel::qSortCANFrameAsc(QVector<CANFrame> *frames, Column column, int lowerBound, int upperBound)
@@ -295,9 +298,6 @@ void CANFrameModel::recalcOverwrite()
 
     qDebug() << "recalcOverwrite called in model";
 
-    int lastUnique = 0;
-    bool found;
-
     mutex.lock();
     beginResetModel();
 
@@ -358,10 +358,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::BackgroundColorRole)
     {
-        if (dbcHandler != NULL && interpretFrames)
+        if (dbcHandler != nullptr && interpretFrames)
         {
             DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-            if (msg != NULL)
+            if (msg != nullptr)
             {
                 return msg->bgColor;
             }
@@ -378,10 +378,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::TextColorRole)
     {
-        if (dbcHandler != NULL && interpretFrames)
+        if (dbcHandler != nullptr && interpretFrames)
         {
             DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-            if (msg != NULL)
+            if (msg != nullptr)
             {
                 return msg->fgColor;
             }
@@ -454,10 +454,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(" ");
             }
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
-            if (dbcHandler != NULL && interpretFrames)
+            if (dbcHandler != nullptr && interpretFrames)
             {
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-                if (msg != NULL)
+                if (msg != nullptr)
                 {
                     tempString.append("   <Interpreted>\n");
                     tempString.append(msg->name + "\n" + msg->comment + "\n");
@@ -763,7 +763,7 @@ void CANFrameModel::loadFilterFile(QString filename)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
-            ID = tokens[0].toInt(NULL, 16);
+            ID = tokens[0].toInt(nullptr, 16);
             if (tokens[1].toUpper() == "T") filters.insert(ID, true);
                 else filters.insert(ID, false);
         }

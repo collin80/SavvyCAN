@@ -1186,7 +1186,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     selDecorator->setPen(selectedPen);
     ui->graphingView->graph()->setSelectionDecorator(selDecorator);
 
-    if (params.graphName == NULL || params.graphName.length() == 0)
+    if (params.graphName == nullptr || params.graphName.length() == 0)
     {
         params.graphName = QString("0x") + QString::number(params.ID, 16) + ":" + QString::number(params.startBit);
         params.graphName += "-" + QString::number(params.numBits);

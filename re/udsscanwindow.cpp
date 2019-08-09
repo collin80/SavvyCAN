@@ -218,9 +218,9 @@ void UDSScanWindow::scanUDS()
 
     ui->treeResults->clear();
     sendingFrames.clear();
-    nodeService = NULL;
-    nodeID = NULL;
-    nodeSubFunc = NULL;
+    nodeService = nullptr;
+    nodeID = nullptr;
+    nodeSubFunc = nullptr;
 
     UDS_MESSAGE test;
     int typ, id;

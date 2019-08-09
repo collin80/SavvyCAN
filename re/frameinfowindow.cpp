@@ -186,7 +186,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
 
         unsigned int currID = 0;
         if (ui->listFrameID->currentItem())
-            currID = (unsigned int)ui->listFrameID->currentItem()->text().toInt(NULL, 16);
+            currID = (unsigned int)ui->listFrameID->currentItem()->text().toInt(nullptr, 16);
         bool thisID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {

@@ -56,7 +56,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
     //if this is a multiplexed signal then we have to see if it is even found in the current message
     if (isMultiplexed)
     {
-        if (parentMessage->multiplexorSignal != NULL)
+        if (parentMessage->multiplexorSignal != nullptr)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
@@ -145,7 +145,7 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     //if this is a multiplexed signal then we have to see if it is even found in the current message
     if (isMultiplexed)
     {
-        if (parentMessage->multiplexorSignal != NULL)
+        if (parentMessage->multiplexorSignal != nullptr)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
@@ -187,7 +187,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     //if this is a multiplexed signal then we have to see if it is even found in the current message
     if (isMultiplexed)
     {
-        if (parentMessage->multiplexorSignal != NULL)
+        if (parentMessage->multiplexorSignal != nullptr)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
@@ -243,7 +243,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
 
 DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByName(QString name)
 {
-    if (attributes.length() == 0) return NULL;
+    if (attributes.length() == 0) return nullptr;
     for (int i = 0; i < attributes.length(); i++)
     {
         if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
@@ -251,19 +251,19 @@ DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByName(QString name)
             return &attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= attributes.count()) return nullptr;
     return &attributes[idx];
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByName(QString name)
 {
-    if (attributes.length() == 0) return NULL;
+    if (attributes.length() == 0) return nullptr;
     for (int i = 0; i < attributes.length(); i++)
     {
         if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
@@ -271,19 +271,19 @@ DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByName(QString name)
             return &attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= attributes.count()) return nullptr;
     return &attributes[idx];
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByName(QString name)
 {
-    if (attributes.length() == 0) return NULL;
+    if (attributes.length() == 0) return nullptr;
     for (int i = 0; i < attributes.length(); i++)
     {
         if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
@@ -291,12 +291,12 @@ DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByName(QString name)
             return &attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= attributes.count()) return nullptr;
     return &attributes[idx];
 }
