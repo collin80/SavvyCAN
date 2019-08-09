@@ -33,7 +33,7 @@ public:
         if (input.startsWith("0X") || input.startsWith("X")) //hex number
         {
             if (input.length() < 3) temp = 0;
-            else temp = input.right(input.size() - 2).toLongLong(NULL, 16);
+            else temp = input.right(input.size() - 2).toLongLong(nullptr, 16);
         }
         else if (input.startsWith("0B") || input.startsWith("B")) //binary number
         {
@@ -56,7 +56,7 @@ public:
         return ParseStringToNum(input.toUtf8());
     }
 
-    static uint ParseStringToNum2(QString pInput, bool* pOk_p = NULL)
+    static uint ParseStringToNum2(QString pInput, bool* pOk_p = nullptr)
     {
         if(pInput.startsWith("0b"))
         {

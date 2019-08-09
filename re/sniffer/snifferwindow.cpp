@@ -61,7 +61,7 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
 
 SnifferWindow::~SnifferWindow()
 {
-    closeEvent(NULL);
+    closeEvent(nullptr);
     delete sniffDel;
     delete ui;
 }

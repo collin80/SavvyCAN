@@ -242,7 +242,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         break;
     case 2: //subsequent frames for multi-frame messages
-        pMsg = NULL;
+        pMsg = nullptr;
         for (int i = 0; i < messageBuffer.length(); i++)
         {
             if (messageBuffer[i].ID == ID)

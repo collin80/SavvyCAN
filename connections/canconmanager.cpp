@@ -4,7 +4,7 @@
 #include "canconmanager.h"
 #include "canconfactory.h"
 
-CANConManager* CANConManager::mInstance = NULL;
+CANConManager* CANConManager::mInstance = nullptr;
 
 CANConManager* CANConManager::getInstance()
 {
@@ -43,7 +43,7 @@ void CANConManager::resetTimeBasis()
 CANConManager::~CANConManager()
 {
     mTimer.stop();
-    mInstance = NULL;
+    mInstance = nullptr;
 }
 
 void CANConManager::stopAllConnections()
@@ -142,7 +142,7 @@ CANConnection* CANConManager::getByName(const QString& pName) const
             return conn_p;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
@@ -159,9 +159,9 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
         emit connectionStatusUpdated(buses);
     }
 
-    if (pConn_p->getQueue().peek() == NULL) return;
+    if (pConn_p->getQueue().peek() == nullptr) return;
 
-    CANFrame* frame_p = NULL;
+    CANFrame* frame_p = nullptr;
     QVector<CANFrame> frames;
 
     //Each connection only knows about its own bus numbers

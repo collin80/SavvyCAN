@@ -115,14 +115,14 @@ void ISOTP_InterpreterWindow::writeSettings()
 void ISOTP_InterpreterWindow::interpretCapturedFrames()
 {
     clearList();
-    decoder->rapidFrames(NULL, *modelFrames);
+    decoder->rapidFrames(nullptr, *modelFrames);
 }
 
 void ISOTP_InterpreterWindow::listFilterItemChanged(QListWidgetItem *item)
 {
     if (item)
     {
-        int id = item->text().toInt(NULL, 16);
+        int id = item->text().toInt(nullptr, 16);
         bool state = item->checkState();
         //qDebug() << id << "*" << state;
         idFilters[id] = state;
@@ -134,7 +134,7 @@ void ISOTP_InterpreterWindow::filterAll()
     for (int i = 0 ; i < ui->listFilter->count(); i++)
     {
         ui->listFilter->item(i)->setCheckState(Qt::Checked);
-        idFilters[ui->listFilter->item(1)->text().toInt(NULL, 16)] = true;
+        idFilters[ui->listFilter->item(1)->text().toInt(nullptr, 16)] = true;
     }
 }
 
@@ -143,7 +143,7 @@ void ISOTP_InterpreterWindow::filterNone()
     for (int i = 0 ; i < ui->listFilter->count(); i++)
     {
         ui->listFilter->item(i)->setCheckState(Qt::Unchecked);
-        idFilters[ui->listFilter->item(1)->text().toInt(NULL, 16)] = false;
+        idFilters[ui->listFilter->item(1)->text().toInt(nullptr, 16)] = false;
     }
 }
 

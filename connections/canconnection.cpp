@@ -16,7 +16,7 @@ CANConnection::CANConnection(QString pPort,
     mIsCapSuspended(false),
     mStatus(CANCon::NOT_CONNECTED),
     mStarted(false),
-    mThread_p(NULL)
+    mThread_p(nullptr)
 {
     /* register types */
     qRegisterMetaType<CANBus>("CANBus");
@@ -48,7 +48,7 @@ CANConnection::~CANConnection()
         mThread_p->quit();
         mThread_p->wait();
         delete mThread_p;
-        mThread_p = NULL;
+        mThread_p = nullptr;
     }
 
     mBusData.clear();

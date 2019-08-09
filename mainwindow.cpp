@@ -17,7 +17,7 @@ allow scripts to load DBC files in support of the script - maybe the graphing sy
 */
 
 QString MainWindow::loadedFileName = "";
-MainWindow *MainWindow::selfRef = NULL;
+MainWindow *MainWindow::selfRef = nullptr;
 
 MainWindow *MainWindow::getReference()
 {
@@ -238,7 +238,7 @@ void MainWindow::killWindow(QDialog *win)
     {
         win->close();
         delete win;
-        win = NULL;
+        win = nullptr;
     }
 }
 
@@ -416,9 +416,9 @@ void MainWindow::overwriteToggled(bool state)
 
 void MainWindow::updateFilterList()
 {
-    if (model == NULL) return;
+    if (model == nullptr) return;
     const QMap<int, bool> *filters = model->getFiltersReference();
-    if (filters == NULL) return;
+    if (filters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
 
@@ -745,10 +745,10 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         outFile->write(builderString.toUtf8());
 
         builderString = "";
-        if (dbcHandler != NULL)
+        if (dbcHandler != nullptr)
         {
             DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-            if (msg != NULL)
+            if (msg != nullptr)
             {
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
