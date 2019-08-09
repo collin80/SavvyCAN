@@ -219,7 +219,7 @@ DBCFile::DBCFile()
     messageHandler->setJ1939(false);
 }
 
-DBCFile::DBCFile(const DBCFile& cpy)
+DBCFile::DBCFile(const DBCFile& cpy) : QObject()
 {
     messageHandler = new DBCMessageHandler;
     for (int i = 0 ; i < cpy.messageHandler->getCount() ; i++)

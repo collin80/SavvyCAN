@@ -155,15 +155,16 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     }
 
     if (valType == SIGNED_INT) isSigned = true;
-    if ( frame.len*8 < (startBit+signalSize) )
+    if ( static_cast<int>(frame.len * 8) < (startBit + signalSize) )
     {
         result = 0;
         return false;
     }
-    result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
 
-    double endResult = ((double)result * factor) + bias;
-    result = (int32_t)endResult;
+    result = static_cast<int32_t>(Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned));
+
+    double endResult = (result * factor) + bias;
+    result = static_cast<int32_t>(endResult);
     cachedValue = result;
     outValue = result;
     return true;
