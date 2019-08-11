@@ -42,7 +42,8 @@ public:
     void sendRefresh(int);
     int  sendBulkRefresh();
     void clearFrames();
-    void setInterpetMode(bool);
+    void setInterpretMode(bool);
+    bool getInterpretMode();
     void setOverwriteMode(bool);
     void setHexMode(bool);
     void setSysTimeMode(bool);

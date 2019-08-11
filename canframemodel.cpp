@@ -102,7 +102,7 @@ void CANFrameModel::setSysTimeMode(bool mode)
     }
 }
 
-void CANFrameModel::setInterpetMode(bool mode)
+void CANFrameModel::setInterpretMode(bool mode)
 {
     //if the state of interpretFrames changes then we need to reset the model
     //so that QT will refresh the view properly
@@ -112,6 +112,11 @@ void CANFrameModel::setInterpetMode(bool mode)
         interpretFrames = mode;
         this->endResetModel();
     }
+}
+
+bool CANFrameModel::getInterpretMode()
+{
+    return interpretFrames;
 }
 
 void CANFrameModel::setTimeFormat(QString format)

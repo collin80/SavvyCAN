@@ -8,6 +8,7 @@
 #include "connections/connectionwindow.h"
 #include "helpwindow.h"
 #include "utility.h"
+#include "filterutility.h"
 
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
@@ -142,6 +143,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listFilters->horizontalScrollBar()->setEnabled(false);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
@@ -324,7 +328,13 @@ void MainWindow::readUpdateableSettings()
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
 
-}
+    if (settings.value("Main/FilterLabeling", false).toBool())
+        ui->listFilters->setMaximumWidth(250);
+    else
+        ui->listFilters->setMaximumWidth(175);
+    updateFilterList();    
+}    
+
 
 void MainWindow::writeSettings()
 {
@@ -391,7 +401,7 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
 
 void MainWindow::interpretToggled(bool state)
 {
-    model->setInterpetMode(state);
+    model->setInterpretMode(state);
     //ui->canFramesView->resizeRowsToContents();   //a VERY costly operation!
 }
 
@@ -429,12 +439,7 @@ void MainWindow::updateFilterList()
     QMap<int, bool>::const_iterator filterIter;
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
-        QListWidgetItem *thisItem = new QListWidgetItem();
-        thisItem->setText(Utility::formatCANID(filterIter.key()));
-        thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-        if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
-            else thisItem->setCheckState(Qt::Unchecked);
-        ui->listFilters->addItem(thisItem);
+        QListWidgetItem *thisItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
 }
 
@@ -442,9 +447,10 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
 {
     if (inhibitFilterUpdate) return;
     //qDebug() << item->text();
-    int ID;
+
+    // strip away possible filter label
+    int ID = FilterUtility::getIdAsInt(item);
     bool isSet = false;
-    ID = Utility::ParseStringToNum(item->text());
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);

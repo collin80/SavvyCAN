@@ -5,6 +5,7 @@
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
+#include "filterutility.h"
 
 FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -42,6 +43,9 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
     ui->cbBuses->addItem(tr("All"));
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listID->horizontalScrollBar()->setEnabled(false);    
 
     installEventFilter(this);
 }
@@ -95,11 +99,7 @@ void FuzzingWindow::updatedFrames(int numFrames)
             {
                 foundIDs.append(id);
                 selectedIDs.append(id);
-                QListWidgetItem *thisItem = new QListWidgetItem();
-                thisItem->setText(Utility::formatCANID(id, modelFrames->at(i).extended));
-                thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-                thisItem->setCheckState(Qt::Checked);
-                ui->listID->addItem(thisItem);
+                FilterUtility::createCheckableFilterItem(id, true, ui->listID);
             }
         }
     }
@@ -376,11 +376,7 @@ void FuzzingWindow::refreshIDList()
         {
             foundIDs.append(id);
             selectedIDs.append(id);
-            QListWidgetItem *thisItem = new QListWidgetItem();
-            thisItem->setText(Utility::formatCANID(id, thisFrame.extended));
-            thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-            thisItem->setCheckState(Qt::Checked);
-            ui->listID->addItem(thisItem);
+            FilterUtility::createCheckableFilterItem(id, true, ui->listID);
         }
     }
     //default is to sort in ascending order
@@ -389,7 +385,7 @@ void FuzzingWindow::refreshIDList()
 
 void FuzzingWindow::idListChanged(QListWidgetItem *item)
 {
-    int id = Utility::ParseStringToNum(item->text());
+    int id = FilterUtility::getIdAsInt(item);
     if (item->checkState() == Qt::Checked)
     {
         if (!selectedIDs.contains(id))
