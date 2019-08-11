@@ -432,6 +432,8 @@ void MainWindow::updateFilterList()
 
     qDebug() << "updateFilterList called on MainWindow";
 
+    inhibitFilterUpdate = true;
+
     ui->listFilters->clear();
 
     if (filters->isEmpty()) return;
@@ -441,6 +443,7 @@ void MainWindow::updateFilterList()
     {
         QListWidgetItem *thisItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
+    inhibitFilterUpdate = false;
 }
 
 void MainWindow::filterListItemChanged(QListWidgetItem *item)
