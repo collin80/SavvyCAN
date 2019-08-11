@@ -61,6 +61,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->comboSendingBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
+    ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", false).toBool());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -83,6 +84,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->lineRemotePort, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbLoadConnections, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbFilterLabeling, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     installEventFilter(this);
 }
 
@@ -141,6 +143,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Remote/Host", ui->lineRemoteHost->text());
     settings.setValue("Remote/Port", ui->lineRemotePort->text());
     settings.setValue("Remote/AutoStart", ui->cbAutoStartRemote->isChecked());
+    settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
 
     settings.sync();
     emit updatedSettings();

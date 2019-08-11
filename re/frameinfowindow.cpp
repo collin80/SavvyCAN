@@ -4,6 +4,7 @@
 #include "helpwindow.h"
 #include <QtDebug>
 #include <vector>
+#include "filterutility.h"
 
 const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                     Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -22,7 +23,13 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     modelFrames = frames;
 
-    connect(ui->listFrameID, &QListWidget::currentTextChanged, this, &FrameInfoWindow::updateDetailsWindow);
+    // Using lambda expression to strip away the possible filter label before passing the ID to updateDetailsWindow
+    connect(ui->listFrameID, &QListWidget::currentTextChanged, 
+        [this](QString itemText)
+            {
+            FrameInfoWindow::updateDetailsWindow(FilterUtility::getId(itemText));
+            } );
+
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
 
@@ -82,6 +89,9 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
         ui->timeHistogram->setAntialiasedElements(QCP::aeNone);
     }
 
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listFrameID->horizontalScrollBar()->setEnabled(false);
+
     installEventFilter(this);
 
     for (int i = 0; i < 8; i++)
@@ -98,7 +108,7 @@ void FrameInfoWindow::showEvent(QShowEvent* event)
     refreshIDList();
     if (ui->listFrameID->count() > 0)
     {
-        updateDetailsWindow(ui->listFrameID->item(0)->text());
+        updateDetailsWindow(FilterUtility::getId(ui->listFrameID->item(0)));
         ui->listFrameID->setCurrentRow(0);
     }
 }
@@ -135,12 +145,23 @@ void FrameInfoWindow::closeEvent(QCloseEvent *event)
 void FrameInfoWindow::readSettings()
 {
     QSettings settings;
+ 
+    if (settings.value("Main/FilterLabeling", false).toBool())
+    {
+        ui->listFrameID->setMinimumWidth(250);
+    }
+    else
+    {
+        ui->listFrameID->setMinimumWidth(120);    
+    }
+
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("FrameInfo/WindowSize", QSize(794, 694)).toSize());
         move(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint());
     }
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
+
 }
 
 void FrameInfoWindow::writeSettings()
@@ -174,7 +195,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         refreshIDList();
         if (ui->listFrameID->count() > 0)
         {
-            updateDetailsWindow(ui->listFrameID->item(0)->text());
+            updateDetailsWindow(FilterUtility::getId(ui->listFrameID->item(0)));
             ui->listFrameID->setCurrentRow(0);
         }
     }
@@ -185,7 +206,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
 
         unsigned int currID = 0;
         if (ui->listFrameID->currentItem())
-            currID = static_cast<unsigned int>(ui->listFrameID->currentItem()->text().toInt(nullptr, 16));
+            currID = static_cast<unsigned int>(FilterUtility::getIdAsInt(ui->listFrameID->currentItem()));
         bool thisID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
@@ -194,7 +215,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
             if (!foundID.contains(id))
             {
                 foundID.append(id);
-                ui->listFrameID->addItem(Utility::formatCANID(id, thisFrame.extended));
+                FilterUtility::createFilterItem(id, ui->listFrameID);
             }
 
             if (currID == modelFrames->at(x).ID)
@@ -266,6 +287,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         if (frameCache[0].extended) //if these frames seem to be extended then try for J1939 decoding
         {
+            // ------- J1939 decoding ----------
             J1939ID jid;
             jid.src = targettedID & 0xFF;
             jid.priority = targettedID >> 26;
@@ -273,36 +295,56 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             jid.pf = (targettedID >> 16) & 0xFF;
             jid.ps = (targettedID >> 8) & 0xFF;
 
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("J1939 decoding"));
+            baseNode->addChild(tempItem);
+
             if (jid.pf > 0xEF)
             {
                 jid.isBroadcast = true;
                 jid.dest = 0xFFFF;
                 tempItem = new QTreeWidgetItem();
-                tempItem->setText(0, tr("Broadcast Frame"));
+                tempItem->setText(0, tr("   Broadcast Frame"));
                 baseNode->addChild(tempItem);
             }
             else
             {
                 jid.dest = jid.ps;
                 tempItem = new QTreeWidgetItem();
-                tempItem->setText(0, tr("Destination ID: ") + Utility::formatNumber(static_cast<uint64_t>(jid.dest)));
+                tempItem->setText(0, tr("   Destination ID: ") + Utility::formatNumber(static_cast<uint64_t>(jid.dest)));
                 baseNode->addChild(tempItem);
             }
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("SRC: ") + Utility::formatNumber(static_cast<uint64_t>(jid.src)));
+            tempItem->setText(0, tr("   SRC: ") + Utility::formatNumber(static_cast<uint64_t>(jid.src)));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PGN: ") + Utility::formatNumber(static_cast<uint64_t>(jid.pgn)) + "(" + QString::number(jid.pgn) + ")");
+            tempItem->setText(0, tr("   PGN: ") + Utility::formatNumber(static_cast<uint64_t>(jid.pgn)) + "(" + QString::number(jid.pgn) + ")");
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PF: ") + Utility::formatNumber(static_cast<uint64_t>(jid.pf)));
+            tempItem->setText(0, tr("   PF: ") + Utility::formatNumber(static_cast<uint64_t>(jid.pf)));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("PS: ") + Utility::formatNumber(static_cast<uint64_t>(jid.ps)));
+            tempItem->setText(0, tr("   PS: ") + Utility::formatNumber(static_cast<uint64_t>(jid.ps)));
             baseNode->addChild(tempItem);
+
+            // ------- GMLAN 29bit decoding ----------
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("GMLAN 29bit decoding"));
+            baseNode->addChild(tempItem);
+
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   Priority bits: ") + Utility::formatNumber( FilterUtility::getGMLanPriorityBits(targettedID)));
+            baseNode->addChild(tempItem);
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   Arbitration Id: ") + Utility::formatNumber( FilterUtility::getGMLanArbitrationId(targettedID)));
+            baseNode->addChild(tempItem);
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   Sender Id: ") + Utility::formatNumber( FilterUtility::getGMLanSenderId(targettedID)));
+            baseNode->addChild(tempItem);
+
         }
 
         tempItem = new QTreeWidgetItem();
@@ -562,7 +604,7 @@ void FrameInfoWindow::refreshIDList()
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            ui->listFrameID->addItem(Utility::formatCANID(id, thisFrame.extended));
+            FilterUtility::createFilterItem(id, ui->listFrameID);
         }
     }
     //default is to sort in ascending order
@@ -603,7 +645,7 @@ void FrameInfoWindow::saveDetails()
             //go through all IDs, recalculate the data, and then save it to file
             for (int i = 0; i < ui->listFrameID->count(); i++)
             {
-                updateDetailsWindow(ui->listFrameID->item(i)->text());
+                updateDetailsWindow(FilterUtility::getId(ui->listFrameID->item(i)));
                 dumpNode(ui->treeDetails->invisibleRootItem(), outFile, 0);
                 outFile->write("\n\n");
             }

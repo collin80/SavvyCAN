@@ -74,6 +74,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="cbFilterLabeling">
+          <property name="text">
+           <string>Label filters using messages from DBC files</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbUseOpenGL">
           <property name="text">
            <string>OpenGL Accelerated AntiAliased Graphing</string>
