@@ -68,7 +68,8 @@ SOURCES += main.cpp\
     blfhandler.cpp \
     re/sniffer/SnifferDelegate.cpp \
     connections/newconnectiondialog.cpp \
-    re/temporalgraphwindow.cpp
+    re/temporalgraphwindow.cpp \
+    filterutility.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -127,7 +128,8 @@ HEADERS  += mainwindow.h \
     blfhandler.h \
     re/sniffer/SnifferDelegate.h \
     connections/newconnectiondialog.h \
-    re/temporalgraphwindow.h
+    re/temporalgraphwindow.h \
+    filterutility.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \

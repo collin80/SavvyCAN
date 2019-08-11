@@ -2,6 +2,7 @@
 #include "ui_flowviewwindow.h"
 #include "mainwindow.h"
 #include "helpwindow.h"
+#include "filterutility.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -85,7 +86,6 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->btnForwardOne, SIGNAL(clicked(bool)), this, SLOT(btnFwdOneClick()));
     connect(ui->spinPlayback, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     connect(ui->cbLoopPlayback, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
-    connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(changeID(QString)));
     connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
     connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
     connect(ui->txtTrigger0, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
@@ -97,6 +97,13 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->txtTrigger6, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
     connect(ui->txtTrigger7, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
 
+    // Using lambda expression to strip away the possible filter label before passing the ID to updateDetailsWindow
+    connect(ui->listFrameID, &QListWidget::currentTextChanged, 
+        [this](QString itemText)
+            {
+            changeID(FilterUtility::getId(itemText));
+            } );
+
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
     ui->graphView->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -104,6 +111,9 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->flowView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
     connect(ui->flowView, SIGNAL(gridClicked(int,int)), this, SLOT(gotCellClick(int, int)));
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listFrameID->horizontalScrollBar()->setEnabled(false);
 
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 }
@@ -119,7 +129,7 @@ void FlowViewWindow::showEvent(QShowEvent* event)
     refreshIDList();
     if (ui->listFrameID->count() > 0)
     {
-        changeID(ui->listFrameID->item(0)->text());
+        changeID(FilterUtility::getId(ui->listFrameID->item(0)));
         ui->listFrameID->setCurrentRow(0);
     }
     updateFrameLabel();
@@ -160,6 +170,11 @@ void FlowViewWindow::readSettings()
     {
         ui->cbTimeGraph->setChecked(true);
     }
+
+    if (settings.value("Main/FilterLabeling", false).toBool())
+        ui->listFrameID->setMaximumWidth(250);
+    else
+        ui->listFrameID->setMaximumWidth(120);    
 
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     openGLMode = settings.value("Main/UseOpenGL", false).toBool();
@@ -252,7 +267,7 @@ void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
 
     for (int j = 0; j < ui->listFrameID->count(); j++)
     {
-        int thisNum = Utility::ParseStringToNum(ui->listFrameID->item(j)->text());
+        int thisNum = FilterUtility::getIdAsInt(ui->listFrameID->item(j));
         if (thisNum == ID)
         {
             ui->listFrameID->setCurrentRow(j);
@@ -423,7 +438,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
             if (!foundID.contains(thisFrame.ID))
             {
                 foundID.append(thisFrame.ID);
-                /*QListWidgetItem* item =*/ new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listFrameID);
+                FilterUtility::createFilterItem(thisFrame.ID, ui->listFrameID);
             }
 
             if (thisFrame.ID == refID)
@@ -540,7 +555,7 @@ void FlowViewWindow::refreshIDList()
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            /*QListWidgetItem* item = */ new QListWidgetItem(Utility::formatCANID(id, thisFrame.extended), ui->listFrameID);
+            FilterUtility::createFilterItem(id, ui->listFrameID);
         }
     }
     //default is to sort in ascending order

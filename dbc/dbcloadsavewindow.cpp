@@ -1,6 +1,6 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
-#include <QCheckBox>
+#include <QComboBox>
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
 
@@ -18,13 +18,43 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     inhibitCellProcessing = false;
 
     QStringList header;
-    header << "Filename" << "Associated Bus" << "J1939";
-    ui->tableFiles->setColumnCount(3);
+    header << "Filename" << "Associated Bus" << "Matching criteria" << "Label filters";
+    ui->tableFiles->setColumnCount(4);
     ui->tableFiles->setHorizontalHeaderLabels(header);
     ui->tableFiles->setColumnWidth(0, 265);
     ui->tableFiles->setColumnWidth(1, 125);
-    ui->tableFiles->setColumnWidth(2, 80);
+    ui->tableFiles->setColumnWidth(2, 120);
+    ui->tableFiles->setColumnWidth(3, 90);
     ui->tableFiles->horizontalHeader()->setStretchLastSection(true);
+
+    // Populate table
+    for (int idx=0; idx<dbcHandler->getFileCount(); idx++)
+    {
+        DBCFile * file = dbcHandler->getFileByIdx(idx);
+        ui->tableFiles->insertRow(ui->tableFiles->rowCount());
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
+        QString bus = QString::number(file->getAssocBus() );
+        ui->tableFiles->setItem(idx, 1, new QTableWidgetItem(bus));
+
+        QComboBox * mc_item = addMatchingCriteriaCombobox(idx);
+        int mc = (int)file->messageHandler->getMatchingCriteria();
+        mc_item->setCurrentIndex(mc);
+
+        QTableWidgetItem *item = new QTableWidgetItem("");
+        ui->tableFiles->setItem(idx, 3, item);
+        bool filterLabeling = file->messageHandler->filterLabeling();
+        if (filterLabeling)
+        {
+            item->setCheckState(Qt::Checked);
+        }
+        else
+        {
+            item->setCheckState(Qt::Unchecked);
+        }
+
+        qDebug() << "Populate DBC table:" << file->getFullFilename() << " (bus:" << bus << " - Matching Criteria:" << mc 
+            << "Filter labeling: " << (filterLabeling?"enabled":"disabled") << ")";
+    }
 
     connect(ui->btnEdit, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::editFile);
     connect(ui->btnLoad, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFile);
@@ -42,10 +72,40 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     installEventFilter(this);
 }
 
+QComboBox * DBCLoadSaveWindow::addMatchingCriteriaCombobox(int row)
+{
+    QComboBox *item = new QComboBox();
+    item->addItem("Exact");
+    item->addItem("J1939");
+    item->addItem("GMLAN");
+    ui->tableFiles->setCellWidget(row, 2, item);
+    connect(item, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+        [this](int box_idx) { matchingCriteriaChanged(box_idx); } );
+    return item;
+}
+
 DBCLoadSaveWindow::~DBCLoadSaveWindow()
 {
     removeEventFilter(this);
     delete ui;
+}
+
+void DBCLoadSaveWindow::updateSettings()
+{
+    QSettings settings;
+    int filecount = ui->tableFiles->rowCount();
+    settings.setValue("DBC/FileCount", filecount);
+    for (int i=0; i<filecount; i++)
+    {
+        DBCFile * file = dbcHandler->getFileByIdx(i);
+        if (file)
+        {
+            settings.setValue("DBC/Filename_" + QString(i), file->getFullFilename());
+            settings.setValue("DBC/AssocBus_" + QString(i), file->getAssocBus());
+            settings.setValue("DBC/MatchingCriteria_" + QString(i), file->messageHandler->getMatchingCriteria());            
+            settings.setValue("DBC/FilterLabeling_" + QString(i), file->messageHandler->filterLabeling());   
+        }
+    }
 }
 
 bool DBCLoadSaveWindow::eventFilter(QObject *obj, QEvent *event)
@@ -74,9 +134,12 @@ void DBCLoadSaveWindow::newFile()
     ui->tableFiles->setItem(idx, 0, new QTableWidgetItem("UNNAMEDFILE"));
     ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
 
+    QComboBox * mc_item = addMatchingCriteriaCombobox(idx);
+    mc_item->setCurrentIndex(EXACT);
+
     QTableWidgetItem *item = new QTableWidgetItem("");
-    item->setCheckState(Qt::Unchecked);
-    ui->tableFiles->setItem(idx, 2, item);
+    item->setCheckState(Qt::Checked);
+    ui->tableFiles->setItem(idx, 3, item);    
 }
 
 void DBCLoadSaveWindow::loadFile()
@@ -87,9 +150,17 @@ void DBCLoadSaveWindow::loadFile()
         ui->tableFiles->insertRow(ui->tableFiles->rowCount());
         ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
         ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
-        DBC_ATTRIBUTE *attr = file->findAttributeByName("isj1939dbc");
+
+        DBC_ATTRIBUTE *attr = file->findAttributeByName("matchingcriteria");
+        QComboBox * mc_item = addMatchingCriteriaCombobox(idx);
+        if (attr && attr->defaultValue > 0)
+        {
+            mc_item->setCurrentIndex(attr->defaultValue.toInt());
+        }
+
+        attr = file->findAttributeByName("filterlabeling");
         QTableWidgetItem *item = new QTableWidgetItem("");
-        ui->tableFiles->setItem(idx, 2, item);
+        ui->tableFiles->setItem(idx, 3, item);
         if (attr && attr->defaultValue > 0)
         {
             item->setCheckState(Qt::Checked);
@@ -98,6 +169,8 @@ void DBCLoadSaveWindow::loadFile()
         {
             item->setCheckState(Qt::Unchecked);
         }
+
+        updateSettings();
     }
 }
 
@@ -131,6 +204,7 @@ void DBCLoadSaveWindow::removeFile()
         dbcHandler->removeDBCFile(idx);
         ui->tableFiles->removeRow(idx);
     }
+    updateSettings();
 }
 
 void DBCLoadSaveWindow::moveUp()
@@ -139,6 +213,7 @@ void DBCLoadSaveWindow::moveUp()
     if (idx < 1) return;
     dbcHandler->swapFiles(idx - 1, idx);
     swapTableRows(true);
+    updateSettings();
 }
 
 void DBCLoadSaveWindow::moveDown()
@@ -148,6 +223,7 @@ void DBCLoadSaveWindow::moveDown()
     if (idx > (dbcHandler->getFileCount() - 2)) return;
     dbcHandler->swapFiles(idx, idx + 1);
     swapTableRows(false);
+    updateSettings();
 }
 
 void DBCLoadSaveWindow::editFile()
@@ -159,6 +235,42 @@ void DBCLoadSaveWindow::editFile()
     editorWindow->show();
 }
 
+void DBCLoadSaveWindow::matchingCriteriaChanged(int index)
+{
+    // We don't know which combobox changed, so we just update all of them
+    for (int row=0; row<ui->tableFiles->rowCount(); row++)
+    {
+        DBCFile *file = dbcHandler->getFileByIdx(row);
+        if (file)
+        {
+            QComboBox *item = (QComboBox*)ui->tableFiles->cellWidget(row, 2);
+            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t) item->currentIndex();
+            DBC_ATTRIBUTE *attr = file->findAttributeByName("matchingcriteria");
+            if (attr)
+            {
+                attr->defaultValue = matchingCriteria;
+                file->messageHandler->setMatchingCriteria(matchingCriteria);
+            }
+            else
+            {
+                DBC_ATTRIBUTE attr;
+
+                attr.attrType = MESSAGE;
+                attr.defaultValue = matchingCriteria;
+                attr.enumVals.clear();
+                attr.lower = 0;
+                attr.upper = 0;
+                attr.name = "matchingcriteria";
+                attr.valType = QINT;
+                file->dbc_attributes.append(attr);
+                file->messageHandler->setMatchingCriteria(matchingCriteria);
+            }
+        }
+    }
+    updateSettings();
+}
+
+
 void DBCLoadSaveWindow::cellChanged(int row, int col)
 {
     if (inhibitCellProcessing) return;
@@ -167,39 +279,40 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
         DBCFile *file = dbcHandler->getFileByIdx(row);
         int bus = ui->tableFiles->item(row, col)->text().toInt();
         int numBuses = CANConManager::getInstance()->getNumBuses();
-        if (bus > -2 && bus < numBuses)
+        if (bus > -2)
         {
             file->setAssocBus(bus);
         }
-    }
-    else if (col == 2)
+        updateSettings();
+    } 
+    else if (col == 3) // labelfilters
     {
         DBCFile *file = dbcHandler->getFileByIdx(row);
         if (file)
         {
-            //int isj1939dbc = ui->tableFiles->item(row, col)->text().toInt();
-            bool isj1939dbc = ui->tableFiles->item(row, col)->checkState() == Qt::Checked;
-            DBC_ATTRIBUTE *attr = file->findAttributeByName("isj1939dbc");
+            bool labelFilters = ui->tableFiles->item(row, col)->checkState() == Qt::Checked;
+            DBC_ATTRIBUTE *attr = file->findAttributeByName("filterlabeling");
             if (attr)
             {
-                attr->defaultValue = isj1939dbc ? 1 : 0;
-                file->messageHandler->setJ1939(isj1939dbc);
+                attr->defaultValue = labelFilters ? 1 : 0;
+                file->messageHandler->setFilterLabeling(labelFilters);
             }
             else
             {
                 DBC_ATTRIBUTE attr;
 
                 attr.attrType = MESSAGE;
-                attr.defaultValue = isj1939dbc ? 1 : 0;
+                attr.defaultValue = labelFilters ? 1 : 0;
                 attr.enumVals.clear();
                 attr.lower = 0;
                 attr.upper = 0;
-                attr.name = "isj1939dbc";
+                attr.name = "labelfilters";
                 attr.valType = QINT;
                 file->dbc_attributes.append(attr);
-                file->messageHandler->setJ1939(isj1939dbc);
+                file->messageHandler->setFilterLabeling(labelFilters);
             }
-        }
+            updateSettings();
+        }        
     }
 }
 
@@ -222,9 +335,16 @@ void DBCLoadSaveWindow::swapTableRows(bool up)
     QList<QTableWidgetItem*> sourceItems = takeRow(idx);
     QList<QTableWidgetItem*> destItems = takeRow(destIdx);
 
+    // QCombobox needs separate handling
+    int sourceMC = ((QComboBox*)ui->tableFiles->cellWidget(idx,2))->currentIndex();
+    int destMC = ((QComboBox*)ui->tableFiles->cellWidget(destIdx,2))->currentIndex();
+
     // set back in reverse order
     setRow(idx, destItems);
     setRow(destIdx, sourceItems);
+
+    ((QComboBox*)ui->tableFiles->cellWidget(idx,2))->setCurrentIndex(destMC);
+    ((QComboBox*)ui->tableFiles->cellWidget(destIdx,2))->setCurrentIndex(sourceMC);
 
     inhibitCellProcessing = false;
 }
