@@ -6,6 +6,7 @@
 #include <QSettings>
 #include "connections/canconmanager.h"
 #include "helpwindow.h"
+#include "filterutility.h"
 
 /*
  * Notes about new functionality:
@@ -77,6 +78,9 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->listID, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuFilters(QPoint)));
 
     playbackObject.setPlaybackInterval(ui->spinPlaySpeed->value());
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listID->horizontalScrollBar()->setEnabled(false);    
 
     QStringList headers;
     headers << "Source" << "Loops";
@@ -197,7 +201,7 @@ void FramePlaybackWindow::saveFilters()
 
             for (int c = 0; c < ui->listID->count(); c++)
             {
-                outFile->write(QString::number(ui->listID->item(c)->text().toInt(nullptr, 16), 16).toUtf8());
+                outFile->write(QString::number(FilterUtility::getId(ui->listID->item(c)).toInt(nullptr, 16), 16).toUtf8());
                 outFile->putChar(',');
                 if (ui->listID->item(c)->checkState() == Qt::Checked) outFile->putChar('T');
                 else outFile->putChar('F');
@@ -260,7 +264,7 @@ void FramePlaybackWindow::loadFilters()
                     for (int c = 0; c < ui->listID->count(); c++)
                     {
                         QListWidgetItem *item = ui->listID->item(c);
-                        if (item->text().toInt(nullptr, 16) == ID)
+                        if (FilterUtility::getId(item).toInt(nullptr, 16) == ID)
                         {
                             item->setCheckState(Qt::Checked);
                         }
@@ -291,10 +295,7 @@ void FramePlaybackWindow::refreshIDList()
     QHash<int, bool>::Iterator filterIter;
     for (filterIter = currentSeqItem->idFilters.begin(); filterIter != currentSeqItem->idFilters.end(); ++filterIter)
     {
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(filterIter.key()), ui->listID);
-        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-        if (filterIter.value()) listItem->setCheckState(Qt::Checked);
-        else listItem->setCheckState(Qt::Unchecked);
+        QListWidgetItem* listItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listID);
     }
     //default is to sort in ascending order
     ui->listID->sortItems();
@@ -611,7 +612,7 @@ void FramePlaybackWindow::changeSendingBus(int newIdx)
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
 {
     qDebug() << "Changed ID filter " << item->text() << " : " << item->checkState();
-    int ID = Utility::ParseStringToNum(item->text());
+    int ID = FilterUtility::getIdAsInt(item);
     currentSeqItem->idFilters[ID] = (item->checkState() == Qt::Checked) ? true : false;
 }
 
