@@ -15,7 +15,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
 
     ui->setupUi(this);
 
-    inhibitCellProcessing = false;
+    inhibitCellProcessing = true;
 
     QStringList header;
     header << "Filename" << "Associated Bus" << "Matching criteria" << "Label filters";
@@ -69,6 +69,8 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     editorWindow = new DBCMainEditor(frames, this);
     currentlyEditingFile = nullptr;
 
+    inhibitCellProcessing = false;
+
     installEventFilter(this);
 }
 
@@ -100,12 +102,16 @@ void DBCLoadSaveWindow::updateSettings()
         DBCFile * file = dbcHandler->getFileByIdx(i);
         if (file)
         {
+            qDebug() << "Save DBC settings #" << i << " File: " << file->getFullFilename() 
+                << "Bus: " << file->getAssocBus() << "MC: " << file->messageHandler->getMatchingCriteria()
+                << "Filter Labeling: " << (file->messageHandler->filterLabeling() ? "enabled" : "disabled");
             settings.setValue("DBC/Filename_" + QString(i), file->getFullFilename());
             settings.setValue("DBC/AssocBus_" + QString(i), file->getAssocBus());
             settings.setValue("DBC/MatchingCriteria_" + QString(i), file->messageHandler->getMatchingCriteria());            
             settings.setValue("DBC/FilterLabeling_" + QString(i), file->messageHandler->filterLabeling());   
         }
     }
+    emit updatedDBCSettings();
 }
 
 bool DBCLoadSaveWindow::eventFilter(QObject *obj, QEvent *event)
@@ -146,6 +152,7 @@ void DBCLoadSaveWindow::loadFile()
 {
     DBCFile *file = dbcHandler->loadDBCFile(-1);
     if(file) {
+        inhibitCellProcessing=true;
         int idx = ui->tableFiles->rowCount();
         ui->tableFiles->insertRow(ui->tableFiles->rowCount());
         ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
@@ -169,6 +176,7 @@ void DBCLoadSaveWindow::loadFile()
         {
             item->setCheckState(Qt::Unchecked);
         }
+        inhibitCellProcessing=false;
 
         updateSettings();
     }
@@ -237,6 +245,7 @@ void DBCLoadSaveWindow::editFile()
 
 void DBCLoadSaveWindow::matchingCriteriaChanged(int index)
 {
+    if (inhibitCellProcessing) return;
     // We don't know which combobox changed, so we just update all of them
     for (int row=0; row<ui->tableFiles->rowCount(); row++)
     {
