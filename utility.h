@@ -67,10 +67,11 @@ public:
         return pInput.toUInt(pOk_p, 0);
     }
 
-    static long GetTimeMS()
+    static uint64_t GetTimeMS()
     {
         QDateTime stamp = QDateTime::currentDateTime();
-        return (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
+        return (((static_cast<uint64_t>(stamp.time().hour()) * 3600ull) + (static_cast<uint64_t>(stamp.time().minute()) * 60ull)
+                 + (static_cast<uint64_t>(stamp.time().second())) * 1000ull) + static_cast<uint64_t>(stamp.time().msec()));
     }
 
     //prints hex numbers in uppercase with 0's filling out the number depending

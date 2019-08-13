@@ -224,6 +224,7 @@ void GraphingWindow::updatedFrames(int numFrames)
 
 void GraphingWindow::plottableClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event)
 {
+    Q_UNUSED(dataIdx);
     qDebug() << "plottableClick";
     double x, y;
     QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
@@ -1150,7 +1151,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         //qDebug() << tempVal;
         if (secondsMode)
         {
-            params.x[j] = (double)(frameCache[k].timestamp) / 1000000.0;
+            params.x[j] = (frameCache[k].timestamp) / 1000000.0;
         }
         else
         {
