@@ -51,7 +51,7 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
     if (index.column() > 9) return;
 
-    int x, y;
+    int x;
     SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
     int idx = index.column() - 2;
     int val = item->getData(idx);

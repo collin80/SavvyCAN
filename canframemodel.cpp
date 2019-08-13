@@ -209,12 +209,12 @@ uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
         if (frame.isReceived) return 1;
         return 0;
     case Column::Bus:
-        return frame.bus;
+        return static_cast<uint64_t>(frame.bus);
     case Column::Length:
-        return frame.len;
+        return static_cast<uint64_t>(frame.len);
     case Column::ASCII: //sort both the same for now
     case Column::Data:
-        for (uint32_t i = 0; i < frame.len; i++) temp += ((uint64_t)frame.data[i] << (56 - (8 * i)));
+        for (int i = 0; i < frame.len; i++) temp += (static_cast<uint64_t>(frame.data[i]) << (56 - (8 * i)));
         //qDebug() << temp;
         return temp;
     case Column::NUM_COLUMN:
