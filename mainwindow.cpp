@@ -1029,11 +1029,19 @@ void MainWindow::showFlowViewWindow()
     flowViewWindow->show();
 }
 
+
+void MainWindow::DBCSettingsUpdated()
+    {
+    updateFilterList();
+    model->sendRefresh();
+    }
+
 void MainWindow::showDBCFileWindow()
 {
     if (!dbcFileWindow)
     {
         dbcFileWindow = new DBCLoadSaveWindow(model->getListReference());
+        connect(dbcFileWindow, &DBCLoadSaveWindow::updatedDBCSettings, this, &MainWindow::DBCSettingsUpdated);
     }
     dbcFileWindow->show();
 }

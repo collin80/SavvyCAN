@@ -31,6 +31,9 @@ private slots:
     void matchingCriteriaChanged(int index);
     void newFile();
 
+signals:
+    void updatedDBCSettings();
+
 private:
     Ui::DBCLoadSaveWindow *ui;
     DBCHandler *dbcHandler;
