@@ -188,8 +188,8 @@ iconfiles.files=icons
 iconfiles.path = $$PREFIX/share/icons
 INSTALLS += iconfiles
 
-helpfiles.files=SavvyCAN.q*
-helpfiles.path = $$PREFIX/bin
+helpfiles.files=help/*
+helpfiles.path = $$PREFIX/bin/help
 INSTALLS += helpfiles
 
 INSTALLS += target
