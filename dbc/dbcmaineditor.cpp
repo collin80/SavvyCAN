@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QColorDialog>
+#include <qevent.h>
 #include "helpwindow.h"
 
 DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) :

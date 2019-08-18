@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>74. Custom Sender Window</title>
+    <link rel="stylesheet" href="_static/nonav.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="custom-sender-window">
+<h1>74. Custom Sender Window</h1>
+<p>.</p>
+<img alt="_images/CustomSender.png" src="_images/CustomSender.png" />
+</div>
+<div class="section" id="general-overview">
+<h1>75. General Overview</h1>
+<p>This window allows you to create custom frames that will be sent out on one of the can buses. The uses are endless.
+It can be used to generate valid traffic to control connected hardware. It can be used to test out various ideas
+you might have for now to interact with other devices. It can replay frames from one bus into the other bus but with
+modifications.</p>
+</div>
+<div class="section" id="layout-of-the-view">
+<h1>76. Layout of the View</h1>
+<p>This screen is laid out as a data grid.</p>
+<ul class="simple">
+<li>The first field is “En” which stands for Enabled. If the checkbox is checked
+then this line will be active.</li>
+<li>The second field is “Bus” and sets which bus to use for sending.</li>
+<li>The third field is “ID” and is the ID to use for sending. It can be specified in hex or decimal formats.</li>
+<li>The fourth field is “Len” and sets the number of data bytes for this frame.</li>
+<li>The fifth field is “Data” and specifies what values will be sent for the next frame. These values can be
+automatically updated by the modifiers which will be covered later on.</li>
+<li>The sixth field is “Trigger” which specifies when this frame will be sent. Proper syntax for triggers is
+covered later.</li>
+<li>The seventh field is “Modifications” which specifies how the data bytes for this frame will be changed for
+the next frame sent. Full syntax for this is covered later on.</li>
+<li>The final field is “Count” and is automatically filled out with the number of frames that have been sent as
+a result of this line.</li>
+</ul>
+</div>
+<div class="section" id="writing-trigger-rules">
+<h1>77. Writing Trigger Rules</h1>
+<p>It should first be noted that each line can contain multiple triggers. Each trigger is separated by a comma ‘,’.</p>
+<p>Triggers are allowed to have one or more conditions. Each condition contained within a single trigger is separated
+by a space ‘ ‘.</p>
+<p>The program implments the following conditions:</p>
+<ul class="simple">
+<li>id - Set the trigger to activate when a frame with the given ID is received. The syntax is ‘id’
+followed by the numeric ID you want to match. Example: ‘id0x200’</li>
+<li>ms - Set the number of milliseconds to wait. This condition acts differently depending on whether
+you have set ID matching as well. If so then ms will cause a delay of the requested number of milliseconds
+after receiving a frame with the ID. If not, the trigger will constantly fire every time the requested number
+of milliseconds have elapsed. The syntax is the number of desired milliseconds followed by ‘ms’. For example:
+‘40ms’.</li>
+<li>x - Only allow this trigger to fire a set number of times. The syntax is the number of times you want the trigger
+to fire followed by ‘x’. For example: ‘100x’.</li>
+<li>bus - Only trigger when a frame with the given ID comes in on the specified bus. Otherwise the triggering frame
+could come from either bus. The syntax is ‘bus’ followed by either ‘0’ or ‘1’. For example: ‘bus0’</li>
+</ul>
+<p>Now, a full example of a trigger line: “id0x200 5ms 10x bus0,1000ms” This trigger means: Trigger when a frame with ID 0x200 comes
+in on bus 0. Wait 5 milliseconds before sending and only allow this to happen at most 10 times. Also, always trigger every
+1 second and never stop doing this.</p>
+</div>
+<div class="section" id="writing-modifications">
+<h1>78. Writing Modifications</h1>
+<p>As with the triggers, you can have multiple modifications per line; each of which is separated by a comma ‘,’.</p>
+<p>Modifications always start with a data byte to modify The syntax is ‘D’ or ‘d’ followed by a number 0 through 7.
+For example: ‘D4’. This is then always followed by an equal sign ‘=’. Thereafter there is a string of operands and
+operations.</p>
+<p>Operands have a special syntax. Each operand can have multiple sections separated by colons ‘:’.</p>
+<ul class="simple">
+<li>D - A data byte. Specifies which data byte 0 - 7 from the given frame to use for this operation. If specified
+on its own it will reference the data in the “Data” section of this line. The syntax is ‘d’ or ‘D’ followed
+by a number 0 - 7. Example: ‘D3’.</li>
+<li>ID - Instead of grabbing data from this line’s data bytes grab it from the last frame received with the given ID.
+Syntax: ‘ID’ followed by a colon ‘:’ followed by the ID to match against. Example: ‘ID:0x200’</li>
+<li>BUS - Restrict which bus the frame used for grabbing the data bytes can come in on. Syntax: ‘BUS’ followed by
+a colon ‘:’ followed by 0 or 1 to specify which bus to use. Example: ‘BUS:0’</li>
+<li>&lt;NUMBER&gt; - Instead of using a data byte from somewhere you can instead use a numeric literal. The syntax is
+the same as any number - either a series of numbers or 0x followed by a series of numbers and A - F to specify
+a hexadecimal number. Example: 0x10.</li>
+</ul>
+<p>A few full examples of operands:</p>
+<ul class="simple">
+<li>“bus:0:id:0x120:D3” = Grab byte 3 from the last frame with ID 0x120 that came in on bus 0.</li>
+<li>“0x200” = Use the numeric value 0x200 directly.</li>
+<li>“id:0x200:D7” = Grab byte 7 from the last frame received with ID 0x200.</li>
+</ul>
+<p>Each operand is usually followed by an operation and then a second operand. If no operation or second operand is found that
+is also OK. Thus a modifier can be as simple as “D0 = D1” if you choose. Operands can also be directly chained such that the
+output of the last operation is used as the left hand operand for the next operation. This will be shown later on.</p>
+<p>Modifiers can use the following operations:</p>
+<ul class="simple">
+<li>+ - Add the two operands together. Example: “D1 + D2”</li>
+<li>- - Subtract the second operand from the first operand. Example: “D1 - D2”</li>
+<li>* - Multiply the two operands together. Example: “D1 * D2”</li>
+<li>/ - Divide the first operand by the second operand. Example: “D1 / D2”</li>
+<li>&amp; - Do the bitfield operation AND on the two operands. Example: D1 &amp; 0x20</li>
+<li>| - Do the bitfield operation OR on the two operands. Example: D1 | 0x10</li>
+<li>^ - Do the bitfield operation XOR on the two operands. Example: D1 ^ 0xD2</li>
+</ul>
+<p>Putting all of that together yields complete modifiers. For simplicity all operations
+are done left to right. There is no special order of operations like in normal mathematics.</p>
+<p>Here are a few examples:</p>
+<ul class="simple">
+<li>“D0=D0+1” = Take the value in D0 within this line’s data bytes, add 1, and store it back in D0.</li>
+<li>“D1=ID:0x200:D3+ID:0x200:D4&amp;0xF0” = Grab byte 3 from the most recently received frame with ID 0x200 and add it
+to byte 4 from the same received frame. AND this new value with 0xF0 and finally store it in D1 of the data bytes for this line.</li>
+<li>“D2=D4 * 10 + D3 &amp; 0x3F” = Multiply byte 4 by 10, add the new value to byte 3, AND the resulting value by 0x3F and store it in byte 2.</li>
+</ul>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

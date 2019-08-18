@@ -1,8 +1,9 @@
 #ifndef HELPWINDOW_H
 #define HELPWINDOW_H
 
+#include <Qt>
 #include <QDialog>
-#include <QtHelp>
+#include <QSettings>
 
 namespace Ui {
 class HelpWindow;
@@ -25,7 +26,6 @@ private:
 
     Ui::HelpWindow *ui;
     static HelpWindow *self;
-    QHelpEngineCore *m_helpEngine;
 };
 
 #endif // HELPWINDOW_H

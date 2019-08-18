@@ -2,6 +2,8 @@
 #include "ui_mainsettingsdialog.h"
 #include "helpwindow.h"
 
+#include <qevent.h>
+
 MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MainSettingsDialog)

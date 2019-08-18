@@ -1,6 +1,8 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
 #include <QComboBox>
+#include <QMessageBox>
+#include <qevent.h>
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
 
