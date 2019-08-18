@@ -50,6 +50,7 @@ matrix:
         script:
            - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
            - xcodebuild
+           - mkdir Release/SavvyCAN.app/Contents/MacOS/help
            - cp -R help/*.* Release/SavvyCAN.app/Contents/MacOS/help
            - cd Release
            - ls SavvyCAN.app/Contents/MacOS
