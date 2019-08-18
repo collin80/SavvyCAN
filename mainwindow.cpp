@@ -133,10 +133,16 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
+    lbHelp.setText(tr("Press F1 on any screen for help"));
+    lbHelp.setAlignment(Qt::AlignCenter);
+    QFont boldFont;
+    boldFont.setBold(true);
+    lbHelp.setFont(boldFont);
     updateFileStatus();
     //lbStatusDatabase.setText(tr("No DBC database loaded"));
-    ui->statusBar->addWidget(&lbStatusConnected);
-    ui->statusBar->addWidget(&lbStatusFilename);
+    ui->statusBar->insertWidget(0, &lbStatusConnected, 1);
+    ui->statusBar->insertWidget(1, &lbStatusFilename, 1);
+    ui->statusBar->insertWidget(2, &lbHelp, 1);
     //ui->statusBar->addWidget(&lbStatusDatabase);
     ui->lblRemoteConn->setVisible(false);
     ui->lineRemoteKey->setVisible(false);
