@@ -1,0 +1,53 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>70. Playback Window</title>
+    <link rel="stylesheet" href="_static/nonav.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="playback-window">
+<h1>70. Playback Window</h1>
+<p>.</p>
+<img alt="_images/Playback.png" src="_images/Playback.png" />
+</div>
+<div class="section" id="preparing-frames-for-playback">
+<h1>71. Preparing Frames for Playback</h1>
+<p>The first order of business is to load some CAN frames that you’d like to play back onto a CAN bus. In the lower left is a section titled “Playback Sequence”. It is so named because this playback interface can play a chain of different CAN captures very configurably. It consists of a list of captures to playback along with how many times to play each sequence item. For instance, you could play a file twice then go to the next, then play a third one four times. A playback item can either come from a file (Load File) or from the current list of captured frames on the main window (Load Captured Data). If you load the currently captured frames it truly means “currently”. That is, if more traffic comes in it will not play that new traffic back. A snapshot is taken at the time you push the button. Each sequence item has its own list of ID filters. In this way you can send only some of the frame IDs from the capture and this list can be different for each file or capture you load. The list of ID filters can be saved and loaded to make the process faster in the future.</p>
+<p>Once you’ve set up a sequence of frames to playback you can also decide whether you’d like to loop that sequence forever or not. Up above the Playback Sequence and ID Filtering sections is the “Loop Sequence” checkbox.</p>
+</div>
+<div class="section" id="playing-back-frames">
+<h1>72. Playing Back Frames</h1>
+<p>The playback window can send frames on a specific bus, all buses (be careful with that!) or “From File.” Some file formats store which bus each frame came in on. Also, the main window stores that info. So, captures that stored the bus properly could be used to send frames out multiple buses always to the proper bus for the frame in question. But, if you load a capture without this info it will default to bus 0 so bear that in mind.</p>
+<p>The next order of business is frame timing. There are two approaches possible here. If you click “Use original frame timing from captured frames” then frames will be sent out in approximately the same timing as they came in with. The word approximately is used because it is difficult to get 1ms timing precision on a desktop OS. Frames that come in rapidly might have a 2-3ms jitter. In practice this is almost always irrelevant. This setting is suitable for nearly all uses.</p>
+<p>Alternatively, it is also possible to send on a set schedule. With the “Use original” checkbox not checked you can set a playback speed in milliseconds and a burst rate. Burst means that it’ll send that many frames every tick. So, if you have a burst of 5 and a timing of 10ms then every 10ms 5 frames will be sent. This mode can provide for a predictable number of frames per second and could be useful to test how quickly a device really requires traffic without faulting. But, it will potentially drastically alter the timing of frames compared to their timing when they were captured.</p>
+<p>The top of the window has a series of 6 icons all in a row:</p>
+<ol class="arabic simple">
+<li>White Left Arrow - Play the last frame (just one frame)</li>
+<li>Pause sign - Pause playback</li>
+<li>Green Left Arrow - Play frames backward</li>
+<li>Blue Stop Button - Stop playback and return to the first frame in the first capture in the sequence</li>
+<li>Green Right Arrow - Play frames forward</li>
+<li>White Right Arrow - Play the next frame (just one frame)</li>
+</ol>
+</div>
+<div class="section" id="playback-status">
+<h1>73. Playback Status</h1>
+<p>Below the number spinners for Playback Speed and Burst Rate is text that displays the currently playing sequence item along with the current frame within that capture.</p>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

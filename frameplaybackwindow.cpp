@@ -4,6 +4,8 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QSettings>
+#include <qevent.h>
+#include <QScrollBar>
 #include "connections/canconmanager.h"
 #include "helpwindow.h"
 #include "filterutility.h"

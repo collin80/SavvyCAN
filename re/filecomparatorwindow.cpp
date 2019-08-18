@@ -1,7 +1,9 @@
 #include "filecomparatorwindow.h"
 #include "ui_filecomparatorwindow.h"
 #include "helpwindow.h"
+#include <QProgressDialog>
 #include <QSettings>
+#include <qevent.h>
 
 FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     QDialog(parent),

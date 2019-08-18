@@ -353,7 +353,7 @@ UDSScriptHelper::UDSScriptHelper(QJSEngine *engine)
     handler = new UDS_HANDLER;
     connect(handler, SIGNAL(newUDSMessage(UDS_MESSAGE)), this, SLOT(newUDSMessage(UDS_MESSAGE)));
     handler->setReception(true);
-    handler->setFlowCtrl(true);
+    handler->setFlowCtrl(true); //uds potentially requires flow control so turn it on
 }
 
 void UDSScriptHelper::clearFilters()
@@ -408,9 +408,9 @@ void UDSScriptHelper::setRxCallback(QJSValue cb)
 void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
 {
     //qDebug() << "udsScriptHelper got a UDS message";
-    qDebug() << "UDS script helper. Meg data len: " << msg.len;
+    qDebug() << "UDS script helper. Msg data len: " << msg.len;
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
-    //qDebug() << "Got frame in script interface";
+    qDebug() << "Got frame in script interface";
 
     QJSValueList args;
     args << msg.bus << msg.ID << msg.service << msg.subFunc << msg.len;

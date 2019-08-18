@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMenu>
 #include <QSettings>
+#include <qevent.h>
 #include "helpwindow.h"
 
 DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
