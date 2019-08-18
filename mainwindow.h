@@ -168,6 +168,7 @@ private:
     QLabel lbStatusConnected;
     QLabel lbStatusFilename;
     QLabel lbStatusDatabase;
+    QLabel lbHelp;
     int normalRowHeight;
     bool isConnected;
 
