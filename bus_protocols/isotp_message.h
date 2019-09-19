@@ -11,6 +11,8 @@ public:
     bool isReceived;
     int len; //# of bytes this message should have (as reported)
     int actualSize; //# we actually got
+    int lastSequence;
+    bool isMultiframe;
     QVector<unsigned char> data;
     uint64_t timestamp;
 };

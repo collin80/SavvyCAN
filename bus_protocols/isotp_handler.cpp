@@ -9,7 +9,6 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     processAll = false;
     lastSenderBus = 0;
     lastSenderID = 0;
-    issuedMultiFrame = false;
 
     modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
 
@@ -62,7 +61,6 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
 
     if (data.length() < 8)
     {
-        issuedMultiFrame = false;
         frame.bus = bus;        
         frame.ID = ID;
         if (ID > 0x7FF) frame.extended = true;
@@ -75,7 +73,6 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
-        issuedMultiFrame = true;
         frame.bus = bus;
         frame.ID = ID;
         if (ID > 0x7FF) frame.extended = true;
@@ -194,6 +191,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         msg.len = frameLen;
         msg.data.reserve(frameLen);
         msg.timestamp = frame.timestamp;
+        msg.isMultiframe = false;
         if (useExtendedAddressing) for (int j = 0; j < frameLen; j++) msg.data.append(frame.data[j+2]);
         else for (int j = 0; j < frameLen; j++) msg.data.append(frame.data[j+1]);
         //qDebug() << "Emitting single frame ISOTP message";
@@ -206,7 +204,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         msg.ID = ID;
         msg.timestamp = frame.timestamp;
         msg.isReceived = frame.isReceived;
-        issuedMultiFrame = true;
+        msg.isMultiframe = true;
         frameLen = frameLen << 8;
         if (useExtendedAddressing)
         {
@@ -224,10 +222,11 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             msg.data.reserve(frameLen);
             for (int j = 0; j < 6; j++) msg.data.append(frame.data[2 + j]);
         }
+        msg.lastSequence = -1;
         messageBuffer.append(msg);
         //The sending ID is set to the last ID we used to send from this class which is
         //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
-        if (issueFlowMsgs && lastSenderID > 0 && issuedMultiFrame)
+        if (issueFlowMsgs && lastSenderID > 0)
         {
             CANFrame outFrame;
             outFrame.bus = lastSenderBus;
@@ -252,6 +251,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             }
         }
         if (!pMsg) return;
+        if (!pMsg->isMultiframe) return; //if we didn't get a frame type 1 (start of multiframe) first then ignore this frame.
         ln = pMsg->len - pMsg->data.count();
         //offset = pMsg->data.count();
         if (useExtendedAddressing)
@@ -267,8 +267,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (pMsg->len <= pMsg->data.count())
         {
             //qDebug() << "Emitting multiframe ISOTP message";
-            issuedMultiFrame = false;
-            emit newISOMessage(*pMsg);
+            checkNeedFlush(pMsg->ID);
         }
         break;
     case 3: //flow control messages
@@ -306,9 +305,18 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
         if (messageBuffer[i].ID == ID)
         {
             //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
-            //qDebug() << "Flushing a partial frame";
+            if (messageBuffer[i].ID > 0x600 && messageBuffer[i].ID < 0x630)
+            {
+            if (messageBuffer[i].len <= messageBuffer[i].data.count())
+            {
+                qDebug() << "Flushing full frame" << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
+            }
+            else
+            {
+                qDebug() << "Flushing a partial frame " << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
+            }
+            }
             emit newISOMessage(messageBuffer[i]);
-            issuedMultiFrame = false;
             messageBuffer.removeAt(i);
             return;
         }

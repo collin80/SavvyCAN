@@ -46,7 +46,6 @@ private:
     int framesUntilFlow;
     bool processAll;
     bool issueFlowMsgs;
-    bool issuedMultiFrame;
     QTimer frameTimer;
     uint32_t lastSenderID;
     uint32_t lastSenderBus;

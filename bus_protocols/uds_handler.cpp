@@ -50,7 +50,8 @@ static QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
     {0x14, "CLEAR_DIAG", "Clear diagnostic trouble codes"},
     {0x19, "READ_DTC", "Read diagnostic trouble codes"},
     {0x1A, "GMLAN_READ_DIAGNOSTIC_ID", "GMLAN - Read diagnostics ID"},
-    {0x20, "RETURN_TO_NORMAL", "Return to normal mode"},
+    {0x20, "RETURN_TO_NORMAL", "Return to normal mode"},    
+    {0x21, "READ_BY_LOCALID", "Read data by Local ID"},
     {0x22, "READ_BY_ID", "Read data by ID"},
     {0x23, "READ_BY_ADDR", "Read data by address"},
     {0x24, "READ_SCALING_ID", "Read scaling data by ID"},
@@ -184,6 +185,10 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
     udsMsg.isReceived = msg.isReceived;
     udsMsg.timestamp = msg.timestamp;
     udsMsg.actualSize = msg.actualSize;
+    udsMsg.service = 0;
+    udsMsg.subFunc = 0;
+    udsMsg.subFuncLen = 0;
+    udsMsg.isErrorReply = false;
     udsMsg.len = msg.len;
     if (msg.data.length() > 0) {
         udsMsg.service = msg.data.at(0);

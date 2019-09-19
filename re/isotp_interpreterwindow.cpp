@@ -61,7 +61,21 @@ void ISOTP_InterpreterWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     readSettings();
+
+    QProgressDialog progress(qApp->activeWindow());
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Analyzing Frames...");
+    progress.setCancelButton(nullptr);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
+
+    qApp->processEvents();
+
     decoder->updatedFrames(-2);
+
+    progress.cancel();
+
     installEventFilter(this);
 }
 
@@ -134,7 +148,7 @@ void ISOTP_InterpreterWindow::filterAll()
     for (int i = 0 ; i < ui->listFilter->count(); i++)
     {
         ui->listFilter->item(i)->setCheckState(Qt::Checked);
-        idFilters[ui->listFilter->item(1)->text().toInt(nullptr, 16)] = true;
+        //idFilters[ui->listFilter->item(i)->text().toInt(nullptr, 16)] = true;
     }
 }
 
@@ -143,7 +157,7 @@ void ISOTP_InterpreterWindow::filterNone()
     for (int i = 0 ; i < ui->listFilter->count(); i++)
     {
         ui->listFilter->item(i)->setCheckState(Qt::Unchecked);
-        idFilters[ui->listFilter->item(1)->text().toInt(nullptr, 16)] = false;
+        //idFilters[ui->listFilter->item(i)->text().toInt(nullptr, 16)] = false;
     }
 }
 
