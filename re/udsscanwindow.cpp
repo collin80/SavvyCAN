@@ -362,13 +362,13 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
 
     id = msg.ID;
 
-    qDebug() << "UDS message ID " << msg.ID << "  service: " << msg.service << " subfunc: " << msg.subFunc;
+    qDebug() << "UDS message ID " << QString::number(msg.ID,16) << "  service: " << QString::number(msg.service, 16) << " subfunc: " << QString::number(msg.subFunc, 16);
 
     if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
     {
         serviceShortName = udsHandler->getServiceShortDesc(sentFrame.service);
         if (serviceShortName.length() < 3) serviceShortName = QString::number(sentFrame.service, 16);
-        if (msg.service == 0x40 + sendingFrames[currIdx].service)
+        if (msg.service == (0x40 + sendingFrames[currIdx].service) )
         {
             setupNodes(id);
 
@@ -385,7 +385,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
             nodeSubFunc->setForeground(0, QBrush(Qt::darkGreen));
             gotReply = true;
         }
-        else if ( msg.isErrorReply && msg.service == sendingFrames[currIdx].service)
+        else if ( msg.isErrorReply && (msg.service == sendingFrames[currIdx].service) )
         {
             if (msg.data.length())
             {
