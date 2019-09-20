@@ -229,6 +229,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
 //whether a file could be loaded or not by a given loader. The loader return is still used in case the guess was wrong.
 bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames)
 {
+    qDebug() << "Attempting Canalyzer BLF";
     if (isCanalyzerBLF(filename))
     {
         if (loadCanalyzerBLF(filename, frames))
@@ -238,6 +239,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting native CSV";
     if (isNativeCSVFile(filename))
     {
         if (loadNativeCSVFile(filename, frames))
@@ -247,6 +249,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting canalyzer ASC";
     if (isCanalyzerASC(filename))
     {
         if (loadCanalyzerASC(filename, frames))
@@ -256,6 +259,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting CRTD";
     if (isCRTDFile(filename))
     {
         if (loadCRTDFile(filename, frames))
@@ -266,6 +270,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
     }
 
 
+    qDebug() << "Attempting trace file";
     if (isTraceFile(filename))
     {
         if (loadTraceFile(filename, frames))
@@ -275,6 +280,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting vehicle spy";
     if (isVehicleSpyFile(filename))
     {
         if (loadVehicleSpyFile(filename, frames))
@@ -284,6 +290,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting candump";
     if (isCanDumpFile(filename))
     {
         if (loadCanDumpFile(filename, frames))
@@ -293,6 +300,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting canhacker";
     if (isCANHackerFile(filename))
     {
         if (loadCANHackerFile(filename, frames))
@@ -302,6 +310,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting cabana";
     if (isCabanaFile(filename))
     {
         if (loadCabanaFile(filename, frames))
@@ -311,6 +320,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting canopen";
     if (isCANOpenFile(filename))
     {
         if (loadCANOpenFile(filename, frames))
@@ -320,6 +330,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting busmaster log";
     if (isLogFile(filename))
     {
         if (loadLogFile(filename, frames))
@@ -329,6 +340,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting pcan";
     if (isPCANFile(filename))
     {
         if (loadPCANFile(filename, frames))
@@ -338,6 +350,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting ixxat";
     if (isIXXATFile(filename))
     {
         if (loadIXXATFile(filename, frames))
@@ -347,6 +360,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting microchip";
     if (isMicrochipFile(filename))
     {
         if (loadMicrochipFile(filename, frames))
@@ -356,6 +370,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting CANDo";
     if (isCANDOFile(filename))
     {
         if (loadCANDOFile(filename, frames))
@@ -365,6 +380,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting kvaser";
     if (isKvaserFile(filename))
     {
         if (loadKvaserFile(filename, frames,true))
@@ -379,6 +395,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Attempting generic CSV";
     if (isGenericCSVFile(filename))
     {
         if (loadGenericCSVFile(filename, frames))
@@ -388,6 +405,7 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    qDebug() << "Nothing worked... sorry...";
     return false;
 }
 
@@ -1157,7 +1175,7 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
     QFile *inFile = new QFile(filename);
     QByteArray line;
     int lineCounter = 0;
-    bool isMatch = true;
+    bool isMatch = false;
     bool inHeader = true;
     QList<QByteArray> tokens;
 
@@ -1191,16 +1209,14 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
                 if (tokens.length() > 5)
                 {
                     uint64_t time = static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0);
-                    if (time <= 0) isMatch = false;
+                    if (time > 0) isMatch = true;
                     uint32_t id = static_cast<uint32_t>(tokens[2].toUInt(nullptr, 16));
-                    if (id < 1 || id > 0x1FFFFFFF) isMatch = false;
+                    if (id > 0 && id < 0x20000000) isMatch = true;
                     int len = tokens[5].toInt();
-                    if (len < 0 || len > 8) isMatch = false;
-                    if (tokens.count() < (len + 6)) isMatch = false;
+                    if (len > 0 && len < 9) isMatch = true;
+                    if (tokens.count() >= (len + 6)) isMatch = true;
                 }
-                else isMatch = false;
             }
-            else isMatch = false;
         }
     }
     catch (...)
