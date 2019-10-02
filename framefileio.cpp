@@ -155,6 +155,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
     filters.append(QString(tr("Candump/Kayak (*.log *.LOG)")));
+    filters.append(QString(tr("CANDump Lawicel (*.txt *.TXT *.LOG *.log)")));
     filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
     filters.append(QString(tr("Kvaser Log Decimal (*.txt *.TXT)")));
     filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
@@ -194,14 +195,15 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (dialog.selectedNameFilter() == filters[8]) result = loadCANDOFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[9]) result = loadVehicleSpyFile(filename, frameCache);
         if (dialog.selectedNameFilter() == filters[10]) result = loadCanDumpFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[11]) result = loadPCANFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[12]) result = loadKvaserFile(filename, frameCache, false);
-        if (dialog.selectedNameFilter() == filters[13]) result = loadKvaserFile(filename, frameCache, true);
-        if (dialog.selectedNameFilter() == filters[14]) result = loadCanalyzerASC(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[15]) result = loadCanalyzerBLF(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[16]) result = loadCANHackerFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[17]) result = loadCabanaFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[18]) result = loadCANOpenFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[11]) result = loadLawicelFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[12]) result = loadPCANFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[13]) result = loadKvaserFile(filename, frameCache, false);
+        if (dialog.selectedNameFilter() == filters[14]) result = loadKvaserFile(filename, frameCache, true);
+        if (dialog.selectedNameFilter() == filters[15]) result = loadCanalyzerASC(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[16]) result = loadCanalyzerBLF(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[17]) result = loadCANHackerFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[18]) result = loadCabanaFile(filename, frameCache);
+        if (dialog.selectedNameFilter() == filters[19]) result = loadCANOpenFile(filename, frameCache);
 
         progress.cancel();
 
@@ -296,6 +298,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadCanDumpFile(filename, frames))
         {
             qDebug() << "Loaded as candump successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting lawicel";
+    if (isLawicelFile(filename))
+    {
+        if (loadLawicelFile(filename, frames))
+        {
+            qDebug() << "Loaded as lawicel successfully!";
             return true;
         }
     }
@@ -3119,6 +3131,96 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
+bool FrameFileIO::isLawicelFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+    int lineCounter = 0;
+    bool isMatch = false;
+    bool ret;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    try
+    {
+        while (!inFile->atEnd() && lineCounter < 100) {
+            lineCounter++;
+
+            line = inFile->readLine().toUpper();
+            if (line.length() > 4 && !line.startsWith("S"))
+            {
+                int ID = line.mid(0, 3).toInt(nullptr, 16);
+                if (ID > 0 && ID < 0x800)
+                {
+                    line.remove(0, 3);
+                    int len = line.length() / 2;
+                    if (len > -1 && len < 9) isMatch = true;
+                }
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
+/*Example line:
+1D5210000000000E0D7
+The first three digits are the ID, all bytes are then two hex digits after that. So, the length is determined by line length
+Skip all lines that start with an S
+*/
+bool FrameFileIO::loadLawicelFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+    quint64 timeStamp = 0;
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = inFile->readLine().simplified();
+        if (line.length() > 4 && !line.startsWith("S"))
+        {
+            thisFrame.timestamp = (timeStamp += 100);
+            thisFrame.ID = line.mid(0, 3).toInt(nullptr, 16);
+            thisFrame.extended = false;
+            thisFrame.isReceived = true;
+            thisFrame.remote = false;
+            thisFrame.bus = 0;
+            line.remove(0, 3);
+            thisFrame.len = line.length() / 2;
+            for (int d = 0; d < thisFrame.len; d++)
+            {
+                thisFrame.data[d] = static_cast<unsigned char>(line.mid(d * 2, 2).toInt(nullptr, 16));
+            }
+            frames->append(thisFrame);
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
 
 bool FrameFileIO::isKvaserFile(QString filename)
 {
