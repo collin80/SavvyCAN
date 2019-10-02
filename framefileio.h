@@ -41,6 +41,7 @@ public:
     static bool loadCANDOFile(QString, QVector<CANFrame>*);
     static bool loadVehicleSpyFile(QString, QVector<CANFrame>*);
     static bool loadCanDumpFile(QString, QVector<CANFrame>*);
+    static bool loadLawicelFile(QString, QVector<CANFrame>*);
     static bool loadPCANFile(QString, QVector<CANFrame>*);
     static bool loadKvaserFile(QString, QVector<CANFrame>*, bool);
     static bool loadCanalyzerASC(QString, QVector<CANFrame>*);
@@ -61,6 +62,7 @@ public:
     static bool isCANDOFile(QString);
     static bool isVehicleSpyFile(QString);
     static bool isCanDumpFile(QString);
+    static bool isLawicelFile(QString);
     static bool isPCANFile(QString);
     static bool isKvaserFile(QString);
     static bool isCanalyzerASC(QString);
