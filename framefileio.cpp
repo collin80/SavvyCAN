@@ -1287,14 +1287,24 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             if (tokens.length() > 5)
             {
                 thisFrame.timestamp = static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0);
-                thisFrame.ID = tokens[2].toUInt(nullptr, 16);
+                if (tokens[2].endsWith('x'))
+                {
+                    QByteArray copied_id = tokens[2];
+                    copied_id.chop(1);
+                    thisFrame.ID = copied_id.toUInt(nullptr, 16);
+                    thisFrame.extended = true;
+                }
+                else
+                {
+                    thisFrame.ID = tokens[2].toUInt(nullptr, 16);
+                    thisFrame.extended = false;
+                }
                 thisFrame.len = tokens[5].toInt();
                 if (thisFrame.len > 8) return false;
                 if (thisFrame.len < 0) return false;
                 thisFrame.isReceived = tokens[3].toUpper().contains("RX");
                 thisFrame.bus = tokens[1].toInt();
-                thisFrame.extended = (thisFrame.ID > 0x7FF);
-                thisFrame.remote = false;
+                thisFrame.remote = tokens[4] == "r";
                 for (int d = 6; d < (6 + static_cast<int>(thisFrame.len)); d++)
                 {
                     if (tokens.count() > d)
@@ -1365,16 +1375,22 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
         outFile->write(QString::number(frames->at(c).bus + 1).toUtf8());
         outFile->write("  ");
         if (frames->at(c).extended)
+        {
             outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(8, '0').toUtf8());
+            outFile->write("x");
+        }
         else
         {
             outFile->write(QString::number(frames->at(c).ID, 16).toUpper().rightJustified(3, '0').toUtf8());
-            outFile->write("     ");
+            outFile->write("      ");
         }
         outFile->write("   ");
 
-        if (frames->at(c).isReceived) outFile->write("Rx D ");
-        else outFile->write("Tx D ");
+        if (frames->at(c).isReceived) outFile->write("Rx ");
+        else outFile->write("Tx ");
+
+        if (frames->at(c).remote) outFile->write("r ");
+        else outFile->write("d ");
 
         outFile->write(QString::number(frames->at(c).len).toUtf8());
         outFile->write("  ");
