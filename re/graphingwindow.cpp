@@ -1113,7 +1113,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        if (thisFrame.ID == params.ID) frameCache.append(thisFrame);
+        if (thisFrame.ID == params.ID && thisFrame.remote == false) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
