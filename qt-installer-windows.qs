@@ -14,8 +14,8 @@
 // Unfortunately it is not possible to disable deps like qt.tools.qtcreator
 var INSTALL_COMPONENTS = [
     installer.environmentVariable("PLATFORM") == "x64" ?
-    "qt.qt5.5132.win64_msvc2017_64" :
-    "qt.qt5.5132.win32_msvc2017",
+    "qt.qt5.5123.win64_msvc2017_64" :
+    "qt.qt5.5123.win32_msvc2017",
 ];
 
 function Controller() {
@@ -26,6 +26,15 @@ function Controller() {
         console.log("installationFinished");
         gui.clickButton(buttons.NextButton);
     });
+}
+
+Controller.prototype.DynamicTelemetryPluginFormCallback = function() {
+    gui.currentPageWidget().TelemetryPluginForm.statisticGroupBox.disableStatisticRadioButton.setChecked(true);
+    gui.clickButton(buttons.NextButton);
+
+    //for(var key in widget.TelemetryPluginForm.statisticGroupBox){
+    //    console.log(key);
+    //}
 }
 
 Controller.prototype.WelcomePageCallback = function() {
