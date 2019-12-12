@@ -79,7 +79,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         //that the bytes that make up the integer are instead treated as having made up
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
-        result = Utility::processIntegerSignal(frame.data, startBit, 32, false, false);
+        result = Utility::processIntegerSignal(frame.data, startBit, 32, intelByteOrder, false);
         endResult = (*((float *)(&result)) * factor) + bias;
     }
     else //double precision float
@@ -91,7 +91,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
+        result = Utility::processIntegerSignal(frame.data, 0, 64, intelByteOrder, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
 
