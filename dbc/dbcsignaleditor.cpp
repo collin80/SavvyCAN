@@ -147,8 +147,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal == nullptr) return;
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtBitLength->text());
-                if (temp < 0) return;
-                if (temp > 63) return;
+                if (temp < 1) return;
+                if (temp > 64) return;
                 if (currentSignal->valType != SP_FLOAT && currentSignal->valType != DP_FLOAT)
                     currentSignal->signalSize = temp;
                 fillSignalForm(currentSignal);
