@@ -294,9 +294,9 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
 
             for (int i = 0; i < referenceFrames->length(); i++)
             {
-                if ((uint) referenceFrames->at(i).ID == msgID)
+                if ((uint) referenceFrames->at(i).frameId() == msgID)
                 {
-                    newMsg.len = referenceFrames->at(i).len;
+                    newMsg.len = referenceFrames->at(i).payload().length();
                     break;
                 }
             }

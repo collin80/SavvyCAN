@@ -1,6 +1,9 @@
 #ifndef ISOTP_MESSAGE_H
 #define ISOTP_MESSAGE_H
 
+#include <Qt>
+#include <QVector>
+
 //the same as the CANFrame struct but with arbitrary data size.
 class ISOTP_MESSAGE
 {

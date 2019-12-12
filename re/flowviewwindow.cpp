@@ -250,7 +250,7 @@ void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMous
     int id = 0;
     //apply transforms to get the X axis value where we double clicked
     double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
-    if (frameCache.count() > 0) id = frameCache[0].ID;
+    if (frameCache.count() > 0) id = frameCache[0].frameId();
     if (secondsMode) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
 }
@@ -278,7 +278,7 @@ void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
     int bestIdx = -1;
     for (int i = 0; i < frameCache.count(); i++)
     {
-        if (frameCache[i].timestamp > t_stamp)
+        if (frameCache[i].timeStamp().microSeconds() > t_stamp)
         {
             bestIdx = i - 1;
             break;
@@ -428,20 +428,20 @@ void FlowViewWindow::updatedFrames(int numFrames)
     {
         if (numFrames > modelFrames->count()) return;
         unsigned int refID;
-        if (frameCache.count() > 0) refID = frameCache[0].ID;
+        if (frameCache.count() > 0) refID = frameCache[0].frameId();
             else refID = 0;
         bool needRefresh = false;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
 
-            if (!foundID.contains(thisFrame.ID))
+            if (!foundID.contains(thisFrame.frameId()))
             {
-                foundID.append(thisFrame.ID);
-                FilterUtility::createFilterItem(thisFrame.ID, ui->listFrameID);
+                foundID.append(thisFrame.frameId());
+                FilterUtility::createFilterItem(thisFrame.frameId(), ui->listFrameID);
             }
 
-            if (thisFrame.ID == refID)
+            if (thisFrame.frameId() == refID)
             {
                 frameCache.append(thisFrame);
 
@@ -450,18 +450,18 @@ void FlowViewWindow::updatedFrames(int numFrames)
                     if (ui->cbTimeGraph->isChecked())
                     {
                         if (secondsMode){
-                            newX[k].append((double)(thisFrame.timestamp) / 1000000.0);
+                            newX[k].append((double)(thisFrame.timeStamp().microSeconds()) / 1000000.0);
                         }
                         else
                         {
-                            newX[k].append(thisFrame.timestamp);
+                            newX[k].append(thisFrame.timeStamp().microSeconds());
                         }
                     }
                     else
                     {
                         newX[k].append(x[k].count());
                     }
-                    newY[k].append(thisFrame.data[k]);
+                    newY[k].append(thisFrame.payload()[k]);
                     needRefresh = true;
                 }
             }
@@ -469,7 +469,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
         if (ui->cbLiveMode->checkState() == Qt::Checked)
         {
             currentPosition = frameCache.count() - 1;
-            memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+            memcpy(currBytes, frameCache.at(currentPosition).payload(), 8);
             memcpy(refBytes, currBytes, 8);
 
         }
@@ -482,7 +482,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
             }
             ui->graphView->replot();
             updateDataView();
-            if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
+            if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
         }
     }
     updateFrameLabel();
@@ -512,16 +512,16 @@ void FlowViewWindow::createGraph(int byteNum)
 
     for (int j = 0; j < numEntries; j++)
     {
-        tempVal = frameCache[j].data[byteNum];
+        tempVal = frameCache[j].payload()[byteNum];
 
         if (graphByTime)
         {
             if (secondsMode){
-                x[byteNum][j] = (double)(frameCache[j].timestamp) / 1000000.0;
+                x[byteNum][j] = (double)(frameCache[j].timeStamp().microSeconds()) / 1000000.0;
             }
             else
             {
-                x[byteNum][j] = frameCache[j].timestamp;
+                x[byteNum][j] = frameCache[j].timeStamp().microSeconds();
             }
         }
         else
@@ -551,7 +551,7 @@ void FlowViewWindow::refreshIDList()
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        id = thisFrame.ID;
+        id = thisFrame.frameId();
         if (!foundID.contains(id))
         {
             foundID.append(id);
@@ -581,9 +581,9 @@ void FlowViewWindow::changeID(QString newID)
     for (int x = 0; x < modelFrames->count(); x++)
     {
         CANFrame thisFrame = modelFrames->at(x);
-        if (thisFrame.ID == id)
+        if (thisFrame.frameId() == id)
         {
-            for (int j = thisFrame.len; j < 8; j++) thisFrame.data[j] = 0;
+            thisFrame.payload().clear();
             frameCache.append(thisFrame);
         }
     }
@@ -600,7 +600,7 @@ void FlowViewWindow::changeID(QString newID)
 
     updateGraphLocation();
 
-    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload(), 8);
     memcpy(refBytes, currBytes, 8);
 
     updateDataView();
@@ -635,7 +635,8 @@ void FlowViewWindow::btnStopClick()
     playbackActive = false;
     currentPosition = 0;
 
-    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+
+    memcpy(currBytes, frameCache.at(currentPosition).payload().data_ptr(), 8);
     memcpy(refBytes, currBytes, 8);
 
     updateFrameLabel();
@@ -757,7 +758,7 @@ void FlowViewWindow::updatePosition(bool forward)
     uint8_t cngByte;
     for (int i = 0; i < 8; i++)
     {
-        cngByte = currBytes[i] ^ frameCache.at(currentPosition).data[i];
+        cngByte = currBytes[i] ^ frameCache.at(currentPosition).payload()[i];
         changedBits |= (uint64_t)cngByte << (8ull * i);
     }
 
@@ -771,9 +772,9 @@ void FlowViewWindow::updatePosition(bool forward)
         playbackTimer->stop();
     }
 
-    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().data(), 8);
 
-    if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
+    if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
 }
 
 void FlowViewWindow::updateGraphLocation()
@@ -787,9 +788,9 @@ void FlowViewWindow::updateGraphLocation()
     {
         if (secondsMode)
         {
-            ui->graphView->xAxis->setRange(frameCache[start].timestamp / 1000000.0, frameCache[end].timestamp / 1000000.0);
+            ui->graphView->xAxis->setRange(frameCache[start].timeStamp().microSeconds() / 1000000.0, frameCache[end].timeStamp().microSeconds() / 1000000.0);
             /*
-            ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3000000.0);
+            ui->graphView->xAxis->setTickStep((frameCache[end].timeStamp().microSeconds() - frameCache[start].timeStamp().microSeconds())/ 3000000.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
             ui->graphView->xAxis->setNumberPrecision(6);
@@ -797,9 +798,9 @@ void FlowViewWindow::updateGraphLocation()
         }
         else
         {
-            ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
+            ui->graphView->xAxis->setRange(frameCache[start].timeStamp().microSeconds(), frameCache[end].timeStamp().microSeconds());
             /*
-            ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
+            ui->graphView->xAxis->setTickStep((frameCache[end].timeStamp().microSeconds() - frameCache[start].timeStamp().microSeconds())/ 3.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
             ui->graphView->xAxis->setNumberPrecision(0); */

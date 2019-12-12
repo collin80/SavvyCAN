@@ -179,7 +179,7 @@ public:
         return (value1 * (1.0 - samplePoint)) + (value2 * samplePoint);
     }
 
-    static int64_t processIntegerSignal(const uint8_t *data, int startBit, int sigSize, bool littleEndian, bool isSigned)
+    static int64_t processIntegerSignal(const QByteArray data, int startBit, int sigSize, bool littleEndian, bool isSigned)
     {
 
         int64_t result = 0;

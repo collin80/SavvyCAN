@@ -1,5 +1,4 @@
-#ifndef ISOTP_HANDLER_H
-#define ISOTP_HANDLER_H
+#pragma once
 
 #include <Qt>
 #include <QObject>
@@ -53,5 +52,3 @@ private:
     void processFrame(const CANFrame &frame);
     void checkNeedFlush(uint64_t ID);
 };
-
-#endif // ISOTP_HANDLER_H

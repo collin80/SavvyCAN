@@ -10,11 +10,11 @@ SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
         mNotch[i] =0;
         mMarker.data[i] = 0;
         mMarker.dataTimestamp[i] = 0;
-        mCurrent.data[i] = pFrame.data[i];
+        mCurrent.data[i] = pFrame.payload()[i];
         mCurrent.dataTimestamp[i] = seq;
     }
     mLastMarker = mMarker;
-    mCurrent.len = pFrame.len;
+    mCurrent.len = pFrame.payload().length();
     /* that's dirty */
     update(pFrame, seq, false);
     update(pFrame, seq, false);
@@ -115,18 +115,18 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
     /* copy new value */
     for (int i = 0; i < 8; i++)
     {
-        maskedData = pFrame.data[i];
+        maskedData = pFrame.payload()[i];
         if (mute) maskedData &= ~mNotch[i];
         maskedCurr = mCurrent.data[i];
         if (mute) maskedCurr &= ~mNotch[i];
         if (maskedCurr != maskedData)
         {
-            mCurrent.data[i] = pFrame.data[i];
+            mCurrent.data[i] = pFrame.payload()[i];
             mCurrent.dataTimestamp[i] = timeSeq;
         }
     }
-    mCurrent.len = pFrame.len;
-    mCurrentTime = pFrame.timestamp;
+    mCurrent.len = pFrame.payload().length();
+    mCurrentTime = pFrame.timeStamp().microSeconds();
 
     /* update marker */
     //We "OR" our stored marker with the changed bits.

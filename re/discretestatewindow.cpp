@@ -140,10 +140,10 @@ void DiscreteStateWindow::updatedFrames(int numFrames)
         {
             thisFrame = modelFrames->at(i);
 
-            if (!idFilters.contains(thisFrame.ID))
+            if (!idFilters.contains(thisFrame.frameId()))
             {
-                idFilters.insert(thisFrame.ID, true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listID);
+                idFilters.insert(thisFrame.frameId(), true);
+                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat()), ui->listID);
                 listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
@@ -164,11 +164,11 @@ void DiscreteStateWindow::refreshFilterList()
     for (int i = 0; i < modelFrames->length(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        id = thisFrame.ID;
+        id = thisFrame.frameId();
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
-            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(id, thisFrame.extended), ui->listID);
+            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(id, thisFrame.hasExtendedFrameFormat()), ui->listID);
             listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
             listItem->setCheckState(Qt::Checked); //default all filters to be set active
         }
@@ -359,7 +359,7 @@ void DiscreteStateWindow::calculateResults()
                 frameCache.clear();
                 for (int i = 0; i < modelFrames->count(); i++)
                 {
-                    if (modelFrames->at(i).ID == (unsigned int)it.key()) frameCache.append(modelFrames->at(i));
+                    if (modelFrames->at(i).frameId() == (unsigned int)it.key()) frameCache.append(modelFrames->at(i));
                 }
                 for (int bits = maxBits; bits >= minBits; bits--)
                 {
