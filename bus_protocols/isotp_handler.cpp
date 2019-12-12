@@ -50,7 +50,7 @@ void ISOTP_HANDLER::setReception(bool mode)
 void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
 {
     CANFrame frame;
-    frame.remote = false;
+    frame.setFrameType(QCanBusFrame::DataFrame);
     int currByte = 0;
     int index = 0;
     if (bus < 0) return;
@@ -61,27 +61,28 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
 
     if (data.length() < 8)
     {
-        frame.bus = bus;        
-        frame.ID = ID;
-        if (ID > 0x7FF) frame.extended = true;
-        else frame.extended = false;
-        frame.len = 8;
-        for (int b = 0; b < 8; b++) frame.data[b] = 0x00;
-        frame.data[0] = data.length();
-        for (int i = 0; i < frame.data[0]; i++) frame.data[i + 1] = data[i];
+        frame.bus = bus;
+        frame.setFrameId(ID);
+        if (ID > 0x7FF) frame.setExtendedFrameFormat(true);
+        else frame.setExtendedFrameFormat(false);
+        QByteArray bytes(8,0);
+        bytes.resize(8);
+        bytes[0] = data.length();
+        for (int i = 0; i < data.length(); i++) bytes[i + 1] = data[i];
+        frame.setPayload(bytes);
         CANConManager::getInstance()->sendFrame(frame);
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
         frame.bus = bus;
-        frame.ID = ID;
-        if (ID > 0x7FF) frame.extended = true;
-        else frame.extended = false;
-        frame.len = 8;
-        for (int b = 0; b < 8; b++) frame.data[b] = 0x00;
-        frame.data[0] = 0x10 + (data.length() / 256);
-        frame.data[1] = data.length() & 0xFF;
-        for (int i = 0; i < 6; i++) frame.data[2 + i] = data[currByte++];
+        frame.setFrameId(ID);
+        if (ID > 0x7FF) frame.setExtendedFrameFormat(true);
+        else frame.setExtendedFrameFormat(false);
+        QByteArray bytes(8, 0);
+        bytes[0] = 0x10 + (data.length() / 256);
+        bytes[1] = data.length() & 0xFF;
+        for (int i = 0; i < 6; i++) bytes[2 + i] = data[currByte++];
+        frame.setPayload(bytes);
         CANConManager::getInstance()->sendFrame(frame);
         //Queue up the rest of the frames
         waitingForFlow = true;
@@ -90,13 +91,13 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
         frameTimer.start();
         while (currByte < data.length())
         {
-            for (int b = 0; b < 8; b++) frame.data[b] = 0x00;
-            frame.data[0] = 0x20 + index;
+            for (int b = 0; b < 8; b++) bytes[b] = 0x00;
+            bytes[0] = 0x20 + index;
             index = (index + 1) & 0xF;
             int bytesToGo = data.length() - currByte;
             if (bytesToGo > 7) bytesToGo = 7;
-            for (int i = 0; i < bytesToGo; i++) frame.data[1 + i] = data[currByte++];
-            frame.len = 8;
+            for (int i = 0; i < bytesToGo; i++) bytes[1 + i] = data[currByte++];
+            frame.setPayload(bytes);
             sendingFrames.append(frame);
             //CANConManager::getInstance()->sendFrame(frame);
         }
@@ -138,7 +139,7 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
         {
             for (int i = 0; i < filters.count(); i++)
             {
-                if ((thisFrame.bus == filters[i].bus) && ((thisFrame.ID & filters[i].mask) == filters[i].ID))
+                if ((thisFrame.bus == filters[i].bus) && ((thisFrame.frameId() & filters[i].mask) == filters[i].ID))
                 {
                     processFrame(thisFrame);
                     break;
@@ -151,7 +152,7 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
 
 void ISOTP_HANDLER::processFrame(const CANFrame &frame)
 {
-    uint64_t ID = frame.ID;
+    uint64_t ID = frame.frameId();
     int frameType;
     int frameLen;
     int ln;
@@ -165,14 +166,14 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     if (useExtendedAddressing)
     {
         ID = ID << 8;
-        ID += frame.data[0];
-        frameType = frame.data[1] >> 4;
-        frameLen = frame.data[1] & 0xF;
+        ID += frame.payload()[0];
+        frameType = frame.payload()[1] >> 4;
+        frameLen = frame.payload()[1] & 0xF;
     }
     else
     {
-        frameType = frame.data[0] >> 4;
-        frameLen = frame.data[0] & 0xF;
+        frameType = frame.payload()[0] >> 4;
+        frameLen = frame.payload()[0] & 0xF;
     }
 
     switch(frameType)
@@ -185,42 +186,42 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (frameLen > 7) return;
 
         msg.bus = frame.bus;
-        msg.extended = frame.extended;
+        msg.extended = frame.hasExtendedFrameFormat();
         msg.ID = ID;
         msg.isReceived = frame.isReceived;
         msg.len = frameLen;
         msg.data.reserve(frameLen);
-        msg.timestamp = frame.timestamp;
+        msg.timestamp = frame.timeStamp().microSeconds();
         msg.isMultiframe = false;
-        if (useExtendedAddressing) for (int j = 0; j < frameLen; j++) msg.data.append(frame.data[j+2]);
-        else for (int j = 0; j < frameLen; j++) msg.data.append(frame.data[j+1]);
+        if (useExtendedAddressing) for (int j = 0; j < frameLen; j++) msg.data.append(frame.payload()[j+2]);
+        else for (int j = 0; j < frameLen; j++) msg.data.append(frame.payload()[j+1]);
         //qDebug() << "Emitting single frame ISOTP message";
         emit newISOMessage(msg);
         break;
     case 1: //first frame of a multi-frame message
         checkNeedFlush(ID);
         msg.bus = frame.bus;
-        msg.extended = frame.extended;
+        msg.extended = frame.hasExtendedFrameFormat();
         msg.ID = ID;
-        msg.timestamp = frame.timestamp;
+        msg.timestamp = frame.timeStamp().microSeconds();
         msg.isReceived = frame.isReceived;
         msg.isMultiframe = true;
         frameLen = frameLen << 8;
         if (useExtendedAddressing)
         {
-            frameLen += frame.data[2];
+            frameLen += frame.payload()[2];
             frameLen = frameLen & 0xFFF;
             msg.len = frameLen;
             msg.data.reserve(frameLen);
-            for (int j = 0; j < 5; j++) msg.data.append(frame.data[3 + j]);
+            for (int j = 0; j < 5; j++) msg.data.append(frame.payload()[3 + j]);
         }
         else
         {
-            frameLen += frame.data[1];
+            frameLen += frame.payload()[1];
             frameLen = frameLen & 0xFFF;
             msg.len = frameLen;
             msg.data.reserve(frameLen);
-            for (int j = 0; j < 6; j++) msg.data.append(frame.data[2 + j]);
+            for (int j = 0; j < 6; j++) msg.data.append(frame.payload()[2 + j]);
         }
         msg.lastSequence = -1;
         messageBuffer.append(msg);
@@ -230,13 +231,13 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         {
             CANFrame outFrame;
             outFrame.bus = lastSenderBus;
-            outFrame.extended = false;
-            outFrame.ID = lastSenderID;
-            outFrame.len = 8;
-            for (int b = 0; b < 8; b++) outFrame.data[b] = 0x00;
-            outFrame.data[0] = 0x30; //flow control, go ahead and send
-            outFrame.data[1] = 0; //dont ask again about flow control
-            outFrame.data[2] = 3; //separation time in milliseconds between messages.
+            outFrame.setExtendedFrameFormat(false);
+            outFrame.setFrameId(lastSenderID);
+            QByteArray bytes(8, 0);
+            bytes[0] = 0x30; //flow control, go ahead and send
+            bytes[1] = 0; //dont ask again about flow control
+            bytes[2] = 3; //separation time in milliseconds between messages.
+            outFrame.setPayload(bytes);
             CANConManager::getInstance()->sendFrame(outFrame);
         }
         break;
@@ -257,12 +258,12 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (useExtendedAddressing)
         {
             if (ln > 6) ln = 6;
-            for (int j = 0; j < ln; j++) pMsg->data.append(frame.data[j+2]);
+            for (int j = 0; j < ln; j++) pMsg->data.append(frame.payload()[j+2]);
         }
         else
         {
             if (ln > 7) ln = 7;
-            for (int j = 0; j < ln; j++) pMsg->data.append(frame.data[j+1]);
+            for (int j = 0; j < ln; j++) pMsg->data.append(frame.payload()[j+1]);
         }
         if (pMsg->len <= pMsg->data.count())
         {
@@ -276,10 +277,10 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         case 0: //continue to send frames but maybe change inter-frame delay
             waitingForFlow = false;
             //data[1] contains number of frames to send before waiting for next flow control
-            framesUntilFlow = frame.data[1];
+            framesUntilFlow = frame.payload()[1];
             if (framesUntilFlow == 0) framesUntilFlow = -1; //-1 means don't count frames and just keep going
             //data[2] contains the interframe delay to use (0xF1 through 0xF9 are special through)
-            if (frame.data[2] < 0xF1) frameTimer.start(frame.data[2]); //set proper delay between frames
+            if (frame.payload()[2] < (char)0xF1) frameTimer.start(frame.payload()[2]); //set proper delay between frames
             else frameTimer.start(1); //can't do sub-millisecond sending with this code so just use 1ms timing
             break;
         case 1: //wait - do not send any more frames until other side says so
@@ -307,14 +308,14 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
             //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
             if (messageBuffer[i].ID > 0x600 && messageBuffer[i].ID < 0x630)
             {
-            if (messageBuffer[i].len <= messageBuffer[i].data.count())
-            {
-                qDebug() << "Flushing full frame" << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
-            }
-            else
-            {
-                qDebug() << "Flushing a partial frame " << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
-            }
+                if (messageBuffer[i].len <= messageBuffer[i].data.count())
+                {
+                    qDebug() << "Flushing full frame" << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
+                }
+                else
+                {
+                    qDebug() << "Flushing a partial frame " << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
+                }
             }
             emit newISOMessage(messageBuffer[i]);
             messageBuffer.removeAt(i);

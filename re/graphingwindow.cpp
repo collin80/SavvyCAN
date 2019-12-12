@@ -186,7 +186,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
                 thisFrame = modelFrames->at(i);
-                if (graphParams[j].ID == thisFrame.ID)
+                if (graphParams[j].ID == thisFrame.frameId())
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
@@ -1075,15 +1075,15 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
     {
         params.strideSoFar = 0;
         int64_t tempVal; //64 bit temp value.
-        tempVal = Utility::processIntegerSignal(frame.data, params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
+        tempVal = Utility::processIntegerSignal(frame.payload(), params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
         double xVal, yVal;
         if (secondsMode)
         {
-            xVal = ((double)(frame.timestamp) / 1000000.0 - params.xbias);
+            xVal = ((double)(frame.timeStamp().microSeconds()) / 1000000.0 - params.xbias);
         }
         else
         {
-            xVal = (frame.timestamp - params.xbias);
+            xVal = (frame.timeStamp().microSeconds() - params.xbias);
         }
         yVal = (tempVal * params.scale) + params.bias;
         params.x.append(xVal);
@@ -1113,7 +1113,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        if (thisFrame.ID == params.ID && thisFrame.remote == false) frameCache.append(thisFrame);
+        if (thisFrame.frameId() == params.ID && thisFrame.frameType() == QCanBusFrame::DataFrame) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1122,12 +1122,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     if (frameCache.count() == 0)
     {
         CANFrame dummy;
-        dummy.ID = params.ID;
+        dummy.setFrameId(params.ID);
         dummy.bus = 0;
-        dummy.len = 8;
-        dummy.remote = false;
-        dummy.timestamp = 0;
-        for (int i = 0; i < 8; i++) dummy.data[i] = 0;
+        dummy.setPayload(QByteArray(8, 0));
+        dummy.setFrameType(QCanBusFrame::DataFrame);
         frameCache.append(dummy);
     }
 
@@ -1147,15 +1145,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int j = 0; j < numEntries; j++)
     {
         int k = j * params.stride;
-        tempVal = Utility::processIntegerSignal(frameCache[k].data, sBit, bits, intelFormat, isSigned); //& params.mask;
+        tempVal = Utility::processIntegerSignal(frameCache[k].payload(), sBit, bits, intelFormat, isSigned); //& params.mask;
         //qDebug() << tempVal;
         if (secondsMode)
         {
-            params.x[j] = (frameCache[k].timestamp) / 1000000.0;
+            params.x[j] = (frameCache[k].timeStamp().microSeconds()) / 1000000.0;
         }
         else
         {
-            params.x[j] = frameCache[k].timestamp;
+            params.x[j] = frameCache[k].timeStamp.microSeconds();
         }
         params.y[j] = (tempVal * params.scale) + params.bias;
         if (params.y[j] < yminval) yminval = params.y[j];

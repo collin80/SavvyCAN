@@ -94,7 +94,7 @@ void FuzzingWindow::updatedFrames(int numFrames)
         if (numFrames > modelFrames->count()) return;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
-            id = modelFrames->at(i).ID;
+            id = modelFrames->at(i).frameId();
             if (!foundIDs.contains(id))
             {
                 foundIDs.append(id);
@@ -133,17 +133,17 @@ void FuzzingWindow::changedNumDataBytes(int newVal)
 void FuzzingWindow::timerTriggered()
 {
     CANFrame thisFrame;
-    thisFrame.remote = false;
     sendingBuffer.clear();
     int buses = ui->cbBuses->currentIndex();
     for (int count = 0; count < ui->spinBurst->value(); count++)
     {
-        thisFrame.ID = currentID;
-        for (int i = 0; i < 8; i++) thisFrame.data[i] = currentBytes[i];
-        if (currentID > 0x7FF) thisFrame.extended = true;
-        else thisFrame.extended = false;
-        thisFrame.bus = 0; //hard coded for now. TODO: do not hard code
-        thisFrame.len = ui->spinBytes->value();
+        thisFrame.setFrameId(currentID);
+        QByteArray bytes(ui->spinBytes->value(), 0);
+        for (int i = 0; i < bytes.length(); i++) bytes[i] = currentBytes[i];
+        thisFrame.setPayload(bytes);
+        if (currentID > 0x7FF) thisFrame.setExtendedFrameFormat(true);
+        else thisFrame.setExtendedFrameFormat(false);
+        thisFrame.bus = 0; //hard coded for now. TODO: do not hard code        
 
         if (buses < (ui->cbBuses->count() - 1))
         {
@@ -371,7 +371,7 @@ void FuzzingWindow::refreshIDList()
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        id = thisFrame.ID;
+        id = thisFrame.frameId();
         if (!foundIDs.contains(id))
         {
             foundIDs.append(id);

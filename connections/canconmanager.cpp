@@ -220,11 +220,11 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
             workingFrame.isReceived = false;
             if (useSystemTime)
             {
-                workingFrame.timestamp = (QDateTime::currentMSecsSinceEpoch() * 1000);
+                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0,QDateTime::currentMSecsSinceEpoch() * 1000));
             }
             else
             {
-                workingFrame.timestamp = mElapsedTimer.nsecsElapsed() / 1000;
+                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
             txFrame = conn->getQueue().get();

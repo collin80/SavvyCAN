@@ -211,14 +211,14 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
             CANFrame thisFrame = modelFrames->at(x);
-            int32_t id = static_cast<int32_t>(thisFrame.ID);
+            int32_t id = static_cast<int32_t>(thisFrame.frameId());
             if (!foundID.contains(id))
             {
                 foundID.append(id);
                 FilterUtility::createFilterItem(id, ui->listFrameID);
             }
 
-            if (currID == modelFrames->at(x).ID)
+            if (currID == modelFrames->at(x).frameId())
             {
                 thisID = true;
                 break;
@@ -275,7 +275,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int i = 0; i < modelFrames->count(); i++)
         {
             CANFrame thisFrame = modelFrames->at(i);
-            if (thisFrame.ID == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
+            if (thisFrame.frameId() == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
 
         ui->treeDetails->clear();
@@ -285,7 +285,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         baseNode = new QTreeWidgetItem();
         baseNode->setText(0, QString("ID: ") + newID );
 
-        if (frameCache[0].extended) //if these frames seem to be extended then try for J1939 decoding
+        if (frameCache[0].hasExtendedFrameFormat()) //if these frames seem to be extended then try for J1939 decoding
         {
             // ------- J1939 decoding ----------
             J1939ID jid;
@@ -367,7 +367,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int c = 0; c < 8; c++)
         {
             changedBits[c] = 0;
-            referenceBits[c] = frameCache.at(0).data[c];
+            referenceBits[c] = frameCache.at(0).payload()[c];
             //qDebug() << referenceBits[c];
         }
 
@@ -378,19 +378,19 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         for (int j = 0; j < frameCache.count(); j++)
         {
             byteGraphX.append(j);
-            for (uint32_t bytcnt = 0; bytcnt < frameCache[j].len; bytcnt++)
+            for (uint32_t bytcnt = 0; bytcnt < frameCache[j].payload().length(); bytcnt++)
             {
-                byteGraphY[bytcnt].append(frameCache[j].data[bytcnt]);
+                byteGraphY[bytcnt].append(frameCache[j].payload()[bytcnt]);
             }
 
             if (j != 0)
             {
                 //TODO - we try the interval whichever way doesn't go negative. But, we should probably sort the frame list before
                 //starting so that the intervals are all correct.
-                if (frameCache[j].timestamp > frameCache[j-1].timestamp)
-                    thisInterval = (frameCache[j].timestamp - frameCache[j-1].timestamp);
+                if (frameCache[j].timeStamp().microSeconds() > frameCache[j-1].timeStamp().microSeconds())
+                    thisInterval = (frameCache[j].timeStamp().microSeconds() - frameCache[j-1].timeStamp().microSeconds());
                 else
-                    thisInterval = (frameCache[j-1].timestamp - frameCache[j].timestamp);
+                    thisInterval = (frameCache[j-1].timeStamp().microSeconds() - frameCache[j].timeStamp().microSeconds());
 
                 sortedIntervals.push_back(thisInterval);
                 intervalSum += thisInterval;
@@ -398,12 +398,12 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 if (thisInterval < minInterval) minInterval = thisInterval;
                 avgInterval += thisInterval;
             }
-            thisLen = frameCache.at(j).len;
+            thisLen = frameCache.at(j).payload().length();
             if (thisLen > maxLen) maxLen = thisLen;
             if (thisLen < minLen) minLen = thisLen;
             for (int c = 0; c < thisLen; c++)
             {
-                unsigned char dat = frameCache.at(j).data[c];
+                unsigned char dat = frameCache.at(j).payload()[c];
                 if (minData[c] > dat) minData[c] = dat;
                 if (maxData[c] < dat) maxData[c] = dat;
                 dataHistogram[dat][c]++; //add one to count for this
@@ -600,7 +600,7 @@ void FrameInfoWindow::refreshIDList()
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        id = (int)thisFrame.ID;
+        id = (int)thisFrame.frameId();
         if (!foundID.contains(id))
         {
             foundID.append(id);
