@@ -28,6 +28,15 @@ function Controller() {
     });
 }
 
+Controller.prototype.DynamicTelemetryPluginFormCallback = function() {
+    gui.currentPageWidget().TelemetryPluginForm.statisticGroupBox.disableStatisticRadioButton.setChecked(true);
+    gui.clickButton(buttons.NextButton);
+
+    //for(var key in widget.TelemetryPluginForm.statisticGroupBox){
+    //    console.log(key);
+    //}
+}
+
 Controller.prototype.WelcomePageCallback = function() {
     console.log("Step: " + gui.currentPageWidget());
     // At least for 3.0.4 immediately clicking Next fails, so wait a bit.

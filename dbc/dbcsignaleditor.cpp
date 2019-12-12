@@ -49,8 +49,6 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             {
                 if (currentSignal == nullptr) return;
                 currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
-                if (currentSignal->valType == SP_FLOAT || currentSignal->valType == DP_FLOAT)
-                    currentSignal->intelByteOrder = false;
                 fillSignalForm(currentSignal);
             });
 
@@ -74,13 +72,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     break;
                 case 2:
                     currentSignal->valType = SP_FLOAT;
-                    currentSignal->intelByteOrder = false;
                     if (currentSignal->startBit > 39) currentSignal->startBit = 39;
                     currentSignal->signalSize = 32;
                     break;
                 case 3:
                     currentSignal->valType = DP_FLOAT;
-                    currentSignal->intelByteOrder = false;
                     currentSignal->startBit = 7; //has to be!
                     currentSignal->signalSize = 64;
                     break;
