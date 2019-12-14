@@ -68,7 +68,7 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
     //only send frame out if its ID is checked in the list. Otherwise discard it.
     CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
     uint32_t originalBus = thisFrame->bus;
-    if (currentSeqItem->idFilters.find(thisFrame->ID).value())
+    if (currentSeqItem->idFilters.find(thisFrame->frameId()).value())
     {
         if (whichBusSend > -1)
         {
@@ -90,7 +90,7 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
 
         thisFrame->bus = originalBus;
     }
-    return thisFrame->timestamp;
+    return thisFrame->timeStamp().microSeconds();
 }
 
 quint64 FramePlaybackObject::peekPosition(bool forward)
@@ -113,7 +113,7 @@ quint64 FramePlaybackObject::peekPosition(bool forward)
         }
     }
     CANFrame *thisFrame = &currentSeqItem->data[peekCurrentPosition];
-    return thisFrame->timestamp;
+    return thisFrame->timeStamp().microSeconds();
 }
 
 void FramePlaybackObject::piStart()
@@ -197,8 +197,8 @@ void FramePlaybackObject::startPlaybackForward()
     {
         playbackTimer->setInterval(1);
         playbackElapsed.start();
-        if (currentSeqItem->data[currentPosition].timestamp > 2000)
-            playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp - 2000;
+        if (currentSeqItem->data[currentPosition].timeStamp().microSeconds() > 2000)
+            playbackLastTimeStamp = currentSeqItem->data[currentPosition].timeStamp().microSeconds() - 2000;
         else playbackLastTimeStamp = 0;
     }
     playbackTimer->start();
@@ -219,7 +219,7 @@ void FramePlaybackObject::startPlaybackBackward()
     {
         playbackElapsed.start();
         playbackTimer->setInterval(1);
-        playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp + 2000;
+        playbackLastTimeStamp = currentSeqItem->data[currentPosition].timeStamp().microSeconds() + 2000;
     }
     playbackTimer->start();
 }
@@ -350,8 +350,8 @@ void FramePlaybackObject::timerTriggered()
             if (peekPosition(true) == 0xFFFFFFFFFFFFFFFFull)
             {
                 updatePosition(true); //this'll go to the next log (if there is one)
-                if (currentSeqItem->data[currentPosition].timestamp > 1000)
-                    playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp - 1000;
+                if (currentSeqItem->data[currentPosition].timeStamp().microSeconds() > 1000)
+                    playbackLastTimeStamp = currentSeqItem->data[currentPosition].timeStamp().microSeconds() - 1000;
                 else playbackLastTimeStamp = 0;
             }
         }
@@ -367,7 +367,7 @@ void FramePlaybackObject::timerTriggered()
             if (peekPosition(false) == 0xFFFFFFFFFFFFFFFFull)
             {
                 updatePosition(false); //this'll go to the next log (if there is one)
-                playbackLastTimeStamp = currentSeqItem->data[currentPosition].timestamp + 1000;
+                playbackLastTimeStamp = currentSeqItem->data[currentPosition].timeStamp().microSeconds() + 1000;
             }
         }
         statusCounter++;

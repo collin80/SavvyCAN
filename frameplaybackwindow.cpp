@@ -426,7 +426,7 @@ void FramePlaybackWindow::fillIDHash(SequenceItem &item)
 
     for (int i = 0; i < item.data.count(); i++)
     {
-        id = item.data[i].ID;
+        id = item.data[i].frameId();
         if (!item.idFilters.contains(id))
         {
             item.idFilters.insert(id, true);

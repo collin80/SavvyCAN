@@ -293,7 +293,7 @@ void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
             memcpy(refBytes, currBytes, 8);
         }
 
-        memcpy(currBytes, frameCache.at(currentPosition).data, 8);
+        memcpy(currBytes, frameCache.at(currentPosition).payload().data(), 8);
 
         updateDataView();
     }
@@ -696,23 +696,23 @@ void FlowViewWindow::timerTriggered()
 void FlowViewWindow::updateDataView()
 {
 
-    ui->txtCurr1->setText(Utility::formatNumber(currBytes[0]));
-    ui->txtCurr2->setText(Utility::formatNumber(currBytes[1]));
-    ui->txtCurr3->setText(Utility::formatNumber(currBytes[2]));
-    ui->txtCurr4->setText(Utility::formatNumber(currBytes[3]));
-    ui->txtCurr5->setText(Utility::formatNumber(currBytes[4]));
-    ui->txtCurr6->setText(Utility::formatNumber(currBytes[5]));
-    ui->txtCurr7->setText(Utility::formatNumber(currBytes[6]));
-    ui->txtCurr8->setText(Utility::formatNumber(currBytes[7]));
+    ui->txtCurr1->setText(Utility::formatNumber((char)currBytes[0]));
+    ui->txtCurr2->setText(Utility::formatNumber((char)currBytes[1]));
+    ui->txtCurr3->setText(Utility::formatNumber((char)currBytes[2]));
+    ui->txtCurr4->setText(Utility::formatNumber((char)currBytes[3]));
+    ui->txtCurr5->setText(Utility::formatNumber((char)currBytes[4]));
+    ui->txtCurr6->setText(Utility::formatNumber((char)currBytes[5]));
+    ui->txtCurr7->setText(Utility::formatNumber((char)currBytes[6]));
+    ui->txtCurr8->setText(Utility::formatNumber((char)currBytes[7]));
 
-    ui->txtRef1->setText(Utility::formatNumber(refBytes[0]));
-    ui->txtRef2->setText(Utility::formatNumber(refBytes[1]));
-    ui->txtRef3->setText(Utility::formatNumber(refBytes[2]));
-    ui->txtRef4->setText(Utility::formatNumber(refBytes[3]));
-    ui->txtRef5->setText(Utility::formatNumber(refBytes[4]));
-    ui->txtRef6->setText(Utility::formatNumber(refBytes[5]));
-    ui->txtRef7->setText(Utility::formatNumber(refBytes[6]));
-    ui->txtRef8->setText(Utility::formatNumber(refBytes[7]));
+    ui->txtRef1->setText(Utility::formatNumber((char)refBytes[0]));
+    ui->txtRef2->setText(Utility::formatNumber((char)refBytes[1]));
+    ui->txtRef3->setText(Utility::formatNumber((char)refBytes[2]));
+    ui->txtRef4->setText(Utility::formatNumber((char)refBytes[3]));
+    ui->txtRef5->setText(Utility::formatNumber((char)refBytes[4]));
+    ui->txtRef6->setText(Utility::formatNumber((char)refBytes[5]));
+    ui->txtRef7->setText(Utility::formatNumber((char)refBytes[6]));
+    ui->txtRef8->setText(Utility::formatNumber((char)refBytes[7]));
 
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);

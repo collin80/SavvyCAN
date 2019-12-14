@@ -97,6 +97,15 @@ public:
         else return formatHexNum(value);
     }
 
+    static QString formatNumber(char value)
+    {
+        if (decimalMode)
+        {
+            return QString::number((unsigned char)value, 10);
+        }
+        else return formatHexNum((unsigned char)value);
+    }
+
     static QString formatCANID(uint64_t id, bool extended)
     {
         if (decimalMode) return QString::number(id, 10);

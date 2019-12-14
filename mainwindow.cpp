@@ -168,12 +168,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //of scaling or font differences between different computers.
     CANFrame temp;
     temp.bus = 0;
-    temp.ID = 0x100;
-    temp.len = 0;
-    temp.extended = false;
+    temp.setFrameId(0x100);
     temp.isReceived = true;
-    temp.remote = false;
-    temp.timestamp = 100000000;
+    temp.setTimeStamp(QCanBusFrame::TimeStamp(0, 100000000));
     model->addFrame(temp, true);
     qApp->processEvents();
     tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
@@ -402,7 +399,7 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
     //qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
-    emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);
+    emit sendCenterTimeID(frame.frameId(), frame.timeStamp().microSeconds() / 1000000.0);
 }
 
 void MainWindow::interpretToggled(bool state)
@@ -743,18 +740,18 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     {
         CANFrame thisFrame = frames->at(c);
         QString builderString;
-        builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
-        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.ID, thisFrame.extended);
-        if (thisFrame.extended) builderString += tr(" Ext ");
+        builderString += tr("Time: ") + QString::number((thisFrame.timeStamp().microSeconds() / 1000000.0), 'f', 6);
+        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
+        if (thisFrame.hasExtendedFrameFormat()) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
         builderString += tr("Bus: ") + QString::number(thisFrame.bus);
-        builderString += " Len: " + QString::number(thisFrame.len) + "\n";
+        builderString += " Len: " + QString::number(thisFrame.payload().length()) + "\n";
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (unsigned int temp = 0; temp < thisFrame.len; temp++)
+        for (unsigned int temp = 0; temp < thisFrame.payload().length(); temp++)
         {
-            builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
+            builderString += Utility::formatNumber(thisFrame.payload()[temp]) + " ";
         }
         builderString += "\n";
         outFile->write(builderString.toUtf8());
