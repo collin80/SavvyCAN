@@ -1531,7 +1531,7 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
     {
         if (loadedFiles[i].getAssocBus() == -1 || frame.bus == (unsigned int)loadedFiles[i].getAssocBus())
         {
-            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.ID);
+            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;
         }
     }

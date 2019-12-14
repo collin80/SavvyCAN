@@ -230,23 +230,21 @@ void CANScriptHelper::clearFilters()
 void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
 {
     CANFrame frame;
-    frame.extended = false;
-    frame.remote = false;
-    frame.ID = static_cast<uint32_t>(id.toInt());
-    frame.len = length.toUInt();
-    if (frame.len > 8) frame.len = 8;
+    frame.setExtendedFrameFormat(false);
+    frame.setFrameId(static_cast<uint32_t>(id.toInt()));
+    QByteArray bytes(length.toUInt(), 0);
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
-    for (unsigned int i = 0; i < frame.len; i++)
+    for (unsigned int i = 0; i < bytes.length(); i++)
     {
-        frame.data[i] = (uint8_t)data.property(i).toInt();
+        bytes[i] = (uint8_t)data.property(i).toInt();
     }
-
+    frame.setPayload(bytes);
     frame.bus = (uint32_t)bus.toInt();
     //if (frame.bus > 1) frame.bus = 1;
 
-    if (frame.ID > 0x7FF) frame.extended = true;
+    if (frame.frameId() > 0x7FF) frame.setExtendedFrameFormat(true);
 
     qDebug() << "sending frame from script";
     CANConManager::getInstance()->sendFrame(frame);
@@ -258,13 +256,13 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
     //qDebug() << "Got frame in script interface";
     for (int i = 0; i < filters.length(); i++)
     {
-        if (filters[i].checkFilter(frame.ID, frame.bus))
+        if (filters[i].checkFilter(frame.frameId(), frame.bus))
         {
             QJSValueList args;
-            args << frame.bus << frame.ID << frame.len;
-            QJSValue dataBytes = scriptEngine->newArray(frame.len);
+            args << frame.bus << frame.frameId() << frame.payload().length();
+            QJSValue dataBytes = scriptEngine->newArray(frame.payload().length());
 
-            for (unsigned int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
+            for (unsigned int j = 0; j < frame.payload().length(); j++) dataBytes.setProperty(j, QJSValue((unsigned char)frame.payload()[j]));
             args.append(dataBytes);
             gotFrameFunction.call(args);
             return; //as soon as one filter matches we jump out

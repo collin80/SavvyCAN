@@ -4,7 +4,7 @@
 
 
 SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
-    mID(pFrame.ID)
+    mID(pFrame.frameId())
 {
     for (int i = 0; i < 8; i++) {
         mNotch[i] =0;

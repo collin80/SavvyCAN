@@ -585,7 +585,7 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 
     for (int i = 0; i < sig->valList.count(); i++)
     {
-        QTableWidgetItem *val = new QTableWidgetItem(Utility::formatNumber(sig->valList[i].value));
+        QTableWidgetItem *val = new QTableWidgetItem(Utility::formatNumber((uint64_t)sig->valList[i].value));
         QTableWidgetItem *desc = new QTableWidgetItem(sig->valList[i].descript);
         rowIdx = ui->valuesTable->rowCount();
         ui->valuesTable->insertRow(rowIdx);

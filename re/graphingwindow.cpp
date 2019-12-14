@@ -1153,7 +1153,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         }
         else
         {
-            params.x[j] = frameCache[k].timeStamp.microSeconds();
+            params.x[j] = frameCache[k].timeStamp().microSeconds();
         }
         params.y[j] = (tempVal * params.scale) + params.bias;
         if (params.y[j] < yminval) yminval = params.y[j];

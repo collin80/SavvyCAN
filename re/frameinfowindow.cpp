@@ -336,13 +336,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("   Priority bits: ") + Utility::formatNumber( FilterUtility::getGMLanPriorityBits(targettedID)));
+            tempItem->setText(0, tr("   Priority bits: ") + Utility::formatNumber( (uint64_t)FilterUtility::getGMLanPriorityBits(targettedID)));
             baseNode->addChild(tempItem);
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("   Arbitration Id: ") + Utility::formatNumber( FilterUtility::getGMLanArbitrationId(targettedID)));
+            tempItem->setText(0, tr("   Arbitration Id: ") + Utility::formatNumber( (uint64_t)FilterUtility::getGMLanArbitrationId(targettedID)));
             baseNode->addChild(tempItem);
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("   Sender Id: ") + Utility::formatNumber( FilterUtility::getGMLanSenderId(targettedID)));
+            tempItem->setText(0, tr("   Sender Id: ") + Utility::formatNumber( (uint64_t)FilterUtility::getGMLanSenderId(targettedID)));
             baseNode->addChild(tempItem);
 
         }
@@ -506,7 +506,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             dataBase->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("Range: ") + Utility::formatNumber(minData[c]) + tr(" to ") + Utility::formatNumber(maxData[c]));
+            tempItem->setText(0, tr("Range: ") + Utility::formatNumber((char)minData[c]) + tr(" to ") + Utility::formatNumber((char)maxData[c]));
             dataBase->addChild(tempItem);
             histBase->setText(0, tr("Histogram"));
             dataBase->addChild(histBase);

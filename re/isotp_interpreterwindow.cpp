@@ -218,7 +218,7 @@ void ISOTP_InterpreterWindow::showDetailView()
     buildString.append(tr("Raw Payload: "));
     for (int i = 0; i < messages[rowNum].data.count(); i++)
     {
-        buildString.append(Utility::formatNumber(messages[rowNum].data[i]));
+        buildString.append(Utility::formatNumber((char)messages[rowNum].data[i]));
         buildString.append(" ");
     }
     buildString.append("\r\r");
@@ -291,7 +291,7 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
 
     for (int i = 0; i < msg.data.count(); i++)
     {
-        tempString.append(Utility::formatNumber(msg.data[i]));
+        tempString.append(Utility::formatNumber((char)msg.data[i]));
         tempString.append(" ");
     }
     ui->tableIsoFrames->setItem(rowNum, 5, new QTableWidgetItem(tempString));
