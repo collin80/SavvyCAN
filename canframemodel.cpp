@@ -347,7 +347,6 @@ void CANFrameModel::recalcOverwrite()
 
 QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
-    int dLen;
     QString tempString;
     CANFrame thisFrame;
     static bool rowFlip = false;
@@ -360,6 +359,9 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     thisFrame = filteredFrames.at(index.row());
+
+    unsigned char *data = reinterpret_cast<unsigned char *>(thisFrame.payload().data());
+    int dataLen = thisFrame.payload().count();
 
     if (role == Qt::BackgroundColorRole)
     {
@@ -422,7 +424,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case Column::Bus:
             return QString::number(thisFrame.bus);
         case Column::Length:
-            return QString::number(thisFrame.payload().length());
+            return QString::number(dataLen);
         case Column::ASCII:
             if (thisFrame.frameId() >= 0x7FFFFFF0ull)
             {
@@ -430,32 +432,29 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(QString::number(thisFrame.frameId() & 0x7));
                 return tempString;
             }
-            dLen = thisFrame.payload().length();
-            if (!thisFrame.frameType() != QCanBusFrame::RemoteRequestFrame) {
-                if (dLen < 0) dLen = 0;
-                if (dLen > 8) dLen = 8;
-                for (int i = 0; i < dLen; i++)
+            if (thisFrame.frameType() != QCanBusFrame::RemoteRequestFrame) {
+                if (dataLen < 0) dataLen = 0;
+                //if (dLen > 8) dLen = 8;
+                for (int i = 0; i < dataLen; i++)
                 {
-                    quint8 byt = thisFrame.payload()[i];
+                    char byt = thisFrame.payload()[i];
                     //0x20 through 0x7E are printable characters. Outside of that range they aren't. So use dots instead
                     if (byt < 0x20) byt = 0x2E; //dot character
                     if (byt > 0x7E) byt = 0x2E;
-                    tempString.append(QString::fromUtf8((char *)&byt, 1));
+                    tempString.append(QString::fromUtf8(&byt, 1));
                 }
             }
             return tempString;
         case Column::Data:
-            dLen = thisFrame.payload().length();
-            if (dLen < 0) dLen = 0;
-            if (dLen > 8) dLen = 8;
+            if (dataLen < 0) dataLen = 0;
             //if (useHexMode) tempString.append("0x ");
             if (thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame) {
                 return tempString;
             }
-            for (int i = 0; i < dLen; i++)
+            for (int i = 0; i < dataLen; i++)
             {
-                if (useHexMode) tempString.append( QString::number((unsigned char)thisFrame.payload()[i], 16).toUpper().rightJustified(2, '0'));
-                else tempString.append(QString::number(thisFrame.payload()[i], 10));
+                if (useHexMode) tempString.append( QString::number(data[i], 16).toUpper().rightJustified(2, '0'));
+                else tempString.append(QString::number(data[i], 10));
                 tempString.append(" ");
             }
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
@@ -740,7 +739,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
 int CANFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
 {
     int bestIndex = -1;
-    uint64_t intTimeStamp = timestamp * 1000000l;
+    int64_t intTimeStamp = static_cast<int64_t> (timestamp * 1000000l);
     for (int i = 0; i < frames.count(); i++)
     {
         if ((frames[i].frameId() == ID))

@@ -88,7 +88,7 @@ private:
     bool timeSeconds;
     bool useSystemTime;
     bool needFilterRefresh;
-    uint64_t timeOffset;
+    int64_t timeOffset;
     int lastUpdateNumFrames;
     uint32_t preallocSize;
     bool sortDirAsc;

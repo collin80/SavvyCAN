@@ -444,7 +444,7 @@ void MainWindow::updateFilterList()
     QMap<int, bool>::const_iterator filterIter;
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
-        QListWidgetItem *thisItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
+        /*QListWidgetItem *thisItem = */FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
     inhibitFilterUpdate = false;
 }
@@ -729,6 +729,10 @@ void MainWindow::saveDecodedTextFile(QString filename)
     QFile *outFile = new QFile(filename);
     const QVector<CANFrame> *frames = model->getFilteredListReference();
 
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 /*
@@ -738,20 +742,23 @@ Data Bytes: 88 10 00 13 BB 00 06 00
 */
     for (int c = 0; c < frames->count(); c++)
     {
-        CANFrame thisFrame = frames->at(c);
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
         QString builderString;
-        builderString += tr("Time: ") + QString::number((thisFrame.timeStamp().microSeconds() / 1000000.0), 'f', 6);
-        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
-        if (thisFrame.hasExtendedFrameFormat()) builderString += tr(" Ext ");
+        builderString += tr("Time: ") + QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6);
+        builderString += tr("    ID: ") + Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat());
+        if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
-        builderString += tr("Bus: ") + QString::number(thisFrame.bus);
-        builderString += " Len: " + QString::number(thisFrame.payload().length()) + "\n";
+        builderString += tr("Bus: ") + QString::number(frame->bus);
+        builderString += " Len: " + QString::number(dataLen) + "\n";
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (unsigned int temp = 0; temp < thisFrame.payload().length(); temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            builderString += Utility::formatNumber(thisFrame.payload()[temp]) + " ";
+            builderString += Utility::formatNumber(data[temp]) + " ";
         }
         builderString += "\n";
         outFile->write(builderString.toUtf8());
@@ -759,14 +766,14 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         builderString = "";
         if (dbcHandler != nullptr)
         {
-            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
+            DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
             if (msg != nullptr)
             {
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
 
                     QString temp;
-                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, temp))
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp))
                     {
                         builderString.append("\t" + temp);
                         builderString.append("\n");

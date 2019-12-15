@@ -138,7 +138,7 @@ FrameInfoWindow::~FrameInfoWindow()
 
 void FrameInfoWindow::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     writeSettings();
 }
 
@@ -260,9 +260,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     uint8_t referenceBits[8];
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
-    targettedID = static_cast<int>(Utility::ParseStringToNum(newID));
-
     if (modelFrames->count() == 0) return;
+
+    targettedID = static_cast<int>(Utility::ParseStringToNum(newID));
 
     qDebug() << "Started update details window with id " << targettedID;
 
@@ -277,6 +277,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             CANFrame thisFrame = modelFrames->at(i);
             if (thisFrame.frameId() == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
+
+        unsigned char *data = reinterpret_cast<unsigned char *>(frameCache.at(0).payload().data());
+        int dataLen = frameCache.at(0).payload().length();
 
         ui->treeDetails->clear();
 
@@ -364,10 +367,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
         for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
 
-        for (int c = 0; c < 8; c++)
+        data = reinterpret_cast<unsigned char *>(frameCache.at(0).payload().data());
+        dataLen = frameCache.at(0).payload().length();
+
+        for (int c = 0; c < dataLen; c++)
         {
             changedBits[c] = 0;
-            referenceBits[c] = frameCache.at(0).payload()[c];
+            referenceBits[c] = data[c];
             //qDebug() << referenceBits[c];
         }
 
@@ -377,10 +383,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
+            data = reinterpret_cast<unsigned char *>(frameCache.at(j).payload().data());
+            dataLen = frameCache.at(j).payload().length();
+
             byteGraphX.append(j);
-            for (uint32_t bytcnt = 0; bytcnt < frameCache[j].payload().length(); bytcnt++)
+            for (uint32_t bytcnt = 0; bytcnt < dataLen; bytcnt++)
             {
-                byteGraphY[bytcnt].append(frameCache[j].payload()[bytcnt]);
+                byteGraphY[bytcnt].append(data[bytcnt]);
             }
 
             if (j != 0)
@@ -398,12 +407,12 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 if (thisInterval < minInterval) minInterval = thisInterval;
                 avgInterval += thisInterval;
             }
-            thisLen = frameCache.at(j).payload().length();
+            thisLen = dataLen;
             if (thisLen > maxLen) maxLen = thisLen;
             if (thisLen < minLen) minLen = thisLen;
             for (int c = 0; c < thisLen; c++)
             {
-                unsigned char dat = frameCache.at(j).payload()[c];
+                unsigned char dat = data[c];
                 if (minData[c] > dat) minData[c] = dat;
                 if (maxData[c] < dat) maxData[c] = dat;
                 dataHistogram[dat][c]++; //add one to count for this

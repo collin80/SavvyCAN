@@ -809,7 +809,7 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
                 {
                     if (tokens[d + 3] != "")
                     {
-                        bytes[d] = static_cast<unsigned char>(tokens[d + 3].toInt(nullptr, 16));
+                        bytes[d] = static_cast<char>(tokens[d + 3].toInt(nullptr, 16));
                     }
                     else bytes[d] = 0;
                 }
@@ -927,7 +927,7 @@ bool FrameFileIO::loadCANOpenFile(QString filename, QVector<CANFrame>* frames)
                 {
                     if (dataTok[d] != "")
                     {
-                        bytes[d] = static_cast<unsigned char>(dataTok[d].simplified().toInt(nullptr, 16));
+                        bytes[d] = static_cast<char>(dataTok[d].simplified().toInt(nullptr, 16));
                     }
                     else bytes[d] = 0;
                 }
@@ -946,6 +946,10 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
 {
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -966,24 +970,28 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
             lineCounter = 0;
         }
 
-        outFile->write(QString::number(frames->at(c).timeStamp().microSeconds() / 1000000.0, 'f', 6).toUtf8());
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        outFile->write(QString::number(frame->timeStamp().microSeconds() / 1000000.0, 'f', 6).toUtf8());
         outFile->putChar(' ');
 
-        outFile->write(QString::number(frames->at(c).bus + 1).toUtf8());
-        if (frames->at(c).isReceived) outFile->putChar('R');
+        outFile->write(QString::number(frame->bus + 1).toUtf8());
+        if (frame->isReceived) outFile->putChar('R');
         else outFile->putChar('T');
 
-        if (frames->at(c).hasExtendedFrameFormat())
+        if (frame->hasExtendedFrameFormat())
         {
             outFile->write("29 ");
         }
         else outFile->write("11 ");
-        outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+        outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(' ');
 
-        for (int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            outFile->write(QString::number(frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
         }
 
@@ -1136,7 +1144,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         {
                             if (tokens[d] != "")
                             {
-                                bytes[d] = static_cast<unsigned char>(tokens[d].toInt(nullptr, 16));
+                                bytes[d] = static_cast<char>(tokens[d].toInt(nullptr, 16));
                             }
                             else bytes[d] = 0;
                         }
@@ -1169,7 +1177,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         {
                             if (tokens[d] != "")
                             {
-                                bytes[d] = static_cast<unsigned char>(tokens[d].toInt(nullptr, 16));
+                                bytes[d] = static_cast<char>(tokens[d].toInt(nullptr, 16));
                             }
                             else bytes[d] = 0;
                         }
@@ -1313,7 +1321,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                 {
                     if (tokens.count() > d)
                     {
-                        bytes[d - 6] = static_cast<unsigned char>(tokens[d].toInt(nullptr, 16));
+                        bytes[d - 6] = static_cast<char>(tokens[d].toInt(nullptr, 16));
                     }
                     else //expected byte wasn't there to read. Set it zero and set error flag
                     {
@@ -1336,7 +1344,12 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
 {
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
-    uint64_t offsetTime = frames->at(0).timeStamp().microSeconds();
+    int64_t offsetTime = frames->at(0).timeStamp().microSeconds();
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     for (int c = 0; c < frames->count(); c++)
     {
         if (frames->at(c).timeStamp().microSeconds() < offsetTime) offsetTime = frames->at(c).timeStamp().microSeconds();
@@ -1369,24 +1382,28 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
             lineCounter = 0;
         }
 
-        uint64_t timeStamp = (frames->at(c).timeStamp().microSeconds() - offsetTime) / 1000000ull;
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        uint64_t timeStamp = (frame->timeStamp().microSeconds() - offsetTime) / 1000000ull;
         int tsLen = QString::number(timeStamp).length();
         int precision = 6;
         //vector seems to keep 10 bytes at the start of the line for the timestamp. It should never exceed this
         //and there should never be a precision over 6 digits after the decimal
         if (tsLen > 3) precision = 9 - tsLen;
-        outFile->write(QString::number((frames->at(c).timeStamp().microSeconds() - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
+        outFile->write(QString::number((frame->timeStamp().microSeconds() - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
         outFile->putChar(' ');
-        outFile->write(QString::number(frames->at(c).bus + 1).toUtf8());
+        outFile->write(QString::number(frame->bus + 1).toUtf8());
         outFile->write("  ");
         if (frames->at(c).hasExtendedFrameFormat())
         {
-            outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+            outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
             outFile->write("x");
         }
         else
         {
-            outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(3, '0').toUtf8());
+            outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(3, '0').toUtf8());
             outFile->write("      ");
         }
         outFile->write("   ");
@@ -1397,12 +1414,12 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
         if (frames->at(c).frameType() == QCanBusFrame::RemoteRequestFrame) outFile->write("r ");
         else outFile->write("d ");
 
-        outFile->write(QString::number(frames->at(c).payload().length()).toUtf8());
+        outFile->write(QString::number(dataLen).toUtf8());
         outFile->write("  ");
 
-        for (int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->write("  ");
         }
 
@@ -1563,7 +1580,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < 8; c++) bytes[c] = 0;
                     for (int d = 0; d < thisFrame.payload().length(); d++)
-                        bytes[d] = static_cast<unsigned char>(tokens[5 + d].toInt(nullptr, 16));
+                        bytes[d] = static_cast<char>(tokens[5 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                 }
                 else if (fileVersion == 2)
@@ -1578,7 +1595,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < 8; c++) bytes[c] = 0;
                     for (int d = 0; d < thisFrame.payload().length(); d++)
-                        bytes[d] = static_cast<unsigned char>(tokens[6 + d].toInt(nullptr, 16));
+                        bytes[d] = static_cast<char>(tokens[6 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                 }
 
@@ -1596,6 +1613,10 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
 {
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -1615,28 +1636,32 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
             lineCounter = 0;
         }
 
-        outFile->write(QString::number(frames->at(c).timeStamp().microSeconds()).toUtf8());
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        outFile->write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
         outFile->putChar(44);
 
-        outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+        outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(44);
 
-        if (frames->at(c).hasExtendedFrameFormat()) outFile->write("true,");
+        if (frame->hasExtendedFrameFormat()) outFile->write("true,");
         else outFile->write("false,");
 
-        if (frames->at(c).isReceived) outFile->write("Rx,");
+        if (frame->isReceived) outFile->write("Rx,");
         else outFile->write("Tx,");
 
-        outFile->write(QString::number(frames->at(c).bus).toUtf8());
+        outFile->write(QString::number(frame->bus).toUtf8());
         outFile->putChar(44);
 
-        outFile->write(QString::number(frames->at(c).payload().length()).toUtf8());
+        outFile->write(QString::number(dataLen).toUtf8());
         outFile->putChar(44);
 
         for (int temp = 0; temp < 8; temp++)
         {
-            if (temp < frames->at(c).payload().length())
-                outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            if (temp < dataLen)
+                outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             else
                 outFile->write("00");
             outFile->putChar(44);
@@ -1694,32 +1719,41 @@ bool FrameFileIO::closeContinuousNative()
 
 bool FrameFileIO::writeContinuousNative(const QVector<CANFrame>* frames, int beginningFrame)
 {
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     if (!continuousFile.isOpen()) return false;
     qDebug() << "Bgn: " << beginningFrame << "  Count: " << frames->count();
     for (int c = beginningFrame; c < frames->count(); c++)
     {
-        continuousFile.write(QString::number(frames->at(c).timeStamp().microSeconds()).toUtf8());
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        continuousFile.write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
         continuousFile.putChar(44);
 
-        continuousFile.write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+        continuousFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         continuousFile.putChar(44);
 
-        if (frames->at(c).hasExtendedFrameFormat()) continuousFile.write("true,");
+        if (frame->hasExtendedFrameFormat()) continuousFile.write("true,");
         else continuousFile.write("false,");
 
-        if (frames->at(c).isReceived) continuousFile.write("Rx,");
+        if (frame->isReceived) continuousFile.write("Rx,");
         else continuousFile.write("Tx,");
 
-        continuousFile.write(QString::number(frames->at(c).bus).toUtf8());
+        continuousFile.write(QString::number(frame->bus).toUtf8());
         continuousFile.putChar(44);
 
-        continuousFile.write(QString::number(frames->at(c).payload().length()).toUtf8());
+        continuousFile.write(QString::number(dataLen).toUtf8());
         continuousFile.putChar(44);
 
         for (int temp = 0; temp < 8; temp++)
         {
-            if (temp < frames->at(c).payload().length())
-                continuousFile.write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            if (temp < dataLen)
+                continuousFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             else
                 continuousFile.write("00");
             continuousFile.putChar(44);
@@ -1829,7 +1863,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
             thisFrame.setFrameType(QCanBusFrame::DataFrame);
             QList<QByteArray> dataTok = tokens[1].split(' ');
             QByteArray bytes(dataTok.length(), 0);
-            for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<unsigned char>(dataTok[d].toInt(nullptr, 16));
+            for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>(dataTok[d].toInt(nullptr, 16));
             thisFrame.setPayload(bytes);
             frames->append(thisFrame);
         }
@@ -1845,6 +1879,10 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
 {
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -1864,12 +1902,16 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
             lineCounter = 0;
         }
 
-        outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(44);
 
-        for (int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
         }
 
@@ -2025,7 +2067,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
                 QByteArray bytes(lng, 0);
                 if (thisFrame.frameType() != QCanBusFrame::RemoteRequestFrame) {
                     for (int d = 0; d < thisFrame.payload().length(); d++)
-                        bytes[d] = static_cast<unsigned char>(tokens[d + 6].toInt(nullptr, 16));
+                        bytes[d] = static_cast<char>(tokens[d + 6].toInt(nullptr, 16));
                 }
                 thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
@@ -2043,6 +2085,10 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
     QFile *outFile = new QFile(filename);
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
 
     //timestamp = QDateTime::currentDateTime();
 
@@ -2077,28 +2123,32 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
             lineCounter = 0;
         }
 
-        tempStamp = QDateTime::fromMSecsSinceEpoch(frames->at(c).timeStamp().microSeconds() / 1000);
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        tempStamp = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
         outFile->write(tempStamp.toString("hh:mm:ss:zzz").toUtf8());
-        if (frames->at(c).isReceived) outFile->write(" Rx ");
+        if (frame->isReceived) outFile->write(" Rx ");
         else outFile->write(" Tx ");
         // busmaster channel start at 1
-        outFile->write(QString::number(frames->at(c).bus+1).toUtf8() + " ");
+        outFile->write(QString::number(frame->bus + 1).toUtf8() + " ");
         outFile->write("0x");
-        if (frames->at(c).hasExtendedFrameFormat() && frames->at(c).frameId() > 0x7FF) {
-            outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+        if (frame->hasExtendedFrameFormat() && frame->frameId() > 0x7FF) {
+            outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         } else {
-            outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(3, '0').toUtf8());
+            outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(3, '0').toUtf8());
         }
-        if (frames->at(c).hasExtendedFrameFormat()) outFile->write(" x");
+        if (frame->hasExtendedFrameFormat()) outFile->write(" x");
             else outFile->write(" s");
-        if (frames->at(c).frameType() == QCanBusFrame::RemoteRequestFrame) outFile->write("r ");
+        if (frame->frameType() == QCanBusFrame::RemoteRequestFrame) outFile->write("r ");
             else outFile->write(" ");
-        outFile->write(QString::number(frames->at(c).payload().length()).toUtf8() + " ");
+        outFile->write(QString::number(dataLen).toUtf8() + " ");
 
-        if (frames->at(c).frameType() != QCanBusFrame::RemoteRequestFrame) {
-            for (int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        if (frame->frameType() != QCanBusFrame::RemoteRequestFrame) {
+            for (int temp = 0; temp < dataLen; temp++)
             {
-                outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+                outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
                 outFile->putChar(' ');
             }
         }
@@ -2214,7 +2264,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
                 QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
                 QByteArray bytes(dataToks.length(), 0);
                 if (thisFrame.payload().length() > 8) return false;
-                for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<unsigned char>(dataToks[d].toInt(nullptr, 16));
+                for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
                 thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
             }
@@ -2231,6 +2281,10 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
     QFile *outFile = new QFile(filename);
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
 
     timestamp = QDateTime::currentDateTime();
 
@@ -2257,17 +2311,22 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
             qApp->processEvents();
             lineCounter = 0;
         }
-        tempStamp = QDateTime::fromMSecsSinceEpoch(frames->at(c).timeStamp().microSeconds() / 1000);
+
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        tempStamp = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
         outFile->write("\"" + tempStamp.toString("h:m:s.").toUtf8() + tempStamp.toString("z").rightJustified(3, '0').toUtf8() + "\"");
 
-        outFile->write(",\"" + QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + "\"");
-        if (frames->at(c).hasExtendedFrameFormat()) outFile->write(",\"Ext\"");
+        outFile->write(",\"" + QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + "\"");
+        if (frame->hasExtendedFrameFormat()) outFile->write(",\"Ext\"");
             else outFile->write(",\"Std\"");
         outFile->write(",\"\",\"");
 
-        for (int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
         }
 
@@ -2334,7 +2393,7 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
     int lineCounter = 0;
     QByteArray data;
     int timeOffset = 0;
-    uint64_t lastTimeStamp = 0;
+    int64_t lastTimeStamp = 0;
     bool foundErrors = false;
     thisFrame.setFrameType(QCanBusFrame::DataFrame);
 
@@ -2359,14 +2418,15 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
         }
 
         data = inFile->read(12);
+        unsigned char *uData = reinterpret_cast<unsigned char *>(data.data());
 
         thisFrame.bus = 0;
         thisFrame.isReceived = true;
         thisFrame.setExtendedFrameFormat(false); //format is incapable of extended frames
         thisFrame.setFrameType(QCanBusFrame::DataFrame);
         qint64 tempStamp;
-        tempStamp = 1000000ul * ((unsigned char)data[0] >> 2);
-        tempStamp += (((data[0] & 3) << 8) + (unsigned char)data[1]) * 1000;
+        tempStamp = 1000000ul * (uData[0] >> 2);
+        tempStamp += (((uData[0] & 3) << 8) + uData[1]) * 1000;
         tempStamp += timeOffset;
         if (tempStamp < lastTimeStamp)
         {
@@ -2374,12 +2434,12 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
         }
         lastTimeStamp = tempStamp;
         thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempStamp));
-        thisFrame.setFrameId((((unsigned char)data[3] & 0x0F) * 256 + (unsigned char)data[2]) & 0x7FF);
-        QByteArray bytes((unsigned char)data[3] >> 4, 0);
+        thisFrame.setFrameId(((uData[3] & 0x0F) * 256 + uData[2]) & 0x7FF);
+        QByteArray bytes(uData[3] >> 4, 0);
 
         if (thisFrame.payload().length() <= 8 && thisFrame.frameId() <= 0x7FF)
         {
-            for (unsigned int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = (unsigned char)data[4 + d];
+            for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = data[4 + d];
             thisFrame.setPayload(bytes);
             frames->append(thisFrame);
         }
@@ -2397,7 +2457,12 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
     int lineCounter = 0;
     QByteArray data;
     CANFrame thisFrame;
-    int ms, id;
+    int id;
+    qint64 ms;
+
+    unsigned char *inData;
+    int inDataLen;
+    const CANFrame *frame;
 
     if (!outFile->open(QIODevice::WriteOnly))
     {
@@ -2425,18 +2490,22 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
             qApp->processEvents();
             lineCounter = 0;
         }
+
+        frame = &frames->at(c);
+        inData = reinterpret_cast<unsigned char *>(frame->payload().data());
+        inDataLen = frame->payload().count();
+
         for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
 
-        thisFrame = frames->at(c);
-        if (!thisFrame.hasExtendedFrameFormat())
+        if (!frame->hasExtendedFrameFormat())
         {
-            ms = (thisFrame.timeStamp().microSeconds() / 1000);
-            id = thisFrame.frameId() & 0x7FF;
+            ms = (frame->timeStamp().microSeconds() / 1000);
+            id = frame->frameId() & 0x7FF;
             data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
             data[1] = (char)(ms & 0xFF);
             data[2] = (char)(id & 0xFF);
-            data[3] = (char)((id >> 8) + (thisFrame.payload().length() << 4));
-            for (unsigned int d = 0; d < thisFrame.payload().length(); d++) data[4 + d] = (char)thisFrame.payload()[d];
+            data[3] = (char)((id >> 8) + (inDataLen << 4));
+            for (int d = 0; d < inDataLen; d++) data[4 + d] = (char)inData[d];
             outFile->write(data);
         }
     }
@@ -2553,14 +2622,14 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
                         if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
                             else thisFrame.isReceived = false;
                         thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                        thisFrame.setFrameId(Utility::ParseStringToNum(tokens[2]));
+                        thisFrame.setFrameId(static_cast<quint32>( Utility::ParseStringToNum(tokens[2])) );
                         if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
                             else thisFrame.setExtendedFrameFormat(true);
                         thisFrame.bus = 0;
-                        QByteArray bytes(tokens[3].toUInt(), 0);
+                        QByteArray bytes(tokens[3].toInt(), 0);
                         if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
-                        if (thisFrame.payload().length() + 4 > (unsigned int) tokens.length()) thisFrame.payload().resize( tokens.length() - 4 );
-                        for (unsigned int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = (unsigned char)Utility::ParseStringToNum(tokens[4 + d]);
+                        if (thisFrame.payload().length() + 4 > tokens.length()) thisFrame.payload().resize( tokens.length() - 4 );
+                        for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>( Utility::ParseStringToNum(tokens[4 + d]) );
                         thisFrame.setPayload(bytes);
                         frames->append(thisFrame);
                     }
@@ -2591,6 +2660,10 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
 
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     timestamp = QDateTime::currentDateTime();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
@@ -2617,15 +2690,19 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
             lineCounter = 0;
         }
 
-        outFile->write(QString::number((int)(frames->at(c).timeStamp().microSeconds() / 1000)).toUtf8());
-        if (frames->at(c).isReceived) outFile->write(";RX;");
-        else outFile->write(";TX;");
-        outFile->write("0x" + QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
-        outFile->write(QString::number(frames->at(c).payload().length()).toUtf8() + ";");
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
 
-        for (unsigned int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        outFile->write(QString::number((frame->timeStamp().microSeconds() / 1000)).toUtf8());
+        if (frame->isReceived) outFile->write(";RX;");
+        else outFile->write(";TX;");
+        outFile->write("0x" + QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
+        outFile->write(QString::number(dataLen).toUtf8() + ";");
+
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            outFile->write("0x" + QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write("0x" + QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(';');
         }
 
@@ -2773,11 +2850,11 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
                         else thisFrame.setExtendedFrameFormat(true);
                     thisFrame.bus = 0;
                     thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                    QByteArray bytes(tokens[3].toUInt(), 0);
+                    QByteArray bytes(tokens[3].toInt(), 0);
                     if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
                     QList<QByteArray> dataToks = tokens[4].split(' ');
-                    if (thisFrame.payload().length() > (unsigned int) dataToks.length()) thisFrame.payload().resize( static_cast<unsigned int>(dataToks.length()) );
-                    for (unsigned int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = (unsigned char)dataToks[d].toInt(nullptr, 16);
+                    if (thisFrame.payload().length() > dataToks.length()) thisFrame.payload().resize(dataToks.length());
+                    for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                     frames->append(thisFrame);
                 }
@@ -2795,8 +2872,12 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
     QFile *outFile = new QFile(filename);
     QDateTime timestamp;
     int lineCounter = 0;
-    uint64_t tempTime;
+    int64_t tempTime;
     int tempTimePiece;
+
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
 
     timestamp = QDateTime::currentDateTime();
 
@@ -2836,38 +2917,41 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
             //lineCounter = 0;
         }
 
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
 
          //1F D3 3F FF 08 FF E0 CB
         outFile->write(QString::number(lineCounter).rightJustified(10, ' ').toUtf8());
         outFile->write("\t");
 
-        tempTime = frames->at(c).timeStamp().microSeconds();
-        tempTimePiece = tempTime / 1000000ul / 60 / 60;
-        tempTime -= tempTimePiece * 1000000ul * 60 * 60;
+        tempTime = frame->timeStamp().microSeconds();
+        tempTimePiece = static_cast<int>(tempTime / 1000000l / 60 / 60);
+        tempTime -= tempTimePiece * 1000000l * 60 * 60;
         outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
         outFile->write(":");
 
-        tempTimePiece = tempTime / 1000000ul / 60;
-        tempTime -= tempTimePiece * 1000000ul * 60;
+        tempTimePiece = static_cast<int>(tempTime / 1000000l / 60);
+        tempTime -= tempTimePiece * 1000000l * 60;
         outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
         outFile->write(":");
 
-        tempTimePiece = tempTime / 1000000ul;
-        tempTime -= tempTimePiece * 1000000ul;
+        tempTimePiece = static_cast<int>(tempTime / 1000000l);
+        tempTime -= tempTimePiece * 1000000l;
         outFile->write(QString::number(tempTimePiece).rightJustified(2, '0').toUtf8());
         outFile->write(":");
 
-        tempTimePiece = tempTime / 100;
+        tempTimePiece = static_cast<int>(tempTime / 100);
         outFile->write(QString::number(tempTimePiece).rightJustified(4, '0').toUtf8());
         outFile->write("\t");
 
-        outFile->write(QString::number(frames->at(c).frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + "\t");
+        outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + "\t");
 
-        outFile->write(QString::number(frames->at(c).payload().length()).toUtf8() + "\t");
+        outFile->write(QString::number(dataLen).toUtf8() + "\t");
 
-        for (unsigned int temp = 0; temp < frames->at(c).payload().length(); temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile->putChar(' ');
         }
 
@@ -2886,6 +2970,10 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
     int lineCounter = 0;
     double tempTime;
 
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     timestamp = QDateTime::currentDateTime();
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
@@ -2902,27 +2990,31 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
             qApp->processEvents();
         }
 
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
         outFile->write("(");
 
-        tempTime = frames->at(c).timeStamp().microSeconds() / 1000000.0;
+        tempTime = frame->timeStamp().microSeconds() / 1000000.0;
         outFile->write(QString::number(tempTime,'f', 6).rightJustified(17, '0').toUtf8());
         outFile->write(") vcan0 ");
 
-        if (frames->at(c).hasExtendedFrameFormat()) {
-            outFile->write(QString::number(frames->at(c).frameId(), 16).rightJustified(8,'0').toUpper().toUtf8());
+        if (frame->hasExtendedFrameFormat()) {
+            outFile->write(QString::number(frame->frameId(), 16).rightJustified(8,'0').toUpper().toUtf8());
         } else {
-            outFile->write(QString::number(frames->at(c).frameId(), 16).rightJustified(3,'0').toUpper().toUtf8());
+            outFile->write(QString::number(frame->frameId(), 16).rightJustified(3,'0').toUpper().toUtf8());
         }
 
         outFile->write("#");
 
-        if (frames->at(c).frameType() == QCanBusFrame::RemoteRequestFrame) {
+        if (frame->frameType() == QCanBusFrame::RemoteRequestFrame) {
             outFile->write("R");
-            outFile->write(QString::number(frames->at(c).payload().length()).toUtf8());
+            outFile->write(QString::number(dataLen).toUtf8());
         } else {
-            for (unsigned int temp = 0; temp < frames->at(c).payload().length(); temp++)
+            for (int temp = 0; temp < dataLen; temp++)
             {
-                outFile->write(QString::number((unsigned char)frames->at(c).payload()[temp], 16).rightJustified(2,'0').toUpper().toUtf8());
+                outFile->write(QString::number(data[temp], 16).rightJustified(2,'0').toUpper().toUtf8());
             }
         }
 
@@ -3102,14 +3194,14 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             {
                 //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
                 //     0               1     2   3  4 5  6  7  8  9  10 11
-                thisFrame.setFrameId(tokens[2].toULong(nullptr, 16));
+                thisFrame.setFrameId(tokens[2].toLong(nullptr, 16));
                 if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
                 QByteArray bytes(tokens[3].at(1) - '0', 0);
-                for (uint32_t c = 0; c < thisFrame.payload().length(); c++)
+                for (int c = 0; c < thisFrame.payload().length(); c++)
                 {
-                    bytes[c] = static_cast<unsigned char>(tokens[4 + c].toInt(nullptr, 16));
+                    bytes[c] = static_cast<char>(tokens[4 + c].toInt(nullptr, 16));
                 }
                 thisFrame.setPayload(bytes);
             }
@@ -3170,7 +3262,6 @@ bool FrameFileIO::isLawicelFile(QString filename)
     QByteArray line;
     int lineCounter = 0;
     bool isMatch = false;
-    bool ret;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -3245,7 +3336,7 @@ bool FrameFileIO::loadLawicelFile(QString filename, QVector<CANFrame>* frames)
             QByteArray bytes(line.length() / 2, 0);
             for (int d = 0; d < bytes.length(); d++)
             {
-                bytes[d] = static_cast<unsigned char>(line.mid(d * 2, 2).toInt(nullptr, 16));
+                bytes[d] = static_cast<char>(line.mid(d * 2, 2).toInt(nullptr, 16));
             }
             thisFrame.setPayload(bytes);
             frames->append(thisFrame);
@@ -3508,6 +3599,10 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
 
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
         delete outFile;
@@ -3526,23 +3621,27 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
             lineCounter = 0;
         }
 
-        double tempTimeStamp = frames->at(c).timeStamp().microSeconds();
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
+        double tempTimeStamp = frame->timeStamp().microSeconds();
         tempTimeStamp /= 1000000;
 
         outFile->write(QString::number(tempTimeStamp, 'f').toUtf8());
         outFile->write(".0");
         outFile->putChar(44);
 
-        outFile->write(QString::number(frames->at(c).frameId(), 10).toUpper().toUtf8());
+        outFile->write(QString::number(frame->frameId(), 10).toUpper().toUtf8());
         outFile->putChar(44);
 
-        outFile->write(QString::number(frames->at(c).bus).toUtf8());
+        outFile->write(QString::number(frame->bus).toUtf8());
         outFile->putChar(44);
 
-        for (unsigned int temp = 0; temp < 8; temp++)
+        for (int temp = 0; temp < 8; temp++)
         {
-            if (temp < frames->at(c).payload().length())
-                outFile->write(QString::number(frames->at(c).payload()[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            if (temp < dataLen)
+                outFile->write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             else
                 outFile->write("00");
         }

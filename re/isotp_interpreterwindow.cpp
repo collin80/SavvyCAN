@@ -81,7 +81,7 @@ void ISOTP_InterpreterWindow::showEvent(QShowEvent* event)
 
 void ISOTP_InterpreterWindow::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     removeEventFilter(this);
     writeSettings();
 }
@@ -194,7 +194,7 @@ void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
 void ISOTP_InterpreterWindow::headerClicked(int logicalIndex)
 {
     ui->tableIsoFrames->setSortingEnabled(false);
-    ui->tableIsoFrames->sortByColumn(logicalIndex);
+    ui->tableIsoFrames->sortByColumn(logicalIndex, Qt::SortOrder::AscendingOrder);
 }
 
 void ISOTP_InterpreterWindow::showDetailView()
@@ -208,17 +208,21 @@ void ISOTP_InterpreterWindow::showDetailView()
 
     msg = &messages[rowNum];
 
-    if (msg->len != msg->data.length())
+    unsigned char *data = reinterpret_cast<unsigned char *>(msg->payload().data());
+    int dataLen = msg->payload().length();
+
+    if (msg->reportedLength != dataLen)
     {
         buildString.append("Message didn't have the correct number of bytes.\rExpected "
-                           + QString::number(msg->len) + " got "
-                           + QString::number(msg->data.length()) + "\r\r");
+                           + QString::number(msg->reportedLength) + " got "
+                           + QString::number(dataLen) + "\r\r");
     }
 
     buildString.append(tr("Raw Payload: "));
-    for (int i = 0; i < messages[rowNum].data.count(); i++)
+
+    for (int i = 0; i < dataLen; i++)
     {
-        buildString.append(Utility::formatNumber((char)messages[rowNum].data[i]));
+        buildString.append(Utility::formatNumber(data[i]));
         buildString.append(" ");
     }
     buildString.append("\r\r");
@@ -262,17 +266,20 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     int rowNum;
     QString tempString;
 
-    if ((msg.len != msg.data.count()) && !ui->cbShowIncomplete->isChecked()) return;
+    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
+    int dataLen = msg.payload().length();
 
-    if (idFilters.find(msg.ID) == idFilters.end())
+    if ((msg.reportedLength != dataLen) && !ui->cbShowIncomplete->isChecked()) return;
+
+    if (idFilters.find(msg.frameId()) == idFilters.end())
     {
-        idFilters.insert(msg.ID, true);
+        idFilters.insert(msg.frameId(), true);
 
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(msg.ID, msg.extended), ui->listFilter);
+        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(msg.frameId(), msg.hasExtendedFrameFormat()), ui->listFilter);
         listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
         listItem->setCheckState(Qt::Checked);
     }
-    if (!idFilters[msg.ID]) return;
+    if (!idFilters[msg.frameId()]) return;
     messages.append(msg);
 
     rowNum = ui->tableIsoFrames->rowCount();
@@ -280,22 +287,21 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     ui->tableIsoFrames->insertRow(rowNum);
 
     QTableWidgetItem *item = new QTableWidgetItem;
-    item->setData(Qt::EditRole, Utility::formatTimestamp(msg.timestamp));
+    item->setData(Qt::EditRole, Utility::formatTimestamp(msg.timeStamp().microSeconds()));
     //ui->tableIsoFrames->setItem(rowNum, 0, (double)msg.timestamp, Utility::formatTimestamp(msg.timestamp)));
     ui->tableIsoFrames->setItem(rowNum, 0, item);
-    ui->tableIsoFrames->setItem(rowNum, 1, new QTableWidgetItem(QString::number(msg.ID, 16)));
+    ui->tableIsoFrames->setItem(rowNum, 1, new QTableWidgetItem(QString::number(msg.frameId(), 16)));
     ui->tableIsoFrames->setItem(rowNum, 2, new QTableWidgetItem(QString::number(msg.bus)));
     if (msg.isReceived) ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Rx"));
     else ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Tx"));
-    ui->tableIsoFrames->setItem(rowNum, 4, new QTableWidgetItem(QString::number(msg.len)));
+    ui->tableIsoFrames->setItem(rowNum, 4, new QTableWidgetItem(QString::number(msg.payload().length())));
 
-    for (int i = 0; i < msg.data.count(); i++)
+    for (int i = 0; i < dataLen; i++)
     {
-        tempString.append(Utility::formatNumber((char)msg.data[i]));
+        tempString.append(Utility::formatNumber(data[i]));
         tempString.append(" ");
     }
     ui->tableIsoFrames->setItem(rowNum, 5, new QTableWidgetItem(tempString));
-
 }
 
 

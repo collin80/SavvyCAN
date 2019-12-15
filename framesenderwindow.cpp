@@ -185,7 +185,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
             qDebug() << "Frame ID: " << frame->frameId();
             if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->frameId())
             {
-                if ((uint32_t)thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
+                if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
                 {
                     if (thisTrigger->currCount < thisTrigger->maxCount)
                     {
@@ -525,16 +525,16 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
     }
     else if (op.ID == -2) //fetch data from a data byte within the output frame
     {
-        if (op.notOper) return ~sendingData.at(idx).payload()[op.databyte];
-        else return sendingData.at(idx).payload()[op.databyte];
+        if (op.notOper) return ~((unsigned char)sendingData.at(idx).payload()[op.databyte]);
+        else return (unsigned char)sendingData.at(idx).payload()[op.databyte];
     }
     else //look up external data byte
     {
         tempFrame = lookupFrame(op.ID, op.bus);
         if (tempFrame != nullptr)
         {
-            if (op.notOper) return ~tempFrame->payload()[op.databyte];
-            else return tempFrame->payload()[op.databyte];
+            if (op.notOper) return ~((unsigned char)tempFrame->payload()[op.databyte]);
+            else return (unsigned char)tempFrame->payload()[op.databyte];
         }
         else return 0;
     }
@@ -550,7 +550,7 @@ CANFrame* FrameSenderWindow::lookupFrame(int ID, int bus)
 {
     if (!frameCache.contains(ID)) return nullptr;
 
-    if (bus == -1 || frameCache[ID].bus == (unsigned int)bus) return &frameCache[ID];
+    if (bus == -1 || frameCache[ID].bus == bus) return &frameCache[ID];
 
     return nullptr;
 }
@@ -786,17 +786,21 @@ ModifierOperationType FrameSenderWindow::parseOperation(QString op)
 void FrameSenderWindow::updateGridRow(int idx)
 {
     qDebug() << "updateGridRow";
+
     inhibitChanged = true;
     FrameSendData *temp = &sendingData[idx];
     int gridLine = idx;
     QString dataString;
     QTableWidgetItem *item = ui->tableSender->item(gridLine, 9);
+    unsigned char *data = reinterpret_cast<unsigned char *>(temp->payload().data());
+    int dataLen = temp->payload().length();
+
     if (item == nullptr) item = new QTableWidgetItem();
     item->setText(QString::number(temp->count));
     if (temp->frameType() != QCanBusFrame::RemoteRequestFrame) {
-        for (unsigned int i = 0; i < temp->payload().length(); i++)
+        for (int i = 0; i < dataLen; i++)
         {
-            dataString.append(Utility::formatNumber(temp->payload()[i]));
+            dataString.append(Utility::formatNumber(data[i]));
             dataString.append(" ");
         }
         ui->tableSender->item(gridLine, 6)->setText(dataString);

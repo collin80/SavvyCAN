@@ -44,7 +44,7 @@ signals:
 
 private:
     Ui::FlowViewWindow *ui;
-    QList<int> foundID;
+    QList<quint32> foundID;
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
     unsigned char refBytes[8];

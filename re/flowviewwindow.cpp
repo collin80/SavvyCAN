@@ -257,7 +257,7 @@ void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMous
 
 void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
 {
-    uint64_t t_stamp;
+    int64_t t_stamp;
 
     t_stamp = timestamp * 1000000l;
 
@@ -397,8 +397,10 @@ void FlowViewWindow::updatedFrames(int numFrames)
 {
     QVector<double>newX[8];
     QVector<double>newY[8];
+    unsigned char *data;
+    int dataLen = 0;
 
-    CANFrame thisFrame;
+    const CANFrame *thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
         ui->listFrameID->clear();
@@ -433,35 +435,37 @@ void FlowViewWindow::updatedFrames(int numFrames)
         bool needRefresh = false;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
-            thisFrame = modelFrames->at(i);
+            thisFrame = &modelFrames->at(i);
+            data = reinterpret_cast<unsigned char *>(thisFrame->payload().data());
+            dataLen = thisFrame->payload().length();
 
-            if (!foundID.contains(thisFrame.frameId()))
+            if (!foundID.contains(thisFrame->frameId()))
             {
-                foundID.append(thisFrame.frameId());
-                FilterUtility::createFilterItem(thisFrame.frameId(), ui->listFrameID);
+                foundID.append(thisFrame->frameId());
+                FilterUtility::createFilterItem(thisFrame->frameId(), ui->listFrameID);
             }
 
-            if (thisFrame.frameId() == refID)
+            if (thisFrame->frameId() == refID)
             {
-                frameCache.append(thisFrame);
+                frameCache.append(*thisFrame);
 
-                for (int k = 0; k < 8; k++)
+                for (int k = 0; k < dataLen; k++)
                 {
                     if (ui->cbTimeGraph->isChecked())
                     {
                         if (secondsMode){
-                            newX[k].append((double)(thisFrame.timeStamp().microSeconds()) / 1000000.0);
+                            newX[k].append((double)(thisFrame->timeStamp().microSeconds()) / 1000000.0);
                         }
                         else
                         {
-                            newX[k].append(thisFrame.timeStamp().microSeconds());
+                            newX[k].append(thisFrame->timeStamp().microSeconds());
                         }
                     }
                     else
                     {
                         newX[k].append(x[k].count());
                     }
-                    newY[k].append(thisFrame.payload()[k]);
+                    newY[k].append(data[k]);
                     needRefresh = true;
                 }
             }
@@ -475,7 +479,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
         }
         if (needRefresh)
         {
-            for (int k = 0; k < 8; k++)
+            for (int k = 0; k < dataLen; k++)
             {
                 if (graphRef[k] && graphRef[k]->data())
                     graphRef[k]->addData(newX[k], newY[k]);
@@ -498,6 +502,9 @@ void FlowViewWindow::createGraph(int byteNum)
 {
     int tempVal;
     float minval=1000000, maxval = -100000;
+    unsigned char *data;
+    int dataLen = 0;
+    const CANFrame *frame;
 
     qDebug() << "Create Graph " << byteNum;
 
@@ -512,16 +519,20 @@ void FlowViewWindow::createGraph(int byteNum)
 
     for (int j = 0; j < numEntries; j++)
     {
-        tempVal = frameCache[j].payload()[byteNum];
+        frame = &frameCache[j];
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().length();
+
+        tempVal = data[byteNum];
 
         if (graphByTime)
         {
             if (secondsMode){
-                x[byteNum][j] = (double)(frameCache[j].timeStamp().microSeconds()) / 1000000.0;
+                x[byteNum][j] = (double)(frame->timeStamp().microSeconds()) / 1000000.0;
             }
             else
             {
-                x[byteNum][j] = frameCache[j].timeStamp().microSeconds();
+                x[byteNum][j] = frame->timeStamp().microSeconds();
             }
         }
         else
@@ -758,7 +769,8 @@ void FlowViewWindow::updatePosition(bool forward)
     uint8_t cngByte;
     for (int i = 0; i < 8; i++)
     {
-        cngByte = currBytes[i] ^ frameCache.at(currentPosition).payload()[i];
+        unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload().data()[i]);
+        cngByte = currBytes[i] ^ thisByte;
         changedBits |= (uint64_t)cngByte << (8ull * i);
     }
 
