@@ -47,7 +47,7 @@ void ISOTP_HANDLER::setReception(bool mode)
     }
 }
 
-void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QVector<unsigned char> data)
+void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
 {
     CANFrame frame;
     frame.setFrameType(QCanBusFrame::DataFrame);
@@ -159,6 +159,8 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     //int offset;
     ISOTP_MESSAGE msg;
     ISOTP_MESSAGE *pMsg;
+    unsigned char *data = reinterpret_cast<unsigned char *>(frame.payload().data());
+    //int dataLen = frame.payload().count();
 
     frameType = 0;
     frameLen = 0;
@@ -166,14 +168,14 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     if (useExtendedAddressing)
     {
         ID = ID << 8;
-        ID += frame.payload()[0];
-        frameType = frame.payload()[1] >> 4;
-        frameLen = frame.payload()[1] & 0xF;
+        ID += data[0];
+        frameType = data[1] >> 4;
+        frameLen = data[1] & 0xF;
     }
     else
     {
-        frameType = frame.payload()[0] >> 4;
-        frameLen = frame.payload()[0] & 0xF;
+        frameType = data[0] >> 4;
+        frameLen = data[0] & 0xF;
     }
 
     switch(frameType)
@@ -186,42 +188,42 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (frameLen > 7) return;
 
         msg.bus = frame.bus;
-        msg.extended = frame.hasExtendedFrameFormat();
-        msg.ID = ID;
+        msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
+        msg.setFrameId(ID);
         msg.isReceived = frame.isReceived;
-        msg.len = frameLen;
-        msg.data.reserve(frameLen);
-        msg.timestamp = frame.timeStamp().microSeconds();
+        msg.payload().reserve(frameLen);
+        msg.reportedLength = frameLen;
+        msg.setTimeStamp(frame.timeStamp());
         msg.isMultiframe = false;
-        if (useExtendedAddressing) for (int j = 0; j < frameLen; j++) msg.data.append(frame.payload()[j+2]);
-        else for (int j = 0; j < frameLen; j++) msg.data.append(frame.payload()[j+1]);
+        if (useExtendedAddressing) for (int j = 0; j < frameLen; j++) msg.payload().append(frame.payload()[j+2]);
+        else for (int j = 0; j < frameLen; j++) msg.payload().append(frame.payload()[j+1]);
         //qDebug() << "Emitting single frame ISOTP message";
         emit newISOMessage(msg);
         break;
     case 1: //first frame of a multi-frame message
         checkNeedFlush(ID);
         msg.bus = frame.bus;
-        msg.extended = frame.hasExtendedFrameFormat();
-        msg.ID = ID;
-        msg.timestamp = frame.timeStamp().microSeconds();
+        msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
+        msg.setFrameId(ID);
+        msg.setTimeStamp(frame.timeStamp());
         msg.isReceived = frame.isReceived;
         msg.isMultiframe = true;
         frameLen = frameLen << 8;
         if (useExtendedAddressing)
         {
-            frameLen += frame.payload()[2];
+            frameLen += data[2];
             frameLen = frameLen & 0xFFF;
-            msg.len = frameLen;
-            msg.data.reserve(frameLen);
-            for (int j = 0; j < 5; j++) msg.data.append(frame.payload()[3 + j]);
+            msg.payload().reserve(frameLen);
+            msg.reportedLength = frameLen;
+            for (int j = 0; j < 5; j++) msg.payload().append(frame.payload()[3 + j]);
         }
         else
         {
-            frameLen += frame.payload()[1];
+            frameLen += data[1];
             frameLen = frameLen & 0xFFF;
-            msg.len = frameLen;
-            msg.data.reserve(frameLen);
-            for (int j = 0; j < 6; j++) msg.data.append(frame.payload()[2 + j]);
+            msg.payload().reserve(frameLen);
+            msg.reportedLength = frameLen;
+            for (int j = 0; j < 6; j++) msg.payload().append(frame.payload()[2 + j]);
         }
         msg.lastSequence = -1;
         messageBuffer.append(msg);
@@ -245,7 +247,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         pMsg = nullptr;
         for (int i = 0; i < messageBuffer.length(); i++)
         {
-            if (messageBuffer[i].ID == ID)
+            if (messageBuffer[i].frameId() == ID)
             {
                 pMsg = &messageBuffer[i];
                 break;
@@ -253,22 +255,22 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         if (!pMsg) return;
         if (!pMsg->isMultiframe) return; //if we didn't get a frame type 1 (start of multiframe) first then ignore this frame.
-        ln = pMsg->len - pMsg->data.count();
+        ln = pMsg->payload().length() - pMsg->payload().count();
         //offset = pMsg->data.count();
         if (useExtendedAddressing)
         {
             if (ln > 6) ln = 6;
-            for (int j = 0; j < ln; j++) pMsg->data.append(frame.payload()[j+2]);
+            for (int j = 0; j < ln; j++) pMsg->payload().append(frame.payload()[j+2]);
         }
         else
         {
             if (ln > 7) ln = 7;
-            for (int j = 0; j < ln; j++) pMsg->data.append(frame.payload()[j+1]);
+            for (int j = 0; j < ln; j++) pMsg->payload().append(frame.payload()[j+1]);
         }
-        if (pMsg->len <= pMsg->data.count())
+        if (pMsg->reportedLength <= pMsg->payload().count())
         {
             //qDebug() << "Emitting multiframe ISOTP message";
-            checkNeedFlush(pMsg->ID);
+            checkNeedFlush(pMsg->frameId());
         }
         break;
     case 3: //flow control messages
@@ -277,10 +279,10 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         case 0: //continue to send frames but maybe change inter-frame delay
             waitingForFlow = false;
             //data[1] contains number of frames to send before waiting for next flow control
-            framesUntilFlow = frame.payload()[1];
+            framesUntilFlow = data[1];
             if (framesUntilFlow == 0) framesUntilFlow = -1; //-1 means don't count frames and just keep going
             //data[2] contains the interframe delay to use (0xF1 through 0xF9 are special through)
-            if (frame.payload()[2] < (char)0xF1) frameTimer.start(frame.payload()[2]); //set proper delay between frames
+            if (data[2] < 0xF1) frameTimer.start(data[2]); //set proper delay between frames
             else frameTimer.start(1); //can't do sub-millisecond sending with this code so just use 1ms timing
             break;
         case 1: //wait - do not send any more frames until other side says so
@@ -303,18 +305,18 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
 {
     for (int i = 0; i < messageBuffer.length(); i++)
     {
-        if (messageBuffer[i].ID == ID)
+        if (messageBuffer[i].frameId() == ID)
         {
             //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
-            if (messageBuffer[i].ID > 0x600 && messageBuffer[i].ID < 0x630)
+            if (messageBuffer[i].frameId() > 0x600 && messageBuffer[i].frameId() < 0x630)
             {
-                if (messageBuffer[i].len <= messageBuffer[i].data.count())
+                if (messageBuffer[i].reportedLength <= messageBuffer[i].payload().count())
                 {
-                    qDebug() << "Flushing full frame" << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
+                    qDebug() << "Flushing full frame" << QString::number(messageBuffer[i].frameId(), 16) << "  " << messageBuffer[i].reportedLength << "  " << messageBuffer[i].payload().count();
                 }
                 else
                 {
-                    qDebug() << "Flushing a partial frame " << QString::number(messageBuffer[i].ID, 16) << "  " << messageBuffer[i].len << "  " << messageBuffer[i].data.count();
+                    qDebug() << "Flushing a partial frame " << QString::number(messageBuffer[i].frameId(), 16) << "  " << messageBuffer[i].reportedLength << "  " << messageBuffer[i].payload().count();
                 }
             }
             emit newISOMessage(messageBuffer[i]);

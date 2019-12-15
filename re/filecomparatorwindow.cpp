@@ -123,6 +123,8 @@ void FileComparatorWindow::calculateDetails()
     QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = nullptr, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = nullptr;
     QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = nullptr;
     uint64_t tmp;
+    unsigned char *data;
+    int dataLen;
 
     bool uniqueInterested = ui->ckUniqueToInterested->isChecked();
 
@@ -152,12 +154,15 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < interestedFrames.count(); x++)
     {
         CANFrame frame = interestedFrames.at(x);
+        data = reinterpret_cast<unsigned char *>(frame.payload().data());
+        dataLen = frame.payload().count();
+
         if (interestedIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
-            for (unsigned int y = 0; y < frame.payload().length(); y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                interestedIDs[frame.frameId()].values[y][frame.payload()[y]]++;
-                tmp = frame.payload()[y];
+                interestedIDs[frame.frameId()].values[y][data[y]]++;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
                 interestedIDs[frame.frameId()].bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(interestedIDs[frame.frameId()].bitmap, 16);
@@ -167,7 +172,7 @@ void FileComparatorWindow::calculateDetails()
         {
             FrameData *newData = new FrameData();
             newData->ID = frame.frameId();
-            newData->dataLen = frame.payload().length();
+            newData->dataLen = dataLen;
             //it would be possible to implement a constructor for FrameData
             //that sets the bitmap and values to zero. That would be cleaner and better.
             newData->bitmap = 0;
@@ -179,10 +184,10 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (unsigned int y = 0; y < frame.payload().length(); y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                newData->values[y][frame.payload()[y]] = 1;
-                tmp = frame.payload()[y];
+                newData->values[y][data[y]] = 1;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
                 newData->bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
@@ -196,12 +201,15 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < referenceFrames.count(); x++)
     {
         CANFrame frame = referenceFrames.at(x);
+        data = reinterpret_cast<unsigned char *>(frame.payload().data());
+        dataLen = frame.payload().count();
+
         if (referenceIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
-            for (unsigned int y = 0; y < frame.payload().length(); y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                referenceIDs[frame.frameId()].values[y][frame.payload()[y]]++;
-                tmp = frame.payload()[y];
+                referenceIDs[frame.frameId()].values[y][data[y]]++;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
                 referenceIDs[frame.frameId()].bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(referenceIDs[frame.frameId()].bitmap, 16);
@@ -211,7 +219,7 @@ void FileComparatorWindow::calculateDetails()
         {
             FrameData *newData = new FrameData();
             newData->ID = frame.frameId();
-            newData->dataLen = frame.payload().length();
+            newData->dataLen = dataLen;
             newData->bitmap = 0;
             for (int x = 0; x < 8; x++)
             {
@@ -221,10 +229,10 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (unsigned int y = 0; y < frame.payload().length(); y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                newData->values[y][frame.payload()[y]] = 1;
-                tmp = frame.payload()[y];
+                newData->values[y][data[y]] = 1;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
                 newData->bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);

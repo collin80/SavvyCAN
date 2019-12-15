@@ -77,17 +77,20 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
 
 void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 {
+    unsigned char *data = reinterpret_cast<unsigned char *>(frame.payload().data());
+    int dataLen = frame.payload().count();
+
     qDebug() << "FUW: Got targetted frame with id " << frame.frameId();
-    if (frame.frameId() == (uint32_t)(baseAddress + 0x10)) {
+    if (frame.frameId() == (uint32_t)(baseAddress + 0x10) && (dataLen == 8) ) {
         qDebug() << "Start firmware reply";
-        if (((char)frame.payload()[0] == (char)0xAD) && ((char)frame.payload()[1] == (char)0xDE))
+        if ((data[0] == 0xAD) && (data[1] == 0xDE))
         {
-            if (((char)frame.payload()[2] == (char)0xAF) && ((char)frame.payload()[3] == (char)0xDE))
+            if ((data[2] == 0xAF) && (data[3] == 0xDE))
             {
                 qDebug() << "There's dead beef here";
-                if (((char)frame.payload()[4] == (char)(token & 0xFF)) && ((char)frame.payload()[5] == (char)((token >> 8) & 0xFF)))
+                if ( (data[4] == (token & 0xFF)) && (data[5] == ((token >> 8) & 0xFF) ) )
                 {
-                    if (((char)frame.payload()[6] == (char)((token >> 16) & 0xFF)) && ((char)frame.payload()[7] == (char)((token >> 24) & 0xFF)))
+                    if ((data[6] == ((token >> 16) & 0xFF)) && (data[7] == ((token >> 24) & 0xFF)))
                     {
                         qDebug() << "starting firmware process";
                         //MainWindow::getReference()->setTargettedID(baseAddress + 0x20);
@@ -101,7 +104,7 @@ void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 
     if (frame.frameId() == (uint32_t)(baseAddress + 0x20)) {
         qDebug() << "Firmware reception success reply";
-        int seq = frame.payload()[0] + (256 * frame.payload()[1]);
+        int seq = data[0] + (256 * data[1]);
         if (seq == currentSendingPosition)
         {
             currentSendingPosition++;
@@ -143,7 +146,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     output->payload()[3] = firmwareData[firmwareLocation++];
     output->payload()[4] = firmwareData[firmwareLocation++];
     output->payload()[5] = firmwareData[firmwareLocation++];
-    for (int i = 0; i < 6; i++) xorByte = xorByte ^ output->payload()[i];
+    for (int i = 0; i < 6; i++) xorByte = xorByte ^ static_cast<unsigned char>(output->payload()[i]);
     output->payload()[6] = xorByte;
     output->setPayload(bytes);
     sendCANFrame(output);

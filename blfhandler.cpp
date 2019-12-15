@@ -78,7 +78,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                 }
                 qDebug() << "Uncompressed size: " << uncompressedData.count();
                 pos = 0;
-                bool foundHeader = false;
+                //bool foundHeader = false;
                 //first skip forward to find a header signature - usually not necessary
                 while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.count())
                 {
@@ -163,5 +163,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
 
 bool BLFHandler::saveBLF(QString filename, QVector<CANFrame> *frames)
 {
+    Q_UNUSED(filename)
+    Q_UNUSED(frames)
     return false;
 }

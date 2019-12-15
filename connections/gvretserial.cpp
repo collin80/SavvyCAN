@@ -192,14 +192,14 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         sendDebug("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)) + " 2: " + QString::number((can1Baud & 0xFFFFFFF)));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 5; //setup canbus
-        buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
-        buffer[3] = (unsigned char)(can0Baud >> 8);
-        buffer[4] = (unsigned char)(can0Baud >> 16);
-        buffer[5] = (unsigned char)(can0Baud >> 24);
-        buffer[6] = (unsigned char)(can1Baud & 0xFF); //four bytes of ID LSB first
-        buffer[7] = (unsigned char)(can1Baud >> 8);
-        buffer[8] = (unsigned char)(can1Baud >> 16);
-        buffer[9] = (unsigned char)(can1Baud >> 24);
+        buffer[2] = (char)(can0Baud & 0xFF); //four bytes of ID LSB first
+        buffer[3] = (char)(can0Baud >> 8);
+        buffer[4] = (char)(can0Baud >> 16);
+        buffer[5] = (char)(can0Baud >> 24);
+        buffer[6] = (char)(can1Baud & 0xFF); //four bytes of ID LSB first
+        buffer[7] = (char)(can1Baud >> 8);
+        buffer[8] = (char)(can1Baud >> 16);
+        buffer[9] = (char)(can1Baud >> 24);
         buffer[10] = 0;
         sendToSerial(buffer);
     }
@@ -210,18 +210,18 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         sendDebug("Got signal to update extended bus speeds SWCAN: " + QString::number(swcanBaud) + " LIN1: " + QString::number(lin1Baud) + " LIN2: " + QString::number(lin2Baud));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 14; //setup extended buses
-        buffer[2] = (unsigned char)(swcanBaud & 0xFF); //four bytes of ID LSB first
-        buffer[3] = (unsigned char)(swcanBaud >> 8);
-        buffer[4] = (unsigned char)(swcanBaud >> 16);
-        buffer[5] = (unsigned char)(swcanBaud >> 24);
-        buffer[6] = (unsigned char)(lin1Baud & 0xFF); //four bytes of ID LSB first
-        buffer[7] = (unsigned char)(lin1Baud >> 8);
-        buffer[8] = (unsigned char)(lin1Baud >> 16);
-        buffer[9] = (unsigned char)(lin1Baud >> 24);
-        buffer[10] = (unsigned char)(lin2Baud & 0xFF); //four bytes of ID LSB first
-        buffer[11] = (unsigned char)(lin2Baud >> 8);
-        buffer[12] = (unsigned char)(lin2Baud >> 16);
-        buffer[13] = (unsigned char)(lin2Baud >> 24);
+        buffer[2] = (char)(swcanBaud & 0xFF); //four bytes of ID LSB first
+        buffer[3] = (char)(swcanBaud >> 8);
+        buffer[4] = (char)(swcanBaud >> 16);
+        buffer[5] = (char)(swcanBaud >> 24);
+        buffer[6] = (char)(lin1Baud & 0xFF); //four bytes of ID LSB first
+        buffer[7] = (char)(lin1Baud >> 8);
+        buffer[8] = (char)(lin1Baud >> 16);
+        buffer[9] = (char)(lin1Baud >> 24);
+        buffer[10] = (char)(lin2Baud & 0xFF); //four bytes of ID LSB first
+        buffer[11] = (char)(lin2Baud >> 8);
+        buffer[12] = (char)(lin2Baud >> 16);
+        buffer[13] = (char)(lin2Baud >> 24);
         buffer[14] = 0;
         sendToSerial(buffer);
     }
@@ -231,8 +231,8 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
 bool GVRetSerial::piSendFrame(const CANFrame& frame)
 {
     QByteArray buffer;
-    unsigned int c;
-    int ID;
+    int c;
+    quint32 ID;
 
     //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
@@ -250,16 +250,16 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
         return true;
     }
     ID = frame.frameId();
-    if (frame.hasExtendedFrameFormat()) ID |= 1 << 31;
+    if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
 
-    buffer[0] = (unsigned char)0xF1; //start of a command over serial
+    buffer[0] = (char)0xF1; //start of a command over serial
     buffer[1] = 0; //command ID for sending a CANBUS frame
-    buffer[2] = (unsigned char)(ID & 0xFF); //four bytes of ID LSB first
-    buffer[3] = (unsigned char)(ID >> 8);
-    buffer[4] = (unsigned char)(ID >> 16);
-    buffer[5] = (unsigned char)(ID >> 24);
-    buffer[6] = (unsigned char)((frame.bus) & 3);
-    buffer[7] = (unsigned char)frame.payload().length();
+    buffer[2] = (char)(ID & 0xFF); //four bytes of ID LSB first
+    buffer[3] = (char)(ID >> 8);
+    buffer[4] = (char)(ID >> 16);
+    buffer[5] = (char)(ID >> 24);
+    buffer[6] = (char)((frame.bus) & 3);
+    buffer[7] = (char)frame.payload().length();
     for (c = 0; c < frame.payload().length(); c++)
     {
         buffer[8 + c] = frame.payload()[c];

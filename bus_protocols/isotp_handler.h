@@ -19,7 +19,7 @@ public:
     ~ISOTP_HANDLER();
     void setExtendedAddressing(bool mode);
     void setReception(bool mode); //set whether to accept and forward frames or not
-    void sendISOTPFrame(int bus, int ID, QVector<unsigned char> data);
+    void sendISOTPFrame(int bus, int ID, QByteArray data);
     void setProcessAll(bool state);
     void setFlowCtrl(bool state);
     void addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask);

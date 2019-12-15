@@ -70,10 +70,10 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     //qDebug() << "Row: " << index.row();
 
     CANConnection *conn_p = getAtIdx(index.row());
-    bool ret;
+
     if (!conn_p) return QVariant();
 
-    bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
+    //bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
 
     if (role == Qt::DisplayRole) {
 
@@ -147,6 +147,8 @@ CANConnection* CANConnectionModel::getAtIdx(int pIdx) const
 
 void CANConnectionModel::refresh(int pIndex)
 {
+    Q_UNUSED(pIndex)
+
     beginResetModel();
     endResetModel();
     /*

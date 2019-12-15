@@ -18,7 +18,6 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     editor = new JSEdit();
     editor->setFrameShape(JSEdit::NoFrame);
     editor->setWordWrapMode(QTextOption::NoWrap);
-    editor->setTabStopWidth(4);
     editor->setEnabled(false);
     editor->setFont(QFont("Monospace", 12));
     editor->show();
