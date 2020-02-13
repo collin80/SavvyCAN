@@ -101,6 +101,7 @@ public:
     DBCFile* getFileByIdx(int idx);
     DBCFile* getFileByName(QString name);
     int createBlankFile();
+    DBCFile* loadJSONFile(int);
     static DBCHandler *getReference();
 
 private:

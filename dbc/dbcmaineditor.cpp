@@ -522,9 +522,12 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
                 QTableWidgetItem *msgLen = new QTableWidgetItem(QString::number(msg->len));
                 QTableWidgetItem *msgSignals = new QTableWidgetItem(QString::number(msg->sigHandler->getCount()));
                 QTableWidgetItem *fgColor = new QTableWidgetItem("");
-                fgColor->setBackgroundColor(msg->fgColor);
+                if (msg->fgColor.isValid()) fgColor->setBackgroundColor(msg->fgColor);
+                else fgColor->setBackgroundColor(QColor(dbcFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString()));
                 QTableWidgetItem *bgColor = new QTableWidgetItem("");
-                bgColor->setBackgroundColor(msg->bgColor);
+                if (msg->bgColor.isValid()) bgColor->setBackgroundColor(msg->bgColor);
+                else bgColor->setBackgroundColor(QColor(dbcFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString()));
+
                 QTableWidgetItem *msgComment = new QTableWidgetItem(msg->comment);
 
                 rowIdx = ui->MessagesTable->rowCount();
