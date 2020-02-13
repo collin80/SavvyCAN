@@ -66,7 +66,7 @@ void BisectWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = modelFrames->at(i).ID;
+        id = modelFrames->at(i).frameId();
         if (!foundID.contains(id))
         {
             foundID.append(id);
@@ -129,7 +129,7 @@ void BisectWindow::handleCalculateButton()
         uint32_t upperID = Utility::ParseStringToNum2(ui->cbIDUpper->currentText());
         for (int i = 0; i < modelFrames->count(); i++)
         {
-            if (modelFrames->at(i).ID >= lowerID && modelFrames->at(i).ID <= upperID) splitFrames.append(modelFrames->at(i));
+            if (modelFrames->at(i).frameId() >= lowerID && modelFrames->at(i).frameId() <= upperID) splitFrames.append(modelFrames->at(i));
         }
     }
     refreshFrameNumbers();

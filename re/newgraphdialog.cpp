@@ -212,7 +212,7 @@ void NewGraphDialog::loadMessages()
 {
     DBC_MESSAGE *msg;
     ui->cbMessages->clear();
-    if (dbcHandler == NULL) return;
+    if (dbcHandler == nullptr) return;
     if (dbcHandler->getFileCount() == 0) return;
     for (int y = 0; y < dbcHandler->getFileCount(); y++)
     {
@@ -240,7 +240,7 @@ void NewGraphDialog::loadSignals(int idx)
     DBC_MESSAGE *msg = dbcHandler->findMessage(ui->cbMessages->currentText());
     DBC_SIGNAL *sig;
 
-    if (msg == NULL) return;
+    if (msg == nullptr) return;
 
     ui->cbSignals->clear();
     for (int x = 0; x < msg->sigHandler->getCount(); x++)

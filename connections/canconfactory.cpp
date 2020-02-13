@@ -17,5 +17,5 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
     default: {}
     }
 
-    return NULL;
+    return nullptr;
 }

@@ -5,6 +5,9 @@
 
 QString HexTicker::getTickLabel (double tick, const QLocale& locale, QChar formatChar, int precision)
 {
+    Q_UNUSED(formatChar);
+    Q_UNUSED(precision);
+    Q_UNUSED(locale);
     int valu = static_cast<int>(tick);
     //qDebug() << valu;
     return "0x" + QString::number(valu, 16).toUpper().rightJustified(3,'0');
@@ -193,13 +196,13 @@ void TemporalGraphWindow::generateGraph()
     x.reserve(frameCount);
     y.reserve(frameCount);
 
-    xminval = xmaxval = modelFrames->at(0).timestamp / 1000000.0;
-    yminval = ymaxval = modelFrames->at(0).ID;
+    xminval = xmaxval = modelFrames->at(0).timeStamp().microSeconds() / 1000000.0;
+    yminval = ymaxval = modelFrames->at(0).frameId();
 
     for (int i = 0; i < frameCount; i++)
     {
-        x.append(modelFrames->at(i).timestamp / 1000000.0);
-        y.append(modelFrames->at(i).ID);
+        x.append(modelFrames->at(i).timeStamp().microSeconds() / 1000000.0);
+        y.append(modelFrames->at(i).frameId());
         if (x[i] > xmaxval) xmaxval = x[i];
         if (x[i] < xminval) xminval = x[i];
         if (y[i] > ymaxval) ymaxval = y[i];
@@ -243,8 +246,8 @@ void TemporalGraphWindow::generateGraph()
 
     for (int i = 0; i < frameCount; i++)
     {
-        int x = static_cast<int>(((modelFrames->at(i).timestamp / 1000000.0) - xminval) * 4.0);
-        int y = static_cast<int>(modelFrames->at(i).ID - yminval) / 30;
+        int x = static_cast<int>(((modelFrames->at(i).timeStamp().microSeconds() / 1000000.0) - xminval) * 4.0);
+        int y = static_cast<int>(modelFrames->at(i).frameId() - yminval) / 30;
         double val = colorMap->data()->cell(x, y);
         double inc;
         inc = 1 / (val + 1); //logarithmic decay

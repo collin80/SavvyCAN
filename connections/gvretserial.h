@@ -93,6 +93,9 @@ protected:
     STATE rx_state;
     uint32_t rx_step;
     CANFrame buildFrame;
+    qint64 buildTimestamp;
+    quint32 buildId;
+    QByteArray buildData;
     int can0Baud, can1Baud, swcanBaud, lin1Baud, lin2Baud;
     bool can0Enabled, can1Enabled, swcanEnabled, lin1Enabled, lin2Enabled;
     bool can0ListenOnly, can1ListenOnly, swcanListenOnly;

@@ -1,7 +1,9 @@
 #include "filecomparatorwindow.h"
 #include "ui_filecomparatorwindow.h"
 #include "helpwindow.h"
+#include <QProgressDialog>
 #include <QSettings>
+#include <qevent.h>
 
 FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     QDialog(parent),
@@ -118,9 +120,11 @@ void FileComparatorWindow::calculateDetails()
 {
     QMap<int, FrameData> interestedIDs;
     QMap<int, FrameData> referenceIDs;
-    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = NULL, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = NULL;
-    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = NULL;
+    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = nullptr, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = nullptr;
+    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = nullptr;
     uint64_t tmp;
+    unsigned char *data;
+    int dataLen;
 
     bool uniqueInterested = ui->ckUniqueToInterested->isChecked();
 
@@ -150,22 +154,25 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < interestedFrames.count(); x++)
     {
         CANFrame frame = interestedFrames.at(x);
-        if (interestedIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
+        data = reinterpret_cast<unsigned char *>(frame.payload().data());
+        dataLen = frame.payload().count();
+
+        if (interestedIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
-            for (unsigned int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                interestedIDs[frame.ID].values[y][frame.data[y]]++;
-                tmp = frame.data[y];
+                interestedIDs[frame.frameId()].values[y][data[y]]++;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
-                interestedIDs[frame.ID].bitmap |= tmp;
-                //qDebug() << "bitmap: " << QString::number(interestedIDs[frame.ID].bitmap, 16);
+                interestedIDs[frame.frameId()].bitmap |= tmp;
+                //qDebug() << "bitmap: " << QString::number(interestedIDs[frame.frameId()].bitmap, 16);
             }
         }
         else //never seen this ID before so add one
         {
             FrameData *newData = new FrameData();
-            newData->ID = frame.ID;
-            newData->dataLen = frame.len;
+            newData->ID = frame.frameId();
+            newData->dataLen = dataLen;
             //it would be possible to implement a constructor for FrameData
             //that sets the bitmap and values to zero. That would be cleaner and better.
             newData->bitmap = 0;
@@ -177,15 +184,15 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (unsigned int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                newData->values[y][frame.data[y]] = 1;
-                tmp = frame.data[y];
+                newData->values[y][data[y]] = 1;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
                 newData->bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
-            interestedIDs.insert(frame.ID, *newData);
+            interestedIDs.insert(frame.frameId(), *newData);
         }
     }
 
@@ -194,22 +201,25 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < referenceFrames.count(); x++)
     {
         CANFrame frame = referenceFrames.at(x);
-        if (referenceIDs.contains(frame.ID)) //if we saw this ID before then add to the QList in there
+        data = reinterpret_cast<unsigned char *>(frame.payload().data());
+        dataLen = frame.payload().count();
+
+        if (referenceIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
-            for (unsigned int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                referenceIDs[frame.ID].values[y][frame.data[y]]++;
-                tmp = frame.data[y];
+                referenceIDs[frame.frameId()].values[y][data[y]]++;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
-                referenceIDs[frame.ID].bitmap |= tmp;
-                //qDebug() << "bitmap: " << QString::number(referenceIDs[frame.ID].bitmap, 16);
+                referenceIDs[frame.frameId()].bitmap |= tmp;
+                //qDebug() << "bitmap: " << QString::number(referenceIDs[frame.frameId()].bitmap, 16);
             }
         }
         else //never seen this ID before so add one
         {
             FrameData *newData = new FrameData();
-            newData->ID = frame.ID;
-            newData->dataLen = frame.len;
+            newData->ID = frame.frameId();
+            newData->dataLen = dataLen;
             newData->bitmap = 0;
             for (int x = 0; x < 8; x++)
             {
@@ -219,15 +229,15 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (unsigned int y = 0; y < frame.len; y++)
+            for (unsigned int y = 0; y < dataLen; y++)
             {
-                newData->values[y][frame.data[y]] = 1;
-                tmp = frame.data[y];
+                newData->values[y][data[y]] = 1;
+                tmp = data[y];
                 tmp = tmp << (8 * y);
                 newData->bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
-            referenceIDs.insert(frame.ID, *newData);
+            referenceIDs.insert(frame.frameId(), *newData);
         }
     }
 

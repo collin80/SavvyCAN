@@ -8,6 +8,7 @@
 #include "connections/connectionwindow.h"
 #include "helpwindow.h"
 #include "utility.h"
+#include "filterutility.h"
 
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
@@ -17,7 +18,7 @@ allow scripts to load DBC files in support of the script - maybe the graphing sy
 */
 
 QString MainWindow::loadedFileName = "";
-MainWindow *MainWindow::selfRef = NULL;
+MainWindow *MainWindow::selfRef = nullptr;
 
 MainWindow *MainWindow::getReference()
 {
@@ -132,16 +133,25 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
+    lbHelp.setText(tr("Press F1 on any screen for help"));
+    lbHelp.setAlignment(Qt::AlignCenter);
+    QFont boldFont;
+    boldFont.setBold(true);
+    lbHelp.setFont(boldFont);
     updateFileStatus();
     //lbStatusDatabase.setText(tr("No DBC database loaded"));
-    ui->statusBar->addWidget(&lbStatusConnected);
-    ui->statusBar->addWidget(&lbStatusFilename);
+    ui->statusBar->insertWidget(0, &lbStatusConnected, 1);
+    ui->statusBar->insertWidget(1, &lbStatusFilename, 1);
+    ui->statusBar->insertWidget(2, &lbHelp, 1);
     //ui->statusBar->addWidget(&lbStatusDatabase);
     ui->lblRemoteConn->setVisible(false);
     ui->lineRemoteKey->setVisible(false);
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listFilters->horizontalScrollBar()->setEnabled(false);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
@@ -158,12 +168,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //of scaling or font differences between different computers.
     CANFrame temp;
     temp.bus = 0;
-    temp.ID = 0x100;
-    temp.len = 0;
-    temp.extended = false;
+    temp.setFrameId(0x100);
     temp.isReceived = true;
-    temp.remote = false;
-    temp.timestamp = 100000000;
+    temp.setTimeStamp(QCanBusFrame::TimeStamp(0, 100000000));
     model->addFrame(temp, true);
     qApp->processEvents();
     tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
@@ -238,7 +245,7 @@ void MainWindow::killWindow(QDialog *win)
     {
         win->close();
         delete win;
-        win = NULL;
+        win = nullptr;
     }
 }
 
@@ -324,7 +331,13 @@ void MainWindow::readUpdateableSettings()
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
 
-}
+    if (settings.value("Main/FilterLabeling", false).toBool())
+        ui->listFilters->setMaximumWidth(250);
+    else
+        ui->listFilters->setMaximumWidth(175);
+    updateFilterList();    
+}    
+
 
 void MainWindow::writeSettings()
 {
@@ -386,12 +399,12 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
     //qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
-    emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);
+    emit sendCenterTimeID(frame.frameId(), frame.timeStamp().microSeconds() / 1000000.0);
 }
 
 void MainWindow::interpretToggled(bool state)
 {
-    model->setInterpetMode(state);
+    model->setInterpretMode(state);
     //ui->canFramesView->resizeRowsToContents();   //a VERY costly operation!
 }
 
@@ -416,11 +429,13 @@ void MainWindow::overwriteToggled(bool state)
 
 void MainWindow::updateFilterList()
 {
-    if (model == NULL) return;
+    if (model == nullptr) return;
     const QMap<int, bool> *filters = model->getFiltersReference();
-    if (filters == NULL) return;
+    if (filters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
+
+    inhibitFilterUpdate = true;
 
     ui->listFilters->clear();
 
@@ -429,22 +444,19 @@ void MainWindow::updateFilterList()
     QMap<int, bool>::const_iterator filterIter;
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
-        QListWidgetItem *thisItem = new QListWidgetItem();
-        thisItem->setText(Utility::formatCANID(filterIter.key()));
-        thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-        if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
-            else thisItem->setCheckState(Qt::Unchecked);
-        ui->listFilters->addItem(thisItem);
+        /*QListWidgetItem *thisItem = */FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
+    inhibitFilterUpdate = false;
 }
 
 void MainWindow::filterListItemChanged(QListWidgetItem *item)
 {
     if (inhibitFilterUpdate) return;
     //qDebug() << item->text();
-    int ID;
+
+    // strip away possible filter label
+    int ID = FilterUtility::getIdAsInt(item);
     bool isSet = false;
-    ID = Utility::ParseStringToNum(item->text());
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);
@@ -717,6 +729,10 @@ void MainWindow::saveDecodedTextFile(QString filename)
     QFile *outFile = new QFile(filename);
     const QVector<CANFrame> *frames = model->getFilteredListReference();
 
+    unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 /*
@@ -726,35 +742,38 @@ Data Bytes: 88 10 00 13 BB 00 06 00
 */
     for (int c = 0; c < frames->count(); c++)
     {
-        CANFrame thisFrame = frames->at(c);
+        frame = &frames->at(c);
+        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        dataLen = frame->payload().count();
+
         QString builderString;
-        builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
-        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.ID, thisFrame.extended);
-        if (thisFrame.extended) builderString += tr(" Ext ");
+        builderString += tr("Time: ") + QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6);
+        builderString += tr("    ID: ") + Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat());
+        if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
-        builderString += tr("Bus: ") + QString::number(thisFrame.bus);
-        builderString += " Len: " + QString::number(thisFrame.len) + "\n";
+        builderString += tr("Bus: ") + QString::number(frame->bus);
+        builderString += " Len: " + QString::number(dataLen) + "\n";
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (unsigned int temp = 0; temp < thisFrame.len; temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
+            builderString += Utility::formatNumber(data[temp]) + " ";
         }
         builderString += "\n";
         outFile->write(builderString.toUtf8());
 
         builderString = "";
-        if (dbcHandler != NULL)
+        if (dbcHandler != nullptr)
         {
-            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-            if (msg != NULL)
+            DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
+            if (msg != nullptr)
             {
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
 
                     QString temp;
-                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, temp))
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp))
                     {
                         builderString.append("\t" + temp);
                         builderString.append("\n");
@@ -1020,11 +1039,19 @@ void MainWindow::showFlowViewWindow()
     flowViewWindow->show();
 }
 
+
+void MainWindow::DBCSettingsUpdated()
+    {
+    updateFilterList();
+    model->sendRefresh();
+    }
+
 void MainWindow::showDBCFileWindow()
 {
     if (!dbcFileWindow)
     {
         dbcFileWindow = new DBCLoadSaveWindow(model->getListReference());
+        connect(dbcFileWindow, &DBCLoadSaveWindow::updatedDBCSettings, this, &MainWindow::DBCSettingsUpdated);
     }
     dbcFileWindow->show();
 }

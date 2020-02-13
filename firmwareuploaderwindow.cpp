@@ -4,6 +4,13 @@
 
 #include <QFile>
 
+//You might wonder: Collin, what in the hell is this for? Firmware uploader? For what? I'm interested! Well, it's a custom
+//firmware uploader for a motor controller I built. Why would that be in this project. Cuz. It's not really relevant
+//to anyone else but might serve as a decent reference for a few things: How to make an uploader interface that runs over CAN,
+//how to lay out a screen like this, how to make a comm protocol for firmware updating over CAN. But, most things use UDS
+//for firmware updates and wouldn't need this specific code. But, it might be able to be turned into a UDS firmware uploader or downloader.
+//Note that this screen is specifically hidden by default because of it's oddball status. You have to re-enable it in mainwindow.cpp to see it.
+
 FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FirmwareUploaderWindow)
@@ -70,17 +77,20 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
 
 void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 {
-    qDebug() << "FUW: Got targetted frame with id " << frame.ID;
-    if (frame.ID == (uint32_t)(baseAddress + 0x10)) {
+    unsigned char *data = reinterpret_cast<unsigned char *>(frame.payload().data());
+    int dataLen = frame.payload().count();
+
+    qDebug() << "FUW: Got targetted frame with id " << frame.frameId();
+    if (frame.frameId() == (uint32_t)(baseAddress + 0x10) && (dataLen == 8) ) {
         qDebug() << "Start firmware reply";
-        if ((frame.data[0] == 0xAD) && (frame.data[1] == 0xDE))
+        if ((data[0] == 0xAD) && (data[1] == 0xDE))
         {
-            if ((frame.data[2] == 0xAF) && (frame.data[3] == 0xDE))
+            if ((data[2] == 0xAF) && (data[3] == 0xDE))
             {
-                qDebug() << "THere's dead beef here";
-                if ((frame.data[4] == (token & 0xFF)) && (frame.data[5] == ((token >> 8) & 0xFF)))
+                qDebug() << "There's dead beef here";
+                if ( (data[4] == (token & 0xFF)) && (data[5] == ((token >> 8) & 0xFF) ) )
                 {
-                    if ((frame.data[6] == ((token >> 16) & 0xFF)) && (frame.data[7] == ((token >> 24) & 0xFF)))
+                    if ((data[6] == ((token >> 16) & 0xFF)) && (data[7] == ((token >> 24) & 0xFF)))
                     {
                         qDebug() << "starting firmware process";
                         //MainWindow::getReference()->setTargettedID(baseAddress + 0x20);
@@ -92,9 +102,9 @@ void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
         }
     }
 
-    if (frame.ID == (uint32_t)(baseAddress + 0x20)) {
+    if (frame.frameId() == (uint32_t)(baseAddress + 0x20)) {
         qDebug() << "Firmware reception success reply";
-        int seq = frame.data[0] + (256 * frame.data[1]);
+        int seq = data[0] + (256 * data[1]);
         if (seq == currentSendingPosition)
         {
             currentSendingPosition++;
@@ -126,18 +136,19 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     CANFrame *output = new CANFrame;
     int firmwareLocation = currentSendingPosition * 4;
     int xorByte = 0;
-    output->extended = false;
-    output->len = 7;
+    output->setExtendedFrameFormat(false);
+    QByteArray bytes(7,0);
     output->bus = bus;
-    output->ID = baseAddress + 0x16;
-    output->data[0] = currentSendingPosition & 0xFF;
-    output->data[1] = (currentSendingPosition >> 8) & 0xFF;
-    output->data[2] = firmwareData[firmwareLocation++];
-    output->data[3] = firmwareData[firmwareLocation++];
-    output->data[4] = firmwareData[firmwareLocation++];
-    output->data[5] = firmwareData[firmwareLocation++];
-    for (int i = 0; i < 6; i++) xorByte = xorByte ^ output->data[i];
-    output->data[6] = xorByte;
+    output->setFrameId(baseAddress + 0x16);
+    output->payload()[0] = currentSendingPosition & 0xFF;
+    output->payload()[1] = (currentSendingPosition >> 8) & 0xFF;
+    output->payload()[2] = firmwareData[firmwareLocation++];
+    output->payload()[3] = firmwareData[firmwareLocation++];
+    output->payload()[4] = firmwareData[firmwareLocation++];
+    output->payload()[5] = firmwareData[firmwareLocation++];
+    for (int i = 0; i < 6; i++) xorByte = xorByte ^ static_cast<unsigned char>(output->payload()[i]);
+    output->payload()[6] = xorByte;
+    output->setPayload(bytes);
     sendCANFrame(output);
     timer->start();
 }
@@ -145,14 +156,15 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
 void FirmwareUploaderWindow::sendFirmwareEnding()
 {
     CANFrame *output = new CANFrame;
-    output->extended = false;
+    output->setExtendedFrameFormat(false);
     output->bus = bus;
-    output->len = 4;
-    output->ID = baseAddress + 0x30;
-    output->data[3] = 0xC0;
-    output->data[2] = 0xDE;
-    output->data[1] = 0xFA;
-    output->data[0] = 0xDE;
+    QByteArray bytes(4,0);
+    output->setFrameId(baseAddress + 0x30);
+    output->payload()[3] = 0xC0;
+    output->payload()[2] = 0xDE;
+    output->payload()[1] = 0xFA;
+    output->payload()[0] = 0xDE;
+    output->setPayload(bytes);
     //sendCANFrame(output, bus);
 }
 
@@ -171,19 +183,19 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x10, 0x7FF, this);
         CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x20, 0x7FF, this);
         CANFrame *output = new CANFrame;
-        output->extended = false;
-        output->len = 8;
+        output->setExtendedFrameFormat(false);
+        QByteArray bytes(8,0);
         output->bus = bus;
-        output->ID = baseAddress;
+        output->setFrameId(baseAddress);
 
-        output->data[0] = 0xEF;
-        output->data[1] = 0xBE;
-        output->data[2] = 0xAD;
-        output->data[3] = 0xDE;
-        output->data[4] = token & 0xFF;
-        output->data[5] = (token >> 8) & 0xFF;
-        output->data[6] = (token >> 16) & 0xFF;
-        output->data[7] = (token >> 24) & 0xFF;
+        output->payload()[0] = 0xEF;
+        output->payload()[1] = 0xBE;
+        output->payload()[2] = 0xAD;
+        output->payload()[3] = 0xDE;
+        output->payload()[4] = token & 0xFF;
+        output->payload()[5] = (token >> 8) & 0xFF;
+        output->payload()[6] = (token >> 16) & 0xFF;
+        output->payload()[7] = (token >> 24) & 0xFF;
         sendCANFrame(output);
     }
     else //stop anything in process

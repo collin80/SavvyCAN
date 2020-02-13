@@ -218,9 +218,9 @@ void UDSScanWindow::scanUDS()
 
     ui->treeResults->clear();
     sendingFrames.clear();
-    nodeService = NULL;
-    nodeID = NULL;
-    nodeSubFunc = NULL;
+    nodeService = nullptr;
+    nodeID = nullptr;
+    nodeSubFunc = nullptr;
 
     UDS_MESSAGE test;
     int typ, id;
@@ -237,8 +237,8 @@ void UDSScanWindow::scanUDS()
 
     for (id = startID; id <= endID; id++)
     {
-        test.ID = id;
-        test.data.clear();
+        test.setFrameId( id );
+        test.payload().clear();
 
         if (ui->ckTester->isChecked())
         {
@@ -354,30 +354,32 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
     int offset = ui->spinReplyOffset->value();
     UDS_MESSAGE sentFrame;
     bool gotReply = false;
+    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
+    int dataLen = msg.payload().length();
 
     int numSending = sendingFrames.length();
     if (numSending == 0) return;
     if (currIdx >= numSending) return;
     sentFrame = sendingFrames[currIdx];
 
-    id = msg.ID;
+    id = msg.frameId();
 
-    qDebug() << "UDS message ID " << msg.ID << "  service: " << msg.service << " subfunc: " << msg.subFunc;
+    qDebug() << "UDS message ID " << QString::number(msg.frameId(),16) << "  service: " << QString::number(msg.service, 16) << " subfunc: " << QString::number(msg.subFunc, 16);
 
-    if ((id == (uint32_t)(sentFrame.ID + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
+    if ((id == (uint32_t)(sentFrame.frameId() + offset)) || ui->cbAllowAdaptiveOffset->isChecked())
     {
         serviceShortName = udsHandler->getServiceShortDesc(sentFrame.service);
         if (serviceShortName.length() < 3) serviceShortName = QString::number(sentFrame.service, 16);
-        if (msg.service == 0x40 + sendingFrames[currIdx].service)
+        if (msg.service == (0x40 + sendingFrames[currIdx].service) )
         {
             setupNodes(id);
 
             QTreeWidgetItem *nodePositive = new QTreeWidgetItem();
             QString reply = "POSITIVE ";
-            for (int i = 0; i < msg.data.length(); i++)
+            for (int i = 0; i < dataLen; i++)
             {
                 reply.append(" ");
-                reply.append(Utility::formatHexNum(msg.data[i]));
+                reply.append(Utility::formatHexNum(data[i]));
             }
             nodePositive->setText(0, reply);
             nodePositive->setForeground(0, QBrush(Qt::darkGreen));
@@ -385,14 +387,14 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
             nodeSubFunc->setForeground(0, QBrush(Qt::darkGreen));
             gotReply = true;
         }
-        else if ( msg.isErrorReply && msg.service == sendingFrames[currIdx].service)
+        else if ( msg.isErrorReply && (msg.service == sendingFrames[currIdx].service) )
         {
-            if (msg.data.length())
+            if (dataLen)
             {
                 setupNodes(id);
                 QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
                 qDebug() << ui->spinNumBytes->value();
-                nodeNegative->setText(0, "NEGATIVE - " + udsHandler->getNegativeResponseShort(msg.data[0]));
+                nodeNegative->setText(0, "NEGATIVE - " + udsHandler->getNegativeResponseShort(data[0]));
                 nodeNegative->setForeground(0, QBrush(Qt::darkRed));
                 nodeSubFunc->addChild(nodeNegative);
                 nodeSubFunc->setForeground(0, QBrush(Qt::darkRed));
@@ -413,10 +415,10 @@ void UDSScanWindow::setupNodes(uint32_t replyID)
     if (serviceShortName.length() < 3) serviceShortName = QString::number(sendingFrames[currIdx].service, 16);
     QTreeWidgetItem *replyNode = nullptr;
 
-    if (!nodeID || nodeID->text(0) != Utility::formatHexNum(sendingFrames[currIdx].ID))
+    if (!nodeID || nodeID->text(0) != Utility::formatHexNum(sendingFrames[currIdx].frameId()))
     {
         nodeID = new QTreeWidgetItem();
-        nodeID->setText(0, Utility::formatHexNum(sendingFrames[currIdx].ID));        
+        nodeID->setText(0, Utility::formatHexNum(sendingFrames[currIdx].frameId()));
         ui->treeResults->addTopLevelItem(nodeID);
         nodeService = nullptr;
     }

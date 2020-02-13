@@ -77,7 +77,7 @@ bool SerialBusConnection::piGetBusSettings(int pBusIdx, CANBus& pBus)
 
 void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 {
-    CANConStatus stats;
+    //CANConStatus stats;
     /* sanity checks */
     if(0 != pBusIdx)
         return;
@@ -115,22 +115,11 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
 {
     /* sanity checks */
-    if(0 != pFrame.bus || pFrame.len>8)
+    if(0 != pFrame.bus /*|| pFrame.len>8*/)
         return false;
     if (!mDev_p) return false;
 
-    /* fill frame */
-    QCanBusFrame frame;
-    frame.setExtendedFrameFormat(pFrame.extended);
-    frame.setFrameId(pFrame.ID);
-    if (pFrame.remote) {
-        frame.setFrameType(QCanBusFrame::FrameType::RemoteRequestFrame);
-    } else {
-        frame.setFrameType(QCanBusFrame::FrameType::DataFrame);
-    }
-    frame.setPayload(QByteArray(reinterpret_cast<const char *>(pFrame.data),
-                                static_cast<int>(pFrame.len)));
-    return mDev_p->writeFrame(frame);
+    return mDev_p->writeFrame(pFrame);
 }
 
 
@@ -193,14 +182,16 @@ void SerialBusConnection::framesReceived()
         if (recFrame.payload().length() <= 8) {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
-                frame_p->len           = static_cast<uint32_t>(recFrame.payload().length());
-                frame_p->bus           = 0;
+                frame_p->setPayload(recFrame.payload());
+                frame_p->bus = 0;
 
                 if (recFrame.frameType() == QCanBusFrame::ErrorFrame) {
                     // Constants defined in include/uapi/linux/can/error.h
+                    //since the whole program uses QCanBusFrame now we can just grab errors directly out of the proper place from now on
+                    /*
                     switch (recFrame.error()) {
                         case QCanBusFrame::TransmissionTimeoutError:
-                            frame_p->ID = 0x20000001;
+                            frame_p->setFrameId(0x20000001);
                             break;
                         case QCanBusFrame::LostArbitrationError:
                             frame_p->ID = 0x20000002;
@@ -230,19 +221,21 @@ void SerialBusConnection::framesReceived()
                             break;
                     }
                     frame_p->extended = true;
+                    */
                 } else {
-                    frame_p->extended      = recFrame.hasExtendedFrameFormat();
-                    frame_p->ID            = recFrame.frameId();
-                    frame_p->remote        = (recFrame.frameType() == recFrame.RemoteRequestFrame);
-                    memcpy(frame_p->data, recFrame.payload().data(), frame_p->len);
+                    frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
+                    frame_p->setFrameId(recFrame.frameId());
+                    frame_p->setTimeStamp(recFrame.timeStamp());
+                    frame_p->setFrameType(recFrame.frameType());
+                    frame_p->setError(recFrame.error());
                     frame_p->isReceived = true;
                 }
               
                 frame_p->isReceived    = true;
                 if (useSystemTime) {
-                    frame_p->timestamp = QDateTime::currentMSecsSinceEpoch() * 1000ul;
+                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
-                else frame_p->timestamp     = (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis;
+                else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis));
 
                 checkTargettedFrame(*frame_p);
 

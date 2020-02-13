@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QTableWidget>
+#include <QComboBox>
 #include "dbchandler.h"
 #include "dbcmaineditor.h"
 
@@ -28,7 +29,11 @@ private slots:
     void editFile();
     void cellChanged(int row, int col);
     void cellDoubleClicked(int row, int col);
+    void matchingCriteriaChanged(int index);
     void newFile();
+
+signals:
+    void updatedDBCSettings();
 
 private:
     Ui::DBCLoadSaveWindow *ui;
@@ -42,6 +47,8 @@ private:
     QList<QTableWidgetItem*> takeRow(int row);
     void setRow(int row, const QList<QTableWidgetItem*>& rowItems);
     bool eventFilter(QObject *obj, QEvent *event);
+    void updateSettings();
+    QComboBox * addMatchingCriteriaCombobox(int row);
 };
 
 #endif // DBCLOADSAVEWINDOW_H

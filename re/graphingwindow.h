@@ -19,8 +19,8 @@ public:
     bool intelFormat;
     bool isSigned;
     uint64_t mask;
-    float bias;
-    float scale;
+    double bias;
+    double scale;
     int stride;
     int strideSoFar;
     QColor color;

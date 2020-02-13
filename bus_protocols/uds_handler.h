@@ -65,7 +65,7 @@ namespace UDS_SERVICES
 
 struct CODE_STRUCT
 {
-    unsigned int code;
+    int code;
     QString shortDesc;
     QString longDesc;
 };
@@ -73,9 +73,9 @@ struct CODE_STRUCT
 class UDS_MESSAGE: public ISOTP_MESSAGE
 {
 public:
-    unsigned int service;
-    unsigned int subFunc;
-    unsigned int subFuncLen;
+    int service;
+    int subFunc;
+    int subFuncLen;
     bool isErrorReply;
 
     UDS_MESSAGE();

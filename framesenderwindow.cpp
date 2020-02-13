@@ -130,13 +130,13 @@ void FrameSenderWindow::buildFrameCache()
     for (int i = 0; i < modelFrames->count(); i++)
     {
         thisFrame = modelFrames->at(i);
-        if (!frameCache.contains(thisFrame.ID))
+        if (!frameCache.contains(thisFrame.frameId()))
         {
-            frameCache.insert(thisFrame.ID, thisFrame);
+            frameCache.insert(thisFrame.frameId(), thisFrame);
         }
         else
         {
-            frameCache[thisFrame.ID] = thisFrame;
+            frameCache[thisFrame.frameId()] = thisFrame;
         }
     }
 }
@@ -160,13 +160,13 @@ void FrameSenderWindow::updatedFrames(int numFrames)
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
-            if (!frameCache.contains(thisFrame.ID))
+            if (!frameCache.contains(thisFrame.frameId()))
             {
-                frameCache.insert(thisFrame.ID, thisFrame);
+                frameCache.insert(thisFrame.frameId(), thisFrame);
             }
             else
             {
-                frameCache[thisFrame.ID] = thisFrame;
+                frameCache[thisFrame.frameId()] = thisFrame;
             }
             processIncomingFrame(&thisFrame);
         }
@@ -182,10 +182,10 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
         {
             Trigger *thisTrigger = &sendingData[sd].triggers[trig];
             qDebug() << "Trigger ID: " << thisTrigger->ID;
-            qDebug() << "Frame ID: " << frame->ID;
-            if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->ID)
+            qDebug() << "Frame ID: " << frame->frameId();
+            if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->frameId())
             {
-                if ((uint32_t)thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
+                if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
                 {
                     if (thisTrigger->currCount < thisTrigger->maxCount)
                     {
@@ -511,13 +511,13 @@ void FrameSenderWindow::doModifiers(int idx)
             }
         }
         //Finally, drop the result into the proper data byte
-        sendData->data[mod->destByte] = (unsigned char) shadowReg;
+        sendData->payload().data()[mod->destByte] = (char) shadowReg;
     }
 }
 
 int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 {
-    CANFrame *tempFrame = NULL;
+    CANFrame *tempFrame = nullptr;
     if (op.ID == 0) //numeric constant
     {
         if (op.notOper) return ~op.databyte;
@@ -525,16 +525,16 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
     }
     else if (op.ID == -2) //fetch data from a data byte within the output frame
     {
-        if (op.notOper) return ~sendingData.at(idx).data[op.databyte];
-        else return sendingData.at(idx).data[op.databyte];
+        if (op.notOper) return ~((unsigned char)sendingData.at(idx).payload()[op.databyte]);
+        else return (unsigned char)sendingData.at(idx).payload()[op.databyte];
     }
     else //look up external data byte
     {
         tempFrame = lookupFrame(op.ID, op.bus);
-        if (tempFrame != NULL)
+        if (tempFrame != nullptr)
         {
-            if (op.notOper) return ~tempFrame->data[op.databyte];
-            else return tempFrame->data[op.databyte];
+            if (op.notOper) return ~((unsigned char)tempFrame->payload()[op.databyte]);
+            else return (unsigned char)tempFrame->payload()[op.databyte];
         }
         else return 0;
     }
@@ -548,11 +548,11 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 /// <returns></returns>
 CANFrame* FrameSenderWindow::lookupFrame(int ID, int bus)
 {
-    if (!frameCache.contains(ID)) return NULL;
+    if (!frameCache.contains(ID)) return nullptr;
 
-    if (bus == -1 || frameCache[ID].bus == (unsigned int)bus) return &frameCache[ID];
+    if (bus == -1 || frameCache[ID].bus == bus) return &frameCache[ID];
 
-    return NULL;
+    return nullptr;
 }
 
 /// <summary>
@@ -643,7 +643,7 @@ void FrameSenderWindow::processModifierText(int line)
                     }
                     else thisOp.second.notOper = false;
                     thisOp.second.bus = sendingData[line].bus;
-                    thisOp.second.ID = sendingData[line].ID;
+                    thisOp.second.ID = sendingData[line].frameId();
                     parseOperandString(secondOp.split(":"), thisOp.second);
                     thisMod.operations.append(thisOp);
                 }
@@ -786,17 +786,21 @@ ModifierOperationType FrameSenderWindow::parseOperation(QString op)
 void FrameSenderWindow::updateGridRow(int idx)
 {
     qDebug() << "updateGridRow";
+
     inhibitChanged = true;
     FrameSendData *temp = &sendingData[idx];
     int gridLine = idx;
     QString dataString;
     QTableWidgetItem *item = ui->tableSender->item(gridLine, 9);
-    if (item == NULL) item = new QTableWidgetItem();
+    unsigned char *data = reinterpret_cast<unsigned char *>(temp->payload().data());
+    int dataLen = temp->payload().length();
+
+    if (item == nullptr) item = new QTableWidgetItem();
     item->setText(QString::number(temp->count));
-    if (!temp->remote) {
-        for (unsigned int i = 0; i < temp->len; i++)
+    if (temp->frameType() != QCanBusFrame::RemoteRequestFrame) {
+        for (int i = 0; i < dataLen; i++)
         {
-            dataString.append(Utility::formatNumber(temp->data[i]));
+            dataString.append(Utility::formatNumber(data[i]));
             dataString.append(" ");
         }
         ui->tableSender->item(gridLine, 6)->setText(dataString);
@@ -818,8 +822,8 @@ void FrameSenderWindow::processCellChange(int line, int col)
     {
         FrameSendData tempData;
         tempData.enabled = false;
-        tempData.remote = false;
-        tempData.extended = false;
+        tempData.setFrameType(QCanBusFrame::DataFrame);
+        tempData.setExtendedFrameFormat(false);
         sendingData.append(tempData);
     }
 
@@ -848,9 +852,9 @@ void FrameSenderWindow::processCellChange(int line, int col)
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 2)->text());
             if (tempVal < 0) tempVal = 0;
             if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
-            sendingData[line].ID = tempVal;
-            if (sendingData[line].ID > 0x7FF) {
-                sendingData[line].extended = true;
+            sendingData[line].setFrameId(tempVal);
+            if (sendingData[line].frameId() > 0x7FF) {
+                sendingData[line].setExtendedFrameFormat(true);
                 ui->tableSender->blockSignals(true);
                 ui->tableSender->item(line, 4)->setCheckState(Qt::Checked);
                 ui->tableSender->blockSignals(false);
@@ -861,29 +865,29 @@ void FrameSenderWindow::processCellChange(int line, int col)
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 3)->text());
             if (tempVal < 0) tempVal = 0;
             if (tempVal > 8) tempVal = 8;
-            sendingData[line].len = tempVal;
+            sendingData[line].payload().resize(tempVal);
             break;
         case 4: // Ext
             if (ui->tableSender->item(line, 4)->checkState() == Qt::Checked) {
-                sendingData[line].extended = true;
+                sendingData[line].setExtendedFrameFormat(true);
             } else {
-                sendingData[line].extended = false;
+                sendingData[line].setExtendedFrameFormat(false);
             }
             break;
         case 5: // Rem
             if (ui->tableSender->item(line, 5)->checkState() == Qt::Checked) {
-                sendingData[line].remote = true;
+                sendingData[line].setFrameType(QCanBusFrame::RemoteRequestFrame);
             } else {
-                sendingData[line].remote = false;
+                sendingData[line].setFrameType(QCanBusFrame::DataFrame);
             }
             break;
         case 6: //Data bytes
-            for (int i = 0; i < 8; i++) sendingData[line].data[i] = 0;
+            for (int i = 0; i < 8; i++) sendingData[line].payload().data()[i] = 0;
 
             tokens = ui->tableSender->item(line, 6)->text().split(" ");
             for (int j = 0; j < tokens.count(); j++)
             {
-                sendingData[line].data[j] = (uint8_t)Utility::ParseStringToNum(tokens[j]);
+                sendingData[line].payload().data()[j] = (uint8_t)Utility::ParseStringToNum(tokens[j]);
             }
             break;
         case 7: //triggers

@@ -90,7 +90,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
     if (messages.count() == 0) return nullptr;
     for (int i = 0; i < messages.count(); i++)
     {
-        if (isJ1939Handler)
+        if (matchingCriteria == J1939)
         {
             // include data page and extended data page in the pgn
             uint32_t pgn = (id & 0x3FFFF00) >> 8;
@@ -111,6 +111,13 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
                     return &messages[i];
                 }
             }
+        }
+        else if (matchingCriteria == GMLAN)
+        {
+            // Match the bits 14-26 (Arbitration Id) of GMLAN 29bit header
+            uint32_t arbId = id &0x3FFE000;
+            if ( (arbId != 0) && (messages[i].ID & 0x3FFE000) == arbId )
+                return &messages[i];
         }
         else
         {
@@ -206,29 +213,41 @@ int DBCMessageHandler::getCount()
     return messages.count();
 }
 
-bool DBCMessageHandler::isJ1939()
+bool DBCMessageHandler::filterLabeling()
 {
-    return isJ1939Handler;
+    return filterLabelingEnabled;
 }
 
-void DBCMessageHandler::setJ1939(bool j1939)
+void DBCMessageHandler::setFilterLabeling(bool filterLabeling)
 {
-    isJ1939Handler = j1939;
+    filterLabelingEnabled = filterLabeling;
+}
+
+MatchingCriteria_t DBCMessageHandler::getMatchingCriteria()
+{
+    return matchingCriteria;
+}
+
+void DBCMessageHandler::setMatchingCriteria(MatchingCriteria_t _matchingCriteria)
+{
+    matchingCriteria = _matchingCriteria;
 }
 
 DBCFile::DBCFile()
 {
     messageHandler = new DBCMessageHandler;
-    messageHandler->setJ1939(false);
+    messageHandler->setMatchingCriteria(EXACT);
+    messageHandler->setFilterLabeling(false);
 }
 
-DBCFile::DBCFile(const DBCFile& cpy)
+DBCFile::DBCFile(const DBCFile& cpy) : QObject()
 {
     messageHandler = new DBCMessageHandler;
     for (int i = 0 ; i < cpy.messageHandler->getCount() ; i++)
         messageHandler->addMessage(*cpy.messageHandler->findMsgByIdx(i));
 
-    messageHandler->setJ1939(cpy.messageHandler->isJ1939());
+    messageHandler->setMatchingCriteria(cpy.messageHandler->getMatchingCriteria());
+    messageHandler->setFilterLabeling(cpy.messageHandler->filterLabeling());
     fileName = cpy.fileName;
     filePath = cpy.filePath;
     assocBuses = cpy.assocBuses;
@@ -296,9 +315,10 @@ int DBCFile::getAssocBus()
 
 void DBCFile::setAssocBus(int bus)
 {
-    int numBuses = CANConManager::getInstance()->getNumBuses();
     if (bus < -1) return;
-    if (bus >= numBuses) return;
+    // To allow setting bus numbers even before connection is configured, do not enforce "valid" bus numbers
+    //int numBuses = CANConManager::getInstance()->getNumBuses();
+    //if (bus >= numBuses) return;
     assocBuses = bus;
 }
 
@@ -447,6 +467,14 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             break;
         case 4:
             sig.valType = STRING;
+            break;
+        case 5: //single point float in little endian
+            sig.valType = SP_FLOAT;
+            sig.intelByteOrder = true;
+            break;
+        case 6: //double point float in little endian
+            sig.valType = DP_FLOAT;
+            sig.intelByteOrder = true;
             break;
         }
         sig.factor = match.captured(6 + offset).toDouble();
@@ -693,7 +721,8 @@ void DBCFile::loadFile(QString fileName)
     qDebug() << "Starting DBC load";
     dbc_nodes.clear();
     messageHandler->removeAllMessages();
-    messageHandler->setJ1939(false);
+    messageHandler->setMatchingCriteria(EXACT);
+    messageHandler->setFilterLabeling(false);
 
     DBC_NODE falseNode;
     falseNode.name = "Vector__XXX";
@@ -887,14 +916,24 @@ void DBCFile::loadFile(QString fileName)
         fgAttr = findAttributeByName("GenMsgForegroundColor");
     }
 
-    DBC_ATTRIBUTE *j1939attr = findAttributeByName("isj1939dbc");
-    if (j1939attr)
+    DBC_ATTRIBUTE *mc_attr = findAttributeByName("matchingcriteria");
+    if (mc_attr)
     {
-        messageHandler->setJ1939(j1939attr->defaultValue > 0);
+        messageHandler->setMatchingCriteria((MatchingCriteria_t)mc_attr->defaultValue.toInt());
     }
     else
     {
-        messageHandler->setJ1939(false);
+        messageHandler->setMatchingCriteria(EXACT);
+    }
+
+    DBC_ATTRIBUTE *fl_attr = findAttributeByName("filterlabeling");
+    if (fl_attr)
+    {
+        messageHandler->setFilterLabeling(fl_attr->defaultValue.toInt());
+    }
+    else
+    {
+        messageHandler->setFilterLabeling(false);
     }
 
     QColor DefaultBG = QColor(bgAttr->defaultValue.toString());
@@ -1202,10 +1241,12 @@ void DBCFile::saveFile(QString fileName)
                 else msgOutput.append("0-");
                 break;
             case SP_FLOAT:
-                msgOutput.append("2-");
+                if (sig->intelByteOrder) msgOutput.append("5-");
+                else msgOutput.append("2-");
                 break;
             case DP_FLOAT:
-                msgOutput.append("3-");
+                if (sig->intelByteOrder) msgOutput.append("6-");
+                else msgOutput.append("3-");
                 break;
             case STRING:
                 msgOutput.append("4-");
@@ -1402,7 +1443,16 @@ int DBCHandler::createBlankFile()
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
-    attr.name = "isj1939dbc";
+    attr.name = "matchingcriteria";
+    attr.valType = QINT;
+    newFile.dbc_attributes.append(attr);
+
+    attr.attrType = MESSAGE;
+    attr.defaultValue = 0;
+    attr.enumVals.clear();
+    attr.lower = 0;
+    attr.upper = 0;
+    attr.name = "filterlabeling";
     attr.valType = QINT;
     newFile.dbc_attributes.append(attr);
 
@@ -1413,6 +1463,14 @@ int DBCHandler::createBlankFile()
 
     loadedFiles.append(newFile);
     return loadedFiles.count();
+}
+
+DBCFile* DBCHandler::loadDBCFile(QString filename)
+{
+    DBCFile newFile;
+    newFile.loadFile(filename);
+    loadedFiles.append(newFile);
+    return &loadedFiles.last();
 }
 
 //the only reason to even bother sending the index is to see if
@@ -1440,11 +1498,8 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
     {
         filename = dialog.selectedFiles()[0];
         //right now there is only one file type that can be loaded here so just do it.
-        DBCFile newFile;
-        newFile.loadFile(filename);
-        loadedFiles.append(newFile);
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
-        return &loadedFiles.last();
+        return loadDBCFile(filename);
     }
 
     return nullptr;
@@ -1650,7 +1705,7 @@ void DBCHandler::swapFiles(int pos1, int pos2)
  * Convenience function that encapsulates a whole lot of the details.
  * You give it a canbus frame and it'll tell you whether there is a loaded DBC file that can
  * interpret that frame for you.
- * Returns NULL if there is no message definition that matches.
+ * Returns nullptr if there is no message definition that matches.
 */
 DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
 {
@@ -1658,12 +1713,35 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
     {
         if (loadedFiles[i].getAssocBus() == -1 || frame.bus == (unsigned int)loadedFiles[i].getAssocBus())
         {
-            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.ID);
+            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;
         }
     }
     return nullptr;
 }
+
+
+// This function won't care which bus the DBC file is associated, but will return any message as long as ID matches and the file
+// has filter labeling enabled.
+// Returns the found message as well as the matching criteria (exact/J1939/GMLAN) 
+// Used for quickly populating the Frame Filtering section with interpreted values
+DBC_MESSAGE* DBCHandler::findMessageForFilter(uint32_t id, MatchingCriteria_t * matchingCriteria)
+{
+    for(int i = 0; i < loadedFiles.count(); i++)
+    {
+        if (loadedFiles[i].messageHandler->filterLabeling())
+        {
+            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(id);
+            if (msg != nullptr) 
+            {
+                *matchingCriteria = loadedFiles[i].messageHandler->getMatchingCriteria();
+                return msg;
+            }
+        }
+    }
+    return nullptr;
+}
+
 
 /*
  * As above, a real shortcut function that searches all files in order to try to find a message with the given name
@@ -1708,7 +1786,44 @@ DBCFile* DBCHandler::getFileByName(QString name)
 
 DBCHandler::DBCHandler()
 {
+    // Load previously saved DBC file settings
+    QSettings settings;
+    int filecount = settings.value("DBC/FileCount", 0).toInt();
+    for (int i=0; i<filecount; i++)
+    {
+        QString filename = settings.value("DBC/Filename_" + QString(i),"").toString();
+        DBCFile * file = loadDBCFile(filename);
+        int bus = settings.value("DBC/AssocBus_" + QString(i),0).toInt();
+        file->setAssocBus(bus);
 
+        MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString(i),0).toInt();
+
+        DBC_ATTRIBUTE attr;
+
+        attr.attrType = MESSAGE;
+        attr.defaultValue = matchingCriteria;
+        attr.enumVals.clear();
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.name = "matchingcriteria";
+        attr.valType = QINT;
+        file->dbc_attributes.append(attr);
+        file->messageHandler->setMatchingCriteria(matchingCriteria);
+
+        bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
+        attr.attrType = MESSAGE;
+        attr.defaultValue = filterLabeling;
+        attr.enumVals.clear();
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.name = "filterlabeling";
+        attr.valType = QINT;
+        file->dbc_attributes.append(attr);
+        file->messageHandler->setFilterLabeling(filterLabeling);
+
+        qInfo() << "Loaded DBC file" << filename << " (bus:" << bus 
+            << ", Matching Criteria:" << (int)matchingCriteria << "Filter labeling: " << (filterLabeling?"enabled":"disabled") << ")";
+    }
 }
 
 DBCHandler* DBCHandler::getReference()

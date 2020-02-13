@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QListWidgetItem>
+#include <qevent.h>
 #include "snifferwindow.h"
 #include "ui_snifferwindow.h"
 #include "helpwindow.h"
@@ -61,7 +62,7 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
 
 SnifferWindow::~SnifferWindow()
 {
-    closeEvent(NULL);
+    closeEvent(nullptr);
     delete sniffDel;
     delete ui;
 }

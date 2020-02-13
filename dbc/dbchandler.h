@@ -5,6 +5,13 @@
 #include "dbc_classes.h"
 #include "can_structs.h"
 
+    typedef enum
+    {
+        EXACT,
+        J1939,
+        GMLAN
+    } MatchingCriteria_t;
+
 /*
  * TODO:
  * Finish coding up the decoupled design
@@ -40,11 +47,14 @@ public:
     bool removeMessage(QString name);
     void removeAllMessages();
     int getCount();
-    bool isJ1939();
-    void setJ1939(bool j1939);
+    MatchingCriteria_t getMatchingCriteria();
+    void setMatchingCriteria(MatchingCriteria_t mc);
+    void setFilterLabeling( bool labelFiltering );
+    bool filterLabeling();
 private:
     QList<DBC_MESSAGE> messages;
-    bool isJ1939Handler;
+    MatchingCriteria_t matchingCriteria;
+    bool filterLabelingEnabled;
 };
 
 //technically there should be a node handler too but I'm sort of treating nodes as second class
@@ -90,6 +100,7 @@ class DBCHandler: public QObject
 {
     Q_OBJECT
 public:
+    DBCFile* loadDBCFile(QString filename);
     DBCFile* loadDBCFile(int);
     void saveDBCFile(int);
     void removeDBCFile(int);
@@ -97,6 +108,7 @@ public:
     void swapFiles(int pos1, int pos2);
     DBC_MESSAGE* findMessage(const CANFrame &frame);
     DBC_MESSAGE* findMessage(const QString msgName);
+    DBC_MESSAGE* findMessageForFilter(uint32_t id, MatchingCriteria_t * matchingCriteria);
     int getFileCount();
     DBCFile* getFileByIdx(int idx);
     DBCFile* getFileByName(QString name);

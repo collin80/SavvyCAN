@@ -1,8 +1,8 @@
-#include <QDebug>
+#include <QtDebug>
 #include "helpwindow.h"
 #include "ui_helpwindow.h"
 
-HelpWindow* HelpWindow::self = 0;
+HelpWindow* HelpWindow::self = nullptr;
 
 HelpWindow::HelpWindow(QWidget *parent) :
     QDialog(parent),
@@ -10,13 +10,6 @@ HelpWindow::HelpWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Window);
-
-    m_helpEngine = new QHelpEngineCore(QApplication::applicationDirPath() +"/SavvyCAN.qhc", this);
-    if (!m_helpEngine->setupData()) {
-        delete m_helpEngine;
-        m_helpEngine = 0;
-        qDebug() << "Could not load help file!";
-    }
 
     readSettings();
 }
@@ -66,17 +59,9 @@ HelpWindow* HelpWindow::getRef()
 
 void HelpWindow::showHelp(QString help)
 {
-    if (m_helpEngine) {
-        QString url = "qthelp://org.sphinx.savvycan.189/doc/" + help;
-        qDebug() << "Searching for " << url;
-        QByteArray helpData = m_helpEngine->fileData(QUrl(url));
-        qDebug() << "Help file size: " << helpData.length();
-        ui->textHelp->setText(helpData);
-    }
-    else
-    {
-        qDebug() << "Help engine not loaded!";
-    }
+    QString url = QCoreApplication::applicationDirPath() + "/help/" + help;
+    qDebug() << "Searching for " << url;
+    ui->textHelp->setSource(url);
 
     readSettings();
     self->show();
