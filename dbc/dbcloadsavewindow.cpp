@@ -35,6 +35,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->btnNewDBC, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::newFile);
     connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
+    connect(ui->btnLoadJSON, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadJSON);
 
     editorWindow = new DBCMainEditor(frames, this);
     currentlyEditingFile = nullptr;
@@ -82,6 +83,28 @@ void DBCLoadSaveWindow::newFile()
 void DBCLoadSaveWindow::loadFile()
 {
     DBCFile *file = dbcHandler->loadDBCFile(-1);
+    if(file) {
+        int idx = ui->tableFiles->rowCount();
+        ui->tableFiles->insertRow(ui->tableFiles->rowCount());
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
+        ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
+        DBC_ATTRIBUTE *attr = file->findAttributeByName("isj1939dbc");
+        QTableWidgetItem *item = new QTableWidgetItem("");
+        ui->tableFiles->setItem(idx, 2, item);
+        if (attr && attr->defaultValue > 0)
+        {
+            item->setCheckState(Qt::Checked);
+        }
+        else
+        {
+            item->setCheckState(Qt::Unchecked);
+        }
+    }
+}
+
+void DBCLoadSaveWindow::loadJSON()
+{
+    DBCFile *file = dbcHandler->loadJSONFile(-1);
     if(file) {
         int idx = ui->tableFiles->rowCount();
         ui->tableFiles->insertRow(ui->tableFiles->rowCount());
