@@ -51,7 +51,7 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
     if (index.column() > 9) return;
 
-    int x, y;
+    int x;
     SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
     int idx = index.column() - 2;
     int val = item->getData(idx);
@@ -116,7 +116,7 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     painter->setOpacity(1.0);
     painter->setPen(QApplication::palette().color(QPalette::Text));
     painter->setFont(mainFont);
-    painter->drawText(QRect(viewport.left(), viewport.top() + xSector + yOffset, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber(val));
+    painter->drawText(QRect(viewport.left(), viewport.top() + xSector + yOffset, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber((char)val));
 }
 
 QSize SnifferDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const

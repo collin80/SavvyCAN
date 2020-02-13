@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QColorDialog>
+#include <qevent.h>
 #include "helpwindow.h"
 
 DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) :
@@ -193,7 +194,7 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
             QString newName =  ui->NodesTable->item(row, col)->text().simplified().replace(' ', '_');
             qDebug() << "new name: " << newName;
             if (newName.length() == 0) return;
-            if (dbcFile->findNodeByName(newName) != NULL) //duplicates an existing node!
+            if (dbcFile->findNodeByName(newName) != nullptr) //duplicates an existing node!
             {
                 QMessageBox msg;
                 msg.setParent(0);
@@ -217,7 +218,7 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
         {
             DBC_NODE *oldNode = dbcFile->findNodeByIdx(row);
             QString nodeName = ui->NodesTable->item(row, col)->text().simplified().replace(' ', '_');
-            if (oldNode == NULL) return;
+            if (oldNode == nullptr) return;
             if (row != 0) oldNode->name = nodeName;
             else nodeName = oldNode->name;
             inhibitCellChanged = true;
@@ -230,7 +231,7 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
             QString nodeName = ui->NodesTable->item(row, 0)->text().simplified().replace(' ', '_');
             qDebug() << "searching for node " << nodeName;
             DBC_NODE *thisNode = dbcFile->findNodeByName(nodeName);
-            if (thisNode == NULL) return;
+            if (thisNode == nullptr) return;
             thisNode->comment = ui->NodesTable->item(row, col)->text().simplified();
             qDebug() << "New comment: " << thisNode->comment;
         }
@@ -240,15 +241,15 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
 
 void DBCMainEditor::onCellChangedMessage(int row,int col)
 {
-    QTableWidgetItem* item  = NULL;
+    QTableWidgetItem* item  = nullptr;
     bool ret                = false;
-    DBC_MESSAGE *msg        = NULL;
+    DBC_MESSAGE *msg        = nullptr;
     uint msgID;
 
     if (inhibitCellChanged) return;
 
     DBC_NODE *node = dbcFile->findNodeByIdx(ui->NodesTable->currentRow());
-    if (node == NULL)
+    if (node == nullptr)
     {
         qDebug() << "No node set?!? This is bad!";
         return;
@@ -271,7 +272,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
                 ui->MessagesTable->item(row, 0)->setText("");
                 return;
             }
-            if (msg != NULL)
+            if (msg != nullptr)
             {
                 QMessageBox msg;
                 msg.setParent(0);
@@ -293,9 +294,9 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
 
             for (int i = 0; i < referenceFrames->length(); i++)
             {
-                if ((uint) referenceFrames->at(i).ID == msgID)
+                if ((uint) referenceFrames->at(i).frameId() == msgID)
                 {
-                    newMsg.len = referenceFrames->at(i).len;
+                    newMsg.len = referenceFrames->at(i).payload().length();
                     break;
                 }
             }
@@ -328,7 +329,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         {
             QString msgName = ui->MessagesTable->item(row, 1)->text().simplified().replace(' ', '_');
             if (msgName.length() == 0) return;
-            if( ret && (msg!=NULL) )
+            if( ret && (msg!=nullptr) )
                 msg->name = msgName;
             break;
         }
@@ -349,7 +350,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
                 ui->MessagesTable->item(row, col)->setText(QString::number(msgLen));
             }
 
-            if( ret && (msg!=NULL) )
+            if( ret && (msg!=nullptr) )
                 msg->len = msgLen;
             break;
         }
@@ -358,7 +359,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
         case 6: //comment
         {
             QString msgComment = ui->MessagesTable->item(row, col)->text().simplified();
-            if( ret && (msgComment!=NULL) )
+            if( ret && (msgComment!=nullptr) )
                 msg->comment = msgComment;
             break;
         }
@@ -376,7 +377,7 @@ void DBCMainEditor::onCellClickedNode(int row, int col)
         currRow = row;
         QTableWidgetItem *item = ui->NodesTable->item(currRow, 0);
         QString nodeName;
-        if (item == NULL) return;
+        if (item == nullptr) return;
 
         nodeName = item->text();
         qDebug() << "Trying to find node with name " << nodeName;
@@ -476,7 +477,7 @@ void DBCMainEditor::refreshNodesTable()
 
     int rowIdx;
 
-    if (dbcFile->findNodeByName("Vector__XXX") == NULL)
+    if (dbcFile->findNodeByName("Vector__XXX") == nullptr)
     {
         DBC_NODE newNode;
         newNode.name = "Vector__XXX";
@@ -509,7 +510,7 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
 
     int rowIdx;
 
-    if (node != NULL)
+    if (node != nullptr)
     {
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {

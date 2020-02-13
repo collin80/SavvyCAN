@@ -33,7 +33,7 @@ public:
         if (input.startsWith("0X") || input.startsWith("X")) //hex number
         {
             if (input.length() < 3) temp = 0;
-            else temp = input.right(input.size() - 2).toLongLong(NULL, 16);
+            else temp = input.right(input.size() - 2).toLongLong(nullptr, 16);
         }
         else if (input.startsWith("0B") || input.startsWith("B")) //binary number
         {
@@ -56,7 +56,7 @@ public:
         return ParseStringToNum(input.toUtf8());
     }
 
-    static uint ParseStringToNum2(QString pInput, bool* pOk_p = NULL)
+    static uint ParseStringToNum2(QString pInput, bool* pOk_p = nullptr)
     {
         if(pInput.startsWith("0b"))
         {
@@ -67,10 +67,11 @@ public:
         return pInput.toUInt(pOk_p, 0);
     }
 
-    static long GetTimeMS()
+    static uint64_t GetTimeMS()
     {
         QDateTime stamp = QDateTime::currentDateTime();
-        return (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
+        return (((static_cast<uint64_t>(stamp.time().hour()) * 3600ull) + (static_cast<uint64_t>(stamp.time().minute()) * 60ull)
+                 + (static_cast<uint64_t>(stamp.time().second())) * 1000ull) + static_cast<uint64_t>(stamp.time().msec()));
     }
 
     //prints hex numbers in uppercase with 0's filling out the number depending
@@ -178,7 +179,7 @@ public:
         return (value1 * (1.0 - samplePoint)) + (value2 * samplePoint);
     }
 
-    static int64_t processIntegerSignal(const uint8_t *data, int startBit, int sigSize, bool littleEndian, bool isSigned)
+    static int64_t processIntegerSignal(const QByteArray data, int startBit, int sigSize, bool littleEndian, bool isSigned)
     {
 
         int64_t result = 0;

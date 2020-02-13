@@ -4,8 +4,11 @@
 #include <QFileDialog>
 #include <QMenu>
 #include <QSettings>
+#include <qevent.h>
+#include <QScrollBar>
 #include "connections/canconmanager.h"
 #include "helpwindow.h"
+#include "filterutility.h"
 
 /*
  * Notes about new functionality:
@@ -40,7 +43,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
 
     modelFrames = frames;
 
-    currentSeqItem = NULL;
+    currentSeqItem = nullptr;
     currentSeqNum = -1;
     currentPosition = 0;
     forward = true;
@@ -77,6 +80,9 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->listID, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuFilters(QPoint)));
 
     playbackObject.setPlaybackInterval(ui->spinPlaySpeed->value());
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listID->horizontalScrollBar()->setEnabled(false);    
 
     QStringList headers;
     headers << "Source" << "Loops";
@@ -197,7 +203,7 @@ void FramePlaybackWindow::saveFilters()
 
             for (int c = 0; c < ui->listID->count(); c++)
             {
-                outFile->write(QString::number(ui->listID->item(c)->text().toInt(NULL, 16), 16).toUtf8());
+                outFile->write(QString::number(FilterUtility::getId(ui->listID->item(c)).toInt(nullptr, 16), 16).toUtf8());
                 outFile->putChar(',');
                 if (ui->listID->item(c)->checkState() == Qt::Checked) outFile->putChar('T');
                 else outFile->putChar('F');
@@ -244,7 +250,7 @@ void FramePlaybackWindow::loadFilters()
             if (line.length() > 2)
             {
                 QList<QByteArray> tokens = line.split(',');
-                ID = tokens[0].toInt(NULL, 16);
+                ID = tokens[0].toInt(nullptr, 16);
                 if (tokens[1].toUpper() == "T") checked = true;
                     else checked = false;
                 if (checked)
@@ -260,7 +266,7 @@ void FramePlaybackWindow::loadFilters()
                     for (int c = 0; c < ui->listID->count(); c++)
                     {
                         QListWidgetItem *item = ui->listID->item(c);
-                        if (item->text().toInt(NULL, 16) == ID)
+                        if (FilterUtility::getId(item).toInt(nullptr, 16) == ID)
                         {
                             item->setCheckState(Qt::Checked);
                         }
@@ -275,7 +281,7 @@ void FramePlaybackWindow::loadFilters()
 
 void FramePlaybackWindow::refreshIDList()
 {
-    if (currentSeqNum < 0 || currentSeqItem == NULL)
+    if (currentSeqNum < 0 || currentSeqItem == nullptr)
     {
         ui->listID->clear();
         return;
@@ -291,10 +297,7 @@ void FramePlaybackWindow::refreshIDList()
     QHash<int, bool>::Iterator filterIter;
     for (filterIter = currentSeqItem->idFilters.begin(); filterIter != currentSeqItem->idFilters.end(); ++filterIter)
     {
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(filterIter.key()), ui->listID);
-        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-        if (filterIter.value()) listItem->setCheckState(Qt::Checked);
-        else listItem->setCheckState(Qt::Unchecked);
+        /*QListWidgetItem* listItem = */ FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listID);
     }
     //default is to sort in ascending order
     ui->listID->sortItems();
@@ -423,7 +426,7 @@ void FramePlaybackWindow::fillIDHash(SequenceItem &item)
 
     for (int i = 0; i < item.data.count(); i++)
     {
-        id = item.data[i].ID;
+        id = item.data[i].frameId();
         if (!item.idFilters.contains(id))
         {
             item.idFilters.insert(id, true);
@@ -463,7 +466,7 @@ void FramePlaybackWindow::btnDeleteCurrSeq()
     else
     {
         currentSeqNum = -1;
-        currentSeqItem = NULL;
+        currentSeqItem = nullptr;
     }
     refreshIDList();
     updateFrameLabel();
@@ -476,7 +479,7 @@ void FramePlaybackWindow::btnLoadFile()
 
     if (FrameFileIO::loadFrameFile(filename, &item.data))
     {
-        qSort(item.data); //sort by timestamp to be sure it's in order
+        std::sort(item.data.begin(), item.data.end()); //sort by timestamp to be sure it's in order
         QStringList fileList = filename.split('/');
         item.filename = fileList[fileList.length() - 1];
         item.currentLoopCount = 0;
@@ -510,7 +513,7 @@ void FramePlaybackWindow::btnLoadLive()
     item.currentLoopCount = 0;
     item.maxLoops = 1;
     item.data = QVector<CANFrame>(*modelFrames); //create a copy of the current frames from the main view
-    qSort(item.data); //be sure it's all in time based order
+    std::sort(item.data.begin(), item.data.end()); //be sure it's all in time based order
     fillIDHash(item);
     if (ui->tblSequence->currentRow() == -1)
     {
@@ -564,7 +567,7 @@ void FramePlaybackWindow::btnStopClick()
     }
     else {
         currentSeqNum = -1;
-        currentSeqItem = NULL;
+        currentSeqItem = nullptr;
     }
     if (ui->tblSequence->rowCount() > 0)
     {
@@ -604,13 +607,14 @@ void FramePlaybackWindow::changeLooping(bool check)
 
 void FramePlaybackWindow::changeSendingBus(int newIdx)
 {
+    Q_UNUSED(newIdx);
     calculateWhichBus();
 }
 
 void FramePlaybackWindow::changeIDFiltering(QListWidgetItem *item)
 {
     qDebug() << "Changed ID filter " << item->text() << " : " << item->checkState();
-    int ID = Utility::ParseStringToNum(item->text());
+    int ID = FilterUtility::getIdAsInt(item);
     currentSeqItem->idFilters[ID] = (item->checkState() == Qt::Checked) ? true : false;
 }
 

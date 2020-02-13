@@ -4,35 +4,32 @@
 #include <QObject>
 #include <QVector>
 #include <stdint.h>
+#include <QCanBusFrame>
 
-struct CANFrame
+//Now inherits from the built-in CAN frame class from Qt. This should be more future proof and easier to integrate with other code
+
+struct CANFrame : public QCanBusFrame
 {
 public:
-    uint32_t ID;
-    uint32_t bus;
-    bool extended;
-    bool remote;
+    int bus;
     bool isReceived; //did we receive this or send it?
-    uint32_t len;
-    unsigned char data[8];
-    uint64_t timestamp;
     uint64_t timedelta;
     uint32_t frameCount; //used in overwrite mode
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
     {
-        return l.timestamp < r.timestamp;
+        qint64 lStamp = l.timeStamp().seconds() * 1000000 + l.timeStamp().microSeconds();
+        qint64 rStamp = r.timeStamp().seconds() * 1000000 + r.timeStamp().microSeconds();
+        return lStamp < rStamp;
     }
 
     CANFrame()
     {
-        ID = 0;
+        setFrameId(0);
         bus = 0;
-        extended = false;
-        remote = false;
+        setExtendedFrameFormat(false);
+        setFrameType(QCanBusFrame::DataFrame);
         isReceived = true;
-        len = 0;
-        timestamp = 0;
         timedelta = 0;
         frameCount = 1;
     }

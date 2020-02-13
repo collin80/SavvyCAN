@@ -98,6 +98,7 @@ private slots:
     void filterSetAll();
     void filterClearAll();
     void headerClicked (int logicalIndex);
+    void DBCSettingsUpdated();
 
 public slots:
     void gotFrames(int);
@@ -167,6 +168,7 @@ private:
     QLabel lbStatusConnected;
     QLabel lbStatusFilename;
     QLabel lbStatusDatabase;
+    QLabel lbHelp;
     int normalRowHeight;
     bool isConnected;
 

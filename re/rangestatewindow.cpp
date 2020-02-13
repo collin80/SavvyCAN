@@ -158,10 +158,10 @@ void RangeStateWindow::updatedFrames(int numFrames)
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
-            if (!idFilters.contains(thisFrame.ID))
+            if (!idFilters.contains(thisFrame.frameId()))
             {
-                idFilters.insert(thisFrame.ID, true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listFilter);
+                idFilters.insert(thisFrame.frameId(), true);
+                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat()), ui->listFilter);
                 listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
@@ -178,7 +178,7 @@ void RangeStateWindow::refreshFilterList()
 
     for (int i = 0; i < modelFrames->length(); i++)
     {
-        id = modelFrames->at(i).ID;
+        id = modelFrames->at(i).frameId();
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
@@ -223,7 +223,7 @@ void RangeStateWindow::recalcButton()
             id = iter.key();
             for (int j = 0; j < modelFrames->count(); j++)
             {
-                if (modelFrames->at(j).ID == id) frameCache.append(modelFrames->at(j));
+                if (modelFrames->at(j).frameId() == id) frameCache.append(modelFrames->at(j));
             }
             //now we've got a list with all the same ID. Time to send it off for processing
             signalsFactory();
@@ -247,7 +247,7 @@ void RangeStateWindow::signalsFactory()
     int granularity = ui->spinGranularity->value();
     int sigType = ui->cbSignalMode->currentIndex() + 1;
     int signedType = ui->cbSignedMode->currentIndex() + 1;
-    int maxBits = frameCache.at(0).len * 8;
+    int maxBits = frameCache.at(0).payload().length() * 8;
     int sens = ui->slideSensitivity->value();
 
     for (int sigSize = maxSig; sigSize >= minSig; sigSize -= granularity)
@@ -297,7 +297,7 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
 
     for (i = 0; i < numFrames; i++)
     {
-        valu = Utility::processIntegerSignal(frameCache.at(i).data, startBit, bitLength, !bigEndian, isSigned);
+        valu = Utility::processIntegerSignal(frameCache.at(i).payload(), startBit, bitLength, !bigEndian, isSigned);
         if (valu < lowestValue) lowestValue = valu;
         if (valu > highestValue) highestValue = valu;
     }
@@ -316,7 +316,7 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
         return false; //doesn't range enough.
 
     for (i = 0; i < numFrames; i++)
-        scaledVals.append((int)((Utility::processIntegerSignal(frameCache.at(i).data, startBit, bitLength, !bigEndian, isSigned) - lowestValue)));
+        scaledVals.append((int)((Utility::processIntegerSignal(frameCache.at(i).payload(), startBit, bitLength, !bigEndian, isSigned) - lowestValue)));
 
     for (i = 1; i < numFrames; i++)
     {
@@ -365,9 +365,9 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
     {
         //createGraph(scaledVals);
         QString temp;
-        temp = "ID: " + QString::number(frameCache.at(0).ID, 16) + " startBit: " + QString::number(startBit) + "  len: " + QString::number(bitLength);
+        temp = "ID: " + QString::number(frameCache.at(0).frameId(), 16) + " startBit: " + QString::number(startBit) + "  len: " + QString::number(bitLength);
         int64_t foundSig;
-        foundSig = frameCache.at(0).ID;
+        foundSig = frameCache.at(0).frameId();
         foundSig += (int64_t)startBit << 32;
         foundSig += (int64_t)bitLength << 40;
 
@@ -474,12 +474,12 @@ void RangeStateWindow::clickedSignalList(int idx)
 
     for (int j = 0; j < modelFrames->count(); j++)
     {
-        if (modelFrames->at(j).ID == id) frameCache.append(modelFrames->at(j));
+        if (modelFrames->at(j).frameId() == id) frameCache.append(modelFrames->at(j));
     }
 
     int numFrames = frameCache.count();
     QVector<int> values;
     values.reserve(numFrames);
-    for (int i = 0; i < numFrames; i++) values.append((int)((Utility::processIntegerSignal(frameCache.at(i).data, startBit, bitLength, !isBigEndian, isSigned))));
+    for (int i = 0; i < numFrames; i++) values.append((int)((Utility::processIntegerSignal(frameCache.at(i).payload(), startBit, bitLength, !isBigEndian, isSigned))));
     createGraph(values);
 }

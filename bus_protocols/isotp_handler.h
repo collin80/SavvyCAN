@@ -1,5 +1,4 @@
-#ifndef ISOTP_HANDLER_H
-#define ISOTP_HANDLER_H
+#pragma once
 
 #include <Qt>
 #include <QObject>
@@ -20,7 +19,7 @@ public:
     ~ISOTP_HANDLER();
     void setExtendedAddressing(bool mode);
     void setReception(bool mode); //set whether to accept and forward frames or not
-    void sendISOTPFrame(int bus, int ID, QVector<unsigned char> data);
+    void sendISOTPFrame(int bus, int ID, QByteArray data);
     void setProcessAll(bool state);
     void setFlowCtrl(bool state);
     void addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask);
@@ -46,7 +45,6 @@ private:
     int framesUntilFlow;
     bool processAll;
     bool issueFlowMsgs;
-    bool issuedMultiFrame;
     QTimer frameTimer;
     uint32_t lastSenderID;
     uint32_t lastSenderBus;
@@ -54,5 +52,3 @@ private:
     void processFrame(const CANFrame &frame);
     void checkNeedFlush(uint64_t ID);
 };
-
-#endif // ISOTP_HANDLER_H

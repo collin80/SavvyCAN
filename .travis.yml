@@ -24,7 +24,7 @@ matrix:
            - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
            - chmod a+x linuxdeployqt-continuous-x86_64.AppImage
            # export VERSION=... # linuxdeployqt uses this for naming the file
-           - ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/local/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes.libqgtk3.so
+           - ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/local/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
 
         after_success:
            # find appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq # for debugging
@@ -50,7 +50,8 @@ matrix:
         script:
            - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
            - xcodebuild
-           - cp *.q* Release/SavvyCAN.app/Contents/MacOS/
+           - mkdir Release/SavvyCAN.app/Contents/MacOS/help
+           - cp -R help/*.* Release/SavvyCAN.app/Contents/MacOS/help
            - cd Release
            - ls SavvyCAN.app/Contents/MacOS
            - macdeployqt SavvyCAN.app -dmg
@@ -78,7 +79,8 @@ matrix:
            - rm *.cpp
            - rm *.h
            - rm *.obj
-           - cp ../*.q* .
+           - mkdir help
+           - cp -R ../help/*.* ./help
            - cp -r ../examples .
            - 7z a -tzip SavvyCAN32.zip -r *
            
@@ -92,6 +94,6 @@ matrix:
            draft: false
            
 branches:
-  only:
-  - master
-  - WIP
+  except:
+    - # Do not build tags that we create when we upload to GitHub Releases
+    - /^(?i:continuous)/

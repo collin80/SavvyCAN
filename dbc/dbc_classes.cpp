@@ -47,7 +47,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         QString buildString;
         int startByte = startBit / 8;
         int bytes = signalSize / 8;
-        for (int x = 0; x < bytes; x++) buildString.append(frame.data[startByte + x]);
+        for (int x = 0; x < bytes; x++) buildString.append(frame.payload().data()[startByte + x]);
         outString = buildString;
         cachedValue = outString;
         return true;
@@ -56,7 +56,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
     //if this is a multiplexed signal then we have to see if it is even found in the current message
     if (isMultiplexed)
     {
-        if (parentMessage->multiplexorSignal != NULL)
+        if (parentMessage->multiplexorSignal != nullptr)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
@@ -68,7 +68,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
     {
-        result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;        
     }
@@ -79,19 +79,19 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         //that the bytes that make up the integer are instead treated as having made up
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
-        result = Utility::processIntegerSignal(frame.data, startBit, 32, false, false);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, 32, intelByteOrder, false);
         endResult = (*((float *)(&result)) * factor) + bias;
     }
     else //double precision float
     {
-        if ( frame.len < 8 )
+        if ( frame.payload().length() < 8 )
         {
             result = 0;
             return false;
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
+        result = Utility::processIntegerSignal(frame.payload(), 0, 64, intelByteOrder, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
 
@@ -145,7 +145,7 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     //if this is a multiplexed signal then we have to see if it is even found in the current message
     if (isMultiplexed)
     {
-        if (parentMessage->multiplexorSignal != NULL)
+        if (parentMessage->multiplexorSignal != nullptr)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
@@ -155,15 +155,16 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     }
 
     if (valType == SIGNED_INT) isSigned = true;
-    if ( frame.len*8 < (startBit+signalSize) )
+    if ( static_cast<int>(frame.payload().length() * 8) < (startBit + signalSize) )
     {
         result = 0;
         return false;
     }
-    result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
 
-    double endResult = ((double)result * factor) + bias;
-    result = (int32_t)endResult;
+    result = static_cast<int32_t>(Utility::processIntegerSignal(frame.payload(), startBit, signalSize, intelByteOrder, isSigned));
+
+    double endResult = (result * factor) + bias;
+    result = static_cast<int32_t>(endResult);
     cachedValue = result;
     outValue = result;
     return true;
@@ -187,7 +188,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     //if this is a multiplexed signal then we have to see if it is even found in the current message
     if (isMultiplexed)
     {
-        if (parentMessage->multiplexorSignal != NULL)
+        if (parentMessage->multiplexorSignal != nullptr)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
@@ -199,19 +200,19 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
     {
-        if ( frame.len*8 < (startBit+signalSize) )
+        if ( frame.payload().length() * 8 < (startBit+signalSize) )
         {
             result = 0;
             return false;
         }
-        result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;
     }
     /*TODO: It should be noted that the below floating point has not even been tested. For shame! Test it!*/
     else if (valType == SP_FLOAT)
     {
-        if ( frame.len*8 < (startBit+32) )
+        if ( frame.payload().length() * 8 < (startBit + 32) )
         {
             result = 0;
             return false;
@@ -221,19 +222,19 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         //that the bytes that make up the integer are instead treated as having made up
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
-        result = Utility::processIntegerSignal(frame.data, startBit, 32, false, false);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, 32, false, false);
         endResult = (*((float *)(&result)) * factor) + bias;
     }
     else //double precision float
     {
-        if ( frame.len < 8 )
+        if ( frame.payload().length() < 8 )
         {
             result = 0;
             return false;
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.data, 0, 64, false, false);
+        result = Utility::processIntegerSignal(frame.payload(), 0, 64, false, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
     cachedValue = endResult;
@@ -243,7 +244,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
 
 DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByName(QString name)
 {
-    if (attributes.length() == 0) return NULL;
+    if (attributes.length() == 0) return nullptr;
     for (int i = 0; i < attributes.length(); i++)
     {
         if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
@@ -251,19 +252,19 @@ DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByName(QString name)
             return &attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_SIGNAL::findAttrValByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= attributes.count()) return nullptr;
     return &attributes[idx];
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByName(QString name)
 {
-    if (attributes.length() == 0) return NULL;
+    if (attributes.length() == 0) return nullptr;
     for (int i = 0; i < attributes.length(); i++)
     {
         if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
@@ -271,19 +272,19 @@ DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByName(QString name)
             return &attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_MESSAGE::findAttrValByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= attributes.count()) return nullptr;
     return &attributes[idx];
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByName(QString name)
 {
-    if (attributes.length() == 0) return NULL;
+    if (attributes.length() == 0) return nullptr;
     for (int i = 0; i < attributes.length(); i++)
     {
         if (attributes[i].attrName.compare(name, Qt::CaseInsensitive) == 0)
@@ -291,12 +292,12 @@ DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByName(QString name)
             return &attributes[i];
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 DBC_ATTRIBUTE_VALUE *DBC_NODE::findAttrValByIdx(int idx)
 {
-    if (idx < 0) return NULL;
-    if (idx >= attributes.count()) return NULL;
+    if (idx < 0) return nullptr;
+    if (idx >= attributes.count()) return nullptr;
     return &attributes[idx];
 }

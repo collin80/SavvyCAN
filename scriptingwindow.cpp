@@ -18,7 +18,6 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     editor = new JSEdit();
     editor->setFrameShape(JSEdit::NoFrame);
     editor->setWordWrapMode(QTextOption::NoWrap);
-    editor->setTabStopWidth(4);
     editor->setEnabled(false);
     editor->setFont(QFont("Monospace", 12));
     editor->show();
@@ -42,7 +41,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     connect(&valuesTimer, SIGNAL(timeout()), this, SLOT(valuesTimerElapsed()));
 
-    currentScript = NULL;
+    currentScript = nullptr;
 
     elapsedTime.start();
     valuesTimer.start(1000);
@@ -259,8 +258,8 @@ void ScriptingWindow::deleteCurrentScript()
         thisScript = scripts.at(sel);
         scripts.removeAt(sel);
         delete thisScript;  //causes a seg fault. Seems to be due to currently running javascript code. No idea how to stop code from running
-        thisScript = NULL;
-        currentScript = NULL;
+        thisScript = nullptr;
+        currentScript = nullptr;
 
         if (ui->listLoadedScripts->count() > 0)
         {
@@ -359,7 +358,7 @@ void ScriptingWindow::clickedLogClear()
 void ScriptingWindow::log(QString text)
 {
     ScriptContainer *cont = qobject_cast<ScriptContainer*>(sender());
-    if (cont != NULL)
+    if (cont != nullptr)
        ui->listLog->addItem(QString::number(elapsedTime.elapsed()) + "(" + cont->fileName + "): " + text);
     else
        ui->listLog->addItem(QString::number(elapsedTime.elapsed()) + ": " + text);

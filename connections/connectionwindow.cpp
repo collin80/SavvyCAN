@@ -312,8 +312,8 @@ void ConnectionWindow::populateBusDetails(int offset)
     }
     else
     {
-        bool ret;
-        int numBuses;
+        //bool ret;
+        //int numBuses;
 
         CANConnection* conn_p = connModel->getAtIdx(selIdx);
         CANBus bus;
@@ -365,7 +365,7 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     }
     else
     {
-        bool ret;
+        //bool ret;
         ui->groupBus->setEnabled(true);
         int numBuses;
 
