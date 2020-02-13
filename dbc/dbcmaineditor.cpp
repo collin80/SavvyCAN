@@ -288,8 +288,8 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             newMsg.name = "";
             newMsg.sender = node;
             newMsg.len = 0;
-            newMsg.fgColor = ui->MessagesTable->item(row, 4)->backgroundColor();
-            newMsg.bgColor = ui->MessagesTable->item(row, 5)->backgroundColor();
+            newMsg.fgColor = QColor(dbcFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
+            newMsg.bgColor = QColor(dbcFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
 
             for (int i = 0; i < referenceFrames->length(); i++)
             {

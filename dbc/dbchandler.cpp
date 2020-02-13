@@ -1507,8 +1507,8 @@ DBCFile* DBCHandler::loadJSONFile(int idx)
              msg.sender = thisFile->findNodeByIdx(0);
              QString nodeName = iter->toObject().find("originNode").value().toString();
              msg.sender = thisFile->findNodeByName(nodeName);
-             msg.bgColor = QColor();
-             msg.fgColor = QColor();
+             msg.bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
+             msg.fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
              if (!msg.sender && nodeName.length() > 1)
              {
                  DBC_NODE node;
