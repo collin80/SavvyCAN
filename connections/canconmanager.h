@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QElapsedTimer>
 
 #include "canconnection.h"
 
@@ -16,7 +17,9 @@ public:
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
+    void replace(int idx, CANConnection* pConn_p);
     QList<CANConnection*>& getConnections();
+    void stopAllConnections();
 
     CANConnection* getByName(const QString& pName) const;
 
@@ -24,6 +27,7 @@ public:
     void resetTimeBasis();
 
     int getNumBuses();
+    int getBusBase(CANConnection *);
 
     /**
      * @brief sendFrame sends a single frame out the desired bus
@@ -72,7 +76,12 @@ private:
     static CANConManager*  mInstance;
     QList<CANConnection*>  mConns;
     QTimer                 mTimer;
+    QElapsedTimer          mElapsedTimer;
     uint64_t               mTimestampBasis;
+    uint32_t               mNumActiveBuses;
+    bool                   useSystemTime;
+    QVector<CANFrame>      buslessFrames;
+    QVector<CANFrame>      tempFrames;
 };
 
 #endif // CANCONNECTIONMODEL_H

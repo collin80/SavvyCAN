@@ -8,6 +8,9 @@
 #include "canframemodel.h"
 #include "can_structs.h"
 #include "framefileio.h"
+#include "dbc/dbchandler.h"
+#include "bus_protocols/isotp_handler.h"
+
 #include "re/graphingwindow.h"
 #include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"
@@ -15,12 +18,10 @@
 #include "re/flowviewwindow.h"
 #include "framesenderwindow.h"
 #include "re/filecomparatorwindow.h"
-#include "dbc/dbchandler.h"
 #include "dbc/dbcmaineditor.h"
 #include "mainsettingsdialog.h"
 #include "firmwareuploaderwindow.h"
 #include "re/discretestatewindow.h"
-#include "connections/connectionwindow.h"
 #include "scriptingwindow.h"
 #include "re/rangestatewindow.h"
 #include "dbc/dbcloadsavewindow.h"
@@ -29,8 +30,13 @@
 #include "re/sniffer/snifferwindow.h"
 #include "re/isotp_interpreterwindow.h"
 #include "motorcontrollerconfigwindow.h"
+#include "signalviewerwindow.h"
+#include "re/temporalgraphwindow.h"
 
+class CANConnection;
 class ConnectionWindow;
+class ISOTP_InterpreterWindow;
+class ScriptingWindow;
 
 namespace Ui {
 class MainWindow;
@@ -44,6 +50,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
     static MainWindow *getReference();
+    CANFrameModel * getCANFrameModel();
     ~MainWindow();
 
 private slots:
@@ -52,6 +59,7 @@ private slots:
     void handleSaveFilteredFile();
     void handleSaveFilters();
     void handleLoadFilters();
+    void handleContinousLogging();
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
@@ -73,6 +81,8 @@ private slots:
     void showISOInterpreterWindow();
     void showSnifferWindow();
     void showBisectWindow();
+    void showSignalViewer();
+    void showTemporalGraphWindow();
     void exitApp();
     void handleSaveDecoded();
     void connectionStatusUpdated(int conns);
@@ -87,10 +97,13 @@ private slots:
     void filterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
+    void headerClicked (int logicalIndex);
+    void DBCSettingsUpdated();
 
 public slots:
     void gotFrames(int);
     void updateSettings();
+    void readUpdateableSettings();
     void gotCenterTimeID(int32_t ID, double timestamp);
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
@@ -99,7 +112,7 @@ signals:
     void suspendCapturing(bool);
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
-    void framesUpdated(int numFrames); //something has updated the frame list
+    void framesUpdated(int numFrames); //something has updated the frame list (send at gui update frequency)
     void frameUpdateRapid(int numFrames);
     void settingsUpdated();
     void sendCenterTimeID(int32_t ID, double timestamp);
@@ -110,7 +123,7 @@ private:
 
     //canbus related data
     CANFrameModel *model;
-    DBCHandler *dbcHandler;    
+    DBCHandler *dbcHandler;
     QByteArray inputBuffer;
     QTimer updateTimer;
     QTime *elapsedTime;
@@ -120,8 +133,12 @@ private:
     bool useHex;
     bool allowCapture;
     bool secondsMode;
+    bool useSystemClock;
     bool bDirty; //have frames been added or subtracted since the last save/load?
     bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
+
+    bool continuousLogging;
+    int continuousLogFlushCounter;
 
     //References to other windows we can display
     GraphingWindow *graphingWindow;
@@ -144,11 +161,14 @@ private:
     SnifferWindow* snifferWindow;
     MotorControllerConfigWindow *motorctrlConfigWindow;
     BisectWindow* bisectWindow;
+    SignalViewerWindow *signalViewerWindow;
+    TemporalGraphWindow *temporalGraphWindow;
 
     //various private storage
     QLabel lbStatusConnected;
     QLabel lbStatusFilename;
     QLabel lbStatusDatabase;
+    QLabel lbHelp;
     int normalRowHeight;
     bool isConnected;
 
@@ -157,9 +177,11 @@ private:
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);
+    void killEmAll();
+    void killWindow(QDialog *win);
     void readSettings();
-    void readUpdateableSettings();
     void writeSettings();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // MAINWINDOW_H

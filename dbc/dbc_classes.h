@@ -1,15 +1,17 @@
 #ifndef DBC_CLASSES_H
 #define DBC_CLASSES_H
 
+#include <QColor>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 #include "can_structs.h"
 
 /*classes to encapsulate data from a DBC file. Really, the stuff of interest
   are the nodes, messages, signals, attributes, and comments.
 
   These things sort of form a hierarchy. Nodes send and receive messages.
-  Messages are comprised of signals. Signals and messages have attributes.
+  Messages are comprised of signals. Nodes, signals, and messages potentially have attribute values.
   All of them can have comments.
 */
 
@@ -24,23 +26,39 @@ enum DBC_SIG_VAL_TYPE
 
 enum DBC_ATTRIBUTE_VAL_TYPE
 {
-    HEX,
+    QINT,
     QFLOAT,
     QSTRING,
     ENUM
+};
+
+enum DBC_ATTRIBUTE_TYPE
+{
+    GENERAL,
+    NODE,
+    MESSAGE,
+    SIG
 };
 
 class DBC_ATTRIBUTE
 {
 public:
     QString name;
-    DBC_ATTRIBUTE_VAL_TYPE type;
-    double startVal;
-    double endVal;
-    QStringList enumVals; //also used for STRING type but then you're assured to have only one
+    DBC_ATTRIBUTE_VAL_TYPE valType;
+    DBC_ATTRIBUTE_TYPE attrType;
+    double upper, lower;
+    QStringList enumVals;
+    QVariant defaultValue;
 };
 
-class DBC_VAL
+class DBC_ATTRIBUTE_VALUE
+{
+public:
+    QString attrName;
+    QVariant value;
+};
+
+class DBC_VAL_ENUM_ENTRY
 {
 public:
     int value;
@@ -52,7 +70,10 @@ class DBC_NODE
 public:
     QString name;
     QString comment;
-    QList<DBC_ATTRIBUTE> attributes;
+    QList<DBC_ATTRIBUTE_VALUE> attributes;
+
+    DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
+    DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
 
 class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
@@ -76,12 +97,16 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     DBC_MESSAGE *parentMessage;
     QString unitName;
     QString comment;
-    QList<DBC_ATTRIBUTE> attributes;
-    QList<DBC_VAL> valList;
+    QVariant cachedValue;
+    QList<DBC_ATTRIBUTE_VALUE> attributes;
+    QList<DBC_VAL_ENUM_ENTRY> valList;
 
-    bool processAsText(const CANFrame &frame, QString &outString);
+    bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
+    QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true);
+    DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
+    DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
 
 class DBCSignalHandler; //forward declaration to keep from having to include dbchandler.h in this file and thus create a loop
@@ -96,9 +121,14 @@ public:
     QString comment;
     unsigned int len;
     DBC_NODE *sender;
-    QList<DBC_ATTRIBUTE> attributes;
+    QColor bgColor;
+    QColor fgColor;
+    QList<DBC_ATTRIBUTE_VALUE> attributes;
     DBCSignalHandler *sigHandler;
     DBC_SIGNAL* multiplexorSignal;
+
+    DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
+    DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
 
 

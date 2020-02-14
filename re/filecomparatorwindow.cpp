@@ -1,13 +1,16 @@
 #include "filecomparatorwindow.h"
 #include "ui_filecomparatorwindow.h"
-
+#include "helpwindow.h"
+#include <QProgressDialog>
 #include <QSettings>
+#include <qevent.h>
 
 FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FileComparatorWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     connect(ui->btnInterestedFile, SIGNAL(clicked(bool)), this, SLOT(loadInterestedFile()));
     connect(ui->btnLoadRefFile, SIGNAL(clicked(bool)), this, SLOT(loadReferenceFile()));
@@ -15,11 +18,14 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     connect(ui->btnClear, SIGNAL(clicked(bool)), this, SLOT(clearReference()));
 
     ui->lblFirstFile->setText("");
-    ui->lblRefFrames->setText("0");
+    ui->lblRefFrames->setText("Loaded frames: 0");
+
+    installEventFilter(this);
 }
 
 FileComparatorWindow::~FileComparatorWindow()
 {
+    removeEventFilter(this);
     delete ui;
 }
 
@@ -32,6 +38,24 @@ void FileComparatorWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     writeSettings();
+}
+
+bool FileComparatorWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("filecomparison.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void FileComparatorWindow::readSettings()
@@ -59,21 +83,28 @@ void FileComparatorWindow::loadInterestedFile()
 {
     interestedFrames.clear();
     QString resultingFileName;
+
+    qApp->processEvents();
+
     if (FrameFileIO::loadFrameFile(resultingFileName, &interestedFrames))
     {
         ui->lblFirstFile->setText(resultingFileName);
         interestedFilename = resultingFileName;
         if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
+
 }
 
 void FileComparatorWindow::loadReferenceFile()
 {
     //secondFileFrames.clear();
     QString resultingFileName;
+
+    qApp->processEvents();
+
     if (FrameFileIO::loadFrameFile(resultingFileName, &referenceFrames))
     {
-        ui->lblRefFrames->setText(QString::number(referenceFrames.length()));
+        ui->lblRefFrames->setText("Loaded frames: " + QString::number(referenceFrames.length()));
         if (interestedFrames.count() > 0 && referenceFrames.count() > 0) calculateDetails();
     }
 }
@@ -82,17 +113,28 @@ void FileComparatorWindow::clearReference()
 {
     referenceFrames.clear();
     ui->treeDetails->clear();
+    ui->lblRefFrames->setText("Loaded frames: " + QString::number(referenceFrames.length()));
 }
 
 void FileComparatorWindow::calculateDetails()
 {
     QMap<int, FrameData> interestedIDs;
     QMap<int, FrameData> referenceIDs;
-    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = NULL, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = NULL;
-    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = NULL;
+    QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = nullptr, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = nullptr;
+    QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = nullptr;
     uint64_t tmp;
 
     bool uniqueInterested = ui->ckUniqueToInterested->isChecked();
+
+    QProgressDialog progress(this);
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Calculating differences");
+    progress.setCancelButton(0);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
+
+    qApp->processEvents();
 
     ui->treeDetails->clear();
 
@@ -101,10 +143,10 @@ void FileComparatorWindow::calculateDetails()
     if (!uniqueInterested)
     {
         referenceOnlyBase = new QTreeWidgetItem();
-        referenceOnlyBase->setText(0, "IDs found only in reference frames");
+        referenceOnlyBase->setText(0, "IDs found only in Side 2 - Reference frames");
     }
     sharedBase = new QTreeWidgetItem();
-    sharedBase->setText(0,"IDs found in both places");
+    sharedBase->setText(0,"IDs found on both sides");
 
     //first we have to fill out the data structures to get ready to do the report
     for (int x = 0; x < interestedFrames.count(); x++)
@@ -146,8 +188,10 @@ void FileComparatorWindow::calculateDetails()
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
             interestedIDs.insert(frame.ID, *newData);
-        }        
-    }    
+        }
+    }
+
+    qApp->processEvents();
 
     for (int x = 0; x < referenceFrames.count(); x++)
     {
@@ -189,24 +233,34 @@ void FileComparatorWindow::calculateDetails()
         }
     }
 
+    qApp->processEvents();
+
     //now we iterate through the IDs within both files and see which are unique to one file and which
     //are shared
     bool interestedHadUnique = false;
     QMap<int, FrameData>::iterator i;
+    int framesCounter = 0;
     for (i = interestedIDs.begin(); i != interestedIDs.end(); ++i)
     {
+        framesCounter++;
+        if (framesCounter > 10000)
+        {
+            framesCounter = 0;
+            qApp->processEvents();
+        }
+
         int keyone = i.key();
         if (!referenceIDs.contains(keyone))
         {
             valuesBase = new QTreeWidgetItem();
-            valuesBase->setText(0, QString::number(keyone, 16));
+            valuesBase->setText(0, Utility::formatHexNum(keyone));
             interestedOnlyBase->addChild(valuesBase);
         }
         else //ID was in both files
         {
             interestedHadUnique = false;
             sharedItem = new QTreeWidgetItem();
-            sharedItem->setText(0, Utility::formatHexNum(keyone));            
+            sharedItem->setText(0, Utility::formatHexNum(keyone));
             //if the ID was in both files then we can use the data accumulated above in bitmap
             //and values to figure out what has changed between the two files
 
@@ -218,7 +272,7 @@ void FileComparatorWindow::calculateDetails()
             if (!uniqueInterested)
             {
                 bitmapBaseReference = new QTreeWidgetItem();
-                bitmapBaseReference->setText(0, "Bits set only in reference frames");
+                bitmapBaseReference->setText(0, "Bits set only in Side 2 - Reference frames");
             }
             sharedItem->addChild(bitmapBaseInterested);
             if (!uniqueInterested) sharedItem->addChild(bitmapBaseReference);
@@ -255,7 +309,7 @@ void FileComparatorWindow::calculateDetails()
                 if (!uniqueInterested)
                 {
                     valuesReference = new QTreeWidgetItem();
-                    valuesReference->setText(0, "Values found only in reference frames");
+                    valuesReference->setText(0, "Values found only in Side 2 - Reference frames");
                 }
                 valuesBase->addChild(valuesInterested);
                 if (!uniqueInterested) valuesBase->addChild(valuesReference);
@@ -277,6 +331,8 @@ void FileComparatorWindow::calculateDetails()
             if (interestedHadUnique || !uniqueInterested) sharedBase->addChild(sharedItem);
         }
     }
+
+    qApp->processEvents();
 
     if (!uniqueInterested)
     {
@@ -305,12 +361,15 @@ void FileComparatorWindow::calculateDetails()
     {
         ui->treeDetails->expandAll();
     }
+
+    progress.cancel();
 }
 
 void FileComparatorWindow::saveDetails()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
@@ -319,10 +378,12 @@ void FileComparatorWindow::saveDetails()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FileComparator/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        settings.setValue("FileComparator/LoadSaveDirectory", dialog.directory().path());
         if (!filename.contains('.')) filename += ".txt";
         QFile *outFile = new QFile(filename);
 

@@ -3,12 +3,14 @@
 
 
 
-#include <QSerialPortInfo>
 #include <QDialog>
+#include <QSerialPortInfo>
 #include <QDebug>
 #include <QSettings>
 #include <QTimer>
 #include <QItemSelection>
+#include <QCanBusDeviceInfo>
+#include <QUdpSocket>
 #include "canconnectionmodel.h"
 #include "connections/canconnection.h"
 
@@ -27,50 +29,47 @@ class ConnectionWindow : public QDialog
 public:
     explicit ConnectionWindow(QWidget *parent = 0);
     ~ConnectionWindow();
-    void showEvent(QShowEvent *);
-
-    CANCon::type getConnectionType();
-    bool getSWMode();
 
 signals:
     void updateBusSettings(CANBus *bus);
     void updatePortName(QString port);
+    void sendDebugData(QByteArray bytes);
 
 public slots:
-    void setSpeed(int speed0);
-    void setSWMode(bool mode);
-
+    void getDebugText(QString debugText);
     void setSuspendAll(bool pSuspend);
 
+
 private slots:
-    void handleOKButton();
-    void handleConnTypeChanged();
     void currentRowChanged(const QModelIndex &current, const QModelIndex &previous);
+    void currentTabChanged(int newIdx);
+    void consoleEnableChanged(bool checked);
     void handleRemoveConn();
-    void handleEnableAll();
-    void handleDisableAll();
-    void handleRevert();
     void handleNewConn();
-    void connectionStatus(CANCon::status);
+    void handleResetConn();
+    void handleClearDebugText();
+    void handleSendHex();
+    void handleSendText();
+    void saveBusSettings();
+    void connectionStatus(CANConStatus);
+    void readPendingDatagrams();
 
 private:
-    Ui::ConnectionWindow *ui;
-    QList<QSerialPortInfo> ports;
+    Ui::ConnectionWindow *ui;    
     QSettings *settings;
     CANConnectionModel *connModel;
+    QUdpSocket *rxBroadcast;
+    QVector<QString> remoteDeviceIP;
 
-    void selectSerial();
-    void selectKvaser();
-    void selectSocketCan();
-    bool isSocketCanAvailable();
-    int getSpeed();
-    QString getPortName();
-    void setPortName(CANCon::type pType, QString pPortName);
-
-    void setActiveAll(bool pActive);
-    CANConnection* create(CANCon::type pTye, QString pPortName);
+    CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver);
+    void populateBusDetails(int offset);
     void loadConnections();
     void saveConnections();
+    void showEvent(QShowEvent *);
+    void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
+    void readSettings();
+    void writeSettings();
 };
 
 #endif // CONNECTIONWINDOW_H

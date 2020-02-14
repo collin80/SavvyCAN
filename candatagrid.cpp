@@ -14,6 +14,9 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     memset(data, 0, 8);
     memset(refData, 0, 8);
     memset(usedData, 0, 8);
+    for (int x = 0; x < 8; x++)
+        for (int y = 0; y < 8; y++)
+            textStates[x][y] = GridTextState::NORMAL;
 }
 
 CANDataGrid::~CANDataGrid()
@@ -40,19 +43,42 @@ void CANDataGrid::mousePressEvent(QMouseEvent *event)
     }
 }
 
+void CANDataGrid::setCellTextState(int x, int y, GridTextState state)
+{
+    if (x < 0) return;
+    if (x > 7) return;
+    if (y < 0) return;
+    if (y > 7) return;
+    textStates[x][y] = state;
+    this->update();
+}
+
+GridTextState CANDataGrid::geCellTextState(int x, int y)
+{
+    if (x < 0) return GridTextState::NORMAL;
+    if (x > 7) return GridTextState::NORMAL;
+    if (y < 0) return GridTextState::NORMAL;
+    if (y > 7) return GridTextState::NORMAL;
+    return textStates[x][y];
+}
+
 void CANDataGrid::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
+    qDebug() << "CANDataGrid Paint Event";
     int x, y;
     unsigned char prevByte, thisByte;
     bool thisBit, prevBit;
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
     QPainter painter(this);
 
+
     QRect viewport = painter.viewport();
 
     int xSpan = viewport.right() - viewport.left();
     int ySpan = viewport.bottom() - viewport.top();
+
+    qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
 
     int xSector = xSpan / 10;
     int ySector = ySpan / 10;
@@ -70,12 +96,15 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     //The left most column has "BYTES" written vertically down it
     //the next left most column has "0 1 2 3 4 5 6 7" written down along the grid
 
-    painter.setPen(QPen(Qt::black));
+    painter.setPen(QPen(QApplication::palette().color(QPalette::Text)));
     QFont mainFont;
     mainFont.setPixelSize(qMin(xSector, ySector) - 10);
     painter.setFont(mainFont);
     QFont smallFont;
     smallFont.setPixelSize(qMin(xSector, ySector) - 15);
+    QFont boldFont;
+    boldFont.setPixelSize(qMin(xSector, ySector) - 10);
+    boldFont.setBold(true);
 
     painter.drawText(QRect(viewport.left(), viewport.top(), xSpan, ySector), Qt::AlignCenter, tr("BITS"));
 
@@ -139,7 +168,25 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 
             //painter.fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
             painter.drawRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector);
-            painter.drawText(viewport.left() + (x+2) * xSector + (xSector / 3), viewport.top() + (y + 3) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
+            switch (textStates[x][y])
+            {
+            case GridTextState::NORMAL:
+                painter.setPen(QPen(Qt::gray));
+                painter.setFont(mainFont);
+                break;
+            case GridTextState::BOLD_BLUE:
+                painter.setPen(QPen(Qt::blue));
+                painter.setFont(boldFont);
+                break;
+            case GridTextState::INVERT:
+                painter.setFont(mainFont);
+                QColor brushColor = painter.brush().color();
+                painter.setPen(QColor(255-brushColor.red(), 255-brushColor.green(), 255-brushColor.blue()));
+                break;
+            }
+
+            painter.drawText(viewport.left() + (x+2) * xSector + (xSector / 8), viewport.top() + (y + 3) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
+            painter.setPen(QPen(Qt::gray));
         }
     }
     upperLeft.setX(viewport.left() + 2 * xSector);

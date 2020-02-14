@@ -6,16 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>884</width>
-    <height>915</height>
+    <width>1239</width>
+    <height>644</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Signal Editor</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="10,1,5">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="10,1,4">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2,1">
      <item>
       <widget class="QListWidget" name="signalsList"/>
      </item>
@@ -46,160 +46,164 @@
          <widget class="CANDataGrid" name="bitfield" native="true">
           <property name="minimumSize">
            <size>
-            <width>0</width>
-            <height>200</height>
+            <width>300</width>
+            <height>300</height>
            </size>
           </property>
          </widget>
         </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_4">
-          <property name="text">
-           <string>Bit Length:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_5">
-          <property name="text">
-           <string>Byte Order</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QLineEdit" name="txtBitLength"/>
-        </item>
-        <item row="3" column="1">
-         <widget class="QCheckBox" name="cbIntelFormat">
-          <property name="text">
-           <string>Intel (Little Endian)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="label_6">
-          <property name="text">
-           <string>Type:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label_7">
-          <property name="text">
-           <string>Scale:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0">
-         <widget class="QLabel" name="label_8">
-          <property name="text">
-           <string>Bias:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_9">
-          <property name="text">
-           <string>Min Value:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="0">
-         <widget class="QLabel" name="label_10">
-          <property name="text">
-           <string>Max Value:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="0">
-         <widget class="QLabel" name="label_11">
-          <property name="text">
-           <string>Receiving Node:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="14" column="0">
-         <widget class="QLabel" name="label_13">
-          <property name="text">
-           <string>Comment:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="9" column="0">
-         <widget class="QLabel" name="label_12">
-          <property name="text">
-           <string>Units Name:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="1">
-         <widget class="QComboBox" name="comboType"/>
-        </item>
-        <item row="5" column="1">
-         <widget class="QLineEdit" name="txtScale"/>
-        </item>
-        <item row="6" column="1">
-         <widget class="QLineEdit" name="txtBias"/>
-        </item>
-        <item row="7" column="1">
-         <widget class="QLineEdit" name="txtMinVal"/>
-        </item>
-        <item row="8" column="1">
-         <widget class="QLineEdit" name="txtMaxVal"/>
-        </item>
-        <item row="9" column="1">
-         <widget class="QLineEdit" name="txtUnitName"/>
-        </item>
-        <item row="10" column="1">
-         <widget class="QComboBox" name="comboReceiver"/>
-        </item>
-        <item row="14" column="1">
-         <widget class="QLineEdit" name="txtComment"/>
-        </item>
-        <item row="12" column="0">
-         <widget class="QLabel" name="label_14">
-          <property name="text">
-           <string>Multiplexing</string>
-          </property>
-         </widget>
-        </item>
-        <item row="12" column="1">
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QRadioButton" name="rbNotMulti">
-            <property name="text">
-             <string>Not multiplexed</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="rbMultiplexed">
-            <property name="text">
-             <string>Multiplexed</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="rbMultiplexor">
-            <property name="text">
-             <string>Multiplexor</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="13" column="0">
-         <widget class="QLabel" name="label_15">
-          <property name="text">
-           <string>Multiplex Value</string>
-          </property>
-         </widget>
-        </item>
-        <item row="13" column="1">
-         <widget class="QLineEdit" name="txtMultiplexValue"/>
-        </item>
        </layout>
       </widget>
+     </item>
+     <item>
+      <layout class="QFormLayout" name="formLayout_2">
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_4">
+         <property name="text">
+          <string>Bit Length:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="txtBitLength"/>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Byte Order</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QCheckBox" name="cbIntelFormat">
+         <property name="text">
+          <string>LSB First (Little Endian)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_6">
+         <property name="text">
+          <string>Type:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="comboType"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Scale:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="txtScale"/>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_8">
+         <property name="text">
+          <string>Bias:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="txtBias"/>
+       </item>
+       <item row="5" column="0">
+        <widget class="QLabel" name="label_9">
+         <property name="text">
+          <string>Min Value:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="txtMinVal"/>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_10">
+         <property name="text">
+          <string>Max Value:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1">
+        <widget class="QLineEdit" name="txtMaxVal"/>
+       </item>
+       <item row="7" column="0">
+        <widget class="QLabel" name="label_12">
+         <property name="text">
+          <string>Units Name:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1">
+        <widget class="QLineEdit" name="txtUnitName"/>
+       </item>
+       <item row="8" column="0">
+        <widget class="QLabel" name="label_11">
+         <property name="text">
+          <string>Receiving Node:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1">
+        <widget class="QComboBox" name="comboReceiver"/>
+       </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>Multiplexing</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QRadioButton" name="rbNotMulti">
+           <property name="text">
+            <string>Not multiplexed</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rbMultiplexed">
+           <property name="text">
+            <string>Multiplexed</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="rbMultiplexor">
+           <property name="text">
+            <string>Multiplexor</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item row="10" column="0">
+        <widget class="QLabel" name="label_15">
+         <property name="text">
+          <string>Multiplex Value</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="1">
+        <widget class="QLineEdit" name="txtMultiplexValue"/>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="label_13">
+         <property name="text">
+          <string>Comment:</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1">
+        <widget class="QLineEdit" name="txtComment"/>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
@@ -223,6 +227,14 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>signalsList</tabstop>
+  <tabstop>txtName</tabstop>
+  <tabstop>rbNotMulti</tabstop>
+  <tabstop>rbMultiplexed</tabstop>
+  <tabstop>rbMultiplexor</tabstop>
+  <tabstop>valuesTable</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

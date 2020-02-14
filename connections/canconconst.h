@@ -16,9 +16,17 @@ namespace CANCon {
     {
         GVRET_SERIAL,
         KVASER,
-        SOCKETCAN,
+        SERIALBUS,
+        REMOTE,
         NONE
     };
 }
+
+class CANConStatus
+{
+public:
+    CANCon::status conStatus;
+    int numHardwareBuses;
+};
 
 #endif // CANCONCONST_H

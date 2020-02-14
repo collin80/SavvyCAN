@@ -16,14 +16,17 @@ public:
     explicit MainSettingsDialog(QWidget *parent = 0);
     ~MainSettingsDialog();
 
-private slots:
+signals:
+    void updatedSettings();
+
+public slots:
     void updateSettings();
 
 private:
     Ui::MainSettingsDialog *ui;
-    QSettings *settings;
 
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // MAINSETTINGSDIALOG_H

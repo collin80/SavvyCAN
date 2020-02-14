@@ -1,27 +1,33 @@
 
-Welcome to SavvyCAN's documentation!
-====================================
+Welcome to SavvyCAN V189 documentation!
+=========================================
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :titlesonly:
+   :numbered:
    
    mainscreen
+   connectionwindow
    preferences
-   flowview
+   dbc_manager
+   dbc_editor
+   signaleditor
    graphwindow
+   graphsetup
+   flowview
+   bisector
+   sniffer
    framedetails
    filecomparison
+   fuzzingwindow
+   isotp_decoder
+   rangestate
+   uds_scanner
    playbackwindow
    customsender
-   firmwareuploader
-   
+   scriptingwindow
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 

@@ -19,13 +19,15 @@ protected:
     /**
      * @brief CANConnection constructor
      * @param pPort: string containing port name
+     * @param pDriver: string containing driver name - Really only used for SerialBus connections
      * @param pType: the type of connection @ref CANCon::type
      * @param pNumBuses: the number of buses the device has
      * @param pQueueLen: the length of the lock free queue to use
      * @param pUseThread: if set to true, object will be execute in a dedicated thread
      */
     CANConnection(QString pPort,
-                  CANCon::type pType,
+                  QString pDriver,
+                  CANCon::type pType,                  
                   int pNumBuses,
                   int pQueueLen,
                   bool pUseThread);
@@ -49,6 +51,13 @@ public:
      * @return returns the port name of the device
      */
     QString getPort();
+
+    /**
+     * @brief getDriver
+     * @return returns the name of the driver used for this device
+     */
+    QString getDriver();
+
 
     /**
      * @brief getQueue
@@ -89,8 +98,13 @@ signals:
      * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
      * @param pStatus: the new status of the device
      */
-    void status(CANCon::status pStatus);
+    void status(CANConStatus pStatus);
 
+    /**
+      * @brief Event sent when device has done something worthy of debugging output.
+      * @param debugString: String based output to show for debugging purposes
+      */
+    void debugOutput(QString debugString);
 
 public slots:
 
@@ -175,7 +189,11 @@ public slots:
      */
     bool removeAllTargettedFrames(QObject *receiver);
 
+    void debugInput(QByteArray bytes);
+
 protected:
+    int mNumBuses; //protected to allow connected device to figure out how many buses are available
+    QVector<BusData> mBusData;
 
     //determine if the passed frame is part of a filter or not.
     void checkTargettedFrame(CANFrame &frame);
@@ -229,6 +247,7 @@ protected:
     void setCapSuspended(bool pIsSuspended);
 
 protected:
+    bool useSystemTime;
 
     /**************************************************************/
     /***********     protected interface to implement       *******/
@@ -283,13 +302,12 @@ protected:
 
 private:
     LFQueue<CANFrame>   mQueue;
-    const int           mNumBuses;
     const QString       mPort;
+    const QString       mDriver;
     const CANCon::type  mType;
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;
     bool                mStarted;
-    BusData*            mBusData_p;
     QThread*            mThread_p;
 };
 

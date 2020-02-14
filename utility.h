@@ -12,6 +12,18 @@ class Utility
 public:
 
     static bool decimalMode;
+    static bool secondsMode;
+    static bool sysTimeMode;
+    static QString timeFormat;
+
+    static QString unQuote(QString inStr)
+    {
+        QStringList temp;
+        temp = inStr.split('\"');
+        if (temp.length() >= 3)
+            return temp[1];
+        return inStr;
+    }
 
     static uint64_t ParseStringToNum(QByteArray input)
     {
@@ -21,7 +33,7 @@ public:
         if (input.startsWith("0X") || input.startsWith("X")) //hex number
         {
             if (input.length() < 3) temp = 0;
-            else temp = input.right(input.size() - 2).toLongLong(NULL, 16);
+            else temp = input.right(input.size() - 2).toLongLong(nullptr, 16);
         }
         else if (input.startsWith("0B") || input.startsWith("B")) //binary number
         {
@@ -44,7 +56,7 @@ public:
         return ParseStringToNum(input.toUtf8());
     }
 
-    static uint ParseStringToNum2(QString pInput, bool* pOk_p = NULL)
+    static uint ParseStringToNum2(QString pInput, bool* pOk_p = nullptr)
     {
         if(pInput.startsWith("0b"))
         {
@@ -55,10 +67,11 @@ public:
         return pInput.toUInt(pOk_p, 0);
     }
 
-    static long GetTimeMS()
+    static uint64_t GetTimeMS()
     {
         QDateTime stamp = QDateTime::currentDateTime();
-        return (long)(((stamp.time().hour() * 3600) + (stamp.time().minute() * 60) + (stamp.time().second()) * 1000) + stamp.time().msec());
+        return (((static_cast<uint64_t>(stamp.time().hour()) * 3600ull) + (static_cast<uint64_t>(stamp.time().minute()) * 60ull)
+                 + (static_cast<uint64_t>(stamp.time().second())) * 1000ull) + static_cast<uint64_t>(stamp.time().msec()));
     }
 
     //prints hex numbers in uppercase with 0's filling out the number depending
@@ -84,6 +97,27 @@ public:
         else return formatHexNum(value);
     }
 
+    static QString formatCANID(uint64_t id, bool extended)
+    {
+        if (decimalMode) return QString::number(id, 10);
+
+        if (extended)
+        {
+            return "0x" + QString::number(id, 16).toUpper().rightJustified(8,'0');
+        }
+        else
+        {
+            id = id & 0x7FF;
+            return "0x" + QString::number(id, 16).toUpper().rightJustified(3,'0');
+        }
+    }
+
+    static QString formatCANID(uint64_t id)
+    {
+        if (id < 0x800) return formatCANID(id, false);
+        return formatCANID(id, true);
+    }
+
     static QString formatByteAsBinary(uint8_t value)
     {
         QString output;
@@ -93,6 +127,15 @@ public:
             else output += "0";
         }
         return output;
+    }
+
+    static QVariant formatTimestamp(uint64_t timestamp)
+    {
+        if (!sysTimeMode) {
+            if (!secondsMode) return (unsigned long long)(timestamp);
+            else return (double)timestamp / 1000000.0;
+        }
+        else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric
@@ -147,8 +190,10 @@ public:
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
-                if (data[bit / 8] & (1 << (bit % 8)))
-                    result += (1ULL << bitpos);
+                if (bit < 64) {
+                    if (data[bit / 8] & (1 << (bit % 8)))
+                        result += (1ULL << bitpos);
+                }
                 bit++;
             }
         }
@@ -157,8 +202,10 @@ public:
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
-                if (data[bit / 8] & (1 << (bit % 8)))
-                    result += (1ULL << (sigSize - bitpos - 1));
+                if (bit < 64) {
+                    if (data[bit / 8] & (1 << (bit % 8)))
+                        result += (1ULL << (sigSize - bitpos - 1));
+                }
 
                 if ((bit % 8) == 0)
                     bit += 15;

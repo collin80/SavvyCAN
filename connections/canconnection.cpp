@@ -1,15 +1,9 @@
+#include <QSettings>
 #include <QThread>
 #include "canconnection.h"
 
-
-struct BusData {
-    CANBus             mBus;
-    bool               mConfigured;
-    QVector<CANFlt>    mTargettedFrames;
-};
-
-
 CANConnection::CANConnection(QString pPort,
+                             QString pDriver,
                              CANCon::type pType,
                              int pNumBuses,
                              int pQueueLen,
@@ -17,26 +11,27 @@ CANConnection::CANConnection(QString pPort,
     mQueue(),
     mNumBuses(pNumBuses),
     mPort(pPort),
+    mDriver(pDriver),
     mType(pType),
     mIsCapSuspended(false),
     mStatus(CANCon::NOT_CONNECTED),
     mStarted(false),
-    mThread_p(NULL)
+    mThread_p(nullptr)
 {
     /* register types */
     qRegisterMetaType<CANBus>("CANBus");
     qRegisterMetaType<CANFrame>("CANFrame");
-    qRegisterMetaType<CANCon::status>("CANCon::status");
-    qRegisterMetaType<CANFlt>("CANFlt");
+    qRegisterMetaType<CANConStatus>("CANConStatus");
+    qRegisterMetaType<CANFltObserver>("CANFlt");
 
     /* set queue size */
     mQueue.setSize(pQueueLen); /*TODO add check on returned value */
 
     /* allocate buses */
     /* TODO: change those tables for a vector */
-    mBusData_p = new BusData[mNumBuses];
+    mBusData.resize(mNumBuses);
     for(int i=0 ; i<mNumBuses ; i++) {
-        mBusData_p[i].mConfigured  = false;
+        mBusData[i].mConfigured  = false;
     }
 
     /* if needed, create a thread and move ourself into it */
@@ -53,13 +48,10 @@ CANConnection::~CANConnection()
         mThread_p->quit();
         mThread_p->wait();
         delete mThread_p;
-        mThread_p = NULL;
+        mThread_p = nullptr;
     }
 
-    if(mBusData_p) {
-        delete[] mBusData_p;
-        mBusData_p = NULL;
-    }
+    mBusData.clear();
 }
 
 
@@ -78,6 +70,14 @@ void CANConnection::start()
 
     /* set started flag */
     mStarted = true;
+
+    QSettings settings;
+
+    if (settings.value("Main/TimeClock", false).toBool())
+    {
+        useSystemTime = true;
+    }
+    else useSystemTime = false;
 
     /* in multithread case, this will be called before entering thread event loop */
     return piStarted();
@@ -197,21 +197,21 @@ int CANConnection::getNumBuses() const{
 bool CANConnection::isConfigured(int pBusId) {
     if( pBusId < 0 || pBusId >= getNumBuses())
         return false;
-    return mBusData_p[pBusId].mConfigured;
+    return mBusData[pBusId].mConfigured;
 }
 
 void CANConnection::setConfigured(int pBusId, bool pConfigured) {
     if( pBusId < 0 || pBusId >= getNumBuses())
         return;
-    mBusData_p[pBusId].mConfigured = pConfigured;
+    mBusData[pBusId].mConfigured = pConfigured;
 }
 
 
 bool CANConnection::getBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses() || !isConfigured(pBusId))
         return false;
-
-    pBus = mBusData_p[pBusId].mBus;
+    qDebug() << "getBusConfig id: " << pBusId;
+    pBus = mBusData[pBusId].mBus;
     return true;
 }
 
@@ -220,8 +220,8 @@ void CANConnection::setBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses())
         return;
 
-    mBusData_p[pBusId].mConfigured = true;
-    mBusData_p[pBusId].mBus = pBus;
+    mBusData[pBusId].mConfigured = true;
+    mBusData[pBusId].mBus = pBus;
 }
 
 
@@ -229,6 +229,10 @@ QString CANConnection::getPort() {
     return mPort;
 }
 
+QString CANConnection::getDriver()
+{
+    return mDriver;
+}
 
 LFQueue<CANFrame>& CANConnection::getQueue() {
     return mQueue;
@@ -256,6 +260,10 @@ void CANConnection::setCapSuspended(bool pIsSuspended) {
     mIsCapSuspended = pIsSuspended;
 }
 
+void CANConnection::debugInput(QByteArray bytes) {
+    Q_UNUSED(bytes)
+}
+
 bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
 /*
@@ -272,20 +280,15 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     }
 */
     /* sanity checks */
-    if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
+    if(pBusId < -1 || pBusId >=  getNumBuses())
         return false;
 
-    for (int i = 0; i < getNumBuses(); i++)
-    {
-        if ( (pBusId == -1) || (pBusId && (1 << i)) ) {
-            qDebug() << "Connection is registering a new targetted frame filter, local bus " << i;
-            CANFlt target;
-            target.id = ID;
-            target.mask = mask;
-            target.observer = receiver;
-            mBusData_p[i].mTargettedFrames.append(target);
-        }
-    }
+    qDebug() << "Connection is registering a new targetted frame filter, local bus " << pBusId;
+    CANFltObserver target;
+    target.id = ID;
+    target.mask = mask;
+    target.observer = receiver;
+    mBusData[pBusId].mTargettedFrames.append(target);
 
     return true;
 }
@@ -306,20 +309,14 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     }
 */
     /* sanity checks */
-    if(pBusId < -1 || pBusId >= (1 << getNumBuses()))
+    if(pBusId < -1 || pBusId >= getNumBuses())
         return false;
 
-    for (int i = 0; i < getNumBuses(); i++)
-    {
-        if (pBusId == -1 || (pBusId && (1 << i)))
-        {
-            CANFlt target;
-            target.id = ID;
-            target.mask = mask;
-            target.observer = receiver;
-            mBusData_p[i].mTargettedFrames.removeAll(target);
-        }
-    }
+    CANFltObserver target;
+    target.id = ID;
+    target.mask = mask;
+    target.observer = receiver;
+    mBusData[pBusId].mTargettedFrames.removeAll(target);
 
     return true;
 }
@@ -327,9 +324,9 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
 bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 {
     for (int i = 0; i < getNumBuses(); i++) {
-        foreach (const CANFlt filt, mBusData_p[i].mTargettedFrames)
+        foreach (const CANFltObserver filt, mBusData[i].mTargettedFrames)
         {
-            if (filt.observer == receiver) mBusData_p[i].mTargettedFrames.removeOne(filt);
+            if (filt.observer == receiver) mBusData[i].mTargettedFrames.removeOne(filt);
         }
     }
 
@@ -339,10 +336,13 @@ bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 void CANConnection::checkTargettedFrame(CANFrame &frame)
 {
     unsigned int maskedID;
-    qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
-    foreach (const CANFlt filt, mBusData_p[frame.bus].mTargettedFrames)
+    //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
+    if (mBusData.count() == 0) return;
+
+    if (mBusData[frame.bus].mTargettedFrames.length() == 0) return;
+    foreach (const CANFltObserver filt, mBusData[frame.bus].mTargettedFrames)
     {
-        qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
+        //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
         maskedID = frame.ID & filt.mask;
         if (maskedID == filt.id) {
             qDebug() << "In connection object I got a targetted frame. Forwarding it.";

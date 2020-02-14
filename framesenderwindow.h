@@ -53,6 +53,8 @@ private:
     void processCellChange(int line, int col);
     void buildFrameCache();
     void processIncomingFrame(CANFrame *frame);
+    bool eventFilter(QObject *obj, QEvent *event);
+    void setupGrid();
 };
 
 #endif // FRAMESENDERWINDOW_H

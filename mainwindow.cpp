@@ -5,24 +5,20 @@
 #include <QFileDialog>
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
+#include "connections/connectionwindow.h"
+#include "helpwindow.h"
 #include "utility.h"
+#include "filterutility.h"
 
 /*
-Compile for all platforms and create release (remember to include QScintilla libs) and make Win32 binary.
-
 Some notes on things I'd like to put into the program but haven't put on github (yet)
-
-Single / Multi state - The goal is to find bits that change based on toggles or discrete state items (shifters, etc)
-
-fuzzy scope - Try to find potential places where a given value might be stored - offer guesses and the program tries to find candidates for you
-or, try to find things that appear to be multi-byte integers
 
 Allow scripts to read/write signals from DBC files
 allow scripts to load DBC files in support of the script - maybe the graphing system too.
 */
 
 QString MainWindow::loadedFileName = "";
-MainWindow *MainWindow::selfRef = NULL;
+MainWindow *MainWindow::selfRef = nullptr;
 
 MainWindow *MainWindow::getReference()
 {
@@ -34,13 +30,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    qRegisterMetaTypeStreamOperators<QVector<QString>>();
+    qRegisterMetaTypeStreamOperators<QVector<int>>();
 
     useHex = true;
-
-    //These things are used by QSettings to set up setting storage
-    QCoreApplication::setOrganizationName("EVTV");
-    QCoreApplication::setOrganizationDomain("evtv.me");
-    QCoreApplication::setApplicationName("SavvyCAN");
 
     selfRef = this;
 
@@ -48,47 +41,52 @@ MainWindow::MainWindow(QWidget *parent) :
 
     model = new CANFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
 
-    ui->canFramesView->setModel(model);
+    QSortFilterProxyModel* proxyModel = new QSortFilterProxyModel;
+    proxyModel->setSourceModel(model);
+
+    ui->canFramesView->setModel(proxyModel);
+
+    settingsDialog = new MainSettingsDialog(); //instantiate the settings dialog so it can initialize settings if this is the first run or the config file was deleted.
+    settingsDialog->updateSettings(); //write out all the settings. If this is the first run it'll write defaults out.
 
     readSettings();
 
-    ui->canFramesView->setColumnWidth(0, 110);
-    ui->canFramesView->setColumnWidth(1, 70);
-    ui->canFramesView->setColumnWidth(2, 40);
-    ui->canFramesView->setColumnWidth(3, 40);
-    ui->canFramesView->setColumnWidth(4, 40);
-    ui->canFramesView->setColumnWidth(5, 40);
-    ui->canFramesView->setColumnWidth(6, 275);
+    //QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
+    //verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
+    //verticalHeader->setDefaultSectionSize(10);
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+    connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 
-    graphingWindow = NULL;
-    frameInfoWindow = NULL;
-    playbackWindow = NULL;
-    flowViewWindow = NULL;
-    frameSenderWindow = NULL;
-    dbcMainEditor = NULL;
-    comparatorWindow = NULL;
-    settingsDialog = NULL;
-    firmwareUploaderWindow = NULL;
-    discreteStateWindow = NULL;
-    connectionWindow = NULL;
-    scriptingWindow = NULL;
-    rangeWindow = NULL;
-    dbcFileWindow = NULL;
-    fuzzingWindow = NULL;
-    udsScanWindow = NULL;
-    motorctrlConfigWindow = NULL;
-    isoWindow = NULL;
-    snifferWindow = NULL;
-    bisectWindow = NULL;
-    dbcHandler = new DBCHandler;
+    graphingWindow = nullptr;
+    frameInfoWindow = nullptr;
+    playbackWindow = nullptr;
+    flowViewWindow = nullptr;
+    frameSenderWindow = nullptr;
+    dbcMainEditor = nullptr;
+    comparatorWindow = nullptr;
+    settingsDialog = nullptr;
+    firmwareUploaderWindow = nullptr;
+    discreteStateWindow = nullptr;
+    connectionWindow = nullptr;
+    scriptingWindow = nullptr;
+    rangeWindow = nullptr;
+    dbcFileWindow = nullptr;
+    fuzzingWindow = nullptr;
+    udsScanWindow = nullptr;
+    motorctrlConfigWindow = nullptr;
+    isoWindow = nullptr;
+    snifferWindow = nullptr;
+    bisectWindow = nullptr;
+    signalViewerWindow = nullptr;
+    temporalGraphWindow = nullptr;
+    dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
     rxFrames = 0;
     framesPerSec = 0;
-
-    model->setDBCHandler(dbcHandler);
+    continuousLogging = false;
+    continuousLogFlushCounter = 0;
 
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
@@ -102,7 +100,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
     connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
     connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
-    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::pressed, this, &MainWindow::gridClicked);
     connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
@@ -128,21 +126,35 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
+    connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
+    connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
+    connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
+    lbHelp.setText(tr("Press F1 on any screen for help"));
+    lbHelp.setAlignment(Qt::AlignCenter);
+    QFont boldFont;
+    boldFont.setBold(true);
+    lbHelp.setFont(boldFont);
     updateFileStatus();
-    lbStatusDatabase.setText(tr("No DBC database loaded"));
-    ui->statusBar->addWidget(&lbStatusConnected);
-    ui->statusBar->addWidget(&lbStatusFilename);
-    ui->statusBar->addWidget(&lbStatusDatabase);
+    //lbStatusDatabase.setText(tr("No DBC database loaded"));
+    ui->statusBar->insertWidget(0, &lbStatusConnected, 1);
+    ui->statusBar->insertWidget(1, &lbStatusFilename, 1);
+    ui->statusBar->insertWidget(2, &lbHelp, 1);
+    //ui->statusBar->addWidget(&lbStatusDatabase);
+    ui->lblRemoteConn->setVisible(false);
+    ui->lineRemoteKey->setVisible(false);
 
     ui->lbFPS->setText("0");
     ui->lbNumFrames->setText("0");
 
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listFilters->horizontalScrollBar()->setEnabled(false);
+
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
-    updateTimer.setInterval(500); //test 250);
+    updateTimer.setInterval(250);
     updateTimer.start();
 
     elapsedTime = new QTime;
@@ -158,8 +170,15 @@ MainWindow::MainWindow(QWidget *parent) :
     temp.bus = 0;
     temp.ID = 0x100;
     temp.len = 0;
+    temp.extended = false;
+    temp.isReceived = true;
+    temp.remote = false;
+    temp.timestamp = 100000000;
     model->addFrame(temp, true);
+    qApp->processEvents();
+    tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
     normalRowHeight = ui->canFramesView->rowHeight(0);
+    if (normalRowHeight == 0) normalRowHeight = 30; //should not be necessary but provides a sane number if something stupid happened.
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
 
@@ -168,159 +187,104 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //Automatically create the connection window so it can be updated even if we never opened it.
     connectionWindow = new ConnectionWindow();
-    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));    
+    connect(this, SIGNAL(suspendCapturing(bool)), connectionWindow, SLOT(setSuspendAll(bool)));
 
+    //these either are unfinished/not working or are not for general use. But,they exist
+    //so if you want to enable them and play with them then go for it.
+    ui->actionFirmware_Update->setVisible(false);
+    ui->actionMotorControlConfig->setVisible(false);
+    ui->actionSingle_Multi_State_2->setVisible(false);
+
+    installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
 {
-    //serialWorkerThread.quit();
-    //serialWorkerThread.wait();
-    //delete worker;
-
-    if (graphingWindow)
-    {
-        graphingWindow->close();
-        delete graphingWindow;
-    }
-
-    if (frameInfoWindow)
-    {
-        frameInfoWindow->close();
-        delete frameInfoWindow;
-    }
-
-    if (playbackWindow)
-    {
-        playbackWindow->close();
-        delete playbackWindow;
-    }
-
-    if (flowViewWindow)
-    {
-        flowViewWindow->close();
-        delete flowViewWindow;
-    }
-
-    if (frameSenderWindow)
-    {
-        frameSenderWindow->close();
-        delete frameSenderWindow;
-    }
-
-    if (comparatorWindow)
-    {
-        comparatorWindow->close();
-        delete comparatorWindow;
-    }
-
-    if (dbcMainEditor)
-    {
-        dbcMainEditor->close();
-        delete dbcMainEditor;
-    }
-
-    if (settingsDialog)
-    {
-        settingsDialog->close();
-        delete settingsDialog;
-    }
-
-    if (discreteStateWindow)
-    {
-        discreteStateWindow->close();
-        delete discreteStateWindow;
-    }
-
-    if (connectionWindow)
-    {
-        connectionWindow->close();
-        delete connectionWindow;
-    }
-   
-    if (scriptingWindow)
-    {
-        scriptingWindow->close();
-        delete scriptingWindow;
-    }
-
-    if (rangeWindow)
-    {
-        rangeWindow->close();
-        delete rangeWindow;
-    }
-
-    if (dbcFileWindow)
-    {
-        dbcFileWindow->close();
-        delete dbcFileWindow;
-    }
-
-    if (fuzzingWindow)
-    {
-        fuzzingWindow->close();
-        delete fuzzingWindow;
-    }
-
-    if (udsScanWindow)
-    {
-        udsScanWindow->close();
-        delete udsScanWindow;
-    }
-
-    if (isoWindow)
-    {
-        isoWindow->close();
-        delete isoWindow;
-    }
-    if (snifferWindow)
-    {
-        snifferWindow->close();
-        delete snifferWindow;
-        snifferWindow = NULL;
-    }
-
-    if (bisectWindow)
-    {
-        bisectWindow->close();
-        delete bisectWindow;
-        bisectWindow = NULL;
-    }
-
+    updateTimer.stop();
+    killEmAll(); //Ride the lightning
+    delete ui;
     delete model;
     delete elapsedTime;
     delete dbcHandler;
-    delete ui;
+}
+
+//kill every sub window that could be open. At the moment a hard coded list
+//but eventually each window should be registered and be able to be iterated.
+void MainWindow::killEmAll()
+{
+    killWindow(graphingWindow);
+    killWindow(frameInfoWindow);
+    killWindow(playbackWindow);
+    killWindow(flowViewWindow);
+    killWindow(frameSenderWindow);
+    killWindow(comparatorWindow);
+    killWindow(dbcMainEditor);
+    killWindow(settingsDialog);
+    killWindow(discreteStateWindow);
+    killWindow(scriptingWindow);
+    killWindow(rangeWindow);
+    killWindow(dbcFileWindow);
+    killWindow(fuzzingWindow);
+    killWindow(udsScanWindow);
+    killWindow(isoWindow);
+    killWindow(snifferWindow);
+    killWindow(bisectWindow);
+    killWindow(firmwareUploaderWindow);
+    killWindow(motorctrlConfigWindow);
+    killWindow(signalViewerWindow);
+    killWindow(connectionWindow);
+    killWindow(temporalGraphWindow);
+}
+
+//forcefully close the window, kill it, and salt the earth
+//note, for some stupid reason this function causes a seg fault
+//it seems that when it runs just before the program closes it'll
+//fault out when trying to close the connection window. I assume
+//this could be because that window has long running threads open and doesn't
+//close quickly or maybe cleanly. Investigate.
+void MainWindow::killWindow(QDialog *win)
+{
+    if (win)
+    {
+        win->close();
+        delete win;
+        win = nullptr;
+    }
 }
 
 void MainWindow::exitApp()
 {
-    if (graphingWindow) graphingWindow->close();
-    if (frameInfoWindow) frameInfoWindow->close();
-    if (playbackWindow) playbackWindow->close();
-    if (flowViewWindow) flowViewWindow->close();
-    if (frameSenderWindow) frameSenderWindow->close();
-    if (dbcMainEditor) dbcMainEditor->close();
-    if (comparatorWindow) comparatorWindow->close();
-    if (connectionWindow) connectionWindow->close();
-    if (settingsDialog) settingsDialog->close();
-    if (discreteStateWindow) discreteStateWindow->close();
-    if (scriptingWindow) scriptingWindow->close();
-    if (rangeWindow) rangeWindow->close();
-    if (dbcFileWindow) dbcFileWindow->close();
-    if (fuzzingWindow) fuzzingWindow->close();
-    if (udsScanWindow) udsScanWindow->close();
-    if (isoWindow) isoWindow->close();
-    if (snifferWindow) snifferWindow->close();
     this->close();
+    QApplication::quit(); //forces the whole application to terminate when the main window is closed
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
     exitApp();
 }
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("mainscreen.html");
+            return true;
+            break;
+        }
+        return false;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
+}
+
 
 void MainWindow::updateSettings()
 {
@@ -335,24 +299,24 @@ void MainWindow::readSettings()
     {
         resize(settings.value("Main/WindowSize", QSize(800, 750)).toSize());
         move(settings.value("Main/WindowPos", QPoint(100, 100)).toPoint());
+        ui->canFramesView->setColumnWidth(0, settings.value("Main/TimeColumn", 150).toUInt()); //time stamp
+        ui->canFramesView->setColumnWidth(1, settings.value("Main/IDColumn", 70).toUInt()); //frame ID
+        ui->canFramesView->setColumnWidth(2, settings.value("Main/ExtColumn", 40).toUInt()); //extended
+        ui->canFramesView->setColumnWidth(3, settings.value("Main/RemColumn", 40).toUInt()); //remote
+        ui->canFramesView->setColumnWidth(4, settings.value("Main/DirColumn", 40).toUInt()); //direction
+        ui->canFramesView->setColumnWidth(5, settings.value("Main/BusColumn", 40).toUInt()); //bus
+        ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
+        ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
+        //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
     if (settings.value("Main/AutoScroll", false).toBool())
     {
         ui->cbAutoScroll->setChecked(true);
     }
-
-    /*
-    int cType = settings.value("Main/DefaultConnectionType", 0).toInt();
-    if (cType == 0) connType = "GVRET";
-    if (cType == 1) connType = "KVASER";
-    if (cType == 2) connType = "SOCKETCAN";
-    portName = settings.value("Main/DefaultConnectionPort", "").toString();
-    */
-
-    //qDebug() << connType;
-    //qDebug() << portName;
-
-    //"Main/SingleWireMode"
+    int fontSize = settings.value("Main/FontSize", 9).toUInt();
+    QFont newFont = QFont(ui->canFramesView->font());
+    newFont.setPointSize(fontSize);
+    ui->canFramesView->setFont(newFont);
 
     readUpdateableSettings();
 }
@@ -365,8 +329,18 @@ void MainWindow::readUpdateableSettings()
     Utility::decimalMode = !useHex;
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     model->setSecondsMode(secondsMode);
+    useSystemClock = settings.value("Main/TimeClock", false).toBool();
+    model->setSysTimeMode(useSystemClock);
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
-}
+    model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
+
+    if (settings.value("Main/FilterLabeling", false).toBool())
+        ui->listFilters->setMaximumWidth(250);
+    else
+        ui->listFilters->setMaximumWidth(175);
+    updateFilterList();    
+}    
+
 
 void MainWindow::writeSettings()
 {
@@ -376,6 +350,15 @@ void MainWindow::writeSettings()
     {
         settings.setValue("Main/WindowSize", size());
         settings.setValue("Main/WindowPos", pos());
+        settings.setValue("Main/TimeColumn", ui->canFramesView->columnWidth(0));
+        settings.setValue("Main/IDColumn", ui->canFramesView->columnWidth(1));
+        settings.setValue("Main/ExtColumn", ui->canFramesView->columnWidth(2));
+        settings.setValue("Main/RemColumn", ui->canFramesView->columnWidth(3));
+        settings.setValue("Main/DirColumn", ui->canFramesView->columnWidth(4));
+        settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(5));
+        settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
+        settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
+        //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
     }
 }
 
@@ -396,8 +379,15 @@ void MainWindow::updateConnectionSettings(QString connectionType, QString port, 
     }
 }
 
+void MainWindow::headerClicked(int logicalIndex)
+{
+    //ui->canFramesView->sortByColumn(logicalIndex);
+    model->sortByColumn(logicalIndex);
+}
+
 void MainWindow::gridClicked(QModelIndex idx)
 {
+    //qDebug() << "Grid Clicked";
     if (ui->canFramesView->rowHeight(idx.row()) > normalRowHeight)
     {
         ui->canFramesView->setRowHeight(idx.row(), normalRowHeight);
@@ -409,6 +399,7 @@ void MainWindow::gridClicked(QModelIndex idx)
 
 void MainWindow::gridDoubleClicked(QModelIndex idx)
 {
+    //qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
     emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);
@@ -416,21 +407,38 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
 
 void MainWindow::interpretToggled(bool state)
 {
-    model->setInterpetMode(state);
+    model->setInterpretMode(state);
+    //ui->canFramesView->resizeRowsToContents();   //a VERY costly operation!
 }
 
 void MainWindow::overwriteToggled(bool state)
 {
-    model->setOverwriteMode(state);
+    if (state)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes)
+        {
+            model->setOverwriteMode(true);
+        }
+        else ui->cbOverwrite->setCheckState(Qt::Unchecked);
+    }
+    else
+    {
+        model->setOverwriteMode(false);
+    }
 }
 
 void MainWindow::updateFilterList()
 {
-    if (model == NULL) return;
+    if (model == nullptr) return;
     const QMap<int, bool> *filters = model->getFiltersReference();
-    if (filters == NULL) return;
+    if (filters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
+
+    inhibitFilterUpdate = true;
 
     ui->listFilters->clear();
 
@@ -439,22 +447,19 @@ void MainWindow::updateFilterList()
     QMap<int, bool>::const_iterator filterIter;
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
-        QListWidgetItem *thisItem = new QListWidgetItem();
-        thisItem->setText(Utility::formatNumber(filterIter.key()));
-        thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-        if (filterIter.value()) thisItem->setCheckState(Qt::Checked);
-            else thisItem->setCheckState(Qt::Unchecked);
-        ui->listFilters->addItem(thisItem);
+        QListWidgetItem *thisItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
+    inhibitFilterUpdate = false;
 }
 
 void MainWindow::filterListItemChanged(QListWidgetItem *item)
 {
     if (inhibitFilterUpdate) return;
     //qDebug() << item->text();
-    int ID;
+
+    // strip away possible filter label
+    int ID = FilterUtility::getIdAsInt(item);
     bool isSet = false;
-    ID = Utility::ParseStringToNum(item->text());
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);
@@ -489,14 +494,14 @@ void MainWindow::tickGUIUpdate()
     //{
         int elapsed = elapsedTime->elapsed();
         if(elapsed) {
-            framesPerSec = rxFrames * 1000 / elapsed;
+            framesPerSec = (framesPerSec + (rxFrames * 1000 / elapsed)) / 2;
             elapsedTime->restart();
         }
         else
             framesPerSec = 0;
 
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
-        if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
         ui->lbFPS->setText(QString::number(framesPerSec));
         if (rxFrames > 0)
         {
@@ -505,6 +510,30 @@ void MainWindow::tickGUIUpdate()
         }
 
         if (model->needsFilterRefresh()) updateFilterList();
+
+        if (continuousLogging)
+        {
+            const QVector<CANFrame> *modelFrames = model->getListReference();
+            FrameFileIO::writeContinuousNative(modelFrames, modelFrames->count() - rxFrames);
+
+            continuousLogFlushCounter++;
+            if ((continuousLogFlushCounter % 3) == 0)
+            {
+                if (ui->lblContMsg->text().length() > 2)
+                {
+                    ui->lblContMsg->setText("");
+                }
+                else
+                {
+                    ui->lblContMsg->setText("CONTINUOUS LOGGING");
+                }
+            }
+            if (continuousLogFlushCounter > 8)
+            {
+                continuousLogFlushCounter = 0;
+                FrameFileIO::flushContinuousNative();
+            }
+        }
 
         rxFrames = 0;
     //}
@@ -560,7 +589,20 @@ void MainWindow::handleLoadFile()
     QString filename;
     QVector<CANFrame> tempFrames;
 
-    if (FrameFileIO::loadFrameFile(filename, &tempFrames))
+    QMessageBox::StandardButton confirmDialog;
+
+    bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames);
+
+    if (!loadResult)
+    {
+        confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes) {
+            loadResult = true;
+        }
+    }
+
+    if (loadResult)
     {
         ui->canFramesView->scrollToTop();
         model->clearFrames();
@@ -571,7 +613,7 @@ void MainWindow::handleLoadFile()
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
         updateFileStatus();
-        emit framesUpdated(-2);
+        emit framesUpdated(-1);
     }
 }
 
@@ -583,6 +625,23 @@ void MainWindow::handleSaveFile()
     {
         loadedFileName = filename;
         updateFileStatus();
+    }
+}
+
+void MainWindow::handleContinousLogging()
+{
+    continuousLogging = !continuousLogging;
+
+    if (continuousLogging)
+    {
+        ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
+        FrameFileIO::openContinuousNative();
+    }
+    else
+    {
+        ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
+        ui->lblContMsg->setText("");
+        FrameFileIO::closeContinuousNative();
     }
 }
 
@@ -601,10 +660,12 @@ void MainWindow::handleSaveFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter list (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -615,6 +676,7 @@ void MainWindow::handleSaveFilters()
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".ftl";
         if (dialog.selectedNameFilter() == filters[0]) model->saveFilterFile(filename);
+        settings.setValue("Filters/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -622,10 +684,12 @@ void MainWindow::handleLoadFilters()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Filter List (*.ftl)")));
 
+    dialog.setDirectory(settings.value("Filters/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -635,19 +699,20 @@ void MainWindow::handleLoadFilters()
         filename = dialog.selectedFiles()[0];
         //right now there is only one file type that can be loaded here so just do it.
         model->loadFilterFile(filename);
+        settings.setValue("Filters/LoadSaveDirectory", dialog.directory().path());
     }
 }
-
-//lbStatusDatabase.setText(fileList[fileList.length() - 1] + tr(" loaded."));
 
 void MainWindow::handleSaveDecoded()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("Text File (*.txt)")));
 
+    dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
@@ -658,6 +723,7 @@ void MainWindow::handleSaveDecoded()
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".txt";
         saveDecodedTextFile(filename);
+        settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -678,7 +744,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         CANFrame thisFrame = frames->at(c);
         QString builderString;
         builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
-        builderString += tr("    ID: ") + Utility::formatNumber(thisFrame.ID);
+        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.ID, thisFrame.extended);
         if (thisFrame.extended) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
         builderString += tr("Bus: ") + QString::number(thisFrame.bus);
@@ -694,10 +760,10 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         outFile->write(builderString.toUtf8());
 
         builderString = "";
-        if (dbcHandler != NULL)
+        if (dbcHandler != nullptr)
         {
             DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-            if (msg != NULL)
+            if (msg != nullptr)
             {
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
@@ -729,7 +795,7 @@ void MainWindow::toggleCapture()
 }
 
 void MainWindow::connectionStatusUpdated(int conns)
-{    
+{
     lbStatusConnected.setText(tr("Connected to ") + QString::number(conns) + tr(" buses"));
 }
 
@@ -759,12 +825,17 @@ void MainWindow::updateFileStatus()
     lbStatusFilename.setText(output);
 }
 
+CANFrameModel* MainWindow::getCANFrameModel()
+{
+    return model;
+}
+
 void MainWindow::showSettingsDialog()
 {
     if (!settingsDialog)
     {
         settingsDialog = new MainSettingsDialog();
-        connect(settingsDialog, SIGNAL(finished(int)), this, SLOT(updateSettings()));
+        connect (settingsDialog, SIGNAL(updatedSettings()), this, SLOT(readUpdateableSettings()));
     }
     settingsDialog->show();
 }
@@ -773,7 +844,7 @@ void MainWindow::showSettingsDialog()
 void MainWindow::showGraphingWindow()
 {
     if (!graphingWindow) {
-        graphingWindow = new GraphingWindow(dbcHandler, model->getListReference());
+        graphingWindow = new GraphingWindow(model->getListReference());
         connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
         connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
@@ -784,6 +855,19 @@ void MainWindow::showGraphingWindow()
         connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
     graphingWindow->show();
+}
+
+void MainWindow::showTemporalGraphWindow()
+{
+    //only create an instance of the object if we dont have one. Otherwise just display the existing one.
+    if (!temporalGraphWindow)
+    {
+        if (!useFiltered)
+            temporalGraphWindow = new TemporalGraphWindow(model->getListReference());
+        else
+            temporalGraphWindow = new TemporalGraphWindow(model->getFilteredListReference());
+    }
+    temporalGraphWindow->show();
 }
 
 void MainWindow::showFrameDataAnalysis()
@@ -951,13 +1035,33 @@ void MainWindow::showFlowViewWindow()
     flowViewWindow->show();
 }
 
+
+void MainWindow::DBCSettingsUpdated()
+    {
+    updateFilterList();
+    model->sendRefresh();
+    }
+
 void MainWindow::showDBCFileWindow()
 {
     if (!dbcFileWindow)
     {
-        dbcFileWindow = new DBCLoadSaveWindow(dbcHandler, model->getListReference());
+        dbcFileWindow = new DBCLoadSaveWindow(model->getListReference());
+        connect(dbcFileWindow, &DBCLoadSaveWindow::updatedDBCSettings, this, &MainWindow::DBCSettingsUpdated);
     }
     dbcFileWindow->show();
+}
+
+void MainWindow::showSignalViewer()
+{
+    if (!signalViewerWindow)
+    {
+        if (!useFiltered)
+            signalViewerWindow = new SignalViewerWindow(model->getListReference());
+        else
+            signalViewerWindow = new SignalViewerWindow(model->getFilteredListReference());
+    }
+    signalViewerWindow->show();
 }
 
 void MainWindow::showConnectionSettingsWindow()

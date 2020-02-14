@@ -17,6 +17,19 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Public Variables:</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QTableWidget" name="tableVariables"/>
+     </item>
+     <item>
       <widget class="QLabel" name="label">
        <property name="text">
         <string>Loaded Scripts</string>
@@ -30,30 +43,34 @@
       <widget class="QListWidget" name="listLoadedScripts"/>
      </item>
      <item>
-      <widget class="QPushButton" name="btnLoadScript">
-       <property name="text">
-        <string>Load New Script</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnNewScript">
-       <property name="text">
-        <string>Create New Script</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnRemoveScript">
-       <property name="text">
-        <string>Remove Current Script</string>
-       </property>
-      </widget>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QPushButton" name="btnNewScript">
+         <property name="text">
+          <string>New</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnRemoveScript">
+         <property name="text">
+          <string>Del</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnLoadScript">
+         <property name="text">
+          <string>Load</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,10,0,0,4">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,4,0,0">
      <item>
       <widget class="QLabel" name="label_2">
        <property name="text">
@@ -61,16 +78,6 @@
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QsciScintilla" name="txtScriptSource">
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="whatsThis">
-        <string/>
        </property>
       </widget>
      </item>
@@ -102,7 +109,7 @@
      <item>
       <widget class="QLabel" name="label_3">
        <property name="text">
-        <string>Current Scripting Errors</string>
+        <string>Log Window:</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -110,19 +117,39 @@
       </widget>
      </item>
      <item>
-      <widget class="QListWidget" name="listErrors"/>
+      <widget class="QListWidget" name="listLog"/>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="cbAutoScroll">
+       <property name="text">
+        <string>Auto Scroll Log Window</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClearLog">
+       <property name="text">
+        <string>Clear Log Window</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QsciScintilla</class>
-   <extends>QFrame</extends>
-   <header>Qsci/qsciscintilla.h</header>
-  </customwidget>
- </customwidgets>
+ <tabstops>
+  <tabstop>listLog</tabstop>
+  <tabstop>btnNewScript</tabstop>
+  <tabstop>btnRemoveScript</tabstop>
+  <tabstop>btnLoadScript</tabstop>
+  <tabstop>listLoadedScripts</tabstop>
+  <tabstop>tableVariables</tabstop>
+  <tabstop>btnSaveScript</tabstop>
+  <tabstop>btnRevertScript</tabstop>
+  <tabstop>btnRecompile</tabstop>
+  <tabstop>cbAutoScroll</tabstop>
+  <tabstop>btnClearLog</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

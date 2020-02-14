@@ -1,6 +1,8 @@
 #include "flowviewwindow.h"
 #include "ui_flowviewwindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
+#include "filterutility.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -10,7 +12,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     QDialog(parent),
     ui(new Ui::FlowViewWindow)
 {
-    ui->setupUi(this);    
+    ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     readSettings();
 
@@ -25,6 +28,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     memset(refBytes, 0, 8);
     memset(currBytes, 0, 8);
     memset(triggerValues, -1, sizeof(int) * 8);
+    triggerBits = 0;
 
     //ui->graphView->setInteractions();
 
@@ -33,7 +37,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphView->axisRect()->setupFullAxesBox();
 
     QCPItemText *textLabel = new QCPItemText(ui->graphView);
-    ui->graphView->addItem(textLabel);
+    //ui->graphView->addItem(textLabel);
     textLabel->setPositionAlignment(Qt::AlignTop|Qt::AlignHCenter);
     textLabel->position->setType(QCPItemPosition::ptAxisRectRatio);
     textLabel->position->setCoords(0.5, .5);
@@ -53,11 +57,26 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphView->legend->setSelectableParts(QCPLegend::spItems); // legend box shall not be selectable, only legend items
     //ui->graphView->xAxis->setAutoSubTicks(false);
     //ui->graphView->xAxis->setAutoTicks(false);
-    ui->graphView->xAxis->setAutoTickStep(false);
-    ui->graphView->xAxis->setAutoSubTicks(false);
-    ui->graphView->xAxis->setNumberFormat("gb");
-    ui->graphView->xAxis->setTickStep(5.0);
-    ui->graphView->xAxis->setSubTickCount(0);
+    QCPAxisTicker *xTicker = new QCPAxisTicker();
+    xTicker->setTickCount(5);
+    xTicker->setTickStepStrategy(QCPAxisTicker::tssReadability);
+    ui->graphView->xAxis->setTicker(QSharedPointer<QCPAxisTicker>(xTicker));
+    //ui->graphView->xAxis->setAutoTickStep(false);
+    //ui->graphView->xAxis->setAutoSubTicks(false);
+    //ui->graphView->xAxis->setNumberFormat("gb");
+    //ui->graphView->xAxis->setTickStep(5.0);
+    //ui->graphView->xAxis->setSubTickCount(0);
+
+    if (openGLMode)
+    {
+        ui->graphView->setAntialiasedElements(QCP::aeAll);
+        ui->graphView->setOpenGl(true);
+    }
+    else
+    {
+        ui->graphView->setOpenGl(false);
+        ui->graphView->setAntialiasedElements(QCP::aeNone);
+    }
 
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
@@ -67,8 +86,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->btnForwardOne, SIGNAL(clicked(bool)), this, SLOT(btnFwdOneClick()));
     connect(ui->spinPlayback, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     connect(ui->cbLoopPlayback, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
-    connect(ui->listFrameID, SIGNAL(currentTextChanged(QString)), this, SLOT(changeID(QString)));
-    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));    
+    connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
     connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
     connect(ui->txtTrigger0, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
     connect(ui->txtTrigger1, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
@@ -79,12 +97,23 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->txtTrigger6, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
     connect(ui->txtTrigger7, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
 
+    // Using lambda expression to strip away the possible filter label before passing the ID to updateDetailsWindow
+    connect(ui->listFrameID, &QListWidget::currentTextChanged, 
+        [this](QString itemText)
+            {
+            changeID(FilterUtility::getId(itemText));
+            } );
+
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
     ui->graphView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->graphView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestGraph(QPoint)));
     ui->flowView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
+    connect(ui->flowView, SIGNAL(gridClicked(int,int)), this, SLOT(gotCellClick(int, int)));
+
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listFrameID->horizontalScrollBar()->setEnabled(false);
 
     playbackTimer->setInterval(ui->spinPlayback->value()); //set the timer to the default value of the control
 }
@@ -100,7 +129,7 @@ void FlowViewWindow::showEvent(QShowEvent* event)
     refreshIDList();
     if (ui->listFrameID->count() > 0)
     {
-        changeID(ui->listFrameID->item(0)->text());
+        changeID(FilterUtility::getId(ui->listFrameID->item(0)));
         ui->listFrameID->setCurrentRow(0);
     }
     updateFrameLabel();
@@ -142,7 +171,13 @@ void FlowViewWindow::readSettings()
         ui->cbTimeGraph->setChecked(true);
     }
 
+    if (settings.value("Main/FilterLabeling", false).toBool())
+        ui->listFrameID->setMaximumWidth(250);
+    else
+        ui->listFrameID->setMaximumWidth(120);    
+
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+    openGLMode = settings.value("Main/UseOpenGL", false).toBool();
 }
 
 void FlowViewWindow::writeSettings()
@@ -178,12 +213,24 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_Y:
             btnFwdOneClick();
             break;
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("flowview.html");
+            break;
         }
         return true;
     } else {
         // standard event processing
         return QObject::eventFilter(obj, event);
     }
+}
+
+void FlowViewWindow::gotCellClick(int x, int y)
+{
+    int bitnum = (7-x) + (8 * y);
+    triggerBits = triggerBits ^ (1ull << bitnum);
+    if (triggerBits & (1ull << bitnum)) ui->flowView->setCellTextState(x, y, GridTextState::BOLD_BLUE);
+    else ui->flowView->setCellTextState(x, y, GridTextState::NORMAL);
+    qDebug() << "Bit Num: " << bitnum << "   Hex of trigger bits: " << QString::number(triggerBits, 16);
 }
 
 void FlowViewWindow::updateTriggerValues()
@@ -220,7 +267,7 @@ void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
 
     for (int j = 0; j < ui->listFrameID->count(); j++)
     {
-        int thisNum = Utility::ParseStringToNum(ui->listFrameID->item(j)->text());
+        int thisNum = FilterUtility::getIdAsInt(ui->listFrameID->item(j));
         if (thisNum == ID)
         {
             ui->listFrameID->setCurrentRow(j);
@@ -276,6 +323,7 @@ void FlowViewWindow::saveFileGraph()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("PDF Files (*.pdf)")));
@@ -286,6 +334,7 @@ void FlowViewWindow::saveFileGraph()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FlowView/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -294,7 +343,7 @@ void FlowViewWindow::saveFileGraph()
         if (dialog.selectedNameFilter() == filters[0])
         {
             if (!filename.contains('.')) filename += ".pdf";
-            ui->graphView->savePdf(filename, true, 0, 0);
+            ui->graphView->savePdf(filename, 0, 0);
         }
         if (dialog.selectedNameFilter() == filters[1])
         {
@@ -306,6 +355,7 @@ void FlowViewWindow::saveFileGraph()
             if (!filename.contains('.')) filename += ".jpg";
             ui->graphView->saveJpg(filename, 1024, 768);
         }
+        settings.setValue("FlowView/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
@@ -313,6 +363,7 @@ void FlowViewWindow::saveFileFlow()
 {
     QString filename;
     QFileDialog dialog(this);
+    QSettings settings;
 
     QStringList filters;
     filters.append(QString(tr("PNG Files (*.png)")));
@@ -322,6 +373,7 @@ void FlowViewWindow::saveFileFlow()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FlowView/LoadSaveDirectory", dialog.directory().path()).toString());
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -337,11 +389,15 @@ void FlowViewWindow::saveFileFlow()
             if (!filename.contains('.')) filename += ".jpg";
             ui->flowView->saveImage(filename, 1024, 768);
         }
+        settings.setValue("FlowView/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
 void FlowViewWindow::updatedFrames(int numFrames)
 {
+    QVector<double>newX[8];
+    QVector<double>newY[8];
+
     CANFrame thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
@@ -361,12 +417,12 @@ void FlowViewWindow::updatedFrames(int numFrames)
         foundID.clear();
         currentPosition = 0;
         refreshIDList();
-        if (ui->listFrameID->count() > 0)
-        {
-            changeID(ui->listFrameID->item(0)->text());
-            ui->listFrameID->setCurrentRow(0);
-        }
-        updateFrameLabel();
+        //if (ui->listFrameID->count() > 0)
+        //{
+         //   changeID(ui->listFrameID->item(0)->text());
+        //    ui->listFrameID->setCurrentRow(0);
+        //}
+        //updateFrameLabel();
     }
     else //just got some new frames. See if they are relevant.
     {
@@ -382,7 +438,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
             if (!foundID.contains(thisFrame.ID))
             {
                 foundID.append(thisFrame.ID);
-                /*QListWidgetItem* item =*/ new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listFrameID);
+                FilterUtility::createFilterItem(thisFrame.ID, ui->listFrameID);
             }
 
             if (thisFrame.ID == refID)
@@ -394,21 +450,21 @@ void FlowViewWindow::updatedFrames(int numFrames)
                     if (ui->cbTimeGraph->isChecked())
                     {
                         if (secondsMode){
-                            x[k].append((double)(thisFrame.timestamp) / 1000000.0);
+                            newX[k].append((double)(thisFrame.timestamp) / 1000000.0);
                         }
                         else
                         {
-                            x[k].append(thisFrame.timestamp);
+                            newX[k].append(thisFrame.timestamp);
                         }
                     }
                     else
                     {
-                        x[k].append(x[k].count());
+                        newX[k].append(x[k].count());
                     }
-                    y[k].append(thisFrame.data[k]);
+                    newY[k].append(thisFrame.data[k]);
                     needRefresh = true;
                 }
-            }            
+            }
         }
         if (ui->cbLiveMode->checkState() == Qt::Checked)
         {
@@ -421,10 +477,11 @@ void FlowViewWindow::updatedFrames(int numFrames)
         {
             for (int k = 0; k < 8; k++)
             {
-                graphRef[k]->setData(x[k], y[k]);
+                if (graphRef[k] && graphRef[k]->data())
+                    graphRef[k]->addData(newX[k], newY[k]);
             }
             ui->graphView->replot();
-            updateDataView();            
+            updateDataView();
             if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
         }
     }
@@ -441,6 +498,8 @@ void FlowViewWindow::createGraph(int byteNum)
 {
     int tempVal;
     float minval=1000000, maxval = -100000;
+
+    qDebug() << "Create Graph " << byteNum;
 
     bool graphByTime = ui->cbTimeGraph->isChecked();
 
@@ -491,11 +550,12 @@ void FlowViewWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = modelFrames->at(i).ID;
+        CANFrame thisFrame = modelFrames->at(i);
+        id = thisFrame.ID;
         if (!foundID.contains(id))
         {
             foundID.append(id);
-            /*QListWidgetItem* item = */ new QListWidgetItem(Utility::formatNumber(id), ui->listFrameID);
+            FilterUtility::createFilterItem(id, ui->listFrameID);
         }
     }
     //default is to sort in ascending order
@@ -509,6 +569,7 @@ void FlowViewWindow::updateFrameLabel()
 
 void FlowViewWindow::changeID(QString newID)
 {
+    qDebug() << "change id " << newID;
     //parse the ID and then load up the frame cache with just messages with that ID.
     uint32_t id = (uint32_t)Utility::ParseStringToNum(newID);
     frameCache.clear();
@@ -531,7 +592,8 @@ void FlowViewWindow::changeID(QString newID)
     if (frameCache.count() == 0) return;
 
     removeAllGraphs();
-    for (uint32_t c = 0; c < frameCache.at(0).len; c++)
+    //for (uint32_t c = 0; c < frameCache.at(0).len; c++)
+    for (uint32_t c = 0; c < 8; c++)
     {
         createGraph(c);
     }
@@ -689,7 +751,27 @@ void FlowViewWindow::updatePosition(bool forward)
         memcpy(refBytes, currBytes, 8);
     }
 
-    memcpy(currBytes, frameCache.at(currentPosition).data, 8);    
+    //figure out which bits changed since the previous frame and then AND that with the trigger bits. If any bits
+    //get through that then they're changed and a trigger so we stop playback at this frame.
+    uint64_t changedBits = 0;
+    uint8_t cngByte;
+    for (int i = 0; i < 8; i++)
+    {
+        cngByte = currBytes[i] ^ frameCache.at(currentPosition).data[i];
+        changedBits |= (uint64_t)cngByte << (8ull * i);
+    }
+
+    qDebug() << "ChangedBits: " << QString::number(changedBits, 16);
+    qDebug() << "TriggerBits: " << QString::number(triggerBits, 16);
+    changedBits &= triggerBits;
+    qDebug() << "Final ChangedBits: " << QString::number(changedBits, 16);
+    if (changedBits)
+    {
+        playbackActive = false;
+        playbackTimer->stop();
+    }
+
+    memcpy(currBytes, frameCache.at(currentPosition).data, 8);
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].ID, frameCache[currentPosition].timestamp / 1000000.0);
 }
@@ -706,25 +788,28 @@ void FlowViewWindow::updateGraphLocation()
         if (secondsMode)
         {
             ui->graphView->xAxis->setRange(frameCache[start].timestamp / 1000000.0, frameCache[end].timestamp / 1000000.0);
+            /*
             ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3000000.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
             ui->graphView->xAxis->setNumberPrecision(6);
+            */
         }
         else
         {
             ui->graphView->xAxis->setRange(frameCache[start].timestamp, frameCache[end].timestamp);
+            /*
             ui->graphView->xAxis->setTickStep((frameCache[end].timestamp - frameCache[start].timestamp)/ 3.0);
             ui->graphView->xAxis->setSubTickCount(0);
             ui->graphView->xAxis->setNumberFormat("f");
-            ui->graphView->xAxis->setNumberPrecision(0);
+            ui->graphView->xAxis->setNumberPrecision(0); */
         }
     }
     else
     {
         ui->graphView->xAxis->setRange(start, end);
-        ui->graphView->xAxis->setTickStep(5.0);
-        ui->graphView->xAxis->setSubTickCount(0);
+        //ui->graphView->xAxis->setTickStep(5.0);
+        //ui->graphView->xAxis->setSubTickCount(0);
         ui->graphView->xAxis->setNumberFormat("gb");
     }
 

@@ -15,13 +15,31 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="8,0,8">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
+        <widget class="QLabel" name="label_2">
+         <property name="font">
+          <font>
+           <pointsize>16</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>SIDE 1</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>File of interest:</string>
+          <string>Single file to compare to side 2:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
@@ -42,11 +60,39 @@
       </layout>
      </item>
      <item>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
       <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="label_4">
+         <property name="font">
+          <font>
+           <pointsize>16</pointsize>
+          </font>
+         </property>
+         <property name="text">
+          <string>Side 2</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QLabel" name="label">
          <property name="text">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Loaded reference frames:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>One or more files to compare with the single file on side1:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -80,9 +126,19 @@
     </layout>
    </item>
    <item>
+    <widget class="Line" name="line_2">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QCheckBox" name="ckUniqueToInterested">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="text">
-      <string>Show only unique data for interested file</string>
+      <string>Show only data unique to Side 1</string>
      </property>
     </widget>
    </item>
@@ -104,6 +160,14 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>btnInterestedFile</tabstop>
+  <tabstop>btnLoadRefFile</tabstop>
+  <tabstop>btnClear</tabstop>
+  <tabstop>ckUniqueToInterested</tabstop>
+  <tabstop>treeDetails</tabstop>
+  <tabstop>btnSaveDetails</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

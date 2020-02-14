@@ -3,23 +3,13 @@
 
 #include <QDialog>
 #include <QListWidget>
-#include <QTimer>
 #include "can_structs.h"
 #include "framefileio.h"
+#include "frameplaybackobject.h"
 
 namespace Ui {
 class FramePlaybackWindow;
 }
-
-//one entry in the sequence of data to use
-struct SequenceItem
-{
-    QString filename;
-    QVector<CANFrame> data;
-    QHash<int, bool> idFilters;
-    int maxLoops;
-    int currentLoopCount;
-};
 
 class FramePlaybackWindow : public QDialog
 {
@@ -38,12 +28,12 @@ private slots:
     void btnFwdOneClick();
     void btnDeleteCurrSeq();
     void changePlaybackSpeed(int newSpeed);
+    void changeBurstRate(int burst);
     void changeLooping(bool check);
     void changeSendingBus(int newIdx);
     void changeIDFiltering(QListWidgetItem *item);
     void btnSelectAllClick();
     void btnSelectNoneClick();
-    void timerTriggered();
     void btnLoadFile();
     void btnLoadLive();
     void seqTableCellClicked(int row, int col);
@@ -51,30 +41,32 @@ private slots:
     void contextMenuFilters(QPoint);
     void saveFilters();
     void loadFilters();
+    void useOrigTimingClicked();
+    void getStatusUpdate(int frameNum);
+    void EndOfFrameCache();
 
 private:
     Ui::FramePlaybackWindow *ui;
     QList<int> foundID;
     QList<CANFrame> frameCache;
-    QList<CANFrame> sendingBuffer;
     const QVector<CANFrame> *modelFrames;
-    int currentPosition;
-    QTimer *playbackTimer;
-    bool playbackActive;
-    bool playbackForward;
-    int whichBusSend;
     QList<SequenceItem> seqItems;
     SequenceItem *currentSeqItem;
     int currentSeqNum;
+    FramePlaybackObject playbackObject;
+    bool forward;
+    bool isPlaying;
+    int currentPosition;
 
     void refreshIDList();
     void updateFrameLabel();
-    void updatePosition(bool forward);
-    void fillIDHash(SequenceItem &item);    
+    void fillIDHash(SequenceItem &item);
     void showEvent(QShowEvent *);
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
+    void calculateWhichBus();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // FRAMEPLAYBACKWINDOW_H

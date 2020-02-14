@@ -5,13 +5,18 @@
 #include "dbc_classes.h"
 #include "can_structs.h"
 
+    typedef enum
+    {
+        EXACT,
+        J1939,
+        GMLAN
+    } MatchingCriteria_t;
+
 /*
  * TODO:
  * Finish coding up the decoupled design
  *
 */
-
-
 class DBCSignalHandler: public QObject
 {
     Q_OBJECT
@@ -42,8 +47,14 @@ public:
     bool removeMessage(QString name);
     void removeAllMessages();
     int getCount();
+    MatchingCriteria_t getMatchingCriteria();
+    void setMatchingCriteria(MatchingCriteria_t mc);
+    void setFilterLabeling( bool labelFiltering );
+    bool filterLabeling();
 private:
     QList<DBC_MESSAGE> messages;
+    MatchingCriteria_t matchingCriteria;
+    bool filterLabelingEnabled;
 };
 
 //technically there should be a node handler too but I'm sort of treating nodes as second class
@@ -57,6 +68,9 @@ public:
     DBCFile& operator=(const DBCFile& cpy);
     DBC_NODE *findNodeByName(QString name);
     DBC_NODE *findNodeByIdx(int idx);
+    DBC_ATTRIBUTE *findAttributeByName(QString name);
+    DBC_ATTRIBUTE *findAttributeByIdx(int idx);
+    void findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> *list);
     void saveFile(QString);
     void loadFile(QString);
     QString getFullFilename();
@@ -67,29 +81,45 @@ public:
 
     DBCMessageHandler *messageHandler;
     QList<DBC_NODE> dbc_nodes;
+    QList<DBC_ATTRIBUTE> dbc_attributes;
 private:
     QString fileName;
     QString filePath;
-    int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus
+    int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus, etc.
+
+    bool parseAttribute(QString inpString, DBC_ATTRIBUTE &attr);
+    QVariant processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ);
+    DBC_SIGNAL* parseSignalLine(QString line, DBC_MESSAGE *msg);
+    DBC_MESSAGE* parseMessageLine(QString line);
+    bool parseValueLine(QString line);
+    bool parseAttributeLine(QString line);
+    bool parseDefaultAttrLine(QString line);
 };
 
 class DBCHandler: public QObject
 {
     Q_OBJECT
 public:
+    DBCFile* loadDBCFile(QString filename);
     DBCFile* loadDBCFile(int);
     void saveDBCFile(int);
     void removeDBCFile(int);
     void removeAllFiles();
     void swapFiles(int pos1, int pos2);
     DBC_MESSAGE* findMessage(const CANFrame &frame);
+    DBC_MESSAGE* findMessage(const QString msgName);
+    DBC_MESSAGE* findMessageForFilter(uint32_t id, MatchingCriteria_t * matchingCriteria);
     int getFileCount();
     DBCFile* getFileByIdx(int idx);
     DBCFile* getFileByName(QString name);
     int createBlankFile();
+    static DBCHandler *getReference();
 
 private:
     QList<DBCFile> loadedFiles;
+
+    DBCHandler();
+    static DBCHandler *instance;
 };
 
 #endif // DBCHANDLER_H

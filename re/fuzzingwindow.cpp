@@ -3,13 +3,16 @@
 #include "utility.h"
 #include <QDebug>
 #include "mainwindow.h"
+#include "helpwindow.h"
 #include "connections/canconmanager.h"
+#include "filterutility.h"
 
 FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FuzzingWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
 
@@ -41,11 +44,34 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
     ui->cbBuses->addItem(tr("All"));
 
+    // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
+    ui->listID->horizontalScrollBar()->setEnabled(false);    
+
+    installEventFilter(this);
 }
 
 FuzzingWindow::~FuzzingWindow()
 {
+    removeEventFilter(this);
     delete ui;
+}
+
+bool FuzzingWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("fuzzingwindow.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void FuzzingWindow::updatedFrames(int numFrames)
@@ -73,11 +99,7 @@ void FuzzingWindow::updatedFrames(int numFrames)
             {
                 foundIDs.append(id);
                 selectedIDs.append(id);
-                QListWidgetItem *thisItem = new QListWidgetItem();
-                thisItem->setText(Utility::formatNumber(id));
-                thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-                thisItem->setCheckState(Qt::Checked);
-                ui->listID->addItem(thisItem);
+                FilterUtility::createCheckableFilterItem(id, true, ui->listID);
             }
         }
     }
@@ -111,6 +133,7 @@ void FuzzingWindow::changedNumDataBytes(int newVal)
 void FuzzingWindow::timerTriggered()
 {
     CANFrame thisFrame;
+    thisFrame.remote = false;
     sendingBuffer.clear();
     int buses = ui->cbBuses->currentIndex();
     for (int count = 0; count < ui->spinBurst->value(); count++)
@@ -163,7 +186,7 @@ void FuzzingWindow::setAllFilters()
 void FuzzingWindow::calcNextID()
 {
     if (seqIDScan)
-    {        
+    {
         if (rangeIDSelect)
         {
             currentID++;
@@ -347,16 +370,13 @@ void FuzzingWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = modelFrames->at(i).ID;
+        CANFrame thisFrame = modelFrames->at(i);
+        id = thisFrame.ID;
         if (!foundIDs.contains(id))
         {
             foundIDs.append(id);
             selectedIDs.append(id);
-            QListWidgetItem *thisItem = new QListWidgetItem();
-            thisItem->setText(Utility::formatNumber(id));
-            thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
-            thisItem->setCheckState(Qt::Checked);
-            ui->listID->addItem(thisItem);
+            FilterUtility::createCheckableFilterItem(id, true, ui->listID);
         }
     }
     //default is to sort in ascending order
@@ -365,7 +385,7 @@ void FuzzingWindow::refreshIDList()
 
 void FuzzingWindow::idListChanged(QListWidgetItem *item)
 {
-    int id = Utility::ParseStringToNum(item->text());
+    int id = FilterUtility::getIdAsInt(item);
     if (item->checkState() == Qt::Checked)
     {
         if (!selectedIDs.contains(id))

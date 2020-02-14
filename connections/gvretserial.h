@@ -5,6 +5,8 @@
 #include <QCanBusDevice>
 #include <QThread>
 #include <QTimer>
+#include <QTcpSocket>
+#include <QUdpSocket>
 
 /*************/
 #include <QDateTime>
@@ -16,7 +18,7 @@
 
 namespace SERIALSTATE {
 
-enum STATE //keep this enum synchronized with the Arduino firmware project
+enum STATE
 {
     IDLE,
     GET_COMMAND,
@@ -28,11 +30,12 @@ enum STATE //keep this enum synchronized with the Arduino firmware project
     SETUP_CANBUS,
     GET_CANBUS_PARAMS,
     GET_DEVICE_INFO,
-    SET_SINGLEWIRE_MODE
+    SET_SINGLEWIRE_MODE,
+    GET_NUM_BUSES,
+    GET_EXT_BUSES
 };
 
 }
-
 
 using namespace SERIALSTATE;
 class GVRetSerial : public CANConnection
@@ -40,7 +43,7 @@ class GVRetSerial : public CANConnection
     Q_OBJECT
 
 public:
-    GVRetSerial(QString portName);
+    GVRetSerial(QString portName, bool useTcp);
     virtual ~GVRetSerial();
 
 protected:
@@ -54,10 +57,15 @@ protected:
 
     void disconnectDevice();
 
+public slots:
+    void debugInput(QByteArray bytes);
+
 private slots:
     void connectDevice();
     void connectionTimeout();
     void readSerialData();
+    void serialError(QSerialPort::SerialPortError err);
+    void deviceConnected();
     void handleTick();
 
 private:
@@ -65,23 +73,29 @@ private:
     void procRXChar(unsigned char);
     void sendCommValidation();
     void rebuildLocalTimeBasis();
+    void sendToSerial(const QByteArray &bytes);
+    void sendDebug(const QString debugText);
 
 protected:
     QTimer             mTimer;
     QThread            mThread;
 
     bool doValidation;
-    bool gotValidated;
+    int validationCounter;
     bool isAutoRestart;
     bool continuousTimeSync;
+    bool useTcp;
+    bool espSerialMode; //special serial mode for ESP32 based boards - no flow control and much slower serial baud speed
     QSerialPort *serial;
+    QTcpSocket *tcpClient;
+    QUdpSocket *udpClient;
     int framesRapid;
     STATE rx_state;
     uint32_t rx_step;
     CANFrame buildFrame;
-    int can0Baud, can1Baud;
-    bool can0Enabled, can1Enabled;
-    bool can0ListenOnly, can1ListenOnly;
+    int can0Baud, can1Baud, swcanBaud, lin1Baud, lin2Baud;
+    bool can0Enabled, can1Enabled, swcanEnabled, lin1Enabled, lin2Enabled;
+    bool can0ListenOnly, can1ListenOnly, swcanListenOnly;
     int deviceBuildNum;
     int deviceSingleWireMode;
     uint32_t buildTimeBasis;

@@ -1,0 +1,52 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>31. Graph Setup</title>
+    <link rel="stylesheet" href="_static/nonav.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="graph-setup">
+<h1>31. Graph Setup</h1>
+<p>.</p>
+<img alt="_images/GraphSetup.png" src="_images/GraphSetup.png" />
+</div>
+<div class="section" id="setting-up-a-graph">
+<h1>32. Setting up a Graph</h1>
+<p>This same screen is used whether you are creating a new graph or editing an existing graph. If you are creating a new graph then you have two options.</p>
+</div>
+<div class="section" id="graphing-a-dbc-signal">
+<h1>33. Graphing a DBC Signal</h1>
+<p>If you want to graph a signal from a DBC file that you have loaded then pick the Message from the combo box. Picking a message will then allow you to pick a signal within that message. After selecting both the message and the signal then click the “Copy Signal Parameters” button. This will fill out the left hand side with the proper values for you automatically.</p>
+</div>
+<div class="section" id="manual-signal-graphing-or-editing">
+<h1>34. Manual Signal Graphing (Or Editing)</h1>
+<p>If you want to manually create a signal or edit an existing signal then you will find the relevant fields on the left hand size of the window.</p>
+<p>“Name” is for your reference and will be shown on the Graphing Window.</p>
+<p>“ID” is the frame ID to use for this graph. You can enter in either decimal or hex. Hex values are preceded by 0x</p>
+<p>“Data Len” is used to specify how many bits are in the signal to graph. You can graph odd bit lengths such as 9, 11, or 15 bits. These are not as uncommon as you might think.</p>
+<p>“Little Endian” switches between little and big endian mode. This will change how the signal grabs bits from the frame.</p>
+<p>Once you’ve set both Data Len and Little Endian you can set the bits to use. The 8x8 grid above is used for this. Click on the start bit and the rest of the bits will automatically be selected for you based on Data Len and Little Endian.</p>
+<p>“Signed” can be used to select between signed and unsigned mode.</p>
+<p>“Mask” will apply a mask to the value before using it.</p>
+<p>“Bias” allows for setting an offset to the values to bring them to a different resting point</p>
+<p>“Scale” is used as a multiplier to change the scaling of the values</p>
+<p>“Stride” is not often used but will cause only every “x” values to actually be graphed. This can be used to graph a very dense set of data with less points to speed things up.</p>
+<p>“Color” changes the color of the graphed line. It is automatically randomly set for new graphs but if you don’t like the random color you can click the color and select a better one.</p>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

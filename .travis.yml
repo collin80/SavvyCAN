@@ -1,0 +1,99 @@
+language: cpp
+
+# Any time a commit is done to either master or WIP we do a CI build on all three platforms to make sure it really builds. The linux version will be saved to the continuous tag 
+# and thus available for testing. All three platforms will get a proper release upon a tagged commit. 
+
+matrix:
+   include:
+      - os: linux
+        dist: xenial
+        compiler: gcc
+        sudo: require
+        before_install:
+           - sudo add-apt-repository ppa:beineri/opt-qt-5.12.3-xenial -y
+           - sudo apt-get update -qq
+
+        install:
+           - sudo apt-get -y install qt512base qt512connectivity qt512imageformats qt512serialport qt512serialbus qt512doc qt512tools libgl1-mesa-dev
+           - source /opt/qt*/bin/qt*-env.sh
+
+        script:
+           - qmake CONFIG+=release PREFIX=/usr
+           - make -j$(nproc)
+           - make INSTALL_ROOT=appdir -j$(nproc) install ; find appdir/
+           - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+           - chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+           # export VERSION=... # linuxdeployqt uses this for naming the file
+           - ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/local/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
+
+        after_success:
+           # find appdir -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq # for debugging
+           # curl --upload-file APPNAME*.AppImage https://transfer.sh/APPNAME-git.$(git rev-parse --short HEAD)-x86_64.AppImage           
+           - wget -c https://github.com/probonopd/uploadtool/raw/master/upload.sh
+           - bash upload.sh SavvyCAN*.AppImage*
+
+        deploy:
+           provider: releases
+           skip_cleanup: true
+           api_key: $GITHUB_TOKEN
+           file_glob: true
+           file: SavvyCAN*.AppImage
+           on:              
+              tags: true #deploy is only done on tagged builds
+           draft: false
+  
+      - os: osx
+        osx_image: xcode10
+        before_install:
+           - brew install qt5
+           - brew link qt5 --force
+        script:
+           - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
+           - xcodebuild
+           - mkdir Release/SavvyCAN.app/Contents/MacOS/help
+           - cp -R help/*.* Release/SavvyCAN.app/Contents/MacOS/help
+           - cd Release
+           - ls SavvyCAN.app/Contents/MacOS
+           - macdeployqt SavvyCAN.app -dmg
+        deploy:
+           provider: releases
+           skip_cleanup: true
+           api_key: $GITHUB_TOKEN
+           file: SavvyCAN.dmg
+           on:
+              tags: true
+           draft: false
+
+      - os: windows
+        before_install:
+           - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat"'
+           - choco install zip
+           - curl -vLO http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe
+           - "./qt-unified-windows-x86-online.exe --verbose --script qt-installer-windows.qs"
+        script:
+           - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" && cd && "C:/Qt/5.12.3/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro && cd && nmake'
+           - ls
+           - cmd.exe /C 'cd release && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" && "C:/Qt/5.12.3/msvc2017/bin/windeployqt.exe" ./SavvyCAN.exe'
+           - cd release
+           - ls
+           - rm *.cpp
+           - rm *.h
+           - rm *.obj
+           - mkdir help
+           - cp -R ../help/*.* ./help
+           - cp -r ../examples .
+           - 7z a -tzip SavvyCAN32.zip -r *
+           
+        deploy:
+           provider: releases
+           skip_cleanup: true
+           api_key: $GITHUB_TOKEN
+           file: SavvyCAN32.zip
+           on:
+              tags: true
+           draft: false
+           
+branches:
+  except:
+    - # Do not build tags that we create when we upload to GitHub Releases
+    - /^(?i:continuous)/

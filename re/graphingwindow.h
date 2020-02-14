@@ -19,12 +19,14 @@ public:
     bool intelFormat;
     bool isSigned;
     uint64_t mask;
-    float bias;
-    float scale;
+    double bias;
+    double scale;
     int stride;
+    int strideSoFar;
     QColor color;
     QCPGraph *ref;
     QString graphName;
+    DBC_SIGNAL *associatedSignal;
     //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;
@@ -35,15 +37,17 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(DBCHandler *handler, const QVector<CANFrame> *, QWidget *parent = 0);
+    explicit GraphingWindow(const QVector<CANFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
     void showEvent(QShowEvent*);
 
 private slots:
-    void titleDoubleClick(QMouseEvent *event, QCPPlotTitle *title);
+    void titleDoubleClick(QMouseEvent *event, QCPTextElement *title);
     void axisLabelDoubleClick(QCPAxis* axis, QCPAxis::SelectablePart part);
     void legendDoubleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
-    void plottableDoubleClick(QCPAbstractPlottable* plottable,QMouseEvent* event);
+    void legendSingleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
+    void plottableDoubleClick(QCPAbstractPlottable* plottable,int dataIdx, QMouseEvent* event);
+    void plottableClick(QCPAbstractPlottable* plottable, int dataIdx, QMouseEvent* event);
     void selectionChanged();
     void mousePress();
     void mouseWheel();
@@ -55,9 +59,10 @@ private slots:
     void saveSpreadsheet();
     void saveDefinitions();
     void loadDefinitions();
+    void toggleFollowMode();
     void addNewGraph();
     void createGraph(GraphParams &params, bool createGraphParam = true);
-    void appendToGraph(GraphParams &params, CANFrame &frame);
+    void appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y);
     void editSelectedGraph();
     void updatedFrames(int);
     void gotCenterTimeID(int32_t ID, double timestamp);
@@ -75,8 +80,13 @@ private:
     const QVector<CANFrame> *modelFrames;
     QList<GraphParams> graphParams;
     QPen selectedPen;
+    QCPSelectionDecorator *selDecorator;
+    QCPItemText *locationText;
+    QCPItemTracer *itemTracer;
     bool needScaleSetup; //do we need to set x,y graphing extents?
     bool secondsMode;
+    bool useOpenGL;
+    bool followGraphEnd;
 
     void showParamsDialog(int idx);
     void closeEvent(QCloseEvent *event);

@@ -4,17 +4,16 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialbus
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets serialport printsupport qml
+QT = core gui printsupport qml serialbus serialport widgets help
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
-CONFIG += c++11 qscintilla2
+CONFIG += c++11
+
+DEFINES += QCUSTOMPLOT_USE_OPENGL
 
 TARGET = SavvyCAN
 TEMPLATE = app
-
 
 SOURCES += main.cpp\
     mainwindow.cpp \
@@ -33,7 +32,7 @@ SOURCES += main.cpp\
     can_structs.cpp \
     motorcontrollerconfigwindow.cpp \
     connections/canconnection.cpp \
-    connections/socketcan.cpp \
+    connections/serialbusconnection.cpp \
     connections/canconfactory.cpp \
     connections/gvretserial.cpp \
     connections/canconmanager.cpp \
@@ -50,7 +49,6 @@ SOURCES += main.cpp\
     re/flowviewwindow.cpp \
     re/frameinfowindow.cpp \
     re/fuzzingwindow.cpp \
-    re/isotp_handler.cpp \
     re/isotp_interpreterwindow.cpp \
     re/rangestatewindow.cpp \
     re/udsscanwindow.cpp \
@@ -59,7 +57,19 @@ SOURCES += main.cpp\
     connections/connectionwindow.cpp \
     re/graphingwindow.cpp \
     re/newgraphdialog.cpp \
-    bisectwindow.cpp
+    bisectwindow.cpp \
+    signalviewerwindow.cpp \
+    bus_protocols/isotp_handler.cpp \
+    bus_protocols/j1939_handler.cpp \
+    bus_protocols/uds_handler.cpp \
+    jsedit.cpp \
+    frameplaybackobject.cpp \
+    helpwindow.cpp \
+    blfhandler.cpp \
+    re/sniffer/SnifferDelegate.cpp \
+    connections/newconnectiondialog.cpp \
+    re/temporalgraphwindow.cpp \
+    filterutility.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -80,7 +90,7 @@ HEADERS  += mainwindow.h \
     utils/lfqueue.h \
     motorcontrollerconfigwindow.h \
     connections/canconnection.h \
-    connections/socketcan.h \
+    connections/serialbusconnection.h \
     connections/canconconst.h \
     connections/canconfactory.h \
     connections/gvretserial.h \
@@ -98,7 +108,6 @@ HEADERS  += mainwindow.h \
     re/flowviewwindow.h \
     re/frameinfowindow.h \
     re/fuzzingwindow.h \
-    re/isotp_handler.h \
     re/isotp_interpreterwindow.h \
     re/rangestatewindow.h \
     re/udsscanwindow.h \
@@ -107,7 +116,20 @@ HEADERS  += mainwindow.h \
     connections/connectionwindow.h \
     re/graphingwindow.h \
     re/newgraphdialog.h \
-    bisectwindow.h
+    bisectwindow.h \
+    signalviewerwindow.h \
+    bus_protocols/isotp_handler.h \
+    bus_protocols/j1939_handler.h \
+    bus_protocols/uds_handler.h \
+    bus_protocols/isotp_message.h \
+    jsedit.h \
+    frameplaybackobject.h \
+    helpwindow.h \
+    blfhandler.h \
+    re/sniffer/SnifferDelegate.h \
+    connections/newconnectiondialog.h \
+    re/temporalgraphwindow.h \
+    filterutility.h
 
 FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
@@ -132,10 +154,43 @@ FORMS    += ui/candatagrid.ui \
     ui/scriptingwindow.ui \
     ui/snifferwindow.ui \
     ui/udsscanwindow.ui \
-    ui/bisectwindow.ui
-
-DISTFILES +=
-
+    ui/bisectwindow.ui \
+    ui/signalviewerwindow.ui \
+    helpwindow.ui \
+    ui/newconnectiondialog.ui \
+    ui/temporalgraphwindow.ui
+    
 RESOURCES += \
     icons.qrc \
     images.qrc
+
+win32 {
+   LIBS += opengl32.lib
+}
+
+unix {
+   isEmpty(PREFIX)
+   {
+      PREFIX=/usr/local
+   }
+   target.path = $$PREFIX/bin
+   shortcutfiles.files=SavvyCAN.desktop
+   shortcutfiles.path = $$PREFIX/share/applications
+   INSTALLS += shortcutfiles
+   DISTFILES += SavvyCAN.desktop
+}
+
+examplefiles.files=examples
+examplefiles.path = $$PREFIX/share/savvycan/examples
+INSTALLS += examplefiles
+
+iconfiles.files=icons
+iconfiles.path = $$PREFIX/share/icons
+INSTALLS += iconfiles
+
+helpfiles.files=help/*
+helpfiles.path = $$PREFIX/bin/help
+INSTALLS += helpfiles
+
+INSTALLS += target
+

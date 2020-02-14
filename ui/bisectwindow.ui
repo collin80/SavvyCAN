@@ -218,6 +218,22 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>rbIDRange</tabstop>
+  <tabstop>cbIDLower</tabstop>
+  <tabstop>cbIDUpper</tabstop>
+  <tabstop>rbFrameNumber</tabstop>
+  <tabstop>slideFrameNumber</tabstop>
+  <tabstop>editFrameNumber</tabstop>
+  <tabstop>rbPercentage</tabstop>
+  <tabstop>slidePercentage</tabstop>
+  <tabstop>editPercentage</tabstop>
+  <tabstop>rbLowerSection</tabstop>
+  <tabstop>rbUpperSection</tabstop>
+  <tabstop>btnCalculate</tabstop>
+  <tabstop>btnSaveFrames</tabstop>
+  <tabstop>btnReplaceFrames</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

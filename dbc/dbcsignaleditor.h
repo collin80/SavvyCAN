@@ -14,7 +14,7 @@ class DBCSignalEditor : public QDialog
     Q_OBJECT
 
 public:
-    explicit DBCSignalEditor(DBCHandler *handler, QWidget *parent = 0);
+    explicit DBCSignalEditor(QWidget *parent = 0);
     void setMessageRef(DBC_MESSAGE *msg);
     void showEvent(QShowEvent*);
     void setFileIdx(int idx);
@@ -27,6 +27,7 @@ private slots:
     void onCustomMenuSignals(QPoint);
     void onCustomMenuValues(QPoint);
     void addNewSignal();
+    void cloneSignal();
     void deleteCurrentSignal();
     void deleteCurrentValue();
 
@@ -44,6 +45,7 @@ private:
     void generateUsedBits();
 
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
 };

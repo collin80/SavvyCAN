@@ -22,7 +22,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="icons.qrc">
+        <iconset resource="../icons.qrc">
          <normaloff>:/icons/images/NavBack.png</normaloff>:/icons/images/NavBack.png</iconset>
        </property>
       </widget>
@@ -33,7 +33,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="icons.qrc">
+        <iconset resource="../icons.qrc">
          <normaloff>:/icons/images/PauseHS.png</normaloff>:/icons/images/PauseHS.png</iconset>
        </property>
       </widget>
@@ -44,7 +44,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="icons.qrc">
+        <iconset resource="../icons.qrc">
          <normaloff>:/icons/images/ReverseHS.png</normaloff>:/icons/images/ReverseHS.png</iconset>
        </property>
       </widget>
@@ -55,7 +55,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="icons.qrc">
+        <iconset resource="../icons.qrc">
          <normaloff>:/icons/images/StopHS.png</normaloff>:/icons/images/StopHS.png</iconset>
        </property>
       </widget>
@@ -66,7 +66,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="icons.qrc">
+        <iconset resource="../icons.qrc">
          <normaloff>:/icons/images/PlayHS.png</normaloff>:/icons/images/PlayHS.png</iconset>
        </property>
       </widget>
@@ -77,7 +77,7 @@
         <string/>
        </property>
        <property name="icon">
-        <iconset resource="icons.qrc">
+        <iconset resource="../icons.qrc">
          <normaloff>:/icons/images/NavForward.png</normaloff>:/icons/images/NavForward.png</iconset>
        </property>
       </widget>
@@ -99,6 +99,13 @@
       </size>
      </property>
     </spacer>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="cbOriginalTiming">
+     <property name="text">
+      <string>Use original frame timing from captured frames</string>
+     </property>
+    </widget>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -328,6 +335,24 @@
          </item>
         </layout>
        </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_9">
+         <item>
+          <widget class="QPushButton" name="btnLoadFilters">
+           <property name="text">
+            <string>Load Filters</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btnSaveFilters">
+           <property name="text">
+            <string>Save Filters</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
       </layout>
      </item>
     </layout>
@@ -337,8 +362,29 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>btnStepBack</tabstop>
+  <tabstop>btnPause</tabstop>
+  <tabstop>btnPlayReverse</tabstop>
+  <tabstop>btnStop</tabstop>
+  <tabstop>btnPlay</tabstop>
+  <tabstop>btnStepForward</tabstop>
+  <tabstop>spinPlaySpeed</tabstop>
+  <tabstop>spinBurstSpeed</tabstop>
+  <tabstop>cbLoop</tabstop>
+  <tabstop>comboCANBus</tabstop>
+  <tabstop>tblSequence</tabstop>
+  <tabstop>btnLoadFile</tabstop>
+  <tabstop>btnLoadLive</tabstop>
+  <tabstop>btnDelete</tabstop>
+  <tabstop>listID</tabstop>
+  <tabstop>btnSelectAll</tabstop>
+  <tabstop>btnSelectNone</tabstop>
+  <tabstop>btnLoadFilters</tabstop>
+  <tabstop>btnSaveFilters</tabstop>
+ </tabstops>
  <resources>
-  <include location="icons.qrc"/>
+  <include location="../icons.qrc"/>
  </resources>
  <connections/>
 </ui>

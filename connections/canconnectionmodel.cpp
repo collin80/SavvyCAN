@@ -11,6 +11,13 @@ CANConnectionModel::~CANConnectionModel()
 {
 }
 
+enum class Column {
+    Type       = 0, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
+    Subtype    = 1, ///< Mostly used by SerialBus devices to pick the sub type
+    Port       = 2, ///< The CAN hardware port, e.g. can0 for socketcan
+    NumBuses   = 3, ///< Number of buses exposed by this device. Usually non-GVRET devices will just have one
+    Status     = 4  ///< The bus status as text message
+};
 
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
@@ -19,32 +26,18 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
 
     if (orientation == Qt::Horizontal)
     {
-        switch (section)
+        switch (Column(section))
         {
-        case 0:
-            return QString(tr("Bus"));
-            break;
-        case 1:
+        case Column::Type:
             return QString(tr("Type"));
-            break;
-        case 2:
+        case Column::Subtype:
+            return QString(tr("Subtype"));
+        case Column::Port:
             return QString(tr("Port"));
-            break;
-        case 3:
-            return QString(tr("Speed"));
-            break;
-        case 4:
-            return QString(tr("Listen Only"));
-            break;
-        case 5:
-            return QString(tr("Single Wire"));
-            break;
-        case 6:
+        case Column::NumBuses:
+            return QString(tr("Buses"));
+        case Column::Status:
             return QString(tr("Status"));
-            break;
-        case 7:
-            return QString(tr("Active"));
-            break;
         }
     }
 
@@ -54,11 +47,10 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
     return QVariant();
 }
 
-
 int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 7;
+    return 5;
 }
 
 
@@ -66,67 +58,51 @@ int CANConnectionModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
 
-    int rows=0;
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
-    foreach(const CANConnection* conn_p, conns)
-        rows+=conn_p->getNumBuses();
-
-    return rows;
+    return conns.count();
 }
-
 
 QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid())
         return QVariant();
+    //qDebug() << "Row: " << index.row();
 
+    CANConnection *conn_p = getAtIdx(index.row());
+    bool ret;
+    if (!conn_p) return QVariant();
+
+    bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
 
     if (role == Qt::DisplayRole) {
-        int busId;
-        CANConnection *conn_p = getAtIdx(index.row(), busId);
-        if(!conn_p)
-            return QVariant();
 
-        CANBus bus;
-        bool ret;
-        ret = conn_p->getBusSettings(busId, bus);
-        if(!ret) return QVariant();
-
-        switch (index.column())
+        switch (Column(index.column()))
         {
-            case 0: //bus
-                //return QString::number(busId);
-                return QString::number(index.row());
-                break;
-            case 1: //type
+            case Column::Type:
                 if (conn_p)
                     switch (conn_p->getType()) {
                         case CANCon::KVASER: return "KVASER";
-                        case CANCon::SOCKETCAN: return "SocketCAN";
+                        case CANCon::SERIALBUS: return "SerialBus";
                         case CANCon::GVRET_SERIAL: return "GVRET";
                         default: {}
                     }
-                else qDebug() << "Tried to show connection type but connection was NULL";
+                else qDebug() << "Tried to show connection type but connection was nullptr";
                 break;
-            case 2: //port
+            case Column::Port:
                 if (conn_p) return conn_p->getPort();
-                else qDebug() << "Tried to show connection port but connection was NULL";
+                else qDebug() << "Tried to show connection port but connection was nullptr";
                 break;
-            case 3: //speed
-                return QString::number(bus.speed);
-            case 4: //Listen Only
-                return (bus.listenOnly) ? "True" : "False";
-            case 5: //Single Wire
-                return (bus.singleWire) ? "True" : "False";
-            case 6: //Status
-                return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
-            case 7: //Active
-                return (bus.active) ? "True" : "False";
-            default: {}
+            case Column::Subtype:
+                return conn_p->getDriver();
+                break;
+            case Column::NumBuses:
+                return conn_p->getNumBuses();
+                break;
+            case Column::Status:
+                 return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
         }
     }
-
     return QVariant();
 }
 
@@ -150,31 +126,30 @@ void CANConnectionModel::remove(CANConnection* pConn_p)
     endResetModel();
 }
 
-
-CANConnection* CANConnectionModel::getAtIdx(int pIdx, int& pBusId) const
+void CANConnectionModel::replace(int idx , CANConnection* pConn_p)
 {
-    if (pIdx < 0)
-        return NULL;
+    CANConManager* manager = CANConManager::getInstance();
 
-    int i=0;
-    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
-
-    foreach(CANConnection* conn_p, conns)
-    {
-        if( i <= pIdx && pIdx < i+conn_p->getNumBuses() ) {
-            pBusId = pIdx - i;
-            return conn_p;
-        }
-
-        i+= conn_p->getNumBuses();
-    }
-
-    return NULL;
+    beginResetModel();
+    manager->replace(idx, pConn_p);
+    endResetModel();
 }
 
+CANConnection* CANConnectionModel::getAtIdx(int pIdx) const
+{
+    if (pIdx < 0)
+        return nullptr;
+
+    QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
+
+    return conns.at(pIdx);
+}
 
 void CANConnectionModel::refresh(int pIndex)
 {
+    beginResetModel();
+    endResetModel();
+    /*
     QModelIndex begin;
     QModelIndex end;
 
@@ -186,5 +161,5 @@ void CANConnectionModel::refresh(int pIndex)
         begin   = createIndex(0, 0);
         end     = createIndex(rowCount()-1, columnCount()-1);
     }
-    dataChanged(begin, end, QVector<int>(Qt::DisplayRole));
+    dataChanged(begin, end, QVector<int>(Qt::DisplayRole)); */
 }

@@ -14,7 +14,7 @@ template<class T>
 class LFQueue
 {
 public:
-    LFQueue() : mSize(0), mArray(NULL){}
+    LFQueue() : mSize(0), mArray(nullptr){}
 
     ~LFQueue() {setSize(0);}
 
@@ -24,14 +24,14 @@ public:
 
         if(mArray) {
             delete[] mArray;
-            mArray = NULL;
+            mArray = nullptr;
         }
 
         if(size>0) {
             mArray = new T[size];
             if(mArray)
                 mSize = size;
-            return ( mArray!=NULL );
+            return ( mArray != nullptr );
         }
 
         return true;
@@ -44,7 +44,7 @@ public:
 
     T* get() {
         if(IS_FULL())
-            return NULL;
+            return nullptr;
 
         return &(mArray[mWIdx.loadAcquire()]); /* prevent memory reordering (belt and braces) */
     }
@@ -63,7 +63,7 @@ public:
 
     T* peek() {
         if(IS_EMPTY())
-            return NULL;
+            return nullptr;
 
         return &(mArray[mRIdx.loadAcquire()]); /* prevent memory reordering (belt and braces) */
     }

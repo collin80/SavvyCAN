@@ -2,12 +2,14 @@
 #include "ui_rangestatewindow.h"
 #include "mainwindow.h"
 #include "utility.h"
+#include "helpwindow.h"
 
 RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RangeStateWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
 
@@ -88,12 +90,33 @@ void RangeStateWindow::showEvent(QShowEvent* event)
     readSettings();
 
     refreshFilterList();
+
+    installEventFilter(this);
 }
 
 void RangeStateWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
+    removeEventFilter(this);
     writeSettings();
+}
+
+bool RangeStateWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("rangestate.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void RangeStateWindow::readSettings()
@@ -138,7 +161,7 @@ void RangeStateWindow::updatedFrames(int numFrames)
             if (!idFilters.contains(thisFrame.ID))
             {
                 idFilters.insert(thisFrame.ID, true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listFilter);
+                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listFilter);
                 listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
@@ -159,7 +182,9 @@ void RangeStateWindow::refreshFilterList()
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
-            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(id), ui->listFilter);
+            QListWidgetItem* listItem;
+            if (id < 0x800) listItem = new QListWidgetItem(Utility::formatCANID(id, false), ui->listFilter);
+                else listItem = new QListWidgetItem(Utility::formatCANID(id, true), ui->listFilter);
             listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
             listItem->setCheckState(Qt::Checked); //default all filters to be set active
         }
@@ -170,11 +195,22 @@ void RangeStateWindow::refreshFilterList()
 
 void RangeStateWindow::recalcButton()
 {
-    QHash<int, bool>::iterator iter;
+    QMap<int, bool>::iterator iter;
     uint32_t id;
 
     ui->listCandidates->clear();
     foundSignals.clear();
+    ui->graphSignal->clearGraphs();
+
+    QProgressDialog progress(qApp->activeWindow());
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Calculating");
+    progress.setCancelButton(0);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
+
+
 
     for (iter = idFilters.begin(); iter != idFilters.end(); ++iter)
     {
@@ -194,6 +230,7 @@ void RangeStateWindow::recalcButton()
         }
     }
 
+    progress.cancel();
     qDebug() << "Found " << foundSignals.count() << " signals total.";
 }
 
@@ -213,8 +250,9 @@ void RangeStateWindow::signalsFactory()
     int maxBits = frameCache.at(0).len * 8;
     int sens = ui->slideSensitivity->value();
 
-    for (int sigSize = maxSig; sigSize >= minSig; sigSize--)
+    for (int sigSize = maxSig; sigSize >= minSig; sigSize -= granularity)
     {
+        qApp->processEvents();
         for (int startBit = 0; startBit < maxBits; startBit += granularity)
         {
             if (sigType & 1)
@@ -248,7 +286,7 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
     int64_t valu;
     int64_t highestValue = -1000000000000LL;
     int64_t lowestValue = 1000000000000LL;
-    double multiplier;
+    double lerpPoint = ((double)sensitivity - 10.0) / 240.0;
     int numFrames = frameCache.count();
 
     scaledVals.reserve(frameCache.count());
@@ -268,17 +306,17 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
 
     if (lowestValue == highestValue) return false; //a signal that never changes is worthless and not a range signal
 
-    //multiplier is calculated such that the range of the signal is scaled down to the value of sensitivity.
-    //so, if we have a sensitivity of 50 then the range is scaled so that it is 50
-    //this has the effect of smoothing the data a bit by completely removing the fine detail. It's irrelevant to
-    //an algorithm like this anyway and just gets in the way.
-    //Also, we're going to offset by lowest value so that everything is based at a value of 0 as the low end.
-    //All of this drastically modifies the actual signal but that's OK, we're looking for patterns here not
-    //being faithful to the signal (what a dirty cheater)
-    int range = highestValue - lowestValue;
-    multiplier = (double)sensitivity / (double)range;
+    int64_t range = highestValue - lowestValue;
 
-    for (i = 0; i < numFrames; i++) scaledVals.append((int)((Utility::processIntegerSignal(frameCache.at(i).data, startBit, bitLength, !bigEndian, isSigned) - lowestValue) * multiplier));
+    int64_t maxRange = isSigned?(1<<(bitLength - 1)):(1 << bitLength);
+    //at highest sensitivity require signal to at least range 20% of max range
+    //at lowest  sensitivity require signal to at least range 1%  of max range
+    int64_t requiredRange = Utility::Lerp(maxRange * 0.01, maxRange * 0.2, lerpPoint);
+    if (range < requiredRange)
+        return false; //doesn't range enough.
+
+    for (i = 0; i < numFrames; i++)
+        scaledVals.append((int)((Utility::processIntegerSignal(frameCache.at(i).data, startBit, bitLength, !bigEndian, isSigned) - lowestValue)));
 
     for (i = 1; i < numFrames; i++)
     {
@@ -292,19 +330,36 @@ bool RangeStateWindow::processSignal(int startBit, int bitLength, int sensitivit
         diff2.append(valu);
     }
 
-    //now the differences are all stored so let's go through and see if they seem to suggest a ramping sort of signal or not.
-    //for a first test lets let through any signal where the acceleration values are all much smaller than the signal range
+    //now the differences are all stored so let's go through and see if first order diffs seem to suggest a ramping sort of signal or not.
+    //for a first test lets let through any signal where the first order diff doesn't seem too large
     bool isGood = true;
-    int comparisonValue = Utility::Lerp(sensitivity / 5, sensitivity / 40, (sensitivity - 10) / 240.0);
-    qDebug() << "range: " << sensitivity << " comparisonvalue: " << comparisonValue;
+    int comparisonValue = Utility::Lerp((double)range * 0.55, 0, lerpPoint);
+    qDebug() << " 1st Delta comparisonvalue: " << comparisonValue;
     int overValues = 0;
-    for (i = 0; i < diff2.count(); i++)
+    for (i = 0; i < diff1.count(); i++)
     {
         if (abs(diff1[i]) > comparisonValue) overValues++;
     }
-    int maxOvers = Utility::Lerp(4, numFrames / 50.0, 1.0 - ((sensitivity -10) / 240.0));
-    qDebug() << "Max Overs: " << maxOvers;
+    int maxOvers = Utility::Lerp(numFrames / 30.0, 2, lerpPoint);
+    qDebug() << "1st order overages: " << overValues << "   Max Overs: " << maxOvers;
     if (overValues > maxOvers) isGood = false;
+
+    if (isGood)
+    {
+        //now look at the second order differentials. This is acceleration. There shouldn't be hard acceleration in values for a ranging signal
+        comparisonValue = Utility::Lerp((double)range * 0.20, 1, lerpPoint);
+        maxOvers = Utility::Lerp(8, 2, lerpPoint); //really clamp down on second order over limits
+        qDebug() << "2nd Delta comparisonvalue: " << comparisonValue;
+        overValues = 0;
+        for (i = 0; i < diff2.count(); i++)
+        {
+            if (abs(diff2[i]) > comparisonValue) overValues++;
+        }
+        if (overValues > maxOvers) isGood = false;
+        qDebug() << "2nd order overages: " << overValues << "   Max Overs: " << maxOvers;
+        if (overValues > maxOvers) isGood = false;
+    }
+
     qDebug() << "Is this signal good: " << isGood << " Num overs: " << overValues;
     if (isGood)
     {

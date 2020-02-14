@@ -39,6 +39,7 @@ private:
 
     void refreshIDList();
     void refreshFrameNumbers();
+    bool eventFilter(QObject *obj, QEvent *event);
 };
 
 #endif // BISECTWINDOW_H

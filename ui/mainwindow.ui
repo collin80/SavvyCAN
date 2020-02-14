@@ -26,7 +26,7 @@
    <string>SavvyCAN</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,0">
     <item>
      <widget class="QTableView" name="canFramesView">
       <property name="font">
@@ -39,6 +39,9 @@
       <property name="alternatingRowColors">
        <bool>true</bool>
       </property>
+      <property name="verticalScrollMode">
+       <enum>QAbstractItemView::ScrollPerPixel</enum>
+      </property>
       <property name="wordWrap">
        <bool>false</bool>
       </property>
@@ -46,6 +49,65 @@
     </item>
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLabel" name="lblRemoteConn">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Remote Connection Active:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="lineRemoteKey">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>1000</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="baseSize">
+         <size>
+          <width>150</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="maxLength">
+         <number>8</number>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="lblContMsg">
+        <property name="font">
+         <font>
+          <pointsize>11</pointsize>
+          <weight>75</weight>
+          <italic>true</italic>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
       <item alignment="Qt::AlignHCenter">
        <widget class="QLabel" name="label">
         <property name="sizePolicy">
@@ -138,6 +200,9 @@
       </item>
       <item>
        <widget class="QCheckBox" name="cbOverwrite">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="text">
          <string>Overwrite Mode</string>
         </property>
@@ -200,7 +265,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>19</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
@@ -216,6 +281,8 @@
     <addaction name="actionISO_TP_Decoder"/>
     <addaction name="actionSniffer"/>
     <addaction name="actionCapture_Bisector"/>
+    <addaction name="actionSignal_Viewer"/>
+    <addaction name="actionTemporal_Graph"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -236,6 +303,8 @@
     <addaction name="actionOpen_Log_File"/>
     <addaction name="actionSave_Filtered_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="actionSave_Continuous_Logfile"/>
+    <addaction name="separator"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
@@ -356,7 +425,7 @@
   </action>
   <action name="actionSetup">
    <property name="text">
-    <string>Open Connection WIndow</string>
+    <string>Open Connection Window</string>
    </property>
   </action>
   <action name="actionConnect">
@@ -417,6 +486,21 @@
   <action name="actionCapture_Bisector">
    <property name="text">
     <string>Capture Bisector</string>
+   </property>
+  </action>
+  <action name="actionSignal_Viewer">
+   <property name="text">
+    <string>Signal Viewer</string>
+   </property>
+  </action>
+  <action name="actionSave_Continuous_Logfile">
+   <property name="text">
+    <string>Start Continuous Logging</string>
+   </property>
+  </action>
+  <action name="actionTemporal_Graph">
+   <property name="text">
+    <string>Temporal Graph</string>
    </property>
   </action>
  </widget>

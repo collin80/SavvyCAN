@@ -1,0 +1,40 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>17. DBC Message Editor</title>
+    <link rel="stylesheet" href="_static/nonav.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> 
+  </head><body>
+
+    <div class="document">
+      <div class="documentwrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="dbc-message-editor">
+<h1>17. DBC Message Editor</h1>
+<p>.</p>
+<img alt="_images/DBCEditor.png" src="_images/DBCEditor.png" />
+</div>
+<div class="section" id="working-with-nodes">
+<h1>18. Working with Nodes</h1>
+<p>In DBC files a node is a device on the CAN bus. For instance, the engine control unit (ECU) would be a node as would a motor controller, a battery charger, or any other device that is connected to the CAN bus. DBC files let you define nodes that are
+set as either the sender or receiver of a message. This allows messages to be organized for more easy retrieval. To add
+a new node click on the empty row beneath the last defined node and type a new name and optionally a comment. The comment is not used by SavvyCAN but can be filled out for your own reference. When a node is selected in the top list you will then see
+in the bottom a listing of every message it sends.</p>
+</div>
+<div class="section" id="working-with-messages">
+<h1>19. Working with Messages</h1>
+<p>The bottom list is all of the messages that are sent by the selected node. A message is defined based on its message ID. The message ID is the CAN id used for this message. For normal DBC files this creates a one to one correspondance of ID to a given CAN ID. For J1939 messages special masking is done and so more than one actual CAN id will map to the given message ID but still only one specific J1939 PGN will come through. Once a message ID is entered in for a new message it will attempt to auto populate the Data Len column with the number of data bytes that message has. This is only for your information, it is not used by SavvyCAN. You can give the DBC message a meaningful name. The “Fg” and “Bg” columns can be clicked on to set a color. This will set the foreground and background color to use for this message. These colors will be used in the main frame view on the main screen when you click “Interpret Frames.” Clicking on the “Signals” column will bring up the signals editor for that message so that you can edit, add, or remove signals from the message. The “Comments” column is once again not used by SavvyCAN and only for your viewing reference.</p>
+</div>
+
+
+          </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+  </body>
+</html>

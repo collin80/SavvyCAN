@@ -1,9 +1,10 @@
 #include <QDateTime>
+#include <QSettings>
 
 #include "canconmanager.h"
+#include "canconfactory.h"
 
-
-CANConManager* CANConManager::mInstance = NULL;
+CANConManager* CANConManager::mInstance = nullptr;
 
 CANConManager* CANConManager::getInstance()
 {
@@ -13,33 +14,49 @@ CANConManager* CANConManager::getInstance()
     return mInstance;
 }
 
-
 CANConManager::CANConManager(QObject *parent): QObject(parent)
 {
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(refreshCanList()));
-    mTimer.setInterval(125); /*tick 8 times a second */
+    mTimer.setInterval(20); /*Tick 50 times per second to allow for good resolution in reception where needed. GUI updates *MUCH* more slowly*/
     mTimer.setSingleShot(false);
     mTimer.start();
 
+    mNumActiveBuses = 0;
+
     resetTimeBasis();
+
+    QSettings settings;
+
+    if (settings.value("Main/TimeClock", false).toBool())
+    {
+        useSystemTime = true;
+    }
+    else useSystemTime = false;
 }
 
 void CANConManager::resetTimeBasis()
 {
     mTimestampBasis = QDateTime::currentMSecsSinceEpoch() * 1000;
+    mElapsedTimer.restart();
 }
 
 CANConManager::~CANConManager()
 {
     mTimer.stop();
-    mInstance = NULL;
+    mInstance = nullptr;
 }
 
+void CANConManager::stopAllConnections()
+{
+    foreach (CANConnection *conn, mConns)
+    {
+        conn->stop();
+    }
+}
 
 void CANConManager::add(CANConnection* pConn_p)
-{    
+{
     mConns.append(pConn_p);
-    emit connectionStatusUpdated(getNumBuses());
 }
 
 
@@ -47,7 +64,11 @@ void CANConManager::remove(CANConnection* pConn_p)
 {
     //disconnect(pConn_p, 0, this, 0);
     mConns.removeOne(pConn_p);
-    emit connectionStatusUpdated(getNumBuses());
+}
+
+void CANConManager::replace(int idx, CANConnection* pConn_p)
+{
+    mConns.replace(idx, pConn_p);
 }
 
 //Get total number of buses currently registered with the program
@@ -61,9 +82,32 @@ int CANConManager::getNumBuses()
     return buses;
 }
 
+int CANConManager::getBusBase(CANConnection *which)
+{
+    int buses = 0;
+    foreach(CANConnection* conn_p, mConns)
+    {
+        if (conn_p != which) buses += conn_p->getNumBuses();
+        else return buses;
+    }
+    return -1;
+}
+
 void CANConManager::refreshCanList()
 {
     QObject* sender_p = QObject::sender();
+
+    if (mConns.count() == 0)
+    {
+        tempFrames.clear();
+        //TODO: Seems to crash under heavy load. Find out why.
+        if(buslessFrames.size()) {            
+            tempFrames = buslessFrames; //make a copy and pass that copy
+            buslessFrames.clear(); //delete all frames from the original
+            emit framesReceived(nullptr, tempFrames);
+        }
+        return;
+    }
 
     if( sender_p != &mTimer)
     {
@@ -98,15 +142,26 @@ CANConnection* CANConManager::getByName(const QString& pName) const
             return conn_p;
     }
 
-    return NULL;
+    return nullptr;
 }
 
 
 void CANConManager::refreshConnection(CANConnection* pConn_p)
 {
-    if (pConn_p->getQueue().peek() == NULL) return;
+    unsigned int buses = 0;
+    foreach(CANConnection* conn_p, mConns)
+    {
+        if (conn_p->getStatus() == CANCon::CONNECTED) buses += conn_p->getNumBuses();
+    }
+    if (buses != mNumActiveBuses)
+    {
+        mNumActiveBuses = buses;
+        emit connectionStatusUpdated(buses);
+    }
 
-    CANFrame* frame_p = NULL;
+    if (pConn_p->getQueue().peek() == nullptr) return;
+
+    CANFrame* frame_p = nullptr;
     QVector<CANFrame> frames;
 
     //Each connection only knows about its own bus numbers
@@ -150,6 +205,12 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     CANFrame workingFrame = pFrame;
     CANFrame *txFrame;
 
+    if (mConns.count() == 0)
+    {
+        buslessFrames.append(pFrame);
+        return true;
+    }
+
     foreach (CANConnection* conn, mConns)
     {
         //check if this CAN connection is supposed to handle the requested bus
@@ -157,7 +218,15 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
-            workingFrame.timestamp = ((QDateTime::currentMSecsSinceEpoch() * 1000) - mTimestampBasis);
+            if (useSystemTime)
+            {
+                workingFrame.timestamp = (QDateTime::currentMSecsSinceEpoch() * 1000);
+            }
+            else
+            {
+                workingFrame.timestamp = mElapsedTimer.nsecsElapsed() / 1000;
+                //workingFrame.timestamp -= mTimestampBasis;
+            }
             txFrame = conn->getQueue().get();
             *txFrame = workingFrame;
             conn->getQueue().queue();
@@ -184,20 +253,17 @@ bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
 //the bus numbers if bus wasn't -1 so that they're local to the device
 bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-    int tempBusVal;
-    int busBase = 0;    
+    //int tempBusVal;
+    int busBase = 0;
 
     foreach (CANConnection* conn, mConns)
     {
         if (pBusId == -1) conn->addTargettedFrame(pBusId, ID, mask, receiver);
-        else
+        else if (pBusId < (busBase + conn->getNumBuses()))
         {
-            tempBusVal = pBusId >> busBase;
-            tempBusVal &= ((1 << conn->getNumBuses()) - 1);
-            if (tempBusVal) {
-                qDebug() << "Forwarding targetted frame setting to a connection object";
-                conn->addTargettedFrame(tempBusVal, ID, mask, receiver);
-            }
+            qDebug() << "Forwarding targetted frame setting to a connection object";
+            conn->addTargettedFrame(pBusId - busBase, ID, mask, receiver);
+
         }
         busBase += conn->getNumBuses();
     }
@@ -206,17 +272,17 @@ bool CANConManager::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
 
 bool CANConManager::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-    int tempBusVal;
+    //int tempBusVal;
     int busBase = 0;
 
     foreach (CANConnection* conn, mConns)
     {
         if (pBusId == -1) conn->removeTargettedFrame(pBusId, ID, mask, receiver);
-        else
+        else if (pBusId < (busBase + conn->getNumBuses()))
         {
-            tempBusVal = pBusId >> busBase;
-            tempBusVal &= ((1 << conn->getNumBuses()) - 1);
-            if (tempBusVal) conn->removeTargettedFrame(tempBusVal, ID, mask, receiver);
+            qDebug() << "Forwarding targetted frame setting to a connection object";
+            conn->removeTargettedFrame(pBusId - busBase, ID, mask, receiver);
+
         }
         busBase += conn->getNumBuses();
     }

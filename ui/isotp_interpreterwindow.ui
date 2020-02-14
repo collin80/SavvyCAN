@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>792</width>
+    <width>830</width>
     <height>725</height>
    </rect>
   </property>
@@ -24,10 +24,35 @@
    <item>
     <widget class="QTableWidget" name="tableIsoFrames"/>
    </item>
-   <item alignment="Qt::AlignHCenter">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QPushButton" name="btnCaptured">
+       <property name="text">
+        <string>Interpret Previously Captured Frames</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClearList">
+       <property name="text">
+        <string>Clear Messages List</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item alignment="Qt::AlignLeft">
     <widget class="QCheckBox" name="cbShowIncomplete">
      <property name="text">
       <string>Show incomplete and/or corrupted messages</string>
+     </property>
+    </widget>
+   </item>
+   <item alignment="Qt::AlignLeft">
+    <widget class="QCheckBox" name="cbUseExtendedAddressing">
+     <property name="text">
+      <string>Use extended addressing</string>
      </property>
     </widget>
    </item>
@@ -43,42 +68,14 @@
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
-         <item>
-          <widget class="QLabel" name="label_3">
-           <property name="text">
-            <string>Interpret As:</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="rbRaw">
-           <property name="text">
-            <string>Raw</string>
-           </property>
-           <property name="checked">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="rbUDS">
-           <property name="text">
-            <string>UDS</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QRadioButton" name="rbOBDII">
-           <property name="text">
-            <string>OBDII</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <layout class="QHBoxLayout" name="horizontalLayout_3"/>
        </item>
        <item>
-        <widget class="QTextBrowser" name="txtFrameDetails"/>
+        <widget class="QPlainTextEdit" name="txtFrameDetails">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
@@ -92,7 +89,11 @@
         </widget>
        </item>
        <item>
-        <widget class="QListWidget" name="listFilter"/>
+        <widget class="QListWidget" name="listFilter">
+         <property name="sortingEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">

@@ -6,6 +6,7 @@
 #include <QListWidget>
 #include <QTreeWidget>
 #include "can_structs.h"
+#include "bus_protocols/j1939_handler.h"
 
 namespace Ui {
 class FrameInfoWindow;
@@ -31,9 +32,13 @@ private:
     QList<int> foundID;
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
+    bool useOpenGL;
+    static const QColor byteGraphColors[8];
+    static QPen bytePens[8];
 
     void refreshIDList();
     void closeEvent(QCloseEvent *event);
+    bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
     void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);

@@ -1,13 +1,10 @@
 Main / Start Up Screen
 ======================
 
-**SavvyCAN main screen**
-
 .. image:: ./images/MainScreen.png
 
 This screen embodies the core of the program. Here you will find the master list of all frames. Also, here you can navigate to the other aspects
-of the program. You can have multiple sub-windows open at once - in fact, quite often this is very beneficial. This screen is also used to 
-connect to a GVRET compatible device. But, one thing at a time.
+of the program. You can have multiple sub-windows open at once - in fact, quite often this is very beneficial.
 
 
 The Main Frame List
@@ -17,10 +14,11 @@ The main frame list takes up the majority of the main screen. This list consists
 
 - Timestamp: The timestamp is either in microseconds or seconds. This is a setting in preferences. Either way, the timestamp can have
   microsecond resolution. The difference is just whether there is a decimal point or not. GVRET has the ability to maintain full microsecond
-  resolution for timestamping purposes.
+  resolution for timestamping purposes. There is a third timing mode where the timestamp can be customized and is based upon the actual "clock" time.
 - ID: The ID is specified either in hexadecimal or decimal (a preference you can set). This is the message identifier sent over the CAN bus.
 - Ext: 0 = Standard message (11 bit ID). 1 = Extended message (29 bit ID)
-- Bus: SavvyCAN was meant for use with GVRET compatible capture devices. GVRET supports two buses labeled 0 and 1. The bus a frame came in on
+- Dir: Either "Rx" or "Tx" to show whether SavvyCAN has received or sent this message.
+- Bus: SavvyCAN supports a variety of capture hardware. GVRET compatible devices can support more than one bus. The bus a frame came in on
   is specified here. Many file formats do not specify bus and thus all frames will be loaded as bus 0.
 - Len: The number of data bytes that were sent with this frame. It can range from 0 to 8.
 - Data: All of the data bytes separated by spaces. Can be in either hexadecimal or decimal (preference). If "Interpet Frames" is checked you will
@@ -31,28 +29,16 @@ The main frame list takes up the majority of the main screen. This list consists
 The Bottom Statusbar
 ====================
 
-At the very bottom of the main screen is a status bar with three sections. 
+At the very bottom of the main screen is a status bar with two sections. 
 
-* The first section shows the connection status. If you are connected to a GVRET compatible dongle you will see the 
-  version of the connected device here. 
+* The first section shows the connection status. You will see the number of currently connected buses here.
 * The second second section shows which file is currently loaded. This is updated by loading or saving.
-* The third section shows whether a DBC file is currently loaded and which one. DBC files are used to interpret messages.
-
-
-Connecting To A Dongle
-======================
-
-SavvyCAN is able to connect to GVRET compatible devices to capture new traffic. These devices will present as serial ports on the connected PC.
-To connect to a dongle select the proper serial port and click "Connect to GVRET". If a valid device is found on that serial port the first
-statusbar section will update and the currently set canbus speeds will show in the drop down lists below the button. These speeds can then
-be changed. Changes to canbus speed will only take effect when you click "Set CANBUS Speeds". The program will let you know if the connection
-was not successful.
 
 
 The Rest of the Main Window
 ===========================
 
-Below the dongle configuration is an area that shows the total number of captured frames and the frames per second. Total frames might not match
+To the right of the main frames list is an area that shows the total number of captured frames and the frames per second. Total frames might not match
 the number of shown frames. If you've deselected any IDs in the filter list then fewer frames will be shown. Frames per second is calculated as
 an average and so will wind up or down when there is a sudden change.
 
@@ -75,25 +61,27 @@ this off for performance reasons (interpreting takes some extra processor power 
 The "Overwrite Mode" checkbox is used to ensure that only the newest frame for each message ID is shown. That is, if 100 messages with ID 0x105 come in you
 will see only the newest one. This is generally used along side "Interpret Frames" to interpret frames and always see the up-to-date information.
 
+"Frame Filtering" provides a list of all the frame IDs seen so far. Any ID which is checked will be shown in the main list. Any ID which is unchecked will not.
+This can be used to hone in on frames of importance while hiding frames that are currently of no interest. The filtered list can be saved as well.
+
 
 Loading And Saving Frames
 =========================
 
 What CANBus analysis tool would be complete without an easy way to load and save frames? 
 
-SavvyCAN can load and save in several formats:
+SavvyCAN can load and save in several formats (a few of which are listed below):
 	- CRTD: This format was made by Mark Webb-Johnson for OVMS (open vehicle monitoring system) and other related tools. It is a reasonably 
-	  readable and compact format. GVRET defaults to saving in this format. One reason one might not want to use CRTD is if knowing which bus
-	  a frame originated on is important. CRTD does not save that information.
-	- GVRET: This is the native format for GVRET and SavvyCAN. One might then ask why CRTD is the default. Well, for compatibility with 
-	  OVMS tools. Otherwise, the GVRET format saves more information such as the bus a frame originated on. This format is in CSV 
+	  readable and compact format.
+	- GVRET: This is the native format for GVRET and SavvyCAN. The GVRET format saves more information such as the bus a frame originated on. This format is in CSV 
 	  (comma delimited) format and as such can easily be loaded into your favorite spreadsheet program as well.
 	- Generic ID/DATA - Another CSV format. This is a very cut down format with limited information.
 	- BusMaster - This is the format output by the BusMaster CANBus program. BusMaster is an open source Windows-only somewhat clone 
 	  of CANAlyzer (the 800lb gorilla in the analysis space). The ability to load and save in this format makes SavvyCAN fully capable 
 	  of swapping data with BusMaster should you need to do so.
-	- Microchip - Format output by Microchip CANBus tools. Perhaps you have logs that were 
-	  captured with a $100 Microchip dongle? You can load them in SavvyCAN.
+	- Microchip - Format output by Microchip CANBus tools. Perhaps you have logs that were captured with a $100 Microchip dongle? You can load them in SavvyCAN.
+
+There are many other formats supported. Some are only supported for writing, some only for reading. The list of supported formats is expanded every so often.
 
 
 Filters
@@ -126,7 +114,6 @@ to figure out the actual details of that signal.
 How DBC interacts with the main screen:
 =======================================
 	
-First of all, one can load and save DBC files from the File menu. Also, one can edit the currently loaded DBC file (or start working on 
-one if one is not loaded). It is also possible to save the currently loaded frames but with DBC decoding. This is somewhat like the normal
-saving functionality with a two differences: there is only one output format and that format has all signals contained in each message listed
-and decoded.
+First of all, one can load and save DBC files from the "DBC File Manager" found in the File menu. Also in the File menu it is possible to save the currently
+loaded frames but with DBC decoding. This is somewhat like the normal saving functionality with a two differences: there is only one output format
+and that format has all signals contained in each message listed and decoded.

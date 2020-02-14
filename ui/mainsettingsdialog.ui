@@ -6,163 +6,373 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>580</height>
+    <width>965</width>
+    <height>591</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Main Settings</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QHBoxLayout" name="horizontalLayout_5" stretch="1,1">
    <item>
-    <widget class="QGroupBox" name="groupBox">
-     <property name="title">
-      <string>General Settings:</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QCheckBox" name="cbRestorePositions">
-        <property name="text">
-         <string>Save/Restore window positions and sizes</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="cbDisplayHex">
-        <property name="text">
-         <string>Display values as hexadecimal</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="cbValidate">
-        <property name="text">
-         <string>Require validation of GVRET connection</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="cbTimeSeconds">
-        <property name="text">
-         <string>Display time in seconds</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="cbUseFiltered">
-        <property name="text">
-         <string>Use filtered frames in sub-windows</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_2">
-     <property name="title">
-      <string>Main Form Settings:</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_3">
-      <item>
-       <widget class="QCheckBox" name="cbMainAutoScroll">
-        <property name="text">
-         <string>Autoscroll main frame window by default</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_3">
-     <property name="title">
-      <string>Flowview Settings:</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_4">
-      <item>
-       <widget class="QCheckBox" name="cbFlowUseTimestamp">
-        <property name="text">
-         <string>Use timestamp mode by default</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QCheckBox" name="cbFlowAutoRef">
-        <property name="text">
-         <string>Set Auto Reference by default</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item>
-    <widget class="QGroupBox" name="groupBox_4">
-     <property name="title">
-      <string>Playback Window Settings:</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_5">
-      <item>
-       <widget class="QCheckBox" name="cbPlaybackLoop">
-        <property name="text">
-         <string>Loop by default</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QGroupBox" name="groupBox_2">
+       <property name="title">
+        <string>Main Form Settings:</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="QLabel" name="label">
+         <widget class="QCheckBox" name="cbMainAutoScroll">
           <property name="text">
-           <string>Default playback speed (ms)</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSpinBox" name="spinPlaybackSpeed">
-          <property name="maximum">
-           <number>1000</number>
+           <string>Autoscroll main frame window by default</string>
           </property>
          </widget>
         </item>
        </layout>
-      </item>
-      <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>General Settings:</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QLabel" name="label_2">
+         <widget class="QCheckBox" name="cbRestorePositions">
           <property name="text">
-           <string>Default Sending Bus</string>
+           <string>Save/Restore window positions and sizes</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="comboSendingBus"/>
+         <widget class="QCheckBox" name="cbLoadConnections">
+          <property name="text">
+           <string>Save/Restore CAN bus connections</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbDisplayHex">
+          <property name="text">
+           <string>Display values as hexadecimal</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbValidate">
+          <property name="text">
+           <string>Require validation of GVRET connection</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbUseFiltered">
+          <property name="text">
+           <string>Use filtered frames in sub-windows</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbFilterLabeling">
+          <property name="text">
+           <string>Label filters using messages from DBC files</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbUseOpenGL">
+          <property name="text">
+           <string>OpenGL Accelerated AntiAliased Graphing</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_6">
+          <property name="title">
+           <string>Time Keeping</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_7">
+           <item>
+            <widget class="QLabel" name="label_3">
+             <property name="text">
+              <string>Seconds/Microseconds are dongle based</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QRadioButton" name="rbSeconds">
+               <property name="text">
+                <string>Seconds</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="rbMicros">
+               <property name="text">
+                <string>Microseconds</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="rbSysClock">
+               <property name="text">
+                <string>System Clock</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_3">
+             <item>
+              <widget class="QLabel" name="label_4">
+               <property name="text">
+                <string>Time Format String:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="lineClockFormat"/>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_7">
+          <property name="title">
+           <string>Font Size</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_8">
+           <item>
+            <widget class="QSpinBox" name="spinFontSize">
+             <property name="minimum">
+              <number>7</number>
+             </property>
+             <property name="maximum">
+              <number>15</number>
+             </property>
+             <property name="value">
+              <number>9</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_3">
+          <property name="title">
+           <string>Flowview Settings:</string>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="QCheckBox" name="cbFlowUseTimestamp">
+             <property name="text">
+              <string>Use timestamp mode by default</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="cbFlowAutoRef">
+             <property name="text">
+              <string>Set Auto Reference by default</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <spacer name="verticalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
         </item>
        </layout>
-      </item>
-     </layout>
-    </widget>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_5">
-     <property name="title">
-      <string>File Info and Comparator Settings:</string>
-     </property>
-     <layout class="QVBoxLayout" name="verticalLayout_6">
-      <item>
-       <widget class="QCheckBox" name="cbInfoAutoExpand">
-        <property name="text">
-         <string>Auto expand all nodes</string>
-        </property>
-       </widget>
-      </item>
-     </layout>
-    </widget>
+    <layout class="QVBoxLayout" name="verticalLayout_9">
+     <item>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="title">
+        <string>Playback Window Settings:</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QCheckBox" name="cbPlaybackLoop">
+          <property name="text">
+           <string>Loop by default</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Default playback speed (ms)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinPlaybackSpeed">
+            <property name="maximum">
+             <number>1000</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_2">
+            <property name="text">
+             <string>Default Sending Bus</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboSendingBus"/>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_5">
+       <property name="title">
+        <string>File Info and Comparator Settings:</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
+        <item>
+         <widget class="QCheckBox" name="cbInfoAutoExpand">
+          <property name="text">
+           <string>Auto expand all nodes</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_8">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="title">
+        <string>Remote Connection:</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_6">
+          <property name="text">
+           <string>Host:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_7">
+          <property name="text">
+           <string>Port:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="lineRemoteHost"/>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="lineRemotePort"/>
+        </item>
+        <item row="2" column="1">
+         <widget class="QCheckBox" name="cbAutoStartRemote">
+          <property name="text">
+           <string>Auto start remote hosting</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_5">
+       <property name="text">
+        <string>Some settings will not take effect until the application is restarted</string>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>cbMainAutoScroll</tabstop>
+  <tabstop>cbRestorePositions</tabstop>
+  <tabstop>cbLoadConnections</tabstop>
+  <tabstop>cbDisplayHex</tabstop>
+  <tabstop>cbValidate</tabstop>
+  <tabstop>cbUseFiltered</tabstop>
+  <tabstop>cbUseOpenGL</tabstop>
+  <tabstop>rbSeconds</tabstop>
+  <tabstop>rbMicros</tabstop>
+  <tabstop>rbSysClock</tabstop>
+  <tabstop>lineClockFormat</tabstop>
+  <tabstop>spinFontSize</tabstop>
+  <tabstop>cbFlowUseTimestamp</tabstop>
+  <tabstop>cbFlowAutoRef</tabstop>
+  <tabstop>cbPlaybackLoop</tabstop>
+  <tabstop>spinPlaybackSpeed</tabstop>
+  <tabstop>comboSendingBus</tabstop>
+  <tabstop>cbInfoAutoExpand</tabstop>
+  <tabstop>lineRemoteHost</tabstop>
+  <tabstop>lineRemotePort</tabstop>
+  <tabstop>cbAutoStartRemote</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

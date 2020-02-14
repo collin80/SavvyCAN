@@ -5,9 +5,8 @@
 #include <QAbstractTableModel>
 
 #include "canbus.h"
-#include "connections/canconnection.h"
-#include "connectionwindow.h"
 
+class CANConnection;
 
 class CANConnectionModel : public QAbstractTableModel
 {
@@ -21,12 +20,14 @@ public:
     QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
     int columnCount(const QModelIndex &parent = QModelIndex()) const override;
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
+    void replace(int idx , CANConnection* pConn_p);
 
-    CANConnection* getAtIdx(int, int&) const;
+    CANConnection* getAtIdx(int) const;
     void refresh(int pIndex=-1);
 };
 

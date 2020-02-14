@@ -9,53 +9,48 @@ struct CANFrame
 {
 public:
     uint32_t ID;
-    uint32_t bus;
+    int bus;
     bool extended;
+    bool remote;
     bool isReceived; //did we receive this or send it?
-    uint32_t len;
+    int len;
     unsigned char data[8];
     uint64_t timestamp;
+    uint64_t timedelta;
+    uint32_t frameCount; //used in overwrite mode
+
+    friend bool operator<(const CANFrame& l, const CANFrame& r)
+    {
+        return l.timestamp < r.timestamp;
+    }
+
+    CANFrame()
+    {
+        ID = 0;
+        bus = 0;
+        extended = false;
+        remote = false;
+        isReceived = true;
+        len = 0;
+        timestamp = 0;
+        timedelta = 0;
+        frameCount = 1;
+    }
 };
 
-class CANFlt
+class CANFltObserver
 {
 public:
     quint32 id;
     quint32 mask;
     QObject * observer; //used to target the specific object that setup this filter
 
-    bool operator ==(const CANFlt &b) const
+    bool operator ==(const CANFltObserver &b) const
     {
         if ( (id == b.id) && (mask == b.mask) && (observer == b.observer) ) return true;
 
         return false;
     }
-};
-
-struct J1939ID
-{
-public:
-    int src;
-    int dest;
-    int pgn;
-    int pf;
-    int ps;
-    int priority;
-    bool isBroadcast;
-};
-
-//the same as the CANFrame struct but with arbitrary data size.
-struct ISOTP_MESSAGE
-{
-public:
-    uint32_t ID;
-    int bus;
-    bool extended;
-    bool isReceived;
-    int len; //# of bytes this message should have (as reported)
-    int actualSize; //# we actually got
-    QVector<unsigned char> data;
-    uint64_t timestamp;
 };
 
 #endif // CAN_STRUCTS_H

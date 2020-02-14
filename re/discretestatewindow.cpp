@@ -1,12 +1,14 @@
 #include "discretestatewindow.h"
 #include "ui_discretestatewindow.h"
 #include "mainwindow.h"
+#include "helpwindow.h"
 
 DiscreteStateWindow::DiscreteStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DiscreteStateWindow)
 {
     ui->setupUi(this);
+    setWindowFlags(Qt::Window);
 
     modelFrames = frames;
     operatingState = DWStates::IDLE;
@@ -55,10 +57,12 @@ DiscreteStateWindow::DiscreteStateWindow(const QVector<CANFrame> *frames, QWidge
             });
 
     refreshFilterList();
+    installEventFilter(this);
 }
 
 DiscreteStateWindow::~DiscreteStateWindow()
 {
+    removeEventFilter(this);
     timer->stop();
 
     for (int i = 0; i < stateFrames.count(); i++)
@@ -69,6 +73,24 @@ DiscreteStateWindow::~DiscreteStateWindow()
 
     delete timer;
     delete ui;
+}
+
+bool DiscreteStateWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::KeyRelease) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        switch (keyEvent->key())
+        {
+        case Qt::Key_F1:
+            HelpWindow::getRef()->showHelp("discretestate.html");
+            break;
+        }
+        return true;
+    } else {
+        // standard event processing
+        return QObject::eventFilter(obj, event);
+    }
+    return false;
 }
 
 void DiscreteStateWindow::typeChanged()
@@ -121,13 +143,13 @@ void DiscreteStateWindow::updatedFrames(int numFrames)
             if (!idFilters.contains(thisFrame.ID))
             {
                 idFilters.insert(thisFrame.ID, true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(thisFrame.ID), ui->listID);
+                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.ID, thisFrame.extended), ui->listID);
                 listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
                 listItem->setCheckState(Qt::Checked); //default all filters to be set active
             }
 
-            if (operatingState == DWStates::IDLE) stateFrames[0]->append(thisFrame);
-            else stateFrames[currToggleState + 1]->append(thisFrame);
+            //if (operatingState == DWStates::IDLE) stateFrames[0]->append(thisFrame);
+            //else stateFrames[currToggleState + 1]->append(thisFrame);
         }
     }
 }
@@ -141,11 +163,12 @@ void DiscreteStateWindow::refreshFilterList()
 
     for (int i = 0; i < modelFrames->length(); i++)
     {
-        id = modelFrames->at(i).ID;
+        CANFrame thisFrame = modelFrames->at(i);
+        id = thisFrame.ID;
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
-            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatNumber(id), ui->listID);
+            QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(id, thisFrame.extended), ui->listID);
             listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
             listItem->setCheckState(Qt::Checked); //default all filters to be set active
         }
