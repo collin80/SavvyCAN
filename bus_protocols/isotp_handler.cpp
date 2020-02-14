@@ -59,12 +59,13 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     lastSenderID = ID;
     lastSenderBus = bus;
 
+    frame.bus = bus;
+    frame.setFrameId(ID);
+    if (ID > 0x7FF) frame.setExtendedFrameFormat(true);
+    else frame.setExtendedFrameFormat(false);
+
     if (data.length() < 8)
     {
-        frame.bus = bus;
-        frame.setFrameId(ID);
-        if (ID > 0x7FF) frame.setExtendedFrameFormat(true);
-        else frame.setExtendedFrameFormat(false);
         QByteArray bytes(8,0);
         bytes.resize(8);
         bytes[0] = data.length();
@@ -74,10 +75,6 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
-        frame.bus = bus;
-        frame.setFrameId(ID);
-        if (ID > 0x7FF) frame.setExtendedFrameFormat(true);
-        else frame.setExtendedFrameFormat(false);
         QByteArray bytes(8, 0);
         bytes[0] = 0x10 + (data.length() / 256);
         bytes[1] = data.length() & 0xFF;
@@ -159,7 +156,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     //int offset;
     ISOTP_MESSAGE msg;
     ISOTP_MESSAGE *pMsg;
-    unsigned char *data = reinterpret_cast<unsigned char *>(frame.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
     //int dataLen = frame.payload().count();
 
     frameType = 0;

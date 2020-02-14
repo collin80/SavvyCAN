@@ -77,7 +77,7 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
 
 void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
 {
-    unsigned char *data = reinterpret_cast<unsigned char *>(frame.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
     int dataLen = frame.payload().count();
 
     qDebug() << "FUW: Got targetted frame with id " << frame.frameId();

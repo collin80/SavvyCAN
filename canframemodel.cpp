@@ -360,7 +360,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     thisFrame = filteredFrames.at(index.row());
 
-    unsigned char *data = reinterpret_cast<unsigned char *>(thisFrame.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(thisFrame.payload().constData());
     int dataLen = thisFrame.payload().count();
 
     if (role == Qt::BackgroundColorRole)
@@ -551,6 +551,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     mutex.lock();
     CANFrame tempFrame;
     tempFrame = frame;
+
     tempFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempFrame.timeStamp().microSeconds() - timeOffset));
 
     lastUpdateNumFrames++;

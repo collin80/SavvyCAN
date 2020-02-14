@@ -77,6 +77,12 @@ public:
      */
     CANCon::status getStatus();
 
+    /**
+     * @brief setConsoleOutput
+     * @param state - set whether to send debugging info to the console or not
+     */
+    void setConsoleOutput(bool state);
+
 
 signals:
     /*not implemented yet */
@@ -194,6 +200,7 @@ public slots:
 protected:
     int mNumBuses; //protected to allow connected device to figure out how many buses are available
     QVector<BusData> mBusData;
+    bool mConsoleOutput; //send debugging info to the console?
 
     //determine if the passed frame is part of a filter or not.
     void checkTargettedFrame(CANFrame &frame);

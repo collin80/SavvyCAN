@@ -397,7 +397,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
 {
     QVector<double>newX[8];
     QVector<double>newY[8];
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen = 0;
 
     const CANFrame *thisFrame;
@@ -436,7 +436,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = &modelFrames->at(i);
-            data = reinterpret_cast<unsigned char *>(thisFrame->payload().data());
+            data = reinterpret_cast<const unsigned char *>(thisFrame->payload().constData());
             dataLen = thisFrame->payload().length();
 
             if (!foundID.contains(thisFrame->frameId()))
@@ -502,7 +502,7 @@ void FlowViewWindow::createGraph(int byteNum)
 {
     int tempVal;
     float minval=1000000, maxval = -100000;
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen = 0;
     const CANFrame *frame;
 
@@ -520,7 +520,7 @@ void FlowViewWindow::createGraph(int byteNum)
     for (int j = 0; j < numEntries; j++)
     {
         frame = &frameCache[j];
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().length();
 
         tempVal = data[byteNum];

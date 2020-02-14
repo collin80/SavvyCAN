@@ -255,7 +255,7 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     //qDebug() << "Got frame in script interface";
 
-    unsigned char *data = reinterpret_cast<unsigned char *>(frame.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
     int dataLen = frame.payload().length();
 
     for (int i = 0; i < filters.length(); i++)
@@ -310,14 +310,13 @@ void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJ
     msg.setFrameId(id.toUInt());
     msg.payload().resize(length.toInt());
 
-    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
     int dataLen = msg.payload().length();
 
     if (!dataBytes.isArray()) qDebug() << "data isn't an array";
 
     for (int i = 0; i < dataLen; i++)
     {
-        data[i] = static_cast<uint8_t>(dataBytes.property(i).toInt());
+        msg.payload()[i] = static_cast<int8_t>(dataBytes.property(i).toInt());
     }
 
     msg.bus = bus.toInt();

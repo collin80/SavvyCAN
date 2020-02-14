@@ -6,7 +6,7 @@
 SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
     mID(pFrame.frameId())
 {
-    unsigned char *data = reinterpret_cast<unsigned char *>(pFrame.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
     int dataLen = pFrame.payload().length();
 
     for (int i = 0; i < 0; i++) {
@@ -117,7 +117,7 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
     mLastTime = mCurrentTime;
     mCurrSeqVal = timeSeq;
 
-    unsigned char *data = reinterpret_cast<unsigned char *>(pFrame.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
     int dataLen = pFrame.payload().length();
 
     /* copy new value */

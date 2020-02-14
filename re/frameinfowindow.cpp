@@ -278,7 +278,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (thisFrame.frameId() == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
 
-        unsigned char *data = reinterpret_cast<unsigned char *>(frameCache.at(0).payload().data());
+        const unsigned char *data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
         int dataLen = frameCache.at(0).payload().length();
 
         ui->treeDetails->clear();
@@ -367,7 +367,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
         for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
 
-        data = reinterpret_cast<unsigned char *>(frameCache.at(0).payload().data());
+        data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
         dataLen = frameCache.at(0).payload().length();
 
         for (int c = 0; c < dataLen; c++)
@@ -383,7 +383,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
         {
-            data = reinterpret_cast<unsigned char *>(frameCache.at(j).payload().data());
+            data = reinterpret_cast<const unsigned char *>(frameCache.at(j).payload().constData());
             dataLen = frameCache.at(j).payload().length();
 
             byteGraphX.append(j);

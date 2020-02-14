@@ -123,7 +123,7 @@ void FileComparatorWindow::calculateDetails()
     QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = nullptr, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = nullptr;
     QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = nullptr;
     uint64_t tmp;
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
 
     bool uniqueInterested = ui->ckUniqueToInterested->isChecked();
@@ -154,7 +154,7 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < interestedFrames.count(); x++)
     {
         CANFrame frame = interestedFrames.at(x);
-        data = reinterpret_cast<unsigned char *>(frame.payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
         dataLen = frame.payload().count();
 
         if (interestedIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
@@ -201,7 +201,7 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < referenceFrames.count(); x++)
     {
         CANFrame frame = referenceFrames.at(x);
-        data = reinterpret_cast<unsigned char *>(frame.payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
         dataLen = frame.payload().count();
 
         if (referenceIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there

@@ -185,6 +185,9 @@ public:
         int64_t result = 0;
         int bit;
 
+        int maxBytes = (startBit + sigSize) / 8;
+        if (data.size() < maxBytes) return 0;
+
         if (littleEndian)
         {
             bit = startBit;
