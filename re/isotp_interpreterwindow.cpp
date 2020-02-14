@@ -208,7 +208,7 @@ void ISOTP_InterpreterWindow::showDetailView()
 
     msg = &messages[rowNum];
 
-    unsigned char *data = reinterpret_cast<unsigned char *>(msg->payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg->payload().constData());
     int dataLen = msg->payload().length();
 
     if (msg->reportedLength != dataLen)
@@ -266,7 +266,7 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     int rowNum;
     QString tempString;
 
-    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().length();
 
     if ((msg.reportedLength != dataLen) && !ui->cbShowIncomplete->isChecked()) return;

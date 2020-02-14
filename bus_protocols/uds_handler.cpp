@@ -177,7 +177,7 @@ UDS_HANDLER::~UDS_HANDLER()
 void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
 {
     qDebug() << "UDS handler got ISOTP frame";
-    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().count();
     UDS_MESSAGE udsMsg;
     udsMsg.bus = msg.bus;
@@ -258,6 +258,8 @@ void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
     data.append(msg.payload());
     isoHandler->sendISOTPFrame(msg.bus, msg.frameId(), data);
 
+    //qDebug() << "Data sending: " << data;
+
     qDebug() << "Sent UDS service: " << getServiceShortDesc(msg.service) << " on bus " << msg.bus;
 }
 
@@ -327,7 +329,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
     bool isResponse = true;
     int dataSize;
     int addrSize;
-    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().length();
 
     if (msg.isErrorReply)

@@ -119,6 +119,8 @@ bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
         return false;
     if (!mDev_p) return false;
 
+    qDebug() << "Data bytes at lowlevel: " << pFrame.payload().toBase64();
+
     return mDev_p->writeFrame(pFrame);
 }
 
@@ -179,7 +181,7 @@ void SerialBusConnection::framesReceived()
             continue;
 
         /* check frame */
-        if (recFrame.payload().length() <= 8) {
+        //if (recFrame.payload().length() <= 8) {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
@@ -241,7 +243,7 @@ void SerialBusConnection::framesReceived()
 
                 /* enqueue frame */
                 getQueue().queue();
-            }
+            //}
 #if 0
             else
                 qDebug() << "can't get a frame, ERROR";

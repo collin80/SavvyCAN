@@ -792,7 +792,7 @@ void FrameSenderWindow::updateGridRow(int idx)
     int gridLine = idx;
     QString dataString;
     QTableWidgetItem *item = ui->tableSender->item(gridLine, 9);
-    unsigned char *data = reinterpret_cast<unsigned char *>(temp->payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(temp->payload().constData());
     int dataLen = temp->payload().length();
 
     if (item == nullptr) item = new QTableWidgetItem();

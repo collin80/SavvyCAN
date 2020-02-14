@@ -354,7 +354,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
     int offset = ui->spinReplyOffset->value();
     UDS_MESSAGE sentFrame;
     bool gotReply = false;
-    unsigned char *data = reinterpret_cast<unsigned char *>(msg.payload().data());
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().length();
 
     int numSending = sendingFrames.length();
@@ -488,6 +488,9 @@ void UDSScanWindow::sendNextMsg()
     else
     {
         waitTimer->stop();
+        udsHandler->setReception(false);
+        udsHandler->setProcessAllIDs(false);
+        udsHandler->setFlowCtrl(false);
         ui->btnScan->setText("Start Scan");
         currentlyRunning = false;
     }

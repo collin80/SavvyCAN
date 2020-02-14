@@ -1556,7 +1556,7 @@ DBCFile* DBCHandler::loadJSONFile(int idx)
          {
              qDebug() << iter.key();
              DBC_MESSAGE msg;
-             msg.ID = static_cast<uint32_t>(iter->toObject().find("origin_id").value().toInt());
+             msg.ID = static_cast<uint32_t>(iter->toObject().find("message_id").value().toInt());
              msg.name = QString(iter.key().toUtf8());
              msg.len = static_cast<unsigned int>(iter->toObject().find("length_bytes").value().toInt());
              msg.sender = thisFile->findNodeByIdx(0);

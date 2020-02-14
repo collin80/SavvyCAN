@@ -947,7 +947,7 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -971,7 +971,7 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         outFile->write(QString::number(frame->timeStamp().microSeconds() / 1000000.0, 'f', 6).toUtf8());
@@ -1346,7 +1346,7 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
     int lineCounter = 0;
     int64_t offsetTime = frames->at(0).timeStamp().microSeconds();
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -1383,7 +1383,7 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         uint64_t timeStamp = (frame->timeStamp().microSeconds() - offsetTime) / 1000000ull;
@@ -1614,7 +1614,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -1637,7 +1637,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         outFile->write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
@@ -1720,7 +1720,7 @@ bool FrameFileIO::closeContinuousNative()
 bool FrameFileIO::writeContinuousNative(const QVector<CANFrame>* frames, int beginningFrame)
 {
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -1729,7 +1729,7 @@ bool FrameFileIO::writeContinuousNative(const QVector<CANFrame>* frames, int beg
     for (int c = beginningFrame; c < frames->count(); c++)
     {
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         continuousFile.write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
@@ -1880,7 +1880,7 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -1903,7 +1903,7 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
@@ -2086,7 +2086,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -2124,7 +2124,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         tempStamp = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
@@ -2282,7 +2282,7 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -2313,7 +2313,7 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         tempStamp = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
@@ -2418,7 +2418,7 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
         }
 
         data = inFile->read(12);
-        unsigned char *uData = reinterpret_cast<unsigned char *>(data.data());
+        const unsigned char *uData = reinterpret_cast<const unsigned char *>(data.constData());
 
         thisFrame.bus = 0;
         thisFrame.isReceived = true;
@@ -2460,7 +2460,7 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
     int id;
     qint64 ms;
 
-    unsigned char *inData;
+    const unsigned char *inData;
     int inDataLen;
     const CANFrame *frame;
 
@@ -2492,7 +2492,7 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
         }
 
         frame = &frames->at(c);
-        inData = reinterpret_cast<unsigned char *>(frame->payload().data());
+        inData = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         inDataLen = frame->payload().count();
 
         for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
@@ -2660,7 +2660,7 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
     QDateTime timestamp, tempStamp;
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -2691,7 +2691,7 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         outFile->write(QString::number((frame->timeStamp().microSeconds() / 1000)).toUtf8());
@@ -2875,7 +2875,7 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
     int64_t tempTime;
     int tempTimePiece;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -2918,7 +2918,7 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
          //1F D3 3F FF 08 FF E0 CB
@@ -2970,7 +2970,7 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
     int lineCounter = 0;
     double tempTime;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -2991,7 +2991,7 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         outFile->write("(");
@@ -3599,7 +3599,7 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
     QFile *outFile = new QFile(filename);
     int lineCounter = 0;
 
-    unsigned char *data;
+    const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -3622,7 +3622,7 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
         }
 
         frame = &frames->at(c);
-        data = reinterpret_cast<unsigned char *>(frame->payload().data());
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         double tempTimeStamp = frame->timeStamp().microSeconds();
