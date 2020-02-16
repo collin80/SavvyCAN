@@ -119,8 +119,6 @@ bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
         return false;
     if (!mDev_p) return false;
 
-    qDebug() << "Data bytes at lowlevel: " << pFrame.payload().toBase64();
-
     return mDev_p->writeFrame(pFrame);
 }
 
