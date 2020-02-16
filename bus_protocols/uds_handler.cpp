@@ -326,7 +326,6 @@ QString UDS_HANDLER::getNegativeResponseLong(int respCode)
 QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
 {
     QString buildString;
-    bool isResponse = true;
     int dataSize;
     int addrSize;
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
@@ -334,18 +333,15 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
 
     if (msg.isErrorReply)
     {
-        isResponse = true;
         buildString.append("UDS ERROR Response\n");
         buildString.append("Service: " + getServiceLongDesc(msg.service) + "\n");
     }
     else if (msg.service < 0x3F || (msg.service > 0x7F && msg.service < 0xAF)) {
-        isResponse = false;
         buildString.append("UDS Request\n");
         buildString.append("Service: " + getServiceLongDesc(msg.service) + "\n");
     }
     else
     {
-        isResponse = true;
         buildString.append("UDS Positive Response\n");
         buildString.append("Service: " + getServiceLongDesc(msg.service - 0x40) + "\n");
     }

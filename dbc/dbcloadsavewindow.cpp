@@ -270,6 +270,8 @@ void DBCLoadSaveWindow::editFile()
 
 void DBCLoadSaveWindow::matchingCriteriaChanged(int index)
 {
+    Q_UNUSED(index)
+
     if (inhibitCellProcessing) return;
     // We don't know which combobox changed, so we just update all of them
     for (int row=0; row<ui->tableFiles->rowCount(); row++)
@@ -312,7 +314,7 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
     {
         DBCFile *file = dbcHandler->getFileByIdx(row);
         int bus = ui->tableFiles->item(row, col)->text().toInt();
-        int numBuses = CANConManager::getInstance()->getNumBuses();
+        //int numBuses = CANConManager::getInstance()->getNumBuses();
         if (bus > -2)
         {
             file->setAssocBus(bus);

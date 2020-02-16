@@ -501,9 +501,8 @@ void FlowViewWindow::removeAllGraphs()
 void FlowViewWindow::createGraph(int byteNum)
 {
     int tempVal;
-    float minval=1000000, maxval = -100000;
+    double minval = 1000000.0, maxval = -100000.0;
     const unsigned char *data;
-    int dataLen = 0;
     const CANFrame *frame;
 
     qDebug() << "Create Graph " << byteNum;
@@ -521,14 +520,13 @@ void FlowViewWindow::createGraph(int byteNum)
     {
         frame = &frameCache[j];
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().length();
 
         tempVal = data[byteNum];
 
         if (graphByTime)
         {
             if (secondsMode){
-                x[byteNum][j] = (double)(frame->timeStamp().microSeconds()) / 1000000.0;
+                x[byteNum][j] = frame->timeStamp().microSeconds() / 1000000.0;
             }
             else
             {

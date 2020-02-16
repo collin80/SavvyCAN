@@ -46,7 +46,7 @@ bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
 
 bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
 {
-    Q_UNUSED(sig);
+    Q_UNUSED(sig)
     //if (sigs.removeAll(*sig) > 0) return true;
     return false;
 }
@@ -1698,7 +1698,7 @@ void DBCHandler::swapFiles(int pos1, int pos2)
     if (pos2 < 0) return;
     if (pos2 >= loadedFiles.count()) return;
 
-    loadedFiles.swap(pos1, pos2);
+    loadedFiles.swapItemsAt(pos1, pos2);
 }
 
 /*
@@ -1711,7 +1711,7 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == (unsigned int)loadedFiles[i].getAssocBus())
+        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == loadedFiles[i].getAssocBus())
         {
             DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;
