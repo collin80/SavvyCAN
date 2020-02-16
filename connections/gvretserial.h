@@ -91,7 +91,7 @@ protected:
     QUdpSocket *udpClient;
     int framesRapid;
     STATE rx_state;
-    uint32_t rx_step;
+    int rx_step;
     CANFrame buildFrame;
     qint64 buildTimestamp;
     quint32 buildId;

@@ -102,7 +102,7 @@ void DBCMainEditor::setFileIdx(int idx)
 
 void DBCMainEditor::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     writeSettings();
     sigEditor->close();
 }
@@ -197,7 +197,7 @@ void DBCMainEditor::onCellChangedNode(int row,int col)
             if (dbcFile->findNodeByName(newName) != nullptr) //duplicates an existing node!
             {
                 QMessageBox msg;
-                msg.setParent(0);
+                msg.setParent(nullptr);
                 msg.setText("An existing node with that name already exists! Aborting!");
                 msg.exec();
                 return;
@@ -275,7 +275,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             if (msg != nullptr)
             {
                 QMessageBox msg;
-                msg.setParent(0);
+                msg.setParent(nullptr);
                 msg.setText("An existing msg with that ID already exists! Aborting!");
                 msg.exec();
 
@@ -296,7 +296,7 @@ void DBCMainEditor::onCellChangedMessage(int row,int col)
             {
                 if ((uint) referenceFrames->at(i).frameId() == msgID)
                 {
-                    newMsg.len = referenceFrames->at(i).payload().length();
+                    newMsg.len = static_cast<unsigned int>(referenceFrames->at(i).payload().length());
                     break;
                 }
             }
@@ -395,14 +395,14 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
     QTableWidgetItem* firstCol = ui->MessagesTable->item(row, 0);
     bool ret = false;
     DBC_MESSAGE *msg;
-    int msgID;
+    uint32_t msgID;
 
     if (col == 3) //3 is the signals field. If clicked we go to the signals dialog
     {
         QTableWidgetItem* msg = ui->MessagesTable->item(row, 0);
         if(msg) {
             QString idString = msg->text();
-            DBC_MESSAGE *message = dbcFile->messageHandler->findMsgByID(Utility::ParseStringToNum(idString));
+            DBC_MESSAGE *message = dbcFile->messageHandler->findMsgByID(static_cast<uint32_t>(Utility::ParseStringToNum(idString)));
             sigEditor->setMessageRef(message);
             sigEditor->setFileIdx(fileIdx);
             sigEditor->setWindowModality(Qt::WindowModal);
@@ -416,8 +416,8 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
     }
     if (col == 4)
     {
-        QColor newColor = QColorDialog::getColor(thisItem->backgroundColor());
-        thisItem->setBackgroundColor(newColor);
+        QColor newColor = QColorDialog::getColor(thisItem->background().color());
+        thisItem->setBackground(newColor);
 
         if(!firstCol) return;
 
@@ -443,8 +443,8 @@ void DBCMainEditor::onCellClickedMessage(int row, int col)
     }
     if (col == 5)
     {
-        QColor newColor = QColorDialog::getColor(thisItem->backgroundColor());
-        thisItem->setBackgroundColor(newColor);
+        QColor newColor = QColorDialog::getColor(thisItem->background().color());
+        thisItem->setBackground(newColor);
 
         if(!firstCol) return;
 
@@ -523,11 +523,11 @@ void DBCMainEditor::refreshMessagesTable(const DBC_NODE *node)
                 QTableWidgetItem *msgLen = new QTableWidgetItem(QString::number(msg->len));
                 QTableWidgetItem *msgSignals = new QTableWidgetItem(QString::number(msg->sigHandler->getCount()));
                 QTableWidgetItem *fgColor = new QTableWidgetItem("");
-                if (msg->fgColor.isValid()) fgColor->setBackgroundColor(msg->fgColor);
-                else fgColor->setBackgroundColor(QColor(dbcFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString()));
+                if (msg->fgColor.isValid()) fgColor->setBackground(msg->fgColor);
+                else fgColor->setBackground(QColor(dbcFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString()));
                 QTableWidgetItem *bgColor = new QTableWidgetItem("");
-                if (msg->bgColor.isValid()) bgColor->setBackgroundColor(msg->bgColor);
-                else bgColor->setBackgroundColor(QColor(dbcFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString()));
+                if (msg->bgColor.isValid()) bgColor->setBackground(msg->bgColor);
+                else bgColor->setBackground(QColor(dbcFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString()));
 
                 QTableWidgetItem *msgComment = new QTableWidgetItem(msg->comment);
 
@@ -558,8 +558,8 @@ void DBCMainEditor::insertBlankRow()
     for(int i=1 ; i < ui->MessagesTable->columnCount(); i++)
     {
         QTableWidgetItem *item = new QTableWidgetItem("");
-        if (i == 4) item->setBackgroundColor(QApplication::palette().color(QPalette::WindowText)); //foreground color
-        if (i == 5) item->setBackgroundColor(QApplication::palette().color(QPalette::Base));
+        if (i == 4) item->setBackground(QApplication::palette().color(QPalette::WindowText)); //foreground color
+        if (i == 5) item->setBackground(QApplication::palette().color(QPalette::Base));
         item->setFlags(item->flags() & ~Qt::ItemIsEditable);
         ui->MessagesTable->setItem(rowIdx, i, item);
     }

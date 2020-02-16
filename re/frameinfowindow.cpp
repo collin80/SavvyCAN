@@ -244,10 +244,10 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 {
     int targettedID;
     int minLen, maxLen, thisLen;
-    uint64_t avgInterval;
-    uint64_t minInterval;
-    uint64_t maxInterval;
-    uint64_t thisInterval;
+    int64_t avgInterval;
+    int64_t minInterval;
+    int64_t maxInterval;
+    int64_t thisInterval;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
@@ -377,8 +377,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             //qDebug() << referenceBits[c];
         }
 
-        std::vector<uint64_t> sortedIntervals;
-        uint64_t intervalSum = 0;
+        std::vector<int64_t> sortedIntervals;
+        int64_t intervalSum = 0;
 
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
@@ -387,7 +387,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             dataLen = frameCache.at(j).payload().length();
 
             byteGraphX.append(j);
-            for (uint32_t bytcnt = 0; bytcnt < dataLen; bytcnt++)
+            for (int bytcnt = 0; bytcnt < dataLen; bytcnt++)
             {
                 byteGraphY[bytcnt].append(data[bytcnt]);
             }
@@ -429,7 +429,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         }
 
         std::sort(sortedIntervals.begin(), sortedIntervals.end());
-        uint64_t intervalStdDiv = 0, intervalPctl5 = 0, intervalPctl95 = 0, intervalMean = 0, intervalVariance = 0;
+        int64_t intervalStdDiv = 0, intervalPctl5 = 0, intervalPctl95 = 0, intervalMean = 0, intervalVariance = 0;
 
         int maxTimeCounter = -1;
         if (sortedIntervals.size() > 0)
@@ -441,17 +441,17 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             }
 
             intervalVariance /= sortedIntervals.size();
-            intervalStdDiv = sqrt(intervalVariance);
+            intervalStdDiv = static_cast<int>(sqrt(intervalVariance));
 
-            intervalPctl5 = sortedIntervals[floor(0.05 * sortedIntervals.size())];
-            intervalPctl95 = sortedIntervals[floor(0.95 * sortedIntervals.size())];
+            intervalPctl5 = sortedIntervals[static_cast<unsigned int>(floor(0.05 * sortedIntervals.size()))];
+            intervalPctl95 = sortedIntervals[static_cast<unsigned int>(floor(0.95 * sortedIntervals.size()))];
 
-            uint64_t step = ceil((maxInterval - minInterval) / numIntervalHistBars);
+            uint64_t step = static_cast<unsigned int>(ceil((maxInterval - minInterval) / numIntervalHistBars));
             qDebug() << "Step: " << step << " minInt: " << minInterval << " maxInt: " << maxInterval;
-            int index = 0;
+            unsigned int index = 0;
             int counter = 0;
             for(int l = 0; l <= numIntervalHistBars; l++) {
-                uint64_t currentMax = maxInterval - ((numIntervalHistBars - l) * step);	// avoid missing the biggest value due to rounding errors
+                int64_t currentMax = maxInterval - ((numIntervalHistBars - l) * step);	// avoid missing the biggest value due to rounding errors
                 qDebug() << "CurrentMax: " << currentMax;
                 while(index < sortedIntervals.size()) {
                     if(sortedIntervals[index] <= currentMax) {
@@ -483,22 +483,22 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         baseNode->addChild(tempItem);
 
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Average inter-frame interval: ") + QString::number(avgInterval / 1000.0f) + "ms");
+        tempItem->setText(0, tr("Average inter-frame interval: ") + QString::number(avgInterval / 1000.0) + "ms");
         baseNode->addChild(tempItem);
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Minimum inter-frame interval: ") + QString::number(minInterval / 1000.0f) + "ms");
+        tempItem->setText(0, tr("Minimum inter-frame interval: ") + QString::number(minInterval / 1000.0) + "ms");
         baseNode->addChild(tempItem);
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Maximum inter-frame interval: ") + QString::number(maxInterval / 1000.0f) + "ms");
+        tempItem->setText(0, tr("Maximum inter-frame interval: ") + QString::number(maxInterval / 1000.0) + "ms");
         baseNode->addChild(tempItem);
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Inter-frame interval variation: ") + QString::number((maxInterval - minInterval) / 1000.0f) + "ms");
+        tempItem->setText(0, tr("Inter-frame interval variation: ") + QString::number((maxInterval - minInterval) / 1000.0) + "ms");
         baseNode->addChild(tempItem);
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Interval standard deviation: ") + QString::number(intervalStdDiv / 1000.0f) + "ms");
+        tempItem->setText(0, tr("Interval standard deviation: ") + QString::number(intervalStdDiv / 1000.0) + "ms");
         baseNode->addChild(tempItem);
         tempItem = new QTreeWidgetItem();
-        tempItem->setText(0, tr("Minimum range to fit 90% of inter-frame intervals: ") + QString::number((intervalPctl95 - intervalPctl5) / 1000.0f) + "ms");
+        tempItem->setText(0, tr("Minimum range to fit 90% of inter-frame intervals: ") + QString::number((intervalPctl95 - intervalPctl5) / 1000.0) + "ms");
         baseNode->addChild(tempItem);
         for (int c = 0; c < maxLen; c++)
         {
@@ -515,7 +515,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             dataBase->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
-            tempItem->setText(0, tr("Range: ") + Utility::formatNumber((char)minData[c]) + tr(" to ") + Utility::formatNumber((char)maxData[c]));
+            tempItem->setText(0, tr("Range: ") + Utility::formatNumber((unsigned int)minData[c]) + tr(" to ") + Utility::formatNumber((unsigned int)maxData[c]));
             dataBase->addChild(tempItem);
             histBase->setText(0, tr("Histogram"));
             dataBase->addChild(histBase);
@@ -525,7 +525,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 if (dataHistogram[d][c] > 0)
                 {
                     tempItem = new QTreeWidgetItem();
-                    tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +" (" + Utility::formatByteAsBinary(d) +") -> " + QString::number(dataHistogram[d][c]));
+                    tempItem->setText(0, QString::number(d) + "/0x" + QString::number(d, 16) +" (" + Utility::formatByteAsBinary(static_cast<uint8_t>(d)) +") -> " + QString::number(dataHistogram[d][c]));
                     histBase->addChild(tempItem);
                 }
             }

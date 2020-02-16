@@ -849,14 +849,14 @@ void MainWindow::showGraphingWindow()
 {
     if (!graphingWindow) {
         graphingWindow = new GraphingWindow(model->getListReference());
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     if (flowViewWindow) //connect the two external windows together
     {
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
     graphingWindow->show();
 }
@@ -1026,14 +1026,14 @@ void MainWindow::showFlowViewWindow()
             flowViewWindow = new FlowViewWindow(model->getListReference());
         else
             flowViewWindow = new FlowViewWindow(model->getFilteredListReference());
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     if (graphingWindow)
     {
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     flowViewWindow->show();

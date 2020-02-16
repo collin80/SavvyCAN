@@ -36,7 +36,7 @@ void FileComparatorWindow::showEvent(QShowEvent *)
 
 void FileComparatorWindow::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
     writeSettings();
 }
 
@@ -118,8 +118,8 @@ void FileComparatorWindow::clearReference()
 
 void FileComparatorWindow::calculateDetails()
 {
-    QMap<int, FrameData> interestedIDs;
-    QMap<int, FrameData> referenceIDs;
+    QMap<uint32_t, FrameData> interestedIDs;
+    QMap<uint32_t, FrameData> referenceIDs;
     QTreeWidgetItem *interestedOnlyBase, *referenceOnlyBase = nullptr, *sharedBase, *bitmapBaseInterested, *bitmapBaseReference = nullptr;
     QTreeWidgetItem *valuesBase, *detail, *sharedItem, *valuesInterested, *valuesReference = nullptr;
     uint64_t tmp;
@@ -131,7 +131,7 @@ void FileComparatorWindow::calculateDetails()
     QProgressDialog progress(this);
     progress.setWindowModality(Qt::WindowModal);
     progress.setLabelText("Calculating differences");
-    progress.setCancelButton(0);
+    progress.setCancelButton(nullptr);
     progress.setRange(0,0);
     progress.setMinimumDuration(0);
     progress.show();
@@ -159,7 +159,7 @@ void FileComparatorWindow::calculateDetails()
 
         if (interestedIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
-            for (unsigned int y = 0; y < dataLen; y++)
+            for (int y = 0; y < dataLen; y++)
             {
                 interestedIDs[frame.frameId()].values[y][data[y]]++;
                 tmp = data[y];
@@ -184,7 +184,7 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (unsigned int y = 0; y < dataLen; y++)
+            for (int y = 0; y < dataLen; y++)
             {
                 newData->values[y][data[y]] = 1;
                 tmp = data[y];
@@ -206,7 +206,7 @@ void FileComparatorWindow::calculateDetails()
 
         if (referenceIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
-            for (unsigned int y = 0; y < dataLen; y++)
+            for (int y = 0; y < dataLen; y++)
             {
                 referenceIDs[frame.frameId()].values[y][data[y]]++;
                 tmp = data[y];
@@ -229,7 +229,7 @@ void FileComparatorWindow::calculateDetails()
                 }
             }
             //memset(newData->values, 0, 256 * 8);
-            for (unsigned int y = 0; y < dataLen; y++)
+            for (int y = 0; y < dataLen; y++)
             {
                 newData->values[y][data[y]] = 1;
                 tmp = data[y];
@@ -246,7 +246,7 @@ void FileComparatorWindow::calculateDetails()
     //now we iterate through the IDs within both files and see which are unique to one file and which
     //are shared
     bool interestedHadUnique = false;
-    QMap<int, FrameData>::iterator i;
+    QMap<uint32_t, FrameData>::iterator i;
     int framesCounter = 0;
     for (i = interestedIDs.begin(); i != interestedIDs.end(); ++i)
     {
@@ -257,7 +257,7 @@ void FileComparatorWindow::calculateDetails()
             qApp->processEvents();
         }
 
-        int keyone = i.key();
+        uint32_t keyone = i.key();
         if (!referenceIDs.contains(keyone))
         {
             valuesBase = new QTreeWidgetItem();
@@ -324,7 +324,7 @@ void FileComparatorWindow::calculateDetails()
                 for (int j = 0; j < 256; j++)
                 {
                     detail = new QTreeWidgetItem();
-                    detail->setText(0, Utility::formatHexNum(j));
+                    detail->setText(0, Utility::formatHexNum(static_cast<unsigned int>(j)));
                     if ((interested.values[i][j] > 0) && (reference.values[i][j] == 0) )
                     {
                         valuesInterested->addChild(detail);
@@ -344,10 +344,10 @@ void FileComparatorWindow::calculateDetails()
 
     if (!uniqueInterested)
     {
-        QMap<int, FrameData>::iterator itwo;
+        QMap<uint32_t, FrameData>::iterator itwo;
         for (itwo = referenceIDs.begin(); itwo != referenceIDs.end(); ++itwo)
         {
-            int keytwo = itwo.key();
+            unsigned int keytwo = itwo.key();
             if (!interestedIDs.contains(keytwo))
             {
                 valuesBase = new QTreeWidgetItem();

@@ -40,7 +40,7 @@ private slots:
     void gotCellClick(int x, int y);
 
 signals:
-    void sendCenterTimeID(int32_t ID, double timestamp);
+    void sendCenterTimeID(uint32_t ID, double timestamp);
 
 private:
     Ui::FlowViewWindow *ui;

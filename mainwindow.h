@@ -115,7 +115,7 @@ signals:
     void framesUpdated(int numFrames); //something has updated the frame list (send at gui update frequency)
     void frameUpdateRapid(int numFrames);
     void settingsUpdated();
-    void sendCenterTimeID(int32_t ID, double timestamp);
+    void sendCenterTimeID(uint32_t ID, double timestamp);
 
 private:
     Ui::MainWindow *ui;

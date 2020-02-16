@@ -356,7 +356,7 @@ void ISOTP_HANDLER::setProcessAll(bool state)
     processAll = state;
 }
 
-void ISOTP_HANDLER::addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask)
+void ISOTP_HANDLER::addFilter(int pBusId, uint32_t ID, uint32_t mask)
 {
     CANFilter filt;
     filt.ID = ID;
@@ -366,7 +366,7 @@ void ISOTP_HANDLER::addFilter(uint32_t pBusId, uint32_t ID, uint32_t mask)
     filters.append(filt);
 }
 
-void ISOTP_HANDLER::removeFilter(uint32_t pBusId, uint32_t ID, uint32_t mask)
+void ISOTP_HANDLER::removeFilter(int pBusId, uint32_t ID, uint32_t mask)
 {
     for (int i = 0; i < filters.count(); i++)
     {
