@@ -67,13 +67,13 @@ matrix:
       - os: windows
         filter_secrets: false
         before_install:
+           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat"
            - curl -vLO http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe
-           - "./qt-unified-windows-x86-online.exe --verbose --script qt-installer-windows.qs"
-           - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat"'
+           - "./qt-unified-windows-x86-online.exe" --verbose --script qt-installer-windows.qs
         script:
-           - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" && cd && "C:/Qt/5.12.3/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro && cd && nmake'
+           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" '&&' cd '&&' "C:/Qt/5.12.3/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro '&&' cd '&&' nmake
            - ls
-           - cmd.exe /C 'cd release && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" && "C:/Qt/5.12.3/msvc2017/bin/windeployqt.exe" ./SavvyCAN.exe'
+           - cmd.exe //C cd release '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" '&&' "C:/Qt/5.12.3/msvc2017/bin/windeployqt.exe" ./SavvyCAN.exe
            - cd release
            - ls
            - rm *.cpp
