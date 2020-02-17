@@ -98,4 +98,22 @@ Controller.prototype.FinishedPageCallback = function() {
     gui.clickButton(buttons.FinishButton);
 };
 
+Controller.prototype.DynamicTelemetryPluginFormCallback = function() {
+    var widget = gui.currentPageWidget();
+    widget.TelemetryPluginForm.statisticGroupBox.disableStatisticRadioButton.checked = true;
+    gui.clickButton(buttons.NextButton);
+}
+
+Controller.prototype.ComponentSelectionPageCallback = function() {
+    var page = gui.pageWidgetByObjectName("ComponentSelectionPage");
+
+    var archiveCheckBox = gui.findChild(page, "Archive");
+    var latestCheckBox = gui.findChild(page, "Latest releases");
+    var fetchButton = gui.findChild(page, "FetchCategoryButton");
+
+    archiveCheckBox.click();
+    latestCheckBox.click();
+    fetchButton.click();
+}
+
 // vim: set ft=javascript:
