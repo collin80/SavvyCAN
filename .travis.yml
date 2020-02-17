@@ -67,6 +67,7 @@ matrix:
       - os: windows
         before_install:
            - cmd.exe /C 'cd && "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat"'
+           - dir
            - curl -vLO http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe
            - "./qt-unified-windows-x86-online.exe --verbose --script qt-installer-windows.qs"
         script:
