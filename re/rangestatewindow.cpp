@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "utility.h"
 #include "helpwindow.h"
+#include "filterutility.h"
 
 RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -68,7 +69,7 @@ RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *par
             [=](QListWidgetItem *item)
             {
                 bool isChecked = false;
-                int id = Utility::ParseStringToNum(item->text());
+                int id = FilterUtility::getIdAsInt(item);
                 if (item->checkState() == Qt::Checked) isChecked = true;
                 idFilters[id] = isChecked;
             });
@@ -161,9 +162,7 @@ void RangeStateWindow::updatedFrames(int numFrames)
             if (!idFilters.contains(thisFrame.frameId()))
             {
                 idFilters.insert(thisFrame.frameId(), true);
-                QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat()), ui->listFilter);
-                listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-                listItem->setCheckState(Qt::Checked); //default all filters to be set active
+                FilterUtility::createCheckableFilterItem(thisFrame.frameId(), true, ui->listFilter);
             }
         }
     }
@@ -182,11 +181,7 @@ void RangeStateWindow::refreshFilterList()
         if (!idFilters.contains(id))
         {
             idFilters.insert(id, true);
-            QListWidgetItem* listItem;
-            if (id < 0x800) listItem = new QListWidgetItem(Utility::formatCANID(id, false), ui->listFilter);
-                else listItem = new QListWidgetItem(Utility::formatCANID(id, true), ui->listFilter);
-            listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-            listItem->setCheckState(Qt::Checked); //default all filters to be set active
+            FilterUtility::createCheckableFilterItem(id, true, ui->listFilter);
         }
     }
 

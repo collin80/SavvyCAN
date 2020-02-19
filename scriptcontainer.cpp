@@ -306,9 +306,10 @@ void ISOTPScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
 void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue dataBytes)
 {
     ISOTP_MESSAGE msg;
+    QByteArray dataArray;
     msg.setExtendedFrameFormat(false);
     msg.setFrameId(id.toUInt());
-    msg.payload().resize(length.toInt());
+    dataArray.resize(length.toInt());
 
     int dataLen = msg.payload().length();
 
@@ -316,8 +317,9 @@ void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJ
 
     for (int i = 0; i < dataLen; i++)
     {
-        msg.payload()[i] = static_cast<int8_t>(dataBytes.property(i).toInt());
+        dataArray[i] = static_cast<int8_t>(dataBytes.property(i).toInt());
     }
+    msg.setPayload(dataArray);
 
     msg.bus = bus.toInt();
 
@@ -379,9 +381,10 @@ void UDSScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
 void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSValue sublen, QJSValue subFunc, QJSValue length, QJSValue data)
 {
     UDS_MESSAGE msg;
+    QByteArray dataArray;
     msg.setExtendedFrameFormat(false);
     msg.setFrameId( id.toUInt() );
-    msg.payload().resize(length.toUInt());
+    dataArray.resize(length.toUInt());
     msg.service = service.toUInt();
     msg.subFuncLen = sublen.toUInt();
     msg.subFunc = subFunc.toUInt();
@@ -390,8 +393,9 @@ void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSVa
 
     for (int i = 0; i < msg.payload().length(); i++)
     {
-        msg.payload().append(static_cast<uint8_t>(data.property(static_cast<quint32>(i)).toInt()));
+        dataArray[i] = (static_cast<uint8_t>(data.property(static_cast<quint32>(i)).toInt()));
     }
+    msg.setPayload(dataArray);
 
     msg.bus = bus.toInt();
 

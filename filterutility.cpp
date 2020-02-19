@@ -60,7 +60,7 @@ QListWidgetItem * FilterUtility::createFilterItem(int32_t id, QListWidget* paren
         // Filter labeling (show interpreted frame names next to the CAN addr ID)
         MatchingCriteria_t matchingCriteria;
         DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(id,&matchingCriteria);
-        if (msg != NULL)
+        if (msg != nullptr)
         {
             filterItemName.append(" ");
             filterItemName.append(msg->name);

@@ -511,7 +511,9 @@ void FrameSenderWindow::doModifiers(int idx)
             }
         }
         //Finally, drop the result into the proper data byte
-        sendData->payload().data()[mod->destByte] = (char) shadowReg;
+        QByteArray newArr(sendData->payload());
+        newArr[mod->destByte] = (char) shadowReg;
+        sendData->setPayload(newArr);
     }
 }
 
@@ -830,6 +832,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
     sendingData[line].count = 0;
 
     int numBuses = CANConManager::getInstance()->getNumBuses();
+    QByteArray arr;
 
     switch (col)
     {
@@ -864,8 +867,9 @@ void FrameSenderWindow::processCellChange(int line, int col)
         case 3: //length field
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 3)->text());
             if (tempVal < 0) tempVal = 0;
-            if (tempVal > 8) tempVal = 8;
-            sendingData[line].payload().resize(tempVal);
+            if (tempVal > 8) tempVal = 8;            
+            arr.resize(tempVal);
+            sendingData[line].setPayload(arr);
             break;
         case 4: // Ext
             if (ui->tableSender->item(line, 4)->checkState() == Qt::Checked) {
@@ -885,10 +889,13 @@ void FrameSenderWindow::processCellChange(int line, int col)
             for (int i = 0; i < 8; i++) sendingData[line].payload().data()[i] = 0;
 
             tokens = ui->tableSender->item(line, 6)->text().split(" ");
+            arr.clear();
+            arr.reserve(tokens.count());
             for (int j = 0; j < tokens.count(); j++)
             {
-                sendingData[line].payload().data()[j] = (uint8_t)Utility::ParseStringToNum(tokens[j]);
+                arr.append((uint8_t)Utility::ParseStringToNum(tokens[j]));
             }
+            sendingData[line].setPayload(arr);
             break;
         case 7: //triggers
             processTriggerText(line);

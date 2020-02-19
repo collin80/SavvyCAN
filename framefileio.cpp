@@ -3198,10 +3198,10 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
                 if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                QByteArray bytes(tokens[3].at(1) - '0', 0);
+                QByteArray bytes(tokens[3].at(1) - '0', 0);                
                 for (int c = 0; c < thisFrame.payload().length(); c++)
                 {
-                    bytes[c] = static_cast<char>(tokens[4 + c].toInt(nullptr, 16));
+                    if ((4 + c) < tokens.size()) bytes[c] = static_cast<char>(tokens[4 + c].toInt(nullptr, 16));
                 }
                 thisFrame.setPayload(bytes);
             }
