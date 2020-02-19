@@ -2,6 +2,7 @@
 #include "ui_isotp_interpreterwindow.h"
 #include "mainwindow.h"
 #include "helpwindow.h"
+#include "filterutility.h"
 
 ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -136,7 +137,7 @@ void ISOTP_InterpreterWindow::listFilterItemChanged(QListWidgetItem *item)
 {
     if (item)
     {
-        int id = item->text().toInt(nullptr, 16);
+        int id = FilterUtility::getIdAsInt(item);
         bool state = item->checkState();
         //qDebug() << id << "*" << state;
         idFilters[id] = state;
@@ -240,22 +241,6 @@ void ISOTP_InterpreterWindow::newUDSMessage(UDS_MESSAGE msg)
 
     buildText = ui->txtFrameDetails->toPlainText();
 
-    /*
-    buildText.append("UDS Message:\n");
-    if (msg.isErrorReply)
-    {
-        buildText.append("Error reply for service " + udsDecoder->getServiceShortDesc(msg.service));
-        buildText.append("\nError Desc: " + udsDecoder->getNegativeResponseShort(msg.subFunc));
-    }
-    else
-    {
-        if (msg.service < 0x3F || (msg.service > 0x7F && msg.service < 0xAF))
-            buildText.append("Request for service " + udsDecoder->getServiceShortDesc(msg.service) + " Sub Func: " + QString::number(msg.subFunc));
-        else
-            buildText.append("Response on service " + udsDecoder->getServiceShortDesc(msg.service - 0x40) + " Sub Func: " + QString::number(msg.subFunc));
-    }*/
-
-    //Much more detailed analysis than the code above. You'll like it.
     buildText.append(udsDecoder->getDetailedMessageAnalysis(msg));
 
     ui->txtFrameDetails->setPlainText(buildText);
@@ -275,9 +260,7 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     {
         idFilters.insert(msg.frameId(), true);
 
-        QListWidgetItem* listItem = new QListWidgetItem(Utility::formatCANID(msg.frameId(), msg.hasExtendedFrameFormat()), ui->listFilter);
-        listItem->setFlags(listItem->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-        listItem->setCheckState(Qt::Checked);
+        FilterUtility::createCheckableFilterItem(msg.frameId(), true, ui->listFilter);
     }
     if (!idFilters[msg.frameId()]) return;
     messages.append(msg);
@@ -303,5 +286,3 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     }
     ui->tableIsoFrames->setItem(rowNum, 5, new QTableWidgetItem(tempString));
 }
-
-

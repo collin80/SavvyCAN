@@ -609,7 +609,7 @@ void FlowViewWindow::changeID(QString newID)
 
     updateGraphLocation();
 
-    memcpy(currBytes, frameCache.at(currentPosition).payload(), 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
     memcpy(refBytes, currBytes, 8);
 
     updateDataView();
@@ -645,7 +645,7 @@ void FlowViewWindow::btnStopClick()
     currentPosition = 0;
 
 
-    memcpy(currBytes, frameCache.at(currentPosition).payload().data_ptr(), 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
     memcpy(refBytes, currBytes, 8);
 
     updateFrameLabel();
@@ -705,23 +705,23 @@ void FlowViewWindow::timerTriggered()
 void FlowViewWindow::updateDataView()
 {
 
-    ui->txtCurr1->setText(Utility::formatNumber((char)currBytes[0]));
-    ui->txtCurr2->setText(Utility::formatNumber((char)currBytes[1]));
-    ui->txtCurr3->setText(Utility::formatNumber((char)currBytes[2]));
-    ui->txtCurr4->setText(Utility::formatNumber((char)currBytes[3]));
-    ui->txtCurr5->setText(Utility::formatNumber((char)currBytes[4]));
-    ui->txtCurr6->setText(Utility::formatNumber((char)currBytes[5]));
-    ui->txtCurr7->setText(Utility::formatNumber((char)currBytes[6]));
-    ui->txtCurr8->setText(Utility::formatNumber((char)currBytes[7]));
+    ui->txtCurr1->setText(Utility::formatNumber((unsigned char)currBytes[0]));
+    ui->txtCurr2->setText(Utility::formatNumber((unsigned char)currBytes[1]));
+    ui->txtCurr3->setText(Utility::formatNumber((unsigned char)currBytes[2]));
+    ui->txtCurr4->setText(Utility::formatNumber((unsigned char)currBytes[3]));
+    ui->txtCurr5->setText(Utility::formatNumber((unsigned char)currBytes[4]));
+    ui->txtCurr6->setText(Utility::formatNumber((unsigned char)currBytes[5]));
+    ui->txtCurr7->setText(Utility::formatNumber((unsigned char)currBytes[6]));
+    ui->txtCurr8->setText(Utility::formatNumber((unsigned char)currBytes[7]));
 
-    ui->txtRef1->setText(Utility::formatNumber((char)refBytes[0]));
-    ui->txtRef2->setText(Utility::formatNumber((char)refBytes[1]));
-    ui->txtRef3->setText(Utility::formatNumber((char)refBytes[2]));
-    ui->txtRef4->setText(Utility::formatNumber((char)refBytes[3]));
-    ui->txtRef5->setText(Utility::formatNumber((char)refBytes[4]));
-    ui->txtRef6->setText(Utility::formatNumber((char)refBytes[5]));
-    ui->txtRef7->setText(Utility::formatNumber((char)refBytes[6]));
-    ui->txtRef8->setText(Utility::formatNumber((char)refBytes[7]));
+    ui->txtRef1->setText(Utility::formatNumber((unsigned char)refBytes[0]));
+    ui->txtRef2->setText(Utility::formatNumber((unsigned char)refBytes[1]));
+    ui->txtRef3->setText(Utility::formatNumber((unsigned char)refBytes[2]));
+    ui->txtRef4->setText(Utility::formatNumber((unsigned char)refBytes[3]));
+    ui->txtRef5->setText(Utility::formatNumber((unsigned char)refBytes[4]));
+    ui->txtRef6->setText(Utility::formatNumber((unsigned char)refBytes[5]));
+    ui->txtRef7->setText(Utility::formatNumber((unsigned char)refBytes[6]));
+    ui->txtRef8->setText(Utility::formatNumber((unsigned char)refBytes[7]));
 
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);
@@ -782,7 +782,7 @@ void FlowViewWindow::updatePosition(bool forward)
         playbackTimer->stop();
     }
 
-    memcpy(currBytes, frameCache.at(currentPosition).payload().data(), 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
 }
