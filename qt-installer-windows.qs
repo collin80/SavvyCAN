@@ -28,15 +28,6 @@ function Controller() {
     });
 }
 
-Controller.prototype.DynamicTelemetryPluginFormCallback = function() {
-    gui.currentPageWidget().TelemetryPluginForm.statisticGroupBox.disableStatisticRadioButton.setChecked(true);
-    gui.clickButton(buttons.NextButton);
-
-    //for(var key in widget.TelemetryPluginForm.statisticGroupBox){
-    //    console.log(key);
-    //}
-}
-
 Controller.prototype.WelcomePageCallback = function() {
     console.log("Step: " + gui.currentPageWidget());
     // At least for 3.0.4 immediately clicking Next fails, so wait a bit.
@@ -58,16 +49,6 @@ Controller.prototype.TargetDirectoryPageCallback = function() {
     console.log("Step: " + gui.currentPageWidget());
     // Keep default at "C:\Qt".
     //gui.currentPageWidget().TargetDirectoryLineEdit.setText("E:\\Qt");
-    gui.clickButton(buttons.NextButton);
-};
-
-Controller.prototype.ComponentSelectionPageCallback = function() {
-    console.log("Step: " + gui.currentPageWidget());
-    var page = gui.currentPageWidget();
-    page.deselectAll();
-    for (var i = 0; i < INSTALL_COMPONENTS.length; i++) {
-        page.selectComponent(INSTALL_COMPONENTS[i]);
-    }
     gui.clickButton(buttons.NextButton);
 };
 
