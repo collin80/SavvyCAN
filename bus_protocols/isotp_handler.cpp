@@ -268,18 +268,21 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         if (!pMsg) return;
         if (!pMsg->isMultiframe) return; //if we didn't get a frame type 1 (start of multiframe) first then ignore this frame.
-        ln = pMsg->payload().length() - pMsg->payload().count();
+        dataBytes.clear();
+        dataBytes.append(pMsg->payload());
+        ln = pMsg->reportedLength - pMsg->payload().count();
         //offset = pMsg->data.count();
         if (useExtendedAddressing)
         {
             if (ln > 6) ln = 6;
-            for (int j = 0; j < ln; j++) pMsg->payload().append(frame.payload()[j+2]);
+            for (int j = 0; j < ln; j++) dataBytes.append(frame.payload()[j+2]);
         }
         else
         {
             if (ln > 7) ln = 7;
-            for (int j = 0; j < ln; j++) pMsg->payload().append(frame.payload()[j+1]);
+            for (int j = 0; j < ln; j++) dataBytes.append(frame.payload()[j+1]);
         }
+        pMsg->setPayload(dataBytes);
         if (pMsg->reportedLength <= pMsg->payload().count())
         {
             qDebug() << "Emitting multiframe ISOTP message";
