@@ -210,6 +210,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             }
         }
         qDebug() << "Emitting single frame ISOTP message";
+        msg.setPayload(dataBytes);
         emit newISOMessage(msg);
         break;
     case 1: //first frame of a multi-frame message
@@ -239,7 +240,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         msg.lastSequence = -1;
         msg.setPayload(dataBytes);
-        messageBuffer.append(msg);
+        messageBuffer.insert(msg.frameId(), msg);
         //The sending ID is set to the last ID we used to send from this class which is
         //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
         if (issueFlowMsgs && lastSenderID > 0)
@@ -258,13 +259,9 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         break;
     case 2: //subsequent frames for multi-frame messages
         pMsg = nullptr;
-        for (int i = 0; i < messageBuffer.length(); i++)
+        if (messageBuffer.contains(ID))
         {
-            if (messageBuffer[i].frameId() == ID)
-            {
-                pMsg = &messageBuffer[i];
-                break;
-            }
+            pMsg = &messageBuffer[ID];
         }
         if (!pMsg) return;
         if (!pMsg->isMultiframe) return; //if we didn't get a frame type 1 (start of multiframe) first then ignore this frame.
@@ -319,26 +316,20 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
 
 void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
 {
-    for (int i = 0; i < messageBuffer.length(); i++)
+    ISOTP_MESSAGE *msg;
+    if (messageBuffer.contains(ID))
     {
-        if (messageBuffer[i].frameId() == ID)
+        msg = &messageBuffer[ID];
+        if (msg->reportedLength <= msg->payload().count())
         {
-            //used to pass by reference but now newISOMessage should pass by value which makes it easier to use cross thread
-            if (messageBuffer[i].frameId() > 0x600 && messageBuffer[i].frameId() < 0x630)
-            {
-                if (messageBuffer[i].reportedLength <= messageBuffer[i].payload().count())
-                {
-                    qDebug() << "Flushing full frame" << QString::number(messageBuffer[i].frameId(), 16) << "  " << messageBuffer[i].reportedLength << "  " << messageBuffer[i].payload().count();
-                }
-                else
-                {
-                    qDebug() << "Flushing a partial frame " << QString::number(messageBuffer[i].frameId(), 16) << "  " << messageBuffer[i].reportedLength << "  " << messageBuffer[i].payload().count();
-                }
-            }
-            if (messageBuffer[i].reportedLength > 0) emit newISOMessage(messageBuffer[i]);
-            messageBuffer.removeAt(i);
-            return;
+            qDebug() << "Flushing full frame" << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
         }
+        else
+        {
+            qDebug() << "Flushing a partial frame " << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
+        }
+        if (msg->reportedLength > 0) emit newISOMessage(*msg);
+        messageBuffer.remove(ID);
     }
 }
 

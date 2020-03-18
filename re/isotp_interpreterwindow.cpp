@@ -73,7 +73,7 @@ void ISOTP_InterpreterWindow::showEvent(QShowEvent* event)
 
     qApp->processEvents();
 
-    decoder->updatedFrames(-2);
+    decoder->rapidFrames(nullptr, *modelFrames);
 
     progress.cancel();
 
