@@ -64,6 +64,9 @@ bool BisectWindow::eventFilter(QObject *obj, QEvent *event)
 void BisectWindow::refreshIDList()
 {
     int id;
+    foundID.clear();
+    ui->cbIDLower->clear();
+    ui->cbIDUpper->clear();
     for (int i = 0; i < modelFrames->count(); i++)
     {
         id = modelFrames->at(i).frameId();
@@ -137,7 +140,12 @@ void BisectWindow::handleCalculateButton()
 
 void BisectWindow::handleReplaceButton()
 {
-
+    CANFrameModel *model;
+    model = MainWindow::getReference()->getCANFrameModel();
+    model->clearFrames();
+    model->insertFrames(splitFrames);
+    refreshFrameNumbers();
+    refreshIDList();
 }
 
 void BisectWindow::handleSaveButton()
