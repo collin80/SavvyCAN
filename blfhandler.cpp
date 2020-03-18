@@ -67,7 +67,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                     qDebug() << "Container is not compressed";
                     uncompressedData = fileData;
                 }
-                if (objHeader.containerObj.compressionMethod == BLF_CONT_ZLIB_COMPRESSION)
+                else if (objHeader.containerObj.compressionMethod == BLF_CONT_ZLIB_COMPRESSION)
                 {
                     qDebug() << "Compressed container. Unpacking it.";
                     fileData.prepend(objHeader.containerObj.uncompressedSize & 0xFF);
@@ -76,7 +76,12 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                     fileData.prepend((objHeader.containerObj.uncompressedSize >> 24) & 0xFF);
                     uncompressedData += qUncompress(fileData);
                 }
+                else
+                {
+                    qDebug() << "Dunno what this is... " << objHeader.containerObj.compressionMethod;
+                }
                 qDebug() << "Uncompressed size: " << uncompressedData.count();
+                qDebug() << "Currently loaded frames at this point: " << frames->count();
                 pos = 0;
                 //bool foundHeader = false;
                 //first skip forward to find a header signature - usually not necessary
@@ -91,7 +96,8 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                 {
                     memcpy(&obj.header.base, (uncompressedData.constData() + pos), sizeof(BLF_OBJ_HEADER_BASE));
                     memcpy(&obj.header.v1Obj, (uncompressedData.constData() + pos) + sizeof(BLF_OBJ_HEADER_BASE), sizeof(BLF_OBJ_HEADER_V1));
-                    qDebug() << "Pos: " << pos << " Type: " << obj.header.base.objType << "Obj Size: " << obj.header.base.objSize;
+                    //if (obj.header.base.objType != 1)
+                        //qDebug() << "Pos: " << pos << " Type: " << obj.header.base.objType << "Obj Size: " << obj.header.base.objSize;
                     if (qFromLittleEndian(objHeader.base.sig) == 0x4A424F4C)
                     {
                         fileData = uncompressedData.mid(pos + sizeof(BLF_OBJ_HEADER_BASE) + sizeof(BLF_OBJ_HEADER_V1), obj.header.base.objSize - sizeof(BLF_OBJ_HEADER_BASE) - sizeof(BLF_OBJ_HEADER_V1));
@@ -109,7 +115,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                                 frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                             } else {
                                 frame.setFrameType(QCanBusFrame::DataFrame);
-                                for (int i = 0; i < 8; i++) bytes[i] = canObject.data[i];
+                                for (int i = 0; i < canObject.dlc; i++) bytes[i] = canObject.data[i];
                             }
                             frame.setPayload(bytes);
                             //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
@@ -130,7 +136,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                                 frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                             } else {
                                 frame.setFrameType(QCanBusFrame::DataFrame);
-                                for (int i = 0; i < 8; i++) bytes[i] = canObject2.data[i];
+                                for (int i = 0; i < canObject2.dlc; i++) bytes[i] = canObject2.data[i];
                             }
                             //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
                             frame.setTimeStamp(QCanBusFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
@@ -138,7 +144,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                         }
                         else
                         {
-                            //qDebug() << "Not a can frame! ObjType: " << obj.header.objType;
+                            qDebug() << "Not a can frame! ObjType: " << obj.header.base.objType;
                             if (obj.header.base.objType > 0xFFFF)
                                 return false;
                         }
