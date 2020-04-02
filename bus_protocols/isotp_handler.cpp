@@ -7,6 +7,7 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     isReceiving = false;
     issueFlowMsgs = false;
     processAll = false;
+    sendPartialMessages = false;
     lastSenderBus = 0;
     lastSenderID = 0;
 
@@ -106,9 +107,11 @@ void ISOTP_HANDLER::updatedFrames(int numFrames)
 {
     if (numFrames == -1) //all frames deleted. Kill the display
     {
+        messageBuffer.clear();
     }
     else if (numFrames == -2) //all new set of frames. Reset
     {
+        messageBuffer.clear();
         for (int i = 0; i < modelFrames->length(); i++) processFrame(modelFrames->at(i));
     }
     else //just got some new frames. See if they are relevant.
@@ -125,7 +128,7 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
     Q_UNUSED(conn)
     if (pFrames.length() <= 0) return;
 
-    //qDebug() << "received messages in ISOTP handler";
+    qDebug() << "received " << QString::number(pFrames.count()) << " messages in ISOTP handler";
 
     foreach(const CANFrame& thisFrame, pFrames)
     {
@@ -158,7 +161,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     ISOTP_MESSAGE *pMsg;
     QByteArray dataBytes;
     const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
-    qDebug() << frame.payload().count();
+    //qDebug() << frame.payload().count();
     //int dataLen = frame.payload().count();
 
     frameType = 0;
@@ -196,17 +199,19 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         msg.setTimeStamp(frame.timeStamp());
         msg.isMultiframe = false;
         if (useExtendedAddressing)
-        {
+        {       
             for (int j = 0; j < frameLen; j++)
             {
-                dataBytes.append(data[j+2]);
+                if (frame.payload().count() > (j+2))
+                    dataBytes.append(data[j+2]);
             }
         }
         else
         {
             for (int j = 0; j < frameLen; j++)
             {
-                 dataBytes.append(data[j+1]);
+                if (frame.payload().count() > (j+1))
+                    dataBytes.append(data[j+1]);
             }
         }
         qDebug() << "Emitting single frame ISOTP message";
@@ -216,6 +221,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     case 1: //first frame of a multi-frame message
         checkNeedFlush(ID);
         msg.bus = frame.bus;
+        if (frame.payload().count() < 8) return; //MUST have all 8 data bytes in this first frame.
         msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
         msg.setFrameId(ID);
         msg.setTimeStamp(frame.timeStamp());
@@ -323,12 +329,17 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
         if (msg->reportedLength <= msg->payload().count())
         {
             qDebug() << "Flushing full frame" << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
+            if (msg->reportedLength > 0) emit newISOMessage(*msg);
         }
         else
         {
-            qDebug() << "Flushing a partial frame " << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
-        }
-        if (msg->reportedLength > 0) emit newISOMessage(*msg);
+            if (sendPartialMessages)
+            {
+                qDebug() << "Flushing a partial frame " << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
+                if (msg->reportedLength > 0) emit newISOMessage(*msg);
+            }
+            else qDebug() << "Have a partial message but sending of such is disabled. Throwing it away";
+        }        
         messageBuffer.remove(ID);
     }
 }
@@ -389,4 +400,4 @@ void ISOTP_HANDLER::clearAllFilters()
     filters.clear();
 }
 
-
+void setEmitPartials(bool mode);

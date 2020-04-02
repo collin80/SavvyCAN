@@ -33,6 +33,14 @@ static QVector<CODE_STRUCT> UDS_ROUTINE_SUB = {
     {3,"GET_ROUTINE_RESULTS", "Get results from routine specified by ID"},
 };
 
+static QVector<CODE_STRUCT> UDS_FILE_MODEOFOP = {
+    {1, "ADDFILE", "Add file to file system"},
+    {2, "DELETEFILE", "Add file to file system"},
+    {3, "REPLACEFILE", "Add file to file system"},
+    {4, "READFILE", "Add file to file system"},
+    {5, "READDIR", "Add file to file system"}
+};
+
 static QVector<CODE_STRUCT> UDS_SERVICE_DESC = {
     {1, "OBDII_SHOW_CURRENT", "OBDII - Show current data"},
     {2, "OBDII_SHOW_FREEZE", "OBDII - Show freeze data"},
@@ -328,6 +336,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
     QString buildString;
     int dataSize;
     int addrSize;
+    int compType, encType;
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().length();
 
@@ -480,20 +489,36 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
                 buildString.append(Utility::formatHexNum(data[i]) + " ");
             }
             break;
-        case UDS_SERVICES::WRITE_BY_ID:
+        case UDS_SERVICES::WRITE_BY_ID:            
+            if (dataLen > 3)
+            {
+                int writeID = (data[1] * 256 + data[2]);
+                buildString.append("ID to write to: " + Utility::formatHexNum(writeID) + "\nPayload: ");
+                for (int i = 3; i < dataLen; i++)
+                {
+                    buildString.append(Utility::formatHexNum(data[i]) + " ");
+                }
+            }
+            break;
+        case UDS_SERVICES::WRITE_BY_ID + 0x40:
+            if (dataLen > 2)
+            {
+                int writeID = (data[1] * 256 + data[2]);
+                buildString.append("ID written to: " + Utility::formatHexNum(writeID));
+            }
             break;
         case UDS_SERVICES::ROUTINE_CTRL:
             buildString.append("Routine Control: " + getLongDesc(UDS_ROUTINE_SUB, msg.subFunc));
             if (dataLen > 3)
             {
                 int routineID;
-                routineID = (data[2] * 256 + data[3]);
+                routineID = (data[1] * 256 + data[2]);
                 buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
             }
             if (dataLen > 4)
             {
                 buildString.append("\nParameter bytes to routine: ");
-                for (int i = 4; i < dataLen; i++)
+                for (int i = 3; i < dataLen; i++)
                 {
                     buildString.append(Utility::formatHexNum(data[i]) + " ");
                 }
@@ -501,28 +526,63 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             break;
         case UDS_SERVICES::ROUTINE_CTRL + 0x40:
             buildString.append("Routine Control: " + getLongDesc(UDS_ROUTINE_SUB, msg.subFunc));
-            if (dataLen > 3)
+            if (dataLen > 2)
             {
                 int routineID;
-                routineID = (data[2] * 256 + data[3]);
+                routineID = (data[1] * 256 + data[2]);
                 buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
             }
-            if (dataLen > 4)
+            if (dataLen > 3)
             {
                 buildString.append("\nBytes returned by routine: ");
-                for (int i = 4; i < dataLen; i++)
+                for (int i = 3; i < dataLen; i++)
                 {
                     buildString.append(Utility::formatHexNum(data[i]) + " ");
                 }
             }
             break;
         case UDS_SERVICES::REQUEST_DOWNLOAD:
-            break;
         case UDS_SERVICES::REQUEST_UPLOAD:
+            compType = data[1] >> 4;
+            encType = data[1] & 0xF;
+            buildString.append("Compression Type: " + QString(compType) + "\n");
+            buildString.append("Encryption Type: " + QString(encType) + "\n");
+            //subfunc byte specifies address and length format, then address, then size
+            dataSize = data[2] >> 4;
+            addrSize = data[2] & 0xF;
+            if (dataLen > (dataSize + addrSize))
+            {
+                buildString.append("Address: 0x");
+                for (int i = 0; i < addrSize; i++) buildString.append(QString::number(data[3 + i], 16).toUpper().rightJustified(2,'0'));
+                buildString.append("\nSize: 0x");
+                for (int i = 0; i < dataSize; i++) buildString.append(QString::number(data[3 + i + addrSize], 16).toUpper().rightJustified(2,'0'));
+            }
+            else
+            {
+                buildString.append("Message has insufficient bytes to properly decode address and size!");
+            }
+            break;
+        case UDS_SERVICES::REQUEST_DOWNLOAD + 0x40:
+        case UDS_SERVICES::REQUEST_UPLOAD + 0x40:
+            dataSize = data[1] >> 4;
+            buildString.append("\nMax Size of data block: 0x");
+            for (int i = 0; i < dataSize; i++) buildString.append(QString::number(data[2 + i], 16).toUpper().rightJustified(2,'0'));
             break;
         case UDS_SERVICES::TRANSFER_DATA:
+        case UDS_SERVICES::TRANSFER_DATA + 0x40:
+            buildString.append("\nBlock Sequence: " + QString(data[1]) + "\nPayload: ");
+            for (int i = 2; i < dataLen; i++)
+            {
+                buildString.append(Utility::formatHexNum(data[i]) + " ");
+            }
             break;
         case UDS_SERVICES::REQ_TRANS_EXIT:
+        case UDS_SERVICES::REQ_TRANS_EXIT + 0x40:
+            buildString.append("\nPayload: ");
+            for (int i = 1; i < dataLen; i++)
+            {
+                buildString.append(Utility::formatHexNum(data[i]) + " ");
+            }
             break;
         case UDS_SERVICES::REQ_FILE_TRANS:
             break;

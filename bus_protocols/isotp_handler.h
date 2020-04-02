@@ -19,6 +19,7 @@ public:
     ~ISOTP_HANDLER();
     void setExtendedAddressing(bool mode);
     void setReception(bool mode); //set whether to accept and forward frames or not
+    void setEmitPartials(bool mode);
     void sendISOTPFrame(int bus, int ID, QByteArray data);
     void setProcessAll(bool state);
     void setFlowCtrl(bool state);
@@ -45,6 +46,7 @@ private:
     int framesUntilFlow;
     bool processAll;
     bool issueFlowMsgs;
+    bool sendPartialMessages;
     QTimer frameTimer;
     uint32_t lastSenderID;
     uint32_t lastSenderBus;

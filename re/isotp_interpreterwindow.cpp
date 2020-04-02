@@ -73,7 +73,8 @@ void ISOTP_InterpreterWindow::showEvent(QShowEvent* event)
 
     qApp->processEvents();
 
-    decoder->rapidFrames(nullptr, *modelFrames);
+    decoder->updatedFrames(-2);
+    //decoder->rapidFrames(nullptr, *modelFrames);
 
     progress.cancel();
 
@@ -130,7 +131,7 @@ void ISOTP_InterpreterWindow::writeSettings()
 void ISOTP_InterpreterWindow::interpretCapturedFrames()
 {
     clearList();
-    decoder->rapidFrames(nullptr, *modelFrames);
+    decoder->updatedFrames(-2);
 }
 
 void ISOTP_InterpreterWindow::listFilterItemChanged(QListWidgetItem *item)
