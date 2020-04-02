@@ -1,6 +1,7 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
 #include <QComboBox>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <qevent.h>
 #include "helpwindow.h"
@@ -67,7 +68,6 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->btnNewDBC, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::newFile);
     connect(ui->tableFiles, &QTableWidget::cellChanged, this, &DBCLoadSaveWindow::cellChanged);
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked, this, &DBCLoadSaveWindow::cellDoubleClicked);
-    connect(ui->btnLoadJSON, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadJSON);
 
     editorWindow = new DBCMainEditor(frames, this);
     currentlyEditingFile = nullptr;
@@ -153,7 +153,38 @@ void DBCLoadSaveWindow::newFile()
 
 void DBCLoadSaveWindow::loadFile()
 {
-    DBCFile *file = dbcHandler->loadDBCFile(-1);
+    DBCFile *file = nullptr;
+    QString filename;
+    QFileDialog dialog;
+    QSettings settings;
+
+    QStringList filters;
+    filters.append(QString(tr("DBC File (*.dbc)")));
+    filters.append(QString(tr("Tesla JSON File (*.json)")));
+
+    dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        //right now there is only one file type that can be loaded here so just do it.
+        settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
+
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".dbc";
+            file = dbcHandler->loadDBCFile(filename);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".json";
+            file = dbcHandler->loadJSONFile(filename);
+        }
+    }
+
     if(file) {
         inhibitCellProcessing=true;
         int idx = ui->tableFiles->rowCount();
@@ -187,24 +218,7 @@ void DBCLoadSaveWindow::loadFile()
 
 void DBCLoadSaveWindow::loadJSON()
 {
-    DBCFile *file = dbcHandler->loadJSONFile(-1);
-    if(file) {
-        int idx = ui->tableFiles->rowCount();
-        ui->tableFiles->insertRow(ui->tableFiles->rowCount());
-        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
-        ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
-        DBC_ATTRIBUTE *attr = file->findAttributeByName("isj1939dbc");
-        QTableWidgetItem *item = new QTableWidgetItem("");
-        ui->tableFiles->setItem(idx, 2, item);
-        if (attr && attr->defaultValue > 0)
-        {
-            item->setCheckState(Qt::Checked);
-        }
-        else
-        {
-            item->setCheckState(Qt::Unchecked);
-        }
-    }
+
 }
 
 void DBCLoadSaveWindow::saveFile()

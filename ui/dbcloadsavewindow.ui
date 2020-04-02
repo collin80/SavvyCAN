@@ -25,13 +25,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QPushButton" name="btnLoadJSON">
-     <property name="text">
-      <string>Load Tesla JSON (shhhh....)</string>
-     </property>
-    </widget>
-   </item>
-   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QPushButton" name="btnLoad">

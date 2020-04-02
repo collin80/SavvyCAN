@@ -1505,28 +1505,12 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
     return nullptr;
 }
 
-DBCFile* DBCHandler::loadJSONFile(int idx)
+DBCFile* DBCHandler::loadJSONFile(QString filename)
 {
-    if (idx > -1 && idx < loadedFiles.count()) removeDBCFile(idx);
-
-     QString filename;
-     QFileDialog dialog;
      QSettings settings;
      DBCFile *thisFile;
      DBC_MESSAGE *pMsg;
 
-     QStringList filters;
-     filters.append(QString(tr("JSON File (*.json *.JSON)")));
-
-     dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
-     dialog.setFileMode(QFileDialog::ExistingFile);
-     dialog.setNameFilters(filters);
-     dialog.setViewMode(QFileDialog::Detail);
-
-     if (dialog.exec() == QDialog::Accepted)
-     {
-         filename = dialog.selectedFiles()[0];
-         //right now there is only one file type that can be loaded here so just do it.
          createBlankFile();
          thisFile = &loadedFiles.last();
          QFile *inFile = new QFile(filename);
@@ -1543,7 +1527,7 @@ DBCFile* DBCHandler::loadJSONFile(int idx)
          QJsonDocument jsonDoc = QJsonDocument::fromJson(wholeFileData);
          if (jsonDoc.isNull())
          {
-             qDebug() << "Couldn't load the json file, shit the bed, don't know why I did it.";
+             qDebug() << "Couldn't load and parse the JSON file for some reason.";
              return nullptr;
          }
          qDebug() << "Loaded JSON";
@@ -1594,8 +1578,8 @@ DBCFile* DBCHandler::loadJSONFile(int idx)
                 sig.name = QString(sigIter.key().toUtf8());
                 sig.factor = sigObj.find("scale").value().toDouble();
                 sig.bias = sigObj.find("offset").value().toDouble();
-                sig.max = sigObj.find("max").value().toInt();
-                sig.min = sigObj.find("min").value().toInt();
+                sig.max = sigObj.find("max").value().toDouble();
+                sig.min = sigObj.find("min").value().toDouble();
                 sig.startBit = sigObj.find("start_position").value().toInt();
                 sig.unitName = sigObj.find("units").value().toString();
                 sig.signalSize = sigObj.find("width").value().toInt();
@@ -1669,12 +1653,7 @@ DBCFile* DBCHandler::loadJSONFile(int idx)
                 }
              }
          }
-
-         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
          return thisFile;
-     }
-
-    return nullptr;
 }
 
 void DBCHandler::removeDBCFile(int idx)
