@@ -63,6 +63,8 @@ private slots:
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
+    void expandAllRows();
+    void collapseAllRows();
     void showPlaybackWindow();
     void showFlowViewWindow();
     void showFrameSenderWindow();

@@ -192,6 +192,23 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="cbOverwrite">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="text">
+         <string>Overwrite Mode</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="cbInterpret">
         <property name="text">
          <string>Interpret Frames</string>
@@ -199,12 +216,23 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="cbOverwrite">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
+       <widget class="QPushButton" name="btnExpandAll">
         <property name="text">
-         <string>Overwrite Mode</string>
+         <string>Expand All Rows</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnCollapseAll">
+        <property name="text">
+         <string>Collapse All Rows</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
         </property>
        </widget>
       </item>
@@ -265,7 +293,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
