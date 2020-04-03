@@ -1311,13 +1311,24 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                     thisFrame.setFrameId(tokens[2].toUInt(nullptr, 16));
                     thisFrame.setExtendedFrameFormat(false);
                 }
-                QByteArray bytes(tokens[5].toInt(), 0);
-                if (thisFrame.payload().length() > 8) return false;
-                if (thisFrame.payload().length() < 0) return false;
+
+                int payloadLen = tokens[5].toInt();
+                QByteArray bytes(payloadLen, 0);
+
+                if (payloadLen > 8)
+                {
+                    qDebug() << "Payload length too long. Original line: " << line;
+                    return false;
+                }
+                if (payloadLen < 0)
+                {
+                    qDebug() << "Payload length negative! Original line: " << line;
+                    return false;
+                }
                 thisFrame.isReceived = tokens[3].toUpper().contains("RX");
                 thisFrame.bus = tokens[1].toInt();
                 if (tokens[4] == "r") thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
-                for (int d = 6; d < (6 + static_cast<int>(thisFrame.payload().length())); d++)
+                for (int d = 6; d < (6 + payloadLen); d++)
                 {
                     if (tokens.count() > d)
                     {
@@ -1325,8 +1336,10 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                     }
                     else //expected byte wasn't there to read. Set it zero and set error flag
                     {
-                    bytes[d - 6] = 0;
-                    foundErrors = true;
+                        bytes[d - 6] = 0;
+                        foundErrors = true;
+                        qDebug() << "D:" << d << " Count:" << tokens.count();
+                        qDebug() << "Expected byte missing! Original line: " << line;
                     }
                 }
                 thisFrame.setPayload(bytes);
