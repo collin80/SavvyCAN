@@ -129,6 +129,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
+    connect(ui->btnExpandAll, &QAbstractButton::clicked, this, &MainWindow::expandAllRows);
+    connect(ui->btnCollapseAll, &QAbstractButton::clicked, this, &MainWindow::collapseAllRows);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -380,6 +382,48 @@ void MainWindow::headerClicked(int logicalIndex)
 {
     //ui->canFramesView->sortByColumn(logicalIndex);
     model->sortByColumn(logicalIndex);
+}
+
+void MainWindow::expandAllRows()
+{
+    bool goAhead = false;
+    int numRows = ui->canFramesView->model()->rowCount();
+
+    if (numRows > 20000)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Really?", "It's not recommended to use this\non more than 20000 frames.\nIt can take a long time.\n\nYou have been warned!\nStill do it?",
+                                  QMessageBox::Yes|QMessageBox::No);
+
+        if (confirmDialog == QMessageBox::Yes) goAhead = true;
+    }
+    else goAhead = true;
+
+    if (goAhead)
+    {
+        ui->canFramesView->resizeRowsToContents();
+    }
+}
+
+void MainWindow::collapseAllRows()
+{
+    bool goAhead = false;
+    int numRows = ui->canFramesView->model()->rowCount();
+
+    if (numRows > 50000)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Really?", "It's not recommended to use this\non more than 50000 frames.\nIt can take a long time.\n\nYou have been warned!\nStill do it?",
+                                  QMessageBox::Yes|QMessageBox::No);
+
+        if (confirmDialog == QMessageBox::Yes) goAhead = true;
+    }
+    else goAhead = true;
+
+    if (goAhead)
+    {
+        for (int i = 0; i < numRows; i++) ui->canFramesView->setRowHeight(i, normalRowHeight);
+    }
 }
 
 void MainWindow::gridClicked(QModelIndex idx)

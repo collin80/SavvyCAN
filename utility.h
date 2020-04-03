@@ -194,6 +194,8 @@ public:
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
                 if (bit < 64) {
+                    int bytePos = bit / 8;
+                    if (bytePos >= data.count()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
                         result += (1ULL << bitpos);
                 }
@@ -206,6 +208,8 @@ public:
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
                 if (bit < 64) {
+                    int bytePos = bit / 8;
+                    if (bytePos >= data.count()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
                         result += (1ULL << (sigSize - bitpos - 1));
                 }
