@@ -7,7 +7,7 @@ language: cpp
 env:
   global:
     - QT_INSTALL_DIR=~/Qt
-    - QT_VERSION=5.15.0
+    - QT_VERSION=5.14.2
 
 matrix:
    include:
@@ -76,7 +76,7 @@ matrix:
             QDEPLOY_PATH=${QT_INSTALL_DIR}/${QT_VERSION}/msvc2017_64/bin/windeployqt.exe
         before_install:
            - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat"
-           - ./install-qt.sh -d ${QT_INSTALL_DIR} --version ${QT_VERSION} --toolchain win64_msvc2017_64 qtbase qttools qtconnectivity qtimageformats qtserialport qtserialbus qtdoc
+           - ./install-qt.sh -d ${QT_INSTALL_DIR} --version ${QT_VERSION} --toolchain win64_msvc2017_64 qtbase qttools qtconnectivity qtimageformats qtserialport qtserialbus
         script:
            - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat" '&&' cd '&&' ${QMAKE_PATH}  CONFIG+=RELEASE SavvyCAN.pro '&&' cd '&&' nmake
            - ls
