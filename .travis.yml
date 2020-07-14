@@ -1,7 +1,13 @@
 language: cpp
 
-# Any time a commit is done to either master or WIP we do a CI build on all three platforms to make sure it really builds. The linux version will be saved to the continuous tag 
-# and thus available for testing. All three platforms will get a proper release upon a tagged commit. 
+# Any time a commit is done to either master or WIP we do a CI build on all three platforms to make 
+# sure it really builds. The linux version will be saved to the continuous tag and thus available
+# for testing. All three platforms will get a proper release upon a tagged commit. 
+
+env:
+  global:
+    - QT_INSTALL_DIR=~/Qt
+    - QT_VERSION=5.15.0
 
 matrix:
    include:
@@ -65,14 +71,16 @@ matrix:
            draft: false
 
       - os: windows
+        env:
+            QMAKE_PATH=${QT_INSTALL_DIR}/${QT_VERSION}/msvc2017_64/bin/qmake.exe
+            QDEPLOY_PATH=${QT_INSTALL_DIR}/${QT_VERSION}/msvc2017_64/bin/windeployqt.exe
         before_install:
-           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat"
-           - curl -vLO http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe
-           - ./qt-unified-windows-x86-online.exe --verbose --script qt-installer-windows.qs
+           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat"
+           - ./install-qt.sh -d ${QT_INSTALL_DIR} --version ${QT_VERSION} --toolchain win64_msvc2017_64 qtbase qttools qtconnectivity qtimageformats qtserialport qtserialbus qtdoc
         script:
-           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" '&&' cd '&&' "C:/Qt/5.12.3/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro '&&' cd '&&' nmake
+           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat" '&&' cd '&&' ${QMAKE_PATH}  CONFIG+=RELEASE SavvyCAN.pro '&&' cd '&&' nmake
            - ls
-           - cmd.exe //C cd release '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars32.bat" '&&' "C:/Qt/5.12.3/msvc2017/bin/windeployqt.exe" ./SavvyCAN.exe
+           - cmd.exe //C cd release '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat" '&&' ${QDEPLOY_PATH} ./SavvyCAN.exe
            - cd release
            - ls
            - rm *.cpp
@@ -81,13 +89,13 @@ matrix:
            - mkdir help
            - cp -R ../help/*.* ./help
            - cp -r ../examples .
-           - 7z a -tzip SavvyCAN32.zip -r *
+           - 7z a -tzip SavvyCAN.zip -r *
            
         deploy:
            provider: releases
            skip_cleanup: true
            api_key: $GITHUB_TOKEN
-           file: SavvyCAN32.zip
+           file: SavvyCAN.zip
            on:
               tags: true
            draft: false
