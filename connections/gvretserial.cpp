@@ -819,11 +819,14 @@ void GVRetSerial::procRXChar(unsigned char c)
             qDebug() << "Baud 0 = " << can0Baud;
             qDebug() << "Baud 1 = " << can1Baud;
             mBusData[0].mBus.setSpeed(can0Baud);
-            mBusData[1].mBus.setSpeed(can1Baud);
             mBusData[0].mBus.setActive(can0Enabled);
-            mBusData[1].mBus.setActive(can1Enabled);
             mBusData[0].mConfigured = true;
-            mBusData[1].mConfigured = true;
+            if (mBusData.count() > 1)
+            {
+                mBusData[1].mBus.setSpeed(can1Baud);
+                mBusData[1].mBus.setActive(can1Enabled);
+                mBusData[1].mConfigured = true;
+            }
 
             can0Baud |= 0x80000000;
             if (can0Enabled) can0Baud |= 0x40000000;
