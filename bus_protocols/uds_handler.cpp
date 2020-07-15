@@ -545,8 +545,12 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
         case UDS_SERVICES::REQUEST_UPLOAD:
             compType = data[1] >> 4;
             encType = data[1] & 0xF;
-            buildString.append("Compression Type: " + QString(compType) + "\n");
-            buildString.append("Encryption Type: " + QString(encType) + "\n");
+            buildString.append("Compression Type: " + QString::number(compType));
+            if (compType == 0) buildString.append(" (none)");
+            buildString.append("\n");
+            buildString.append("Encryption Type: " + QString::number(encType));
+            if (encType == 0) buildString.append(" (none)");
+            buildString.append("\n");
             //subfunc byte specifies address and length format, then address, then size
             dataSize = data[2] >> 4;
             addrSize = data[2] & 0xF;
@@ -570,7 +574,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             break;
         case UDS_SERVICES::TRANSFER_DATA:
         case UDS_SERVICES::TRANSFER_DATA + 0x40:
-            buildString.append("\nBlock Sequence: " + QString(data[1]) + "\nPayload: ");
+            buildString.append("\nBlock Sequence: " + QString::number(data[1], 16) + "\nPayload: ");
             for (int i = 2; i < dataLen; i++)
             {
                 buildString.append(Utility::formatHexNum(data[i]) + " ");
