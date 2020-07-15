@@ -29,6 +29,7 @@ private slots:
     void onCustomMenuMessage(QPoint);
     void deleteCurrentNode();
     void deleteCurrentMessage();
+    void handleSearch();
 
 private:
     Ui::DBCMainEditor *ui;

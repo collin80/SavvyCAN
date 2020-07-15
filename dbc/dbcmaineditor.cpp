@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QColorDialog>
+#include <QTableWidgetItem>
 #include <qevent.h>
 #include "helpwindow.h"
 
@@ -49,6 +50,9 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     connect(ui->MessagesTable, SIGNAL(cellClicked(int,int)), this, SLOT(onCellClickedMessage(int,int)));
     connect(ui->MessagesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuMessage(QPoint)));
     ui->MessagesTable->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    connect(ui->btnSearch, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearch);
+    connect(ui->lineSearch, &QLineEdit::returnPressed, this, &DBCMainEditor::handleSearch);
 
     sigEditor = new DBCSignalEditor(this);
 
@@ -176,6 +180,81 @@ void DBCMainEditor::deleteCurrentMessage()
     {
         ui->MessagesTable->removeRow(thisRow);
         dbcFile->messageHandler->removeMessageByIndex(thisRow);
+    }
+}
+
+void DBCMainEditor::handleSearch()
+{
+    uint32_t msgId = Utility::ParseStringToNum(ui->lineSearch->text());
+    if (ui->radioID->isChecked())
+    {
+        DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByID(msgId);
+        if (msg)
+        {
+            DBC_NODE *node = msg->sender;
+            if (node)
+            {
+                QString nodeName = node->name;
+                for (int i = 0; i < ui->NodesTable->rowCount(); i++)
+                {
+                    QTableWidgetItem *item = ui->NodesTable->item(i, 0);
+                    if (item->text() == nodeName)
+                    {
+                        item->setSelected(true);
+                        ui->NodesTable->scrollToItem(item);
+                        onCellClickedNode(i, 0);
+                        for (int j = 0; j < ui->MessagesTable->rowCount(); j++)
+                        {
+                            QTableWidgetItem *msgItem = ui->MessagesTable->item(j, 0);
+                            if (!msgItem) break;
+                            if (Utility::ParseStringToNum(msgItem->text()) == msgId)
+                            {
+                                msgItem->setSelected(true);
+                                ui->MessagesTable->scrollToItem(msgItem);
+                                onCellClickedMessage(j, 0);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if (ui->radioName->isChecked())
+    {
+        DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByPartialName(ui->lineSearch->text());
+        if (msg)
+        {
+            DBC_NODE *node = msg->sender;
+            if (node)
+            {
+                QString nodeName = node->name;
+                for (int i = 0; i < ui->NodesTable->rowCount(); i++)
+                {
+                    QTableWidgetItem *item = ui->NodesTable->item(i, 0);
+                    if (item->text() == nodeName)
+                    {
+                        item->setSelected(true);
+                        ui->NodesTable->scrollToItem(item);
+                        onCellClickedNode(i, 0);
+                        for (int j = 0; j < ui->MessagesTable->rowCount(); j++)
+                        {
+                            QTableWidgetItem *msgItem = ui->MessagesTable->item(j, 1);
+                            if (!msgItem) break;
+                            if (msgItem->text().contains(ui->lineSearch->text(), Qt::CaseInsensitive))
+                            {
+                                msgItem->setSelected(true);
+                                ui->MessagesTable->scrollToItem(msgItem);
+                                onCellClickedMessage(j, 0);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
     }
 }
 

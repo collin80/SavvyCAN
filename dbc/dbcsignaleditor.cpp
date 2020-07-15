@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMenu>
 #include <QSettings>
+#include <QRandomGenerator>
 #include <qevent.h>
 #include "helpwindow.h"
 
@@ -14,8 +15,6 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->setupUi(this);
 
     readSettings();
-
-    qsrand(QDateTime::currentMSecsSinceEpoch());
 
     dbcHandler = DBCHandler::getReference();
     dbcMessage = nullptr;
@@ -345,7 +344,7 @@ void DBCSignalEditor::onCustomMenuValues(QPoint point)
 
 void DBCSignalEditor::addNewSignal()
 {
-    int num = qrand() % 70000;
+    int num = QRandomGenerator::global()->bounded(70000);
     QString newName = "SIGNAL" + QString::number(num);
     DBC_SIGNAL newSig;
     newSig.name = newName;
@@ -373,7 +372,7 @@ void DBCSignalEditor::addNewSignal()
 
 void DBCSignalEditor::cloneSignal()
 {
-    int num = qrand() % 100;
+    int num = QRandomGenerator::global()->bounded(100);
 
     int idx = ui->signalsList->currentRow();
     if (idx < 0) return;

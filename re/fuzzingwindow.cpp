@@ -2,6 +2,7 @@
 #include "ui_fuzzingwindow.h"
 #include "utility.h"
 #include <QDebug>
+#include <QRandomGenerator>
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
@@ -250,12 +251,12 @@ void FuzzingWindow::calcNextID()
         if (rangeIDSelect)
         {
             int range = endID - startID;
-            if (range != 0) currentID = startID + qrand() % range;
+            if (range != 0) currentID = startID + QRandomGenerator::global()->bounded(range);
             else currentID = startID;
         }
         else //IDs by filter so pick a random selected ID from the filter list
         {
-            currentIdx = qrand() % selectedIDs.length();
+            currentIdx = QRandomGenerator::global()->bounded(selectedIDs.length());
             currentID = selectedIDs[currentIdx];
         }
     }
@@ -277,7 +278,7 @@ void FuzzingWindow::calcNextBitPattern()
                 thisBit = bitGrid[byt * 8 + bit];
                 if (thisBit == 1)
                 {
-                    if ((qrand() % 2) == 1) currentBytes[byt] |= (1 << bit);
+                    if ((QRandomGenerator::global()->bounded(2)) == 1) currentBytes[byt] |= (1 << bit);
                 }
                 if (thisBit == 2) currentBytes[byt] |= (1 << bit);
             }
@@ -391,12 +392,12 @@ void FuzzingWindow::toggleFuzzing()
             if (rangeIDSelect)
             {
                 int range = endID - startID;
-                if (range != 0) currentID = startID + qrand() % range;
+                if (range != 0) currentID = startID + QRandomGenerator::global()->bounded(range);
                 else currentID = startID;
             }
             else //IDs by filter so pick a random selected ID from the filter list
             {
-                currentIdx = qrand() % selectedIDs.length();
+                currentIdx = QRandomGenerator::global()->bounded(selectedIDs.length());
                 currentID = selectedIDs[currentIdx];
             }
         }

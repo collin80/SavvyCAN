@@ -151,6 +151,20 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
     return nullptr;
 }
 
+//allow for finding a message just by part of the name
+DBC_MESSAGE* DBCMessageHandler::findMsgByPartialName(QString name)
+{
+    if (messages.count() == 0) return nullptr;
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].name.contains(name, Qt::CaseInsensitive))
+        {
+            return &messages[i];
+        }
+    }
+    return nullptr;
+}
+
 bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 {
     messages.append(msg);
