@@ -40,6 +40,7 @@ public:
     DBC_MESSAGE *findMsgByID(uint32_t id);
     DBC_MESSAGE *findMsgByIdx(int idx);
     DBC_MESSAGE *findMsgByName(QString name);
+    DBC_MESSAGE *findMsgByPartialName(QString name);
     bool addMessage(DBC_MESSAGE &msg);
     bool removeMessage(DBC_MESSAGE *msg);
     bool removeMessageByIndex(int idx);
