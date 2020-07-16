@@ -39,6 +39,12 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     ui->graphHistogram->xAxis->setRange(0, 63);
     ui->graphHistogram->yAxis->setRange(0, 100);
+    QSharedPointer<QCPAxisTickerLog> graphHistoLogTicker(new QCPAxisTickerLog);
+    ui->graphHistogram->yAxis->setTicker(graphHistoLogTicker);
+    ui->graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
+    ui->graphHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
+    ui->graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
+
     ui->graphHistogram->axisRect()->setupFullAxesBox();
 
     ui->graphHistogram->xAxis->setLabel("Bits");
@@ -63,6 +69,12 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     ui->timeHistogram->xAxis->setRange(0, numIntervalHistBars);
     ui->timeHistogram->yAxis->setRange(0, 100);
+    QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
+    ui->timeHistogram->yAxis->setTicker(logTicker);
+    ui->timeHistogram->yAxis2->setTicker(logTicker);
+    ui->timeHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
+    ui->timeHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
+    ui->timeHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
     ui->timeHistogram->axisRect()->setupFullAxesBox();
 
     ui->timeHistogram->xAxis->setLabel("Interval (ms)");
@@ -557,7 +569,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         graphBrush.setStyle(Qt::SolidPattern);
         ui->graphHistogram->graph()->setPen(Qt::NoPen);
         ui->graphHistogram->graph()->setBrush(graphBrush);
-        ui->graphHistogram->yAxis->setRange(0, maxY * 1.02);
+        ui->graphHistogram->yAxis->setRange(0.8, maxY * 1.2);
+        ui->graphHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
         ui->graphHistogram->axisRect()->setupFullAxesBox();
         ui->graphHistogram->replot();
 
@@ -575,12 +588,6 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->timeHistogram->addGraph();
         ui->timeHistogram->graph()->setData(timeGraphX, timeGraphY);
         ui->timeHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
-        ui->timeHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
-        QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
-        ui->timeHistogram->yAxis->setTicker(logTicker);
-        ui->timeHistogram->yAxis2->setTicker(logTicker);
-        ui->timeHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
-        ui->timeHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
         //QBrush graphBrush;
         graphBrush.setColor(Qt::red);
         graphBrush.setStyle(Qt::SolidPattern);
