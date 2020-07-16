@@ -9,7 +9,7 @@ SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
     const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
     int dataLen = pFrame.payload().length();
 
-    for (int i = 0; i < 0; i++) {
+    for (int i = 0; i < dataLen; i++) {
         mNotch[i] = 0;
         mMarker.data[i] = 0;
         mMarker.dataTimestamp[i] = 0;

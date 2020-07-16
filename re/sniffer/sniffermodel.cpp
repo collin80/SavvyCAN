@@ -70,7 +70,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 int data = item->getData(col-tc::DATA_0);
                 if(data >= 0)
                 {
-                    return QString("%1").arg(data, 2, 16, QLatin1Char('0')).toUpper();
+                    return QString("%1").arg((uint8_t)data, 2, 16, QLatin1Char('0')).toUpper();
                 }
             }
             break;
