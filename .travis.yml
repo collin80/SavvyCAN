@@ -4,11 +4,6 @@ language: cpp
 # sure it really builds. The linux version will be saved to the continuous tag and thus available
 # for testing. All three platforms will get a proper release upon a tagged commit. 
 
-env:
-  global:
-    - QT_INSTALL_DIR=~/Qt
-    - QT_VERSION=5.14.2
-
 matrix:
    include:
       - os: linux
@@ -66,37 +61,6 @@ matrix:
            skip_cleanup: true
            api_key: $GITHUB_TOKEN
            file: SavvyCAN.dmg
-           on:
-              tags: true
-           draft: false
-
-      - os: windows
-        env:
-            QMAKE_PATH=${QT_INSTALL_DIR}/${QT_VERSION}/msvc2017/bin/qmake.exe
-            QDEPLOY_PATH=${QT_INSTALL_DIR}/${QT_VERSION}/msvc2017/bin/windeployqt.exe
-        before_install:
-           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat"
-           - ./install-qt.sh -d ${QT_INSTALL_DIR} --version ${QT_VERSION} --toolchain win64_msvc2017_64 qtbase qttools qtconnectivity qtimageformats qtserialport qtserialbus
-        script:
-           - cmd.exe //C cd '&&' "C:/Program Files (x86)/Microsoft Visual Studio/2017/BuildTools/VC/Auxiliary/Build/vcvars64.bat" '&&' cd "c:/Users/travis/build/collin80/savvycan" '&&' cd '&&' "c:/Users/travis/Qt/5.14.2/msvc2017/bin/qmake" CONFIG+=RELEASE SavvyCAN.pro '&&' nmake
-           - ls
-           - cd release 
-           - cmd.exe //C 'C:/Users/travis/Qt/5.14.2/msvc2017/bin/windeployqt.exe' './SavvyCAN.exe'
-           - cd release
-           - ls
-           - rm *.cpp
-           - rm *.h
-           - rm *.obj
-           - mkdir help
-           - cp -R ../help/*.* ./help
-           - cp -r ../examples .
-           - 7z a -tzip SavvyCAN.zip -r *
-           
-        deploy:
-           provider: releases
-           skip_cleanup: true
-           api_key: $GITHUB_TOKEN
-           file: SavvyCAN.zip
            on:
               tags: true
            draft: false
