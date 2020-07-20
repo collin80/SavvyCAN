@@ -3,8 +3,10 @@
 
 #include <QDialog>
 #include <QDebug>
+#include <QIcon>
 #include "dbchandler.h"
 #include "dbcsignaleditor.h"
+#include "dbcmessageeditor.h"
 #include "utility.h"
 
 namespace Ui {
@@ -21,14 +23,9 @@ public:
     void setFileIdx(int idx);
 
 private slots:
-    void onCellChangedNode(int,int);
-    void onCellClickedNode(int, int);
-    void onCellClickedMessage(int, int);
-    void onCellChangedMessage(int,int);
-    void onCustomMenuNode(QPoint);
-    void onCustomMenuMessage(QPoint);
-    void deleteCurrentNode();
-    void deleteCurrentMessage();
+    void onTreeDoubleClicked(const QModelIndex &index);
+    void onCustomMenuTree(QPoint);
+    void deleteCurrentTreeItem();
     void handleSearch();
 
 private:
@@ -36,19 +33,21 @@ private:
     DBCHandler *dbcHandler;
     const QVector<CANFrame> *referenceFrames;
     DBCSignalEditor *sigEditor;
-    int currRow;
+    DBCMessageEditor *msgEditor;
     DBCFile *dbcFile;
     int fileIdx;
-    bool inhibitCellChanged;
+    QIcon nodeIcon;
+    QIcon messageIcon;
+    QIcon signalIcon;
+    QIcon multiplexorSignalIcon;
+    QIcon multiplexedSignalIcon;
 
-    void refreshNodesTable();
-    void refreshMessagesTable(const DBC_NODE *node);
+    void refreshTree();
     void showEvent(QShowEvent* event);
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
-    void insertBlankRow();
 
 };
 
