@@ -4,9 +4,11 @@
 #include <QDialog>
 #include <QDebug>
 #include <QIcon>
+#include <QTreeWidget>
 #include "dbchandler.h"
 #include "dbcsignaleditor.h"
 #include "dbcmessageeditor.h"
+#include "dbcnodeeditor.h"
 #include "utility.h"
 
 namespace Ui {
@@ -22,11 +24,16 @@ public:
     ~DBCMainEditor();
     void setFileIdx(int idx);
 
+public slots:
+    void updatedTreeInfo(QString oldData, QString newData, int type);
+
 private slots:
     void onTreeDoubleClicked(const QModelIndex &index);
     void onCustomMenuTree(QPoint);
     void deleteCurrentTreeItem();
     void handleSearch();
+    void handleSearchForward();
+    void handleSearchBackward();
 
 private:
     Ui::DBCMainEditor *ui;
@@ -34,6 +41,7 @@ private:
     const QVector<CANFrame> *referenceFrames;
     DBCSignalEditor *sigEditor;
     DBCMessageEditor *msgEditor;
+    DBCNodeEditor *nodeEditor;
     DBCFile *dbcFile;
     int fileIdx;
     QIcon nodeIcon;
@@ -41,14 +49,15 @@ private:
     QIcon signalIcon;
     QIcon multiplexorSignalIcon;
     QIcon multiplexedSignalIcon;
+    QList<QTreeWidgetItem *> searchItems;
+    int searchItemPos;
 
-    void refreshTree();
     void showEvent(QShowEvent* event);
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
-
+    void refreshTree();
 };
 
 #endif // DBCMAINEDITOR_H

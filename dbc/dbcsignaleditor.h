@@ -20,6 +20,10 @@ public:
     void setSignalRef(DBC_SIGNAL *sig);
     void showEvent(QShowEvent*);
     ~DBCSignalEditor();
+    void refreshView();
+
+signals:
+    void updatedTreeInfo(QString oldData, QString newData, int type);
 
 private slots:
     void bitfieldClicked(int x, int y);

@@ -19,6 +19,9 @@ class CANDataGrid;
  * Then, support was added for modifying the text color of each cell. This can be used for whatever the calling code wants. An example is
  * FlowView that uses all of the above functionality plus this functionality in order to show which bits are set as triggers for stopping
  * the flowview playback.
+ *
+ * Now the control also tracks which signal is using which bit. Currently this is not used for graphical output. I tried but couldn't make it look
+ * like I wanted. So, it's un-used as of yet.
  */
 
 enum GridTextState
@@ -41,7 +44,9 @@ public:
     void setUsed(unsigned char *, bool);
     void saveImage(QString filename, int width, int height);
     void setCellTextState(int x, int y, GridTextState state);
-    GridTextState geCellTextState(int x, int y);
+    GridTextState getCellTextState(int x, int y);
+    void setUsedSignalNum(int bit, unsigned char signal);
+    unsigned char getUsedSignalNum(int bit);
 
 protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
@@ -54,6 +59,7 @@ private:
     unsigned char refData[8];
     unsigned char data[8];
     unsigned char usedData[8];
+    unsigned char usedSignalNum[64]; //allows a full char per 64 bits we track so we can specify which signal claims this bit
     GridTextState textStates[8][8];
     QPoint upperLeft, gridSize;
 };

@@ -32,6 +32,9 @@
      </item>
      <item>
       <widget class="QToolButton" name="btnNewMessage">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>New Message</string>
        </property>
@@ -46,6 +49,9 @@
      </item>
      <item>
       <widget class="QToolButton" name="btnNewSignal">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>New Signal</string>
        </property>
@@ -60,6 +66,9 @@
      </item>
      <item>
       <widget class="QToolButton" name="btnDelete">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Delete</string>
        </property>
@@ -91,6 +100,27 @@
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <widget class="QTreeWidget" name="treeDBC">
+       <property name="dragEnabled">
+        <bool>false</bool>
+       </property>
+       <property name="dragDropMode">
+        <enum>QAbstractItemView::NoDragDrop</enum>
+       </property>
+       <property name="defaultDropAction">
+        <enum>Qt::IgnoreAction</enum>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::SingleSelection</enum>
+       </property>
+       <property name="indentation">
+        <number>28</number>
+       </property>
+       <property name="headerHidden">
+        <bool>true</bool>
+       </property>
+       <property name="expandsOnDoubleClick">
+        <bool>false</bool>
+       </property>
        <column>
         <property name="text">
          <string notr="true">1</string>
@@ -107,7 +137,7 @@
        <item>
         <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Find DBC Message:</string>
+          <string>Find:</string>
          </property>
         </widget>
        </item>
@@ -115,26 +145,34 @@
         <widget class="QLineEdit" name="lineSearch"/>
        </item>
        <item>
-        <widget class="QRadioButton" name="radioID">
-         <property name="text">
-          <string>Msg ID</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QRadioButton" name="radioName">
-         <property name="text">
-          <string>Msg Name</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <widget class="QPushButton" name="btnSearch">
          <property name="text">
           <string>Search</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QLabel" name="lblSearchPos">
+         <property name="text">
+          <string>Search Results: 0 of 0</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnSearchNext">
+         <property name="text">
+          <string>Next</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnSearchPrev">
+         <property name="text">
+          <string>Previous</string>
          </property>
         </widget>
        </item>

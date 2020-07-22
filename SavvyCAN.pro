@@ -44,6 +44,7 @@ SOURCES += main.cpp\
     dbc/dbchandler.cpp \
     dbc/dbcloadsavewindow.cpp \
     dbc/dbcmaineditor.cpp \
+    dbc/dbcnodeeditor.cpp \
     dbc/dbcsignaleditor.cpp \
     re/discretestatewindow.cpp \
     re/filecomparatorwindow.cpp \
@@ -105,6 +106,7 @@ HEADERS  += mainwindow.h \
     dbc/dbcmaineditor.h \
     dbc/dbcsignaleditor.h \
     dbc/dbcmessageeditor.h \
+    dbc/dbcnodeeditor.h \
     re/discretestatewindow.h \
     re/filecomparatorwindow.h \
     re/flowviewwindow.h \
@@ -139,6 +141,7 @@ FORMS    += ui/candatagrid.ui \
     ui/dbcloadsavewindow.ui \
     ui/dbcmaineditor.ui \
     ui/dbcsignaleditor.ui \
+    ui/dbcnodeeditor.ui \
     ui/discretestatewindow.ui \
     ui/filecomparatorwindow.ui \
     ui/firmwareuploaderwindow.ui \
