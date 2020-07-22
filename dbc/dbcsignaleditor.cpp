@@ -125,6 +125,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             {
                 if (currentSignal == nullptr) return;
                 currentSignal->comment = ui->txtComment->text().simplified().replace(' ', '_');
+                //updatedTreeInfo();
             });
 
     connect(ui->txtUnitName, &QLineEdit::editingFinished,
@@ -151,8 +152,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal == nullptr) return;
                 QString tempNameStr = ui->txtName->text().simplified().replace(' ', '_');
                 if (tempNameStr.length() > 0) currentSignal->name = tempNameStr;
-                //need to update the list too.
-                //ui->signalsList->currentItem()->setText(currentSignal->name);
+                //need to update the tree too.
+                //updatedTreeInfo();
             });
 
     connect(ui->txtMultiplexValue, &QLineEdit::editingFinished,
@@ -282,6 +283,12 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
 
+    fillSignalForm(currentSignal);
+    fillValueTable(currentSignal);
+}
+
+void DBCSignalEditor::refreshView()
+{
     fillSignalForm(currentSignal);
     fillValueTable(currentSignal);
 }
@@ -519,6 +526,7 @@ void DBCSignalEditor::generateUsedBits()
             {
                 int byt = y / 8;
                 usedBits[byt] |= 1 << (y % 8);
+                ui->bitfield->setUsedSignalNum(y, x);
             }
         }
         else //big endian / motorola format
@@ -529,6 +537,7 @@ void DBCSignalEditor::generateUsedBits()
             {
                 int byt = startBit / 8;
                 usedBits[byt] |= 1 << (startBit % 8);
+                ui->bitfield->setUsedSignalNum(startBit, x);
                 size--;
                 if ((startBit % 8) == 0) startBit += 15;
                 else startBit--;

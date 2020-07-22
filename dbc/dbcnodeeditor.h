@@ -1,23 +1,23 @@
-#ifndef DBCMESSAGEEDITOR_H
-#define DBCMESSAGEEDITOR_H
+#ifndef DBCNODEEDITOR_H
+#define DBCNODEEDITOR_H
 
 #include <QDialog>
 #include "dbc_classes.h"
 #include "dbchandler.h"
 
 namespace Ui {
-class DBCMessageEditor;
+class DBCNodeEditor;
 }
 
-class DBCMessageEditor : public QDialog
+class DBCNodeEditor : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit DBCMessageEditor(QWidget *parent = nullptr);
-    ~DBCMessageEditor();
+    explicit DBCNodeEditor(QWidget *parent = nullptr);
+    ~DBCNodeEditor();
     void showEvent(QShowEvent*);
-    void setMessageRef(DBC_MESSAGE *msg);
+    void setNodeRef(DBC_NODE *node);
     void setFileIdx(int idx);
     void refreshView();
 
@@ -25,10 +25,10 @@ signals:
     void updatedTreeInfo(QString oldData, QString newData, int type);
 
 private:
-    Ui::DBCMessageEditor *ui;
+    Ui::DBCNodeEditor *ui;
 
     DBCHandler *dbcHandler;
-    DBC_MESSAGE *dbcMessage;
+    DBC_NODE *dbcNode;
     DBCFile *dbcFile;
 
     void closeEvent(QCloseEvent *event);
@@ -38,4 +38,4 @@ private:
     void generateSampleText();
 };
 
-#endif // DBCMESSAGEEDITOR_H
+#endif // DBCNODEEDITOR_H

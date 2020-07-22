@@ -14,6 +14,7 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     memset(data, 0, 8);
     memset(refData, 0, 8);
     memset(usedData, 0, 8);
+    memset(usedSignalNum, 0, 64);
     for (int x = 0; x < 8; x++)
         for (int y = 0; y < 8; y++)
             textStates[x][y] = GridTextState::NORMAL;
@@ -53,7 +54,7 @@ void CANDataGrid::setCellTextState(int x, int y, GridTextState state)
     this->update();
 }
 
-GridTextState CANDataGrid::geCellTextState(int x, int y)
+GridTextState CANDataGrid::getCellTextState(int x, int y)
 {
     if (x < 0) return GridTextState::NORMAL;
     if (x > 7) return GridTextState::NORMAL;
@@ -61,6 +62,21 @@ GridTextState CANDataGrid::geCellTextState(int x, int y)
     if (y > 7) return GridTextState::NORMAL;
     return textStates[x][y];
 }
+
+void CANDataGrid::setUsedSignalNum(int bit, unsigned char signal)
+{
+    if (bit < 0) return;
+    if (bit > 63) return;
+    usedSignalNum[bit] = signal;
+}
+
+unsigned char CANDataGrid::getUsedSignalNum(int bit)
+{
+    if (bit < 0) return 0;
+    if (bit > 63) return 0;
+    return usedSignalNum[bit];
+}
+
 
 void CANDataGrid::paintEvent(QPaintEvent *event)
 {
@@ -161,7 +177,11 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
                 }
                 else
                 {
-                    if ((usedData[y] & (1 << (7-x))) == (1 << (7-x))) painter.setBrush(grayBrush);
+                    if ((usedData[y] & (1 << (7-x))) == (1 << (7-x)))
+                    {
+                        grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
+                        painter.setBrush(grayBrush);
+                    }
                     else painter.setBrush(whiteBrush);
                 }
             }

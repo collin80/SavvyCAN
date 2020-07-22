@@ -22,10 +22,18 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
 
     connect(ui->btnSearch, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearch);
     connect(ui->lineSearch, &QLineEdit::returnPressed, this, &DBCMainEditor::handleSearch);
+    connect(ui->btnSearchNext, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchForward);
+    connect(ui->btnSearchPrev, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchBackward);
     connect(ui->treeDBC, &QTreeWidget::doubleClicked, this, &DBCMainEditor::onTreeDoubleClicked);
 
     sigEditor = new DBCSignalEditor(this);
     msgEditor = new DBCMessageEditor(this);
+    nodeEditor = new DBCNodeEditor(this);
+
+    //all three might potentially change the data stored and force the tree to be updated
+    connect(sigEditor, &DBCSignalEditor::updatedTreeInfo, this, &DBCMainEditor::updatedTreeInfo);
+    connect(msgEditor, &DBCMessageEditor::updatedTreeInfo, this, &DBCMainEditor::updatedTreeInfo);
+    connect(nodeEditor, &DBCNodeEditor::updatedTreeInfo, this, &DBCMainEditor::updatedTreeInfo);
 
     nodeIcon = QIcon(":/icons/images/node.png");
     messageIcon = QIcon(":/icons/images/message.png");
@@ -60,6 +68,8 @@ DBCMainEditor::~DBCMainEditor()
     removeEventFilter(this);
     delete ui;
     delete sigEditor;
+    delete msgEditor;
+    delete nodeEditor;
 }
 
 bool DBCMainEditor::eventFilter(QObject *obj, QEvent *event)
@@ -70,6 +80,12 @@ bool DBCMainEditor::eventFilter(QObject *obj, QEvent *event)
         {
         case Qt::Key_F1:
             HelpWindow::getRef()->showHelp("dbc_editor.html");
+            break;
+        case Qt::Key_F3:
+            handleSearchForward();
+            break;
+        case Qt::Key_F4:
+            handleSearchBackward();
             break;
         }
         return true;
@@ -160,78 +176,36 @@ void DBCMainEditor::deleteCurrentTreeItem()
 
 void DBCMainEditor::handleSearch()
 {
-    /*
-    uint32_t msgId = Utility::ParseStringToNum(ui->lineSearch->text());
-    if (ui->radioID->isChecked())
+    searchItems = ui->treeDBC->findItems(ui->lineSearch->text(),Qt::MatchContains | Qt::MatchRecursive);
+    qDebug() << "Search returned " << searchItems.count() << "items.";
+    if (searchItems.count() > 0)
     {
-        DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByID(msgId);
-        if (msg)
-        {
-            DBC_NODE *node = msg->sender;
-            if (node)
-            {
-                QString nodeName = node->name;
-                for (int i = 0; i < ui->NodesTable->rowCount(); i++)
-                {
-                    QTableWidgetItem *item = ui->NodesTable->item(i, 0);
-                    if (item->text() == nodeName)
-                    {
-                        item->setSelected(true);
-                        ui->NodesTable->scrollToItem(item);
-                        onCellClickedNode(i, 0);
-                        for (int j = 0; j < ui->MessagesTable->rowCount(); j++)
-                        {
-                            QTableWidgetItem *msgItem = ui->MessagesTable->item(j, 0);
-                            if (!msgItem) break;
-                            if (Utility::ParseStringToNum(msgItem->text()) == msgId)
-                            {
-                                msgItem->setSelected(true);
-                                ui->MessagesTable->scrollToItem(msgItem);
-                                onCellClickedMessage(j, 0);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
+        ui->treeDBC->setCurrentItem(searchItems[0]);
+        searchItemPos = 0;
+        ui->lblSearchPos->setText("Search Results: " + QString::number(searchItemPos + 1) + " of " + QString::number(searchItems.count()));
     }
-    if (ui->radioName->isChecked())
+    else
     {
-        DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByPartialName(ui->lineSearch->text());
-        if (msg)
-        {
-            DBC_NODE *node = msg->sender;
-            if (node)
-            {
-                QString nodeName = node->name;
-                for (int i = 0; i < ui->NodesTable->rowCount(); i++)
-                {
-                    QTableWidgetItem *item = ui->NodesTable->item(i, 0);
-                    if (item->text() == nodeName)
-                    {
-                        item->setSelected(true);
-                        ui->NodesTable->scrollToItem(item);
-                        onCellClickedNode(i, 0);
-                        for (int j = 0; j < ui->MessagesTable->rowCount(); j++)
-                        {
-                            QTableWidgetItem *msgItem = ui->MessagesTable->item(j, 1);
-                            if (!msgItem) break;
-                            if (msgItem->text().contains(ui->lineSearch->text(), Qt::CaseInsensitive))
-                            {
-                                msgItem->setSelected(true);
-                                ui->MessagesTable->scrollToItem(msgItem);
-                                onCellClickedMessage(j, 0);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-    } */
+        ui->lblSearchPos->setText("Search Results: 0 of 0");
+    }
+}
+
+void DBCMainEditor::handleSearchForward()
+{
+    if (searchItems.count() == 0) return;
+    if (searchItemPos < searchItems.count() - 1) searchItemPos++;
+    else searchItemPos = 0;
+    ui->treeDBC->setCurrentItem(searchItems[searchItemPos]);
+    ui->lblSearchPos->setText("Search Results: " + QString::number(searchItemPos + 1) + " of " + QString::number(searchItems.count()));
+}
+
+void DBCMainEditor::handleSearchBackward()
+{
+    if (searchItems.count() == 0) return;
+    if (searchItemPos > 0) searchItemPos--;
+    else searchItemPos = searchItems.count() - 1;
+    ui->treeDBC->setCurrentItem(searchItems[searchItemPos]);
+    ui->lblSearchPos->setText("Search Results: " + QString::number(searchItemPos + 1) + " of " + QString::number(searchItems.count()));
 }
 
 //Double clicking is interpreted as a desire to edit the given item.
@@ -243,6 +217,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
     bool ret = false;
     DBC_MESSAGE *msg;
     DBC_SIGNAL *sig;
+    DBC_NODE *node;
     uint32_t msgID;
     QString idString;
 
@@ -251,6 +226,12 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
     switch (firstCol->data(0, Qt::UserRole).toInt())
     {
     case 1: //a node
+        idString = firstCol->text(0).split(" ")[0];
+        node = dbcFile->findNodeByName(idString);
+        nodeEditor->setFileIdx(fileIdx);
+        nodeEditor->setNodeRef(node);
+        nodeEditor->refreshView();
+        nodeEditor->show();
         break;
     case 2: //a message
         idString = firstCol->text(0).split(" ")[0];
@@ -258,8 +239,9 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         msg = dbcFile->messageHandler->findMsgByID(msgID);
         msgEditor->setMessageRef(msg);
         msgEditor->setFileIdx(fileIdx);
-        msgEditor->setWindowModality(Qt::WindowModal);
-        msgEditor->exec(); //blocks this window from being active until we're done
+        //msgEditor->setWindowModality(Qt::WindowModal);
+        msgEditor->refreshView();
+        msgEditor->show(); //show allows the rest of the forms to keep going
         break;
     case 3: //a signal
         idString = firstCol->parent()->text(0).split(" ")[0];
@@ -269,82 +251,11 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         sigEditor->setSignalRef(sig);
         sigEditor->setMessageRef(msg);
         sigEditor->setFileIdx(fileIdx);
-        sigEditor->setWindowModality(Qt::WindowModal);
-        sigEditor->exec(); //blocks this window from being active until we're done
+        //sigEditor->setWindowModality(Qt::WindowModal);
+        sigEditor->refreshView();
+        sigEditor->show();
         break;
     }
-
-/*    if (col == 3) //3 is the signals field. If clicked we go to the signals dialog
-    {
-        QTableWidgetItem* msg = ui->MessagesTable->item(row, 0);
-        if(msg) {
-            QString idString = msg->text();
-            DBC_MESSAGE *message = dbcFile->messageHandler->findMsgByID(static_cast<uint32_t>(Utility::ParseStringToNum(idString)));
-            sigEditor->setMessageRef(message);
-            sigEditor->setFileIdx(fileIdx);
-            sigEditor->setWindowModality(Qt::WindowModal);
-            sigEditor->exec(); //blocks this window from being active until we're done
-            //now update the displayed # of signals
-            inhibitCellChanged = true;
-            QTableWidgetItem *replacement = new QTableWidgetItem(QString::number(message->sigHandler->getCount()));
-            ui->MessagesTable->setItem(row, col, replacement);
-            inhibitCellChanged = false;
-        }
-    }
-    if (col == 4)
-    {
-        QColor newColor = QColorDialog::getColor(thisItem->background().color());
-        thisItem->setBackground(newColor);
-
-        if(!firstCol) return;
-
-        msgID = Utility::ParseStringToNum2(firstCol->text(), &ret);
-        msg = dbcFile->messageHandler->findMsgByID(msgID);
-
-        if (msg)
-        {
-            msg->fgColor = newColor;
-            DBC_ATTRIBUTE_VALUE *val = msg->findAttrValByName("GenMsgForegroundColor");
-            if (val)
-            {
-                val->value = newColor.name();
-            }
-            else
-            {
-                DBC_ATTRIBUTE_VALUE newVal;
-                newVal.attrName = "GenMsgForegroundColor";
-                newVal.value = newColor.name();
-                msg->attributes.append(newVal);
-            }
-        }
-    }
-    if (col == 5)
-    {
-        QColor newColor = QColorDialog::getColor(thisItem->background().color());
-        thisItem->setBackground(newColor);
-
-        if(!firstCol) return;
-
-        msgID = Utility::ParseStringToNum2(firstCol->text(), &ret);
-        msg = dbcFile->messageHandler->findMsgByID(msgID);
-
-        if (msg)
-        {
-            msg->bgColor = newColor;
-            DBC_ATTRIBUTE_VALUE *val = msg->findAttrValByName("GenMsgBackgroundColor");
-            if (val)
-            {
-                val->value = newColor.name();
-            }
-            else
-            {
-                DBC_ATTRIBUTE_VALUE newVal;
-                newVal.attrName = "GenMsgBackgroundColor";
-                newVal.value = newColor.name();
-                msg->attributes.append(newVal);
-            }
-        }
-    } */
 }
 
 
@@ -400,4 +311,9 @@ void DBCMainEditor::refreshTree()
         ui->treeDBC->addTopLevelItem(nodeItem);
     }
     ui->treeDBC->sortItems(0, Qt::SortOrder::AscendingOrder); //sort the display list for ease in viewing by mere mortals, helps me a lot.
+}
+
+void DBCMainEditor::updatedTreeInfo(QString oldData, QString newData, int type)
+{
+
 }
