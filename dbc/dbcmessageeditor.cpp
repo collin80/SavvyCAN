@@ -18,6 +18,37 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
     dbcHandler = DBCHandler::getReference();
     dbcMessage = nullptr;
 
+    connect(ui->lineComment, &QLineEdit::editingFinished,
+        [=]()
+        {
+            if (dbcMessage == nullptr) return;
+            dbcMessage->comment = ui->lineComment->text();
+            emit updatedTreeInfo(dbcMessage);
+        });
+
+    connect(ui->lineFrameID, &QLineEdit::editingFinished,
+        [=]()
+        {
+            if (dbcMessage == nullptr) return;
+            dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
+            emit updatedTreeInfo(dbcMessage);
+        });
+
+    connect(ui->lineMsgName, &QLineEdit::editingFinished,
+        [=]()
+        {
+            if (dbcMessage == nullptr) return;
+            dbcMessage->name = ui->lineMsgName->text().simplified().replace(' ', '_');
+            emit updatedTreeInfo(dbcMessage);
+        });
+
+    connect(ui->lineFrameLen, &QLineEdit::editingFinished,
+        [=]()
+        {
+            if (dbcMessage == nullptr) return;
+            dbcMessage->len = Utility::ParseStringToNum(ui->lineFrameLen->text());
+        });
+
     connect(ui->btnTextColor, &QAbstractButton::clicked,
         [=]()
         {

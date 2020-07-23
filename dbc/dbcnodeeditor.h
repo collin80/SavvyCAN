@@ -22,7 +22,7 @@ public:
     void refreshView();
 
 signals:
-    void updatedTreeInfo(QString oldData, QString newData, int type);
+    void updatedTreeInfo(DBC_NODE *node);
 
 private:
     Ui::DBCNodeEditor *ui;
