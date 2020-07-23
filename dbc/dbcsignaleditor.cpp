@@ -125,7 +125,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             {
                 if (currentSignal == nullptr) return;
                 currentSignal->comment = ui->txtComment->text().simplified().replace(' ', '_');
-                //updatedTreeInfo();
+                emit updatedTreeInfo(currentSignal);
             });
 
     connect(ui->txtUnitName, &QLineEdit::editingFinished,
@@ -153,7 +153,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 QString tempNameStr = ui->txtName->text().simplified().replace(' ', '_');
                 if (tempNameStr.length() > 0) currentSignal->name = tempNameStr;
                 //need to update the tree too.
-                //updatedTreeInfo();
+                emit updatedTreeInfo(currentSignal);
             });
 
     connect(ui->txtMultiplexValue, &QLineEdit::editingFinished,

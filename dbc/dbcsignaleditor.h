@@ -23,7 +23,7 @@ public:
     void refreshView();
 
 signals:
-    void updatedTreeInfo(QString oldData, QString newData, int type);
+    void updatedTreeInfo(DBC_SIGNAL *sig);
 
 private slots:
     void bitfieldClicked(int x, int y);

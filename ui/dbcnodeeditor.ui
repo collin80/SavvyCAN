@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>311</width>
-    <height>128</height>
+    <height>88</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,13 +37,6 @@
       <widget class="QLineEdit" name="lineComment"/>
      </item>
     </layout>
-   </item>
-   <item>
-    <widget class="QPushButton" name="btnClose">
-     <property name="text">
-      <string>Close</string>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>

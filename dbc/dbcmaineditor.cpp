@@ -31,9 +31,9 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     nodeEditor = new DBCNodeEditor(this);
 
     //all three might potentially change the data stored and force the tree to be updated
-    connect(sigEditor, &DBCSignalEditor::updatedTreeInfo, this, &DBCMainEditor::updatedTreeInfo);
-    connect(msgEditor, &DBCMessageEditor::updatedTreeInfo, this, &DBCMainEditor::updatedTreeInfo);
-    connect(nodeEditor, &DBCNodeEditor::updatedTreeInfo, this, &DBCMainEditor::updatedTreeInfo);
+    connect(sigEditor, &DBCSignalEditor::updatedTreeInfo, this, &DBCMainEditor::updatedSignal);
+    connect(msgEditor, &DBCMessageEditor::updatedTreeInfo, this, &DBCMainEditor::updatedMessage);
+    connect(nodeEditor, &DBCNodeEditor::updatedTreeInfo, this, &DBCMainEditor::updatedNode);
 
     nodeIcon = QIcon(":/icons/images/node.png");
     messageIcon = QIcon(":/icons/images/message.png");
@@ -266,6 +266,9 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
 void DBCMainEditor::refreshTree()
 {
     ui->treeDBC->clear();
+    nodeToItem.clear();
+    messageToItem.clear();
+    signalToItem.clear();
 
     if (dbcFile->findNodeByName("Vector__XXX") == nullptr)
     {
@@ -275,18 +278,20 @@ void DBCMainEditor::refreshTree()
         dbcFile->dbc_nodes.append(newNode);
     }
 
-    foreach (DBC_NODE node, dbcFile->dbc_nodes)
+    for (int n = 0; n < dbcFile->dbc_nodes.count(); n++)
     {
+        DBC_NODE *node = &dbcFile->dbc_nodes[n];
         QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
-        QString nodeInfo = node.name;
-        if (node.comment.count() > 0) nodeInfo.append(" - ").append(node.comment);
+        QString nodeInfo = node->name;
+        if (node->comment.count() > 0) nodeInfo.append(" - ").append(node->comment);
         nodeItem->setText(0, nodeInfo);
         nodeItem->setIcon(0, nodeIcon);
         nodeItem->setData(0, Qt::UserRole, 1);
+        nodeToItem.insert(node, nodeItem);
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {
             DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByIdx(x);
-            if (msg->sender->name == node.name)
+            if (msg->sender->name == node->name)
             {
                 QTreeWidgetItem *msgItem = new QTreeWidgetItem(nodeItem);
                 QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
@@ -294,6 +299,7 @@ void DBCMainEditor::refreshTree()
                 msgItem->setText(0, msgInfo);
                 msgItem->setIcon(0, messageIcon);
                 msgItem->setData(0, Qt::UserRole, 2);
+                messageToItem.insert(msg, msgItem);
                 for (int i = 0; i < msg->sigHandler->getCount(); i++)
                 {
                     DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
@@ -305,6 +311,7 @@ void DBCMainEditor::refreshTree()
                     else if (sig->isMultiplexor) sigItem->setIcon(0, multiplexorSignalIcon);
                     else sigItem->setIcon(0, signalIcon);
                     sigItem->setData(0, Qt::UserRole, 3);
+                    signalToItem.insert(sig, sigItem);
                 }
             }
         }
@@ -313,7 +320,38 @@ void DBCMainEditor::refreshTree()
     ui->treeDBC->sortItems(0, Qt::SortOrder::AscendingOrder); //sort the display list for ease in viewing by mere mortals, helps me a lot.
 }
 
-void DBCMainEditor::updatedTreeInfo(QString oldData, QString newData, int type)
+void DBCMainEditor::updatedNode(DBC_NODE *node)
 {
+    if (nodeToItem.contains(node))
+    {
+        QTreeWidgetItem *item = nodeToItem[node];
+        QString nodeInfo = node->name;
+        if (node->comment.count() > 0) nodeInfo.append(" - ").append(node->comment);
+        item->setText(0, nodeInfo);
+    }
+    else qDebug() << "That node doesn't exist. That's a bug dude.";
+}
 
+void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg)
+{
+    if (messageToItem.contains(msg))
+    {
+        QTreeWidgetItem *item = messageToItem.value(msg);
+        QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
+        if (msg->comment.count() > 0) msgInfo.append(" - ").append(msg->comment);
+        item->setText(0, msgInfo);
+    }
+    else qDebug() << "Shit?! That mesage doesn't exist. That's a bug dude.";
+}
+
+void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
+{
+    if (signalToItem.contains(sig))
+    {
+        QTreeWidgetItem *item = signalToItem.value(sig);
+        QString sigInfo = sig->name;
+        if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
+        item->setText(0, sigInfo);
+    }
+    else qDebug() << "Shit?! That signal doesn't exist. That's a bug dude.";
 }

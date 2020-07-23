@@ -25,7 +25,9 @@ public:
     void setFileIdx(int idx);
 
 public slots:
-    void updatedTreeInfo(QString oldData, QString newData, int type);
+    void updatedNode(DBC_NODE *node);
+    void updatedMessage(DBC_MESSAGE *msg);
+    void updatedSignal(DBC_SIGNAL *sig);
 
 private slots:
     void onTreeDoubleClicked(const QModelIndex &index);
@@ -51,6 +53,9 @@ private:
     QIcon multiplexedSignalIcon;
     QList<QTreeWidgetItem *> searchItems;
     int searchItemPos;
+    QMap<DBC_NODE*, QTreeWidgetItem *> nodeToItem;
+    QMap<DBC_MESSAGE*, QTreeWidgetItem *> messageToItem;
+    QMap<DBC_SIGNAL*, QTreeWidgetItem *> signalToItem;
 
     void showEvent(QShowEvent* event);
     void closeEvent(QCloseEvent *event);

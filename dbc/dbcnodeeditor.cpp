@@ -18,6 +18,22 @@ DBCNodeEditor::DBCNodeEditor(QWidget *parent) :
     dbcHandler = DBCHandler::getReference();
     dbcNode = nullptr;
 
+    connect(ui->lineComment, &QLineEdit::editingFinished,
+        [=]()
+        {
+            if (dbcNode == nullptr) return;
+            dbcNode->comment = ui->lineComment->text();
+            emit updatedTreeInfo(dbcNode);
+        });
+
+    connect(ui->lineMsgName, &QLineEdit::editingFinished,
+        [=]()
+        {
+            if (dbcNode == nullptr) return;
+            dbcNode->name = ui->lineMsgName->text();
+            emit updatedTreeInfo(dbcNode);
+        });
+
     installEventFilter(this);
 }
 
