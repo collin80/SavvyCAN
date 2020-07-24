@@ -6,6 +6,7 @@
 #include <QSettings>
 #include <QColorDialog>
 #include <QTableWidgetItem>
+#include <QRandomGenerator>
 #include <qevent.h>
 #include "helpwindow.h"
 
@@ -25,6 +26,11 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     connect(ui->btnSearchNext, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchForward);
     connect(ui->btnSearchPrev, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchBackward);
     connect(ui->treeDBC, &QTreeWidget::doubleClicked, this, &DBCMainEditor::onTreeDoubleClicked);
+    connect(ui->treeDBC, &QTreeWidget::currentItemChanged, this, &DBCMainEditor::currentItemChanged);
+    connect(ui->btnDelete, &QAbstractButton::clicked, this, &DBCMainEditor::deleteCurrentTreeItem);
+    connect(ui->btnNewNode, &QAbstractButton::clicked, this, &DBCMainEditor::newNode);
+    connect(ui->btnNewMessage, &QAbstractButton::clicked, this, &DBCMainEditor::newMessage);
+    connect(ui->btnNewSignal, &QAbstractButton::clicked, this, &DBCMainEditor::newSignal);
 
     sigEditor = new DBCSignalEditor(this);
     msgEditor = new DBCMessageEditor(this);
@@ -142,38 +148,6 @@ void DBCMainEditor::onCustomMenuTree(QPoint point)
 
 }
 
-void DBCMainEditor::deleteCurrentTreeItem()
-{
-    /*
-    int thisRow = ui->NodesTable->currentRow();
-    QTableWidgetItem* thisItem = ui->NodesTable->item(thisRow, 0);
-    if (!thisItem) return;
-    QString nodeName = thisItem->text();
-    if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
-    {        
-        ui->NodesTable->removeRow(thisRow);
-        dbcFile->dbc_nodes.removeAt(thisRow);
-        inhibitCellChanged = true;
-        refreshMessagesTable(&dbcFile->dbc_nodes[0]);
-        ui->NodesTable->selectRow(0);
-        inhibitCellChanged = false;
-    } */
-}
-
-//void DBCMainEditor::deleteCurrentMessage()
-//{
-    /*
-    int thisRow = ui->MessagesTable->currentRow();
-    QTableWidgetItem* thisItem = ui->MessagesTable->item(thisRow, 0);
-    if (!thisItem) return;
-    if (thisItem->text().length() > 0)
-    {
-        ui->MessagesTable->removeRow(thisRow);
-        dbcFile->messageHandler->removeMessageByIndex(thisRow);
-    }
-    */
-//}
-
 void DBCMainEditor::handleSearch()
 {
     searchItems = ui->treeDBC->findItems(ui->lineSearch->text(),Qt::MatchContains | Qt::MatchRecursive);
@@ -206,6 +180,43 @@ void DBCMainEditor::handleSearchBackward()
     else searchItemPos = searchItems.count() - 1;
     ui->treeDBC->setCurrentItem(searchItems[searchItemPos]);
     ui->lblSearchPos->setText("Search Results: " + QString::number(searchItemPos + 1) + " of " + QString::number(searchItems.count()));
+}
+
+void DBCMainEditor::currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *prev)
+{
+    Q_UNUSED(prev)
+    if (!current)
+    {
+        ui->btnNewMessage->setEnabled(false);
+        ui->btnNewSignal->setEnabled(false);
+        ui->btnDelete->setEnabled(false);
+        return;
+    }
+    switch (current->data(0, Qt::UserRole).toInt())
+    {
+    case 1: //node
+        ui->btnNewNode->setEnabled(true);
+        ui->btnNewMessage->setEnabled(true);
+        ui->btnNewSignal->setEnabled(false);
+        ui->btnDelete->setEnabled(true);
+        break;
+    case 2: //message
+        ui->btnNewNode->setEnabled(true);
+        ui->btnNewMessage->setEnabled(true);
+        ui->btnNewSignal->setEnabled(true);
+        ui->btnDelete->setEnabled(true);
+        break;
+    case 3: //signal
+        ui->btnNewNode->setEnabled(true);
+        ui->btnNewMessage->setEnabled(true);
+        ui->btnNewSignal->setEnabled(true);
+        ui->btnDelete->setEnabled(true);
+        break;
+    default:
+        ui->btnNewMessage->setEnabled(false);
+        ui->btnNewSignal->setEnabled(false);
+        ui->btnDelete->setEnabled(false);
+    }
 }
 
 //Double clicking is interpreted as a desire to edit the given item.
@@ -355,3 +366,166 @@ void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
     }
     else qDebug() << "Shit?! That signal doesn't exist. That's a bug dude.";
 }
+
+void DBCMainEditor::newNode()
+{
+    DBC_NODE node;
+    DBC_NODE *nodePtr;
+    node.name = "Unnamed" + QString::number(randGen.bounded(50000));
+    dbcFile->dbc_nodes.append(node);
+    nodePtr = dbcFile->findNodeByName(node.name);
+    QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
+    nodeItem->setText(0, node.name);
+    nodeItem->setIcon(0, nodeIcon);
+    nodeItem->setData(0, Qt::UserRole, 1);
+    nodeToItem.insert(nodePtr, nodeItem);
+    ui->treeDBC->addTopLevelItem(nodeItem);
+    ui->treeDBC->setCurrentItem(nodeItem);
+}
+
+
+//create a new message with it's parent being the node we're currently within
+void DBCMainEditor::newMessage()
+{
+    QTreeWidgetItem *nodeItem = nullptr;
+    QTreeWidgetItem *msgItem = nullptr;
+    nodeItem = ui->treeDBC->currentItem();
+    int typ = nodeItem->data(0, Qt::UserRole).toInt();
+    if (typ == 2)
+    {
+        msgItem = nodeItem;
+        nodeItem = nodeItem->parent();
+    }
+    if (typ == 3)
+    {
+        msgItem = nodeItem->parent();
+        nodeItem = msgItem->parent();
+    }
+
+    DBC_NODE *node = dbcFile->findNodeByName(nodeItem->data(0, Qt::DisplayRole).toString());
+    DBC_MESSAGE msg;
+    DBC_MESSAGE *msgPtr;
+    if (msgItem)
+    {
+        QString idString = msgItem->text(0).split(" ")[0];
+        int msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
+        DBC_MESSAGE *oldMsg = dbcFile->messageHandler->findMsgByID(msgID);
+        if (oldMsg)
+        {
+            msg.name = oldMsg->name + QString::number(randGen.bounded(1000));
+            msg.ID = oldMsg->ID + 1;
+            msg.len = oldMsg->len;
+            msg.bgColor = oldMsg->bgColor;
+            msg.fgColor = oldMsg->fgColor;
+            msg.comment = oldMsg->comment;
+        }
+        else
+        {
+            msg.name = nodeItem->text(0) + "Msg" + QString::number(randGen.bounded(500));
+            msg.ID = 0;
+            msg.len = 0;
+        }
+    }
+    else
+    {
+        msg.name = nodeItem->text(0) + "Msg" + QString::number(randGen.bounded(500));
+        msg.ID = 0;
+        msg.len = 0;
+    }
+    msg.sender = node;
+
+    dbcFile->messageHandler->addMessage(msg);
+    msgPtr = dbcFile->messageHandler->findMsgByIdx(dbcFile->messageHandler->getCount() - 1);
+    QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
+    QString msgInfo = Utility::formatCANID(msg.ID) + " " + msg.name;
+    if (msg.comment.count() > 0) msgInfo.append(" - ").append(msg.comment);
+    newMsgItem->setText(0, msgInfo);
+    newMsgItem->setIcon(0, messageIcon);
+    newMsgItem->setData(0, Qt::UserRole, 2);
+    messageToItem.insert(msgPtr, newMsgItem);
+    nodeItem->addChild(newMsgItem);
+    ui->treeDBC->setCurrentItem(newMsgItem);
+}
+
+void DBCMainEditor::newSignal()
+{
+    QTreeWidgetItem *msgItem = nullptr;
+    QTreeWidgetItem *sigItem = nullptr;
+    msgItem = ui->treeDBC->currentItem();
+    int typ = msgItem->data(0, Qt::UserRole).toInt();
+    if (typ == 3)
+    {
+        sigItem = msgItem;
+        msgItem = msgItem->parent();
+    }
+
+    QString idString = msgItem->text(0).split(" ")[0];
+    int msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
+    DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByID(msgID);
+    DBC_SIGNAL sig;
+    DBC_SIGNAL *sigPtr;
+    if (sigItem)
+    {
+        DBC_SIGNAL *oldSig = msg->sigHandler->findSignalByName(sigItem->text(0).split(" ")[0]);
+        if (oldSig)
+        {
+            sig = *oldSig; //copy it all over
+            sig.name = sig.name + QString::number(randGen.bounded(100));
+        }
+        else
+        {
+            sig.name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
+        }
+    }
+    else
+    {
+        sig.name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
+    }
+
+    msg->sigHandler->addSignal(sig);
+    sigPtr = msg->sigHandler->findSignalByIdx(msg->sigHandler->getCount() - 1);
+    QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
+    QString sigInfo = sig.name;
+    if (sig.comment.count() > 0) sigInfo.append(" - ").append(sig.comment);
+    newSigItem->setText(0, sigInfo);
+    if (sig.isMultiplexed) newSigItem->setIcon(0, multiplexedSignalIcon);
+    else if (sig.isMultiplexor) newSigItem->setIcon(0, multiplexorSignalIcon);
+    else newSigItem->setIcon(0, signalIcon);
+    newSigItem->setData(0, Qt::UserRole, 3);
+    signalToItem.insert(sigPtr, newSigItem);
+    msgItem->addChild(newSigItem);
+    ui->treeDBC->setCurrentItem(newSigItem);
+
+}
+
+void DBCMainEditor::deleteCurrentTreeItem()
+{
+    /*
+    int thisRow = ui->NodesTable->currentRow();
+    QTableWidgetItem* thisItem = ui->NodesTable->item(thisRow, 0);
+    if (!thisItem) return;
+    QString nodeName = thisItem->text();
+    if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
+    {
+        ui->NodesTable->removeRow(thisRow);
+        dbcFile->dbc_nodes.removeAt(thisRow);
+        inhibitCellChanged = true;
+        refreshMessagesTable(&dbcFile->dbc_nodes[0]);
+        ui->NodesTable->selectRow(0);
+        inhibitCellChanged = false;
+    } */
+}
+
+//void DBCMainEditor::deleteCurrentMessage()
+//{
+    /*
+    int thisRow = ui->MessagesTable->currentRow();
+    QTableWidgetItem* thisItem = ui->MessagesTable->item(thisRow, 0);
+    if (!thisItem) return;
+    if (thisItem->text().length() > 0)
+    {
+        ui->MessagesTable->removeRow(thisRow);
+        dbcFile->messageHandler->removeMessageByIndex(thisRow);
+    }
+    */
+//}

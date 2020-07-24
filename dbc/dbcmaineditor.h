@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QIcon>
 #include <QTreeWidget>
+#include <QRandomGenerator>
 #include "dbchandler.h"
 #include "dbcsignaleditor.h"
 #include "dbcmessageeditor.h"
@@ -31,11 +32,15 @@ public slots:
 
 private slots:
     void onTreeDoubleClicked(const QModelIndex &index);
+    void currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *prev);
     void onCustomMenuTree(QPoint);
     void deleteCurrentTreeItem();
     void handleSearch();
     void handleSearchForward();
     void handleSearchBackward();
+    void newNode();
+    void newMessage();
+    void newSignal();
 
 private:
     Ui::DBCMainEditor *ui;
@@ -56,6 +61,7 @@ private:
     QMap<DBC_NODE*, QTreeWidgetItem *> nodeToItem;
     QMap<DBC_MESSAGE*, QTreeWidgetItem *> messageToItem;
     QMap<DBC_SIGNAL*, QTreeWidgetItem *> signalToItem;
+    QRandomGenerator randGen;
 
     void showEvent(QShowEvent* event);
     void closeEvent(QCloseEvent *event);
