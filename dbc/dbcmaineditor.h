@@ -35,6 +35,9 @@ private slots:
     void currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *prev);
     void onCustomMenuTree(QPoint);
     void deleteCurrentTreeItem();
+    void deleteNode(DBC_NODE *node);
+    void deleteMessage(DBC_MESSAGE *msg);
+    void deleteSignal(DBC_SIGNAL *sig);
     void handleSearch();
     void handleSearchForward();
     void handleSearchBackward();
@@ -58,9 +61,13 @@ private:
     QIcon multiplexedSignalIcon;
     QList<QTreeWidgetItem *> searchItems;
     int searchItemPos;
+    //bidirectional mapping of QTreeWidget items back and forth to DBC objects
     QMap<DBC_NODE*, QTreeWidgetItem *> nodeToItem;
     QMap<DBC_MESSAGE*, QTreeWidgetItem *> messageToItem;
     QMap<DBC_SIGNAL*, QTreeWidgetItem *> signalToItem;
+    QMap<QTreeWidgetItem*, DBC_NODE*> itemToNode;
+    QMap<QTreeWidgetItem*, DBC_MESSAGE*> itemToMessage;
+    QMap<QTreeWidgetItem*, DBC_SIGNAL*> itemToSignal;
     QRandomGenerator randGen;
 
     void showEvent(QShowEvent* event);

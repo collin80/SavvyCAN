@@ -46,9 +46,16 @@ bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
 
 bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
 {
-    Q_UNUSED(sig)
-    //if (sigs.removeAll(*sig) > 0) return true;
-    return false;
+    qDebug() << "Total # of signals: " << getCount();
+    for (int i = 0; i < getCount(); i++)
+    {
+        if (sigs[i].name == sig->name)
+        {
+            sigs.removeAt(i);
+            qDebug() << "Removed signal at idx " << i;
+        }
+    }
+    return true;
 }
 
 bool DBCSignalHandler::removeSignal(int idx)
@@ -173,9 +180,16 @@ bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 
 bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
 {
-    Q_UNUSED(msg);
-    //if (messages.removeAll(*msg) > 0) return true;
-    return false;
+    qDebug() << "Total # of messages: " << getCount();
+    for (int i = 0; i < getCount(); i++)
+    {
+        if (messages[i].name == msg->name)
+        {
+            messages.removeAt(i);
+            qDebug() << "Removed message at idx " << i;
+        }
+    }
+    return true;
 }
 
 bool DBCMessageHandler::removeMessageByIndex(int idx)
