@@ -93,6 +93,17 @@ bool DBCMainEditor::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_F4:
             handleSearchBackward();
             break;
+        case Qt::Key_F5:
+            newNode();
+            break;
+        case Qt::Key_F6:
+            newMessage();
+            break;
+        case Qt::Key_F7:
+            newSignal();
+            break;
+        case Qt::Key_Delete:
+            deleteCurrentTreeItem();
         }
         return true;
     } else {
@@ -280,6 +291,9 @@ void DBCMainEditor::refreshTree()
     nodeToItem.clear();
     messageToItem.clear();
     signalToItem.clear();
+    itemToNode.clear();
+    itemToMessage.clear();
+    itemToSignal.clear();
 
     if (dbcFile->findNodeByName("Vector__XXX") == nullptr)
     {
@@ -299,6 +313,7 @@ void DBCMainEditor::refreshTree()
         nodeItem->setIcon(0, nodeIcon);
         nodeItem->setData(0, Qt::UserRole, 1);
         nodeToItem.insert(node, nodeItem);
+        itemToNode.insert(nodeItem, node);
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {
             DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByIdx(x);
@@ -311,6 +326,7 @@ void DBCMainEditor::refreshTree()
                 msgItem->setIcon(0, messageIcon);
                 msgItem->setData(0, Qt::UserRole, 2);
                 messageToItem.insert(msg, msgItem);
+                itemToMessage.insert(msgItem, msg);
                 for (int i = 0; i < msg->sigHandler->getCount(); i++)
                 {
                     DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
@@ -323,6 +339,7 @@ void DBCMainEditor::refreshTree()
                     else sigItem->setIcon(0, signalIcon);
                     sigItem->setData(0, Qt::UserRole, 3);
                     signalToItem.insert(sig, sigItem);
+                    itemToSignal.insert(sigItem, sig);
                 }
             }
         }
@@ -352,7 +369,7 @@ void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg)
         if (msg->comment.count() > 0) msgInfo.append(" - ").append(msg->comment);
         item->setText(0, msgInfo);
     }
-    else qDebug() << "Shit?! That mesage doesn't exist. That's a bug dude.";
+    else qDebug() << "That mesage doesn't exist. That's a bug dude.";
 }
 
 void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
@@ -364,7 +381,7 @@ void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
         if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
         item->setText(0, sigInfo);
     }
-    else qDebug() << "Shit?! That signal doesn't exist. That's a bug dude.";
+    else qDebug() << "That signal doesn't exist. That's a bug dude.";
 }
 
 void DBCMainEditor::newNode()
@@ -379,6 +396,7 @@ void DBCMainEditor::newNode()
     nodeItem->setIcon(0, nodeIcon);
     nodeItem->setData(0, Qt::UserRole, 1);
     nodeToItem.insert(nodePtr, nodeItem);
+    itemToNode.insert(nodeItem, nodePtr);
     ui->treeDBC->addTopLevelItem(nodeItem);
     ui->treeDBC->setCurrentItem(nodeItem);
 }
@@ -391,6 +409,7 @@ void DBCMainEditor::newMessage()
     QTreeWidgetItem *msgItem = nullptr;
     nodeItem = ui->treeDBC->currentItem();
     int typ = nodeItem->data(0, Qt::UserRole).toInt();
+    if (!nodeItem) return; //nothing selected!
     if (typ == 2)
     {
         msgItem = nodeItem;
@@ -443,6 +462,7 @@ void DBCMainEditor::newMessage()
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, 2);
     messageToItem.insert(msgPtr, newMsgItem);
+    itemToMessage.insert(newMsgItem, msgPtr);
     nodeItem->addChild(newMsgItem);
     ui->treeDBC->setCurrentItem(newMsgItem);
 }
@@ -452,7 +472,9 @@ void DBCMainEditor::newSignal()
     QTreeWidgetItem *msgItem = nullptr;
     QTreeWidgetItem *sigItem = nullptr;
     msgItem = ui->treeDBC->currentItem();
+    if (!msgItem) return; //nothing selected!
     int typ = msgItem->data(0, Qt::UserRole).toInt();
+    if (typ == 1) return; //can't add signals to a node!
     if (typ == 3)
     {
         sigItem = msgItem;
@@ -482,6 +504,7 @@ void DBCMainEditor::newSignal()
         sig.name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
     }
 
+    sig.parentMessage = msg;
     msg->sigHandler->addSignal(sig);
     sigPtr = msg->sigHandler->findSignalByIdx(msg->sigHandler->getCount() - 1);
     QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
@@ -493,39 +516,150 @@ void DBCMainEditor::newSignal()
     else newSigItem->setIcon(0, signalIcon);
     newSigItem->setData(0, Qt::UserRole, 3);
     signalToItem.insert(sigPtr, newSigItem);
+    itemToSignal.insert(newSigItem, sigPtr);
     msgItem->addChild(newSigItem);
     ui->treeDBC->setCurrentItem(newSigItem);
 
 }
 
+//gets confirmation before calling the real routines that delete things
 void DBCMainEditor::deleteCurrentTreeItem()
 {
-    /*
-    int thisRow = ui->NodesTable->currentRow();
-    QTableWidgetItem* thisItem = ui->NodesTable->item(thisRow, 0);
-    if (!thisItem) return;
-    QString nodeName = thisItem->text();
-    if (nodeName.length() > 0 && nodeName.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
+    QTreeWidgetItem *currItem = ui->treeDBC->currentItem();
+    int typ = currItem->data(0, Qt::UserRole).toInt();
+    QString idString;
+    int msgID;
+    DBC_MESSAGE *msg;
+    DBC_NODE *node;
+    int numMsg = 0, numSig = 0;
+
+    QMessageBox::StandardButton confirmDialog;
+
+    switch (typ)
     {
-        ui->NodesTable->removeRow(thisRow);
-        dbcFile->dbc_nodes.removeAt(thisRow);
-        inhibitCellChanged = true;
-        refreshMessagesTable(&dbcFile->dbc_nodes[0]);
-        ui->NodesTable->selectRow(0);
-        inhibitCellChanged = false;
-    } */
+    case 1: //deleting a node cascades deletion down to messages and signals
+        node = dbcFile->findNodeByName(currItem->text(0));
+        if (!node) return;
+        for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
+        {
+            if (dbcFile->messageHandler->findMsgByIdx(x)->sender == node)
+            {
+                numMsg++;
+                numSig += dbcFile->messageHandler->findMsgByIdx(x)->sigHandler->getCount();
+            }
+        }
+        confirmDialog = QMessageBox::question(this, "Really?", "Are you sure you want to delete this node, its\n"
+                                  + QString::number(numMsg) + " messages, and their " + QString::number(numSig) + " combined signals?", QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes)
+        {
+            if (itemToNode.contains(currItem))
+            {
+                DBC_NODE *node = itemToNode.value(currItem);
+                deleteNode(node);
+            }
+            else
+            {
+                qDebug() << "WTF, could not find the node in the map. That should not happen.";
+            }
+        }
+
+        break;
+    case 2: //cascades to removing all signals too.
+        idString = currItem->text(0).split(" ")[0];
+        msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
+        msg = dbcFile->messageHandler->findMsgByID(msgID);
+
+        confirmDialog = QMessageBox::question(this, "Really?", "Are you sure you want to delete\nthis message and its "
+                                  + QString::number(msg->sigHandler->getCount()) + " signals?", QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes)
+        {
+            QTreeWidgetItem *currItem = ui->treeDBC->currentItem();
+            if (itemToMessage.contains(currItem))
+            {
+                DBC_MESSAGE *msg = itemToMessage.value(currItem);
+                deleteMessage(msg);
+            }
+            else
+            {
+                qDebug() << "WTF, could not find the message in the map. That should not happen.";
+            }
+        }
+        break;
+    case 3: //no cascade, just this one signal.
+        confirmDialog = QMessageBox::question(this, "Really?", "Are you sure you want to delete this signal?",
+                                  QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::Yes)
+        {
+            QTreeWidgetItem *currItem = ui->treeDBC->currentItem();
+            if (itemToSignal.contains(currItem))
+            {
+                DBC_SIGNAL *sig = itemToSignal.value(currItem);
+                deleteSignal(sig);
+            }
+            else
+            {
+                qDebug() << "WTF, could not find the signal in the map. That should not happen.";
+            }
+        }
+        break;
+    }
 }
 
-//void DBCMainEditor::deleteCurrentMessage()
-//{
-    /*
-    int thisRow = ui->MessagesTable->currentRow();
-    QTableWidgetItem* thisItem = ui->MessagesTable->item(thisRow, 0);
-    if (!thisItem) return;
-    if (thisItem->text().length() > 0)
+//these don't ask for permission. You call it, it disappears forever.
+void DBCMainEditor::deleteNode(DBC_NODE *node)
+{
+    qDebug() << "Going through with it you mass deleter!";
+    if (!nodeToItem.contains(node)) return;
+    QTreeWidgetItem *currItem = nodeToItem[node];
+    //don't actually store which messages are associated to which nodes so just iterate through the messages list and whack the ones
+    //that claim to be associated to this node.
+    int numItems = dbcFile->messageHandler->getCount();
+    for (int i = numItems - 1; i > -1; i--)
     {
-        ui->MessagesTable->removeRow(thisRow);
-        dbcFile->messageHandler->removeMessageByIndex(thisRow);
+        if (dbcFile->messageHandler->findMsgByIdx(i)->sender == node) deleteMessage(dbcFile->messageHandler->findMsgByIdx(i));
     }
-    */
-//}
+
+    for (int j = 0; j < dbcFile->dbc_nodes.count(); j++)
+    {
+        if (dbcFile->dbc_nodes.at(j).name == node->name) dbcFile->dbc_nodes.removeAt(j);
+    }
+
+    nodeToItem.remove(node);
+    itemToNode.remove(currItem);
+    ui->treeDBC->removeItemWidget(currItem, 0);
+    delete currItem;
+}
+
+void DBCMainEditor::deleteMessage(DBC_MESSAGE *msg)
+{
+    qDebug() << "Deleting the message and all signals. Bye bye!";
+    if (!messageToItem.contains(msg)) return;
+    QTreeWidgetItem *currItem = messageToItem[msg];
+
+    int numItems = msg->sigHandler->getCount();
+    for (int i = numItems - 1; i > -1; i--)
+    {
+        deleteSignal(msg->sigHandler->findSignalByIdx(i));
+    }
+
+    dbcFile->messageHandler->removeMessage(msg);
+
+    itemToMessage.remove(currItem);
+    messageToItem.remove(msg);
+    ui->treeDBC->removeItemWidget(currItem, 0);
+    delete currItem;
+
+}
+
+void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
+{
+    qDebug() << "Signal about to vanish.";
+    if (!signalToItem.contains(sig)) return;
+    QTreeWidgetItem *currItem = signalToItem[sig];
+    sig->parentMessage->sigHandler->removeSignal(sig);
+
+    itemToSignal.remove(currItem);
+    signalToItem.remove(sig);
+    ui->treeDBC->removeItemWidget(currItem, 0);
+    delete currItem;
+}
