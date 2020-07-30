@@ -233,7 +233,7 @@ void DBCComparatorWindow::calculateDetails()
         if (!otherMsg)
         {
             QTreeWidgetItem *missingMsgItem = new QTreeWidgetItem();
-            missingMsgItem->setText(0, msgName);
+            missingMsgItem->setText(0, msgName+ " (" + Utility::formatCANID(thisMsg->ID) + ")");
             msgMissingDBCSecond->addChild(missingMsgItem);
         }
         else //both have Msg. Check sigs for missing
@@ -254,7 +254,7 @@ void DBCComparatorWindow::calculateDetails()
                     {
                         thisMsgHasMissing = true;
                         msgItem = new QTreeWidgetItem();
-                        msgItem->setText(0, msgName);
+                        msgItem->setText(0, msgName + " (" + Utility::formatCANID(thisMsg->ID) + ")");
                         sigDiffTwo->addChild(msgItem);
                     }
                     msgItem->addChild(missingSigItem);
@@ -298,7 +298,7 @@ void DBCComparatorWindow::calculateDetails()
                         {
                             thisMsgHasMods = true;
                             sigTemp = new QTreeWidgetItem();
-                            sigTemp->setText(0, msgName);
+                            sigTemp->setText(0, msgName + " (" + Utility::formatCANID(thisMsg->ID) + ")");
                             sigModifiedRoot->addChild(sigTemp);
                         }
                         sigTemp->addChild(sigItem);
@@ -319,7 +319,7 @@ void DBCComparatorWindow::calculateDetails()
                     {
                         thisMsgHasMissing = true;
                         msgItem = new QTreeWidgetItem();
-                        msgItem->setText(0, msgName);
+                        msgItem->setText(0, msgName + " (" + Utility::formatCANID(thisMsg->ID) + ")");
                         sigDiffOne->addChild(msgItem);
                     }
                     msgItem->addChild(missingSigItem);
@@ -330,12 +330,13 @@ void DBCComparatorWindow::calculateDetails()
 
     for (int i = 0; i < secondDBC->messageHandler->getCount(); i++)
     {
-        QString msgName = secondDBC->messageHandler->findMsgByIdx(i)->name;
+        DBC_MESSAGE *origMsg = secondDBC->messageHandler->findMsgByIdx(i);
+        QString msgName = origMsg->name;
         DBC_MESSAGE *msg = firstDBC->messageHandler->findMsgByName(msgName);
         if (!msg)
         {
             QTreeWidgetItem *missingMsgItem = new QTreeWidgetItem();
-            missingMsgItem->setText(0, msgName);
+            missingMsgItem->setText(0, msgName + " (" + Utility::formatCANID(origMsg->ID) + ")");
             msgMissingDBCFirst->addChild(missingMsgItem);
         }
     }
