@@ -22,6 +22,7 @@ DBCNodeEditor::DBCNodeEditor(QWidget *parent) :
         [=]()
         {
             if (dbcNode == nullptr) return;
+            if (dbcNode->comment != ui->lineComment->text()) dbcFile->setDirtyFlag();
             dbcNode->comment = ui->lineComment->text();
             emit updatedTreeInfo(dbcNode);
         });
@@ -30,6 +31,7 @@ DBCNodeEditor::DBCNodeEditor(QWidget *parent) :
         [=]()
         {
             if (dbcNode == nullptr) return;
+            if (dbcNode->name != ui->lineMsgName->text()) dbcFile->setDirtyFlag();
             dbcNode->name = ui->lineMsgName->text();
             emit updatedTreeInfo(dbcNode);
         });

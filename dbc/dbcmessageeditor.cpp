@@ -22,6 +22,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (dbcMessage->comment != ui->lineComment->text()) dbcFile->setDirtyFlag();
             dbcMessage->comment = ui->lineComment->text();
             emit updatedTreeInfo(dbcMessage);
         });
@@ -30,6 +31,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (dbcMessage->ID != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
             dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
             emit updatedTreeInfo(dbcMessage);
         });
@@ -38,6 +40,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (dbcMessage->name != ui->lineMsgName->text().simplified().replace(' ', '_')) dbcFile->setDirtyFlag();
             dbcMessage->name = ui->lineMsgName->text().simplified().replace(' ', '_');
             emit updatedTreeInfo(dbcMessage);
         });
@@ -46,6 +49,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (dbcMessage->len != Utility::ParseStringToNum(ui->lineFrameLen->text())) dbcFile->setDirtyFlag();
             dbcMessage->len = Utility::ParseStringToNum(ui->lineFrameLen->text());
         });
 
@@ -53,7 +57,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             QColor newColor = QColorDialog::getColor(dbcMessage->fgColor);
-
+            if (dbcMessage->fgColor != newColor) dbcFile->setDirtyFlag();
             dbcMessage->fgColor = newColor;
             DBC_ATTRIBUTE_VALUE *val = dbcMessage->findAttrValByName("GenMsgForegroundColor");
             if (val)
@@ -74,7 +78,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             QColor newColor = QColorDialog::getColor(dbcMessage->bgColor);
-
+            if (dbcMessage->bgColor != newColor) dbcFile->setDirtyFlag();
             dbcMessage->bgColor = newColor;
             DBC_ATTRIBUTE_VALUE *val = dbcMessage->findAttrValByName("GenMsgBackgroundColor");
             if (val)

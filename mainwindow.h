@@ -32,6 +32,7 @@
 #include "motorcontrollerconfigwindow.h"
 #include "signalviewerwindow.h"
 #include "re/temporalgraphwindow.h"
+#include "re/dbccomparatorwindow.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -85,6 +86,7 @@ private slots:
     void showBisectWindow();
     void showSignalViewer();
     void showTemporalGraphWindow();
+    void showDBCComparisonWindow();
     void exitApp();
     void handleSaveDecoded();
     void connectionStatusUpdated(int conns);
@@ -165,6 +167,7 @@ private:
     BisectWindow* bisectWindow;
     SignalViewerWindow *signalViewerWindow;
     TemporalGraphWindow *temporalGraphWindow;
+    DBCComparatorWindow *dbcComparatorWindow;
 
     //various private storage
     QLabel lbStatusConnected;
