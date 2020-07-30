@@ -92,6 +92,11 @@ int DBCSignalHandler::getCount()
     return sigs.count();
 }
 
+void DBCSignalHandler::sort()
+{
+    std::sort(sigs.begin(), sigs.end());
+}
+
 DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
 {
     if (messages.count() == 0) return nullptr;
@@ -241,6 +246,15 @@ int DBCMessageHandler::getCount()
     return messages.count();
 }
 
+void DBCMessageHandler::sort()
+{
+    std::sort(messages.begin(), messages.end());
+    for (int i = 0; i < messages.count(); i++)
+    {
+        messages[i].sigHandler->sort();
+    }
+}
+
 bool DBCMessageHandler::filterLabeling()
 {
     return filterLabelingEnabled;
@@ -266,6 +280,7 @@ DBCFile::DBCFile()
     messageHandler = new DBCMessageHandler;
     messageHandler->setMatchingCriteria(EXACT);
     messageHandler->setFilterLabeling(false);
+    isDirty = false;
 }
 
 DBCFile::DBCFile(const DBCFile& cpy) : QObject()
@@ -283,6 +298,7 @@ DBCFile::DBCFile(const DBCFile& cpy) : QObject()
     dbc_nodes.append(cpy.dbc_nodes);
     dbc_attributes.clear();
     dbc_attributes.append(cpy.dbc_attributes);
+    isDirty = cpy.isDirty;
 }
 
 DBCFile& DBCFile::operator=(const DBCFile& cpy)
@@ -299,6 +315,12 @@ DBCFile& DBCFile::operator=(const DBCFile& cpy)
         dbc_attributes.append(cpy.dbc_attributes);
     }
     return *this;
+}
+
+void DBCFile::sort()
+{
+    std::sort(dbc_nodes.begin(), dbc_nodes.end()); //sort node names
+    messageHandler->sort(); //sort messages, each of which sorts its signals too
 }
 
 DBC_NODE* DBCFile::findNodeByIdx(int idx)
@@ -378,6 +400,17 @@ void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> 
     {
         if (attr.attrType == typ) list->append(attr);
     }
+}
+
+//there's no external way to clear the flag. It is only cleared when the file is saved by this object.
+void DBCFile::setDirtyFlag()
+{
+    isDirty = true;
+}
+
+bool DBCFile::getDirtyFlag()
+{
+    return isDirty;
 }
 
 DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
@@ -735,6 +768,7 @@ void DBCFile::loadFile(QString fileName)
     DBC_MESSAGE *currentMessage = nullptr;
     DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
+    int linesSinceYield = 0;
 
     bool inMultilineBU = false;
 
@@ -760,6 +794,12 @@ void DBCFile::loadFile(QString fileName)
     while (!inFile->atEnd()) {
         rawLine = QString(inFile->readLine());
         line = rawLine.simplified();
+
+        linesSinceYield++;
+        if (linesSinceYield > 100)
+        {
+            qApp->processEvents();
+        }
 
         if (inMultilineBU)
         {
@@ -998,6 +1038,7 @@ void DBCFile::loadFile(QString fileName)
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
     assocBuses = -1;
+    isDirty = false;
 }
 
 QVariant DBCFile::processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ)
@@ -1214,7 +1255,10 @@ void DBCFile::saveFile(QString fileName)
             msgNumber++;
         }
 
-        msgOutput.append("BO_ " + QString::number(msg->ID) + " " + msg->name + ": " + QString::number(msg->len) +
+        uint32_t ID = msg->ID;
+        if (msg->ID > 0x7FF) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+
+        msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
         if (msg->comment.length() > 0)
         {
@@ -1404,6 +1448,8 @@ void DBCFile::saveFile(QString fileName)
 
     outFile->close();
     delete outFile;
+
+    isDirty = false;
 
     QStringList fileList = fileName.split('/');
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
@@ -1681,6 +1727,7 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
                 }
              }
          }
+         thisFile->setDirtyFlag();
          return thisFile;
 }
 

@@ -15,7 +15,8 @@ DEFINES += QCUSTOMPLOT_USE_OPENGL
 TARGET = SavvyCAN
 TEMPLATE = app
 
-SOURCES += main.cpp\    
+SOURCES += main.cpp\
+    re/dbccomparatorwindow.cpp \
     mainwindow.cpp \
     canframemodel.cpp \
     utility.cpp \
@@ -75,7 +76,8 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     can_structs.h \
-    canframemodel.h \    
+    canframemodel.h \     \
+    re/dbccomparatorwindow.h \
     utility.h \
     qcustomplot.h \
     frameplaybackwindow.h \
@@ -136,6 +138,7 @@ HEADERS  += mainwindow.h \
     filterutility.h
 
 FORMS    += ui/candatagrid.ui \
+    ui/dbccomparatorwindow.ui \
     ui/dbcmessageeditor.ui \
     ui/connectionwindow.ui \
     ui/dbcloadsavewindow.ui \

@@ -80,6 +80,7 @@ MainWindow::MainWindow(QWidget *parent) :
     bisectWindow = nullptr;
     signalViewerWindow = nullptr;
     temporalGraphWindow = nullptr;
+    dbcComparatorWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -111,6 +112,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
     connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
     connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
+    connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
     connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
     connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
@@ -257,12 +259,31 @@ void MainWindow::exitApp()
     QApplication::quit(); //forces the whole application to terminate when the main window is closed
 }
 
+
+//the close event can be trapped and ignored so put unsaved warnings in here so the user can abort the program closing if they forgot to save things.
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event);
+
+    QMessageBox::StandardButton confirmDialog;
+
+    for (int i = 0; i < dbcHandler->getFileCount(); i++)
+    {
+        DBCFile *file = dbcHandler->getFileByIdx(i);
+        if (file->getDirtyFlag())
+        {
+            confirmDialog = QMessageBox::question(this, "Unsaved DBC", "DBC File:\n" + file->getFilename() + "\nAppears to have unsaved changes\nReally close without saving?", QMessageBox::Yes|QMessageBox::No);
+            if (confirmDialog != QMessageBox::Yes)
+            {
+                event->ignore();
+                return;
+            }
+        }
+    }
+
     removeEventFilter(this);
     writeSettings();
     exitApp();
+    event->accept();
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -999,6 +1020,15 @@ void MainWindow::showComparisonWindow()
         comparatorWindow = new FileComparatorWindow();
     }
     comparatorWindow->show();
+}
+
+void MainWindow::showDBCComparisonWindow()
+{
+    if (!dbcComparatorWindow)
+    {
+        dbcComparatorWindow = new DBCComparatorWindow();
+    }
+    dbcComparatorWindow->show();
 }
 
 void MainWindow::showSingleMultiWindow()

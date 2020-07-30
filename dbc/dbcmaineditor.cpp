@@ -399,6 +399,7 @@ void DBCMainEditor::newNode()
     itemToNode.insert(nodeItem, nodePtr);
     ui->treeDBC->addTopLevelItem(nodeItem);
     ui->treeDBC->setCurrentItem(nodeItem);
+    dbcFile->setDirtyFlag();
 }
 
 
@@ -465,6 +466,7 @@ void DBCMainEditor::newMessage()
     itemToMessage.insert(newMsgItem, msgPtr);
     nodeItem->addChild(newMsgItem);
     ui->treeDBC->setCurrentItem(newMsgItem);
+    dbcFile->setDirtyFlag();
 }
 
 void DBCMainEditor::newSignal()
@@ -519,7 +521,7 @@ void DBCMainEditor::newSignal()
     itemToSignal.insert(newSigItem, sigPtr);
     msgItem->addChild(newSigItem);
     ui->treeDBC->setCurrentItem(newSigItem);
-
+    dbcFile->setDirtyFlag();
 }
 
 //gets confirmation before calling the real routines that delete things
@@ -628,6 +630,7 @@ void DBCMainEditor::deleteNode(DBC_NODE *node)
     itemToNode.remove(currItem);
     ui->treeDBC->removeItemWidget(currItem, 0);
     delete currItem;
+    dbcFile->setDirtyFlag();
 }
 
 void DBCMainEditor::deleteMessage(DBC_MESSAGE *msg)
@@ -648,7 +651,7 @@ void DBCMainEditor::deleteMessage(DBC_MESSAGE *msg)
     messageToItem.remove(msg);
     ui->treeDBC->removeItemWidget(currItem, 0);
     delete currItem;
-
+    dbcFile->setDirtyFlag();
 }
 
 void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
@@ -662,4 +665,5 @@ void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
     signalToItem.remove(sig);
     ui->treeDBC->removeItemWidget(currItem, 0);
     delete currItem;
+    dbcFile->setDirtyFlag();
 }
