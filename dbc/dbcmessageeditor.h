@@ -30,6 +30,7 @@ private:
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
     DBCFile *dbcFile;
+    bool suppressEditCallbacks;
 
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
