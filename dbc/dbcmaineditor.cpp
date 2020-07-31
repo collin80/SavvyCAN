@@ -368,6 +368,32 @@ void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg)
         QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
         if (msg->comment.count() > 0) msgInfo.append(" - ").append(msg->comment);
         item->setText(0, msgInfo);
+        //editor could have changed the parent Node too. Have to figure out which node
+        //is parent in the GUI and compare that to parent in the data.
+        DBC_NODE *oldParent = dbcFile->findNodeByName(item->parent()->text(0));
+        if (oldParent != msg->sender)
+        {
+            qDebug() << "Changed parent of message. Trying to rehome it.";
+            QTreeWidgetItem *newParent = nullptr;
+            if (nodeToItem.contains(msg->sender)) newParent = nodeToItem.value(msg->sender);
+            else //new node created within message editor. Create the item and then use it
+            {
+                QTreeWidgetItem *newNodeItem = new QTreeWidgetItem();
+                newNodeItem->setText(0, msg->sender->name);
+                newNodeItem->setIcon(0, nodeIcon);
+                newNodeItem->setData(0, Qt::UserRole, 1);
+                ui->treeDBC->addTopLevelItem(newNodeItem);
+                nodeToItem.insert(msg->sender, newNodeItem);
+                itemToNode.insert(newNodeItem, msg->sender);
+                newParent = newNodeItem;
+            }
+
+            QTreeWidgetItem *prevParent = nodeToItem.value(oldParent);
+            prevParent->removeChild(item);
+            newParent->addChild(item);
+            ui->treeDBC->setCurrentItem(item);
+            ui->treeDBC->sortItems(0, Qt::AscendingOrder); //resort because we just moved an item
+        }
     }
     else qDebug() << "That mesage doesn't exist. That's a bug dude.";
 }

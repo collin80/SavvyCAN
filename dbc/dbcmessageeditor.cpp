@@ -17,11 +17,13 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
 
     dbcHandler = DBCHandler::getReference();
     dbcMessage = nullptr;
+    suppressEditCallbacks = false;
 
     connect(ui->lineComment, &QLineEdit::editingFinished,
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
             if (dbcMessage->comment != ui->lineComment->text()) dbcFile->setDirtyFlag();
             dbcMessage->comment = ui->lineComment->text();
             emit updatedTreeInfo(dbcMessage);
@@ -31,6 +33,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
             if (dbcMessage->ID != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
             dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
             emit updatedTreeInfo(dbcMessage);
@@ -40,6 +43,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
             if (dbcMessage->name != ui->lineMsgName->text().simplified().replace(' ', '_')) dbcFile->setDirtyFlag();
             dbcMessage->name = ui->lineMsgName->text().simplified().replace(' ', '_');
             emit updatedTreeInfo(dbcMessage);
@@ -49,13 +53,47 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         [=]()
         {
             if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
             if (dbcMessage->len != Utility::ParseStringToNum(ui->lineFrameLen->text())) dbcFile->setDirtyFlag();
             dbcMessage->len = Utility::ParseStringToNum(ui->lineFrameLen->text());
         });
 
+    connect(ui->comboSender, &QComboBox::currentTextChanged,
+            [=](const QString newText)
+            {
+                if (dbcMessage == nullptr) return;
+                if (suppressEditCallbacks) return;
+                DBC_NODE *node = dbcFile->findNodeByName(newText);
+                if (!node) return;
+                if (node != dbcMessage->sender) dbcFile->setDirtyFlag();
+                dbcMessage->sender = node;
+                emit updatedTreeInfo(dbcMessage);
+            });
+
+    connect(ui->comboSender->lineEdit(), &QLineEdit::editingFinished,
+            [=]()
+            {
+                if (dbcMessage == nullptr) return;
+                if (suppressEditCallbacks) return;
+                QString newText = ui->comboSender->currentText();
+                DBC_NODE *node = dbcFile->findNodeByName(newText);
+                if (!node)
+                {
+                    DBC_NODE newNode;
+                    newNode.name = newText;
+                    dbcFile->dbc_nodes.append(newNode);
+                    node = dbcFile->findNodeByName(newText);
+                    ui->comboSender->addItem(newText);
+                }
+                if (node != dbcMessage->sender) dbcFile->setDirtyFlag();
+                dbcMessage->sender = node;
+                emit updatedTreeInfo(dbcMessage);
+            });
+
     connect(ui->btnTextColor, &QAbstractButton::clicked,
         [=]()
         {
+            if (suppressEditCallbacks) return;
             QColor newColor = QColorDialog::getColor(dbcMessage->fgColor);
             if (dbcMessage->fgColor != newColor) dbcFile->setDirtyFlag();
             dbcMessage->fgColor = newColor;
@@ -77,6 +115,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
     connect(ui->btnBackgroundColor, &QAbstractButton::clicked,
         [=]()
         {
+            if (suppressEditCallbacks) return;
             QColor newColor = QColorDialog::getColor(dbcMessage->bgColor);
             if (dbcMessage->bgColor != newColor) dbcFile->setDirtyFlag();
             dbcMessage->bgColor = newColor;
@@ -133,10 +172,13 @@ void DBCMessageEditor::setFileIdx(int idx)
     if (idx < 0 || idx > dbcHandler->getFileCount() - 1) return;
     dbcFile = dbcHandler->getFileByIdx(idx);
 
+    suppressEditCallbacks = true;
+    ui->comboSender->clear();
     for (int x = 0; x < dbcFile->dbc_nodes.count(); x++)
     {
         ui->comboSender->addItem(dbcFile->dbc_nodes[x].name);
     }
+    suppressEditCallbacks = false;
 }
 
 void DBCMessageEditor::readSettings()
@@ -175,10 +217,12 @@ void DBCMessageEditor::showEvent(QShowEvent* event)
 
 void DBCMessageEditor::refreshView()
 {
+    suppressEditCallbacks = true;
+
     ui->lineComment->setText(dbcMessage->comment);
     ui->lineFrameID->setText(Utility::formatCANID(dbcMessage->ID));
     ui->lineMsgName->setText(dbcMessage->name);
-    ui->lineFrameLen->setText(QString::number(dbcMessage->len));
+    ui->lineFrameLen->setText(QString::number(dbcMessage->len));    
     for (int i = 0; i < ui->comboSender->count(); i++)
     {
         if (ui->comboSender->itemText(i) == dbcMessage->sender->name)
@@ -187,6 +231,8 @@ void DBCMessageEditor::refreshView()
             break;
         }
     }
+
+    suppressEditCallbacks = false;
 
     generateSampleText();
 }
