@@ -32,7 +32,7 @@
 #ifndef QMQTT_H
 #define QMQTT_H
 
-#include <qmqtt_message.h>
-#include <qmqtt_client.h>
+#include "qmqtt_message.h"
+#include "qmqtt_client.h"
 
 #endif // QMQTT_H

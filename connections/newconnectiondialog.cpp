@@ -52,7 +52,7 @@ void NewConnectionDialog::handleConnTypeChanged()
     if (ui->rbGVRET->isChecked()) selectSerial();
     if (ui->rbSocketCAN->isChecked()) selectSocketCan();
     if (ui->rbRemote->isChecked()) selectRemote();
-
+    if (ui->rbMQTT->isChecked()) selectMQTT();
 }
 
 void NewConnectionDialog::handleDeviceTypeChanged()
@@ -123,7 +123,12 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             break;
         case CANCon::SERIALBUS:
             ui->rbSocketCAN->setChecked(true);
-            //you can't configure any of the below three with socketcan so dim them out
+            break;
+        case CANCon::REMOTE:
+            ui->rbRemote->setChecked(true);
+            break;
+        case CANCon::MQTT:
+            ui->rbMQTT->setChecked(true);
             break;
         default: {}
     }
@@ -157,6 +162,9 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             else ui->cbPort->addItem(pPortName);
             break;
         }
+        case CANCon::MQTT:
+            ui->cbPort->setCurrentText(pPortName);
+            break;
         default: {}
     }
 }
