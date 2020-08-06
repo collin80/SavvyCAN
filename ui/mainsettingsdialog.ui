@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>965</width>
-    <height>591</height>
+    <height>668</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -287,10 +287,10 @@
      <item>
       <widget class="QGroupBox" name="groupBox_8">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="title">
-        <string>Remote Connection:</string>
+        <string>MQTT Remote CAN Settings:</string>
        </property>
        <layout class="QFormLayout" name="formLayout">
         <item row="0" column="0">
@@ -300,6 +300,9 @@
           </property>
          </widget>
         </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="lineRemoteHost"/>
+        </item>
         <item row="1" column="0">
          <widget class="QLabel" name="label_7">
           <property name="text">
@@ -307,16 +310,30 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="lineRemoteHost"/>
-        </item>
         <item row="1" column="1">
          <widget class="QLineEdit" name="lineRemotePort"/>
         </item>
-        <item row="2" column="1">
-         <widget class="QCheckBox" name="cbAutoStartRemote">
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_8">
           <property name="text">
-           <string>Auto start remote hosting</string>
+           <string>User Name:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="lineRemoteUser"/>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>Password</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="lineRemotePassword">
+          <property name="echoMode">
+           <enum>QLineEdit::Password</enum>
           </property>
          </widget>
         </item>
@@ -371,7 +388,6 @@
   <tabstop>cbInfoAutoExpand</tabstop>
   <tabstop>lineRemoteHost</tabstop>
   <tabstop>lineRemotePort</tabstop>
-  <tabstop>cbAutoStartRemote</tabstop>
  </tabstops>
  <resources/>
  <connections/>
