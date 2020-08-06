@@ -1,8 +1,13 @@
 #include "mainsettingsdialog.h"
 #include "ui_mainsettingsdialog.h"
 #include "helpwindow.h"
-
 #include <qevent.h>
+#include "simplecrypt.h"
+
+//using this simple encryption library to obfuscate stored password a bit. It's not super secure but better than
+//storing a password in straight plaintext. You have the source to this application anyway, whatever algorithm used,
+//whatever key, you'd see it. Just behave yourselves
+SimpleCrypt crypto(Q_UINT64_C(0xdeadbeefface6285));
 
 MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QDialog(parent),
@@ -11,6 +16,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QSettings settings;
     ui->setupUi(this);
 
+        //TODO: This is still hard coded to support only two buses. Sometimes there is none, sometimes 1, sometimes much more than 2. Fix this.
     ui->comboSendingBus->addItem(tr("None"));
     ui->comboSendingBus->addItem(tr("0"));
     ui->comboSendingBus->addItem(tr("1"));
@@ -30,8 +36,12 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->spinPlaybackSpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
     ui->lineClockFormat->setText(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
     ui->lineRemoteHost->setText(settings.value("Remote/Host", "api.savvycan.com").toString());
-    ui->lineRemotePort->setText(settings.value("Remote/Port", "21315").toString()); // = 0x5343 = SC. Yep, really creative port number
-    ui->cbAutoStartRemote->setChecked(settings.value("Remote/AutoStart", false).toBool());
+    ui->lineRemotePort->setText(settings.value("Remote/Port", "8883").toString()); //default port for SSL enabled MQTT
+    ui->lineRemoteUser->setText(settings.value("Remote/User", "Anonymous").toString());
+    QByteArray encPass = settings.value("Remote/Pass", "").toByteArray();
+    QString decPass = crypto.decryptToString(encPass);
+    ui->lineRemotePassword->setText(decPass);
+
     ui->cbLoadConnections->setChecked(settings.value("Main/SaveRestoreConnections", false).toBool());
 
     ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
@@ -82,9 +92,10 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
-    connect(ui->cbAutoStartRemote, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->lineRemotePort, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    connect(ui->lineRemoteUser, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
+    connect(ui->lineRemotePassword, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbLoadConnections, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFilterLabeling, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     installEventFilter(this);
@@ -144,7 +155,9 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/FontSize", ui->spinFontSize->value());
     settings.setValue("Remote/Host", ui->lineRemoteHost->text());
     settings.setValue("Remote/Port", ui->lineRemotePort->text());
-    settings.setValue("Remote/AutoStart", ui->cbAutoStartRemote->isChecked());
+    settings.setValue("Remote/User", ui->lineRemoteUser->text());
+    QByteArray encPass = crypto.encryptToByteArray(ui->lineRemotePassword->text());
+    settings.setValue("Remote/Pass", encPass);
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
 
     settings.sync();

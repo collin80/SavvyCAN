@@ -40,6 +40,7 @@ private:
     void selectKvaser();
     void selectSocketCan();
     void selectRemote();
+    void selectMQTT();
     bool isSerialBusAvailable();
     void setPortName(CANCon::type pType, QString pPortName, QString pDriver);
 };

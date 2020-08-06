@@ -4,11 +4,12 @@
 #
 #-------------------------------------------------
 
-QT = core gui printsupport qml serialbus serialport widgets help
+QT = core gui printsupport qml serialbus serialport widgets help network
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
 CONFIG += c++11
+CONFIG += NO_UNIT_TESTS
 
 DEFINES += QCUSTOMPLOT_USE_OPENGL
 
@@ -16,9 +17,22 @@ TARGET = SavvyCAN
 TEMPLATE = app
 
 SOURCES += main.cpp\
+    mqtt/qmqtt_client.cpp \
+    mqtt/qmqtt_client_p.cpp \
+    mqtt/qmqtt_frame.cpp \
+    mqtt/qmqtt_message.cpp \
+    mqtt/qmqtt_network.cpp \
+    mqtt/qmqtt_router.cpp \
+    mqtt/qmqtt_routesubscription.cpp \
+    mqtt/qmqtt_socket.cpp \
+    mqtt/qmqtt_ssl_socket.cpp \
+    mqtt/qmqtt_timer.cpp \
+    mqtt/qmqtt_websocket.cpp \
+    mqtt/qmqtt_websocketiodevice.cpp \
     re/dbccomparatorwindow.cpp \
     mainwindow.cpp \
     canframemodel.cpp \
+    simplecrypt.cpp \
     utility.cpp \
     qcustomplot.cpp \
     frameplaybackwindow.cpp \
@@ -77,7 +91,27 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \     \
+    mqtt/qmqtt.h \
+    mqtt/qmqtt_client.h \
+    mqtt/qmqtt_client_p.h \
+    mqtt/qmqtt_frame.h \
+    mqtt/qmqtt_global.h \
+    mqtt/qmqtt_message.h \
+    mqtt/qmqtt_message_p.h \
+    mqtt/qmqtt_network_p.h \
+    mqtt/qmqtt_networkinterface.h \
+    mqtt/qmqtt_routedmessage.h \
+    mqtt/qmqtt_router.h \
+    mqtt/qmqtt_routesubscription.h \
+    mqtt/qmqtt_socket_p.h \
+    mqtt/qmqtt_socketinterface.h \
+    mqtt/qmqtt_ssl_socket_p.h \
+    mqtt/qmqtt_timer_p.h \
+    mqtt/qmqtt_timerinterface.h \
+    mqtt/qmqtt_websocket_p.h \
+    mqtt/qmqtt_websocketiodevice_p.h \
     re/dbccomparatorwindow.h \
+    simplecrypt.h \
     utility.h \
     qcustomplot.h \
     frameplaybackwindow.h \
