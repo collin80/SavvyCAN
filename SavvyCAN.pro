@@ -17,6 +17,7 @@ TARGET = SavvyCAN
 TEMPLATE = app
 
 SOURCES += main.cpp\
+    connections/mqtt_bus.cpp \
     mqtt/qmqtt_client.cpp \
     mqtt/qmqtt_client_p.cpp \
     mqtt/qmqtt_frame.cpp \
@@ -91,6 +92,7 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \     \
+    connections/mqtt_bus.h \
     mqtt/qmqtt.h \
     mqtt/qmqtt_client.h \
     mqtt/qmqtt_client_p.h \
