@@ -164,9 +164,48 @@ void MQTT_BUS::readSettings()
 
 }
 
+void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
+{
+    uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
+
+
+    /* drop frame if capture is suspended */
+    if(isCapSuspended())
+        return;
+
+    CANFrame* frame_p = getQueue().get();
+    if(frame_p)
+    {
+        uint32_t frameID = message.topic().split("/")[1].toInt();
+        uint64_t timeStamp = message.payload()[0] + (message.payload()[1] << 8) + (message.payload()[2] << 16) + (message.payload()[3] << 24)
+                           + ((uint64_t)message.payload()[4] << 32ull)  + ((uint64_t)message.payload()[5] << 40ull)
+                           + ((uint64_t)message.payload()[6] << 48ull) + ((uint64_t)message.payload()[7] << 56ull);
+        int flags = message.payload()[8];
+        frame_p->setPayload(message.payload().right(message.payload().count() - 9));
+        frame_p->bus = 0;
+        frame_p->setExtendedFrameFormat(flags & 1);
+        frame_p->setFrameId(frameID);
+        frame_p->setFrameType(QCanBusFrame::DataFrame);
+        frame_p->isReceived = true;
+        if (useSystemTime)
+        {
+            frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
+        }
+        else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
+
+        checkTargettedFrame(*frame_p);
+
+        /* enqueue frame */
+        getQueue().queue();
+    }
+}
+
 void MQTT_BUS::clientConnected()
 {
     sendDebug("Connecting to MQTT Broker!");
+
+    mqttClient->subscribe(topicName + "/+", 0); //subscribe to all sub topics to grab the frames.
+    connect(mqttClient, &QMQTT::Client::received, this, &MQTT_BUS::clientMessageReceived);
 
     setStatus(CANCon::CONNECTED);
     CANConStatus stats;
