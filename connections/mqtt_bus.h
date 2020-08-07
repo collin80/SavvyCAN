@@ -37,6 +37,7 @@ protected:
 private slots:
     void clientConnected();
     void clientErrored(const QMQTT::ClientError error);
+    void clientMessageReceived(const QMQTT::Message& message);
 
 private:
     void readSettings();
