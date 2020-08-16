@@ -657,10 +657,13 @@ void MainWindow::handleLoadFile()
 
     if (!loadResult)
     {
-        confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
+        if (tempFrames.count() > 0) //only ask if at least one frame was decoded.
+        {
+            confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
                                       QMessageBox::Yes|QMessageBox::No);
-        if (confirmDialog == QMessageBox::Yes) {
-            loadResult = true;
+            if (confirmDialog == QMessageBox::Yes) {
+                loadResult = true;
+            }
         }
     }
 
