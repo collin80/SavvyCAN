@@ -28,7 +28,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
-    filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
+    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)")));
     filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
@@ -149,7 +149,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
     filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
-    filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
+    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)")));
     filters.append(QString(tr("Vector trace files (*.trace *.TRACE)")));
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
@@ -216,9 +216,12 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         }
         else
         {
-            QMessageBox msgBox;
-            msgBox.setText("File load completed with errors.\r\nPerhaps you selected the wrong file type?");
-            msgBox.exec();
+            if (dialog.selectedNameFilter() != filters[0])
+            {
+                QMessageBox msgBox;
+                msgBox.setText("File load completed with errors.\r\nPerhaps you selected the wrong file type?");
+                msgBox.exec();
+            }
             return false;
         }
     }
@@ -226,7 +229,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
 }
 
 
-//Try every format by first uses the "is" functions which try to detect whether a given file is a good match to that
+//Try every format by first using the "is" functions which try to detect whether a given file is a good match to that
 //file format or not. Those functions are much less tolerant than the load functions and so should help to discriminate
 //whether a file could be loaded or not by a given loader. The loader return is still used in case the guess was wrong.
 bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames)
@@ -417,6 +420,9 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    QMessageBox msgBox;
+    msgBox.setText("Could not autodetect the file type.\rPlease try to manually select the file format.");
+    msgBox.exec();
     qDebug() << "Nothing worked... sorry...";
     return false;
 }
@@ -804,8 +810,9 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.isReceived = true;
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
                 thisFrame.bus = 0;
-                QByteArray bytes( tokens[2].toInt(nullptr, 16), 0);
-                for (int d = 0; d < thisFrame.payload().length(); d++)
+                int numBytes = tokens[2].toInt(nullptr, 16);
+                QByteArray bytes( numBytes, 0);
+                for (int d = 0; d < numBytes; d++)
                 {
                     if (tokens[d + 3] != "")
                     {
@@ -923,7 +930,7 @@ bool FrameFileIO::loadCANOpenFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.bus = 0;
                 QList<QByteArray> dataTok = tokens[11].simplified().split(' ');
                 QByteArray bytes(dataTok.length(), 0);
-                for (int d = 0; d < thisFrame.payload().length(); d++)
+                for (int d = 0; d < dataTok.length(); d++)
                 {
                     if (dataTok[d] != "")
                     {
@@ -1126,7 +1133,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.setFrameId(line.mid(28, 8).simplified().toUInt(nullptr, 16));
                 if (thisFrame.frameId() < 0x1FFFFFFF)
                 {
-                    QByteArray bytes(line.mid(38,1).toInt(), 0);
+                    int numBytes = line.mid(38,1).toInt();
+                    QByteArray bytes(numBytes, 0);
                     thisFrame.isReceived = true;
                     thisFrame.bus = 0;
                     if (line.at(28) == ' ') {
@@ -1140,7 +1148,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     } else {
                         QList<QByteArray> tokens = line.mid(41, thisFrame.payload().length() * 3).split(' ');
                         thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                        for (int d = 0; d < thisFrame.payload().length(); d++)
+                        for (int d = 0; d < numBytes; d++)
                         {
                             if (tokens[d] != "")
                             {
@@ -1159,7 +1167,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.setFrameId(line.mid(25, 8).simplified().toUInt(nullptr, 16));
                 if (thisFrame.frameId() < 0x1FFFFFFF)
                 {
-                    QByteArray bytes(line.mid(37,2).trimmed().toInt(), 0);
+                    int numBytes = line.mid(37,2).trimmed().toInt();
+                    QByteArray bytes(numBytes, 0);
                     qDebug() << thisFrame.payload().length();
                     thisFrame.isReceived = true;
                     thisFrame.bus = 0;
@@ -1173,7 +1182,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     } else {
                         QList<QByteArray> tokens = line.mid(40, thisFrame.payload().length() * 3).split(' ');
                         thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                        for (int d = 0; d < thisFrame.payload().length(); d++)
+                        for (int d = 0; d < numBytes; d++)
                         {
                             if (tokens[d] != "")
                             {
@@ -1592,7 +1601,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     if (lng + 5 > tokens.length()) lng = tokens.length() - 5;
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < 8; c++) bytes[c] = 0;
-                    for (int d = 0; d < thisFrame.payload().length(); d++)
+                    for (int d = 0; d < lng; d++)
                         bytes[d] = static_cast<char>(tokens[5 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                 }
@@ -1607,7 +1616,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                     if (lng + 6 > tokens.length()) lng = tokens.length() - 6;
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < 8; c++) bytes[c] = 0;
-                    for (int d = 0; d < thisFrame.payload().length(); d++)
+                    for (int d = 0; d < lng; d++)
                         bytes[d] = static_cast<char>(tokens[6 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                 }
@@ -1876,7 +1885,7 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CANFrame>* frames
             thisFrame.setFrameType(QCanBusFrame::DataFrame);
             QList<QByteArray> dataTok = tokens[1].split(' ');
             QByteArray bytes(dataTok.length(), 0);
-            for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>(dataTok[d].toInt(nullptr, 16));
+            for (int d = 0; d < dataTok.length(); d++) bytes[d] = static_cast<char>(dataTok[d].toInt(nullptr, 16));
             thisFrame.setPayload(bytes);
             frames->append(thisFrame);
         }
@@ -2072,14 +2081,14 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
                     thisFrame.setExtendedFrameFormat(true);
                     thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                 }
-                thisFrame.bus = tokens[2].toInt() - 1;
+                thisFrame.bus = tokens[2].toInt();
 
                 int lng = tokens[5].toInt();
                 if (lng > 8) lng = 8;
                 if (lng < 0) lng = 0;
                 QByteArray bytes(lng, 0);
                 if (thisFrame.frameType() != QCanBusFrame::RemoteRequestFrame) {
-                    for (int d = 0; d < thisFrame.payload().length(); d++)
+                    for (int d = 0; d < lng; d++)
                         bytes[d] = static_cast<char>(tokens[d + 6].toInt(nullptr, 16));
                 }
                 thisFrame.setPayload(bytes);
@@ -2275,9 +2284,10 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
 
                 QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
-                QByteArray bytes(dataToks.length(), 0);
-                if (thisFrame.payload().length() > 8) return false;
-                for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
+                int numBytes = dataToks.length();
+                QByteArray bytes(numBytes, 0);
+                if (numBytes > 8) return false;
+                for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
                 thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
             }
@@ -2448,11 +2458,12 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CANFrame>* frames)
         lastTimeStamp = tempStamp;
         thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempStamp));
         thisFrame.setFrameId(((uData[3] & 0x0F) * 256 + uData[2]) & 0x7FF);
-        QByteArray bytes(uData[3] >> 4, 0);
+        int numBytes = uData[3] >> 4;
+        QByteArray bytes(numBytes, 0);
 
-        if (thisFrame.payload().length() <= 8 && thisFrame.frameId() <= 0x7FF)
+        if (numBytes <= 8 && thisFrame.frameId() <= 0x7FF)
         {
-            for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = data[4 + d];
+            for (int d = 0; d < numBytes; d++) bytes[d] = data[4 + d];
             thisFrame.setPayload(bytes);
             frames->append(thisFrame);
         }
@@ -2639,10 +2650,11 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CANFrame>* frames)
                         if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
                             else thisFrame.setExtendedFrameFormat(true);
                         thisFrame.bus = 0;
-                        QByteArray bytes(tokens[3].toInt(), 0);
+                        int numBytes = tokens[3].toInt();
+                        QByteArray bytes(numBytes, 0);
                         if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
                         if (thisFrame.payload().length() + 4 > tokens.length()) thisFrame.payload().resize( tokens.length() - 4 );
-                        for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>( Utility::ParseStringToNum(tokens[4 + d]) );
+                        for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>( Utility::ParseStringToNum(tokens[4 + d]) );
                         thisFrame.setPayload(bytes);
                         frames->append(thisFrame);
                     }
@@ -2863,11 +2875,12 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CANFrame>* frames)
                         else thisFrame.setExtendedFrameFormat(true);
                     thisFrame.bus = 0;
                     thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                    QByteArray bytes(tokens[3].toInt(), 0);
-                    if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
+                    int numBytes = tokens[3].toInt();
+                    if (numBytes > 8) numBytes = 8;
+                    QByteArray bytes(numBytes, 0);
                     QList<QByteArray> dataToks = tokens[4].split(' ');
-                    if (thisFrame.payload().length() > dataToks.length()) thisFrame.payload().resize(dataToks.length());
-                    for (int d = 0; d < thisFrame.payload().length(); d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
+                    //if (numBytes > dataToks.length()) thisFrame.payload().resize(dataToks.length());
+                    for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                     frames->append(thisFrame);
                 }
@@ -3211,8 +3224,9 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
                 if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                QByteArray bytes(tokens[3].at(1) - '0', 0);                
-                for (int c = 0; c < thisFrame.payload().length(); c++)
+                int numBytes = tokens[3].at(1) - '0';
+                QByteArray bytes(numBytes, 0);
+                for (int c = 0; c < numBytes; c++)
                 {
                     if ((4 + c) < tokens.size()) bytes[c] = static_cast<char>(tokens[4 + c].toInt(nullptr, 16));
                 }
@@ -3346,8 +3360,9 @@ bool FrameFileIO::loadLawicelFile(QString filename, QVector<CANFrame>* frames)
             thisFrame.setFrameType(QCanBusFrame::DataFrame);
             thisFrame.bus = 0;
             line.remove(0, 3);
-            QByteArray bytes(line.length() / 2, 0);
-            for (int d = 0; d < bytes.length(); d++)
+            int numBytes = line.length() / 2;
+            QByteArray bytes(numBytes, 0);
+            for (int d = 0; d < numBytes; d++)
             {
                 bytes[d] = static_cast<char>(line.mid(d * 2, 2).toInt(nullptr, 16));
             }
@@ -3448,8 +3463,9 @@ bool FrameFileIO::loadKvaserFile(QString filename, QVector<CANFrame> *frames, bo
             if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
             thisFrame.setFrameType(QCanBusFrame::DataFrame);
-            QByteArray bytes(line.mid(21, 3).simplified().toInt(), 0);
-            for (int i = 0; i < 8; i++) {
+            int numBytes = line.mid(21, 3).simplified().toInt();
+            QByteArray bytes(numBytes, 0);
+            for (int i = 0; i < numBytes; i++) {
                 bytes[i] = line.mid(25 + i * 4, 3).simplified().toInt(nullptr, base);
             }
             thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, line.mid(57, 14).simplified().toDouble() * 1000000));
