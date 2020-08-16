@@ -43,27 +43,27 @@ matrix:
               tags: true #deploy is only done on tagged builds
            draft: false
   
-      - os: osx
-        osx_image: xcode10
-        before_install:
-           - brew install qt5
-           - brew link qt5 --force
-        script:
-           - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
-           - xcodebuild
-           - mkdir Release/SavvyCAN.app/Contents/MacOS/help
-           - cp -R help/*.* Release/SavvyCAN.app/Contents/MacOS/help
-           - cd Release
-           - ls SavvyCAN.app/Contents/MacOS
-           - macdeployqt SavvyCAN.app -dmg
-        deploy:
-           provider: releases
-           skip_cleanup: true
-           api_key: $GITHUB_TOKEN
-           file: SavvyCAN.dmg
-           on:
-              tags: true
-           draft: false
+#      - os: osx
+#        osx_image: xcode10
+#        before_install:
+#           - brew install qt5
+#           - brew link qt5 --force
+#        script:
+#           - qmake CONFIG+=release -spec macx-xcode SavvyCAN.pro
+#           - xcodebuild
+#           - mkdir Release/SavvyCAN.app/Contents/MacOS/help
+#           - cp -R help/*.* Release/SavvyCAN.app/Contents/MacOS/help
+#           - cd Release
+#           - ls SavvyCAN.app/Contents/MacOS
+#           - macdeployqt SavvyCAN.app -dmg
+#        deploy:
+#           provider: releases
+#           skip_cleanup: true
+#           api_key: $GITHUB_TOKEN
+#           file: SavvyCAN.dmg
+#           on:
+#              tags: true
+#           draft: false
            
 branches:
   except:
