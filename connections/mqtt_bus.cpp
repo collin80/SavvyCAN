@@ -5,6 +5,7 @@
 #include <QStringBuilder>
 #include <QtNetwork>
 
+#include "utility.h"
 #include "mqtt_bus.h"
 
 MQTT_BUS::MQTT_BUS(QString topicName) :
@@ -134,22 +135,28 @@ bool MQTT_BUS::piSendFrame(const CANFrame& frame)
     if (frame.frameId() & 0x20000000) {
         return true;
     }
-    ID = frame.frameId();
-    if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
 
-    buffer[0] = (char)0xF1; //start of a command over serial
-    buffer[1] = 0; //command ID for sending a CANBUS frame
-    buffer[2] = (char)(ID & 0xFF); //four bytes of ID LSB first
-    buffer[3] = (char)(ID >> 8);
-    buffer[4] = (char)(ID >> 16);
-    buffer[5] = (char)(ID >> 24);
-    buffer[6] = (char)((frame.bus) & 3);
-    buffer[7] = (char)frame.payload().length();
-    for (c = 0; c < frame.payload().length(); c++)
+    QMQTT::Message msg;
+    QByteArray bytes;
+
+    msg.setTopic(topicName + "/s/" + QString::number(frame.frameId()));
+    uint8_t flags = 0;
+    if (frame.hasExtendedFrameFormat()) flags += 1;
+    if (frame.frameType() == QCanBusFrame::RemoteRequestFrame) flags += 2;
+    if (frame.hasFlexibleDataRateFormat()) flags += 4;
+    if (frame.frameType() == QCanBusFrame::ErrorFrame) flags += 8;
+
+    uint64_t micros = QDateTime::currentMSecsSinceEpoch() * 1000ull;
+    for (int x = 0; x < 8; x++)
     {
-        buffer[8 + c] = frame.payload()[c];
+        bytes.append(micros & 0xFF);
+        micros = micros / 256;
     }
-    buffer[8 + frame.payload().length()] = 0;
+    bytes.append(flags);
+    bytes.append(frame.payload());
+
+    msg.setPayload(bytes);
+    mqttClient->publish(msg);
 
     return true;
 }
