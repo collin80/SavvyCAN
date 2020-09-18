@@ -104,7 +104,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
-    QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true);
+    QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
 };
