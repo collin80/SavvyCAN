@@ -55,8 +55,11 @@ QListWidgetItem * FilterUtility::createFilterItem(int32_t id, QListWidget* paren
     QListWidgetItem *thisItem = new QListWidgetItem(parent);
     QString filterItemName = Utility::formatCANID(id);
 
+    //Note, there are multiple filter labeling preferences. There is one in main settings to globally
+    //enable or disable them all. Then each loaded DBC file also can be selected on/off
+    //Both must be enabled for you to see labeling.
     if (settings.value("Main/FilterLabeling", false).toBool())
-    {    
+    {
         // Filter labeling (show interpreted frame names next to the CAN addr ID)
         MatchingCriteria_t matchingCriteria;
         DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(id,&matchingCriteria);
