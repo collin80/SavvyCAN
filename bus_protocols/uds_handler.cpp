@@ -512,13 +512,13 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if (dataLen > 3)
             {
                 int routineID;
-                routineID = (data[1] * 256 + data[2]);
+                routineID = (data[2] * 256 + data[3]);
                 buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
             }
             if (dataLen > 4)
             {
                 buildString.append("\nParameter bytes to routine: ");
-                for (int i = 3; i < dataLen; i++)
+                for (int i = 4; i < dataLen; i++)
                 {
                     buildString.append(Utility::formatHexNum(data[i]) + " ");
                 }
@@ -529,13 +529,13 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if (dataLen > 2)
             {
                 int routineID;
-                routineID = (data[1] * 256 + data[2]);
+                routineID = (data[2] * 256 + data[3]);
                 buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
             }
-            if (dataLen > 3)
+            if (dataLen > 4)
             {
                 buildString.append("\nBytes returned by routine: ");
-                for (int i = 3; i < dataLen; i++)
+                for (int i = 4; i < dataLen; i++)
                 {
                     buildString.append(Utility::formatHexNum(data[i]) + " ");
                 }

@@ -463,8 +463,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != nullptr)
                 {
-                    tempString.append("   <Interpreted>\n");
-                    tempString.append(msg->name + "\n" + msg->comment + "\n");
+                    tempString.append("   <" + msg->name + ">\n");
+                    if (msg->comment.length() > 1) tempString.append(msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {
                         QString sigString;
