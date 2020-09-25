@@ -40,6 +40,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
 {
     int64_t result = 0;
     bool isSigned = false;
+    bool isInteger = false;
     double endResult;
 
     if (valType == STRING)
@@ -70,7 +71,9 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
     {
         result = Utility::processIntegerSignal(frame.data, startBit, signalSize, intelByteOrder, isSigned);
         endResult = ((double)result * factor) + bias;
-        result = (int64_t)endResult;        
+        result = (int64_t)endResult;
+        // if factor is an integer, we don't need the possibly human-unreadable float representation
+        isInteger = (factor == ceilf(factor));
     }
     else if (valType == SP_FLOAT)
     {
@@ -95,12 +98,12 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         endResult = (*((double *)(&result)) * factor) + bias;
     }
 
-    outString = makePrettyOutput(endResult, result, outputName);
+    outString = makePrettyOutput(endResult, result, outputName, isInteger);
     cachedValue = endResult;
     return true;
 }
 
-QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outputName)
+QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outputName, bool isInteger)
 {
     QString outputString;
 
@@ -122,7 +125,7 @@ QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outpu
     }
     else //otherwise display the actual number and unit (if it exists)
     {
-       outputString += QString::number(floatVal) + unitName;
+       outputString += (isInteger ? QString::number(intVal) : QString::number(floatVal)) + unitName;
     }
     return outputString;
 }
