@@ -147,7 +147,6 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Autodetect File Type (*.*)")));
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
     filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
     filters.append(QString(tr("Microchip Log (*.can *.CAN)")));
     filters.append(QString(tr("Vector trace files (*.trace *.TRACE)")));
@@ -161,7 +160,9 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
     filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)")));
+    filters.append(QString(tr("CARBUS Analyzer Trace Files (*.trc *.TRC)")));
     filters.append(QString(tr("CANHacker Trace Files (*.trc *.TRC)")));
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
 
@@ -173,6 +174,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+        QString selectedNameFilter = dialog.selectedNameFilter();
 
         QProgressDialog progress(qApp->activeWindow());
         progress.setWindowModality(Qt::WindowModal);
@@ -184,26 +186,27 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
 
         qApp->processEvents();
 
-        if (dialog.selectedNameFilter() == filters[0]) result = autoDetectLoadFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[1]) result = loadNativeCSVFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[2]) result = loadCRTDFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[3]) result = loadGenericCSVFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[4]) result = loadLogFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[5]) result = loadMicrochipFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[6]) result = loadTraceFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[7]) result = loadIXXATFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[8]) result = loadCANDOFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[9]) result = loadVehicleSpyFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[10]) result = loadCanDumpFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[11]) result = loadLawicelFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[12]) result = loadPCANFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[13]) result = loadKvaserFile(filename, frameCache, false);
-        if (dialog.selectedNameFilter() == filters[14]) result = loadKvaserFile(filename, frameCache, true);
-        if (dialog.selectedNameFilter() == filters[15]) result = loadCanalyzerASC(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[16]) result = loadCanalyzerBLF(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[17]) result = loadCANHackerFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[18]) result = loadCabanaFile(filename, frameCache);
-        if (dialog.selectedNameFilter() == filters[19]) result = loadCANOpenFile(filename, frameCache);
+        if (selectedNameFilter == filters[0]) result = autoDetectLoadFile(filename, frameCache);
+        if (selectedNameFilter == filters[1]) result = loadNativeCSVFile(filename, frameCache);
+        if (selectedNameFilter == filters[2]) result = loadCRTDFile(filename, frameCache);
+        if (selectedNameFilter == filters[3]) result = loadLogFile(filename, frameCache);
+        if (selectedNameFilter == filters[4]) result = loadMicrochipFile(filename, frameCache);
+        if (selectedNameFilter == filters[5]) result = loadTraceFile(filename, frameCache);
+        if (selectedNameFilter == filters[6]) result = loadIXXATFile(filename, frameCache);
+        if (selectedNameFilter == filters[7]) result = loadCANDOFile(filename, frameCache);
+        if (selectedNameFilter == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
+        if (selectedNameFilter == filters[9]) result = loadCanDumpFile(filename, frameCache);
+        if (selectedNameFilter == filters[10]) result = loadLawicelFile(filename, frameCache);
+        if (selectedNameFilter == filters[11]) result = loadPCANFile(filename, frameCache);
+        if (selectedNameFilter == filters[12]) result = loadKvaserFile(filename, frameCache, false);
+        if (selectedNameFilter == filters[13]) result = loadKvaserFile(filename, frameCache, true);
+        if (selectedNameFilter == filters[14]) result = loadCanalyzerASC(filename, frameCache);
+        if (selectedNameFilter == filters[15]) result = loadCanalyzerBLF(filename, frameCache);
+        if (selectedNameFilter == filters[16]) result = loadCARBUSAnalyzerFile(filename, frameCache);
+        if (selectedNameFilter == filters[17]) result = loadCANHackerFile(filename, frameCache);
+        if (selectedNameFilter == filters[18]) result = loadGenericCSVFile(filename, frameCache);
+        if (selectedNameFilter == filters[19]) result = loadCabanaFile(filename, frameCache);
+        if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
 
         progress.cancel();
 
@@ -308,6 +311,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadLawicelFile(filename, frames))
         {
             qDebug() << "Loaded as lawicel successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting 'CARBUS Analyzer'";
+    if (isCARBUSAnalyzerFile(filename))
+    {
+        if (loadCARBUSAnalyzerFile(filename, frames))
+        {
+            qDebug() << "Loaded as 'CARBUS Analyzer' successfully!";
             return true;
         }
     }
@@ -704,6 +717,99 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+bool FrameFileIO::isCARBUSAnalyzerFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray line;
+
+    bool isMatch = false;
+
+    // not Text mode because file contains `\r` new lines
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        //read header
+        line = inFile->readLine().toUpper();
+        if (line.startsWith("@ TEXT @")) return true;
+    } catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
+// CARBUS Analayzer trace format:
+//@ TEXT @ 2 @ 64 @ 0 @ 591 @ 38782 @ 00:00:38.782 @
+//14,687	1	0004	4E0	8	24 00 00 00 00 00 00 00	00000000	$
+// timestamp: sec,ms
+bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QString line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+
+    // readLine() works only with "\n" and "\r\n"
+    QString localReadAll = inFile->readAll().replace("\r", "\r\n");
+
+    QTextStream txt(&localReadAll);
+
+    line = txt.readLine().toUpper(); //read out the header first and discard it.
+
+    while (!txt.atEnd()) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = txt.readLine().simplified();
+        if (line.length() > 2)
+        {
+            QList<QString> tokens = line.split(QRegExp("\\s+"));
+            if (tokens.length() > 3)
+            {
+                QString time = tokens[0].replace(",",".");
+
+                thisFrame.timestamp = static_cast<uint64_t>(time.toDouble() * 1000);
+                thisFrame.ID = static_cast<uint32_t>(tokens[3].toInt(nullptr, 16));
+                thisFrame.extended = (thisFrame.ID > 0x7FF);
+                thisFrame.isReceived = true;
+                thisFrame.remote = false;
+                thisFrame.bus = 0;
+                thisFrame.len = tokens[4].toInt(nullptr, 16);
+                for (int d = 0; d < thisFrame.len; d++)
+                {
+                    if (tokens[d + 5] != "")
+                    {
+                        thisFrame.data[d] = static_cast<unsigned char>(tokens[d + 5].toInt(nullptr, 16));
+                    }
+                    else thisFrame.data[d] = 0;
+                }
+                frames->append(thisFrame);
+            }
+            else foundErrors = true;
+        }
+    }
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
+}
+
 
 bool FrameFileIO::isCANHackerFile(QString filename)
 {
@@ -720,7 +826,7 @@ bool FrameFileIO::isCANHackerFile(QString filename)
     try
     {
         line = inFile->readLine().toUpper(); //read out the header first and discard it.
-        if (!line.contains("CANHACKER")) return false;
+        if (line.contains("CANHACKER")) return true;
 
         while (!inFile->atEnd()) {
             lineCounter++;
@@ -2968,6 +3074,10 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                     }
                     int ID = tokens[2].toULong(nullptr, 16);
                     if (ID > 0x1FFFFFFF || ID == 0) isMatch = false;
+                    if (tokens[3].size() < 2) {
+                        isMatch = false;
+                        continue;
+                    }
                     int len = tokens[3].at(1) - '0';
                     if (len < 0 || len > 8) isMatch = false;
                 }

@@ -46,6 +46,7 @@ public:
     static bool loadKvaserFile(QString, QVector<CANFrame>*, bool);
     static bool loadCanalyzerASC(QString, QVector<CANFrame>*);
     static bool loadCanalyzerBLF(QString, QVector<CANFrame>*);
+    static bool loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* frames);
     static bool loadCANHackerFile(QString filename, QVector<CANFrame>* frames);
     static bool loadCabanaFile(QString filename, QVector<CANFrame>* frames);
     static bool loadCANOpenFile(QString filename, QVector<CANFrame>* frames);
@@ -67,6 +68,7 @@ public:
     static bool isKvaserFile(QString);
     static bool isCanalyzerASC(QString);
     static bool isCanalyzerBLF(QString);
+    static bool isCARBUSAnalyzerFile(QString filename);
     static bool isCANHackerFile(QString filename);
     static bool isCabanaFile(QString filename);
     static bool isCANOpenFile(QString filename);
