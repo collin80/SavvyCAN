@@ -4,20 +4,25 @@
 
 
 SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
-    mID(pFrame.ID)
+    mID(pFrame.frameId())
 {
-    for (int i = 0; i < 8; i++) {
-        mNotch[i] =0;
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
+    int dataLen = pFrame.payload().length();
+
+    for (int i = 0; i < dataLen; i++) {
+        mNotch[i] = 0;
         mMarker.data[i] = 0;
         mMarker.dataTimestamp[i] = 0;
-        mCurrent.data[i] = pFrame.data[i];
+        if (i < dataLen) mCurrent.data[i] = data[i];
+        else mCurrent.data[i] = 0;
         mCurrent.dataTimestamp[i] = seq;
     }
     mLastMarker = mMarker;
-    mCurrent.len = pFrame.len;
+    mCurrent.len = dataLen;
+
     /* that's dirty */
     update(pFrame, seq, false);
-    update(pFrame, seq, false);
+    update(pFrame, seq, false); //anyone know why we're doing this twice?!
 }
 
 
@@ -112,21 +117,24 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
     mLastTime = mCurrentTime;
     mCurrSeqVal = timeSeq;
 
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
+    int dataLen = pFrame.payload().length();
+
     /* copy new value */
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < dataLen; i++)
     {
-        maskedData = pFrame.data[i];
+        maskedData = data[i];
         if (mute) maskedData &= ~mNotch[i];
         maskedCurr = mCurrent.data[i];
         if (mute) maskedCurr &= ~mNotch[i];
         if (maskedCurr != maskedData)
         {
-            mCurrent.data[i] = pFrame.data[i];
+            mCurrent.data[i] = data[i];
             mCurrent.dataTimestamp[i] = timeSeq;
         }
     }
-    mCurrent.len = pFrame.len;
-    mCurrentTime = pFrame.timestamp;
+    mCurrent.len = dataLen;
+    mCurrentTime = pFrame.timeStamp().microSeconds();
 
     /* update marker */
     //We "OR" our stored marker with the changed bits.

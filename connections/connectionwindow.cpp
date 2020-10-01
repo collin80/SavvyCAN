@@ -70,7 +70,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     rxBroadcast = new QUdpSocket(this);
     //Need to make sure it tries to share the address in case there are
     //multiple instances of SavvyCAN running.
-    rxBroadcast->bind(QHostAddress::AnyIPv4, 17222, QAbstractSocket::ShareAddress);
+    rxBroadcast->bind(QHostAddress::Any, 17222, QAbstractSocket::ShareAddress);
 
     connect(rxBroadcast, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
 
@@ -85,7 +85,7 @@ void ConnectionWindow::readPendingDatagrams()
         if (!remoteDeviceIP.contains(datagram.senderAddress().toString()))
         {
             remoteDeviceIP.append(datagram.senderAddress().toString());
-            //qDebug() << "Add new remote IP " << datagram.senderAddress().toString();
+            qDebug() << "Add new remote IP " << datagram.senderAddress().toString();
         }
     }
 }
@@ -312,8 +312,8 @@ void ConnectionWindow::populateBusDetails(int offset)
     }
     else
     {
-        bool ret;
-        int numBuses;
+        //bool ret;
+        //int numBuses;
 
         CANConnection* conn_p = connModel->getAtIdx(selIdx);
         CANBus bus;
@@ -365,7 +365,7 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     }
     else
     {
-        bool ret;
+        //bool ret;
         ui->groupBus->setEnabled(true);
         int numBuses;
 

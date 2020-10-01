@@ -25,6 +25,8 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* ips, QWidget *parent)
     connect(ui->rbGVRET, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbSocketCAN, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbRemote, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+    connect(ui->rbMQTT, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+
     connect(ui->cbDeviceType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewConnectionDialog::handleDeviceTypeChanged);
     connect(ui->btnOK, &QPushButton::clicked, this, &NewConnectionDialog::handleCreateButton);
 
@@ -50,6 +52,7 @@ void NewConnectionDialog::handleConnTypeChanged()
     if (ui->rbGVRET->isChecked()) selectSerial();
     if (ui->rbSocketCAN->isChecked()) selectSocketCan();
     if (ui->rbRemote->isChecked()) selectRemote();
+    if (ui->rbMQTT->isChecked()) selectMQTT();
 }
 
 void NewConnectionDialog::handleDeviceTypeChanged()
@@ -102,6 +105,14 @@ void NewConnectionDialog::selectRemote()
     }
 }
 
+void NewConnectionDialog::selectMQTT()
+{
+    ui->lPort->setText("Topic Name:");
+    ui->lblDeviceType->setHidden(true);
+    ui->cbDeviceType->setHidden(true);
+    ui->cbPort->clear();
+}
+
 void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QString pDriver)
 {
 
@@ -112,7 +123,12 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             break;
         case CANCon::SERIALBUS:
             ui->rbSocketCAN->setChecked(true);
-            //you can't configure any of the below three with socketcan so dim them out
+            break;
+        case CANCon::REMOTE:
+            ui->rbRemote->setChecked(true);
+            break;
+        case CANCon::MQTT:
+            ui->rbMQTT->setChecked(true);
             break;
         default: {}
     }
@@ -146,6 +162,9 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             else ui->cbPort->addItem(pPortName);
             break;
         }
+        case CANCon::MQTT:
+            ui->cbPort->setCurrentText(pPortName);
+            break;
         default: {}
     }
 }
@@ -156,6 +175,7 @@ QString NewConnectionDialog::getPortName()
     case CANCon::GVRET_SERIAL:
     case CANCon::SERIALBUS:
     case CANCon::REMOTE:
+    case CANCon::MQTT:
         return ui->cbPort->currentText();
     default:
         qDebug() << "getPortName: can't get port";
@@ -178,6 +198,7 @@ CANCon::type NewConnectionDialog::getConnectionType()
     if (ui->rbGVRET->isChecked()) return CANCon::GVRET_SERIAL;
     if (ui->rbSocketCAN->isChecked()) return CANCon::SERIALBUS;
     if (ui->rbRemote->isChecked()) return CANCon::REMOTE;
+    if (ui->rbMQTT->isChecked()) return CANCon::MQTT;
     qDebug() << "getConnectionType: error";
 
     return CANCon::NONE;

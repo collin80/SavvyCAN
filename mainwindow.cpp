@@ -51,9 +51,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     readSettings();
 
-    //QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
-    //verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
-    //verticalHeader->setDefaultSectionSize(10);
+    QHeaderView *verticalHeader = ui->canFramesView->verticalHeader();
+    verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
+    QSettings settings;
+    int fontSize = settings.value("Main/FontSize", 9).toUInt();
+    QFont sysFont = QFont(); //get default font
+    sysFont.setPointSize(fontSize);
+    verticalHeader->setDefaultSectionSize(sysFont.pixelSize());
+    ui->canFramesView->setFont(sysFont);
+
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
@@ -80,6 +86,7 @@ MainWindow::MainWindow(QWidget *parent) :
     bisectWindow = nullptr;
     signalViewerWindow = nullptr;
     temporalGraphWindow = nullptr;
+    dbcComparatorWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -111,6 +118,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
     connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
     connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
+    connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
     connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
     connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
@@ -129,6 +137,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
+    connect(ui->btnExpandAll, &QAbstractButton::clicked, this, &MainWindow::expandAllRows);
+    connect(ui->btnCollapseAll, &QAbstractButton::clicked, this, &MainWindow::collapseAllRows);
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
@@ -168,12 +178,9 @@ MainWindow::MainWindow(QWidget *parent) :
     //of scaling or font differences between different computers.
     CANFrame temp;
     temp.bus = 0;
-    temp.ID = 0x100;
-    temp.len = 0;
-    temp.extended = false;
+    temp.setFrameId(0x100);
     temp.isReceived = true;
-    temp.remote = false;
-    temp.timestamp = 100000000;
+    temp.setTimeStamp(QCanBusFrame::TimeStamp(0, 100000000));
     model->addFrame(temp, true);
     qApp->processEvents();
     tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
@@ -258,12 +265,31 @@ void MainWindow::exitApp()
     QApplication::quit(); //forces the whole application to terminate when the main window is closed
 }
 
+
+//the close event can be trapped and ignored so put unsaved warnings in here so the user can abort the program closing if they forgot to save things.
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event);
+
+    QMessageBox::StandardButton confirmDialog;
+
+    for (int i = 0; i < dbcHandler->getFileCount(); i++)
+    {
+        DBCFile *file = dbcHandler->getFileByIdx(i);
+        if (file->getDirtyFlag())
+        {
+            confirmDialog = QMessageBox::question(this, "Unsaved DBC", "DBC File:\n" + file->getFilename() + "\nAppears to have unsaved changes\nReally close without saving?", QMessageBox::Yes|QMessageBox::No);
+            if (confirmDialog != QMessageBox::Yes)
+            {
+                event->ignore();
+                return;
+            }
+        }
+    }
+
     removeEventFilter(this);
     writeSettings();
     exitApp();
+    event->accept();
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
@@ -385,6 +411,48 @@ void MainWindow::headerClicked(int logicalIndex)
     model->sortByColumn(logicalIndex);
 }
 
+void MainWindow::expandAllRows()
+{
+    bool goAhead = false;
+    int numRows = ui->canFramesView->model()->rowCount();
+
+    if (numRows > 20000)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Really?", "It's not recommended to use this\non more than 20000 frames.\nIt can take a long time.\n\nYou have been warned!\nStill do it?",
+                                  QMessageBox::Yes|QMessageBox::No);
+
+        if (confirmDialog == QMessageBox::Yes) goAhead = true;
+    }
+    else goAhead = true;
+
+    if (goAhead)
+    {
+        ui->canFramesView->resizeRowsToContents();
+    }
+}
+
+void MainWindow::collapseAllRows()
+{
+    bool goAhead = false;
+    int numRows = ui->canFramesView->model()->rowCount();
+
+    if (numRows > 50000)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Really?", "It's not recommended to use this\non more than 50000 frames.\nIt can take a long time.\n\nYou have been warned!\nStill do it?",
+                                  QMessageBox::Yes|QMessageBox::No);
+
+        if (confirmDialog == QMessageBox::Yes) goAhead = true;
+    }
+    else goAhead = true;
+
+    if (goAhead)
+    {
+        for (int i = 0; i < numRows; i++) ui->canFramesView->setRowHeight(i, normalRowHeight);
+    }
+}
+
 void MainWindow::gridClicked(QModelIndex idx)
 {
     //qDebug() << "Grid Clicked";
@@ -402,7 +470,7 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
     //qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
-    emit sendCenterTimeID(frame.ID, frame.timestamp / 1000000.0);
+    emit sendCenterTimeID(frame.frameId(), frame.timeStamp().microSeconds() / 1000000.0);
 }
 
 void MainWindow::interpretToggled(bool state)
@@ -447,7 +515,7 @@ void MainWindow::updateFilterList()
     QMap<int, bool>::const_iterator filterIter;
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
-        QListWidgetItem *thisItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
+        /*QListWidgetItem *thisItem = */FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
     inhibitFilterUpdate = false;
 }
@@ -595,10 +663,13 @@ void MainWindow::handleLoadFile()
 
     if (!loadResult)
     {
-        confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
+        if (tempFrames.count() > 0) //only ask if at least one frame was decoded.
+        {
+            confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
                                       QMessageBox::Yes|QMessageBox::No);
-        if (confirmDialog == QMessageBox::Yes) {
-            loadResult = true;
+            if (confirmDialog == QMessageBox::Yes) {
+                loadResult = true;
+            }
         }
     }
 
@@ -732,6 +803,10 @@ void MainWindow::saveDecodedTextFile(QString filename)
     QFile *outFile = new QFile(filename);
     const QVector<CANFrame> *frames = model->getFilteredListReference();
 
+    const unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
 /*
@@ -741,20 +816,23 @@ Data Bytes: 88 10 00 13 BB 00 06 00
 */
     for (int c = 0; c < frames->count(); c++)
     {
-        CANFrame thisFrame = frames->at(c);
+        frame = &frames->at(c);
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
+        dataLen = frame->payload().count();
+
         QString builderString;
-        builderString += tr("Time: ") + QString::number((thisFrame.timestamp / 1000000.0), 'f', 6);
-        builderString += tr("    ID: ") + Utility::formatCANID(thisFrame.ID, thisFrame.extended);
-        if (thisFrame.extended) builderString += tr(" Ext ");
+        builderString += tr("Time: ") + QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6);
+        builderString += tr("    ID: ") + Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat());
+        if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
-        builderString += tr("Bus: ") + QString::number(thisFrame.bus);
-        builderString += " Len: " + QString::number(thisFrame.len) + "\n";
+        builderString += tr("Bus: ") + QString::number(frame->bus);
+        builderString += " Len: " + QString::number(dataLen) + "\n";
         outFile->write(builderString.toUtf8());
 
         builderString = tr("Data Bytes: ");
-        for (unsigned int temp = 0; temp < thisFrame.len; temp++)
+        for (int temp = 0; temp < dataLen; temp++)
         {
-            builderString += Utility::formatNumber(thisFrame.data[temp]) + " ";
+            builderString += Utility::formatNumber(data[temp]) + " ";
         }
         builderString += "\n";
         outFile->write(builderString.toUtf8());
@@ -762,14 +840,14 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         builderString = "";
         if (dbcHandler != nullptr)
         {
-            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
+            DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
             if (msg != nullptr)
             {
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
 
                     QString temp;
-                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(thisFrame, temp))
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp))
                     {
                         builderString.append("\t" + temp);
                         builderString.append("\n");
@@ -845,14 +923,14 @@ void MainWindow::showGraphingWindow()
 {
     if (!graphingWindow) {
         graphingWindow = new GraphingWindow(model->getListReference());
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     if (flowViewWindow) //connect the two external windows together
     {
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
     graphingWindow->show();
 }
@@ -953,6 +1031,15 @@ void MainWindow::showComparisonWindow()
     comparatorWindow->show();
 }
 
+void MainWindow::showDBCComparisonWindow()
+{
+    if (!dbcComparatorWindow)
+    {
+        dbcComparatorWindow = new DBCComparatorWindow();
+    }
+    dbcComparatorWindow->show();
+}
+
 void MainWindow::showSingleMultiWindow()
 {
     if (!discreteStateWindow)
@@ -1022,14 +1109,14 @@ void MainWindow::showFlowViewWindow()
             flowViewWindow = new FlowViewWindow(model->getListReference());
         else
             flowViewWindow = new FlowViewWindow(model->getFilteredListReference());
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(this, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     if (graphingWindow)
     {
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(int32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(int32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     flowViewWindow->show();

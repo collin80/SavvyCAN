@@ -179,11 +179,14 @@ public:
         return (value1 * (1.0 - samplePoint)) + (value2 * samplePoint);
     }
 
-    static int64_t processIntegerSignal(const uint8_t *data, int startBit, int sigSize, bool littleEndian, bool isSigned)
+    static int64_t processIntegerSignal(const QByteArray data, int startBit, int sigSize, bool littleEndian, bool isSigned)
     {
 
         int64_t result = 0;
         int bit;
+
+        int maxBytes = (startBit + sigSize) / 8;
+        if (data.size() < maxBytes) return 0;
 
         if (littleEndian)
         {
@@ -191,6 +194,8 @@ public:
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
                 if (bit < 64) {
+                    int bytePos = bit / 8;
+                    if (bytePos >= data.count()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
                         result += (1ULL << bitpos);
                 }
@@ -203,6 +208,8 @@ public:
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
                 if (bit < 64) {
+                    int bytePos = bit / 8;
+                    if (bytePos >= data.count()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
                         result += (1ULL << (sigSize - bitpos - 1));
                 }

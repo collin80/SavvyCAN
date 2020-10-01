@@ -74,6 +74,11 @@ public:
 
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
+
+    friend bool operator<(const DBC_NODE& l, const DBC_NODE& r)
+    {
+        return (l.name.toLower() < r.name.toLower());
+    }
 };
 
 class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
@@ -107,6 +112,11 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
+
+    friend bool operator<(const DBC_SIGNAL& l, const DBC_SIGNAL& r)
+    {
+        return (l.name.toLower() < r.name.toLower());
+    }
 };
 
 class DBCSignalHandler; //forward declaration to keep from having to include dbchandler.h in this file and thus create a loop
@@ -129,6 +139,11 @@ public:
 
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
+
+    friend bool operator<(const DBC_MESSAGE& l, const DBC_MESSAGE& r)
+    {
+        return (l.name.toLower() < r.name.toLower());
+    }
 };
 
 

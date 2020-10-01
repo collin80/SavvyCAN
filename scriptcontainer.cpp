@@ -230,23 +230,21 @@ void CANScriptHelper::clearFilters()
 void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
 {
     CANFrame frame;
-    frame.extended = false;
-    frame.remote = false;
-    frame.ID = static_cast<uint32_t>(id.toInt());
-    frame.len = length.toUInt();
-    if (frame.len > 8) frame.len = 8;
+    frame.setExtendedFrameFormat(false);
+    frame.setFrameId(static_cast<uint32_t>(id.toInt()));
+    QByteArray bytes(length.toUInt(), 0);
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
-    for (unsigned int i = 0; i < frame.len; i++)
+    for (int i = 0; i < bytes.length(); i++)
     {
-        frame.data[i] = (uint8_t)data.property(i).toInt();
+        bytes[i] = (uint8_t)data.property(i).toInt();
     }
-
+    frame.setPayload(bytes);
     frame.bus = (uint32_t)bus.toInt();
     //if (frame.bus > 1) frame.bus = 1;
 
-    if (frame.ID > 0x7FF) frame.extended = true;
+    if (frame.frameId() > 0x7FF) frame.setExtendedFrameFormat(true);
 
     qDebug() << "sending frame from script";
     CANConManager::getInstance()->sendFrame(frame);
@@ -256,15 +254,19 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
 {
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     //qDebug() << "Got frame in script interface";
+
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
+    int dataLen = frame.payload().length();
+
     for (int i = 0; i < filters.length(); i++)
     {
-        if (filters[i].checkFilter(frame.ID, frame.bus))
+        if (filters[i].checkFilter(frame.frameId(), frame.bus))
         {
             QJSValueList args;
-            args << frame.bus << frame.ID << frame.len;
-            QJSValue dataBytes = scriptEngine->newArray(frame.len);
+            args << frame.bus << frame.frameId() << frame.payload().length();
+            QJSValue dataBytes = scriptEngine->newArray(dataLen);
 
-            for (unsigned int j = 0; j < frame.len; j++) dataBytes.setProperty(j, QJSValue(frame.data[j]));
+            for (int j = 0; j < dataLen; j++) dataBytes.setProperty(j, QJSValue(data[j]));
             args.append(dataBytes);
             gotFrameFunction.call(args);
             return; //as soon as one filter matches we jump out
@@ -301,26 +303,30 @@ void ISOTPScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     handler->addFilter(busVal, idVal, maskVal);
 }
 
-void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
+void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue dataBytes)
 {
     ISOTP_MESSAGE msg;
-    msg.extended = false;
-    msg.ID = id.toInt();
-    msg.len = length.toUInt();
+    QByteArray dataArray;
+    msg.setExtendedFrameFormat(false);
+    msg.setFrameId(id.toUInt());
+    dataArray.resize(length.toInt());
 
-    if (!data.isArray()) qDebug() << "data isn't an array";
+    int dataLen = msg.payload().length();
 
-    for (int i = 0; i < msg.len; i++)
+    if (!dataBytes.isArray()) qDebug() << "data isn't an array";
+
+    for (int i = 0; i < dataLen; i++)
     {
-        msg.data[i] = static_cast<uint8_t>(data.property(i).toInt());
+        dataArray[i] = static_cast<int8_t>(dataBytes.property(i).toInt());
     }
+    msg.setPayload(dataArray);
 
     msg.bus = bus.toInt();
 
-    if (msg.ID > 0x7FF) msg.extended = true;
+    if (msg.frameId() > 0x7FF) msg.setExtendedFrameFormat(true);
 
     qDebug() << "sending isotp message from script";
-    handler->sendISOTPFrame(msg.bus, msg.ID, msg.data);
+    handler->sendISOTPFrame(msg.bus, msg.frameId(), msg.payload());
 }
 
 void ISOTPScriptHelper::setRxCallback(QJSValue cb)
@@ -335,10 +341,10 @@ void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
     //qDebug() << "Got frame in script interface";
 
     QJSValueList args;
-    args << msg.bus << msg.ID << msg.len;
-    QJSValue dataBytes = scriptEngine->newArray(static_cast<uint>(msg.len));
+    args << msg.bus << msg.frameId() << msg.payload().length();
+    QJSValue dataBytes = scriptEngine->newArray(static_cast<uint>(msg.payload().length()));
 
-    for (int j = 0; j < msg.len; j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue(msg.data[j]));
+    for (int j = 0; j < msg.payload().length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue((unsigned char)msg.payload()[j]));
     args.append(dataBytes);
     gotFrameFunction.call(args);
 }
@@ -375,25 +381,25 @@ void UDSScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
 void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSValue sublen, QJSValue subFunc, QJSValue length, QJSValue data)
 {
     UDS_MESSAGE msg;
-    msg.extended = false;
-    msg.ID = id.toUInt();
-    msg.len = length.toUInt();
+    QByteArray dataArray;
+    msg.setExtendedFrameFormat(false);
+    msg.setFrameId( id.toUInt() );
+    dataArray.resize(length.toUInt());
     msg.service = service.toUInt();
     msg.subFuncLen = sublen.toUInt();
     msg.subFunc = subFunc.toUInt();
 
     if (!data.isArray()) qDebug() << "data isn't an array";
 
-    msg.data.reserve(msg.len);
-
-    for (int i = 0; i < msg.len; i++)
+    for (int i = 0; i < msg.payload().length(); i++)
     {
-        msg.data.append(static_cast<uint8_t>(data.property(static_cast<quint32>(i)).toInt()));
+        dataArray[i] = (static_cast<uint8_t>(data.property(static_cast<quint32>(i)).toInt()));
     }
+    msg.setPayload(dataArray);
 
     msg.bus = bus.toInt();
 
-    if (msg.ID > 0x7FF) msg.extended = true;
+    if (msg.frameId() > 0x7FF) msg.setExtendedFrameFormat( true );
 
     qDebug() << "sending UDS message from script";
 
@@ -408,15 +414,15 @@ void UDSScriptHelper::setRxCallback(QJSValue cb)
 void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
 {
     //qDebug() << "udsScriptHelper got a UDS message";
-    qDebug() << "UDS script helper. Msg data len: " << msg.len;
+    qDebug() << "UDS script helper. Msg data len: " << msg.payload().length();
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     qDebug() << "Got frame in script interface";
 
     QJSValueList args;
-    args << msg.bus << msg.ID << msg.service << msg.subFunc << msg.len;
-    QJSValue dataBytes = scriptEngine->newArray(static_cast<unsigned int>(msg.len));
+    args << msg.bus << msg.frameId() << msg.service << msg.subFunc << msg.payload().length();
+    QJSValue dataBytes = scriptEngine->newArray(static_cast<unsigned int>(msg.payload().length()));
 
-    for (int j = 0; j < msg.data.length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue(msg.data[j]));
+    for (int j = 0; j < msg.payload().length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue((unsigned char)msg.payload()[j]));
     args.append(dataBytes);
     gotFrameFunction.call(args);
 }

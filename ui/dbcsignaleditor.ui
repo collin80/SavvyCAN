@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1239</width>
+    <width>967</width>
     <height>644</height>
    </rect>
   </property>
@@ -15,10 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout" stretch="10,1,4">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2,1">
-     <item>
-      <widget class="QListWidget" name="signalsList"/>
-     </item>
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,1">
      <item>
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
@@ -210,7 +207,7 @@
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Value Table For Selected Signal:</string>
+      <string>Value Table:</string>
      </property>
     </widget>
    </item>
@@ -228,7 +225,6 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>signalsList</tabstop>
   <tabstop>txtName</tabstop>
   <tabstop>rbNotMulti</tabstop>
   <tabstop>rbMultiplexed</tabstop>

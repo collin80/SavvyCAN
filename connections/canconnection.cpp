@@ -8,8 +8,8 @@ CANConnection::CANConnection(QString pPort,
                              int pNumBuses,
                              int pQueueLen,
                              bool pUseThread) :
-    mQueue(),
     mNumBuses(pNumBuses),
+    mQueue(),
     mPort(pPort),
     mDriver(pDriver),
     mType(pType),
@@ -343,7 +343,7 @@ void CANConnection::checkTargettedFrame(CANFrame &frame)
     foreach (const CANFltObserver filt, mBusData[frame.bus].mTargettedFrames)
     {
         //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
-        maskedID = frame.ID & filt.mask;
+        maskedID = frame.frameId() & filt.mask;
         if (maskedID == filt.id) {
             qDebug() << "In connection object I got a targetted frame. Forwarding it.";
             QMetaObject::invokeMethod(filt.observer, "gotTargettedFrame",Qt::QueuedConnection, Q_ARG(CANFrame, frame));

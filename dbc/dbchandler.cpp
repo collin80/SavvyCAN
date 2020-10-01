@@ -8,6 +8,9 @@
 #include <QApplication>
 #include <QPalette>
 #include <QSettings>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
 #include "utility.h"
 #include "connections/canconmanager.h"
 
@@ -43,9 +46,16 @@ bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
 
 bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
 {
-    Q_UNUSED(sig);
-    //if (sigs.removeAll(*sig) > 0) return true;
-    return false;
+    qDebug() << "Total # of signals: " << getCount();
+    for (int i = 0; i < getCount(); i++)
+    {
+        if (sigs[i].name == sig->name)
+        {
+            sigs.removeAt(i);
+            qDebug() << "Removed signal at idx " << i;
+        }
+    }
+    return true;
 }
 
 bool DBCSignalHandler::removeSignal(int idx)
@@ -80,6 +90,11 @@ void DBCSignalHandler::removeAllSignals()
 int DBCSignalHandler::getCount()
 {
     return sigs.count();
+}
+
+void DBCSignalHandler::sort()
+{
+    std::sort(sigs.begin(), sigs.end());
 }
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
@@ -148,6 +163,20 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
     return nullptr;
 }
 
+//allow for finding a message just by part of the name
+DBC_MESSAGE* DBCMessageHandler::findMsgByPartialName(QString name)
+{
+    if (messages.count() == 0) return nullptr;
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].name.contains(name, Qt::CaseInsensitive))
+        {
+            return &messages[i];
+        }
+    }
+    return nullptr;
+}
+
 bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 {
     messages.append(msg);
@@ -156,9 +185,16 @@ bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 
 bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
 {
-    Q_UNUSED(msg);
-    //if (messages.removeAll(*msg) > 0) return true;
-    return false;
+    qDebug() << "Total # of messages: " << getCount();
+    for (int i = 0; i < getCount(); i++)
+    {
+        if (messages[i].name == msg->name)
+        {
+            messages.removeAt(i);
+            qDebug() << "Removed message at idx " << i;
+        }
+    }
+    return true;
 }
 
 bool DBCMessageHandler::removeMessageByIndex(int idx)
@@ -210,6 +246,15 @@ int DBCMessageHandler::getCount()
     return messages.count();
 }
 
+void DBCMessageHandler::sort()
+{
+    std::sort(messages.begin(), messages.end());
+    for (int i = 0; i < messages.count(); i++)
+    {
+        messages[i].sigHandler->sort();
+    }
+}
+
 bool DBCMessageHandler::filterLabeling()
 {
     return filterLabelingEnabled;
@@ -235,6 +280,7 @@ DBCFile::DBCFile()
     messageHandler = new DBCMessageHandler;
     messageHandler->setMatchingCriteria(EXACT);
     messageHandler->setFilterLabeling(false);
+    isDirty = false;
 }
 
 DBCFile::DBCFile(const DBCFile& cpy) : QObject()
@@ -252,6 +298,7 @@ DBCFile::DBCFile(const DBCFile& cpy) : QObject()
     dbc_nodes.append(cpy.dbc_nodes);
     dbc_attributes.clear();
     dbc_attributes.append(cpy.dbc_attributes);
+    isDirty = cpy.isDirty;
 }
 
 DBCFile& DBCFile::operator=(const DBCFile& cpy)
@@ -268,6 +315,12 @@ DBCFile& DBCFile::operator=(const DBCFile& cpy)
         dbc_attributes.append(cpy.dbc_attributes);
     }
     return *this;
+}
+
+void DBCFile::sort()
+{
+    std::sort(dbc_nodes.begin(), dbc_nodes.end()); //sort node names
+    messageHandler->sort(); //sort messages, each of which sorts its signals too
 }
 
 DBC_NODE* DBCFile::findNodeByIdx(int idx)
@@ -347,6 +400,17 @@ void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> 
     {
         if (attr.attrType == typ) list->append(attr);
     }
+}
+
+//there's no external way to clear the flag. It is only cleared when the file is saved by this object.
+void DBCFile::setDirtyFlag()
+{
+    isDirty = true;
+}
+
+bool DBCFile::getDirtyFlag()
+{
+    return isDirty;
 }
 
 DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
@@ -704,6 +768,7 @@ void DBCFile::loadFile(QString fileName)
     DBC_MESSAGE *currentMessage = nullptr;
     DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
+    int linesSinceYield = 0;
 
     bool inMultilineBU = false;
 
@@ -729,6 +794,12 @@ void DBCFile::loadFile(QString fileName)
     while (!inFile->atEnd()) {
         rawLine = QString(inFile->readLine());
         line = rawLine.simplified();
+
+        linesSinceYield++;
+        if (linesSinceYield > 100)
+        {
+            qApp->processEvents();
+        }
 
         if (inMultilineBU)
         {
@@ -967,6 +1038,7 @@ void DBCFile::loadFile(QString fileName)
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
     assocBuses = -1;
+    isDirty = false;
 }
 
 QVariant DBCFile::processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ)
@@ -1183,7 +1255,10 @@ void DBCFile::saveFile(QString fileName)
             msgNumber++;
         }
 
-        msgOutput.append("BO_ " + QString::number(msg->ID) + " " + msg->name + ": " + QString::number(msg->len) +
+        uint32_t ID = msg->ID;
+        if (msg->ID > 0x7FF) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+
+        msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
         if (msg->comment.length() > 0)
         {
@@ -1374,6 +1449,8 @@ void DBCFile::saveFile(QString fileName)
     outFile->close();
     delete outFile;
 
+    isDirty = false;
+
     QStringList fileList = fileName.split('/');
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
@@ -1417,6 +1494,7 @@ int DBCHandler::createBlankFile()
     //add our custom attributes to the new file so that we know they're already there.
     attr.attrType = MESSAGE;
     attr.defaultValue = QApplication::palette().color(QPalette::Base).name();
+    qDebug() << attr.defaultValue;
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
@@ -1426,6 +1504,7 @@ int DBCHandler::createBlankFile()
 
     attr.attrType = MESSAGE;
     attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
+    qDebug() << attr.defaultValue;
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
@@ -1450,6 +1529,11 @@ int DBCHandler::createBlankFile()
     attr.name = "filterlabeling";
     attr.valType = QINT;
     newFile.dbc_attributes.append(attr);
+
+    DBC_NODE falseNode;
+    falseNode.name = "Vector__XXX";
+    falseNode.comment = "Default node if none specified";
+    newFile.dbc_nodes.append(falseNode);
 
     loadedFiles.append(newFile);
     return loadedFiles.count();
@@ -1495,6 +1579,158 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
     return nullptr;
 }
 
+DBCFile* DBCHandler::loadJSONFile(QString filename)
+{
+     QSettings settings;
+     DBCFile *thisFile;
+     DBC_MESSAGE *pMsg;
+
+         createBlankFile();
+         thisFile = &loadedFiles.last();
+         QFile *inFile = new QFile(filename);
+         if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+         {
+             qDebug() << "Could not open JSON file for reading.";
+             delete inFile;
+             return nullptr;
+         }
+         QByteArray wholeFileData = inFile->readAll();
+         inFile->close();
+         delete inFile;
+         //qDebug() << "Data Length: " << wholeFileData.length();
+         QJsonDocument jsonDoc = QJsonDocument::fromJson(wholeFileData);
+         if (jsonDoc.isNull())
+         {
+             qDebug() << "Couldn't load and parse the JSON file for some reason.";
+             return nullptr;
+         }
+         qDebug() << "Loaded JSON";
+
+         QJsonObject jsonObj = jsonDoc.object();
+         QJsonObject jsonMessages = jsonObj["messages"].toObject();
+
+         QJsonObject::iterator iter;
+         for (iter = jsonMessages.begin(); iter != jsonMessages.end(); iter++)
+         {
+             qDebug() << iter.key();
+             DBC_MESSAGE msg;
+             msg.ID = static_cast<uint32_t>(iter->toObject().find("message_id").value().toInt());
+             msg.name = QString(iter.key().toUtf8());
+             msg.len = static_cast<unsigned int>(iter->toObject().find("length_bytes").value().toInt());
+             msg.sender = thisFile->findNodeByIdx(0);
+             QString nodeName = iter->toObject().find("originNode").value().toString();
+             msg.sender = thisFile->findNodeByName(nodeName);
+             msg.bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
+             msg.fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
+             if (!msg.sender && nodeName.length() > 1)
+             {
+                 DBC_NODE node;
+                 node.name = nodeName;
+                 thisFile->dbc_nodes.append(node);
+                 msg.sender = thisFile->findNodeByName(nodeName);
+             }
+             if (nodeName.length() < 2) msg.sender = thisFile->findNodeByIdx(0);
+             thisFile->messageHandler->addMessage(msg);
+             pMsg = thisFile->messageHandler->findMsgByID(msg.ID);
+             if (!pMsg)
+             {
+                 qDebug() << "pMsg was null... I have no idea how that is possible. DEBUG ME";
+                 return nullptr;
+             }
+
+             QJsonObject jsonSigs = iter->toObject().find("signals").value().toObject();
+             QJsonObject::iterator sigIter;
+             for (sigIter = jsonSigs.begin(); sigIter != jsonSigs.end(); sigIter++)
+             {
+                qDebug() << sigIter.key();
+                DBC_SIGNAL sig;
+                QJsonObject sigObj = sigIter->toObject();
+                if (sigObj.isEmpty())
+                {
+                    qDebug() << "EMPTY!?";
+                }
+                sig.name = QString(sigIter.key().toUtf8());
+                sig.factor = sigObj.find("scale").value().toDouble();
+                sig.bias = sigObj.find("offset").value().toDouble();
+                sig.max = sigObj.find("max").value().toDouble();
+                sig.min = sigObj.find("min").value().toDouble();
+                sig.startBit = sigObj.find("start_position").value().toInt();
+                sig.unitName = sigObj.find("units").value().toString();
+                sig.signalSize = sigObj.find("width").value().toInt();
+                sig.isMultiplexed = false;
+                sig.isMultiplexor = false;
+                sig.parentMessage = pMsg;
+                if (!sigObj.find("mux_id")->isUndefined())
+                {
+                    QJsonValue muxVal = sigObj.find("mux_id").value();
+                    sig.multiplexValue = muxVal.toInt();
+                    sig.isMultiplexed = true;
+                }
+                else
+                {
+                    sig.multiplexValue = 0;
+                }
+                QJsonValue muxerVal = sigObj.find("is_muxer").value();
+                if (!muxerVal.isNull())
+                {
+                    if (muxerVal.toBool())
+                    {
+                        sig.isMultiplexor = true;
+                    }
+                }
+
+                QJsonObject valuesObj = sigObj.find("value_description")->toObject();
+                if (!valuesObj.isEmpty())
+                {
+                    QJsonObject::iterator valIter;
+                    for (valIter = valuesObj.begin(); valIter != valuesObj.end(); valIter++)
+                    {
+                        DBC_VAL_ENUM_ENTRY valEnum;
+                        valEnum.value = valIter.value().toInt();
+                        valEnum.descript = valIter.key().toUtf8();
+                        sig.valList.append(valEnum);
+                    }
+                }
+
+                QJsonArray rxArray = sigObj.find("receivers")->toArray();
+                if (rxArray.size() < 1) sig.receiver = thisFile->findNodeByIdx(0);
+                else
+                {
+                    qDebug() << rxArray[0].toString();
+                    sig.receiver = thisFile->findNodeByName(rxArray[0].toString());
+                    if (!sig.receiver && rxArray[0].toString().length() > 1)
+                    {
+                        DBC_NODE node;
+                        node.name = rxArray[0].toString();
+                        thisFile->dbc_nodes.append(node);
+                        sig.receiver = thisFile->findNodeByName(rxArray[0].toString());
+                    }
+                    if (!sig.receiver) sig.receiver = thisFile->findNodeByIdx(0);
+                }
+                if (!sigObj.find("endianness").value().toString().compare("BIG"))
+                {
+                    sig.intelByteOrder = false;
+                }
+                else sig.intelByteOrder = true;
+
+                if (!sigObj.find("signedness").value().toString().compare("UNSIGNED"))
+                {
+                    sig.valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
+                }
+                else sig.valType = DBC_SIG_VAL_TYPE::SIGNED_INT;
+
+                pMsg->sigHandler->addSignal(sig);
+                if (sig.isMultiplexor) //if this signal was the multiplexor then store that info
+                {
+                    DBC_SIGNAL *pSig = pMsg->sigHandler->findSignalByName(sig.name);
+                    if (pSig) pMsg->multiplexorSignal = pSig;
+                }
+             }
+         }
+         thisFile->setDirtyFlag();
+         return thisFile;
+}
+
 void DBCHandler::removeDBCFile(int idx)
 {
     if (loadedFiles.count() == 0) return;
@@ -1516,7 +1752,7 @@ void DBCHandler::swapFiles(int pos1, int pos2)
     if (pos2 < 0) return;
     if (pos2 >= loadedFiles.count()) return;
 
-    loadedFiles.swap(pos1, pos2);
+    loadedFiles.swapItemsAt(pos1, pos2);
 }
 
 /*
@@ -1529,9 +1765,9 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == (unsigned int)loadedFiles[i].getAssocBus())
+        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == loadedFiles[i].getAssocBus())
         {
-            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.ID);
+            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;
         }
     }

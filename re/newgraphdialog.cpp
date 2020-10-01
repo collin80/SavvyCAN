@@ -1,6 +1,7 @@
 #include "newgraphdialog.h"
 #include "ui_newgraphdialog.h"
 #include <QColorDialog>
+#include <QRandomGenerator>
 #include "utility.h"
 #include "helpwindow.h"
 
@@ -15,13 +16,9 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     connect(ui->colorSwatch, SIGNAL(clicked(bool)), this, SLOT(colorSwatchClick()));
     connect(ui->btnAddGraph, SIGNAL(clicked(bool)), this, SLOT(addButtonClicked()));
 
-    // Seed the random generator with current time
-    QTime time = QTime::currentTime();
-    qsrand((uint)time.msec());
-
     QPalette p = ui->colorSwatch->palette();
     //using 160 instead of 255 so that colors are always at least a little dark
-    p.setColor(QPalette::Button, QColor(qrand() % 160,qrand() % 160,qrand() % 160));
+    p.setColor(QPalette::Button, QColor(QRandomGenerator::global()->bounded(160),QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160)));
     ui->colorSwatch->setPalette(p);
 
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));

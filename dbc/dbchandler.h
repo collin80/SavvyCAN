@@ -29,6 +29,8 @@ public:
     bool removeSignal(QString name);
     void removeAllSignals();
     int getCount();
+    void sort();
+
 private:
     QList<DBC_SIGNAL> sigs; //signals is a reserved word or I'd have used that
 };
@@ -40,6 +42,7 @@ public:
     DBC_MESSAGE *findMsgByID(uint32_t id);
     DBC_MESSAGE *findMsgByIdx(int idx);
     DBC_MESSAGE *findMsgByName(QString name);
+    DBC_MESSAGE *findMsgByPartialName(QString name);
     bool addMessage(DBC_MESSAGE &msg);
     bool removeMessage(DBC_MESSAGE *msg);
     bool removeMessageByIndex(int idx);
@@ -51,6 +54,8 @@ public:
     void setMatchingCriteria(MatchingCriteria_t mc);
     void setFilterLabeling( bool labelFiltering );
     bool filterLabeling();
+    void sort();
+
 private:
     QList<DBC_MESSAGE> messages;
     MatchingCriteria_t matchingCriteria;
@@ -78,6 +83,9 @@ public:
     QString getPath();
     int getAssocBus();
     void setAssocBus(int bus);
+    void setDirtyFlag();
+    bool getDirtyFlag();
+    void sort();
 
     DBCMessageHandler *messageHandler;
     QList<DBC_NODE> dbc_nodes;
@@ -86,6 +94,7 @@ private:
     QString fileName;
     QString filePath;
     int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus, etc.
+    bool isDirty; //has the file been modified?
 
     bool parseAttribute(QString inpString, DBC_ATTRIBUTE &attr);
     QVariant processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ);
@@ -113,6 +122,7 @@ public:
     DBCFile* getFileByIdx(int idx);
     DBCFile* getFileByName(QString name);
     int createBlankFile();
+    DBCFile* loadJSONFile(QString);
     static DBCHandler *getReference();
 
 private:

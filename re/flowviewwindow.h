@@ -40,11 +40,11 @@ private slots:
     void gotCellClick(int x, int y);
 
 signals:
-    void sendCenterTimeID(int32_t ID, double timestamp);
+    void sendCenterTimeID(uint32_t ID, double timestamp);
 
 private:
     Ui::FlowViewWindow *ui;
-    QList<int> foundID;
+    QList<quint32> foundID;
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
     unsigned char refBytes[8];

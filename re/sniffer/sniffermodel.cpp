@@ -70,7 +70,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 int data = item->getData(col-tc::DATA_0);
                 if(data >= 0)
                 {
-                    return QString("%1").arg(data, 2, 16, QLatin1Char('0')).toUpper();
+                    return QString("%1").arg((uint8_t)data, 2, 16, QLatin1Char('0')).toUpper();
                 }
             }
             break;
@@ -300,20 +300,20 @@ void SnifferModel::update(CANConnection*, QVector<CANFrame>& pFrames)
 {
     foreach(const CANFrame& frame, pFrames)
     {
-        if(!mMap.contains(frame.ID))
+        if(!mMap.contains(frame.frameId()))
         {
-            int index = std::distance(mMap.begin(), mMap.lowerBound(frame.ID));
+            int index = std::distance(mMap.begin(), mMap.lowerBound(frame.frameId()));
             /* add the frame */
             beginInsertRows(QModelIndex(), index, index);
-            mMap[frame.ID] = new SnifferItem(frame, mTimeSequence);
-            mMap[frame.ID]->update(frame, mTimeSequence, mMuteNotched);
+            mMap[frame.frameId()] = new SnifferItem(frame, mTimeSequence);
+            mMap[frame.frameId()]->update(frame, mTimeSequence, mMuteNotched);
             endInsertRows();
 
-            emit idChange(frame.ID, true);
+            emit idChange(frame.frameId(), true);
         }
         else
             //updateData
-            mMap[frame.ID]->update(frame, mTimeSequence, mMuteNotched);
+            mMap[frame.frameId()]->update(frame, mTimeSequence, mMuteNotched);
     }
 }
 

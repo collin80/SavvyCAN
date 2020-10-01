@@ -22,22 +22,22 @@ QString FilterUtility::getId( QListWidgetItem * item )
     return getId(item->text());
 }
 
-uint32_t FilterUtility::getGMLanArbitrationId(uint32_t id)
+uint32_t FilterUtility::getGMLanArbitrationId(int32_t id)
 {
     return (id  >> 13) & 0x1FFF;
 }
 
-uint32_t FilterUtility::getGMLanPriorityBits(uint32_t id)
+uint32_t FilterUtility::getGMLanPriorityBits(int32_t id)
 {
     return (id  >> 26) & 0x7;
 }
 
-uint32_t FilterUtility::getGMLanSenderId(uint32_t id)
+uint32_t FilterUtility::getGMLanSenderId(int32_t id)
 {
     return id & 0x1FFF;
 }
 
-QListWidgetItem * FilterUtility::createCheckableFilterItem(uint32_t id, bool checked, QListWidget* parent)
+QListWidgetItem * FilterUtility::createCheckableFilterItem(int32_t id, bool checked, QListWidget* parent)
 {
     QListWidgetItem * thisItem = createFilterItem(id,parent);
     thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
@@ -48,19 +48,22 @@ QListWidgetItem * FilterUtility::createCheckableFilterItem(uint32_t id, bool che
     return thisItem;
 }
 
-QListWidgetItem * FilterUtility::createFilterItem(uint32_t id, QListWidget* parent)
+QListWidgetItem * FilterUtility::createFilterItem(int32_t id, QListWidget* parent)
 {
     QSettings settings;
     DBCHandler * dbcHandler = DBCHandler::getReference();
     QListWidgetItem *thisItem = new QListWidgetItem(parent);
     QString filterItemName = Utility::formatCANID(id);
 
+    //Note, there are multiple filter labeling preferences. There is one in main settings to globally
+    //enable or disable them all. Then each loaded DBC file also can be selected on/off
+    //Both must be enabled for you to see labeling.
     if (settings.value("Main/FilterLabeling", false).toBool())
-    {    
+    {
         // Filter labeling (show interpreted frame names next to the CAN addr ID)
         MatchingCriteria_t matchingCriteria;
         DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(id,&matchingCriteria);
-        if (msg != NULL)
+        if (msg != nullptr)
         {
             filterItemName.append(" ");
             filterItemName.append(msg->name);
