@@ -790,22 +790,23 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
             if (tokens.length() > 3)
             {
                 QString time = tokens[0].replace(",",".");
-
-                thisFrame.timestamp = static_cast<uint64_t>(time.toDouble() * 1000);
-                thisFrame.ID = static_cast<uint32_t>(tokens[3].toInt(nullptr, 16));
-                thisFrame.extended = (thisFrame.ID > 0x7FF);
+                thisFrame.setTimeStamp(static_cast<uint64_t>(time.toDouble() * 1000));
+                thisFrame.setFrameId(static_cast<uint32_t>(tokens[3].toInt(nullptr, 16)));
+                thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);
                 thisFrame.isReceived = true;
-                thisFrame.remote = false;
+                thisFrame.setFrameType(QCanBusFrame::DataFrame);
                 thisFrame.bus = 0;
-                thisFrame.len = tokens[4].toInt(nullptr, 16);
-                for (int d = 0; d < thisFrame.len; d++)
+                int numBytes = tokens[4].toInt(nullptr, 16);
+                QByteArray bytes(numBytes , 0);
+                for (int d = 0; d < numBytes; d++)
                 {
                     if (tokens[d + 5] != "")
                     {
-                        thisFrame.data[d] = static_cast<unsigned char>(tokens[d + 5].toInt(nullptr, 16));
+                        bytes[d] = static_cast<unsigned char>(tokens[d + 5].toInt(nullptr, 16));
                     }
-                    else thisFrame.data[d] = 0;
+                    else bytes[d] = 0;
                 }
+                thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
             }
             else foundErrors = true;
