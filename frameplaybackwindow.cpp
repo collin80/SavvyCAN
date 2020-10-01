@@ -297,7 +297,7 @@ void FramePlaybackWindow::refreshIDList()
     QHash<int, bool>::Iterator filterIter;
     for (filterIter = currentSeqItem->idFilters.begin(); filterIter != currentSeqItem->idFilters.end(); ++filterIter)
     {
-        QListWidgetItem* listItem = FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listID);
+        /*QListWidgetItem* listItem = */ FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listID);
     }
     //default is to sort in ascending order
     ui->listID->sortItems();
@@ -426,7 +426,7 @@ void FramePlaybackWindow::fillIDHash(SequenceItem &item)
 
     for (int i = 0; i < item.data.count(); i++)
     {
-        id = item.data[i].ID;
+        id = item.data[i].frameId();
         if (!item.idFilters.contains(id))
         {
             item.idFilters.insert(id, true);
@@ -479,7 +479,7 @@ void FramePlaybackWindow::btnLoadFile()
 
     if (FrameFileIO::loadFrameFile(filename, &item.data))
     {
-        qSort(item.data); //sort by timestamp to be sure it's in order
+        std::sort(item.data.begin(), item.data.end()); //sort by timestamp to be sure it's in order
         QStringList fileList = filename.split('/');
         item.filename = fileList[fileList.length() - 1];
         item.currentLoopCount = 0;
@@ -513,7 +513,7 @@ void FramePlaybackWindow::btnLoadLive()
     item.currentLoopCount = 0;
     item.maxLoops = 1;
     item.data = QVector<CANFrame>(*modelFrames); //create a copy of the current frames from the main view
-    qSort(item.data); //be sure it's all in time based order
+    std::sort(item.data.begin(), item.data.end()); //be sure it's all in time based order
     fillIDHash(item);
     if (ui->tblSequence->currentRow() == -1)
     {

@@ -14,7 +14,7 @@ class FileComparatorWindow;
 
 struct FrameData
 {
-    int ID;
+    uint32_t ID;
     int dataLen;
     uint64_t bitmap;
     int values[8][256]; //first index is the data byte, second is # of times we saw that value

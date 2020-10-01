@@ -9,9 +9,9 @@
 #include "gvretserial.h"
 
 GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
-    CANConnection(portName, "gvret", CANCon::GVRET_SERIAL, 3, 4000, true),
-    useTcp(useTcp),
-    mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
+    CANConnection(portName, "gvret", CANCon::GVRET_SERIAL, 3, 4000, true),    
+    mTimer(this), /*NB: set this as parent of timer to manage it from working thread */
+    useTcp(useTcp)
 {
     sendDebug("GVRetSerial()");
 
@@ -192,14 +192,14 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         sendDebug("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)) + " 2: " + QString::number((can1Baud & 0xFFFFFFF)));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 5; //setup canbus
-        buffer[2] = (unsigned char)(can0Baud & 0xFF); //four bytes of ID LSB first
-        buffer[3] = (unsigned char)(can0Baud >> 8);
-        buffer[4] = (unsigned char)(can0Baud >> 16);
-        buffer[5] = (unsigned char)(can0Baud >> 24);
-        buffer[6] = (unsigned char)(can1Baud & 0xFF); //four bytes of ID LSB first
-        buffer[7] = (unsigned char)(can1Baud >> 8);
-        buffer[8] = (unsigned char)(can1Baud >> 16);
-        buffer[9] = (unsigned char)(can1Baud >> 24);
+        buffer[2] = (char)(can0Baud & 0xFF); //four bytes of ID LSB first
+        buffer[3] = (char)(can0Baud >> 8);
+        buffer[4] = (char)(can0Baud >> 16);
+        buffer[5] = (char)(can0Baud >> 24);
+        buffer[6] = (char)(can1Baud & 0xFF); //four bytes of ID LSB first
+        buffer[7] = (char)(can1Baud >> 8);
+        buffer[8] = (char)(can1Baud >> 16);
+        buffer[9] = (char)(can1Baud >> 24);
         buffer[10] = 0;
         sendToSerial(buffer);
     }
@@ -210,18 +210,18 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         sendDebug("Got signal to update extended bus speeds SWCAN: " + QString::number(swcanBaud) + " LIN1: " + QString::number(lin1Baud) + " LIN2: " + QString::number(lin2Baud));
         buffer[0] = (char)0xF1; //start of a command over serial
         buffer[1] = 14; //setup extended buses
-        buffer[2] = (unsigned char)(swcanBaud & 0xFF); //four bytes of ID LSB first
-        buffer[3] = (unsigned char)(swcanBaud >> 8);
-        buffer[4] = (unsigned char)(swcanBaud >> 16);
-        buffer[5] = (unsigned char)(swcanBaud >> 24);
-        buffer[6] = (unsigned char)(lin1Baud & 0xFF); //four bytes of ID LSB first
-        buffer[7] = (unsigned char)(lin1Baud >> 8);
-        buffer[8] = (unsigned char)(lin1Baud >> 16);
-        buffer[9] = (unsigned char)(lin1Baud >> 24);
-        buffer[10] = (unsigned char)(lin2Baud & 0xFF); //four bytes of ID LSB first
-        buffer[11] = (unsigned char)(lin2Baud >> 8);
-        buffer[12] = (unsigned char)(lin2Baud >> 16);
-        buffer[13] = (unsigned char)(lin2Baud >> 24);
+        buffer[2] = (char)(swcanBaud & 0xFF); //four bytes of ID LSB first
+        buffer[3] = (char)(swcanBaud >> 8);
+        buffer[4] = (char)(swcanBaud >> 16);
+        buffer[5] = (char)(swcanBaud >> 24);
+        buffer[6] = (char)(lin1Baud & 0xFF); //four bytes of ID LSB first
+        buffer[7] = (char)(lin1Baud >> 8);
+        buffer[8] = (char)(lin1Baud >> 16);
+        buffer[9] = (char)(lin1Baud >> 24);
+        buffer[10] = (char)(lin2Baud & 0xFF); //four bytes of ID LSB first
+        buffer[11] = (char)(lin2Baud >> 8);
+        buffer[12] = (char)(lin2Baud >> 16);
+        buffer[13] = (char)(lin2Baud >> 24);
         buffer[14] = 0;
         sendToSerial(buffer);
     }
@@ -231,8 +231,8 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
 bool GVRetSerial::piSendFrame(const CANFrame& frame)
 {
     QByteArray buffer;
-    unsigned int c;
-    int ID;
+    int c;
+    quint32 ID;
 
     //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
@@ -246,25 +246,25 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
 
     // Doesn't make sense to send an error frame
     // to an adapter
-    if (frame.ID & 0x20000000) {
+    if (frame.frameId() & 0x20000000) {
         return true;
     }
-    ID = frame.ID;
-    if (frame.extended) ID |= 1 << 31;
+    ID = frame.frameId();
+    if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
 
-    buffer[0] = (unsigned char)0xF1; //start of a command over serial
+    buffer[0] = (char)0xF1; //start of a command over serial
     buffer[1] = 0; //command ID for sending a CANBUS frame
-    buffer[2] = (unsigned char)(ID & 0xFF); //four bytes of ID LSB first
-    buffer[3] = (unsigned char)(ID >> 8);
-    buffer[4] = (unsigned char)(ID >> 16);
-    buffer[5] = (unsigned char)(ID >> 24);
-    buffer[6] = (unsigned char)((frame.bus) & 3);
-    buffer[7] = (unsigned char)frame.len;
-    for (c = 0; c < frame.len; c++)
+    buffer[2] = (char)(ID & 0xFF); //four bytes of ID LSB first
+    buffer[3] = (char)(ID >> 8);
+    buffer[4] = (char)(ID >> 16);
+    buffer[5] = (char)(ID >> 24);
+    buffer[6] = (char)((frame.bus) & 3);
+    buffer[7] = (char)frame.payload().length();
+    for (c = 0; c < frame.payload().length(); c++)
     {
-        buffer[8 + c] = frame.data[c];
+        buffer[8 + c] = frame.payload()[c];
     }
-    buffer[8 + frame.len] = 0;
+    buffer[8 + frame.payload().length()] = 0;
 
     sendToSerial(buffer);
 
@@ -375,18 +375,18 @@ void GVRetSerial::deviceConnected()
 {
     sendDebug("Connecting to GVRET Device!");
     QByteArray output;
-    output.append((unsigned char)0xE7); //this puts the device into binary comm mode
-    output.append((unsigned char)0xE7);
+    output.append((char)0xE7); //this puts the device into binary comm mode
+    output.append((char)0xE7);
 
-    output.append((unsigned char)0xF1);
-    output.append((unsigned char)0x0C); //get number of actually implemented buses. Not implemented except on M2RET
+    output.append((char)0xF1);
+    output.append((char)0x0C); //get number of actually implemented buses. Not implemented except on M2RET
     mNumBuses = 2; //the proper number if C/12 is not implemented
 
-    output.append((unsigned char)0xF1); //signal we want to issue a command
-    output.append((unsigned char)0x06); //request canbus stats from the board
+    output.append((char)0xF1); //signal we want to issue a command
+    output.append((char)0x06); //request canbus stats from the board
 
-    output.append((unsigned char)0xF1); //another command to the GVRET
-    output.append((unsigned char)0x07); //request device information
+    output.append((char)0xF1); //another command to the GVRET
+    output.append((char)0x07); //request device information
 
     /*output.append((char)0xF1);
     output.append((char)0x08); //setting singlewire mode
@@ -399,11 +399,11 @@ void GVRetSerial::deviceConnected()
         output.append((char)0xFF); //signal we don't want single wire mode
     }*/
 
-    output.append((unsigned char)0xF1); //and another command
-    output.append((unsigned char)0x01); //Time Sync - Not implemented until 333 but we can try
+    output.append((char)0xF1); //and another command
+    output.append((char)0x01); //Time Sync - Not implemented until 333 but we can try
 
-    output.append((unsigned char)0xF1); //yet another command
-    output.append((unsigned char)0x09); //comm validation command
+    output.append((char)0xF1); //yet another command
+    output.append((char)0x09); //comm validation command
 
     continuousTimeSync = true;
 
@@ -659,57 +659,59 @@ void GVRetSerial::procRXChar(unsigned char c)
         switch (rx_step)
         {
         case 0:
-            buildFrame.timestamp = c;
+            buildTimestamp = c;
             break;
         case 1:
-            buildFrame.timestamp |= (uint)(c << 8);
+            buildTimestamp |= (uint)(c << 8);
             break;
         case 2:
-            buildFrame.timestamp |= (uint)c << 16;
+            buildTimestamp |= (uint)c << 16;
             break;
         case 3:
-            buildFrame.timestamp |= (uint)c << 24;
+            buildTimestamp |= (uint)c << 24;
 
-            buildFrame.timestamp += timeBasis;
+            buildTimestamp += timeBasis;
             if (useSystemTime)
             {
-                buildFrame.timestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
             }
+            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             break;
         case 4:
-            buildFrame.ID = c;
+            buildId = c;
             break;
         case 5:
-            buildFrame.ID |= c << 8;
+            buildId |= c << 8;
             break;
         case 6:
-            buildFrame.ID |= c << 16;
+            buildId |= c << 16;
             break;
         case 7:
-            buildFrame.ID |= c << 24;
-            if ((buildFrame.ID & 1 << 31) == 1u << 31)
+            buildId |= c << 24;
+            if ((buildId & 1 << 31) == 1u << 31)
             {
-                buildFrame.ID &= 0x7FFFFFFF;
-                buildFrame.extended = true;
+                buildId &= 0x7FFFFFFF;
+                buildFrame.setExtendedFrameFormat(true);
             }
-            else buildFrame.extended = false;
+            else buildFrame.setExtendedFrameFormat(false);
+            buildFrame.setFrameId(buildId);
             break;
         case 8:
-            buildFrame.len = c & 0xF;
-            if (buildFrame.len > 8) buildFrame.len = 8;
+            buildData.resize(c & 0xF);
             buildFrame.bus = (c & 0xF0) >> 4;
             break;
         default:
-            if (rx_step < buildFrame.len + 9)
+            if (rx_step < buildData.length() + 9)
             {
-                buildFrame.data[rx_step - 9] = c;
+                buildData[rx_step - 9] = c;
             }
             else
             {
                 rx_state = IDLE;
                 rx_step = 0;
                 buildFrame.isReceived = true;
-
+                buildFrame.setPayload(buildData);
+                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
@@ -717,8 +719,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                     if(frame_p) {
                         //qDebug() << "GVRET got frame on bus " << frame_p->bus;
                         /* copy frame */
-                        *frame_p = buildFrame;
-                        frame_p->remote = false;
+                        *frame_p = buildFrame;                        
                         checkTargettedFrame(buildFrame);
                         /* enqueue frame */
                         getQueue().queue();
@@ -818,11 +819,14 @@ void GVRetSerial::procRXChar(unsigned char c)
             qDebug() << "Baud 0 = " << can0Baud;
             qDebug() << "Baud 1 = " << can1Baud;
             mBusData[0].mBus.setSpeed(can0Baud);
-            mBusData[1].mBus.setSpeed(can1Baud);
             mBusData[0].mBus.setActive(can0Enabled);
-            mBusData[1].mBus.setActive(can1Enabled);
             mBusData[0].mConfigured = true;
-            mBusData[1].mConfigured = true;
+            if (mBusData.count() > 1)
+            {
+                mBusData[1].mBus.setSpeed(can1Baud);
+                mBusData[1].mBus.setActive(can1Enabled);
+                mBusData[1].mConfigured = true;
+            }
 
             can0Baud |= 0x80000000;
             if (can0Enabled) can0Baud |= 0x40000000;

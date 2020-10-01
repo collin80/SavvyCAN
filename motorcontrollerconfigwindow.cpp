@@ -4,6 +4,17 @@
 #include "mainwindow.h"
 #include <QDebug>
 
+/*
+ * Nothing to see here, these are not the droids you're looking for. Go away
+ *
+ *
+ *
+ * You didn't go away, did you... This is a screen that allows for setting EEPROM configuration for a
+ * custom motor controller project I was working on. It's hidden by default. You could re-enable it and play around
+ * with it if you're bored. It might be a good basis for how to set a list of parameters on a device. But, it could be broken
+ * these days too. It is not maintained any longer as the project it was meant for is abandoned. YMMV.
+*/
+
 MotorControllerConfigWindow::MotorControllerConfigWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MotorControllerConfigWindow)
@@ -40,9 +51,8 @@ MotorControllerConfigWindow::~MotorControllerConfigWindow()
 void MotorControllerConfigWindow::updatedFrames(int numFrames)
 {
     CANFrame thisFrame;
-    int id;
-    int param;
-    QTableWidgetItem *item;
+    uint32_t id;
+    QTableWidgetItem *item = nullptr;
     if (numFrames == -1) //all frames deleted
     {
 
@@ -57,18 +67,18 @@ void MotorControllerConfigWindow::updatedFrames(int numFrames)
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
-            id = thisFrame.ID;
+            id = thisFrame.frameId();
 
             if (id == 0xC2) //response to a query we made
             {
-                if (thisFrame.data[2] == 0)
+                if ((char)thisFrame.payload()[2] == 0)
                 {
-                    int paramID = thisFrame.data[0] + (thisFrame.data[1] * 256);
+                    uint32_t paramID = static_cast<uint32_t>(thisFrame.payload()[0] + (thisFrame.payload()[1] * 256));
                     for (int i = 0; i < params.length(); i++)
                     {
                         if (params[i].paramID == paramID)
                         {
-                            params[i].value = thisFrame.data[4] + (thisFrame.data[5] * 256);
+                            params[i].value = static_cast<uint16_t>(thisFrame.payload()[4] + (thisFrame.payload()[5] * 256));
                             if (params[i].paramType == ASCII) item = new QTableWidgetItem(); //QString::fromUtf8((char *)params[i].value, 2));
                             if (params[i].paramType == HEX) item = new QTableWidgetItem(Utility::formatHexNum(params[i].value));
                             if (params[i].paramType == DEC)
@@ -177,18 +187,19 @@ void MotorControllerConfigWindow::timerTick()
     {
         qDebug() << "Request: " << QString::number(transmitStep);
 
-        outFrame.ID = 0xC1;
-        outFrame.len = 8;
+        outFrame.setFrameId(0xC1);
+        QByteArray bytes(8, 0);
         outFrame.bus = 0;
-        outFrame.extended = false;
-        outFrame.data[0] = params[transmitStep].paramID & 0xFF;
-        outFrame.data[1] = (params[transmitStep].paramID >> 8) & 0xFF;
-        outFrame.data[2] = 0; //0 = read, 1 = write
-        outFrame.data[3] = 0; //reserved
-        outFrame.data[4] = 0; //value goes in bytes 4,5 when writing
-        outFrame.data[5] = 0;
-        outFrame.data[6] = 0; //reserved
-        outFrame.data[7] = 0; //reserved
+        outFrame.setExtendedFrameFormat(false);
+        bytes[0] = params[transmitStep].paramID & 0xFF;
+        bytes[1] = (params[transmitStep].paramID >> 8) & 0xFF;
+        bytes[2] = 0; //0 = read, 1 = write
+        bytes[3] = 0; //reserved
+        bytes[4] = 0; //value goes in bytes 4,5 when writing
+        bytes[5] = 0;
+        bytes[6] = 0; //reserved
+        bytes[7] = 0; //reserved
+        outFrame.setPayload(bytes);
 
         CANConManager::getInstance()->sendFrame(outFrame);
 
@@ -213,18 +224,18 @@ void MotorControllerConfigWindow::timerTick()
 
         if (thisValue != params[transmitStep].value)
         {
-            outFrame.ID = 0xC1;
-            outFrame.len = 8;
+            outFrame.setFrameId(0xC1);
+            QByteArray bytes(8, 0);
             outFrame.bus = 0;
-            outFrame.extended = false;
-            outFrame.data[0] = params[transmitStep].paramID & 0xFF;
-            outFrame.data[1] = (params[transmitStep].paramID >> 8) & 0xFF;
-            outFrame.data[2] = 1; //0 = read, 1 = write
-            outFrame.data[3] = 0; //reserved
-            outFrame.data[4] = params[transmitStep].value & 0xFF;
-            outFrame.data[5] = (params[transmitStep].value >> 8) & 0xFF;
-            outFrame.data[6] = 0; //reserved
-            outFrame.data[7] = 0; //reserved
+            outFrame.setExtendedFrameFormat(false);
+            bytes[0] = params[transmitStep].paramID & 0xFF;
+            bytes[1] = (params[transmitStep].paramID >> 8) & 0xFF;
+            bytes[2] = 1; //0 = read, 1 = write
+            bytes[3] = 0; //reserved
+            bytes[4] = params[transmitStep].value & 0xFF;
+            bytes[5] = (params[transmitStep].value >> 8) & 0xFF;
+            bytes[6] = 0; //reserved
+            bytes[7] = 0; //reserved
 
             CANConManager::getInstance()->sendFrame(outFrame);
         }

@@ -214,17 +214,17 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     foreach (CANConnection* conn, mConns)
     {
         //check if this CAN connection is supposed to handle the requested bus
-        if (pFrame.bus < (uint32_t)(busBase + conn->getNumBuses()))
+        if (pFrame.bus < (busBase + conn->getNumBuses()))
         {
             workingFrame.bus -= busBase;
             workingFrame.isReceived = false;
             if (useSystemTime)
             {
-                workingFrame.timestamp = (QDateTime::currentMSecsSinceEpoch() * 1000);
+                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0,QDateTime::currentMSecsSinceEpoch() * 1000));
             }
             else
             {
-                workingFrame.timestamp = mElapsedTimer.nsecsElapsed() / 1000;
+                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
             txFrame = conn->getQueue().get();

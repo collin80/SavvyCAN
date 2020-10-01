@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>356</width>
-    <height>282</height>
+    <width>359</width>
+    <height>291</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -33,7 +33,7 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QRadioButton" name="rbSocketCAN">
         <property name="enabled">
          <bool>false</bool>
@@ -46,7 +46,14 @@
       <item row="1" column="0">
        <widget class="QRadioButton" name="rbRemote">
         <property name="text">
-         <string>Network connection</string>
+         <string>Network Connection</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QRadioButton" name="rbMQTT">
+        <property name="text">
+         <string>MQTT Connection</string>
         </property>
        </widget>
       </item>

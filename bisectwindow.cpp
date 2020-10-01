@@ -64,9 +64,12 @@ bool BisectWindow::eventFilter(QObject *obj, QEvent *event)
 void BisectWindow::refreshIDList()
 {
     int id;
+    foundID.clear();
+    ui->cbIDLower->clear();
+    ui->cbIDUpper->clear();
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        id = modelFrames->at(i).ID;
+        id = modelFrames->at(i).frameId();
         if (!foundID.contains(id))
         {
             foundID.append(id);
@@ -129,7 +132,7 @@ void BisectWindow::handleCalculateButton()
         uint32_t upperID = Utility::ParseStringToNum2(ui->cbIDUpper->currentText());
         for (int i = 0; i < modelFrames->count(); i++)
         {
-            if (modelFrames->at(i).ID >= lowerID && modelFrames->at(i).ID <= upperID) splitFrames.append(modelFrames->at(i));
+            if (modelFrames->at(i).frameId() >= lowerID && modelFrames->at(i).frameId() <= upperID) splitFrames.append(modelFrames->at(i));
         }
     }
     refreshFrameNumbers();
@@ -137,7 +140,12 @@ void BisectWindow::handleCalculateButton()
 
 void BisectWindow::handleReplaceButton()
 {
-
+    CANFrameModel *model;
+    model = MainWindow::getReference()->getCANFrameModel();
+    model->clearFrames();
+    model->insertFrames(splitFrames);
+    refreshFrameNumbers();
+    refreshIDList();
 }
 
 void BisectWindow::handleSaveButton()

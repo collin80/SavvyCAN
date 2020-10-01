@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QMenu>
 #include <QSettings>
+#include <QRandomGenerator>
 #include <qevent.h>
 #include "helpwindow.h"
 
@@ -14,8 +15,6 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->setupUi(this);
 
     readSettings();
-
-    qsrand(QDateTime::currentMSecsSinceEpoch());
 
     dbcHandler = DBCHandler::getReference();
     dbcMessage = nullptr;
@@ -35,10 +34,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
 
-    connect(ui->signalsList, SIGNAL(currentRowChanged(int)), this, SLOT(clickSignalList(int)));
     connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
-    connect(ui->signalsList, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuSignals(QPoint)));
-    ui->signalsList->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->valuesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuValues(QPoint)));
     ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->valuesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onValuesCellChanged(int,int)));
@@ -48,6 +44,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             [=]()
             {
                 if (currentSignal == nullptr) return;
+                if (currentSignal->intelByteOrder != ui->cbIntelFormat->isChecked()) dbcFile->setDirtyFlag();
                 currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
                 fillSignalForm(currentSignal);
             });
@@ -56,7 +53,9 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             [=]()
             {
                 if (currentSignal == nullptr) return;
-                currentSignal->receiver = dbcFile->findNodeByName(ui->comboReceiver->currentText());
+                DBC_NODE *node = dbcFile->findNodeByName(ui->comboReceiver->currentText());
+                if (currentSignal->receiver != node) dbcFile->setDirtyFlag();
+                currentSignal->receiver = node;
             });
     connect(ui->comboType, &QComboBox::currentTextChanged,
             [=]()
@@ -84,6 +83,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     currentSignal->valType = STRING;
                     break;                    
                 }
+                dbcFile->setDirtyFlag();
                 fillSignalForm(currentSignal);
             });
     connect(ui->txtBias, &QLineEdit::editingFinished,
@@ -93,7 +93,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 double temp;
                 bool result;
                 temp = ui->txtBias->text().toDouble(&result);
-                if (result) currentSignal->bias = temp;
+                if (result)
+                {
+                    if (currentSignal->bias != temp) dbcFile->setDirtyFlag();
+                    currentSignal->bias = temp;
+                }
             });
 
     connect(ui->txtMaxVal, &QLineEdit::editingFinished,
@@ -103,7 +107,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 double temp;
                 bool result;
                 temp = ui->txtMaxVal->text().toDouble(&result);
-                if (result) currentSignal->max = temp;
+                if (result)
+                {
+                    if (currentSignal->max != temp) dbcFile->setDirtyFlag();
+                    currentSignal->max = temp;
+                }
             });
 
     connect(ui->txtMinVal, &QLineEdit::editingFinished,
@@ -113,7 +121,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 double temp;
                 bool result;
                 temp = ui->txtMinVal->text().toDouble(&result);
-                if (result) currentSignal->min = temp;
+                if (result)
+                {
+                    if (currentSignal->min != temp) dbcFile->setDirtyFlag();
+                    currentSignal->min = temp;
+                }
             });
     connect(ui->txtScale, &QLineEdit::editingFinished,
             [=]()
@@ -122,19 +134,26 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 double temp;
                 bool result;
                 temp = ui->txtScale->text().toDouble(&result);
-                if (result) currentSignal->factor = temp;
+                if (result)
+                {
+                    if (currentSignal->factor != temp) dbcFile->setDirtyFlag();
+                    currentSignal->factor = temp;
+                }
             });
     connect(ui->txtComment, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == nullptr) return;
+                if (currentSignal->comment != ui->txtComment->text().simplified().replace(' ','_')) dbcFile->setDirtyFlag();
                 currentSignal->comment = ui->txtComment->text().simplified().replace(' ', '_');
+                emit updatedTreeInfo(currentSignal);
             });
 
     connect(ui->txtUnitName, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == nullptr) return;
+                if (currentSignal->unitName != ui->txtUnitName->text().simplified().replace(' ','_')) dbcFile->setDirtyFlag();
                 currentSignal->unitName = ui->txtUnitName->text().simplified().replace(' ', '_');
             });
     connect(ui->txtBitLength, &QLineEdit::textChanged,
@@ -143,8 +162,9 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal == nullptr) return;
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtBitLength->text());
-                if (temp < 0) return;
-                if (temp > 63) return;
+                if (temp < 1) return;
+                if (temp > 64) return;
+                if (currentSignal->signalSize != temp) dbcFile->setDirtyFlag();
                 if (currentSignal->valType != SP_FLOAT && currentSignal->valType != DP_FLOAT)
                     currentSignal->signalSize = temp;
                 fillSignalForm(currentSignal);
@@ -154,9 +174,10 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             {
                 if (currentSignal == nullptr) return;
                 QString tempNameStr = ui->txtName->text().simplified().replace(' ', '_');
+                if (currentSignal->name != tempNameStr) dbcFile->setDirtyFlag();
                 if (tempNameStr.length() > 0) currentSignal->name = tempNameStr;
-                //need to update the list too.
-                ui->signalsList->currentItem()->setText(currentSignal->name);
+                //need to update the tree too.
+                emit updatedTreeInfo(currentSignal);
             });
 
     connect(ui->txtMultiplexValue, &QLineEdit::editingFinished,
@@ -165,6 +186,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal == nullptr) return;
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtMultiplexValue->text());
+                if (currentSignal->multiplexValue != temp) dbcFile->setDirtyFlag();
                 //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
                 currentSignal->multiplexValue = temp;
             });
@@ -178,6 +200,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     //if the set multiplexor for the message was this signal then clear it
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
                 }
+                dbcFile->setDirtyFlag();
             });
 
     connect(ui->rbMultiplexor, &QRadioButton::toggled,
@@ -192,6 +215,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     //we just set that this is the multiplexor so update the message to show that as well.
                     dbcMessage->multiplexorSignal = currentSignal;
                 }
+                dbcFile->setDirtyFlag();
             });
 
     connect(ui->rbNotMulti, &QRadioButton::toggled,
@@ -203,6 +227,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     currentSignal->isMultiplexor = false;
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
                 }
+                dbcFile->setDirtyFlag();
             });
 
     installEventFilter(this);
@@ -228,9 +253,6 @@ bool DBCSignalEditor::eventFilter(QObject *obj, QEvent *event)
         {
         case Qt::Key_F1:
             HelpWindow::getRef()->showHelp("signaleditor.html");
-            break;
-        case Qt::Key_F2:
-            cloneSignal();
             break;
         }
         return true;
@@ -279,12 +301,24 @@ void DBCSignalEditor::setMessageRef(DBC_MESSAGE *msg)
     dbcMessage = msg;
 }
 
+void DBCSignalEditor::setSignalRef(DBC_SIGNAL *sig)
+{
+    currentSignal = sig;
+}
+
+
 void DBCSignalEditor::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
 
-    currentSignal = nullptr;
-    refreshSignalsList();
+    fillSignalForm(currentSignal);
+    fillValueTable(currentSignal);
+}
+
+void DBCSignalEditor::refreshView()
+{
+    fillSignalForm(currentSignal);
+    fillValueTable(currentSignal);
 }
 
 void DBCSignalEditor::onValuesCellChanged(int row,int col)
@@ -318,21 +352,6 @@ void DBCSignalEditor::onValuesCellChanged(int row,int col)
     }
 }
 
-void DBCSignalEditor::onCustomMenuSignals(QPoint point)
-{
-    QMenu *menu = new QMenu(this);
-    menu->setAttribute(Qt::WA_DeleteOnClose);
-
-    menu->addAction(tr("Add a new signal"), this, SLOT(addNewSignal()));
-    if (ui->signalsList->currentRow() != -1)
-    {
-        menu->addAction(tr("Clone currently selected signal"), this, SLOT(cloneSignal()));
-        menu->addAction(tr("Delete currently selected signal"), this, SLOT(deleteCurrentSignal()));
-    }
-
-    menu->popup(ui->signalsList->mapToGlobal(point));
-}
-
 void DBCSignalEditor::onCustomMenuValues(QPoint point)
 {
     QMenu *menu = new QMenu(this);
@@ -343,86 +362,6 @@ void DBCSignalEditor::onCustomMenuValues(QPoint point)
     menu->popup(ui->valuesTable->mapToGlobal(point));
 }
 
-void DBCSignalEditor::addNewSignal()
-{
-    int num = qrand() % 70000;
-    QString newName = "SIGNAL" + QString::number(num);
-    DBC_SIGNAL newSig;
-    newSig.name = newName;
-    newSig.bias = 0.0;
-    newSig.factor = 1.0;
-    newSig.intelByteOrder = true;
-    newSig.max = 0.0;
-    newSig.min = 0.0;
-    newSig.receiver = dbcFile->findNodeByIdx(0);
-    newSig.signalSize = 1;
-    newSig.startBit = 0;
-    newSig.valType = UNSIGNED_INT;
-    newSig.isMultiplexed = false;
-    newSig.isMultiplexor = false;
-    newSig.multiplexValue = 0;
-    newSig.parentMessage = dbcMessage;
-
-    dbcMessage->sigHandler->addSignal(newSig);
-
-    /* add item at the end of the list and select it */
-    /* this will call clickSignalList */
-    ui->signalsList->addItem(newName);
-    ui->signalsList->setCurrentRow(ui->signalsList->count()-1);
-}
-
-void DBCSignalEditor::cloneSignal()
-{
-    int num = qrand() % 100;
-
-    int idx = ui->signalsList->currentRow();
-    if (idx < 0) return;
-
-    DBC_SIGNAL *oldSig = dbcMessage->sigHandler->findSignalByIdx(idx);
-    if (!oldSig) return;
-
-    QString newName = oldSig->name + QString::number(num);
-    DBC_SIGNAL newSig;
-    newSig.name = newName;
-    newSig.bias = oldSig->bias;
-    newSig.factor = oldSig->factor;
-    newSig.intelByteOrder = oldSig->intelByteOrder;
-    newSig.max = oldSig->max;
-    newSig.min = oldSig->min;
-    newSig.receiver = oldSig->receiver;
-    newSig.signalSize = oldSig->signalSize;
-    newSig.startBit = oldSig->startBit;
-    newSig.valType = oldSig->valType;
-    newSig.valList.append(oldSig->valList);
-    newSig.isMultiplexed = oldSig->isMultiplexed;
-    newSig.isMultiplexor = oldSig->isMultiplexor; //maybe should force this false since you can't have two or more!
-    newSig.multiplexValue = oldSig->multiplexValue;
-    newSig.parentMessage = dbcMessage;
-
-    dbcMessage->sigHandler->addSignal(newSig);
-
-    /* add item at the end of the list */
-    ui->signalsList->addItem(newName);
-
-    //unlike adding a signal we don't want to select the new signal here.
-    //ui->signalsList->setCurrentRow(ui->signalsList->count()-1);
-}
-
-void DBCSignalEditor::deleteCurrentSignal()
-{
-    int currIdx = ui->signalsList->currentRow();
-
-    //if(currIdx==ui->signalsList->count()-1)
-        //return;
-
-    if (currIdx > -1)
-    {
-        delete(ui->signalsList->item(currIdx));
-        dbcMessage->sigHandler->removeSignal(currIdx);
-        currentSignal = nullptr;
-    }
-}
-
 void DBCSignalEditor::deleteCurrentValue()
 {
     int currIdx = ui->valuesTable->currentRow();
@@ -431,25 +370,6 @@ void DBCSignalEditor::deleteCurrentValue()
         ui->valuesTable->removeRow(currIdx);
         currentSignal->valList.removeAt(currIdx);
     }
-}
-
-void DBCSignalEditor::refreshSignalsList()
-{
-    ui->signalsList->clear();
-
-
-    for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
-    {
-        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
-        ui->signalsList->addItem(sig->name);
-    }
-
-    if( ui->signalsList->count()>0 ) {
-        /* click first element */
-        ui->signalsList->setCurrentRow(0);
-    }
-    else
-        clickSignalList(-1);
 }
 
 /* fillSignalForm also handles group "enabled" state */
@@ -585,7 +505,7 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 
     for (int i = 0; i < sig->valList.count(); i++)
     {
-        QTableWidgetItem *val = new QTableWidgetItem(Utility::formatNumber(sig->valList[i].value));
+        QTableWidgetItem *val = new QTableWidgetItem(Utility::formatNumber((uint64_t)sig->valList[i].value));
         QTableWidgetItem *desc = new QTableWidgetItem(sig->valList[i].descript);
         rowIdx = ui->valuesTable->rowCount();
         ui->valuesTable->insertRow(rowIdx);
@@ -597,16 +517,6 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
     ui->valuesTable->insertRow(ui->valuesTable->rowCount());
 
     inhibitCellChanged = false;
-}
-
-void DBCSignalEditor::clickSignalList(int row)
-{
-    //qDebug() << ui->signalsList->item(row)->text();
-
-    DBC_SIGNAL *thisSig = (row<0) ? nullptr : dbcMessage->sigHandler->findSignalByName(ui->signalsList->item(row)->text());
-    currentSignal = thisSig;
-    fillSignalForm(thisSig);
-    fillValueTable(thisSig);
 }
 
 void DBCSignalEditor::bitfieldClicked(int x, int y)
@@ -644,6 +554,7 @@ void DBCSignalEditor::generateUsedBits()
             {
                 int byt = y / 8;
                 usedBits[byt] |= 1 << (y % 8);
+                ui->bitfield->setUsedSignalNum(y, x);
             }
         }
         else //big endian / motorola format
@@ -654,6 +565,7 @@ void DBCSignalEditor::generateUsedBits()
             {
                 int byt = startBit / 8;
                 usedBits[byt] |= 1 << (startBit % 8);
+                ui->bitfield->setUsedSignalNum(startBit, x);
                 size--;
                 if ((startBit % 8) == 0) startBit += 15;
                 else startBit--;

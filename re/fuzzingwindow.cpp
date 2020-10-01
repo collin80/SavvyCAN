@@ -2,6 +2,7 @@
 #include "ui_fuzzingwindow.h"
 #include "utility.h"
 #include <QDebug>
+#include <QRandomGenerator>
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
@@ -26,6 +27,15 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->listID, &QListWidget::itemChanged, this, &FuzzingWindow::idListChanged);
     connect(ui->spinBytes, SIGNAL(valueChanged(int)), this, SLOT(changedNumDataBytes(int)));
     connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->txtByte0, &QLineEdit::returnPressed, this, [=](){changedDataByteText(0, ui->txtByte0->text());});
+    connect(ui->txtByte1, &QLineEdit::returnPressed, this, [=](){changedDataByteText(1, ui->txtByte1->text());});
+    connect(ui->txtByte2, &QLineEdit::returnPressed, this, [=](){changedDataByteText(2, ui->txtByte2->text());});
+    connect(ui->txtByte3, &QLineEdit::returnPressed, this, [=](){changedDataByteText(3, ui->txtByte3->text());});
+    connect(ui->txtByte4, &QLineEdit::returnPressed, this, [=](){changedDataByteText(4, ui->txtByte4->text());});
+    connect(ui->txtByte5, &QLineEdit::returnPressed, this, [=](){changedDataByteText(5, ui->txtByte5->text());});
+    connect(ui->txtByte6, &QLineEdit::returnPressed, this, [=](){changedDataByteText(6, ui->txtByte6->text());});
+    connect(ui->txtByte7, &QLineEdit::returnPressed, this, [=](){changedDataByteText(7, ui->txtByte7->text());});
+
 
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
@@ -94,7 +104,7 @@ void FuzzingWindow::updatedFrames(int numFrames)
         if (numFrames > modelFrames->count()) return;
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
-            id = modelFrames->at(i).ID;
+            id = modelFrames->at(i).frameId();
             if (!foundIDs.contains(id))
             {
                 foundIDs.append(id);
@@ -110,9 +120,32 @@ void FuzzingWindow::changePlaybackSpeed(int newSpeed)
     fuzzTimer->setInterval(newSpeed);
 }
 
+void FuzzingWindow::changedDataByteText(int which, QString valu)
+{
+    int startBit = which * 8;
+    int byt = valu.toInt(nullptr, 16);
+
+    for (int i = 0; i < 8; i++)
+    {
+        bitGrid[startBit + i] = (byt & (1 << i)) ? 2 : 0;
+    }
+
+    redrawGrid();
+}
+
 void FuzzingWindow::changedNumDataBytes(int newVal)
 {
     qDebug() << "new num bytes: " << newVal;
+
+    ui->txtByte0->setEnabled((newVal > 0) ? true : false);
+    ui->txtByte1->setEnabled((newVal > 1) ? true : false);
+    ui->txtByte2->setEnabled((newVal > 2) ? true : false);
+    ui->txtByte3->setEnabled((newVal > 3) ? true : false);
+    ui->txtByte4->setEnabled((newVal > 4) ? true : false);
+    ui->txtByte5->setEnabled((newVal > 5) ? true : false);
+    ui->txtByte6->setEnabled((newVal > 6) ? true : false);
+    ui->txtByte7->setEnabled((newVal > 7) ? true : false);
+
     int byt;
     for (int i = 0; i < 64; i++)
     {
@@ -132,18 +165,31 @@ void FuzzingWindow::changedNumDataBytes(int newVal)
 
 void FuzzingWindow::timerTriggered()
 {
+    static uint64_t lastByteUpdate = 0;
     CANFrame thisFrame;
-    thisFrame.remote = false;
     sendingBuffer.clear();
+    //Every 250ms update the text fields to show our progress and what's going on.
+    if (QDateTime::currentMSecsSinceEpoch() - lastByteUpdate > 250)
+    {
+        ui->txtByte0->setText(QString::number(currentBytes[0], 16));
+        ui->txtByte1->setText(QString::number(currentBytes[1], 16));
+        ui->txtByte2->setText(QString::number(currentBytes[2], 16));
+        ui->txtByte3->setText(QString::number(currentBytes[3], 16));
+        ui->txtByte4->setText(QString::number(currentBytes[4], 16));
+        ui->txtByte5->setText(QString::number(currentBytes[5], 16));
+        ui->txtByte6->setText(QString::number(currentBytes[6], 16));
+        ui->txtByte7->setText(QString::number(currentBytes[7], 16));
+    }
     int buses = ui->cbBuses->currentIndex();
     for (int count = 0; count < ui->spinBurst->value(); count++)
     {
-        thisFrame.ID = currentID;
-        for (int i = 0; i < 8; i++) thisFrame.data[i] = currentBytes[i];
-        if (currentID > 0x7FF) thisFrame.extended = true;
-        else thisFrame.extended = false;
-        thisFrame.bus = 0; //hard coded for now. TODO: do not hard code
-        thisFrame.len = ui->spinBytes->value();
+        thisFrame.setFrameId(currentID);
+        QByteArray bytes(ui->spinBytes->value(), 0);
+        for (int i = 0; i < bytes.length(); i++) bytes[i] = currentBytes[i];
+        thisFrame.setPayload(bytes);
+        if (currentID > 0x7FF) thisFrame.setExtendedFrameFormat(true);
+        else thisFrame.setExtendedFrameFormat(false);
+        thisFrame.bus = 0; //hard coded for now. TODO: do not hard code        
 
         if (buses < (ui->cbBuses->count() - 1))
         {
@@ -205,12 +251,12 @@ void FuzzingWindow::calcNextID()
         if (rangeIDSelect)
         {
             int range = endID - startID;
-            if (range != 0) currentID = startID + qrand() % range;
+            if (range != 0) currentID = startID + QRandomGenerator::global()->bounded(range);
             else currentID = startID;
         }
         else //IDs by filter so pick a random selected ID from the filter list
         {
-            currentIdx = qrand() % selectedIDs.length();
+            currentIdx = QRandomGenerator::global()->bounded(selectedIDs.length());
             currentID = selectedIDs[currentIdx];
         }
     }
@@ -232,7 +278,7 @@ void FuzzingWindow::calcNextBitPattern()
                 thisBit = bitGrid[byt * 8 + bit];
                 if (thisBit == 1)
                 {
-                    if ((qrand() % 2) == 1) currentBytes[byt] |= (1 << bit);
+                    if ((QRandomGenerator::global()->bounded(2)) == 1) currentBytes[byt] |= (1 << bit);
                 }
                 if (thisBit == 2) currentBytes[byt] |= (1 << bit);
             }
@@ -346,12 +392,12 @@ void FuzzingWindow::toggleFuzzing()
             if (rangeIDSelect)
             {
                 int range = endID - startID;
-                if (range != 0) currentID = startID + qrand() % range;
+                if (range != 0) currentID = startID + QRandomGenerator::global()->bounded(range);
                 else currentID = startID;
             }
             else //IDs by filter so pick a random selected ID from the filter list
             {
-                currentIdx = qrand() % selectedIDs.length();
+                currentIdx = QRandomGenerator::global()->bounded(selectedIDs.length());
                 currentID = selectedIDs[currentIdx];
             }
         }
@@ -371,7 +417,7 @@ void FuzzingWindow::refreshIDList()
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        id = thisFrame.ID;
+        id = thisFrame.frameId();
         if (!foundIDs.contains(id))
         {
             foundIDs.append(id);

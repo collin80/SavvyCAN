@@ -71,7 +71,7 @@ void SignalViewerWindow::processFrame(CANFrame &frame)
     {
         sig = signalList.at(i);
         if (!sig) return;
-        if (sig->parentMessage->ID == frame.ID)
+        if (sig->parentMessage->ID == frame.frameId())
         {
             if (sig->processAsText(frame, sigString, false)) //if true we could interpret the signal so update it in the list
             {

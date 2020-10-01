@@ -71,7 +71,7 @@ private slots:
     void zoomOut();
 
 signals:
-    void sendCenterTimeID(int32_t ID, double timestamp);
+    void sendCenterTimeID(uint32_t ID, double timestamp);
 
 private:
     Ui::GraphingWindow *ui;

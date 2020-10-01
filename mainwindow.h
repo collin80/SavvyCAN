@@ -32,6 +32,7 @@
 #include "motorcontrollerconfigwindow.h"
 #include "signalviewerwindow.h"
 #include "re/temporalgraphwindow.h"
+#include "re/dbccomparatorwindow.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -63,6 +64,8 @@ private slots:
     void showGraphingWindow();
     void showFrameDataAnalysis();
     void clearFrames();
+    void expandAllRows();
+    void collapseAllRows();
     void showPlaybackWindow();
     void showFlowViewWindow();
     void showFrameSenderWindow();
@@ -83,6 +86,7 @@ private slots:
     void showBisectWindow();
     void showSignalViewer();
     void showTemporalGraphWindow();
+    void showDBCComparisonWindow();
     void exitApp();
     void handleSaveDecoded();
     void connectionStatusUpdated(int conns);
@@ -115,7 +119,7 @@ signals:
     void framesUpdated(int numFrames); //something has updated the frame list (send at gui update frequency)
     void frameUpdateRapid(int numFrames);
     void settingsUpdated();
-    void sendCenterTimeID(int32_t ID, double timestamp);
+    void sendCenterTimeID(uint32_t ID, double timestamp);
 
 private:
     Ui::MainWindow *ui;
@@ -163,6 +167,7 @@ private:
     BisectWindow* bisectWindow;
     SignalViewerWindow *signalViewerWindow;
     TemporalGraphWindow *temporalGraphWindow;
+    DBCComparatorWindow *dbcComparatorWindow;
 
     //various private storage
     QLabel lbStatusConnected;

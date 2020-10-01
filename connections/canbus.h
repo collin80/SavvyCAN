@@ -9,7 +9,8 @@ public:
     CANBus();
     CANBus(const CANBus&);
     bool operator==(const CANBus&) const;
-    virtual ~CANBus(){};
+    CANBus& operator=(const CANBus& other) = default;
+    //virtual ~CANBus(){}
 
     int speed;
     bool listenOnly;

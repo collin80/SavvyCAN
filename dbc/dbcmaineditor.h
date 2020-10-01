@@ -3,8 +3,13 @@
 
 #include <QDialog>
 #include <QDebug>
+#include <QIcon>
+#include <QTreeWidget>
+#include <QRandomGenerator>
 #include "dbchandler.h"
 #include "dbcsignaleditor.h"
+#include "dbcmessageeditor.h"
+#include "dbcnodeeditor.h"
 #include "utility.h"
 
 namespace Ui {
@@ -20,35 +25,57 @@ public:
     ~DBCMainEditor();
     void setFileIdx(int idx);
 
+public slots:
+    void updatedNode(DBC_NODE *node);
+    void updatedMessage(DBC_MESSAGE *msg);
+    void updatedSignal(DBC_SIGNAL *sig);
+
 private slots:
-    void onCellChangedNode(int,int);
-    void onCellClickedNode(int, int);
-    void onCellClickedMessage(int, int);
-    void onCellChangedMessage(int,int);
-    void onCustomMenuNode(QPoint);
-    void onCustomMenuMessage(QPoint);
-    void deleteCurrentNode();
-    void deleteCurrentMessage();
+    void onTreeDoubleClicked(const QModelIndex &index);
+    void currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *prev);
+    void onCustomMenuTree(QPoint);
+    void deleteCurrentTreeItem();
+    void deleteNode(DBC_NODE *node);
+    void deleteMessage(DBC_MESSAGE *msg);
+    void deleteSignal(DBC_SIGNAL *sig);
+    void handleSearch();
+    void handleSearchForward();
+    void handleSearchBackward();
+    void newNode();
+    void newMessage();
+    void newSignal();
 
 private:
     Ui::DBCMainEditor *ui;
     DBCHandler *dbcHandler;
     const QVector<CANFrame> *referenceFrames;
     DBCSignalEditor *sigEditor;
-    int currRow;
+    DBCMessageEditor *msgEditor;
+    DBCNodeEditor *nodeEditor;
     DBCFile *dbcFile;
     int fileIdx;
-    bool inhibitCellChanged;
+    QIcon nodeIcon;
+    QIcon messageIcon;
+    QIcon signalIcon;
+    QIcon multiplexorSignalIcon;
+    QIcon multiplexedSignalIcon;
+    QList<QTreeWidgetItem *> searchItems;
+    int searchItemPos;
+    //bidirectional mapping of QTreeWidget items back and forth to DBC objects
+    QMap<DBC_NODE*, QTreeWidgetItem *> nodeToItem;
+    QMap<DBC_MESSAGE*, QTreeWidgetItem *> messageToItem;
+    QMap<DBC_SIGNAL*, QTreeWidgetItem *> signalToItem;
+    QMap<QTreeWidgetItem*, DBC_NODE*> itemToNode;
+    QMap<QTreeWidgetItem*, DBC_MESSAGE*> itemToMessage;
+    QMap<QTreeWidgetItem*, DBC_SIGNAL*> itemToSignal;
+    QRandomGenerator randGen;
 
-    void refreshNodesTable();
-    void refreshMessagesTable(const DBC_NODE *node);
     void showEvent(QShowEvent* event);
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
-    void insertBlankRow();
-
+    void refreshTree();
 };
 
 #endif // DBCMAINEDITOR_H

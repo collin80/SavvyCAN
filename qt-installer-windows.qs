@@ -14,8 +14,8 @@
 // Unfortunately it is not possible to disable deps like qt.tools.qtcreator
 var INSTALL_COMPONENTS = [
     installer.environmentVariable("PLATFORM") == "x64" ?
-    "qt.qt5.5123.win64_msvc2017_64" :
-    "qt.qt5.5123.win32_msvc2017",
+    "qt.qt5.5141.win64_msvc2017_64" :
+    "qt.qt5.5141.win32_msvc2017",
 ];
 
 function Controller() {
@@ -26,15 +26,6 @@ function Controller() {
         console.log("installationFinished");
         gui.clickButton(buttons.NextButton);
     });
-}
-
-Controller.prototype.DynamicTelemetryPluginFormCallback = function() {
-    gui.currentPageWidget().TelemetryPluginForm.statisticGroupBox.disableStatisticRadioButton.setChecked(true);
-    gui.clickButton(buttons.NextButton);
-
-    //for(var key in widget.TelemetryPluginForm.statisticGroupBox){
-    //    console.log(key);
-    //}
 }
 
 Controller.prototype.WelcomePageCallback = function() {
@@ -58,16 +49,6 @@ Controller.prototype.TargetDirectoryPageCallback = function() {
     console.log("Step: " + gui.currentPageWidget());
     // Keep default at "C:\Qt".
     //gui.currentPageWidget().TargetDirectoryLineEdit.setText("E:\\Qt");
-    gui.clickButton(buttons.NextButton);
-};
-
-Controller.prototype.ComponentSelectionPageCallback = function() {
-    console.log("Step: " + gui.currentPageWidget());
-    var page = gui.currentPageWidget();
-    page.deselectAll();
-    for (var i = 0; i < INSTALL_COMPONENTS.length; i++) {
-        page.selectComponent(INSTALL_COMPONENTS[i]);
-    }
     gui.clickButton(buttons.NextButton);
 };
 
@@ -97,5 +78,23 @@ Controller.prototype.FinishedPageCallback = function() {
     }
     gui.clickButton(buttons.FinishButton);
 };
+
+Controller.prototype.DynamicTelemetryPluginFormCallback = function() {
+    var widget = gui.currentPageWidget();
+    widget.TelemetryPluginForm.statisticGroupBox.disableStatisticRadioButton.checked = true;
+    gui.clickButton(buttons.NextButton);
+}
+
+Controller.prototype.ComponentSelectionPageCallback = function() {
+    var page = gui.pageWidgetByObjectName("ComponentSelectionPage");
+
+    var archiveCheckBox = gui.findChild(page, "Archive");
+    var latestCheckBox = gui.findChild(page, "Latest releases");
+    var fetchButton = gui.findChild(page, "FetchCategoryButton");
+
+    archiveCheckBox.click();
+    latestCheckBox.click();
+    fetchButton.click();
+}
 
 // vim: set ft=javascript:

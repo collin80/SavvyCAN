@@ -1,6 +1,7 @@
 #include "dbcloadsavewindow.h"
 #include "ui_dbcloadsavewindow.h"
 #include <QComboBox>
+#include <QFileDialog>
 #include <QMessageBox>
 #include <qevent.h>
 #include "helpwindow.h"
@@ -152,7 +153,38 @@ void DBCLoadSaveWindow::newFile()
 
 void DBCLoadSaveWindow::loadFile()
 {
-    DBCFile *file = dbcHandler->loadDBCFile(-1);
+    DBCFile *file = nullptr;
+    QString filename;
+    QFileDialog dialog;
+    QSettings settings;
+
+    QStringList filters;
+    filters.append(QString(tr("DBC File (*.dbc)")));
+    filters.append(QString(tr("Tesla JSON File (*.json)")));
+
+    dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        //right now there is only one file type that can be loaded here so just do it.
+        settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
+
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            if (!filename.contains('.')) filename += ".dbc";
+            file = dbcHandler->loadDBCFile(filename);
+        }
+        if (dialog.selectedNameFilter() == filters[1])
+        {
+            if (!filename.contains('.')) filename += ".json";
+            file = dbcHandler->loadJSONFile(filename);
+        }
+    }
+
     if(file) {
         inhibitCellProcessing=true;
         int idx = ui->tableFiles->rowCount();
@@ -182,6 +214,11 @@ void DBCLoadSaveWindow::loadFile()
 
         updateSettings();
     }
+}
+
+void DBCLoadSaveWindow::loadJSON()
+{
+
 }
 
 void DBCLoadSaveWindow::saveFile()
@@ -247,6 +284,8 @@ void DBCLoadSaveWindow::editFile()
 
 void DBCLoadSaveWindow::matchingCriteriaChanged(int index)
 {
+    Q_UNUSED(index)
+
     if (inhibitCellProcessing) return;
     // We don't know which combobox changed, so we just update all of them
     for (int row=0; row<ui->tableFiles->rowCount(); row++)
@@ -289,7 +328,7 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
     {
         DBCFile *file = dbcHandler->getFileByIdx(row);
         int bus = ui->tableFiles->item(row, col)->text().toInt();
-        int numBuses = CANConManager::getInstance()->getNumBuses();
+        //int numBuses = CANConManager::getInstance()->getNumBuses();
         if (bus > -2)
         {
             file->setAssocBus(bus);

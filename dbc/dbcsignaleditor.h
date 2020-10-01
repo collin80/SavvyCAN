@@ -16,19 +16,19 @@ class DBCSignalEditor : public QDialog
 public:
     explicit DBCSignalEditor(QWidget *parent = 0);
     void setMessageRef(DBC_MESSAGE *msg);
-    void showEvent(QShowEvent*);
     void setFileIdx(int idx);
+    void setSignalRef(DBC_SIGNAL *sig);
+    void showEvent(QShowEvent*);
     ~DBCSignalEditor();
+    void refreshView();
+
+signals:
+    void updatedTreeInfo(DBC_SIGNAL *sig);
 
 private slots:
-    void clickSignalList(int);
     void bitfieldClicked(int x, int y);
     void onValuesCellChanged(int row,int col);
-    void onCustomMenuSignals(QPoint);
     void onCustomMenuValues(QPoint);
-    void addNewSignal();
-    void cloneSignal();
-    void deleteCurrentSignal();
     void deleteCurrentValue();
 
 private:
@@ -39,7 +39,6 @@ private:
     DBCFile *dbcFile;
     bool inhibitCellChanged;
 
-    void refreshSignalsList();
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);
     void generateUsedBits();
