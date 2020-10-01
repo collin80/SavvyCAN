@@ -1,6 +1,7 @@
 #include "dbc_classes.h"
 #include "dbchandler.h"
 #include "utility.h"
+#include <QtMath>
 
 DBC_MESSAGE::DBC_MESSAGE()
 {
@@ -73,7 +74,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         endResult = ((double)result * factor) + bias;
         result = (int64_t)endResult;
         // if factor is an integer, we don't need the possibly human-unreadable float representation
-        isInteger = (factor == ceilf(factor));
+        isInteger = (factor == qFloor(factor));
     }
     else if (valType == SP_FLOAT)
     {
