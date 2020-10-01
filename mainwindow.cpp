@@ -882,7 +882,7 @@ void MainWindow::updateFileStatus()
     QString output;
     if (model->rowCount() == 0)
     {
-        output = tr("No file loaded");
+        output = tr("No packets loaded");
     }
     else
     {
