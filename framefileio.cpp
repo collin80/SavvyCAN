@@ -3,6 +3,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QDateTime>
+#include <QRegularExpression>
 #include <QtEndian>
 #include <QSettings>
 #include <iostream>
@@ -33,9 +34,10 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
-    filters.append(QString(tr("Candump/Kayak(*.log)")));
-    filters.append(QString(tr("Cabana Log(*.csv *.CSV)")));
+    filters.append(QString(tr("Candump/Kayak (*.log)")));
+    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
+    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -120,6 +122,11 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
         {
             if (!filename.contains('.')) filename += ".asc";
             result = saveCanalyzerASC(filename, frameCache);
+        }
+        if (dialog.selectedNameFilter() == filters[12])
+        {
+            if (!filename.contains('.')) filename += ".trc";
+            result = saveCARBUSAnalzyer(filename, frameCache);
         }
 
         progress.cancel();
@@ -751,30 +758,40 @@ bool FrameFileIO::isCARBUSAnalyzerFile(QString filename)
     return isMatch;
 }
 
-// CARBUS Analayzer trace format:
+// CARBUS Analayzer trace format https://canhacker.ru/can-trace-format/ :
+// header
 //@ TEXT @ 2 @ 64 @ 0 @ 591 @ 38782 @ 00:00:38.782 @
+//  2 - format version
 //14,687	1	0004	4E0	8	24 00 00 00 00 00 00 00	00000000	$
-// timestamp: sec,ms
+// timestamp: sec,ms - for version 2
+//            sec,us - for version 3
 bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
-    CANFrame thisFrame;
-    QString line;
-    int lineCounter = 0;
-    bool foundErrors = false;
-
     if (!inFile->open(QIODevice::ReadOnly))
     {
         delete inFile;
         return false;
     }
 
+    CANFrame thisFrame;
+    QString line;
+    int lineCounter = 0;
+    bool foundErrors = false;
+
     // readLine() works only with "\n" and "\r\n"
     QString localReadAll = inFile->readAll().replace("\r", "\r\n");
 
     QTextStream txt(&localReadAll);
 
-    line = txt.readLine().toUpper(); //read out the header first and discard it.
+    line = txt.readLine().toUpper(); //read out the header
+
+    int version = 3; // current default
+    QRegularExpression re("@ TEXT @ (?<version>\\d) @.*");
+    QRegularExpressionMatch match = re.match(line);
+    if (match.hasMatch()) {
+        version = match.captured("version").toInt();
+    }
 
     while (!txt.atEnd()) {
         lineCounter++;
@@ -789,14 +806,18 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
             QList<QString> tokens = line.split(QRegExp("\\s+"));
             if (tokens.length() > 3)
             {
-                QString time = tokens[0].replace(",",".");
-                double timeStamp = time.toDouble() * 1000000.0;
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<int64_t>(timeStamp)));
-                thisFrame.setFrameId(static_cast<uint32_t>(tokens[3].toInt(nullptr, 16)));
-                thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);
+                QString time = tokens[0].replace(",", "");
+                int64_t timeStamp = time.toInt();
+                if (version == 2) {
+                    timeStamp *= 1000; // ms -> us
+                }
+
                 thisFrame.isReceived = true;
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                thisFrame.bus = 0;
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<int64_t>(timeStamp)));
+                thisFrame.bus = tokens[1].toInt();
+                thisFrame.setFrameId(static_cast<uint32_t>(tokens[3].toInt(nullptr, 16)));
+                thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);
                 int numBytes = tokens[4].toInt(nullptr, 16);
                 QByteArray bytes(numBytes , 0);
                 for (int d = 0; d < numBytes; d++)
@@ -810,7 +831,10 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
                 thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
             }
-            else foundErrors = true;
+            else
+            {
+                foundErrors = true;
+            }
         }
     }
     inFile->close();
@@ -818,6 +842,120 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
     return !foundErrors;
 }
 
+QString getCARBUSAnalzyerStr(uint64_t time, QString symbol) {
+    QString finalStr = "";
+    QString strTime = QString::number(time);
+    while (strTime.size() < 5) {
+        strTime = "0" + strTime;
+    }
+
+    for (int i = 0; i < strTime.size(); ++i ) {
+        finalStr += strTime.at(i);
+        if (i == 1) {
+            finalStr += symbol;
+        }
+    }
+
+    return finalStr;
+}
+
+bool FrameFileIO::saveCARBUSAnalzyer(QString filename, const QVector<CANFrame>* frames)
+{
+    QFile *outFile = new QFile(filename);
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return false;
+    }
+    QTextStream outTextStream(outFile);
+
+    int lineCounter = 0;
+
+    qint64 minTime = frames->at(0).timeStamp().microSeconds();
+    qint64 maxTime = minTime;
+    for (int c = 0; c < frames->count(); c++)
+    {
+        if (frames->at(c).timeStamp().microSeconds() < minTime) minTime = frames->at(c).timeStamp().microSeconds();
+        if (frames->at(c).timeStamp().microSeconds() > maxTime) maxTime = frames->at(c).timeStamp().microSeconds();
+    }
+    qint64 totalTime = maxTime - minTime;
+    // looks like a bug in CARBUS format for 3 version. time is in ms, while packets in us.
+    totalTime /= 1000;
+    QTime someTime(0,0,0);
+    someTime = someTime.addMSecs(totalTime);
+
+    // header:
+    // @see #loadCARBUSAnalyzer()
+    // 14012 = number of packets
+    // 15688 = max time - start time  in ms
+    //
+    // "@ TEXT @ 3 @ 64 @ 0 @ 14012 @ 15688 @ 00:00:15.688 @"
+    // saving in version format 3 with microseconds in packets time
+    outTextStream << "@ TEXT @ 3 @ 64 @ 0 @ " << frames->count() <<  " @ " << totalTime
+                  <<" @ " << someTime.toString("hh:mm:ss.zzz") <<" @\r";
+
+    const unsigned char *data;
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        auto frame = frames->at(c);
+
+        uint64_t timeStamp = frame.timeStamp().microSeconds();
+        QString canId = QString::number(frame.frameId(), 16).toUpper().rightJustified(3, '0').toUtf8();
+        QString canDlc = QString::number(frame.payload().length()).toUtf8();
+
+        QString ascii = "";
+        QString finalCanData;
+
+        data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
+        for (int d = 0; d < frame.payload().length(); d++)
+        {
+            auto octet = data[d];
+            finalCanData.append(QString::number(octet, 16).toUpper().rightJustified(2, '0').toUtf8());
+            finalCanData.append(" ");
+
+            QString strCode = QString::number(octet, 16);
+            bool conv;
+            uint symbolCode = strCode.toInt(&conv, 16);
+
+            if ((symbolCode >= 32 && symbolCode < 126)) {
+                QChar localQChar = QChar(symbolCode);
+                if (localQChar.toLatin1() != 0) {
+                   ascii += QString::fromLocal8Bit(QByteArray::fromHex(strCode.toLatin1()));
+              }
+            } else {
+                ascii += " ";
+            }
+        }
+        finalCanData = finalCanData.trimmed().leftJustified(23, ' ');
+        ascii = ascii.leftJustified(8, ' ');
+        auto seconds = QString::number(timeStamp / 1000000);
+        auto uSeconds = QString::number(timeStamp % 1000000);
+        QString localArg = "";
+        localArg.append(seconds).append(",").append(uSeconds).append("\t")
+                .append(QString::number(frame.bus)).append("\t") // bus channel
+                .append("0004").append("\t") // it's CAN frame
+                .append(canId).append("\t")
+                .append(canDlc).append("\t")
+                .append(finalCanData).append("\t")
+                .append("00000000").append("\t")
+                .append(ascii).append("\t")
+                .append("\r");
+
+        qDebug() << localArg;
+        outTextStream << localArg;
+    }
+
+    outFile->close();
+    delete outFile;
+
+    return true;
+}
 
 bool FrameFileIO::isCANHackerFile(QString filename)
 {
