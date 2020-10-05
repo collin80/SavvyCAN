@@ -790,7 +790,8 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
             if (tokens.length() > 3)
             {
                 QString time = tokens[0].replace(",",".");
-                thisFrame.setTimeStamp(static_cast<uint64_t>(time.toDouble() * 1000));
+                double timeStamp = time.toDouble() * 1000000.0;
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<int64_t>(timeStamp)));
                 thisFrame.setFrameId(static_cast<uint32_t>(tokens[3].toInt(nullptr, 16)));
                 thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);
                 thisFrame.isReceived = true;
