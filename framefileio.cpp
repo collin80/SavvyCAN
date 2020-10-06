@@ -842,23 +842,6 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
     return !foundErrors;
 }
 
-QString getCARBUSAnalzyerStr(uint64_t time, QString symbol) {
-    QString finalStr = "";
-    QString strTime = QString::number(time);
-    while (strTime.size() < 5) {
-        strTime = "0" + strTime;
-    }
-
-    for (int i = 0; i < strTime.size(); ++i ) {
-        finalStr += strTime.at(i);
-        if (i == 1) {
-            finalStr += symbol;
-        }
-    }
-
-    return finalStr;
-}
-
 bool FrameFileIO::saveCARBUSAnalzyer(QString filename, const QVector<CANFrame>* frames)
 {
     QFile *outFile = new QFile(filename);
