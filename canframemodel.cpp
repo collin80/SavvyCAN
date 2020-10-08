@@ -380,7 +380,20 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::TextAlignmentRole)
     {
-        return Qt::AlignLeft;
+        switch(Column(index.column()))
+        {
+        case Column::TimeStamp:
+            return Qt::AlignRight;
+        case Column::FrameId:
+        case Column::Direction:
+        case Column::Extended:
+        case Column::Bus:
+        case Column::Remote:
+        case Column::Length:
+            return Qt::AlignHCenter;
+        default:
+            return Qt::AlignLeft;
+        }
     }
 
     if (role == Qt::TextColorRole)
