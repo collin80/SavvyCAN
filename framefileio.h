@@ -50,6 +50,7 @@ public:
     static bool loadCANHackerFile(QString filename, QVector<CANFrame>* frames);
     static bool loadCabanaFile(QString filename, QVector<CANFrame>* frames);
     static bool loadCANOpenFile(QString filename, QVector<CANFrame>* frames);
+    static bool loadTeslaAPFile(QString filename, QVector<CANFrame>* frames);
 
     //functions that pre-scan a file to try to figure out if they could read it. Used to automatically determine
     //file type and load it.
@@ -72,6 +73,7 @@ public:
     static bool isCANHackerFile(QString filename);
     static bool isCabanaFile(QString filename);
     static bool isCANOpenFile(QString filename);
+    static bool isTeslaAPFile(QString filename);
 
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);

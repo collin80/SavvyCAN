@@ -13,6 +13,17 @@
 
 QFile FrameFileIO::continuousFile;
 
+struct TeslaAPCANRecord
+{
+    int64_t sec;
+    int32_t nano;
+    int32_t padding1;
+    uint16_t id;
+    uint8_t ctr;
+    uint8_t data[8];
+    uint8_t padding2;
+} __attribute__((packed));
+
 FrameFileIO::FrameFileIO()
 {
 }
@@ -172,6 +183,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
+    filters.append(QString(tr("Tesla Autopilot Snapshot (*.CAN *.can)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -214,6 +226,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[18]) result = loadGenericCSVFile(filename, frameCache);
         if (selectedNameFilter == filters[19]) result = loadCabanaFile(filename, frameCache);
         if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
+        if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
 
         progress.cancel();
 
@@ -260,6 +273,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadNativeCSVFile(filename, frames))
         {
             qDebug() << "Loaded as native CSV successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting Tesla AP Snapshot";
+    if (isTeslaAPFile(filename))
+    {
+        if (loadTeslaAPFile(filename, frames))
+        {
+            qDebug() << "Loaded as Tesla AP Snapshot successfully!";
             return true;
         }
     }
@@ -3914,4 +3937,85 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
     outFile->close();
     delete outFile;
     return true;
+}
+
+bool FrameFileIO::isTeslaAPFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    QByteArray data;
+    bool isValidFile = true;
+    TeslaAPCANRecord record;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd())
+    {
+        inFile->read((char *)&record, sizeof(TeslaAPCANRecord));
+        if (record.id > 0x7FF) isValidFile = false;
+        if ((record.ctr >> 4) > 8) isValidFile = false;
+        if ((record.ctr & 0xF) > 6) isValidFile = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isValidFile;
+}
+
+bool FrameFileIO::loadTeslaAPFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    CANFrame thisFrame;
+    int lineCounter = 0;
+    QByteArray data;
+    int timeOffset = 0;
+    int64_t lastTimeStamp = 0;
+    bool foundErrors = false;
+    thisFrame.setFrameType(QCanBusFrame::DataFrame);
+    TeslaAPCANRecord record;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+
+    while (!inFile->atEnd())
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        inFile->read((char *)&record, sizeof(TeslaAPCANRecord));
+
+        thisFrame.isReceived = true;
+        thisFrame.setExtendedFrameFormat(false); //format is incapable of extended frames
+        thisFrame.setFrameType(QCanBusFrame::DataFrame);
+        qint64 tempStamp;
+        tempStamp = record.sec * 1000000 + (record.nano/1000);
+        thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempStamp));
+        thisFrame.setFrameId(record.id);
+        int numBytes = (record.ctr >> 4);
+        thisFrame.bus = (record.ctr & 0xF);
+        QByteArray bytes(numBytes, 0);
+
+        if (numBytes <= 8)
+        {
+            for (int d = 0; d < numBytes; d++) bytes[d] = record.data[d];
+            thisFrame.setPayload(bytes);
+            frames->append(thisFrame);
+        }
+        else foundErrors = true;
+    }
+
+    inFile->close();
+    delete inFile;
+    return !foundErrors;
 }
