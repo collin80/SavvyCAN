@@ -198,7 +198,7 @@ void DiscreteStateWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DiscreteState/WindowSize", QSize(400, 300)).toSize());
-        move(settings.value("DiscreteState/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DiscreteState/WindowPos", QPoint(50, 50)).toPoint()));
     }
 
 }

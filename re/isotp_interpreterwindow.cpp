@@ -112,7 +112,7 @@ void ISOTP_InterpreterWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("ISODecodeWindow/WindowSize", this->size()).toSize());
-        move(settings.value("ISODecodeWindow/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("ISODecodeWindow/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 

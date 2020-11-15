@@ -6,6 +6,9 @@
 #include <QByteArray>
 #include <QDateTime>
 #include <QDebug>
+#include <QApplication>
+#include <QRect>
+#include <QDesktopWidget>
 
 class Utility
 {
@@ -15,6 +18,19 @@ public:
     static bool secondsMode;
     static bool sysTimeMode;
     static QString timeFormat;
+
+    //determines whether the window position is within any available screens. If it is not we default
+    //back to 0,0 which is going to be on screen. This fixes a problem where some operating systems would
+    //otherwise let you put windows on a second monitor, disconnect that monitor, and still put windows on it.
+    static QPoint constrainedWindowPos(QPoint originalPos)
+    {
+        QScreen *screen = QGuiApplication::screenAt(originalPos);
+        if (!screen)
+        {
+            return QPoint(0,0);
+        }
+        return originalPos;
+    }
 
     static QString unQuote(QString inStr)
     {

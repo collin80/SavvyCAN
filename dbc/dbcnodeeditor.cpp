@@ -81,7 +81,7 @@ void DBCNodeEditor::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DBCNodeEditor/WindowSize", QSize(312, 128)).toSize());
-        move(settings.value("DBCNodeEditor/WindowPos", QPoint(100, 100)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DBCNodeEditor/WindowPos", QPoint(100, 100)).toPoint()));
     }
 }
 

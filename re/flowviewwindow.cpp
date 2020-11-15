@@ -158,7 +158,7 @@ void FlowViewWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("FlowView/WindowSize", QSize(1078, 621)).toSize());
-        move(settings.value("FlowView/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("FlowView/WindowPos", QPoint(50, 50)).toPoint()));
     }
 
     if (settings.value("FlowView/AutoRef", false).toBool())

@@ -125,7 +125,7 @@ void GraphingWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("Graphing/WindowSize", QSize(800, 600)).toSize());
-        move(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint()));
     }
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
