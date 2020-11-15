@@ -170,7 +170,7 @@ void FrameInfoWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("FrameInfo/WindowSize", QSize(794, 694)).toSize());
-        move(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint()));
     }
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
 

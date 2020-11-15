@@ -187,7 +187,7 @@ void DBCMessageEditor::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DBCMessageEditor/WindowSize", QSize(340, 400)).toSize());
-        move(settings.value("DBCMessageEditor/WindowPos", QPoint(100, 100)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DBCMessageEditor/WindowPos", QPoint(100, 100)).toPoint()));
     }
 }
 

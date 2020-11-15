@@ -126,7 +126,7 @@ void RangeStateWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("RangeStateView/WindowSize", QSize(765, 615)).toSize());
-        move(settings.value("RangeStateView/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("RangeStateView/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 

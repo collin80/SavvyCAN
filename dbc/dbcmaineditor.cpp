@@ -133,7 +133,7 @@ void DBCMainEditor::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DBCMainEditor/WindowSize", QSize(1103, 571)).toSize());
-        move(settings.value("DBCMainEditor/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DBCMainEditor/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 

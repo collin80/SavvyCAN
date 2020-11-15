@@ -143,7 +143,7 @@ void FramePlaybackWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("Playback/WindowSize", QSize(742, 606)).toSize());
-        move(settings.value("Playback/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("Playback/WindowPos", QPoint(50, 50)).toPoint()));
     }
     if (settings.value("Playback/AutoLoop", false).toBool())
     {

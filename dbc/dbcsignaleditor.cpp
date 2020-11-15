@@ -280,7 +280,7 @@ void DBCSignalEditor::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DBCSignalEditor/WindowSize", QSize(1000, 600)).toSize());
-        move(settings.value("DBCSignalEditor/WindowPos", QPoint(100, 100)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DBCSignalEditor/WindowPos", QPoint(100, 100)).toPoint()));
     }
 }
 
