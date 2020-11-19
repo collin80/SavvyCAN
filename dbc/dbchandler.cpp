@@ -281,6 +281,7 @@ DBCFile::DBCFile()
     messageHandler->setMatchingCriteria(EXACT);
     messageHandler->setFilterLabeling(false);
     isDirty = false;
+    fileName = "<Unsaved File>";
 }
 
 DBCFile::DBCFile(const DBCFile& cpy) : QObject()
@@ -1534,6 +1535,7 @@ int DBCHandler::createBlankFile()
     falseNode.name = "Vector__XXX";
     falseNode.comment = "Default node if none specified";
     newFile.dbc_nodes.append(falseNode);
+    newFile.setAssocBus(-1);
 
     loadedFiles.append(newFile);
     return loadedFiles.count();
@@ -1587,6 +1589,7 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
 
          createBlankFile();
          thisFile = &loadedFiles.last();
+
          QFile *inFile = new QFile(filename);
          if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
          {
