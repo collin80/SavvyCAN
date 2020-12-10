@@ -1258,7 +1258,7 @@ bool FrameFileIO::isPCANFile(QString filename)
     {
         while (!inFile->atEnd()) {
             lineCounter++;
-            if (lineCounter > 10)
+            if (lineCounter > 25)
             {
                 break;
             }
@@ -1375,7 +1375,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     if (line.at(41) == 'R') {
                         thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                     } else {
-                        QList<QByteArray> tokens = line.mid(41, thisFrame.payload().length() * 3).split(' ');
+                        QList<QByteArray> tokens = line.mid(41, numBytes * 3).split(' ');
                         thisFrame.setFrameType(QCanBusFrame::DataFrame);
                         for (int d = 0; d < numBytes; d++)
                         {
@@ -1398,7 +1398,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 {
                     int numBytes = line.mid(37,2).trimmed().toInt();
                     QByteArray bytes(numBytes, 0);
-                    qDebug() << thisFrame.payload().length();
+                    //qDebug() << thisFrame.payload().length();
                     thisFrame.isReceived = true;
                     thisFrame.bus = 0;
                     if (line.at(25) == ' ') {
@@ -1409,7 +1409,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     if (line.at(40) == 'R') {
                         thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                     } else {
-                        QList<QByteArray> tokens = line.mid(40, thisFrame.payload().length() * 3).split(' ');
+                        QList<QByteArray> tokens = line.mid(40, numBytes * 3).split(' ');
                         thisFrame.setFrameType(QCanBusFrame::DataFrame);
                         for (int d = 0; d < numBytes; d++)
                         {
