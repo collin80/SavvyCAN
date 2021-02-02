@@ -15,6 +15,7 @@ QFile FrameFileIO::continuousFile;
 
 struct TeslaAPCANRecord
 {
+    #pragma pack(push, 1)
     int64_t sec;
     int32_t nano;
     int32_t padding1;
@@ -22,7 +23,8 @@ struct TeslaAPCANRecord
     uint8_t ctr;
     uint8_t data[8];
     uint8_t padding2;
-} __attribute__((packed));
+    #pragma pack(pop)
+};
 
 FrameFileIO::FrameFileIO()
 {

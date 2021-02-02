@@ -126,7 +126,7 @@ void ScriptingWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("ScriptingWindow/WindowSize", QSize(860, 650)).toSize());
-        move(settings.value("ScriptingWindow/WindowPos", QPoint(100, 100)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("ScriptingWindow/WindowPos", QPoint(100, 100)).toPoint()));
     }
 }
 
