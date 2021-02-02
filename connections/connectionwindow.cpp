@@ -150,7 +150,7 @@ void ConnectionWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("ConnWindow/WindowSize", QSize(956, 665)).toSize());
-        move(settings.value("ConnWindow/WindowPos", QPoint(100, 100)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("ConnWindow/WindowPos", QPoint(100, 100)).toPoint()));
     }
 }
 

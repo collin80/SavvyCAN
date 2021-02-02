@@ -6,6 +6,7 @@
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
 #include "SnifferDelegate.h"
+#include "utility.h"
 
 SnifferWindow::SnifferWindow(QWidget *parent) :
     QDialog(parent),
@@ -73,7 +74,7 @@ void SnifferWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("Sniffer/WindowSize", QSize(1100, 750)).toSize());
-        move(settings.value("Sniffer/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("Sniffer/WindowPos", QPoint(50, 50)).toPoint()));
         ui->treeView->setColumnWidth(0, settings.value("Sniffer/DeltaColumn", 110).toUInt());
         ui->treeView->setColumnWidth(1, settings.value("Sniffer/IDColumn", 70).toUInt());
         ui->treeView->setColumnWidth(2, settings.value("Sniffer/Data0Column", 92).toUInt());
