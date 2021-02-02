@@ -19,9 +19,6 @@ public:
     explicit FirmwareUploaderWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
     ~FirmwareUploaderWindow();
 
-signals:
-    void sendCANFrame(const CANFrame *);
-
 public slots:
     void gotTargettedFrame(CANFrame frame);
 
