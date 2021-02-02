@@ -694,7 +694,7 @@ void FrameSenderWindow::processTriggerText(int line)
                 QString tok = trigToks.at(x);
                 if (tok.left(2) == "ID")
                 {
-                    thisTrigger.ID = Utility::ParseStringToNum(tok.right(tok.length() - 3));
+                    thisTrigger.ID = Utility::ParseStringToNum(tok.right(tok.length() - 2));
                     if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 10000000;
 
                     if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 0; //by default don't count, just send it upon trigger

@@ -1400,7 +1400,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     if (line.at(41) == 'R') {
                         thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                     } else {
-                        QList<QByteArray> tokens = line.mid(41, thisFrame.payload().length() * 3).split(' ');
+                        QList<QByteArray> tokens = line.mid(41, numBytes * 3).split(' ');
                         thisFrame.setFrameType(QCanBusFrame::DataFrame);
                         for (int d = 0; d < numBytes; d++)
                         {
