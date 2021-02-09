@@ -5,6 +5,9 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    //Add a local path for Qt extensions, to allow for per-application extensions.
+    a.addLibraryPath("plugins");
+
     //These things are used by QSettings to set up setting storage
     a.setOrganizationName("EVTV");
     a.setApplicationName("SavvyCAN");
