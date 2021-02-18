@@ -6,7 +6,29 @@
 DBC_MESSAGE::DBC_MESSAGE()
 {
     sigHandler = new DBCSignalHandler;
+    ID = 0;
+    len = 0;
+    multiplexorSignal = nullptr;
+    sender = nullptr;
 }
+
+DBC_SIGNAL::DBC_SIGNAL()
+{
+    bias = 0;
+    isMultiplexed = false;
+    isMultiplexor = false;
+    max = 1;
+    min = 0;
+    multiplexValue = 0;
+    factor = 1.0;
+    intelByteOrder = false;
+    parentMessage = nullptr;
+    receiver = nullptr;
+    signalSize = 1;
+    startBit = 1;
+    valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
+}
+
 
 /*
  The way that the DBC file format works is kind of weird... For intel format signals you count up

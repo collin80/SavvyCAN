@@ -149,7 +149,7 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     for (int i = 0; i < 6; i++) xorByte = xorByte ^ static_cast<unsigned char>(output->payload()[i]);
     output->payload()[6] = xorByte;
     output->setPayload(bytes);
-    sendCANFrame(output);
+    CANConManager::getInstance()->sendFrame(*output);
     timer->start();
 }
 
@@ -187,16 +187,18 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         QByteArray bytes(8,0);
         output->bus = bus;
         output->setFrameId(baseAddress);
+        output->setFrameType(QCanBusFrame::DataFrame);
 
-        output->payload()[0] = 0xEF;
-        output->payload()[1] = 0xBE;
-        output->payload()[2] = 0xAD;
-        output->payload()[3] = 0xDE;
-        output->payload()[4] = token & 0xFF;
-        output->payload()[5] = (token >> 8) & 0xFF;
-        output->payload()[6] = (token >> 16) & 0xFF;
-        output->payload()[7] = (token >> 24) & 0xFF;
-        sendCANFrame(output);
+        bytes[0] = 0xEF;
+        bytes[1] = 0xBE;
+        bytes[2] = 0xAD;
+        bytes[3] = 0xDE;
+        bytes[4] = token & 0xFF;
+        bytes[5] = (token >> 8) & 0xFF;
+        bytes[6] = (token >> 16) & 0xFF;
+        bytes[7] = (token >> 24) & 0xFF;
+        output->setPayload(bytes);
+        CANConManager::getInstance()->sendFrame(*output);
     }
     else //stop anything in process
     {

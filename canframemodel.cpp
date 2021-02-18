@@ -311,6 +311,8 @@ void CANFrameModel::recalcOverwrite()
     uint64_t idAugmented; //id in lower 29 bits, bus number shifted up 29 bits
     foreach(CANFrame frame, frames)
     {
+        if (frame.frameType() != frame.DataFrame) continue;
+
         idAugmented = frame.frameId();
         idAugmented = idAugmented + (frame.bus << 29ull);
         if (!overWriteFrames.contains(idAugmented))
@@ -445,7 +447,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(QString::number(thisFrame.frameId() & 0x7));
                 return tempString;
             }
-            if (thisFrame.frameType() != QCanBusFrame::RemoteRequestFrame) {
+            if (thisFrame.frameType() == QCanBusFrame::DataFrame) {
                 if (dataLen < 0) dataLen = 0;
                 //if (dLen > 8) dLen = 8;
                 for (int i = 0; i < dataLen; i++)
@@ -456,6 +458,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                     if (byt > 0x7E) byt = 0x2E;
                     tempString.append(QString::fromUtf8(&byt, 1));
                 }
+            }
+            if (thisFrame.frameType() == QCanBusFrame::ErrorFrame)
+            {
+                 tempString = "ERROR";
             }
             return tempString;
         case Column::Data:
@@ -470,8 +476,23 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 else tempString.append(QString::number(data[i], 10));
                 tempString.append(" ");
             }
+            if (thisFrame.frameType() == thisFrame.ErrorFrame)
+            {
+                if (thisFrame.error() & thisFrame.TransmissionTimeoutError) tempString.append("\nTX Timeout");
+                if (thisFrame.error() & thisFrame.LostArbitrationError) tempString.append("\nLost Arbitration");
+                if (thisFrame.error() & thisFrame.ControllerError) tempString.append("\nController Error");
+                if (thisFrame.error() & thisFrame.ProtocolViolationError) tempString.append("\nProtocol Violation");
+                if (thisFrame.error() & thisFrame.TransceiverError) tempString.append("\nTransceiver Error");
+                if (thisFrame.error() & thisFrame.MissingAcknowledgmentError) tempString.append("\nMissing ACK");
+                if (thisFrame.error() & thisFrame.BusOffError) tempString.append("\nBus OFF");
+                if (thisFrame.error() & thisFrame.BusError) tempString.append("\nBus ERR");
+                if (thisFrame.error() & thisFrame.ControllerRestartError) tempString.append("\nController restart err");
+                if (thisFrame.error() & thisFrame.UnknownError) tempString.append("\nUnknown error type");
+            }
+            //TODO: technically the actual returned bytes for an error frame encode some more info. Not interpreting it yet.
+
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
-            if (dbcHandler != nullptr && interpretFrames)
+            if ( (dbcHandler != nullptr) && interpretFrames && (thisFrame.frameType() == thisFrame.DataFrame) )
             {
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != nullptr)
