@@ -1,4 +1,5 @@
 #include <QtDebug>
+#include "utility.h"
 #include "helpwindow.h"
 #include "ui_helpwindow.h"
 
@@ -32,7 +33,7 @@ void HelpWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("HelpViewer/WindowSize", QSize(600, 700)).toSize());
-        move(settings.value("HelpViewer/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("HelpViewer/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 

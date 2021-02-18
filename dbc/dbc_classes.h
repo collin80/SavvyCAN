@@ -106,6 +106,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     QList<DBC_VAL_ENUM_ENTRY> valList;
 
+    DBC_SIGNAL();
     bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);

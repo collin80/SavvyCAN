@@ -64,7 +64,7 @@ void FileComparatorWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("FileComparator/WindowSize", QSize(720, 631)).toSize());
-        move(settings.value("FileComparator/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("FileComparator/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 

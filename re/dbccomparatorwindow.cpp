@@ -66,7 +66,7 @@ void DBCComparatorWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DBCComparator/WindowSize", QSize(720, 631)).toSize());
-        move(settings.value("DBCComparator/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DBCComparator/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 

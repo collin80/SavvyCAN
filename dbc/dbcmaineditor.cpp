@@ -133,7 +133,7 @@ void DBCMainEditor::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("DBCMainEditor/WindowSize", QSize(1103, 571)).toSize());
-        move(settings.value("DBCMainEditor/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("DBCMainEditor/WindowPos", QPoint(50, 50)).toPoint()));
     }
 }
 
@@ -370,8 +370,8 @@ void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg)
         item->setText(0, msgInfo);
         //editor could have changed the parent Node too. Have to figure out which node
         //is parent in the GUI and compare that to parent in the data.
-        DBC_NODE *oldParent = dbcFile->findNodeByName(item->parent()->text(0));
-        if (oldParent != msg->sender)
+        DBC_NODE *oldParent = dbcFile->findNodeByName(item->parent()->text(0).split(" - ")[0]);
+        if (oldParent != msg->sender && oldParent)
         {
             qDebug() << "Changed parent of message. Trying to rehome it.";
             QTreeWidgetItem *newParent = nullptr;
@@ -448,7 +448,11 @@ void DBCMainEditor::newMessage()
         nodeItem = msgItem->parent();
     }
 
-    DBC_NODE *node = dbcFile->findNodeByName(nodeItem->data(0, Qt::DisplayRole).toString());
+    //if there was a comment this will find the location of the comment and snip it out.
+    QString nodeName = nodeItem->data(0, Qt::DisplayRole).toString().split(" - ")[0];
+
+    DBC_NODE *node = dbcFile->findNodeByName(nodeName);
+    if (!node) node = dbcFile->findNodeByIdx(0);
     DBC_MESSAGE msg;
     DBC_MESSAGE *msgPtr;
     if (msgItem)
@@ -467,17 +471,17 @@ void DBCMainEditor::newMessage()
         }
         else
         {
-            msg.name = nodeItem->text(0) + "Msg" + QString::number(randGen.bounded(500));
+            msg.name = nodeName + "Msg" + QString::number(randGen.bounded(500));
             msg.ID = 0;
             msg.len = 0;
         }
     }
     else
     {
-        msg.name = nodeItem->text(0) + "Msg" + QString::number(randGen.bounded(500));
+        msg.name = nodeName + "Msg" + QString::number(randGen.bounded(500));
         msg.ID = 0;
         msg.len = 0;
-    }
+    }    
     msg.sender = node;
 
     dbcFile->messageHandler->addMessage(msg);

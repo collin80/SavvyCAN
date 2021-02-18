@@ -91,7 +91,7 @@ void TemporalGraphWindow::readSettings()
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
         resize(settings.value("Temporal/WindowSize", QSize(800, 600)).toSize());
-        move(settings.value("Temporal/WindowPos", QPoint(50, 50)).toPoint());
+        move(Utility::constrainedWindowPos(settings.value("Temporal/WindowPos", QPoint(50, 50)).toPoint()));
     }
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
 }

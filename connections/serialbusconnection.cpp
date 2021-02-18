@@ -184,55 +184,22 @@ void SerialBusConnection::framesReceived()
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
                 frame_p->bus = 0;
-
-                if (recFrame.frameType() == QCanBusFrame::ErrorFrame) {
-                    // Constants defined in include/uapi/linux/can/error.h
-                    //since the whole program uses QCanBusFrame now we can just grab errors directly out of the proper place from now on
-                    /*
-                    switch (recFrame.error()) {
-                        case QCanBusFrame::TransmissionTimeoutError:
-                            frame_p->setFrameId(0x20000001);
-                            break;
-                        case QCanBusFrame::LostArbitrationError:
-                            frame_p->ID = 0x20000002;
-                            break;
-                        case QCanBusFrame::ControllerError:
-                            frame_p->ID = 0x20000004;
-                            break;
-                        case QCanBusFrame::ProtocolViolationError:
-                            frame_p->ID = 0x20000008;
-                            break;
-                        case QCanBusFrame::TransceiverError:
-                            frame_p->ID = 0x20000010;
-                            break;
-                        case QCanBusFrame::MissingAcknowledgmentError:
-                            frame_p->ID = 0x20000020;
-                            break;
-                        case QCanBusFrame::BusOffError:
-                            frame_p->ID = 0x20000040;
-                            break;
-                        case QCanBusFrame::BusError:
-                            frame_p->ID = 0x20000080;
-                            break;
-                        case QCanBusFrame::ControllerRestartError:
-                            frame_p->ID = 0x20000100;
-                            break;
-                        default:
-                            break;
-                    }
-                    frame_p->extended = true;
-                    */
-                    frame_p->isReceived = true;
-                } else {
+                if (recFrame.frameType() == recFrame.ErrorFrame)
+                {
+                    frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
+                    frame_p->setFrameId(recFrame.frameId() + 0x20000000ull);
+	            frame_p->isReceived = true;
+                }
+                else
+                {
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId());
-                    frame_p->setTimeStamp(recFrame.timeStamp());
-                    frame_p->setFrameType(recFrame.frameType());
-                    frame_p->setError(recFrame.error());
-
-                    /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
-                    frame_p->isReceived = !recFrame.hasLocalEcho();
                 }
+                frame_p->setTimeStamp(recFrame.timeStamp());
+                frame_p->setFrameType(recFrame.frameType());
+                frame_p->setError(recFrame.error());
+	        /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
+                frame_p->isReceived = !recFrame.hasLocalEcho();
 
                 if (useSystemTime) {
                     frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
