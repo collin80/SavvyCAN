@@ -76,8 +76,8 @@ public:
     DBC_ATTRIBUTE *findAttributeByName(QString name);
     DBC_ATTRIBUTE *findAttributeByIdx(int idx);
     void findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> *list);
-    void saveFile(QString);
-    void loadFile(QString);
+    bool saveFile(QString);
+    bool loadFile(QString);
     QString getFullFilename();
     QString getFilename();
     QString getPath();
