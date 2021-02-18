@@ -760,7 +760,7 @@ bool DBCFile::parseDefaultAttrLine(QString line)
     return false;
 }
 
-void DBCFile::loadFile(QString fileName)
+bool DBCFile::loadFile(QString fileName)
 {
     QFile *inFile = new QFile(fileName);
     QString line, rawLine;
@@ -778,7 +778,8 @@ void DBCFile::loadFile(QString fileName)
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
         delete inFile;
-        return;
+        qDebug() << "Could not load the file!";
+        return false;
     }
 
     qDebug() << "Starting DBC load";
@@ -1040,6 +1041,7 @@ void DBCFile::loadFile(QString fileName)
     filePath = fileName.left(fileName.length() - this->fileName.length());
     assocBuses = -1;
     isDirty = false;
+    return true;
 }
 
 QVariant DBCFile::processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ)
@@ -1157,7 +1159,7 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
     return goodAttr;
 }
 
-void DBCFile::saveFile(QString fileName)
+bool DBCFile::saveFile(QString fileName)
 {
     int nodeNumber = 1;
     int msgNumber = 1;
@@ -1169,7 +1171,7 @@ void DBCFile::saveFile(QString fileName)
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
         delete outFile;
-        return;
+        return false;
     }
 
     //right now it outputs a standard hard coded boilerplate
@@ -1455,6 +1457,7 @@ void DBCFile::saveFile(QString fileName)
     QStringList fileList = fileName.split('/');
     this->fileName = fileList[fileList.length() - 1]; //whoops... same name as parameter in this function.
     filePath = fileName.left(fileName.length() - this->fileName.length());
+    return true;
 }
 
 void DBCHandler::saveDBCFile(int idx)
@@ -1544,9 +1547,16 @@ int DBCHandler::createBlankFile()
 DBCFile* DBCHandler::loadDBCFile(QString filename)
 {
     DBCFile newFile;
-    newFile.loadFile(filename);
-    loadedFiles.append(newFile);
-    return &loadedFiles.last();
+    if (newFile.loadFile(filename))
+    {
+        loadedFiles.append(newFile);
+    }
+    else
+    {
+        //createBlankFile();
+    }
+    if (loadedFiles.count()> 0) return &loadedFiles.last();
+    else return nullptr;
 }
 
 //the only reason to even bother sending the index is to see if
@@ -1846,40 +1856,44 @@ DBCHandler::DBCHandler()
     // Load previously saved DBC file settings
     QSettings settings;
     int filecount = settings.value("DBC/FileCount", 0).toInt();
+    qDebug() << "Previously loaded DBC file count: " << filecount;
     for (int i=0; i<filecount; i++)
     {
         QString filename = settings.value("DBC/Filename_" + QString(i),"").toString();
         DBCFile * file = loadDBCFile(filename);
-        int bus = settings.value("DBC/AssocBus_" + QString(i),0).toInt();
-        file->setAssocBus(bus);
+        if (file)
+        {
+            int bus = settings.value("DBC/AssocBus_" + QString(i),0).toInt();
+            file->setAssocBus(bus);
 
-        MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString(i),0).toInt();
+            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString(i),0).toInt();
 
-        DBC_ATTRIBUTE attr;
+            DBC_ATTRIBUTE attr;
 
-        attr.attrType = MESSAGE;
-        attr.defaultValue = matchingCriteria;
-        attr.enumVals.clear();
-        attr.lower = 0;
-        attr.upper = 0;
-        attr.name = "matchingcriteria";
-        attr.valType = QINT;
-        file->dbc_attributes.append(attr);
-        file->messageHandler->setMatchingCriteria(matchingCriteria);
+            attr.attrType = MESSAGE;
+            attr.defaultValue = matchingCriteria;
+            attr.enumVals.clear();
+            attr.lower = 0;
+            attr.upper = 0;
+            attr.name = "matchingcriteria";
+            attr.valType = QINT;
+            file->dbc_attributes.append(attr);
+            file->messageHandler->setMatchingCriteria(matchingCriteria);
 
-        bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
-        attr.attrType = MESSAGE;
-        attr.defaultValue = filterLabeling;
-        attr.enumVals.clear();
-        attr.lower = 0;
-        attr.upper = 0;
-        attr.name = "filterlabeling";
-        attr.valType = QINT;
-        file->dbc_attributes.append(attr);
-        file->messageHandler->setFilterLabeling(filterLabeling);
+            bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
+            attr.attrType = MESSAGE;
+            attr.defaultValue = filterLabeling;
+            attr.enumVals.clear();
+            attr.lower = 0;
+            attr.upper = 0;
+            attr.name = "filterlabeling";
+            attr.valType = QINT;
+            file->dbc_attributes.append(attr);
+            file->messageHandler->setFilterLabeling(filterLabeling);
 
-        qInfo() << "Loaded DBC file" << filename << " (bus:" << bus 
-            << ", Matching Criteria:" << (int)matchingCriteria << "Filter labeling: " << (filterLabeling?"enabled":"disabled") << ")";
+            qInfo() << "Loaded DBC file" << filename << " (bus:" << bus
+                << ", Matching Criteria:" << (int)matchingCriteria << "Filter labeling: " << (filterLabeling?"enabled":"disabled") << ")";
+        }
     }
 }
 
