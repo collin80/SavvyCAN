@@ -1,12 +1,14 @@
 # SavvyCAN
 Qt based cross platform canbus tool 
-(C) 2015-2018 EVTV and Collin Kidder
+(C) 2015-2021 EVTV and Collin Kidder
 
 A Qt5 based cross platform tool which can be used to load, save, and capture canbus frames.
 This tool is designed to help with visualization, reverse engineering, debugging, and
 capturing of canbus frames.
 
-Really requires at a resolution of at least 1024x768. Fully multi-monitor capable. Works on 4K monitors as well.
+Please use the "Discussions" tab here on GitHub to ask questions and interact with the community.
+
+Requires at a resolution of at least 1024x768. Fully multi-monitor capable. Works on 4K monitors as well.
 
 You are highly recommended to use the 
 [CANDue board from EVTV](http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23).
@@ -46,12 +48,15 @@ http://www.qcustomplot.com/
 However, this source code is integrated into the source for SavvyCAN and one isn't required 
 to download it separately.
 
-This project requires 5.8.0 or higher because of a dependency on QSerialBus. However, you will get
-even more SerialBus goodness if you use QT 5.11 or 5.12
+This project requires 5.10.0 or higher because of a dependency on QtSerialBus. However, you will get
+even more SerialBus goodness if you use QT 5.11 or higher.
+
+NOTE: QT6 currently lacks support for QtSerialBus and many other QT sub-features. At this time you cannot
+use QT6 to compile SavvyCAN. Support for QT6 should be possible around QT6.2.
 
 ## Instructions for compiling:
 
-[Download the newest stable version of Qt directly from qt.io](https://www.qt.io/download/) (You need 5.8.x or newer)
+[Download the newest stable version of Qt directly from qt.io](https://www.qt.io/download/) (You need 5.10.x or newer)
 
 ```sh
 cd ~
@@ -60,7 +65,7 @@ git clone https://github.com/collin80/SavvyCAN.git
 
 cd SavvyCAN
 
-~/Qt/5.8/gcc_64/bin/qmake
+~/Qt/5.10/gcc_64/bin/qmake
 
 make
 ```

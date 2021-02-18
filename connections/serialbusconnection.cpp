@@ -183,11 +183,12 @@ void SerialBusConnection::framesReceived()
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
-                frame_p->bus = 0;                                
+                frame_p->bus = 0;
                 if (recFrame.frameType() == recFrame.ErrorFrame)
                 {
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId() + 0x20000000ull);
+	            frame_p->isReceived = true;
                 }
                 else
                 {
@@ -197,7 +198,8 @@ void SerialBusConnection::framesReceived()
                 frame_p->setTimeStamp(recFrame.timeStamp());
                 frame_p->setFrameType(recFrame.frameType());
                 frame_p->setError(recFrame.error());
-                frame_p->isReceived = true;
+	        /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
+                frame_p->isReceived = !recFrame.hasLocalEcho();
 
                 if (useSystemTime) {
                     frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
