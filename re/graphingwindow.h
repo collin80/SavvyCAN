@@ -23,7 +23,11 @@ public:
     double scale;
     int stride;
     int strideSoFar;
-    QColor color;
+    QColor lineColor;
+    QColor fillColor;
+    int lineWidth;
+    bool drawOnlyPoints;
+    int pointType;
     QCPGraph *ref;
     QString graphName;
     DBC_SIGNAL *associatedSignal;

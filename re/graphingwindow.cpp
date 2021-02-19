@@ -78,7 +78,8 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphingView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->graphingView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequest(QPoint)));
 
-    selectedPen.setWidth(1);
+    selectedPen.setWidth(3);
+    selectedPen.setStyle(Qt::DashLine);
     selectedPen.setColor(Qt::blue);
 
     //ui->graphingView->setAttribute(Qt::WA_AcceptTouchEvents);
@@ -842,13 +843,36 @@ void GraphingWindow::saveDefinitions()
             outFile->putChar(',');
             outFile->write(QString::number(iter->stride).toUtf8());
             outFile->putChar(',');
-            outFile->write(QString::number(iter->color.red()).toUtf8());
+            outFile->write(QString::number(iter->lineColor.red()).toUtf8());
             outFile->putChar(',');
-            outFile->write(QString::number(iter->color.green()).toUtf8());
+            outFile->write(QString::number(iter->lineColor.green()).toUtf8());
             outFile->putChar(',');
-            outFile->write(QString::number(iter->color.blue()).toUtf8());
+            outFile->write(QString::number(iter->lineColor.blue()).toUtf8());
             outFile->putChar(',');
             outFile->write(iter->graphName.toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->fillColor.red()).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->fillColor.green()).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->fillColor.blue()).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->fillColor.alpha()).toUtf8());
+            outFile->putChar(',');
+            if (iter->drawOnlyPoints) outFile->putChar('Y');
+                else outFile->putChar('N');
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->pointType).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->lineWidth).toUtf8());
+            if (iter->associatedSignal)
+            {
+                outFile->putChar(',');
+                outFile->write(iter->associatedSignal->parentMessage->name.toUtf8());
+                outFile->putChar(',');
+                outFile->write(iter->associatedSignal->name.toUtf8());
+            }
+
             outFile->write("\n");
         }
         outFile->close();
@@ -891,6 +915,8 @@ void GraphingWindow::loadDefinitions()
 
                 QList<QByteArray> tokens = line.split(',');
 
+                gp.associatedSignal = nullptr; //might not be saved in the graph definition so default it to nothing
+
                 if (tokens[0] == "X") //newest format based around signals
                 {
                     gp.ID = tokens[1].toUInt(nullptr, 16);
@@ -908,14 +934,35 @@ void GraphingWindow::loadDefinitions()
                     gp.scale = tokens[7].toFloat();
                     gp.stride = tokens[8].toInt();
 
-                    gp.color.setRed(tokens[9].toInt());
-                    gp.color.setGreen(tokens[10].toInt());
-                    gp.color.setBlue(tokens[11].toInt());
+                    gp.lineColor.setRed( tokens[9].toInt() );
+                    gp.lineColor.setGreen( tokens[10].toInt() );
+                    gp.lineColor.setBlue( tokens[11].toInt() );
                     if (tokens.length() > 12)
                         gp.graphName = tokens[12];
                     else
                         gp.graphName = QString();
-                    createGraph(gp, true);
+                   if (tokens.length() > 19) //even newer format with extra graph formatting options
+                   {
+                       gp.fillColor.setRed( tokens[13].toInt() );
+                       gp.fillColor.setGreen( tokens[14].toInt() );
+                       gp.fillColor.setBlue( tokens[15].toInt() );
+                       gp.fillColor.setAlpha( tokens[16].toInt() );
+                       if (tokens[17] == "Y") gp.drawOnlyPoints = true;
+                       else gp.drawOnlyPoints = false;
+                       gp.pointType = tokens[18].toInt();
+                       gp.lineWidth = tokens[19].toInt();
+                   }
+                   if (tokens.length() > 21)
+                   {
+                       DBC_MESSAGE *msg = dbcHandler->findMessage(tokens[20]);
+                       if (msg)
+                       {
+                            gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[21]);
+                       }
+                       else qDebug() << "Couldn't find the message by name! " << tokens[20] << "  " << tokens[21];
+                   }
+
+                   createGraph(gp, true);
                 }
                 else //one of the two older formats then
                 {
@@ -931,9 +978,9 @@ void GraphingWindow::loadDefinitions()
                             {
                                 gp.mask = 0xFFFFFFFF;
                                 gp.bias = (float)sig->bias;
-                                gp.color.setRed(tokens[3].toInt());
-                                gp.color.setGreen(tokens[4].toInt());
-                                gp.color.setBlue(tokens[5].toInt());
+                                gp.lineColor.setRed(tokens[3].toInt());
+                                gp.lineColor.setGreen(tokens[4].toInt());
+                                gp.lineColor.setBlue(tokens[5].toInt());
                                 gp.graphName = sig->name;
                                 gp.intelFormat = sig->intelByteOrder;
                                 if (sig->valType == SIGNED_INT) gp.isSigned = true;
@@ -1020,9 +1067,9 @@ void GraphingWindow::loadDefinitions()
                         gp.bias = tokens[5].toFloat();
                         gp.scale = tokens[6].toFloat();
                         gp.stride = tokens[7].toInt();
-                        gp.color.setRed(tokens[8].toInt());
-                        gp.color.setGreen(tokens[9].toInt());
-                        gp.color.setBlue(tokens[10].toInt());
+                        gp.lineColor.setRed(tokens[8].toInt());
+                        gp.lineColor.setGreen(tokens[9].toInt());
+                        gp.lineColor.setBlue(tokens[10].toInt());
                         if (tokens.length() > 11)
                             gp.graphName = tokens[11];
                         else
@@ -1194,11 +1241,27 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     ui->graphingView->graph()->setProperty("id", params.ID);
 
     ui->graphingView->graph()->setData(refParam->x,refParam->y);
-    ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
+
+    ui->graphingView->graph()->setScatterStyle(QCPScatterStyle((QCPScatterStyle::ScatterShape)params.pointType));
+
+    if (params.drawOnlyPoints) ui->graphingView->graph()->setLineStyle(QCPGraph::lsNone); //Draw only the points, no connections, no fills
+    else
+    {
+        ui->graphingView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
+    }
+
     QPen graphPen;
-    graphPen.setColor(params.color);
-    graphPen.setWidth(1);
+    graphPen.setColor(params.lineColor);
+    graphPen.setWidth(params.lineWidth);
     ui->graphingView->graph()->setPen(graphPen);
+    if (params.fillColor.alpha() > 0) //only if there is some opacity will we set up a fill brush
+    {
+        qDebug() << "Drawing filled graph";
+        QBrush fillBrush;
+        fillBrush.setColor(params.fillColor);
+        fillBrush.setStyle(Qt::SolidPattern);
+        ui->graphingView->graph()->setBrush(fillBrush);
+    }
 
     qDebug() << "xmin: " << xminval;
     qDebug() << "xmax: " << xmaxval;
