@@ -230,7 +230,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[19]) result = loadCabanaFile(filename, frameCache);
         if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
         if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
-        if (selectedNameFilter == filters[21]) result = loadCLX000File(filename, frameCache);
+        if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
 
         progress.cancel();
 
