@@ -14,12 +14,34 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     dbcHandler = handler;
 
     connect(ui->colorSwatch, SIGNAL(clicked(bool)), this, SLOT(colorSwatchClick()));
+    connect(ui->fillSwatch, SIGNAL(clicked(bool)), this, SLOT(fillSwatchClick()));
     connect(ui->btnAddGraph, SIGNAL(clicked(bool)), this, SLOT(addButtonClicked()));
 
     QPalette p = ui->colorSwatch->palette();
     //using 160 instead of 255 so that colors are always at least a little dark
     p.setColor(QPalette::Button, QColor(QRandomGenerator::global()->bounded(160),QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160)));
     ui->colorSwatch->setPalette(p);
+
+    QPalette p2 = ui->fillSwatch->palette();
+    p2.setColor(QPalette::Button, QColor(128,128,128,0)); //light gray, no opacity so it is disabled by default
+    ui->fillSwatch->setPalette(p2);
+
+    ui->coPointStyle->addItem("None");
+    ui->coPointStyle->addItem("Dot");
+    ui->coPointStyle->addItem("Cross");
+    ui->coPointStyle->addItem("Plus");
+    ui->coPointStyle->addItem("Circle");
+    ui->coPointStyle->addItem("Disc");
+    ui->coPointStyle->addItem("Square");
+    ui->coPointStyle->addItem("Diamond");
+    ui->coPointStyle->addItem("Star");
+    ui->coPointStyle->addItem("Triangle");
+    ui->coPointStyle->addItem("TriangleInverted");
+    ui->coPointStyle->addItem("Cross Inside Square");
+    ui->coPointStyle->addItem("Plus Inside Square");
+    ui->coPointStyle->addItem("Cross Inside Circle");
+    ui->coPointStyle->addItem("Plus Inside Circle");
+    ui->coPointStyle->addItem("Peace Sign");
 
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
     connect(ui->gridData, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
@@ -81,7 +103,15 @@ void NewGraphDialog::colorSwatchClick()
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, newColor);
     ui->colorSwatch->setPalette(p);
+}
 
+void NewGraphDialog::fillSwatchClick()
+{
+    QColor newColor = QColorDialog::getColor(ui->fillSwatch->palette().button().color(), nullptr, "Pick A Color", QColorDialog::ShowAlphaChannel);
+
+    QPalette p = ui->fillSwatch->palette();
+    p.setColor(QPalette::Button, newColor);
+    ui->fillSwatch->setPalette(p);
 }
 
 //check whether the current values on the left match the signal selected on the right
@@ -170,8 +200,14 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->txtID->setText(Utility::formatCANID(params.ID));
     ui->txtName->setText(params.graphName);
     QPalette p = ui->colorSwatch->palette();
-    p.setColor(QPalette::Button, params.color);
+    p.setColor(QPalette::Button, params.lineColor);
     ui->colorSwatch->setPalette(p);
+    QPalette p2 = ui->fillSwatch->palette();
+    p2.setColor(QPalette::Button, params.fillColor);
+    ui->fillSwatch->setPalette(p2);
+    ui->cbOnlyPoints->setChecked(params.drawOnlyPoints);
+    ui->spinLineWidth->setValue(params.lineWidth);
+    ui->coPointStyle->setCurrentIndex(params.pointType);
 
     assocSignal = params.associatedSignal;
 
@@ -183,8 +219,13 @@ void NewGraphDialog::setParams(GraphParams &params)
 
 void NewGraphDialog::getParams(GraphParams &params)
 {
-    params.color = ui->colorSwatch->palette().button().color();
+    params.lineColor = ui->colorSwatch->palette().button().color();
+    params.fillColor = ui->fillSwatch->palette().button().color();
     params.graphName = ui->txtName->text();
+
+    params.lineWidth = ui->spinLineWidth->value();
+    params.drawOnlyPoints = ui->cbOnlyPoints->isChecked();
+    params.pointType = ui->coPointStyle->currentIndex();
 
     params.ID = Utility::ParseStringToNum(ui->txtID->text());
     params.bias = ui->txtBias->text().toFloat();
