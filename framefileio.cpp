@@ -186,6 +186,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
     filters.append(QString(tr("Tesla Autopilot Snapshot (*.CAN *.can)")));
+    filters.append(QString(tr("CLX000 (*.txt *.TXT)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -229,6 +230,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[19]) result = loadCabanaFile(filename, frameCache);
         if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
         if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
+        if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
 
         progress.cancel();
 
@@ -451,6 +453,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadKvaserFile(filename, frames,false))
         {
             qDebug() << "Loaded as KVaser Decimal successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting CLX000";
+    if (isCLX000File(filename))
+    {
+        if (loadCLX000File(filename, frames))
+        {
+            qDebug() << "Loaded as CLX000 successfully!";
             return true;
         }
     }
@@ -4019,5 +4031,428 @@ bool FrameFileIO::loadTeslaAPFile(QString filename, QVector<CANFrame>* frames)
 
     inFile->close();
     delete inFile;
+    return !foundErrors;
+}
+
+bool FrameFileIO::isCLX000File(QString filename) {
+    std::unique_ptr<QFile> inFile = std::unique_ptr<QFile>(new QFile(filename));
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        qDebug() << "Could not open the file!";
+        return false;
+    }
+
+    QTextStream fileStream(inFile.get());
+    bool foundErrors = false;
+
+    // Contains 16 lines of header prior to (potential) data.
+    QString headerLine;
+    headerLine = fileStream.readLine();
+    if(!headerLine.startsWith("# Logger type: ")) {
+        qDebug() << "Not the correct first header line:" << headerLine;
+        return false;
+    }
+
+    // Skip to next usable field.
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+
+    // Extract base time.
+    headerLine = fileStream.readLine();
+    if(!headerLine.startsWith("# Time: ")) {
+        qDebug() << "Not the correct start time:" << headerLine;
+        return false;
+    }
+    headerLine = headerLine.right(15);
+
+    QDateTime startDate = QDateTime::fromString(headerLine, "yyyyMMddThhmmss");
+    if(!startDate.isValid()) {
+        qDebug() << "Could not parse " << headerLine << "using \"yyyyMMddThhmmss\" as format string";
+        return false;
+    }
+
+    QString const validSeparators(" -~");
+
+    // Decode separators and format for later decoding.
+    headerLine = fileStream.readLine();
+    QString const valueSeparatorPattern = "# Value separator: \"(?<valueSeparator>[" + validSeparators + "])\"";
+    QRegularExpression valueSeparatorRegEx(valueSeparatorPattern);
+    auto matchValueSeparator = valueSeparatorRegEx.match(headerLine);
+    if(!matchValueSeparator.hasMatch()) {
+        qDebug() << "Could not decode value separator" << headerLine << "using pattern" << valueSeparatorPattern;
+        return false;
+    }
+    QChar valueSeparator = matchValueSeparator.captured("valueSeparator").front();
+
+    headerLine = fileStream.readLine();
+    QString const timeFormatPattern = "# Time format: (?<timeFormat>\\d)";
+    QRegularExpression timeFormatRegEx(timeFormatPattern);
+    auto matchTimeFormat = timeFormatRegEx.match(headerLine);
+    if(!matchTimeFormat.hasMatch()) {
+        qDebug() << "Could not decode time format" << headerLine << "using pattern" << timeFormatPattern;
+        return false;
+    }
+    auto timeFormat = matchTimeFormat.captured("timeFormat").front().digitValue();
+
+    headerLine = fileStream.readLine();
+    QString const timeSeparatorPattern = "# Time separator: \"(?<timeSeparator>[" + validSeparators + "]?)\"";
+    QRegularExpression timeSeparatorRegEx(timeSeparatorPattern);
+    auto matchTimeSeparator = timeSeparatorRegEx.match(headerLine);
+    if( !matchTimeSeparator.hasMatch()) {
+        qDebug() << "Could not decode time format" << headerLine << "using pattern" << timeSeparatorPattern;
+        return false;
+    }
+    QChar timeSeparator = matchTimeSeparator.captured("timeSeparator").front();
+
+    headerLine = fileStream.readLine();
+    QString const timeSeparatorMsPattern = "# Time separator ms: \"(?<timeSeparatorMs>[" + validSeparators + "]?)\"";
+    QRegularExpression timeSeparatorMsRegEx(timeSeparatorMsPattern);
+    auto matchTimeSeparatorMs = timeSeparatorMsRegEx.match(headerLine);
+    if( !matchTimeSeparatorMs.hasMatch()) {
+        qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << timeSeparatorMsPattern;
+        return false;
+    }
+    QChar timeSeparatorMs = matchTimeSeparatorMs.captured("timeSeparatorMs").front();
+
+    headerLine = fileStream.readLine();
+    QString const dateSeparatorPattern = "# Date separator: \"(?<dateSeparator>[" + validSeparators + "]?)\"";
+    QRegularExpression dateSeparatorRegEx(dateSeparatorPattern);
+    auto matchDateSeparator = dateSeparatorRegEx.match(headerLine);
+    if( !matchDateSeparator.hasMatch()) {
+        qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << dateSeparatorPattern;
+        return false;
+    }
+    QChar dateSeparator = matchDateSeparator.captured("dateSeparator").front();
+
+    headerLine = fileStream.readLine();
+    QString const timeDateSeparatorPattern = "# Time and date separator: \"(?<timeDateSeparator>[" + validSeparators + "]?)\"";
+    QRegularExpression timeDateSeparatorRegEx(timeDateSeparatorPattern);
+    auto matchTimeDateSeparator = timeDateSeparatorRegEx.match(headerLine);
+    if( !matchTimeDateSeparator.hasMatch()) {
+        qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << timeDateSeparatorPattern;
+        return false;
+    }
+    QChar timeDateSeparator = matchTimeDateSeparator.captured("timeDateSeparator").front();
+
+    // Skip remaining header lines.
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+
+    // Decode which fields are present.
+    headerLine = fileStream.readLine();
+    auto const presentFields = headerLine.split(valueSeparator);
+    QStringList const validStrings = {"Timestamp", "Type", "ID", "Length", "Data"};
+
+    if(!std::all_of(
+        presentFields.cbegin(),
+        presentFields.cend(),
+        [&validStrings](QString const& entry){return validStrings.contains(entry);})
+        ) {
+        return false;
+    }
+
+    return true;
+}
+
+bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
+    std::unique_ptr<QFile> inFile = std::unique_ptr<QFile>(new QFile(filename));
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        qDebug() << "Could not open the file!";
+        return false;
+    }
+
+    QTextStream fileStream(inFile.get());
+    bool foundErrors = false;
+
+    // Contains 16 lines of header prior to (potential) data.
+    QString headerLine;
+    headerLine = fileStream.readLine();
+    if(!headerLine.startsWith("# Logger type: ")) {
+        qDebug() << "Not the correct first header line:" << headerLine;
+        return false;
+    }
+
+    // Skip to next usable field.
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+
+    // Extract base time.
+    headerLine = fileStream.readLine();
+    if(!headerLine.startsWith("# Time: ")) {
+        qDebug() << "Not the correct start time:" << headerLine;
+        return false;
+    }
+    headerLine = headerLine.right(15);
+
+    QDateTime startDate = QDateTime::fromString(headerLine, "yyyyMMddThhmmss");
+    if(!startDate.isValid()) {
+        qDebug() << "Could not parse " << headerLine << "using \"yyyyMMddThhmmss\" as format string";
+        return false;
+    }
+
+    QString const validSeparators(" -~");
+
+    // Decode separators and format for later decoding.
+    headerLine = fileStream.readLine();
+    QString const valueSeparatorPattern = "# Value separator: \"(?<valueSeparator>[" + validSeparators + "])\"";
+    QRegularExpression valueSeparatorRegEx(valueSeparatorPattern);
+    auto matchValueSeparator = valueSeparatorRegEx.match(headerLine);
+    if(!matchValueSeparator.hasMatch()) {
+        qDebug() << "Could not decode value separator" << headerLine << "using pattern" << valueSeparatorPattern;
+        return false;
+    }
+    QChar valueSeparator = matchValueSeparator.captured("valueSeparator").front();
+
+    headerLine = fileStream.readLine();
+    QString const timeFormatPattern = "# Time format: (?<timeFormat>\\d)";
+    QRegularExpression timeFormatRegEx(timeFormatPattern);
+    auto matchTimeFormat = timeFormatRegEx.match(headerLine);
+    if(!matchTimeFormat.hasMatch()) {
+        qDebug() << "Could not decode time format" << headerLine << "using pattern" << timeFormatPattern;
+        return false;
+    }
+    auto timeFormat = matchTimeFormat.captured("timeFormat").front().digitValue();
+
+    headerLine = fileStream.readLine();
+    QString const timeSeparatorPattern = "# Time separator: \"(?<timeSeparator>[" + validSeparators + "]?)\"";
+    QRegularExpression timeSeparatorRegEx(timeSeparatorPattern);
+    auto matchTimeSeparator = timeSeparatorRegEx.match(headerLine);
+    if( !matchTimeSeparator.hasMatch()) {
+        qDebug() << "Could not decode time format" << headerLine << "using pattern" << timeSeparatorPattern;
+        return false;
+    }
+    QChar timeSeparator = matchTimeSeparator.captured("timeSeparator").front();
+
+    headerLine = fileStream.readLine();
+    QString const timeSeparatorMsPattern = "# Time separator ms: \"(?<timeSeparatorMs>[" + validSeparators + "]?)\"";
+    QRegularExpression timeSeparatorMsRegEx(timeSeparatorMsPattern);
+    auto matchTimeSeparatorMs = timeSeparatorMsRegEx.match(headerLine);
+    if( !matchTimeSeparatorMs.hasMatch()) {
+        qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << timeSeparatorMsPattern;
+        return false;
+    }
+    QChar timeSeparatorMs = matchTimeSeparatorMs.captured("timeSeparatorMs").front();
+
+    headerLine = fileStream.readLine();
+    QString const dateSeparatorPattern = "# Date separator: \"(?<dateSeparator>[" + validSeparators + "]?)\"";
+    QRegularExpression dateSeparatorRegEx(dateSeparatorPattern);
+    auto matchDateSeparator = dateSeparatorRegEx.match(headerLine);
+    if( !matchDateSeparator.hasMatch()) {
+        qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << dateSeparatorPattern;
+        return false;
+    }
+    QChar dateSeparator = matchDateSeparator.captured("dateSeparator").front();
+
+    headerLine = fileStream.readLine();
+    QString const timeDateSeparatorPattern = "# Time and date separator: \"(?<timeDateSeparator>[" + validSeparators + "]?)\"";
+    QRegularExpression timeDateSeparatorRegEx(timeDateSeparatorPattern);
+    auto matchTimeDateSeparator = timeDateSeparatorRegEx.match(headerLine);
+    if( !matchTimeDateSeparator.hasMatch()) {
+        qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << timeDateSeparatorPattern;
+        return false;
+    }
+    QChar timeDateSeparator = matchTimeDateSeparator.captured("timeDateSeparator").front();
+
+    // Skip remaining header lines.
+    fileStream.readLine();
+    fileStream.readLine();
+    fileStream.readLine();
+
+    // Decode which fields are present.
+    headerLine = fileStream.readLine();
+    auto const presentFields = headerLine.split(valueSeparator);
+    QStringList const validStrings = {"Timestamp", "Type", "ID", "Length", "Data"};
+
+    if(!std::all_of(
+        presentFields.cbegin(),
+        presentFields.cend(),
+        [&validStrings](QString const& entry){return validStrings.contains(entry);})
+        ) {
+        return false;
+    }
+
+#ifdef QT_DEBUG
+    qDebug() << "Found CLX000 file";
+    qDebug() << "Base time:" << startDate;
+    qDebug() << "Time format:" << timeFormat;
+    qDebug() << "Value separator:" << valueSeparator;
+    qDebug() << "Time separator:" << timeSeparator;
+    qDebug() << "Time separator ms:" << timeSeparatorMs;
+    qDebug() << "Date separator:" << dateSeparator;
+    qDebug() << "Time and date separator:" << timeDateSeparator;
+    qDebug() << "Found" << presentFields;
+#endif
+
+    // Prepare regex.
+    QString pattern = "";
+
+    if(presentFields.contains("Timestamp")) {
+        switch (timeFormat) {
+            case 6: {
+                // Handle year.
+                pattern += "(?<year>\\d\\d\\d\\d)";
+
+                if (dateSeparator != '\0') {
+                    pattern += dateSeparator;
+                }
+
+                // Fallthrough
+            }
+            case 5: {
+                // Handle month.
+                pattern += "(?<month>\\d\\d)";
+
+                if (dateSeparator != '\0') {
+                    pattern += dateSeparator;
+                }
+
+                // Fallthrough
+            }
+            case 4: {
+                // Handle day.
+                pattern += "(?<day>\\d\\d)";
+
+                if (timeDateSeparator != '\0') {
+                    pattern += timeDateSeparator;
+                }
+
+                // Fallthrough
+            }
+            case 3: {
+                // Handle hours.
+                pattern += "(?<hours>\\d\\d)";
+
+                if (timeSeparator != '\0') {
+                    pattern += timeSeparator;
+                }
+
+                // Fallthrough
+            }
+            case 2: {
+                // Handle minutes.
+                pattern += "(?<minutes>\\d\\d)";
+
+                if (timeSeparator != '\0') {
+                    pattern += timeSeparator;
+                }
+
+                // Fallthrough
+            }
+            case 1: {
+                // Handle seconds.
+                pattern += "(?<seconds>\\d\\d)";
+
+                if (timeSeparatorMs != '\0') {
+                    pattern += timeSeparatorMs;
+                }
+
+                // Fallthrough
+            }
+            case 0: {
+                // Handle milliseconds.
+                pattern += "(?<ms>\\d\\d\\d)";
+                break;
+            }
+            default:
+                qDebug() << "Unsupported time format" << timeFormat;
+                return false;
+        }
+
+        pattern += valueSeparator;
+    }
+    if(presentFields.contains("Type")) {
+        pattern += "(?<type>\\d)";
+        pattern += valueSeparator;
+    }
+    if(presentFields.contains("ID")) {
+        pattern += "(?<id>[a-fA-F\\d]{3,8})";
+        pattern += valueSeparator;
+    }
+    if(presentFields.contains("Length")) {
+        pattern += "(?<length>\\d)";
+        pattern += valueSeparator;
+    }
+    if(presentFields.contains("Data")) {
+        pattern += "(?<data>([a-fA-F\\d]{2}){0,64})";
+    }
+
+    QRegularExpression re(pattern);
+    re.optimize();
+
+    // Parse records.
+    QString recordLine;
+    CANFrame currentFrame;
+    unsigned lineCounter = 0;
+
+    while(fileStream.readLineInto(&recordLine)) {
+        auto res = re.match(recordLine);
+
+        if(res.hasMatch()) {
+            QDateTime currentTime = startDate;
+
+            currentFrame.setFrameType(QCanBusFrame::DataFrame);
+            currentFrame.bus = 0;
+
+            currentTime = currentTime.addYears(res.captured("year").toUInt());
+            currentTime = currentTime.addMonths(res.captured("month").toUInt());
+            currentTime = currentTime.addDays(res.captured("day").toUInt());
+            currentTime = currentTime.addSecs(
+                res.captured("hours").toUInt() * 60 * 60 +
+                res.captured("minutes").toUInt() * 60 +
+                res.captured("seconds").toUInt()
+            );
+            currentTime = currentTime.addMSecs(res.captured("ms").toUInt());
+
+            currentFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, currentTime.toMSecsSinceEpoch()));
+
+            if(res.captured("type").length() != 0) {
+                auto frameType = res.captured("type").toUInt();
+
+                currentFrame.isReceived = (frameType & 0x08);
+                currentFrame.setExtendedFrameFormat(frameType & 0x01);
+            }
+
+            if(res.captured("id").length() != 0) {
+                auto frameID = res.captured("id").toULong(nullptr, 16);
+                currentFrame.setFrameId(frameID);
+
+                if(res.captured("type").length() == 0) {
+                    currentFrame.setExtendedFrameFormat(frameID > 0x7FFu);
+                }
+            }
+
+            if(res.captured("data").length() != 0) {
+                // Ensure field is valid.
+                if(res.captured("data").length() % 2 != 0) {
+                    qDebug() << "Could not decode data field, un-even number of bytes";
+                    continue;
+                }
+
+                currentFrame.setPayload(QByteArray::fromHex(res.captured("data").toLatin1()));
+            } else {
+                currentFrame.setPayload(QByteArray());
+            }
+
+            frames->append(currentFrame);
+        } else {
+            qDebug() << "Could not parse:" << recordLine;
+        }
+
+        if(++lineCounter >= 100) {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+    }
+
     return !foundErrors;
 }
