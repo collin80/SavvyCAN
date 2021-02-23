@@ -15,5 +15,7 @@
         <file>images/signal_new.png</file>
         <file>images/node_new.png</file>
         <file>images/message_new.png</file>
+        <file>images/move_up.png</file>
+        <file>images/move_down.png</file>
     </qresource>
 </RCC>
