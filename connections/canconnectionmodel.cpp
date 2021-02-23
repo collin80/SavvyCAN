@@ -85,6 +85,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                         case CANCon::KVASER: return "KVASER";
                         case CANCon::SERIALBUS: return "SerialBus";
                         case CANCon::GVRET_SERIAL: return "GVRET";
+                        case CANCon::KAYAK: return "socketcand";
                         default: {}
                     }
                 else qDebug() << "Tried to show connection type but connection was nullptr";

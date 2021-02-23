@@ -18,6 +18,7 @@ namespace CANCon {
         KVASER,
         SERIALBUS,
         REMOTE,
+        KAYAK,
         MQTT,
         NONE
     };
