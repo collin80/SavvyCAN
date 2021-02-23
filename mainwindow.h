@@ -94,11 +94,13 @@ private slots:
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
+    void logReceivedFrame(CANConnection*, QVector<CANFrame>);
     void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
+    void busFilterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
     void headerClicked (int logicalIndex);
