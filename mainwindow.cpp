@@ -124,6 +124,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
     connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
     connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
+    connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
     connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
     connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
     connect(ui->actionFirmware_Update, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
@@ -503,13 +504,15 @@ void MainWindow::updateFilterList()
 {
     if (model == nullptr) return;
     const QMap<int, bool> *filters = model->getFiltersReference();
-    if (filters == nullptr) return;
+    const QMap<int, bool> *busFilters = model->getBusFiltersReference();
+    if (filters == nullptr && busFilters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
 
     inhibitFilterUpdate = true;
 
     ui->listFilters->clear();
+    ui->listBusFilters->clear();
 
     if (filters->isEmpty()) return;
 
@@ -517,6 +520,13 @@ void MainWindow::updateFilterList()
     for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
     {
         /*QListWidgetItem *thisItem = */FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
+    }
+
+    if (busFilters->isEmpty()) return;
+
+    for (filterIter = busFilters->begin(); filterIter != busFilters->end(); ++filterIter)
+    {
+        QListWidgetItem *thisItem = FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listBusFilters);
     }
     inhibitFilterUpdate = false;
 }
@@ -532,6 +542,19 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);
+}
+
+void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
+{
+    if (inhibitFilterUpdate) return;
+    //qDebug() << item->text();
+
+    // strip away possible filter label
+    int ID = FilterUtility::getIdAsInt(item);
+    bool isSet = false;
+    if (item->checkState() == Qt::Checked) isSet = true;
+
+    model->setBusFilterState(ID, isSet);
 }
 
 void MainWindow::filterSetAll()

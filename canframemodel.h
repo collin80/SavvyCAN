@@ -48,6 +48,7 @@ public:
     void setHexMode(bool);
     void setSysTimeMode(bool);
     void setFilterState(unsigned int ID, bool state);
+    void setBusFilterState(unsigned int BusID, bool state);
     void setAllFilters(bool state);
     void setSecondsMode(bool);
     void setTimeFormat(QString);
@@ -62,6 +63,7 @@ public:
     const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
     const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
+    const QMap<int, bool> *getBusFiltersReference() const; //this neither
 
 public slots:
     void addFrame(const CANFrame&, bool);
@@ -75,10 +77,12 @@ private:
     void qSortCANFrameDesc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
     uint64_t getCANFrameVal(int row, Column col);
     bool any_filters_are_configured(void);
+    bool any_busfilters_are_configured(void);
 
     QVector<CANFrame> frames;
     QVector<CANFrame> filteredFrames;
     QMap<int, bool> filters;
+    QMap<int, bool> busFilters;
     DBCHandler *dbcHandler;
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
