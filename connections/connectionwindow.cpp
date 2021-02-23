@@ -69,12 +69,17 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->cbBusSpeed->addItem("500000");
     ui->cbBusSpeed->addItem("1000000");
 
-    rxBroadcast = new QUdpSocket(this);
+    rxBroadcastGVRET = new QUdpSocket(this);
     //Need to make sure it tries to share the address in case there are
     //multiple instances of SavvyCAN running.
-    rxBroadcast->bind(QHostAddress::Any, 17222, QAbstractSocket::ShareAddress);
+    rxBroadcastGVRET->bind(QHostAddress::AnyIPv4, 17222, QAbstractSocket::ShareAddress);
 
-    connect(rxBroadcast, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+    connect(rxBroadcastGVRET, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+
+    //Doing the same for socketcand/kayak hosts:
+    rxBroadcastKayak = new QUdpSocket(this);
+    rxBroadcastKayak->bind(QHostAddress::AnyIPv4, 42000, QAbstractSocket::ShareAddress);
+    connect(rxBroadcastKayak, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
 
 }
 
@@ -82,12 +87,56 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 void ConnectionWindow::readPendingDatagrams()
 {
     //qDebug() << "Got a UDP frame!";
-    while (rxBroadcast->hasPendingDatagrams()) {
-        QNetworkDatagram datagram = rxBroadcast->receiveDatagram();
-        if (!remoteDeviceIP.contains(datagram.senderAddress().toString()))
+    while (rxBroadcastGVRET->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = rxBroadcastGVRET->receiveDatagram();
+        if (!remoteDeviceIPGVRET.contains(datagram.senderAddress().toString()))
         {
-            remoteDeviceIP.append(datagram.senderAddress().toString());
-            qDebug() << "Add new remote IP " << datagram.senderAddress().toString();
+            remoteDeviceIPGVRET.append(datagram.senderAddress().toString());
+            //qDebug() << "Add new remote IP " << datagram.senderAddress().toString();
+        }
+    }
+    while (rxBroadcastKayak->hasPendingDatagrams()) {
+        QNetworkDatagram datagram = rxBroadcastKayak->receiveDatagram();
+        //qDebug() << "Broadcast Datagram: " << QString::fromUtf8(datagram.data());
+        QXmlStreamReader CANBeaconXml(QString::fromUtf8(datagram.data()));
+        QString KayakHost;
+        QString KayakBus;
+        while(!CANBeaconXml.atEnd() && !CANBeaconXml.hasError())
+        {
+          CANBeaconXml.readNext();
+          if(CANBeaconXml.name() == "CANBeacon" && !CANBeaconXml.isEndElement())
+                KayakHost.append(CANBeaconXml.attributes().value("name"));
+
+          if(CANBeaconXml.name() == "URL")
+                KayakHost.append(" (" + CANBeaconXml.readElementText() + ')');
+
+          //Kayak can theoretically send multiple busses over one ports
+          //TODO: implement this case in socketcand.cpp
+          if(CANBeaconXml.name() == "Bus" && !CANBeaconXml.isEndElement())
+                KayakBus.append(CANBeaconXml.attributes().value("name") + ",");
+
+        }
+        KayakHost = KayakBus.left(KayakBus.length() - 1) + "@" + KayakHost;
+
+        QVector<QString> connectedPorts;
+        if (connModel->rowCount() > 0)
+        {
+            for (int i = 0; i < connModel->rowCount(); i++)
+            {
+                CANConnection *var_conn = connModel->getAtIdx(i);
+                connectedPorts.append(var_conn->getPort());
+            }
+        }
+
+        if (connectedPorts.contains(KayakHost))
+        {
+            remoteDeviceKayak.removeOne(KayakHost);
+        }
+
+        if (!remoteDeviceKayak.contains(KayakHost) && !connectedPorts.contains(KayakHost))
+        {
+            remoteDeviceKayak.append(KayakHost);
+            //qDebug() << "Add new remote IP " << datagram.senderAddress().toString();
         }
     }
 }
@@ -193,7 +242,7 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
 
 void ConnectionWindow::handleNewConn()
 {
-    NewConnectionDialog *thisDialog = new NewConnectionDialog(&remoteDeviceIP);
+    NewConnectionDialog *thisDialog = new NewConnectionDialog(&remoteDeviceIPGVRET, &remoteDeviceKayak);
     CANCon::type newType;
     QString newPort;
     QString newDriver;
