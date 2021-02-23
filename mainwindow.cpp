@@ -143,6 +143,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
 
+    //new implementation for continuous logging:
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &MainWindow::logReceivedFrame);
+
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     lbHelp.setText(tr("Press F1 on any screen for help"));
     lbHelp.setAlignment(Qt::AlignCenter);
@@ -579,6 +582,14 @@ void MainWindow::filterClearAll()
     model->setAllFilters(false);
 }
 
+void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CANFrame> frames)
+{
+    if (continuousLogging)
+    {
+        FrameFileIO::writeContinuousNative(&frames, 0);
+    }
+}
+
 void MainWindow::tickGUIUpdate()
 {
     rxFrames = model->sendBulkRefresh();
@@ -605,8 +616,8 @@ void MainWindow::tickGUIUpdate()
 
         if (continuousLogging)
         {
-            const QVector<CANFrame> *modelFrames = model->getListReference();
-            FrameFileIO::writeContinuousNative(modelFrames, modelFrames->count() - rxFrames);
+//            const QVector<CANFrame> *modelFrames = model->getListReference();
+//            FrameFileIO::writeContinuousNative(modelFrames, modelFrames->count() - rxFrames);
 
             continuousLogFlushCounter++;
             if ((continuousLogFlushCounter % 3) == 0)
@@ -617,7 +628,7 @@ void MainWindow::tickGUIUpdate()
                 }
                 else
                 {
-                    ui->lblContMsg->setText("CONTINUOUS LOGGING");
+                    ui->lblContMsg->setText("LOGGING");
                 }
             }
             if (continuousLogFlushCounter > 8)
