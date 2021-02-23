@@ -51,6 +51,8 @@ private slots:
     void handleSendHex();
     void handleSendText();
     void saveBusSettings();
+    void moveConnUp();
+    void moveConnDown();
     void connectionStatus(CANConStatus);
     void readPendingDatagrams();
 
