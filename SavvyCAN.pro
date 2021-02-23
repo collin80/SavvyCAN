@@ -210,7 +210,7 @@ RESOURCES += \
     images.qrc
 
 win32 {
-   LIBS += opengl32.lib
+   LIBS += libopengl32
 }
 
 unix {
