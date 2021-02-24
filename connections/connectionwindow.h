@@ -60,8 +60,10 @@ private:
     Ui::ConnectionWindow *ui;    
     QSettings *settings;
     CANConnectionModel *connModel;
-    QUdpSocket *rxBroadcast;
-    QVector<QString> remoteDeviceIP;
+    QUdpSocket *rxBroadcastGVRET;
+    QUdpSocket *rxBroadcastKayak;
+    QVector<QString> remoteDeviceIPGVRET;
+    QVector<QString> remoteDeviceKayak;
 
     CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver);
     void populateBusDetails(int offset);

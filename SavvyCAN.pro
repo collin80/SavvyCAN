@@ -51,6 +51,7 @@ SOURCES += main.cpp\
     connections/serialbusconnection.cpp \
     connections/canconfactory.cpp \
     connections/gvretserial.cpp \
+    connections/socketcand.cpp \
     connections/canconmanager.cpp \
     re/sniffer/snifferitem.cpp \
     re/sniffer/sniffermodel.cpp \
@@ -91,7 +92,8 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     can_structs.h \
-    canframemodel.h \     \
+    canframemodel.h \
+    connections/socketcand.h \
     connections/mqtt_bus.h \
     mqtt/qmqtt.h \
     mqtt/qmqtt_client.h \

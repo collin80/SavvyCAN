@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>359</width>
-    <height>291</height>
+    <width>356</width>
+    <height>282</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -26,14 +26,21 @@
       <item row="0" column="0">
        <widget class="QRadioButton" name="rbGVRET">
         <property name="text">
-         <string>Serial Connection</string>
+         <string>Serial Connection (GVRET)</string>
         </property>
         <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="1" column="0">
+       <widget class="QRadioButton" name="rbRemote">
+        <property name="text">
+         <string>Network connection (GVRET)</string>
+        </property>
+       </widget>
+      </item>
+	  <item row="2" column="0">
        <widget class="QRadioButton" name="rbSocketCAN">
         <property name="enabled">
          <bool>false</bool>
@@ -43,14 +50,14 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0">
-       <widget class="QRadioButton" name="rbRemote">
+      <item row="3" column="0">
+       <widget class="QRadioButton" name="rbKayak">
         <property name="text">
-         <string>Network Connection</string>
+         <string>socketcand (SocketCAN over Ethernet)</string>
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+	  <item row="4" column="0">
        <widget class="QRadioButton" name="rbMQTT">
         <property name="text">
          <string>MQTT Connection</string>

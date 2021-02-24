@@ -1,5 +1,6 @@
 #include <QDateTime>
 #include <QSettings>
+#include <QCoreApplication>
 
 #include "canconmanager.h"
 #include "canconfactory.h"
@@ -228,6 +229,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
                 //workingFrame.timestamp -= mTimestampBasis;
             }
             txFrame = conn->getQueue().get();
+            QCoreApplication::processEvents();
             *txFrame = workingFrame;
             conn->getQueue().queue();
             return conn->sendFrame(workingFrame);
