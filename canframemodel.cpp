@@ -11,6 +11,7 @@ CANFrameModel::~CANFrameModel()
     frames.clear();
     filteredFrames.clear();
     filters.clear();
+    busFilters.clear();
 }
 
 int CANFrameModel::rowCount(const QModelIndex &parent) const
@@ -168,6 +169,13 @@ void CANFrameModel::setFilterState(unsigned int ID, bool state)
 {
     if (!filters.contains(ID)) return;
     filters[ID] = state;
+    sendRefresh();
+}
+
+void CANFrameModel::setBusFilterState(unsigned int BusID, bool state)
+{
+    if (!busFilters.contains(BusID)) return;
+    busFilters[BusID] = state;
     sendRefresh();
 }
 
@@ -337,7 +345,7 @@ void CANFrameModel::recalcOverwrite()
 
     for (int i = 0; i < frames.count(); i++)
     {
-        if (filters[frames[i].frameId()])
+        if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
         {
             filteredFrames.append(frames[i]);
         }
@@ -578,6 +586,18 @@ bool CANFrameModel::any_filters_are_configured(void)
     return false;
 }
 
+bool CANFrameModel::any_busfilters_are_configured(void)
+{
+    for (auto const &val : busFilters)
+    {
+        if (val == true)
+            continue;
+        else
+            return true;
+    }
+    return false;
+}
+
 
 void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 {
@@ -601,10 +621,21 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         needFilterRefresh = true;
     }
 
+    //if this BusID isn't found in the busFilters list then add it and show it by default
+    if (!busFilters.contains(tempFrame.bus))
+    {
+        // if there are any busFilters already configured, leave the new filter disabled
+        if (any_busfilters_are_configured())
+            busFilters.insert(tempFrame.bus, false);
+        else
+            busFilters.insert(tempFrame.bus, true);
+        needFilterRefresh = true;
+    }
+
     if (!overwriteDups)
     {
         frames.append(tempFrame);
-        if (filters[tempFrame.frameId()])
+        if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
         {
             if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
             tempFrame.frameCount = 1;
@@ -629,7 +660,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         if (!found)
         {
             frames.append(tempFrame);
-            if (filters[tempFrame.frameId()])
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                 tempFrame.frameCount = 1;
@@ -676,7 +707,7 @@ void CANFrameModel::sendRefresh()
     int count = frames.count();
     for (int i = 0; i < count; i++)
     {
-        if (filters[frames[i].frameId()])
+        if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
         {
             tempContainer.append(frames[i]);
         }
@@ -727,6 +758,7 @@ void CANFrameModel::clearFrames()
     frames.clear();
     filteredFrames.clear();
     filters.clear();
+    busFilters.clear();
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize);
     this->endResetModel();
@@ -758,6 +790,11 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
             needFilterRefresh = true;
         }
         if (filters[newFrames[i].frameId()])
+        {
+            busFilters.insert(newFrames[i].bus, true);
+            needFilterRefresh = true;
+        }
+        if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].bus])
         {
             insertedFiltered++;
             filteredFrames.append(newFrames[i]);
@@ -796,6 +833,7 @@ void CANFrameModel::loadFilterFile(QString filename)
         return;
 
     filters.clear();
+    busFilters.clear();
 
     while (!inFile->atEnd()) {
         line = inFile->readLine().simplified();
@@ -860,4 +898,9 @@ const QVector<CANFrame>* CANFrameModel::getFilteredListReference() const
 const QMap<int, bool>* CANFrameModel::getFiltersReference() const
 {
     return &filters;
+}
+
+const QMap<int, bool>* CANFrameModel::getBusFiltersReference() const
+{
+    return &busFilters;
 }
