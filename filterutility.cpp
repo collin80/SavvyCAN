@@ -37,7 +37,7 @@ uint32_t FilterUtility::getGMLanSenderId(int32_t id)
     return id & 0x1FFF;
 }
 
-QListWidgetItem * FilterUtility::createCheckableFilterItem(int32_t id, bool checked, QListWidget* parent)
+QListWidgetItem * FilterUtility::createCheckableFilterItem(uint32_t id, bool checked, QListWidget* parent)
 {
     QListWidgetItem * thisItem = createFilterItem(id,parent);
     thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
@@ -48,7 +48,19 @@ QListWidgetItem * FilterUtility::createCheckableFilterItem(int32_t id, bool chec
     return thisItem;
 }
 
-QListWidgetItem * FilterUtility::createFilterItem(int32_t id, QListWidget* parent)
+QListWidgetItem * FilterUtility::createCheckableBusFilterItem(uint32_t id, bool checked, QListWidget* parent)
+{
+    QListWidgetItem * thisItem = createBusFilterItem(id,parent);
+    thisItem->setFlags(thisItem->flags() | Qt::ItemIsUserCheckable);
+    if (checked)
+        thisItem->setCheckState(Qt::Checked);
+    else
+        thisItem->setCheckState(Qt::Unchecked);
+    return thisItem;
+}
+
+
+QListWidgetItem * FilterUtility::createFilterItem(uint32_t id, QListWidget* parent)
 {
     QSettings settings;
     DBCHandler * dbcHandler = DBCHandler::getReference();
@@ -75,6 +87,29 @@ QListWidgetItem * FilterUtility::createFilterItem(int32_t id, QListWidget* paren
                 tooltip.append("0x" + QString::number(FilterUtility::getGMLanArbitrationId(id), 16).toUpper().rightJustified(4,'0') + ": ");
             tooltip.append(msg->name);
             thisItem->setToolTip(tooltip);
+        }
+    }
+
+    thisItem->setText(filterItemName);
+    return thisItem;
+}
+
+QListWidgetItem * FilterUtility::createBusFilterItem(uint32_t id, QListWidget* parent)
+{
+    QSettings settings;
+    DBCHandler * dbcHandler = DBCHandler::getReference();
+    QListWidgetItem *thisItem = new QListWidgetItem(parent);
+    QString filterItemName = QStringLiteral("%1").arg(id);
+
+    if (settings.value("Main/FilterLabeling", false).toBool())
+    {
+        // Filter labeling (show interpreted frame names next to the CAN addr ID)
+        MatchingCriteria_t matchingCriteria;
+        DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(id,&matchingCriteria);
+        if (msg != NULL)
+        {
+            filterItemName.append(" ");
+            filterItemName.append(msg->name);
         }
     }
 
