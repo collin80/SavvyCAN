@@ -2,28 +2,44 @@
 <ui version="4.0">
  <class>ConnectionWindow</class>
  <widget class="QWidget" name="ConnectionWindow">
+  <property name="enabled">
+   <bool>true</bool>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>956</width>
-    <height>665</height>
+    <width>1086</width>
+    <height>744</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Connection Settings</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,1">
+  <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,1">
+   <property name="sizeConstraint">
+    <enum>QLayout::SetDefaultConstraint</enum>
+   </property>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item alignment="Qt::AlignHCenter">
-      <widget class="QLabel" name="label_4">
+    <layout class="QGridLayout" name="gridLayout" columnstretch="1,0">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetMaximumSize</enum>
+     </property>
+     <item row="6" column="0" colspan="2">
+      <widget class="QPushButton" name="btnDisconnect">
        <property name="text">
-        <string>Connected Devices:</string>
+        <string>Disconnect Selected Device</string>
        </property>
       </widget>
      </item>
-     <item>
+     <item row="5" column="0" colspan="2">
+      <widget class="QPushButton" name="btnResetConn">
+       <property name="text">
+        <string>Reset Selected Device</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" rowspan="3">
       <widget class="QTableView" name="tableConnections">
        <property name="alternatingRowColors">
         <bool>true</bool>
@@ -36,28 +52,7 @@
        </property>
       </widget>
      </item>
-     <item>
-      <widget class="QPushButton" name="btnNewConnection">
-       <property name="text">
-        <string>Add New Device Connection</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnResetConn">
-       <property name="text">
-        <string>Reset Selected Device</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnDisconnect">
-       <property name="text">
-        <string>Disconnect Selected Device</string>
-       </property>
-      </widget>
-     </item>
-     <item>
+     <item row="7" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBus">
        <property name="enabled">
         <bool>false</bool>
@@ -124,11 +119,86 @@
        </layout>
       </widget>
      </item>
+     <item row="2" column="1">
+      <widget class="QPushButton" name="btnMoveDown">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>20</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../icons.qrc">
+         <normaloff>:/icons/images/move_down.png</normaloff>:/icons/images/move_down.png</iconset>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Connected Devices:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0" colspan="2">
+      <widget class="QPushButton" name="btnNewConnection">
+       <property name="text">
+        <string>Add New Device Connection</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="btnMoveUp">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>20</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="icon">
+        <iconset resource="../icons.qrc">
+         <normaloff>:/icons/images/move_up.png</normaloff>:/icons/images/move_up.png</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>16</width>
+         <height>16</height>
+        </size>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout_2">
-     <item alignment="Qt::AlignHCenter">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetNoConstraint</enum>
+     </property>
+     <item>
       <widget class="QCheckBox" name="ckEnableConsole">
        <property name="text">
         <string>Enable Console</string>
@@ -208,6 +278,8 @@
    <header>qtabbar.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="../icons.qrc"/>
+ </resources>
  <connections/>
 </ui>
