@@ -180,15 +180,26 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 emit updatedTreeInfo(currentSignal);
             });
 
-    connect(ui->txtMultiplexValue, &QLineEdit::editingFinished,
+    connect(ui->txtMultiplexLow, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == nullptr) return;
                 int temp;
-                temp = Utility::ParseStringToNum(ui->txtMultiplexValue->text());
-                if (currentSignal->multiplexValue != temp) dbcFile->setDirtyFlag();
+                temp = Utility::ParseStringToNum(ui->txtMultiplexLow->text());
+                if (currentSignal->multiplexLowValue != temp) dbcFile->setDirtyFlag();
                 //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
-                currentSignal->multiplexValue = temp;
+                currentSignal->multiplexLowValue = temp;
+            });
+
+    connect(ui->txtMultiplexHigh, &QLineEdit::editingFinished,
+            [=]()
+            {
+                if (currentSignal == nullptr) return;
+                int temp;
+                temp = Utility::ParseStringToNum(ui->txtMultiplexHigh->text());
+                if (currentSignal->multiplexHighValue != temp) dbcFile->setDirtyFlag();
+                //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
+                currentSignal->multiplexHighValue = temp;
             });
 
     connect(ui->rbExtended, &QRadioButton::toggled,
@@ -201,7 +212,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     //an extended multi signal cannot be the root multiplexor for a message so make sure to remove it if it was.
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
                 }
-                ui->txtMultiplexValue->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
                 dbcFile->setDirtyFlag();
             });
@@ -216,7 +228,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     //if the set multiplexor for the message was this signal then clear it
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
                 }
-                ui->txtMultiplexValue->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
                 dbcFile->setDirtyFlag();
             });
@@ -233,7 +246,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     //we just set that this is the multiplexor so update the message to show that as well.
                     dbcMessage->multiplexorSignal = currentSignal;
                 }
-                ui->txtMultiplexValue->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
                 dbcFile->setDirtyFlag();
             });
@@ -247,7 +261,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     currentSignal->isMultiplexor = false;
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
                 }
-                ui->txtMultiplexValue->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
                 dbcFile->setDirtyFlag();
             });
@@ -259,26 +274,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 //add it to this one, update this signal's parent multiplexor
                 DBC_SIGNAL *newSig = dbcMessage->sigHandler->findSignalByName(ui->cbMultiplexParent->currentText());
                 DBC_SIGNAL *oldParent = currentSignal->multiplexParent;
-                int low = currentSignal->multiplexValue;
-                int high = low;
                 if (newSig)
                 {
-                    for (int i = 0; i < oldParent->multiplexedChildren.count(); i++)
-                    {
-                        if (oldParent->multiplexedChildren[i].sig == currentSignal)
-                        {
-                            low = oldParent->multiplexedChildren[i].lowerBound;
-                            high = oldParent->multiplexedChildren[i].upperBound;
-                            oldParent->multiplexedChildren.removeAt(i);
-                            break;
-                        }
-                    }
+                    oldParent->multiplexedChildren.removeOne(currentSignal);
                     currentSignal->multiplexParent = newSig;
-                    DBC_MULTIPLEX mlt;
-                    mlt.lowerBound = low;
-                    mlt.upperBound = high;
-                    mlt.sig = currentSignal;
-                    newSig->multiplexedChildren.append(mlt);
+                    newSig->multiplexedChildren.append(currentSignal);
                     dbcFile->setDirtyFlag();
                 }
             });
@@ -441,7 +441,8 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         ui->txtMinVal->setText("");
         ui->txtScale->setText("");
         ui->txtUnitName->setText("");
-        ui->txtMultiplexValue->setText("");
+        ui->txtMultiplexLow->setText("");
+        ui->txtMultiplexHigh->setText("");
         ui->rbMultiplexed->setChecked(false);
         ui->rbMultiplexor->setChecked(false);
         ui->rbNotMulti->setChecked(true);
@@ -460,7 +461,8 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     ui->txtName->setText(sig->name);
     ui->txtBias->setText(QString::number(sig->bias));
     ui->txtBitLength->setText(QString::number(sig->signalSize));
-    ui->txtMultiplexValue->setText(QString::number(sig->multiplexValue));
+    ui->txtMultiplexLow->setText(QString::number(sig->multiplexLowValue));
+    ui->txtMultiplexHigh->setText(QString::number(sig->multiplexHighValue));
     ui->txtComment->setText(sig->comment);
     ui->txtMaxVal->setText(QString::number(sig->max));
     ui->txtMinVal->setText(QString::number(sig->min));
@@ -494,7 +496,8 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         }
     }
 
-    ui->txtMultiplexValue->setEnabled(sig->isMultiplexed);
+    ui->txtMultiplexLow->setEnabled(sig->isMultiplexed);
+    ui->txtMultiplexHigh->setEnabled(sig->isMultiplexed);
     ui->cbMultiplexParent->setEnabled(sig->isMultiplexed);
 
     memset(bitpattern, 0, 8); //clear it out first.

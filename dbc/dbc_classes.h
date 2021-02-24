@@ -85,15 +85,6 @@ public:
 class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
 class DBC_SIGNAL;
 
-class DBC_MULTIPLEX
-{
-public:
-    int lowerBound, upperBound;
-    DBC_SIGNAL *sig;
-
-    DBC_MULTIPLEX();
-};
-
 class DBC_SIGNAL
 {
 public: //TODO: this is sloppy. It shouldn't all be public!
@@ -103,7 +94,8 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     bool intelByteOrder; //true is obviously little endian. False is big endian
     bool isMultiplexor;
     bool isMultiplexed;
-    int multiplexValue;
+    int multiplexHighValue;
+    int multiplexLowValue;
     DBC_SIG_VAL_TYPE valType;
     double factor;
     double bias;
@@ -116,7 +108,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     QVariant cachedValue;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     QList<DBC_VAL_ENUM_ENTRY> valList;
-    QList<DBC_MULTIPLEX> multiplexedChildren;
+    QList<DBC_SIGNAL *> multiplexedChildren;
     DBC_SIGNAL *multiplexParent;
 
     DBC_SIGNAL();
