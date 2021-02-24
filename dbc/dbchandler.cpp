@@ -453,7 +453,8 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     //bool isMultiplexed = false;
     DBC_SIGNAL sig;
 
-    sig.multiplexValue = 0;
+    sig.multiplexLowValue = 0;
+    sig.multiplexHighValue = 0;
     sig.isMultiplexed = false;
     sig.isMultiplexor = false;
 
@@ -476,7 +477,8 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             qDebug() << "Multiplexed signal";
             //isMultiplexed = true;
             sig.isMultiplexed = true;
-            sig.multiplexValue = match.captured(2).toInt();
+            sig.multiplexLowValue = match.captured(2).toInt();
+            sig.multiplexHighValue = sig.multiplexLowValue;
             offset = 1;
         }
         else
@@ -488,7 +490,8 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
                 qDebug() << "Extended Multiplexor Signal";
                 sig.isMultiplexor = true; //we don't set the local isMultiplexor variable because this isn't the top level multiplexor
                 sig.isMultiplexed = true; //but, it is both a multiplexor and multiplexed
-                sig.multiplexValue = match.captured(2).toInt();
+                sig.multiplexLowValue = match.captured(2).toInt();
+                sig.multiplexHighValue = sig.multiplexLowValue;
                 offset = 1;
             }
             else
@@ -605,11 +608,7 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
                 if (parentSignal != nullptr)
                 {
                     //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
-                    DBC_MULTIPLEX mx;
-                    mx.lowerBound = match.captured(4).toInt();
-                    mx.upperBound = match.captured(5).toInt();
-                    mx.sig = thisSignal;
-                    parentSignal->multiplexedChildren.append(mx);
+                    parentSignal->multiplexedChildren.append(thisSignal);
                     thisSignal->multiplexParent = parentSignal;
                     return true;
                 }
@@ -1102,11 +1101,7 @@ bool DBCFile::loadFile(QString fileName)
             if (sig->isMultiplexed && (sig->multiplexParent == nullptr) )
             {
                 sig->multiplexParent = msg->multiplexorSignal;
-                DBC_MULTIPLEX mlt;
-                mlt.sig = sig;
-                mlt.lowerBound = sig->multiplexValue;
-                mlt.upperBound = mlt.lowerBound;
-                msg->multiplexorSignal->multiplexedChildren.append(mlt);
+                msg->multiplexorSignal->multiplexedChildren.append(sig);
             }
         }
     }
@@ -1388,7 +1383,7 @@ bool DBCFile::saveFile(QString fileName)
             if (sig->isMultiplexor) msgOutput.append(" M");
             if (sig->isMultiplexed)
             {
-                msgOutput.append(" m" + QString::number(sig->multiplexValue));
+                msgOutput.append(" m" + QString::number(sig->multiplexLowValue));
             }
 
             msgOutput.append(" : " + QString::number(sig->startBit) + "|" + QString::number(sig->signalSize) + "@");
@@ -1764,12 +1759,14 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
                 if (!sigObj.find("mux_id")->isUndefined())
                 {
                     QJsonValue muxVal = sigObj.find("mux_id").value();
-                    sig.multiplexValue = muxVal.toInt();
+                    sig.multiplexLowValue = muxVal.toInt();
+                    sig.multiplexHighValue = sig.multiplexLowValue;
                     sig.isMultiplexed = true;
                 }
                 else
                 {
-                    sig.multiplexValue = 0;
+                    sig.multiplexLowValue = 0;
+                    sig.multiplexHighValue = 0;
                 }
                 QJsonValue muxerVal = sigObj.find("is_muxer").value();
                 if (!muxerVal.isNull())

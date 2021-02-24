@@ -19,7 +19,8 @@ DBC_SIGNAL::DBC_SIGNAL()
     isMultiplexor = false;
     max = 1;
     min = 0;
-    multiplexValue = 0;
+    multiplexLowValue = 0;
+    multiplexHighValue = 0;
     factor = 1.0;
     intelByteOrder = false;
     parentMessage = nullptr;
@@ -28,13 +29,6 @@ DBC_SIGNAL::DBC_SIGNAL()
     signalSize = 1;
     startBit = 1;
     valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
-}
-
-DBC_MULTIPLEX::DBC_MULTIPLEX()
-{
-    lowerBound = 0;
-    upperBound = 0;
-    sig = nullptr;
 }
 
 /*
@@ -91,7 +85,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
-           if (val != multiplexValue) return false; //signal not found in this message
+           if (val != multiplexLowValue) return false; //signal not found in this message
         }
         else return false;
     }
@@ -182,7 +176,7 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
-           if (val != multiplexValue) return false; //signal not found in this message
+           if (val != multiplexLowValue) return false; //signal not found in this message
         }
         else return false;
     }
@@ -225,7 +219,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         {
            int val;
            if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
-           if (val != multiplexValue) return false; //signal not found in this message
+           if (val != multiplexLowValue) return false; //signal not found in this message
         }
         else return false;
     }

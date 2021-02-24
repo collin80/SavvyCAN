@@ -363,7 +363,9 @@ QString DBCMainEditor::createSignalText(DBC_SIGNAL *sig)
     QString sigInfo;
     if (sig->isMultiplexed)
     {
-        sigInfo = "(" + QString::number(sig->multiplexValue) + ") ";
+        sigInfo = "(" + QString::number(sig->multiplexLowValue);
+        if (sig->multiplexHighValue != sig->multiplexLowValue) sigInfo += "-" + QString::number(sig->multiplexHighValue);
+        sigInfo += ") ";
     }
     sigInfo.append(sig->name);
     if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
@@ -386,7 +388,7 @@ void DBCMainEditor::processSignalToTree(QTreeWidgetItem *parent, DBC_SIGNAL *sig
     {
         for (int i = 0; i < sig->multiplexedChildren.count(); i++)
         {
-            processSignalToTree(sigItem, sig->multiplexedChildren[i].sig);
+            processSignalToTree(sigItem, sig->multiplexedChildren[i]);
         }
     }
 }

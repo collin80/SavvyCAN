@@ -190,30 +190,40 @@
        <item row="10" column="0">
         <widget class="QLabel" name="label_15">
          <property name="text">
-          <string>Multiplex Value</string>
+          <string>Multiplex Low Value</string>
          </property>
         </widget>
        </item>
        <item row="10" column="1">
-        <widget class="QLineEdit" name="txtMultiplexValue"/>
+        <widget class="QLineEdit" name="txtMultiplexLow"/>
        </item>
-       <item row="12" column="0">
+       <item row="13" column="0">
         <widget class="QLabel" name="label_13">
          <property name="text">
           <string>Comment:</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="1">
+       <item row="13" column="1">
         <widget class="QLineEdit" name="txtComment"/>
        </item>
-       <item row="11" column="1">
+       <item row="12" column="1">
         <widget class="QComboBox" name="cbMultiplexParent"/>
        </item>
-       <item row="11" column="0">
+       <item row="12" column="0">
         <widget class="QLabel" name="label_16">
          <property name="text">
           <string>Multiplex Parent</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1">
+        <widget class="QLineEdit" name="txtMultiplexHigh"/>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="label_17">
+         <property name="text">
+          <string>Multiplex High Value</string>
          </property>
         </widget>
        </item>
