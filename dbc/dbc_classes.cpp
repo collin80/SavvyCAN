@@ -23,12 +23,19 @@ DBC_SIGNAL::DBC_SIGNAL()
     factor = 1.0;
     intelByteOrder = false;
     parentMessage = nullptr;
+    multiplexParent = nullptr;
     receiver = nullptr;
     signalSize = 1;
     startBit = 1;
     valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
 }
 
+DBC_MULTIPLEX::DBC_MULTIPLEX()
+{
+    lowerBound = 0;
+    upperBound = 0;
+    sig = nullptr;
+}
 
 /*
  The way that the DBC file format works is kind of weird... For intel format signals you count up

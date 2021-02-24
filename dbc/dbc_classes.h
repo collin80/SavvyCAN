@@ -26,18 +26,19 @@ enum DBC_SIG_VAL_TYPE
 
 enum DBC_ATTRIBUTE_VAL_TYPE
 {
-    QINT,
-    QFLOAT,
-    QSTRING,
-    ENUM
+    ATTR_INT,
+    ATTR_FLOAT,
+    ATTR_STRING,
+    ATTR_ENUM,
 };
 
 enum DBC_ATTRIBUTE_TYPE
 {
-    GENERAL,
-    NODE,
-    MESSAGE,
-    SIG
+    ATTR_TYPE_GENERAL,
+    ATTR_TYPE_NODE,
+    ATTR_TYPE_MESSAGE,
+    ATTR_TYPE_SIG,
+    ATTR_TYPE_ANY
 };
 
 class DBC_ATTRIBUTE
@@ -82,6 +83,16 @@ public:
 };
 
 class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
+class DBC_SIGNAL;
+
+class DBC_MULTIPLEX
+{
+public:
+    int lowerBound, upperBound;
+    DBC_SIGNAL *sig;
+
+    DBC_MULTIPLEX();
+};
 
 class DBC_SIGNAL
 {
@@ -105,6 +116,8 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     QVariant cachedValue;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     QList<DBC_VAL_ENUM_ENTRY> valList;
+    QList<DBC_MULTIPLEX> multiplexedChildren;
+    DBC_SIGNAL *multiplexParent;
 
     DBC_SIGNAL();
     bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);

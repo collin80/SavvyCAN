@@ -73,7 +73,7 @@ public:
     DBCFile& operator=(const DBCFile& cpy);
     DBC_NODE *findNodeByName(QString name);
     DBC_NODE *findNodeByIdx(int idx);
-    DBC_ATTRIBUTE *findAttributeByName(QString name);
+    DBC_ATTRIBUTE *findAttributeByName(QString name, DBC_ATTRIBUTE_TYPE type = ATTR_TYPE_ANY);
     DBC_ATTRIBUTE *findAttributeByIdx(int idx);
     void findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> *list);
     bool saveFile(QString);
@@ -99,6 +99,7 @@ private:
     bool parseAttribute(QString inpString, DBC_ATTRIBUTE &attr);
     QVariant processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ);
     DBC_SIGNAL* parseSignalLine(QString line, DBC_MESSAGE *msg);
+    bool parseSignalMultiplexValueLine(QString line);
     DBC_MESSAGE* parseMessageLine(QString line);
     bool parseValueLine(QString line);
     bool parseAttributeLine(QString line);

@@ -76,6 +76,9 @@ private:
     void readSettings();
     void writeSettings();
     void refreshTree();
+    void processSignalToTree(QTreeWidgetItem *parent, DBC_SIGNAL *sig);
+    uint32_t getParentMessageID(QTreeWidgetItem *cell);
+    QString createSignalText(DBC_SIGNAL *sig);
 };
 
 #endif // DBCMAINEDITOR_H

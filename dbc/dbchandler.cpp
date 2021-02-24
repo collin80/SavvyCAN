@@ -373,12 +373,12 @@ void DBCFile::setAssocBus(int bus)
     assocBuses = bus;
 }
 
-DBC_ATTRIBUTE *DBCFile::findAttributeByName(QString name)
+DBC_ATTRIBUTE *DBCFile::findAttributeByName(QString name, DBC_ATTRIBUTE_TYPE type)
 {
     if (dbc_attributes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_attributes.length(); i++)
     {
-        if (dbc_attributes[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        if (dbc_attributes[i].name.compare(name, Qt::CaseInsensitive) == 0 && ((type == dbc_attributes[i].attrType) || (type == ATTR_TYPE_ANY) ) )
         {
             return &dbc_attributes[i];
         }
@@ -481,11 +481,24 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         }
         else
         {
-            qDebug() << "standard signal";
-            regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *(\\w+) +m(\\d+)M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
             match = regex.match(line);
-            sig.isMultiplexed = false;
-            sig.isMultiplexor = false;
+            if (match.hasMatch())
+            {
+                qDebug() << "Extended Multiplexor Signal";
+                sig.isMultiplexor = true; //we don't set the local isMultiplexor variable because this isn't the top level multiplexor
+                sig.isMultiplexed = true; //but, it is both a multiplexor and multiplexed
+                sig.multiplexValue = match.captured(2).toInt();
+                offset = 1;
+            }
+            else
+            {
+                qDebug() << "standard signal";
+                regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                match = regex.match(line);
+                sig.isMultiplexed = false;
+                sig.isMultiplexor = false;
+            }
         }
     }
 
@@ -564,6 +577,46 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     }
 
     return nullptr;
+}
+
+//SG_MUL_VAL_ 2024 S1_PID_0D_VehicleSpeed S1 13-13;
+bool DBCFile::parseSignalMultiplexValueLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    qDebug() << "Found a multiplex definition line";
+    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) (\\w+) (\\w+) (\\d+)\\-(\\d+);");
+    match = regex.match(line);
+    //captured 1 is message ID
+    //Captured 2 is signal name
+    //Captured 3 is parent multiplexor
+    //captured 4 is the lower bound
+    //captured 5 is the upper bound
+    if (match.hasMatch())
+    {
+        DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toUInt());
+        if (msg != nullptr)
+        {
+            DBC_SIGNAL *thisSignal = msg->sigHandler->findSignalByName(match.captured(2));
+            if (thisSignal != nullptr)
+            {
+                DBC_SIGNAL *parentSignal = msg->sigHandler->findSignalByName(match.captured(3));
+                if (parentSignal != nullptr)
+                {
+                    //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
+                    DBC_MULTIPLEX mx;
+                    mx.lowerBound = match.captured(4).toInt();
+                    mx.upperBound = match.captured(5).toInt();
+                    mx.sig = thisSignal;
+                    parentSignal->multiplexedChildren.append(mx);
+                    thisSignal->multiplexParent = parentSignal;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 bool DBCFile::parseValueLine(QString line)
@@ -732,16 +785,16 @@ bool DBCFile::parseDefaultAttrLine(QString line)
         {
             switch (found->valType)
             {
-            case QSTRING:
+            case ATTR_STRING:
                 found->defaultValue = match.captured(2);
                 break;
-            case QFLOAT:
+            case ATTR_FLOAT:
                 found->defaultValue = match.captured(2).toFloat();
                 break;
-            case QINT:
+            case ATTR_INT:
                 found->defaultValue = match.captured(2).toInt();
                 break;
-            case ENUM:
+            case ATTR_ENUM:
                 QString temp = match.captured(2);
                 found->defaultValue = 0;
                 for (int x = 0; x < found->enumVals.count(); x++)
@@ -825,6 +878,12 @@ bool DBCFile::loadFile(QString fileName)
             {
                 if (!parseSignalLine(line, currentMessage)) numSigFaults++;
             }
+
+            if (line.startsWith("SG_MUL_VAL_ ")) //defines a signal multiplexing value definition
+            {
+                if (!parseSignalMultiplexValueLine(line)) numSigFaults++;
+            }
+
             if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
             {
                 qDebug() << "Found a BU line";
@@ -917,32 +976,45 @@ bool DBCFile::loadFile(QString fileName)
                 if (parseAttribute(line.right(line.length() - 12), attr))
                 {
                     //qDebug() << "Success";
-                    attr.attrType = SIG;
+                    attr.attrType = ATTR_TYPE_SIG;
                     dbc_attributes.append(attr);
                 }
             }
-            if (line.startsWith("BA_DEF_ BO_ ")) //definition of a message attribute
+            else if (line.startsWith("BA_DEF_ BO_ ")) //definition of a message attribute
             {
                 qDebug() << "Found a BO attribute line";
 
                 if (parseAttribute(line.right(line.length() - 12), attr))
                 {
                     qDebug() << "Success";
-                    attr.attrType = MESSAGE;
+                    attr.attrType = ATTR_TYPE_MESSAGE;
                     dbc_attributes.append(attr);
                 }
             }
-            if (line.startsWith("BA_DEF_ BU_ ")) //definition of a node attribute
+            else if (line.startsWith("BA_DEF_ BU_ ")) //definition of a node attribute
             {
                 qDebug() << "Found a BU attribute line";
 
                 if (parseAttribute(line.right(line.length() - 12), attr))
                 {
                     //qDebug() << "Success";
-                    attr.attrType = NODE;
+                    attr.attrType = ATTR_TYPE_NODE;
                     dbc_attributes.append(attr);
                 }
             }
+
+            else if (line.startsWith("BA_DEF_ ")) //definition of a root attribute
+            {
+                qDebug() << "Found a BU attribute line";
+
+                if (parseAttribute(line.right(line.length() - 9), attr))
+                {
+                    //qDebug() << "Success";
+                    attr.attrType = ATTR_TYPE_GENERAL;
+                    dbc_attributes.append(attr);
+                }
+            }
+
 
             if (line.startsWith("BA_DEF_DEF_ ")) //definition of default value for an attribute
             {
@@ -961,13 +1033,13 @@ bool DBCFile::loadFile(QString fileName)
     DBC_ATTRIBUTE *bgAttr = findAttributeByName("GenMsgBackgroundColor");
     if (!bgAttr)
     {
-        attr.attrType = MESSAGE;
+        attr.attrType = ATTR_TYPE_MESSAGE;
         attr.defaultValue = QApplication::palette().color(QPalette::Base).name();
         attr.enumVals.clear();
         attr.lower = 0;
         attr.upper = 0;
         attr.name = "GenMsgBackgroundColor";
-        attr.valType = QSTRING;
+        attr.valType = ATTR_STRING;
         dbc_attributes.append(attr);
         bgAttr = findAttributeByName("GenMsgBackgroundColor");
     }
@@ -975,13 +1047,13 @@ bool DBCFile::loadFile(QString fileName)
     DBC_ATTRIBUTE *fgAttr = findAttributeByName("GenMsgForegroundColor");
     if (!fgAttr)
     {
-        attr.attrType = MESSAGE;
+        attr.attrType = ATTR_TYPE_MESSAGE;
         attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
         attr.enumVals.clear();
         attr.lower = 0;
         attr.upper = 0;
         attr.name = "GenMsgForegroundColor";
-        attr.valType = QSTRING;
+        attr.valType = ATTR_STRING;
         dbc_attributes.append(attr);
         fgAttr = findAttributeByName("GenMsgForegroundColor");
     }
@@ -1021,6 +1093,22 @@ bool DBCFile::loadFile(QString fileName)
         thisFG = msg->findAttrValByName("GenMsgForegroundColor");
         if (thisBG) msg->bgColor = QColor(thisBG->value.toString());
         if (thisFG) msg->fgColor = QColor(thisFG->value.toString());
+        for (int y = 0; y < msg->sigHandler->getCount(); y++)
+        {
+            DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(y);
+            //if this doesn't have a multiplex parent set but is multiplexed then it must have used
+            //simple multiplexing instead of any extended specification. So, fill in the multiplexor signal here
+            //and also write the extended entry for it too.
+            if (sig->isMultiplexed && (sig->multiplexParent == nullptr) )
+            {
+                sig->multiplexParent = msg->multiplexorSignal;
+                DBC_MULTIPLEX mlt;
+                mlt.sig = sig;
+                mlt.lowerBound = sig->multiplexValue;
+                mlt.upperBound = mlt.lowerBound;
+                msg->multiplexorSignal->multiplexedChildren.append(mlt);
+            }
+        }
     }
 
     if (numSigFaults > 0 || numMsgFaults > 0)
@@ -1049,14 +1137,14 @@ QVariant DBCFile::processAttributeVal(QString input, DBC_ATTRIBUTE_VAL_TYPE typ)
     QVariant out;
     switch (typ)
     {
-    case QSTRING:
+    case ATTR_STRING:
         out = input;
         break;
-    case QFLOAT:
+    case ATTR_FLOAT:
         out = input.toFloat();
         break;
-    case QINT:
-    case ENUM:
+    case ATTR_INT:
+    case ATTR_ENUM:
         out = input.toInt();
         break;
     }
@@ -1080,14 +1168,14 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
         qDebug() << "Parsing an attribute with low/high values";
         attr.name = match.captured(1);
         QString typ = match.captured(2);
-        attr.attrType = SIG;
+        attr.attrType = ATTR_TYPE_SIG;
         attr.lower = 0;
         attr.upper = 0;
-        attr.valType = QSTRING;
+        attr.valType = ATTR_STRING;
         if (!typ.compare("INT", Qt::CaseInsensitive))
         {
             qDebug() << "INT attribute named " << attr.name;
-            attr.valType = QINT;
+            attr.valType = ATTR_INT;
             attr.lower = match.captured(3).toInt();
             attr.upper = match.captured(4).toInt();
             goodAttr = true;
@@ -1095,7 +1183,7 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
         if (!typ.compare("FLOAT", Qt::CaseInsensitive))
         {
             qDebug() << "FLOAT attribute named " << attr.name;
-            attr.valType = QFLOAT;
+            attr.valType = ATTR_FLOAT;
             attr.lower = match.captured(3).toDouble();
             attr.upper = match.captured(4).toDouble();
             goodAttr = true;
@@ -1103,7 +1191,7 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
         if (!typ.compare("STRING", Qt::CaseInsensitive))
         {
             qDebug() << "STRING attribute named " << attr.name;
-            attr.valType = QSTRING;
+            attr.valType = ATTR_STRING;
             goodAttr = true;
         }
     }
@@ -1119,26 +1207,26 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
             QString typ = match.captured(2);
             attr.lower = 0;
             attr.upper = 0;
-            attr.attrType = SIG;
+            attr.attrType = ATTR_TYPE_SIG;
 
             if (!typ.compare("INT", Qt::CaseInsensitive))
             {
                 qDebug() << "INT attribute named " << attr.name;
-                attr.valType = QINT;
+                attr.valType = ATTR_INT;
                 goodAttr = true;
             }
 
             if (!typ.compare("FLOAT", Qt::CaseInsensitive))
             {
                 qDebug() << "FLOAT attribute named " << attr.name;
-                attr.valType = QFLOAT;
+                attr.valType = ATTR_FLOAT;
                 goodAttr = true;
             }
 
             if (!typ.compare("STRING", Qt::CaseInsensitive))
             {
                 qDebug() << "STRING attribute named " << attr.name;
-                attr.valType = QSTRING;
+                attr.valType = ATTR_STRING;
                 goodAttr = true;
             }
 
@@ -1151,7 +1239,7 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
                     attr.enumVals.append(Utility::unQuote(enumStr));
                     qDebug() << "Enum value: " << enumStr;
                 }
-                attr.valType = ENUM;
+                attr.valType = ATTR_ENUM;
                 goodAttr = true;
             }
         }
@@ -1378,15 +1466,15 @@ bool DBCFile::saveFile(QString fileName)
         msgOutput.append("BA_DEF_ ");
         switch (dbc_attributes[x].attrType)
         {
-        case GENERAL:
+        case ATTR_TYPE_GENERAL:
             break;
-        case NODE:
+        case ATTR_TYPE_NODE:
             msgOutput.append("BU_ ");
             break;
-        case MESSAGE:
+        case ATTR_TYPE_MESSAGE:
             msgOutput.append("BO_ ");
             break;
-        case SIG:
+        case ATTR_TYPE_SIG:
             msgOutput.append("SG_ ");
             break;
         }
@@ -1395,16 +1483,16 @@ bool DBCFile::saveFile(QString fileName)
 
         switch (dbc_attributes[x].valType)
         {
-        case QINT:
+        case ATTR_INT:
             msgOutput.append("INT " + QString::number(dbc_attributes[x].lower) + " " + QString::number(dbc_attributes[x].upper));
             break;
-        case QFLOAT:
+        case ATTR_FLOAT:
             msgOutput.append("FLOAT " + QString::number(dbc_attributes[x].lower) + " " + QString::number(dbc_attributes[x].upper));
             break;
-        case QSTRING:
+        case ATTR_STRING:
             msgOutput.append("STRING ");
             break;
-        case ENUM:
+        case ATTR_ENUM:
             msgOutput.append("ENUM ");
             foreach (QString str, dbc_attributes[x].enumVals)
             {
@@ -1424,14 +1512,14 @@ bool DBCFile::saveFile(QString fileName)
             defaultsOutput.append("BA_DEF_DEF_ \"" + dbc_attributes[x].name + "\" ");
             switch (dbc_attributes[x].valType)
             {
-            case QSTRING:
+            case ATTR_STRING:
                 defaultsOutput.append("\"" + dbc_attributes[x].defaultValue.toString() + "\";\n");
                 break;
-            case ENUM:
+            case ATTR_ENUM:
                 defaultsOutput.append("\"" + dbc_attributes[x].enumVals[dbc_attributes[x].defaultValue.toInt()] + "\";\n");
                 break;
-            case QINT:
-            case QFLOAT:
+            case ATTR_INT:
+            case ATTR_FLOAT:
                 defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
                 break;
             }
@@ -1496,42 +1584,42 @@ int DBCHandler::createBlankFile()
     DBC_ATTRIBUTE attr;
 
     //add our custom attributes to the new file so that we know they're already there.
-    attr.attrType = MESSAGE;
+    attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = QApplication::palette().color(QPalette::Base).name();
     qDebug() << attr.defaultValue;
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
     attr.name = "GenMsgBackgroundColor";
-    attr.valType = QSTRING;
+    attr.valType = ATTR_STRING;
     newFile.dbc_attributes.append(attr);
 
-    attr.attrType = MESSAGE;
+    attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
     qDebug() << attr.defaultValue;
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
     attr.name = "GenMsgForegroundColor";
-    attr.valType = QSTRING;
+    attr.valType = ATTR_STRING;
     newFile.dbc_attributes.append(attr);
 
-    attr.attrType = MESSAGE;
+    attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = 0;
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
     attr.name = "matchingcriteria";
-    attr.valType = QINT;
+    attr.valType = ATTR_INT;
     newFile.dbc_attributes.append(attr);
 
-    attr.attrType = MESSAGE;
+    attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = 0;
     attr.enumVals.clear();
     attr.lower = 0;
     attr.upper = 0;
     attr.name = "filterlabeling";
-    attr.valType = QINT;
+    attr.valType = ATTR_INT;
     newFile.dbc_attributes.append(attr);
 
     DBC_NODE falseNode;
@@ -1870,24 +1958,24 @@ DBCHandler::DBCHandler()
 
             DBC_ATTRIBUTE attr;
 
-            attr.attrType = MESSAGE;
+            attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = matchingCriteria;
             attr.enumVals.clear();
             attr.lower = 0;
             attr.upper = 0;
             attr.name = "matchingcriteria";
-            attr.valType = QINT;
+            attr.valType = ATTR_INT;
             file->dbc_attributes.append(attr);
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
             bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
-            attr.attrType = MESSAGE;
+            attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = filterLabeling;
             attr.enumVals.clear();
             attr.lower = 0;
             attr.upper = 0;
             attr.name = "filterlabeling";
-            attr.valType = QINT;
+            attr.valType = ATTR_INT;
             file->dbc_attributes.append(attr);
             file->messageHandler->setFilterLabeling(filterLabeling);
 
