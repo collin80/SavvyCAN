@@ -94,7 +94,7 @@ private slots:
     void gridDoubleClicked(QModelIndex);
     void interpretToggled(bool);
     void overwriteToggled(bool);
-    //void logReceivedFrame(CANConnection*, QVector<CANFrame>);
+    void logReceivedFrame(CANConnection*, QVector<CANFrame>);
     void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
