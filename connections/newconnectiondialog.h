@@ -18,7 +18,7 @@ class NewConnectionDialog : public QDialog
     Q_OBJECT
 
 public:
-    explicit NewConnectionDialog(QVector<QString>* ips, QWidget *parent = nullptr);
+    explicit NewConnectionDialog(QVector<QString>* gvretips, QVector<QString>* kayakips, QWidget *parent = nullptr);
     ~NewConnectionDialog();
 
     CANCon::type getConnectionType();
@@ -34,12 +34,14 @@ private:
     Ui::NewConnectionDialog *ui;
     QList<QSerialPortInfo> ports;
     QList<QCanBusDeviceInfo> canDevices;
-    QVector<QString>* remoteDeviceIP;
+    QVector<QString>* remoteDeviceIPGVRET;
+    QVector<QString>* remoteBusKayak;
 
     void selectSerial();
     void selectKvaser();
     void selectSocketCan();
     void selectRemote();
+    void selectKayak();
     void selectMQTT();
     bool isSerialBusAvailable();
     void setPortName(CANCon::type pType, QString pPortName, QString pDriver);
