@@ -430,7 +430,17 @@ void FrameSenderWindow::handleTick()
     for (int i = 0; i < sendingData.count(); i++)
     {
         sendData = &sendingData[i];
-        if (!sendData->enabled) continue; //abort any processing on this if it is not enabled.
+        if (!sendData->enabled)
+        {
+            if (sendData->triggers.count() > 0)
+            {
+                for (int j = 0; j < sendData->triggers.count(); j++)    //resetting currCount when line is disabled
+                {
+                  sendData->triggers[j].currCount = 0;
+                }
+            }
+            continue; //abort any processing on this if it is not enabled.
+        }
         if (sendData->triggers.count() == 0) return;
         for (int j = 0; j < sendData->triggers.count(); j++)
         {
