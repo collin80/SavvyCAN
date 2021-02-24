@@ -160,7 +160,7 @@
          <item>
           <widget class="QRadioButton" name="rbNotMulti">
            <property name="text">
-            <string>Not multiplexed</string>
+            <string>None</string>
            </property>
           </widget>
          </item>
@@ -178,6 +178,13 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QRadioButton" name="rbExtended">
+           <property name="text">
+            <string>Extended</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item row="10" column="0">
@@ -190,15 +197,25 @@
        <item row="10" column="1">
         <widget class="QLineEdit" name="txtMultiplexValue"/>
        </item>
-       <item row="11" column="0">
+       <item row="12" column="0">
         <widget class="QLabel" name="label_13">
          <property name="text">
           <string>Comment:</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="1">
+       <item row="12" column="1">
         <widget class="QLineEdit" name="txtComment"/>
+       </item>
+       <item row="11" column="1">
+        <widget class="QComboBox" name="cbMultiplexParent"/>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="label_16">
+         <property name="text">
+          <string>Multiplex Parent</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>

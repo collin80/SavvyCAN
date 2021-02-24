@@ -230,6 +230,19 @@ void DBCMainEditor::currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem
     }
 }
 
+uint32_t DBCMainEditor::getParentMessageID(QTreeWidgetItem *cell)
+{
+    if (cell->data(0, Qt::UserRole) == 2)
+    {
+        return static_cast<uint32_t>(Utility::ParseStringToNum(cell->text(0).split(" ")[0]));
+    }
+    else
+    {
+        if (cell->parent()) return getParentMessageID(cell->parent());
+        else return 0;
+    }
+}
+
 //Double clicking is interpreted as a desire to edit the given item.
 void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
 {
@@ -266,16 +279,21 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         msgEditor->show(); //show allows the rest of the forms to keep going
         break;
     case 3: //a signal
-        idString = firstCol->parent()->text(0).split(" ")[0];
-        msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
+        msgID = getParentMessageID(firstCol);
         msg = dbcFile->messageHandler->findMsgByID(msgID);
-        sig = msg->sigHandler->findSignalByName(firstCol->text(0).split(" ")[0]);
-        sigEditor->setSignalRef(sig);
-        sigEditor->setMessageRef(msg);
-        sigEditor->setFileIdx(fileIdx);
-        //sigEditor->setWindowModality(Qt::WindowModal);
-        sigEditor->refreshView();
-        sigEditor->show();
+        QString nameString = firstCol->text(0);
+        if (nameString.contains("(")) nameString = nameString.split(" ")[1];
+        else nameString = nameString.split(" ")[0];
+        sig = msg->sigHandler->findSignalByName(nameString);
+        if (sig)
+        {
+            sigEditor->setSignalRef(sig);
+            sigEditor->setMessageRef(msg);
+            sigEditor->setFileIdx(fileIdx);
+            //sigEditor->setWindowModality(Qt::WindowModal);
+            sigEditor->refreshView();
+            sigEditor->show();
+        }
         break;
     }
 }
@@ -330,22 +348,47 @@ void DBCMainEditor::refreshTree()
                 for (int i = 0; i < msg->sigHandler->getCount(); i++)
                 {
                     DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
-                    QTreeWidgetItem *sigItem = new QTreeWidgetItem(msgItem);
-                    QString sigInfo = sig->name;
-                    if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
-                    sigItem->setText(0, sigInfo);
-                    if (sig->isMultiplexed) sigItem->setIcon(0, multiplexedSignalIcon);
-                    else if (sig->isMultiplexor) sigItem->setIcon(0, multiplexorSignalIcon);
-                    else sigItem->setIcon(0, signalIcon);
-                    sigItem->setData(0, Qt::UserRole, 3);
-                    signalToItem.insert(sig, sigItem);
-                    itemToSignal.insert(sigItem, sig);
+                    //only process signals here which are "top" level
+                    if (sig->multiplexParent == nullptr) processSignalToTree(msgItem, sig);
                 }
             }
         }
         ui->treeDBC->addTopLevelItem(nodeItem);
     }
     ui->treeDBC->sortItems(0, Qt::SortOrder::AscendingOrder); //sort the display list for ease in viewing by mere mortals, helps me a lot.
+}
+
+QString DBCMainEditor::createSignalText(DBC_SIGNAL *sig)
+{
+    QString sigInfo;
+    if (sig->isMultiplexed)
+    {
+        sigInfo = "(" + QString::number(sig->multiplexValue) + ") ";
+    }
+    sigInfo.append(sig->name);
+    if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
+    return sigInfo;
+}
+
+//Signals can have a hierarchial relationship with other signals so this function is separate and calls itself recursively to build the tree
+void DBCMainEditor::processSignalToTree(QTreeWidgetItem *parent, DBC_SIGNAL *sig)
+{
+    QTreeWidgetItem *sigItem = new QTreeWidgetItem(parent);
+    QString sigInfo = createSignalText(sig);
+    sigItem->setText(0, sigInfo);
+    if (sig->isMultiplexor) sigItem->setIcon(0, multiplexorSignalIcon);
+    else if (sig->isMultiplexed) sigItem->setIcon(0, multiplexedSignalIcon);
+    else sigItem->setIcon(0, signalIcon);
+    sigItem->setData(0, Qt::UserRole, 3);
+    signalToItem.insert(sig, sigItem);
+    itemToSignal.insert(sigItem, sig);
+    if (sig->multiplexedChildren.count() > 0)
+    {
+        for (int i = 0; i < sig->multiplexedChildren.count(); i++)
+        {
+            processSignalToTree(sigItem, sig->multiplexedChildren[i].sig);
+        }
+    }
 }
 
 void DBCMainEditor::updatedNode(DBC_NODE *node)
@@ -403,8 +446,7 @@ void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
     if (signalToItem.contains(sig))
     {
         QTreeWidgetItem *item = signalToItem.value(sig);
-        QString sigInfo = sig->name;
-        if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
+        QString sigInfo = createSignalText(sig);
         item->setText(0, sigInfo);
     }
     else qDebug() << "That signal doesn't exist. That's a bug dude.";

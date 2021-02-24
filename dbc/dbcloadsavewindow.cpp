@@ -35,7 +35,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *p
     {
         DBCFile * file = dbcHandler->getFileByIdx(idx);
         ui->tableFiles->insertRow(ui->tableFiles->rowCount());
-        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFilename()));
         QString bus = QString::number(file->getAssocBus() );
         ui->tableFiles->setItem(idx, 1, new QTableWidgetItem(bus));
 
@@ -189,7 +189,7 @@ void DBCLoadSaveWindow::loadFile()
         inhibitCellProcessing=true;
         int idx = ui->tableFiles->rowCount();
         ui->tableFiles->insertRow(ui->tableFiles->rowCount());
-        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFullFilename()));
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFilename()));
         ui->tableFiles->setItem(idx, 1, new QTableWidgetItem("-1"));
 
         DBC_ATTRIBUTE *attr = file->findAttributeByName("matchingcriteria");
@@ -227,7 +227,7 @@ void DBCLoadSaveWindow::saveFile()
     if (idx < 0) return;
     dbcHandler->saveDBCFile(idx);
     //then update the list to show the new file name (if it changed)
-    ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(dbcHandler->getFileByIdx(idx)->getFullFilename()));
+    ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(dbcHandler->getFileByIdx(idx)->getFilename()));
 }
 
 void DBCLoadSaveWindow::removeFile()
@@ -305,13 +305,13 @@ void DBCLoadSaveWindow::matchingCriteriaChanged(int index)
             {
                 DBC_ATTRIBUTE attr;
 
-                attr.attrType = MESSAGE;
+                attr.attrType = ATTR_TYPE_MESSAGE;
                 attr.defaultValue = matchingCriteria;
                 attr.enumVals.clear();
                 attr.lower = 0;
                 attr.upper = 0;
                 attr.name = "matchingcriteria";
-                attr.valType = QINT;
+                attr.valType = ATTR_INT;
                 file->dbc_attributes.append(attr);
                 file->messageHandler->setMatchingCriteria(matchingCriteria);
             }
@@ -351,13 +351,13 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
             {
                 DBC_ATTRIBUTE attr;
 
-                attr.attrType = MESSAGE;
+                attr.attrType = ATTR_TYPE_MESSAGE;
                 attr.defaultValue = labelFilters ? 1 : 0;
                 attr.enumVals.clear();
                 attr.lower = 0;
                 attr.upper = 0;
                 attr.name = "labelfilters";
-                attr.valType = QINT;
+                attr.valType = ATTR_INT;
                 file->dbc_attributes.append(attr);
                 file->messageHandler->setFilterLabeling(labelFilters);
             }
