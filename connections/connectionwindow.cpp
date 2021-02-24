@@ -59,6 +59,8 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
     connect(ui->tabBuses, &QTabBar::currentChanged, this, &ConnectionWindow::currentTabChanged);
     connect(ui->btnSaveBus, &QPushButton::clicked, this, &ConnectionWindow::saveBusSettings);
+    connect(ui->btnMoveUp, &QPushButton::clicked, this, &ConnectionWindow::moveConnUp);
+    connect(ui->btnMoveDown, &QPushButton::clicked, this, &ConnectionWindow::moveConnDown);
 
     ui->cbBusSpeed->addItem("50000");
     ui->cbBusSpeed->addItem("100000");
@@ -479,4 +481,30 @@ void ConnectionWindow::saveConnections()
     settings.setValue("connections/portNames", QVariant::fromValue(portNames));
     settings.setValue("connections/types", QVariant::fromValue(devTypes));
     settings.setValue("connections/driverNames", QVariant::fromValue(driverNames));
+}
+
+void ConnectionWindow::moveConnUp()
+{
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx > 0)
+    {
+        CANConnection* selConn = connModel->getAtIdx(selIdx);
+        CANConnection* prevConn = connModel->getAtIdx(selIdx - 1);
+        connModel->replace(selIdx - 1, selConn);
+        connModel->replace(selIdx, prevConn);
+        ui->tableConnections->selectRow(selIdx - 1);
+    }
+}
+
+void ConnectionWindow::moveConnDown()
+{
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
+    if (selIdx < connModel->rowCount() - 1)
+    {
+        CANConnection* selConn = connModel->getAtIdx(selIdx);
+        CANConnection* nextConn = connModel->getAtIdx(selIdx + 1);
+        connModel->replace(selIdx + 1, selConn);
+        connModel->replace(selIdx, nextConn);
+        ui->tableConnections->selectRow(selIdx + 1);
+    }
 }

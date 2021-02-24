@@ -32,3 +32,4 @@
 **/moc_*
 **/ui_*.h
 **/qrc_*.cpp
+SavvyCAN.pro.user.*
