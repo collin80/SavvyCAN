@@ -508,19 +508,25 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                     tempString.append("   <" + msg->name + ">\n");
                     if (msg->comment.length() > 1) tempString.append(msg->comment + "\n");
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
-                    {
+                    {                        
                         QString sigString;
                         DBC_SIGNAL* sig = msg->sigHandler->findSignalByIdx(j);
-                        if (sig->processAsText(thisFrame, sigString))
+
+                        if ( (sig->multiplexParent == nullptr) && sig->processAsText(thisFrame, sigString))
                         {
                             tempString.append(sigString);
                             tempString.append("\n");
+                            if (sig->isMultiplexor)
+                            {
+                                qDebug() << "Multiplexor. Diving into the tree";
+                                tempString.append(sig->processSignalTree(thisFrame));
+                            }
                         }
-                        else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
-                        {
-                            tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong()));
-                            tempString.append("\n");
-                        }
+                        //else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
+                        //{
+                        //    tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong()));
+                        //    tempString.append("\n");
+                        //}
                     }
                 }
             }

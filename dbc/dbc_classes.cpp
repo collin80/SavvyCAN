@@ -31,6 +31,65 @@ DBC_SIGNAL::DBC_SIGNAL()
     valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
 }
 
+bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
+{
+    if (isMultiplexor && !isMultiplexed) return true; //the root multiplexor is always in the message.
+    if (isMultiplexed)
+    {
+        if (parentMessage->multiplexorSignal != nullptr)
+        {
+            return _sigInMsgPriv(frame, parentMessage->multiplexorSignal);
+        }
+        else return false;
+    }
+    else return true;
+}
+
+bool DBC_SIGNAL::_sigInMsgPriv(const CANFrame &frame, DBC_SIGNAL *multiplexor)
+{
+    int val;
+    if (!multiplexor->processAsInt(frame, val)) return false;
+    foreach (DBC_SIGNAL *child, multiplexedChildren)
+    {
+        if ((val >= child->multiplexLowValue) && (val <= child->multiplexHighValue))
+        {
+            if (child->isMultiplexor) return _sigInMsgPriv(frame, child); //recurse down a level and keep searching
+            if (child == this) return true; //if we are that child then we matched!
+        }
+    }
+    return false; //signal not found in this message
+}
+
+//Take all the children of this signal and see if they exist in the message. Can be called recursively to descend the dependency tree
+QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
+{
+    QString build;
+    int val;
+    if (!this->processAsInt(frame, val)) return build;
+    qDebug() << val;
+
+    foreach (DBC_SIGNAL *sig, multiplexedChildren)
+    {
+        if ( (val >= sig->multiplexLowValue) && (val <= sig->multiplexHighValue) )
+        {
+            qDebug() << "Found match for multiplex value range - " << sig->name;
+            QString sigString;
+            if (sig->processAsText(frame, sigString))
+            {
+                qDebug() << "Returned value: " << sigString;
+                build.append(sigString);
+                build.append("\n");
+                if (sig->isMultiplexor)
+                {
+                    qDebug() << "Spelunkin!";
+                    build.append(sig->processSignalTree(frame));
+                }
+            }
+        }
+    }
+    return build;
+}
+
 /*
  The way that the DBC file format works is kind of weird... For intel format signals you count up
 from the start bit to the end bit which is (startbit + signallength - 1). At each point
@@ -67,6 +126,8 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
     bool isInteger = false;
     double endResult;
 
+    //if (!isSignalInMessage(frame)) return false;
+
     if (valType == STRING)
     {
         QString buildString;
@@ -76,18 +137,6 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         outString = buildString;
         cachedValue = outString;
         return true;
-    }
-
-    //if this is a multiplexed signal then we have to see if it is even found in the current message
-    if (isMultiplexed)
-    {
-        if (parentMessage->multiplexorSignal != nullptr)
-        {
-           int val;
-           if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
-           if (val != multiplexLowValue) return false; //signal not found in this message
-        }
-        else return false;
     }
 
     if (valType == SIGNED_INT) isSigned = true;
@@ -164,22 +213,13 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
 {
     int32_t result = 0;
     bool isSigned = false;
+
     if (valType == STRING || valType == SP_FLOAT  || valType == DP_FLOAT)
     {
         return false;
     }
 
-    //if this is a multiplexed signal then we have to see if it is even found in the current message
-    if (isMultiplexed)
-    {
-        if (parentMessage->multiplexorSignal != nullptr)
-        {
-           int val;
-           if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
-           if (val != multiplexLowValue) return false; //signal not found in this message
-        }
-        else return false;
-    }
+    //if (!isSignalInMessage(frame)) return false;
 
     if (valType == SIGNED_INT) isSigned = true;
     if ( static_cast<int>(frame.payload().length() * 8) < (startBit + signalSize) )
@@ -212,17 +252,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         return false;
     }
 
-    //if this is a multiplexed signal then we have to see if it is even found in the current message
-    if (isMultiplexed)
-    {
-        if (parentMessage->multiplexorSignal != nullptr)
-        {
-           int val;
-           if (!parentMessage->multiplexorSignal->processAsInt(frame, val)) return false;
-           if (val != multiplexLowValue) return false; //signal not found in this message
-        }
-        else return false;
-    }
+    //if (!isSignalInMessage(frame)) return false;
 
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
