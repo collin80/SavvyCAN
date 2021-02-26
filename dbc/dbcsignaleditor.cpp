@@ -19,6 +19,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     dbcHandler = DBCHandler::getReference();
     dbcMessage = nullptr;
     currentSignal = nullptr;
+    inhibitMsgProc = false;
 
     QStringList headers2;
     headers2 << "Value" << "Text";
@@ -267,9 +268,12 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 dbcFile->setDirtyFlag();
             });
 
-    connect(ui->cbMultiplexParent, &QComboBox::currentTextChanged,
+    connect(ui->cbMultiplexParent, &QComboBox::textActivated,
             [=]()
             {
+                if (currentSignal == nullptr) return;
+                if (inhibitMsgProc) return;
+                //qDebug() << "Curr text: :" << ui->cbMultiplexParent->currentText();
                 //try to look up the signal that we're set to now, remove this signal from existing children list
                 //add it to this one, update this signal's parent multiplexor
                 DBC_SIGNAL *newSig = dbcMessage->sigHandler->findSignalByName(ui->cbMultiplexParent->currentText());
@@ -280,6 +284,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     currentSignal->multiplexParent = newSig;
                     newSig->multiplexedChildren.append(currentSignal);
                     dbcFile->setDirtyFlag();
+                    emit updatedTreeInfo(currentSignal);
                 }
             });
 
@@ -431,6 +436,8 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
     unsigned char bitpattern[8];
 
+    inhibitMsgProc = true;
+
     if (sig == nullptr) {
         ui->groupBox->setEnabled(false);
         ui->txtName->setText("");
@@ -451,6 +458,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         ui->bitfield->updateData(bitpattern, true);
         ui->comboReceiver->setCurrentIndex(0);
         ui->comboType->setCurrentIndex(0);
+        inhibitMsgProc = false;
         return;
     }
 
@@ -489,7 +497,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     for (int i = 0; i < numSigs; i++)
     {
         DBC_SIGNAL *sig_iter = dbcMessage->sigHandler->findSignalByIdx(i);
-        if (sig_iter->isMultiplexor && (sig_iter != sig))
+        if (sig_iter && sig_iter->isMultiplexor && (sig_iter != sig))
         {
             ui->cbMultiplexParent->addItem(sig_iter->name);
             if (sig->multiplexParent == sig_iter) ui->cbMultiplexParent->setCurrentIndex(ui->cbMultiplexParent->count() - 1);
@@ -565,6 +573,8 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
             break;
         }
     }
+
+    inhibitMsgProc = false;
 }
 
 /* fillValueTable also handles "enabled" state */

@@ -38,6 +38,7 @@ private:
     DBC_SIGNAL *currentSignal;
     DBCFile *dbcFile;
     bool inhibitCellChanged;
+    bool inhibitMsgProc;
 
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);

@@ -1250,6 +1250,7 @@ bool DBCFile::saveFile(QString fileName)
     QFile *outFile = new QFile(fileName);
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
     QString defaultsOutput, attrValOutput;
+    bool hasExtendedMultiplexing = false;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
     {
@@ -1380,11 +1381,18 @@ bool DBCFile::saveFile(QString fileName)
 
             msgOutput.append("   SG_ " + sig->name);
 
-            if (sig->isMultiplexor) msgOutput.append(" M");
             if (sig->isMultiplexed)
             {
                 msgOutput.append(" m" + QString::number(sig->multiplexLowValue));
             }
+            if (sig->isMultiplexor)
+            {
+                if (!sig->isMultiplexed) msgOutput.append(" ");
+                msgOutput.append("M");
+            }
+            //check for the two telltale signs that we've got extended multiplexing going on.
+            if (sig->isMultiplexed && sig->isMultiplexor) hasExtendedMultiplexing = true;
+            if (sig->multiplexLowValue != sig->multiplexHighValue) hasExtendedMultiplexing = true;
 
             msgOutput.append(" : " + QString::number(sig->startBit) + "|" + QString::number(sig->signalSize) + "@");
 
@@ -1517,6 +1525,32 @@ bool DBCFile::saveFile(QString fileName)
             case ATTR_FLOAT:
                 defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
                 break;
+            }
+        }
+    }
+
+    //extended multiplexing uses SG_MUL_VAL_ to specify the relationships. If a signal is marked
+    //as multiplexed then output a record for it. That's the most complete option. We've already
+    //given the single value multiplex above for backward compatibility with things that don't support extended mode
+    if (hasExtendedMultiplexing)
+    {
+        for (int x = 0; x < messageHandler->getCount(); x++)
+        {
+            DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+
+            for (int s = 0; s < msg->sigHandler->getCount(); s++)
+            {
+                DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+
+                if (sig->isMultiplexed)
+                {
+                    msgOutput.append("SG_MUL_VAL_ " + QString::number(msg->ID) + " ");
+                    msgOutput.append(sig->name + " " + sig->parentMessage->name + " ");
+                    msgOutput.append(QString::number(sig->multiplexLowValue) + "-" + QString::number(sig->multiplexHighValue) + ";");
+                    msgOutput.append("\n");
+                    outFile->write(msgOutput.toUtf8());
+                    msgOutput.clear(); //got to reset it after writing
+                }
             }
         }
     }

@@ -450,6 +450,27 @@ void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
         QTreeWidgetItem *item = signalToItem.value(sig);
         QString sigInfo = createSignalText(sig);
         item->setText(0, sigInfo);
+        if (sig->isMultiplexed)
+        {
+            if (item->parent()->data(0, Qt::UserRole).toInt() == 3) //if our parent is another signal
+            {
+                QString nameString = item->parent()->text(0);
+                if (nameString.contains("(")) nameString = nameString.split(" ")[1];
+                else nameString = nameString.split(" ")[0];
+                DBC_SIGNAL *oldParent = sig->parentMessage->sigHandler->findSignalByName(nameString);
+                if (oldParent && (oldParent != sig->multiplexParent))
+                {
+                    qDebug() << "You changed the signal's parent";
+                    QTreeWidgetItem *newParent = nullptr;
+                    newParent = signalToItem.value(sig->multiplexParent);
+                    QTreeWidgetItem *prevParent = signalToItem.value(oldParent);
+                    prevParent->removeChild(item);
+                    newParent->addChild(item);
+                    ui->treeDBC->setCurrentItem(item);
+                    ui->treeDBC->sortItems(0, Qt::AscendingOrder); //resort because we just moved an item
+                }
+            }
+        }
     }
     else qDebug() << "That signal doesn't exist. That's a bug dude.";
 }
