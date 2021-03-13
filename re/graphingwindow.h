@@ -47,7 +47,7 @@ public:
 
 private slots:
     void titleDoubleClick(QMouseEvent *event, QCPTextElement *title);
-    void axisLabelDoubleClick(QCPAxis* axis, QCPAxis::SelectablePart part);
+    void axisDoubleClick(QCPAxis* axis, QCPAxis::SelectablePart part);
     void legendDoubleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
     void legendSingleClick(QCPLegend* legend, QCPAbstractLegendItem* item);
     void plottableDoubleClick(QCPAbstractPlottable* plottable,int dataIdx, QMouseEvent* event);
