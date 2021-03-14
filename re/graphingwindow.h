@@ -63,6 +63,7 @@ private slots:
     void saveSpreadsheet();
     void saveDefinitions();
     void loadDefinitions();
+    void rescaleAxis(QCPAxis* axis);
     void rescaleToData();
     void toggleFollowMode();
     void addNewGraph();
