@@ -63,6 +63,7 @@ private slots:
     void saveSpreadsheet();
     void saveDefinitions();
     void loadDefinitions();
+    void rescaleToData();
     void toggleFollowMode();
     void addNewGraph();
     void createGraph(GraphParams &params, bool createGraphParam = true);

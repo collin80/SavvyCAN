@@ -586,6 +586,13 @@ void GraphingWindow::removeAllGraphs()
     }
 }
 
+void GraphingWindow::rescaleToData()
+{
+    ui->graphingView->xAxis->rescale(true);
+    ui->graphingView->yAxis->rescale(true);
+    ui->graphingView->replot();
+}
+
 void GraphingWindow::toggleFollowMode()
 {
     followGraphEnd = !followGraphEnd;
@@ -627,6 +634,10 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     }
     menu->addSeparator();
     menu->addAction(tr("Reset View"), this, SLOT(resetView()));
+    if (ui->graphingView->graphCount() > 0)
+    {
+      menu->addAction(tr("Rescale to data"), this, SLOT(rescaleToData()));
+    }
     menu->addAction(tr("Zoom In"), this, SLOT(zoomIn()));
     menu->addAction(tr("Zoom Out"), this, SLOT(zoomOut()));
   }
