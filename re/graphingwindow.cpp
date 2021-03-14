@@ -308,7 +308,7 @@ void GraphingWindow::axisDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart part
     }
   } else if (part == QCPAxis::spAxis) // Resize an axis to fit by double clicking it
   {
-    axis->rescale(true);
+    this->rescaleAxis(axis);
     ui->graphingView->replot();
   }
 }
@@ -586,10 +586,15 @@ void GraphingWindow::removeAllGraphs()
     }
 }
 
+void GraphingWindow::rescaleAxis(QCPAxis *axis)
+{
+    axis->rescale(true);
+}
+
 void GraphingWindow::rescaleToData()
 {
-    ui->graphingView->xAxis->rescale(true);
-    ui->graphingView->yAxis->rescale(true);
+    this->rescaleAxis(ui->graphingView->xAxis);
+    this->rescaleAxis(ui->graphingView->yAxis);
     ui->graphingView->replot();
 }
 
