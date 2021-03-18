@@ -1585,7 +1585,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                 else
                 {
                     thisFrame.setFrameId(tokens[2].toUInt(nullptr, 16));
-                    thisFrame.setExtendedFrameFormat(false);
+                    thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);  //some .asc files have extended IDs without 'x'
                 }
 
                 int payloadLen = tokens[5].toInt();
