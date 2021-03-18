@@ -7,6 +7,7 @@
 #include <QtEndian>
 #include <QSettings>
 #include <iostream>
+#include <memory>
 
 #include "utility.h"
 #include "blfhandler.h"
