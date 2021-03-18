@@ -68,7 +68,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->graphingView->yAxis, SIGNAL(rangeChanged(QCPRange)), ui->graphingView->yAxis2, SLOT(setRange(QCPRange)));
 
     //connect(ui->graphingView, SIGNAL(titleDoubleClick(QMouseEvent*,QCPTextElement*)), this, SLOT(titleDoubleClick(QMouseEvent*,QCPTextElement*)));
-    connect(ui->graphingView, SIGNAL(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart,QMouseEvent*)), this, SLOT(axisLabelDoubleClick(QCPAxis*,QCPAxis::SelectablePart)));
+    connect(ui->graphingView, SIGNAL(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart,QMouseEvent*)), this, SLOT(axisDoubleClick(QCPAxis*,QCPAxis::SelectablePart)));
     connect(ui->graphingView, SIGNAL(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendDoubleClick(QCPLegend*,QCPAbstractLegendItem*)));
     connect(ui->graphingView, SIGNAL(legendClick(QCPLegend*,QCPAbstractLegendItem*,QMouseEvent*)), this, SLOT(legendSingleClick(QCPLegend*,QCPAbstractLegendItem*)));
 
@@ -294,11 +294,10 @@ void GraphingWindow::titleDoubleClick(QMouseEvent* event, QCPTextElement* title)
   editSelectedGraph();
 }
 
-void GraphingWindow::axisLabelDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart part)
+void GraphingWindow::axisDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart part)
 {
-  qDebug() << "axisLabelDoubleClick";
-  // Set an axis label by double clicking on it
-  if (part == QCPAxis::spAxisLabel) // only react when the actual axis label is clicked, not tick label or axis backbone
+  qDebug() << "axisDoubleClick";
+  if (part == QCPAxis::spAxisLabel) // Set an axis label by double clicking on it
   {
     bool ok;
     QString newLabel = QInputDialog::getText(this, "SavvyCAN Graphing", "New axis label:", QLineEdit::Normal, axis->label(), &ok);
@@ -307,6 +306,10 @@ void GraphingWindow::axisLabelDoubleClick(QCPAxis *axis, QCPAxis::SelectablePart
       axis->setLabel(newLabel);
       ui->graphingView->replot();
     }
+  } else if (part == QCPAxis::spAxis) // Resize an axis to fit by double clicking it
+  {
+    this->rescaleAxis(axis);
+    ui->graphingView->replot();
   }
 }
 
@@ -583,6 +586,18 @@ void GraphingWindow::removeAllGraphs()
     }
 }
 
+void GraphingWindow::rescaleAxis(QCPAxis *axis)
+{
+    axis->rescale(true);
+}
+
+void GraphingWindow::rescaleToData()
+{
+    this->rescaleAxis(ui->graphingView->xAxis);
+    this->rescaleAxis(ui->graphingView->yAxis);
+    ui->graphingView->replot();
+}
+
 void GraphingWindow::toggleFollowMode()
 {
     followGraphEnd = !followGraphEnd;
@@ -624,6 +639,10 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
     }
     menu->addSeparator();
     menu->addAction(tr("Reset View"), this, SLOT(resetView()));
+    if (ui->graphingView->graphCount() > 0)
+    {
+      menu->addAction(tr("Rescale to data"), this, SLOT(rescaleToData()));
+    }
     menu->addAction(tr("Zoom In"), this, SLOT(zoomIn()));
     menu->addAction(tr("Zoom Out"), this, SLOT(zoomOut()));
   }
