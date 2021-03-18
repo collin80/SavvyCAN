@@ -357,7 +357,15 @@ void NewGraphDialog::handleDataLenUpdate()
 
 void NewGraphDialog::copySignalToParamsUI()
 {
-    DBC_MESSAGE *msg = dbcHandler->getFileByIdx(0)->messageHandler->findMsgByName(ui->cbMessages->currentText());
+    assocSignal = nullptr;
+    DBC_MESSAGE *msg = nullptr;
+
+    for(int i = 0; i < dbcHandler->getFileCount(); i++)
+    {
+        msg = dbcHandler->getFileByIdx(i)->messageHandler->findMsgByName(ui->cbMessages->currentText());
+        if (msg) break;
+    }
+
     if (!msg) return;
     DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
     if (!sig) return;

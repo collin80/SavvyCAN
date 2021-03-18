@@ -345,8 +345,11 @@ void ScriptingWindow::revertScript()
 
 void ScriptingWindow::recompileScript()
 {
-    currentScript->scriptText = editor->toPlainText();
-    currentScript->compileScript();
+    if (currentScript)
+    {
+        currentScript->scriptText = editor->toPlainText();
+        currentScript->compileScript();
+    }
 }
 
 void ScriptingWindow::clickedLogClear()
