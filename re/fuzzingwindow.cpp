@@ -250,8 +250,8 @@ void FuzzingWindow::calcNextID()
     {
         if (rangeIDSelect)
         {
-            int range = endID - startID;
-            if (range != 0) currentID = startID + QRandomGenerator::global()->bounded(range);
+            int range = endID - startID + 1;
+            if (range != 1) currentID = startID + QRandomGenerator::global()->bounded(range);
             else currentID = startID;
         }
         else //IDs by filter so pick a random selected ID from the filter list

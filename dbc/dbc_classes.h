@@ -137,6 +137,7 @@ public:
     DBC_MESSAGE();
 
     uint32_t ID;
+    bool extendedID;
     QString name;
     QString comment;
     unsigned int len;
