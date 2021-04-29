@@ -34,7 +34,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if (dbcMessage->ID != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
+            if ((dbcMessage->ID & 0x1FFFFFFFul) != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
             dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
             emit updatedTreeInfo(dbcMessage);
         });
@@ -220,7 +220,7 @@ void DBCMessageEditor::refreshView()
     suppressEditCallbacks = true;
 
     ui->lineComment->setText(dbcMessage->comment);
-    ui->lineFrameID->setText(Utility::formatCANID(dbcMessage->ID));
+    ui->lineFrameID->setText(Utility::formatCANID(dbcMessage->ID & 0x1FFFFFFFul));
     ui->lineMsgName->setText(dbcMessage->name);
     ui->lineFrameLen->setText(QString::number(dbcMessage->len));    
     for (int i = 0; i < ui->comboSender->count(); i++)

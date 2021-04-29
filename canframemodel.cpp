@@ -135,6 +135,7 @@ void CANFrameModel::normalizeTiming()
     mutex.lock();
     if (frames.count() == 0) return;
     timeOffset = frames[0].timeStamp().microSeconds();
+    qint64 prevStamp = 0;
 
     //find the absolute lowest timestamp in the whole time. Needed because maybe timestamp was reset in the middle.
     for (int j = 0; j < frames.count(); j++)
@@ -144,7 +145,12 @@ void CANFrameModel::normalizeTiming()
 
     for (int i = 0; i < frames.count(); i++)
     {
-        frames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, frames[i].timeStamp().microSeconds() - timeOffset));
+        qint64 thisStamp = frames[i].timeStamp().microSeconds() - timeOffset;
+        if (thisStamp <= prevStamp)
+        {
+            timeOffset -= prevStamp;
+        }
+        frames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, thisStamp));
     }
 
     this->beginResetModel();
@@ -522,11 +528,13 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                                 tempString.append(sig->processSignalTree(thisFrame));
                             }
                         }
-                        //else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
-                        //{
-                        //    tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong()));
-                        //    tempString.append("\n");
-                        //}
+                        else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
+                        {
+                            bool isInteger = false;
+                            if (sig->valType == UNSIGNED_INT || sig->valType == SIGNED_INT) isInteger = true;
+                            tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong(), true, isInteger));
+                            tempString.append("\n");
+                        }
                     }
                 }
             }

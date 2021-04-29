@@ -65,7 +65,11 @@ QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
 {
     QString build;
     int val;
-    if (!this->processAsInt(frame, val)) return build;
+    if (!this->processAsInt(frame, val))
+    {
+        qDebug() << "Could not process multiplexor as an integer.";
+        return build;
+    }
     qDebug() << val;
 
     foreach (DBC_SIGNAL *sig, multiplexedChildren)
@@ -222,11 +226,11 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     //if (!isSignalInMessage(frame)) return false;
 
     if (valType == SIGNED_INT) isSigned = true;
-    if ( static_cast<int>(frame.payload().length() * 8) < (startBit + signalSize) )
+    /*if ( static_cast<int>(frame.payload().length() * 8) <= (startBit + signalSize) )
     {
         result = 0;
         return false;
-    }
+    }*/
 
     result = static_cast<int32_t>(Utility::processIntegerSignal(frame.payload(), startBit, signalSize, intelByteOrder, isSigned));
 

@@ -2,6 +2,7 @@
 #include "ui_mainsettingsdialog.h"
 #include "helpwindow.h"
 #include <qevent.h>
+#include <QDebug>
 #include "simplecrypt.h"
 
 //using this simple encryption library to obfuscate stored password a bit. It's not super secure but better than
