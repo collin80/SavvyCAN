@@ -1167,6 +1167,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     GraphParams *refParam = &params;
     int sBit, bits;
     bool intelFormat, isSigned;
+    int64_t prevValu = 9999999999;
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start bit: " << params.startBit;
@@ -1213,6 +1214,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         int k = j * params.stride;
         tempVal = Utility::processIntegerSignal(frameCache[k].payload(), sBit, bits, intelFormat, isSigned); //& params.mask;
         //qDebug() << tempVal;
+        params.y[j] = (tempVal * params.scale) + params.bias;
+
         if (secondsMode)
         {
             params.x[j] = (frameCache[k].timeStamp().microSeconds()) / 1000000.0;
@@ -1221,7 +1224,34 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         {
             params.x[j] = frameCache[k].timeStamp().microSeconds();
         }
-        params.y[j] = (tempVal * params.scale) + params.bias;
+
+        if (params.associatedSignal)
+        {
+            QString tempStr;
+            bool isValid = params.associatedSignal->getValueString(tempVal, tempStr);
+            if (isValid)
+            {
+                if (tempVal != prevValu)
+                {
+                    qDebug() << "New Value: " << tempStr;
+                    // add the bracket at the top:
+                    //QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
+                    //bracket->left->setCoords(-8, 1.1);
+                    //bracket->right->setCoords(8, 1.1);
+                    //bracket->setLength(13);
+
+                    // add the text label at the top:
+                    QCPItemText *wavePacketText = new QCPItemText(ui->graphingView);
+                    //wavePacketText->position->setParentAnchor(bracket->center);
+                    wavePacketText->position->setCoords(params.x[j], params.y[j]); // move 10 pixels to the top from bracket center anchor
+                    wavePacketText->setPositionAlignment(Qt::AlignBottom|Qt::AlignHCenter);
+                    wavePacketText->setText(tempStr);
+                    wavePacketText->setFont(QFont(font().family(), 10));
+                }
+                prevValu = tempVal;
+            }
+        }
+
         if (params.y[j] < yminval) yminval = params.y[j];
         if (params.y[j] > ymaxval) ymaxval = params.y[j];
         if (params.x[j] < xminval) xminval = params.x[j];
