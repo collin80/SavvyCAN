@@ -115,6 +115,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
+    bool getValueString(int64_t intVal, QString &outString);
     QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false);
     QString processSignalTree(const CANFrame &frame);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);

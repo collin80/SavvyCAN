@@ -180,6 +180,22 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
     return true;
 }
 
+bool DBC_SIGNAL::getValueString(int64_t intVal, QString &outString)
+{
+    if (valList.count() > 0) //if this is a value list type then look it up and display the proper string
+    {
+        for (int x = 0; x < valList.count(); x++)
+        {
+            if (valList.at(x).value == intVal)
+            {
+                outString = valList.at(x).descript;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outputName, bool isInteger)
 {
     QString outputString;
