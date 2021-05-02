@@ -64,7 +64,7 @@ MainWindow::MainWindow(QWidget *parent) :
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 
-    graphingWindow = nullptr;
+    lastGraphingWindow = nullptr;
     frameInfoWindow = nullptr;
     playbackWindow = nullptr;
     flowViewWindow = nullptr;
@@ -95,11 +95,11 @@ MainWindow::MainWindow(QWidget *parent) :
     continuousLogging = false;
     continuousLogFlushCounter = 0;
 
+    //handlers for all menu entries
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
-    connect(ui->btnClearFrames, &QAbstractButton::clicked, this, &MainWindow::clearFrames);
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
     connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
     connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
@@ -107,11 +107,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
     connect(ui->actionFlow_View, &QAction::triggered, this, &MainWindow::showFlowViewWindow);
     connect(ui->action_Custom, &QAction::triggered, this, &MainWindow::showFrameSenderWindow);
-    connect(ui->canFramesView, &QAbstractItemView::pressed, this, &MainWindow::gridClicked);
-    connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
-    connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
-    connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
-    connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
     connect(ui->actionExit_Application, &QAction::triggered, this, &MainWindow::exitApp);
     connect(ui->actionFuzzy_Scope, &QAction::triggered, this, &MainWindow::showFuzzyScopeWindow);
     connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
@@ -120,13 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
     connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
     connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
-    connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
-    connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
-    connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
-    connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
-    connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
-    connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
     connect(ui->actionFirmware_Update, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
@@ -138,13 +127,30 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
+
+    //handlers fror interactions with the main can frame view table
+    connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
+    connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
+    ui->canFramesView->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->canFramesView, &QAbstractItemView::customContextMenuRequested, this, &MainWindow::gridContextMenuRequest);
+
+    connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
+    //new implementation for continuous logging
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &MainWindow::logReceivedFrame);
+
+    connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
+    connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
+    connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
+
+    connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
+    connect(ui->btnClearFrames, &QAbstractButton::clicked, this, &MainWindow::clearFrames);
+    connect(ui->btnNormalize, &QAbstractButton::clicked, this, &MainWindow::normalizeTiming);
+    connect(ui->btnFilterAll, &QAbstractButton::clicked, this, &MainWindow::filterSetAll);
+    connect(ui->btnFilterNone, &QAbstractButton::clicked, this, &MainWindow::filterClearAll);
     connect(ui->btnExpandAll, &QAbstractButton::clicked, this, &MainWindow::expandAllRows);
     connect(ui->btnCollapseAll, &QAbstractButton::clicked, this, &MainWindow::collapseAllRows);
-
-    connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
-
-    //new implementation for continuous logging:
-    connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &MainWindow::logReceivedFrame);
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     lbHelp.setText(tr("Press F1 on any screen for help"));
@@ -223,7 +229,10 @@ MainWindow::~MainWindow()
 //but eventually each window should be registered and be able to be iterated.
 void MainWindow::killEmAll()
 {
-    killWindow(graphingWindow);
+    foreach (GraphingWindow *win, graphWindows)
+    {
+        killWindow(win);
+    }
     killWindow(frameInfoWindow);
     killWindow(playbackWindow);
     killWindow(flowViewWindow);
@@ -472,10 +481,85 @@ void MainWindow::gridClicked(QModelIndex idx)
 
 void MainWindow::gridDoubleClicked(QModelIndex idx)
 {
-    //qDebug() << "Grid double clicked";
+    qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
     CANFrame frame = model->getListReference()->at(idx.row());
     emit sendCenterTimeID(frame.frameId(), frame.timeStamp().microSeconds() / 1000000.0);
+}
+
+void MainWindow::gridContextMenuRequest(QPoint pos)
+{
+    QModelIndex idx = ui->canFramesView->indexAt(pos); //figure out where in the view we clicked (row, column)
+    qDebug() << "Pos: " << pos << " Row :" << idx.row() << " Col: " << idx.column();
+    qDebug() << "Data: " << idx.data();
+    if (idx.column() == 8) //we're over the DATA column
+    {
+        contextMenuPosition = pos;
+
+        QMenu *menu = new QMenu(this);
+        menu->setAttribute(Qt::WA_DeleteOnClose);
+
+        menu->addAction(tr("Add to a new graphing window"), this, SLOT(setupAddToNewGraph()));
+        menu->addSeparator();
+        menu->addAction(tr("Add to latest graphing window"), this, SLOT(setupSendToLatestGraphWindow()));
+
+        menu->popup(ui->canFramesView->mapToGlobal(pos));
+    }
+}
+
+QString MainWindow::getSignalNameFromPosition(QPoint pos)
+{
+    //there's a bit of an issue to solve. The data column is one big string even if there are a number
+    //of signals in there. So, the basic idea is to find out how tall the font is and where the user
+    //clicked within the cell. Then find out which line that puts us over.
+    QModelIndex idx = ui->canFramesView->indexAt(pos); //figure out where in the view we clicked (row, column)
+    int fontHeight = ui->canFramesView->fontMetrics().height();
+    int cellBaseY = ui->canFramesView->rowViewportPosition(idx.row());
+    int lineOffset = (pos.y() - cellBaseY) / fontHeight;
+    qDebug() << "Offset: " << lineOffset;
+    QString lineText = idx.data().toString().split("\n")[lineOffset];
+    qDebug() << "Line Text: " << lineText;
+    return lineText.split(":")[0];
+}
+
+uint32_t MainWindow::getMessageIDFromPosition(QPoint pos)
+{
+    QModelIndex idx = ui->canFramesView->indexAt(pos); //figure out where in the view we clicked (row, column)
+    QString idText = ui->canFramesView->model()->index(idx.row(), 1).data().toString();
+    return Utility::ParseStringToNum(idText);
+}
+
+void MainWindow::setupAddToNewGraph()
+{
+    showGraphingWindow(); //creates a new window and sets it as latest
+    setupSendToLatestGraphWindow(); //then call the other function to finish
+}
+
+void MainWindow::setupSendToLatestGraphWindow()
+{
+    if (!lastGraphingWindow) showGraphingWindow();
+    GraphParams param;
+    QString signalName = getSignalNameFromPosition(contextMenuPosition);
+    param.ID = getMessageIDFromPosition(contextMenuPosition);
+    DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(param.ID, nullptr);
+    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(signalName);
+    param.associatedSignal = sig;
+    param.bias = sig->bias;
+    param.intelFormat = sig->intelByteOrder;
+    param.isSigned = sig->valType == SIGNED_INT ? true : false;
+    param.numBits = sig->signalSize;
+    param.scale = sig->factor;
+    param.startBit = sig->startBit;
+    param.stride = 1;
+    param.graphName = sig->name;
+    param.lineColor = QColor(QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160));
+    param.lineWidth = 1;
+    param.fillColor = QColor(128, 128, 128, 0);
+    param.mask = 0xFFFFFFFFFFFFFFFFull;
+    param.drawOnlyPoints = false;
+    param.pointType = 0;
+
+    lastGraphingWindow->createGraph(param); //add the new graph to the window
 }
 
 void MainWindow::interpretToggled(bool state)
@@ -954,20 +1038,34 @@ void MainWindow::showSettingsDialog()
 }
 
 //always gets unfiltered list. You ask for the graphs so there is no need to send filtered frames
+//now always creates a new window. This allows for multiple independent graphing windows
 void MainWindow::showGraphingWindow()
 {
-    if (!graphingWindow) {
-        graphingWindow = new GraphingWindow(model->getListReference());
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+/* could only allow the latest window to have these centering signals.
+   if (lastGraphingWindow)
+    {
+        disconnect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+        disconnect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        if (flowViewWindow)
+        {
+            disconnect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+            disconnect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        }
     }
+*/
+    lastGraphingWindow = new GraphingWindow(model->getListReference());
+    graphWindows.append(lastGraphingWindow);
+
+    connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
+    connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
 
     if (flowViewWindow) //connect the two external windows together
     {
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
-    graphingWindow->show();
+
+    lastGraphingWindow->show();
 }
 
 void MainWindow::showTemporalGraphWindow()
@@ -1148,10 +1246,10 @@ void MainWindow::showFlowViewWindow()
         connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
-    if (graphingWindow)
+    if (lastGraphingWindow)
     {
-        connect(graphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), graphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
     flowViewWindow->show();

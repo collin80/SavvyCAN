@@ -1944,7 +1944,7 @@ DBC_MESSAGE* DBCHandler::findMessageForFilter(uint32_t id, MatchingCriteria_t * 
             DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(id);
             if (msg != nullptr) 
             {
-                *matchingCriteria = loadedFiles[i].messageHandler->getMatchingCriteria();
+                if (matchingCriteria) *matchingCriteria = loadedFiles[i].messageHandler->getMatchingCriteria();
                 return msg;
             }
         }
