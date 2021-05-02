@@ -14,6 +14,8 @@ class GraphingWindow;
 class GraphParams
 {
 public:
+    GraphParams();
+
     uint32_t ID;
     int startBit, numBits;
     bool intelFormat;
@@ -34,6 +36,12 @@ public:
     //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;
+    int64_t prevValTable;
+    QPointF prevValLocation;
+    QString prevValStr;
+    QCPItemBracket *lastBracket;
+    QList<QCPItemBracket *> brackets;
+    QList<QCPItemText *> bracketTexts;
 };
 
 class GraphingWindow : public QDialog

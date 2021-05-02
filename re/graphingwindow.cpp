@@ -552,25 +552,36 @@ void GraphingWindow::zoomOut()
 
 void GraphingWindow::removeSelectedGraph()
 {
-  if (ui->graphingView->selectedGraphs().size() > 0)
-  {
-    int idx = -1;
-    for (int i = 0; i < graphParams.count(); i++)
+    if (ui->graphingView->selectedGraphs().size() > 0)
     {
-        if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+        int idx = -1;
+        for (int i = 0; i < graphParams.count(); i++)
         {
-            idx = i;
-            break;
+            if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+            {
+                idx = i;
+                break;
+            }
         }
+
+        foreach (QCPItemBracket* brk, graphParams[idx].brackets)
+        {
+            ui->graphingView->removeItem(brk);
+        }
+
+        foreach (QCPItemText* txt, graphParams[idx].bracketTexts)
+        {
+            ui->graphingView->removeItem(txt);
+        }
+
+        graphParams.removeAt(idx);
+
+        ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().first());
+
+        if (graphParams.count() == 0) needScaleSetup = true;
+
+        ui->graphingView->replot();
     }
-    graphParams.removeAt(idx);
-
-    ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().first());
-
-    if (graphParams.count() == 0) needScaleSetup = true;
-
-    ui->graphingView->replot();
-  }
 }
 
 void GraphingWindow::editSelectedGraph()
@@ -602,6 +613,7 @@ void GraphingWindow::removeAllGraphs()
                                   QMessageBox::Yes|QMessageBox::No);
     if (confirmDialog == QMessageBox::Yes) {
         ui->graphingView->clearGraphs();
+        ui->graphingView->clearItems();
         graphParams.clear();
         needScaleSetup = true;
         ui->graphingView->replot();
@@ -1178,6 +1190,54 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         params.y.append(yVal);
         x.append(xVal);
         y.append(yVal);
+
+        //now see if we've got to do anything with the brackets and labels for value table stuff
+        QString tempStr;
+        if (params.associatedSignal)
+        {
+
+            bool isValid = params.associatedSignal->getValueString(tempVal, tempStr);
+            if (isValid)
+            {
+                //we have a graph with associated signal and we could interpret it. So, see what we need to do
+                if (tempStr == params.prevValStr) //still same value, update bracket only
+                {
+                    params.lastBracket->right->setCoords(xVal, params.prevValLocation.y());
+                }
+                else //changed. See if this is the first value or if we're merely starting another one
+                {
+                    //a quick check for whether this is the first value or not.
+                    if (params.prevValLocation == QPointF(0,0))
+                    {
+                        params.prevValLocation = QPointF(xVal, yVal);
+                        //params.prevValStr = tempStr;
+                        //params.prevValTable = tempVal;
+                    }
+                    else //wasn't the same so complete the previous span and start a new one.
+                    {
+                        params.prevValTable = tempVal;
+                        params.prevValLocation = QPointF(xVal, yVal);
+                        params.prevValStr = tempStr;
+
+                        QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
+                        bracket->left->setCoords(params.prevValLocation);
+                        bracket->right->setCoords(params.prevValLocation);
+                        bracket->setLength(12);
+                        params.lastBracket = bracket;
+                        params.brackets.append(bracket);
+                        // add text label for this value table entry
+                        QCPItemText *valueText = new QCPItemText(ui->graphingView);
+                        valueText->position->setParentAnchor(bracket->center);
+                        valueText->position->setCoords(0, -10.0); // move 10 pixels to the top from bracket center anchor
+                        valueText->setPositionAlignment(Qt::AlignBottom|Qt::AlignHCenter);
+                        valueText->setText(tempStr);
+                        qDebug() << "JiggaWatts: " << tempStr;
+                        valueText->setFont(QFont(font().family(), 10));
+                        params.bracketTexts.append(valueText);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1189,7 +1249,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     GraphParams *refParam = &params;
     int sBit, bits;
     bool intelFormat, isSigned;
-    int64_t prevValu = 9999999999;
+    QString tempStr;
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start bit: " << params.startBit;
@@ -1247,30 +1307,46 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             params.x[j] = frameCache[k].timeStamp().microSeconds();
         }
 
-        if (params.associatedSignal)
+        if (params.associatedSignal && numEntries > 1)
         {
-            QString tempStr;
+
             bool isValid = params.associatedSignal->getValueString(tempVal, tempStr);
             if (isValid)
             {
-                if (tempVal != prevValu)
+                if (params.prevValLocation == QPointF(0,0)) {
+                    params.prevValLocation = QPointF(params.x[j], params.y[j]);
+                    params.prevValStr = tempStr;
+                    params.prevValTable = 0;
+                }
+                if (tempVal != params.prevValTable)
                 {
                     qDebug() << "New Value: " << tempStr;
-                    // add the bracket at the top:
-                    //QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
-                    //bracket->left->setCoords(-8, 1.1);
-                    //bracket->right->setCoords(8, 1.1);
-                    //bracket->setLength(13);
 
-                    // add the text label at the top:
-                    QCPItemText *wavePacketText = new QCPItemText(ui->graphingView);
-                    //wavePacketText->position->setParentAnchor(bracket->center);
-                    wavePacketText->position->setCoords(params.x[j], params.y[j]); // move 10 pixels to the top from bracket center anchor
-                    wavePacketText->setPositionAlignment(Qt::AlignBottom|Qt::AlignHCenter);
-                    wavePacketText->setText(tempStr);
-                    wavePacketText->setFont(QFont(font().family(), 10));
+                    //Adding a bracket is a neat idea but you can't do that unless:
+                    //1. you wait until the value changes again so you can put the bracket where it belongs or
+                    //2. you constantly update the bracket in size then relocate the text too to match.
+                    //since this code runs at the beginning of a graph operation it could center the bracket
+                    //but supporting this all in realtime updating code is a bit more complicated.
+                    // add the bracket at the top:
+                    QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
+                    bracket->left->setCoords(params.prevValLocation);
+                    bracket->right->setCoords(params.x[j], params.prevValLocation.y());
+                    bracket->setLength(12);
+                    params.brackets.append(bracket);
+
+                    // add text label for this value table entry
+                    QCPItemText *valueText = new QCPItemText(ui->graphingView);
+                    valueText->position->setParentAnchor(bracket->center);
+                    valueText->position->setCoords(0, -10.0); // move 10 pixels to the top from bracket center anchor
+                    valueText->setPositionAlignment(Qt::AlignBottom|Qt::AlignHCenter);
+                    valueText->setText(params.prevValStr);
+                    valueText->setFont(QFont(font().family(), 10));
+                    params.bracketTexts.append(valueText);
+                    params.prevValLocation = QPointF(params.x[j], params.y[j]);
+                    params.prevValStr = tempStr;
+                    params.lastBracket = bracket;
                 }
-                prevValu = tempVal;
+                params.prevValTable = tempVal;
             }
         }
 
@@ -1278,6 +1354,27 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         if (params.y[j] > ymaxval) ymaxval = params.y[j];
         if (params.x[j] < xminval) xminval = params.x[j];
         if (params.x[j] > xmaxval) xmaxval = params.x[j];
+    }
+
+    if (params.prevValLocation != QPointF(0,0))
+    {
+        int j = numEntries - 1;
+        QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
+        bracket->left->setCoords(params.prevValLocation);
+        bracket->right->setCoords(params.x[j], params.prevValLocation.y());
+        bracket->setLength(12);
+
+        // add text label for this value table entry
+        QCPItemText *valueText = new QCPItemText(ui->graphingView);
+        valueText->position->setParentAnchor(bracket->center);
+        valueText->position->setCoords(0, -10.0); // move 10 pixels to the top from bracket center anchor
+        valueText->setPositionAlignment(Qt::AlignBottom|Qt::AlignHCenter);
+        valueText->setText(params.prevValStr);
+        valueText->setFont(QFont(font().family(), 10));
+        params.prevValLocation = QPointF(params.x[j], params.y[j]);
+        params.prevValStr = tempStr;
+        params.prevValTable = tempVal;
+        params.lastBracket = bracket;
     }
 
     if (numEntries == 0)
@@ -1342,8 +1439,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     //creates a slightly larger view than the actual boundary values to give some padding
     xminval = xMid - (xRange / 1.95);
     xmaxval = xMid + (xRange / 1.95);
-    yminval = yMid - (yRange / 1.85);
-    ymaxval = yMid + (yRange / 1.85);
+    yminval = yMid - (yRange / 1.8);
+    ymaxval = yMid + (yRange / 1.80);
 
     qDebug() << "xmin: " << xminval;
     qDebug() << "xmax: " << xmaxval;
@@ -1375,4 +1472,31 @@ void GraphingWindow::moveLegend()
       ui->graphingView->replot();
     }
   }
+}
+
+GraphParams::GraphParams()
+{
+    ID = 0;
+    startBit = 1;
+    numBits = 1;
+    intelFormat = false;
+    isSigned = false;
+    mask = 0xFFFFFFFFFFFFFFFFULL;
+    bias = 0;
+    scale = 1;
+    stride = 1;
+    strideSoFar = 1;
+    lineColor = QColor(0,0,0);
+    fillColor = QColor(255,255,255,0);
+    lineWidth = 1;
+    drawOnlyPoints = false;
+    pointType = 0;
+    ref = nullptr;
+    associatedSignal = nullptr;
+    graphName = "default";
+    xbias = 0;
+    prevValTable = 9999999999;
+    prevValLocation = QPointF(0,0);
+    prevValStr = "";
+    lastBracket = nullptr;
 }
