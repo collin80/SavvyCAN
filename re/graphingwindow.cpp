@@ -120,6 +120,26 @@ void GraphingWindow::closeEvent(QCloseEvent *event)
     writeSettings();
 }
 
+void GraphingWindow::changeEvent(QEvent *event)
+{
+    QWidget::changeEvent(event);
+    if (event->type() == QEvent::ActivationChange)
+    {
+        if(this->isActiveWindow())
+        {
+            setWindowOpacity(1);
+            ui->graphingView->repaint();
+            qDebug() << "Show";
+        }
+        else
+        {
+            setWindowOpacity(0.25);
+            // widget is now inactive
+            qDebug() << "Hide";
+        }
+    }
+}
+
 void GraphingWindow::readSettings()
 {
     QSettings settings;
@@ -267,6 +287,8 @@ void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
     //for (int i = 0; i < graphParams.count(); i++)
     //{
     //}
+
+    qDebug() << "Trying to center graph on timestamp: " << timestamp;
 
     QCPRange range = ui->graphingView->xAxis->range();
     double offset = range.size() / 2.0;
@@ -1312,6 +1334,17 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         ui->graphingView->graph()->setBrush(fillBrush);
     }
 
+    double xRange = (xmaxval - xminval);
+    double yRange = (ymaxval - yminval);
+    double xMid = xminval + (xRange / 2.0);
+    double yMid = yminval + (yRange / 2.0);
+
+    //creates a slightly larger view than the actual boundary values to give some padding
+    xminval = xMid - (xRange / 1.95);
+    xmaxval = xMid + (xRange / 1.95);
+    yminval = yMid - (yRange / 1.85);
+    ymaxval = yMid + (yRange / 1.85);
+
     qDebug() << "xmin: " << xminval;
     qDebug() << "xmax: " << xmaxval;
     qDebug() << "ymin: " << yminval;
@@ -1320,10 +1353,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     if (needScaleSetup)
     {
         needScaleSetup = false;
-        ui->graphingView->xAxis->setRange(xminval, xmaxval);
-        ui->graphingView->yAxis->setRange(yminval, ymaxval);
+        ui->graphingView->xAxis->setRange(xminval, xmaxval);        
         ui->graphingView->axisRect()->setupFullAxesBox();
     }
+    //always recalculate Y range so that new graphs actually show up in view
+    ui->graphingView->yAxis->setRange(yminval, ymaxval);
 
     ui->graphingView->replot();
 }
