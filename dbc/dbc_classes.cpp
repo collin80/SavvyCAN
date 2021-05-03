@@ -38,26 +38,21 @@ bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
     {
         if (parentMessage->multiplexorSignal != nullptr)
         {
-            return _sigInMsgPriv(frame, parentMessage->multiplexorSignal);
+            if (multiplexParent->isSignalInMessage(frame)) //parent is in message so check if value is correct
+            {
+                int val;
+                if (!multiplexParent->processAsInt(frame, val)) return false;
+                if ((val >= multiplexLowValue) && (val <= multiplexHighValue))
+                {
+                    return true;
+                }
+                else return false;
+            }
+            else return false;
         }
         else return false;
     }
-    else return true;
-}
-
-bool DBC_SIGNAL::_sigInMsgPriv(const CANFrame &frame, DBC_SIGNAL *multiplexor)
-{
-    int val;
-    if (!multiplexor->processAsInt(frame, val)) return false;
-    foreach (DBC_SIGNAL *child, multiplexedChildren)
-    {
-        if ((val >= child->multiplexLowValue) && (val <= child->multiplexHighValue))
-        {
-            if (child->isMultiplexor) return _sigInMsgPriv(frame, child); //recurse down a level and keep searching
-            if (child == this) return true; //if we are that child then we matched!
-        }
-    }
-    return false; //signal not found in this message
+    else return true; //if signal isn't multiplexed then it's definitely in the message
 }
 
 //Take all the children of this signal and see if they exist in the message. Can be called recursively to descend the dependency tree

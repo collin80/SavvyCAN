@@ -1250,6 +1250,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     int sBit, bits;
     bool intelFormat, isSigned;
     QString tempStr;
+    double x,y;
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start bit: " << params.startBit;
@@ -1283,8 +1284,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     params.x.reserve(numEntries);
     params.y.reserve(numEntries);
-    params.x.fill(0, numEntries);
-    params.y.fill(0, numEntries);
+    //params.x.fill(0, numEntries);
+    //params.y.fill(0, numEntries);
 
     sBit = params.startBit;
     bits = params.numBits;
@@ -1294,18 +1295,31 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int j = 0; j < numEntries; j++)
     {
         int k = j * params.stride;
+        if (params.associatedSignal)
+        {
+            //skip all the rest of the stuff in this loop and don't add this to the graph if this signal isn't in this frame
+            if (!params.associatedSignal->isSignalInMessage(frameCache[k]))
+            {
+                qDebug() << "Signal was not in this frame";
+                continue;
+            }
+            else qDebug() << "Signal in the frame!";
+        }
         tempVal = Utility::processIntegerSignal(frameCache[k].payload(), sBit, bits, intelFormat, isSigned); //& params.mask;
         //qDebug() << tempVal;
-        params.y[j] = (tempVal * params.scale) + params.bias;
+        y = (tempVal * params.scale) + params.bias;
+        params.y.append( y );
 
         if (secondsMode)
         {
-            params.x[j] = (frameCache[k].timeStamp().microSeconds()) / 1000000.0;
+            x = (frameCache[k].timeStamp().microSeconds()) / 1000000.0;
         }
         else
         {
-            params.x[j] = frameCache[k].timeStamp().microSeconds();
+            x = frameCache[k].timeStamp().microSeconds();
         }
+
+        params.x.append( x );
 
         if (params.associatedSignal && numEntries > 1)
         {
@@ -1314,7 +1328,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             if (isValid)
             {
                 if (params.prevValLocation == QPointF(0,0)) {
-                    params.prevValLocation = QPointF(params.x[j], params.y[j]);
+                    params.prevValLocation = QPointF(x, y);
                     params.prevValStr = tempStr;
                     params.prevValTable = 0;
                 }
@@ -1330,7 +1344,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
                     // add the bracket at the top:
                     QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
                     bracket->left->setCoords(params.prevValLocation);
-                    bracket->right->setCoords(params.x[j], params.prevValLocation.y());
+                    bracket->right->setCoords(x, params.prevValLocation.y());
                     bracket->setLength(12);
                     params.brackets.append(bracket);
 
@@ -1342,7 +1356,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
                     valueText->setText(params.prevValStr);
                     valueText->setFont(QFont(font().family(), 10));
                     params.bracketTexts.append(valueText);
-                    params.prevValLocation = QPointF(params.x[j], params.y[j]);
+                    params.prevValLocation = QPointF(x, y);
                     params.prevValStr = tempStr;
                     params.lastBracket = bracket;
                 }
@@ -1350,10 +1364,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
             }
         }
 
-        if (params.y[j] < yminval) yminval = params.y[j];
-        if (params.y[j] > ymaxval) ymaxval = params.y[j];
-        if (params.x[j] < xminval) xminval = params.x[j];
-        if (params.x[j] > xmaxval) xmaxval = params.x[j];
+        if (y < yminval) yminval = y;
+        if (y > ymaxval) ymaxval = y;
+        if (x < xminval) xminval = x;
+        if (x > xmaxval) xmaxval = x;
     }
 
     if (params.prevValLocation != QPointF(0,0))
@@ -1361,7 +1375,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         int j = numEntries - 1;
         QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
         bracket->left->setCoords(params.prevValLocation);
-        bracket->right->setCoords(params.x[j], params.prevValLocation.y());
+        bracket->right->setCoords(x, params.prevValLocation.y());
         bracket->setLength(12);
 
         // add text label for this value table entry
@@ -1371,7 +1385,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         valueText->setPositionAlignment(Qt::AlignBottom|Qt::AlignHCenter);
         valueText->setText(params.prevValStr);
         valueText->setFont(QFont(font().family(), 10));
-        params.prevValLocation = QPointF(params.x[j], params.y[j]);
+        params.prevValLocation = QPointF(x, y);
         params.prevValStr = tempStr;
         params.prevValTable = tempVal;
         params.lastBracket = bracket;
