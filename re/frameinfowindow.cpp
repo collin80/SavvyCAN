@@ -6,8 +6,8 @@
 #include <vector>
 #include "filterutility.h"
 
-const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
-                                                    Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
+const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green,  Qt::black, Qt::red, //0 1 2 3
+                                                    Qt::gray, Qt::yellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
 QPen FrameInfoWindow::bytePens[8];
 
 const int numIntervalHistBars = 20;
@@ -111,6 +111,8 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
         bytePens[i].setColor(byteGraphColors[i]);
         bytePens[i].setWidth(1);
     }
+
+    dbcHandler = DBCHandler::getReference();
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -267,6 +269,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     QVector<double> histGraphX, histGraphY;
     QVector<double> byteGraphX, byteGraphY[8];
     QVector<double> timeGraphX, timeGraphY;
+    QHash<QString, QHash<QString, int>> signalInstances;
     double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
@@ -378,6 +381,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             for (int k = 0; k < 256; k++) dataHistogram[k][i] = 0;
         }
         for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
+        signalInstances.clear();
 
         data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
         dataLen = frameCache.at(0).payload().length();
@@ -391,6 +395,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         std::vector<int64_t> sortedIntervals;
         int64_t intervalSum = 0;
+
+        DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(targettedID, nullptr);
 
         //then find all data points
         for (int j = 0; j < frameCache.count(); j++)
@@ -437,6 +443,28 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                     }
                 }
                 changedBits[c] |= referenceBits[c] ^ dat;
+            }
+
+            //Search every signal in the selected message and give output of the range the signal took and
+            //how many messages contained each discrete value.
+            if (msg)
+            {
+                int numSignals = msg->sigHandler->getCount();
+                for (int i = 0; i < numSignals; i++)
+                {
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    if (sig)
+                    {
+                        if (sig->isSignalInMessage(frameCache.at(j)))
+                        {
+                            QString sigVal;
+                            if (sig->processAsText(frameCache.at(j), sigVal, false))
+                            {
+                                signalInstances[sig->name][sigVal] = signalInstances[sig->name][sigVal] + 1;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -512,6 +540,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         tempItem = new QTreeWidgetItem();
         tempItem->setText(0, tr("Minimum range to fit 90% of inter-frame intervals: ") + QString::number((intervalPctl95 - intervalPctl5) / 1000.0) + "ms");
         baseNode->addChild(tempItem);
+
+        //display accumulated data for all the bytes in the message
         for (int c = 0; c < maxLen; c++)
         {
             dataBase = new QTreeWidgetItem();
@@ -557,6 +587,22 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
         }
         baseNode->addChild(dataBase);
+
+        QHash<QString, QHash<QString, int>>::const_iterator it = signalInstances.constBegin();
+        while (it != signalInstances.constEnd()) {
+            dataBase = new QTreeWidgetItem();
+            dataBase->setText(0, it.key());
+            QHash<QString,int>::const_iterator itVal = signalInstances[it.key()].constBegin();
+            while (itVal != signalInstances[it.key()].constEnd())
+            {
+                tempItem = new QTreeWidgetItem();
+                tempItem->setText(0, itVal.key() + ": " + QString::number(itVal.value()));
+                dataBase->addChild(tempItem);
+                ++itVal;
+            }
+            baseNode->addChild(dataBase);
+            ++it;
+        }
 
         ui->treeDetails->insertTopLevelItem(0, baseNode);
 

@@ -7,6 +7,7 @@
 #include <QTreeWidget>
 #include "can_structs.h"
 #include "bus_protocols/j1939_handler.h"
+#include "dbc/dbchandler.h"
 
 namespace Ui {
 class FrameInfoWindow;
@@ -35,6 +36,7 @@ private:
     bool useOpenGL;
     static const QColor byteGraphColors[8];
     static QPen bytePens[8];
+    DBCHandler *dbcHandler;
 
     void refreshIDList();
     void closeEvent(QCloseEvent *event);
