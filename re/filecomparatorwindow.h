@@ -7,6 +7,7 @@
 #include "framefileio.h"
 #include "can_structs.h"
 #include "utility.h"
+#include "dbc/dbchandler.h"
 
 namespace Ui {
 class FileComparatorWindow;
@@ -18,6 +19,7 @@ struct FrameData
     int dataLen;
     uint64_t bitmap;
     int values[8][256]; //first index is the data byte, second is # of times we saw that value
+    QHash<QString, QList<QString>> signalInstances;
 };
 
 class FileComparatorWindow : public QDialog
@@ -39,6 +41,7 @@ private:
     QVector<CANFrame> interestedFrames;
     QVector<CANFrame> referenceFrames;
     QString interestedFilename;
+    DBCHandler *dbcHandler;
 
     void calculateDetails();
     void showEvent(QShowEvent *);

@@ -1007,7 +1007,7 @@ void GraphingWindow::loadDefinitions()
                    }
                    if (tokens.length() > 21)
                    {
-                       DBC_MESSAGE *msg = dbcHandler->findMessage(tokens[20]);
+                       DBC_MESSAGE *msg = dbcHandler->findMessage(QString(tokens[20]));
                        if (msg)
                        {
                             gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[21]);

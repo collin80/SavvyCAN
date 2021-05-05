@@ -1930,6 +1930,18 @@ DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
     return nullptr;
 }
 
+DBC_MESSAGE* DBCHandler::findMessage(uint32_t id)
+{
+    for(int i = 0; i < loadedFiles.count(); i++)
+    {
+        DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(id);
+        if (msg != nullptr)
+        {
+            return msg;
+        }
+    }
+    return nullptr;
+}
 
 // This function won't care which bus the DBC file is associated, but will return any message as long as ID matches and the file
 // has filter labeling enabled.

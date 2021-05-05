@@ -20,6 +20,8 @@ FileComparatorWindow::FileComparatorWindow(QWidget *parent) :
     ui->lblFirstFile->setText("");
     ui->lblRefFrames->setText("Loaded frames: 0");
 
+    dbcHandler = DBCHandler::getReference();
+
     installEventFilter(this);
 }
 
@@ -154,6 +156,7 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < interestedFrames.count(); x++)
     {
         CANFrame frame = interestedFrames.at(x);
+        DBC_MESSAGE *msg = dbcHandler->findMessage(frame.frameId());
         data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
         dataLen = frame.payload().count();
 
@@ -166,6 +169,28 @@ void FileComparatorWindow::calculateDetails()
                 tmp = tmp << (8 * y);
                 interestedIDs[frame.frameId()].bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(interestedIDs[frame.frameId()].bitmap, 16);
+            }            
+            if (msg)
+            {
+                int numSignals = msg->sigHandler->getCount();
+                for (int i = 0; i < numSignals; i++)
+                {
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    if (sig)
+                    {
+                        if (sig->isSignalInMessage(frame))
+                        {
+                            QString sigVal;
+                            if (sig->processAsText(frame, sigVal, false))
+                            {
+                                QList<QString> tempList = interestedIDs[frame.frameId()].signalInstances[sig->name];
+                                if (!tempList.contains(sigVal)) tempList.append(sigVal);
+                                interestedIDs[frame.frameId()].signalInstances[sig->name] = tempList;
+                            }
+                        }
+                    }
+                }
+                qApp->processEvents();
             }
         }
         else //never seen this ID before so add one
@@ -192,6 +217,28 @@ void FileComparatorWindow::calculateDetails()
                 newData->bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
+            if (msg)
+            {
+                int numSignals = msg->sigHandler->getCount();
+                for (int i = 0; i < numSignals; i++)
+                {
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    if (sig)
+                    {
+                        if (sig->isSignalInMessage(frame))
+                        {
+                            QString sigVal;
+                            if (sig->processAsText(frame, sigVal, false))
+                            {
+                                QList<QString> tempList;
+                                tempList.append(sigVal);
+                                newData->signalInstances[sig->name] = tempList;
+                            }
+                        }
+                    }
+                }
+            }
+
             interestedIDs.insert(frame.frameId(), *newData);
         }
     }
@@ -201,6 +248,7 @@ void FileComparatorWindow::calculateDetails()
     for (int x = 0; x < referenceFrames.count(); x++)
     {
         CANFrame frame = referenceFrames.at(x);
+        DBC_MESSAGE *msg = dbcHandler->findMessage(frame.frameId());
         data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
         dataLen = frame.payload().count();
 
@@ -213,6 +261,27 @@ void FileComparatorWindow::calculateDetails()
                 tmp = tmp << (8 * y);
                 referenceIDs[frame.frameId()].bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(referenceIDs[frame.frameId()].bitmap, 16);
+            }
+            if (msg)
+            {
+                int numSignals = msg->sigHandler->getCount();
+                for (int i = 0; i < numSignals; i++)
+                {
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    if (sig)
+                    {
+                        if (sig->isSignalInMessage(frame))
+                        {
+                            QString sigVal;
+                            if (sig->processAsText(frame, sigVal, false))
+                            {
+                                QList<QString> tempList = referenceIDs[frame.frameId()].signalInstances[sig->name];
+                                if (!tempList.contains(sigVal)) tempList.append(sigVal);
+                                referenceIDs[frame.frameId()].signalInstances[sig->name] = tempList;
+                            }
+                        }
+                    }
+                }
             }
         }
         else //never seen this ID before so add one
@@ -237,6 +306,27 @@ void FileComparatorWindow::calculateDetails()
                 newData->bitmap |= tmp;
                 //qDebug() << "bitmap: " << QString::number(newData->bitmap, 16);
             }
+            if (msg)
+            {
+                int numSignals = msg->sigHandler->getCount();
+                for (int i = 0; i < numSignals; i++)
+                {
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    if (sig)
+                    {
+                        if (sig->isSignalInMessage(frame))
+                        {
+                            QString sigVal;
+                            if (sig->processAsText(frame, sigVal, false))
+                            {
+                                QList<QString> tempList;
+                                tempList.append(sigVal);
+                                newData->signalInstances[sig->name] = tempList;
+                            }
+                        }
+                    }
+                }
+            }
             referenceIDs.insert(frame.frameId(), *newData);
         }
     }
@@ -251,7 +341,7 @@ void FileComparatorWindow::calculateDetails()
     for (i = interestedIDs.begin(); i != interestedIDs.end(); ++i)
     {
         framesCounter++;
-        if (framesCounter > 10000)
+        if (framesCounter > 50)
         {
             framesCounter = 0;
             qApp->processEvents();
@@ -261,14 +351,24 @@ void FileComparatorWindow::calculateDetails()
         if (!referenceIDs.contains(keyone))
         {
             valuesBase = new QTreeWidgetItem();
-            valuesBase->setText(0, Utility::formatHexNum(keyone));
+            DBC_MESSAGE *msg = dbcHandler->findMessage(keyone);
+            if (msg)
+            {
+                valuesBase->setText(0, Utility::formatHexNum(keyone) + " (" + msg->name + ")");
+            }
+            else valuesBase->setText(0, Utility::formatHexNum(keyone));
             interestedOnlyBase->addChild(valuesBase);
         }
         else //ID was in both files
         {
             interestedHadUnique = false;
             sharedItem = new QTreeWidgetItem();
-            sharedItem->setText(0, Utility::formatHexNum(keyone));
+            DBC_MESSAGE *msg = dbcHandler->findMessage(keyone);
+            if (msg)
+            {
+                sharedItem->setText(0, Utility::formatHexNum(keyone) + " (" + msg->name + ")");
+            }
+            else sharedItem->setText(0, Utility::formatHexNum(keyone));
             //if the ID was in both files then we can use the data accumulated above in bitmap
             //and values to figure out what has changed between the two files
 
@@ -336,6 +436,53 @@ void FileComparatorWindow::calculateDetails()
                     }
                 }
             }
+
+            //presumably both include the same signals so for this first attempt just
+            //take all signals from the reference and then find that same signal in
+            //the interested frames and then see what unique values there were in either one
+
+            QHash<QString, QList<QString>>::const_iterator it = reference.signalInstances.constBegin();
+            while (it != reference.signalInstances.constEnd())
+            {
+                valuesBase = new QTreeWidgetItem();
+                valuesBase->setText(0, "Signal " + it.key());
+                sharedItem->addChild(valuesBase);
+                valuesInterested = new QTreeWidgetItem();
+                valuesInterested->setText(0, "Values found only in " + interestedFilename);
+                if (!uniqueInterested)
+                {
+                    valuesReference = new QTreeWidgetItem();
+                    valuesReference->setText(0, "Values found only in Side 2 - Reference frames");
+                }
+                valuesBase->addChild(valuesInterested);
+                if (!uniqueInterested) valuesBase->addChild(valuesReference);
+
+                QList<QString> refVals = it.value();
+                QList<QString> interestedVals = interested.signalInstances[it.key()];
+                foreach (QString str, refVals)
+                {
+                    if (!interestedVals.contains(str))
+                    {
+                        qDebug() << "Interested frames didn't contain value: " << str << " in signal " << it.key();
+                        detail = new QTreeWidgetItem();
+                        detail->setText(0, str);
+                        valuesReference->addChild(detail);
+                    }
+                }
+                qApp->processEvents();
+                foreach (QString str, interestedVals)
+                {
+                    if (!refVals.contains(str))
+                    {
+                        qDebug() << "Reference frames didn't contain value: " << str << " in signal " << it.key();
+                        detail = new QTreeWidgetItem();
+                        detail->setText(0, str);
+                        valuesInterested->addChild(detail);
+                    }
+                }
+                ++it;
+            }
+
             if (interestedHadUnique || !uniqueInterested) sharedBase->addChild(sharedItem);
         }
     }
@@ -351,7 +498,12 @@ void FileComparatorWindow::calculateDetails()
             if (!interestedIDs.contains(keytwo))
             {
                 valuesBase = new QTreeWidgetItem();
-                valuesBase->setText(0, Utility::formatHexNum(keytwo));
+                DBC_MESSAGE *msg = dbcHandler->findMessage(keytwo);
+                if (msg)
+                {
+                    valuesBase->setText(0, Utility::formatHexNum(keytwo) + " (" + msg->name + ")" );
+                }
+                else valuesBase->setText(0, Utility::formatHexNum(keytwo));
                 referenceOnlyBase->addChild(valuesBase);
             }
         }
