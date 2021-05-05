@@ -1355,6 +1355,15 @@ bool FrameFileIO::isPCANFile(QString filename)
 //;---+--   ----+----  --+--  ----+---  +  -+ -- -- -- -- -- -- --
 // 0-6       10-18     21-25   28-35    38  41-? two chars each + space
 
+// Version 1.3
+//;   Message   Time    Bus  Type   ID    Reserved
+//;   Number    Offset  |    |      [hex] |   Data Length Code
+//;   |         [ms]    |    |      |     |   |    Data [hex] ...
+//;   |         |       |    |      |     |   |    |
+//;---+-- ------+------ +- --+-- ---+---- +- -+-- -+ -- -- -- -- -- -- --
+//   0-6       8-20     22 25-26    38  41-? two chars each + space
+//     1)      1004.898 1  Tx        079B -  8    02 21 04 00 00 00 00 00
+
     Version 2.0
 ;   Message   Time    Type ID     Rx/Tx
 ;   Number    Offset  |    [hex]  |  Data Length
@@ -1366,14 +1375,13 @@ bool FrameFileIO::isPCANFile(QString filename)
   Both versions are supported now but rather lazily. Very many aspects of the file are ignored.
   It seems as if Version 2 files might be able to store other protocols like ISO-TP or J1939
 */
-
 bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
     int lineCounter = 0;
-    int fileVersion = 1;
+    int fileVersion = 11;
     bool foundErrors = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -1390,11 +1398,13 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
-        if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 2;
+        if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 20;
+        if (line.startsWith(";$FILEVERSION=1.3")) fileVersion = 13;
+        if (line.startsWith(";$FILEVERSION=1.1")) fileVersion = 11;
         if (line.startsWith(';')) continue;
         if (line.length() > 41)
         {
-            if (fileVersion == 1)
+            if (fileVersion == 11)
             {
                 thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(line.mid(10, 8).simplified().toDouble() * 1000.0)));
                 thisFrame.setFrameId(line.mid(28, 8).simplified().toUInt(nullptr, 16));
@@ -1428,7 +1438,49 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                     frames->append(thisFrame);
                 }
             }
-            else if (fileVersion == 2)
+            // Version 1.3
+            //;   Message   Time    Bus  Type   ID    Reserved
+            //;   Number    Offset  |    |      [hex] |   Data Length Code
+            //;   |         [ms]    |    |      |     |   |    Data [hex] ...
+            //;   |         |       |    |      |     |   |    |
+            //;---+-- ------+------ +- --+-- ---+---- +- -+-- -+ -- -- -- -- -- -- --
+            //   0-6       8-20     22 25-26    38  41-? two chars each + space
+            //     1)      1004.898 1  Tx        079B -  8    02 21 04 00 00 00 00 00
+            else if (fileVersion == 13)
+            {
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(line.mid(8, 13).simplified().toDouble() * 1000.0)));
+                thisFrame.setFrameId(line.mid(30, 8).simplified().toUInt(nullptr, 16));
+                if (thisFrame.frameId() < 0x1FFFFFFF)
+                {
+                    int numBytes = line.mid(43,2).trimmed().toInt();
+                    QByteArray bytes(numBytes, 0);
+                    //qDebug() << thisFrame.payload().length();
+                    thisFrame.isReceived = true;
+                    thisFrame.bus = line.mid(22,1).trimmed().toInt();
+                    if (line.at(30) == ' ') {
+                        thisFrame.setExtendedFrameFormat(false);
+                    } else {
+                        thisFrame.setExtendedFrameFormat(true);
+                    }
+                    if (line.at(48) == 'R') {
+                        thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                    } else {
+                        QList<QByteArray> tokens = line.mid(48, numBytes * 3).split(' ');
+                        thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                        for (int d = 0; d < numBytes; d++)
+                        {
+                            if (tokens[d] != "")
+                            {
+                                bytes[d] = static_cast<char>(tokens[d].toInt(nullptr, 16));
+                            }
+                            else bytes[d] = 0;
+                        }
+                    }
+                    thisFrame.setPayload(bytes);
+                    frames->append(thisFrame);
+                }
+            }
+            else if (fileVersion == 20)
             {
                 thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(line.mid(8, 13).simplified().toDouble() * 1000.0)));
                 thisFrame.setFrameId(line.mid(25, 8).simplified().toUInt(nullptr, 16));
