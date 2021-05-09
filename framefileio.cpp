@@ -1445,11 +1445,11 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             //;   |         |       |    |      |     |   |    |
             //;---+-- ------+------ +- --+-- ---+---- +- -+-- -+ -- -- -- -- -- -- --
             //   0-6       8-20     22 25-26    38  41-? two chars each + space
-            //     1)      1004.898 1  Tx        079B -  8    02 21 04 00 00 00 00 00
+            //     1)      1004.898 1  Tx    1fff079B -  8    02 21 04 00 00 00 00 00
             else if (fileVersion == 13)
             {
                 thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(line.mid(8, 13).simplified().toDouble() * 1000.0)));
-                thisFrame.setFrameId(line.mid(30, 8).simplified().toUInt(nullptr, 16));
+                thisFrame.setFrameId(line.mid(31, 8).simplified().toUInt(nullptr, 16));
                 if (thisFrame.frameId() < 0x1FFFFFFF)
                 {
                     int numBytes = line.mid(43,2).trimmed().toInt();
