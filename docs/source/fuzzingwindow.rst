@@ -38,7 +38,7 @@ The last box is "Bit Scanning"
 3. Random will randomly pick whether each fuzzed bit is set or not.
 
 In order to fuzz bits you need to set which bits to fuzz and which not to. As listed at the bottom of the window, there is a color code to the 8x8 grid. Clicking cells in the grid will toggle them between their various values. White bits are never set, black bits are always set no matter what, green bits follow the fuzzing pattern you specified in "Bit Scanning" You can also set the bytes directly with the text boxes above the 8x8 grid. Setting a hexadecimal value in these
-boxes will set the relavent bits in the 8x8 grid. You must press the ENTER/RETURN key to set the values. Merely changing the value will not update it (as a safety measure).
+boxes will set the relevant bits in the 8x8 grid. You must press the ENTER/RETURN key to set the values. Merely changing the value will not update it (as a safety measure).
 
 Pulling the Trigger
 ===================
