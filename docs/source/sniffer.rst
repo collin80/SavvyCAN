@@ -13,7 +13,7 @@ can_utils program "cansniffer". The general idea here is to display a list
 of frames such that you only see frames that are actively updating. If a given 
 ID has not been seen in 5 seconds the ID portion will turn RED and then disappear
 from the list. In this way only frames that are updating are in the list. They are
-ordered by ID. Bytes that have deincremented will be red and bytes that have incremented 
+ordered by ID. Bytes that have decremented will be red and bytes that have incremented 
 will be green. You can use the "Filters" area to mask away some IDs so that they never 
 show up. This can help to declutter the list. 
 
