@@ -32,7 +32,7 @@ Left clicking and dragging in the graphing area will allow you to pan around. Th
 Loading and Saving Graphs
 =========================
 
-It can be beneficial to create a set of graphs that can be used over and over. You can save the currently setup graphs to a file and then load it later. Right click on the graphing window and use "Save graph defintions to file" and "Load graph definitions from file" to do this. You can also save a picture of the graphing window. PDF, PNG, and JPG are supported. Lastly, you can save a spreadsheet of all the graphed points. 
+It can be beneficial to create a set of graphs that can be used over and over. You can save the currently setup graphs to a file and then load it later. Right click on the graphing window and use "Save graph definitions to file" and "Load graph definitions from file" to do this. You can also save a picture of the graphing window. PDF, PNG, and JPG are supported. Lastly, you can save a spreadsheet of all the graphed points. 
 
 Real Time Graphing
 ===================
