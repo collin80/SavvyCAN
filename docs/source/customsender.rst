@@ -43,7 +43,7 @@ It should first be noted that each line can contain multiple triggers. Each trig
 Triggers are allowed to have one or more conditions. Each condition contained within a single trigger is separated
 by a space ' '.
 
-The program implments the following conditions:
+The program implements the following conditions:
 
 * id - Set the trigger to activate when a frame with the given ID is received. The syntax is 'id' 
   followed by the numeric ID you want to match. Example: 'id0x200'
