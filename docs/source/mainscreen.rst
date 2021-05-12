@@ -21,7 +21,7 @@ The main frame list takes up the majority of the main screen. This list consists
 - Bus: SavvyCAN supports a variety of capture hardware. GVRET compatible devices can support more than one bus. The bus a frame came in on
   is specified here. Many file formats do not specify bus and thus all frames will be loaded as bus 0.
 - Len: The number of data bytes that were sent with this frame. It can range from 0 to 8.
-- Data: All of the data bytes separated by spaces. Can be in either hexadecimal or decimal (preference). If "Interpet Frames" is checked you will
+- Data: All of the data bytes separated by spaces. Can be in either hexadecimal or decimal (preference). If "Interpret Frames" is checked you will
   also see extra data at the end of any frames that have DBC data. To see the rest of this data click upon the frame in the list. It will
   automatically expand to show all signals attached to that frame.
 
@@ -32,7 +32,7 @@ The Bottom Statusbar
 At the very bottom of the main screen is a status bar with two sections. 
 
 * The first section shows the connection status. You will see the number of currently connected buses here.
-* The second second section shows which file is currently loaded. This is updated by loading or saving.
+* The second section shows which file is currently loaded. This is updated by loading or saving.
 
 
 The Rest of the Main Window
@@ -49,7 +49,7 @@ The "Normalize Frame Timing" button is used to reset the lowest timestamp to "0"
 remove the starting offset when you start up the GVRET board long before actual traffic starts. SavvyCAN is designed such that this doesn't really matter
 most of the time but normalizing the timing might be useful to help correlate the timing between two different captures.
 
-The "Clear Frames" button will erase all captured messages. They will be irreversably erased and all memory will be freed.
+The "Clear Frames" button will erase all captured messages. They will be irreversibly erased and all memory will be freed.
 
 The "Auto Scroll Window" checkbox will cause the main frame list to hunt toward the bottom of the list as frames come in. It will normally not be quite
 at the very bottom as, for performance reasons, the program runs at quarter second updates to things like the auto scroll. Thus, the main list will be
@@ -59,7 +59,7 @@ The "Interpret Frames" checkbox is used to specify whether the loaded DBC file s
 this off for performance reasons (interpreting takes some extra processor power and RAM) or to declutter the main frame list.
 
 The "Overwrite Mode" checkbox is used to ensure that only the newest frame for each message ID is shown. That is, if 100 messages with ID 0x105 come in you
-will see only the newest one. This is generally used along side "Interpret Frames" to interpret frames and always see the up-to-date information.
+will see only the newest one. This is generally used alongside "Interpret Frames" to interpret frames and always see the up-to-date information.
 
 "Frame Filtering" provides a list of all the frame IDs seen so far. Any ID which is checked will be shown in the main list. Any ID which is unchecked will not.
 This can be used to hone in on frames of importance while hiding frames that are currently of no interest. The filtered list can be saved as well.
@@ -91,7 +91,7 @@ You might notice that there are three entries in the file menu that mention filt
 of the messages coming in on the bus. It still saves all incoming messages but you are able to filter which you will view at any given time. 
 SavvyCAN allows for loading and saving the list of frames you'd like to view so that you can easily switch "sets" of frames to view. Also,
 when saving you can optionally save just the frames that you have filtered instead of every captured frame. Filters are set in the lower
-righthand of the this screen. All IDs are selected by default. To deselect an ID click on the checkbox next to it. You can also deselect
+right-hand of the this screen. All IDs are selected by default. To deselect an ID click on the checkbox next to it. You can also deselect
 all IDs or select all IDs. These are useful if you only want to view a couple of IDs (click None then the few you need) or you just want
 to remove a couple (click All and then deselect the ones you don't care about).
 
@@ -111,7 +111,7 @@ understood by users of the program. Also, other windows can use the DBC file for
 to figure out the actual details of that signal.
 
 
-How DBC interacts with the main screen:
+How DBC interacts with the main screen?
 =======================================
 	
 First of all, one can load and save DBC files from the "DBC File Manager" found in the File menu. Also in the File menu it is possible to save the currently
