@@ -138,6 +138,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                                 frame.setFrameType(QCanBusFrame::DataFrame);
                                 for (int i = 0; i < canObject2.dlc; i++) bytes[i] = canObject2.data[i];
                             }
+                            frame.setPayload(bytes);
                             //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
                             frame.setTimeStamp(QCanBusFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
