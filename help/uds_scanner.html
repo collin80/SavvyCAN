@@ -1,46 +1,202 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
-  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+
+<html>
   <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>67. UDS Scan Window</title>
-    <link rel="stylesheet" href="_static/nonav.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" /> 
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>67. UDS Scan Window &#8212; SavvyCAN 189 documentation</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="70. Playback Window" href="playbackwindow.html" />
+    <link rel="prev" title="65. Range State Window" href="rangestate.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
   </head><body>
+  
 
     <div class="document">
       <div class="documentwrapper">
+        <div class="bodywrapper">
           <div class="body" role="main">
             
   <div class="section" id="uds-scan-window">
-<h1>67. UDS Scan Window</h1>
+<h1><span class="section-number">67. </span>UDS Scan Window<a class="headerlink" href="#uds-scan-window" title="Permalink to this headline">¶</a></h1>
 <p>.</p>
 <img alt="_images/UDS_Scanner.png" src="_images/UDS_Scanner.png" />
 </div>
 <div class="section" id="purpose-of-the-uds-scan-window">
-<h1>68. Purpose of the UDS Scan Window</h1>
+<h1><span class="section-number">68. </span>Purpose of the UDS Scan Window<a class="headerlink" href="#purpose-of-the-uds-scan-window" title="Permalink to this headline">¶</a></h1>
 <p>This is essentially another CAN fuzzing window but a very special one. This window is meant to search for UDS compliant (or nearly compliant) nodes on the CAN bus. It can also be used to do a blanket search for services, sub functions, and data items on a known UDS node.</p>
 </div>
 <div class="section" id="using-the-uds-scan-window">
-<h1>69. Using the UDS Scan Window</h1>
+<h1><span class="section-number">69. </span>Using the UDS Scan Window<a class="headerlink" href="#using-the-uds-scan-window" title="Permalink to this headline">¶</a></h1>
 <p>UDS queries are sent out on the bus from “Starting ID” to “Ending ID”. Usually UDS compliant ECUs will respond to 0x7E0 through 0x7E7 which is why those are the defaults. Some vehicles use UDS “like” protocols on other IDs. Usually UDS nodes reply with an ID 8 higher than the request ID. This is thus the default in the program. However, some nodes cheat and do not do this. It is quite common for responses to come from an address 16 higher instead. To deal with this situation there is a checkbox “Allow adaptive reply offset.” If this is checked then replies will be accepted no matter what address they come from. Deselecting this will cause only replies of the proper offset to be accepted. The offset defaults to 8 but can be changed with the “Reply Offset” selector. Additionally, you can select which bus to scan and set how long you want to wait for replies.</p>
 <p>“Show tests with no Replies” - This checkbox does what it says. It is a personal preference whether you’d like to see an entry in the list for scans that returned no results. Sometimes an ECU will just plain ignore messages it doesn’t like. In that case you have the option to see an entry in the list telling you that the message was ignored or whether you’d prefer to reduce clutter and just skip anything that had no reply.</p>
 <p>You need to also set a type of scan to do. You can select more than one type but if you don’t set any then you aren’t going to see any results. Keep that in mind as none are checked by default.</p>
 <p>“Read By ID” - UDS allows one to read data from the ECU by an ID number. These are not defined anywhere and are custom to each ECU. But, you can use this to scan a range of IDs to see if you get a response to any of them. There is no real standard for how many bytes the ID will be. It could be 1, it could be 2, 3, 4. It’s likely to be around 2. You can set the number of subfunction bytes which will set the size of the ID. Then you can set the upper and lower bound to scan.</p>
 <p>“Read By Addr” - You can also read data by address. Like IDs the address could be different sizes depending on the hardware you are querying. This works the same as reading by ID but by address instead.</p>
-<p>“Session Ctrl” - UDS has the concept of session type. Some types are “normal” “extended diagnostics” “programmming”. Scanning for session type will try them all and let you know which the device supports. However, note that you might get a response that indicates that conditions are not correct or that access was denied. This probably means that the mode is actually supported but you’d have to do the right things first. This is still useful information. This scan window is too simple to use for further cracking of such things but the scripting interface is the perfect thing to use instead.</p>
+<p>“Session Ctrl” - UDS has the concept of session type. Some types are “normal” “extended diagnostics” “programming”. Scanning for session type will try them all and let you know which the device supports. However, note that you might get a response that indicates that conditions are not correct or that access was denied. This probably means that the mode is actually supported but you’d have to do the right things first. This is still useful information. This scan window is too simple to use for further cracking of such things but the scripting interface is the perfect thing to use instead.</p>
 <p>“ECU Reset” - The ECU might also support being reset by a UDS message. This scan type will try the various reset types and see which are supported.</p>
-<p>“Security Access” - When a device is first started and normally operating it will generally not allow you to do potentially dangerous or sensitive operations such as downloading firmware or changing parameters. To do these things you need to enter a different security level. The security access mechanism is used for this. There are a few different security levels that are likely to be supported. This scan type will attempt to find secutity levels and see if they are protected or not. That is, unfortunately for the casual cracker, most of the time the elevate security levels will be protected by a challenge/response system. The ECU will send you a challenge in the form of one or more random looking bytes. You are tasked with returning the proper response for those challenge bytes. You generally don’t have very many guesses before your hands are slapped. Sometimes the C/R is actually fixed and you can just capture valid traffic once and then use the same response forever. Sometimes the C/R is stupidly easy or there are only a couple of different possible answers. Sometimes the ECU developer actually took more than 2 seconds to implement these features and your work will be cut out for you. This scan type will find which levels the ECU seems to support but is unlikely to actually unlock them.</p>
+<p>“Security Access” - When a device is first started and normally operating it will generally not allow you to do potentially dangerous or sensitive operations such as downloading firmware or changing parameters. To do these things you need to enter a different security level. The security access mechanism is used for this. There are a few different security levels that are likely to be supported. This scan type will attempt to find security levels and see if they are protected or not. That is, unfortunately for the casual cracker, most of the time the elevate security levels will be protected by a challenge/response system. The ECU will send you a challenge in the form of one or more random looking bytes. You are tasked with returning the proper response for those challenge bytes. You generally don’t have very many guesses before your hands are slapped. Sometimes the C/R is actually fixed and you can just capture valid traffic once and then use the same response forever. Sometimes the C/R is stupidly easy or there are only a couple of different possible answers. Sometimes the ECU developer actually took more than 2 seconds to implement these features and your work will be cut out for you. This scan type will find which levels the ECU seems to support but is unlikely to actually unlock them.</p>
 <p>“Tester Present” - A scan that tries to see if tester present is supported. It almost certainly is. This scan can be used to sweep a wide range of addresses just to narrow down the list of addresses to scan more thoroughly. Normally tester present is sent periodically by a connected device just to let the ECU know that someone is still there.</p>
 <p>“Wildcard” - Allows for you to set a lower and upper range for the service byte as well as the number of subfunction bytes and the range there as well. This allows for UDS fuzzing by shooting the moon and trying a huge range of traffic just to see what is supported and what isn’t. This test can take a VERY long time if you aren’t careful but will thoroughly determine what the ECU will support and what it won’t.</p>
 </div>
 
 
           </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">SavvyCAN</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html">1. Main / Start Up Screen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#the-main-frame-list">2. The Main Frame List</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#the-bottom-statusbar">3. The Bottom Statusbar</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#the-rest-of-the-main-window">4. The Rest of the Main Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#loading-and-saving-frames">5. Loading And Saving Frames</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#filters">6. Filters</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#what-is-dbc-and-why-would-i-care">7. What is DBC and why would I care?!</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mainscreen.html#how-dbc-interacts-with-the-main-screen">8. How DBC interacts with the main screen?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="connectionwindow.html">9. Connection Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="connectionwindow.html#connecting-to-a-dongle">10. Connecting To A Dongle</a></li>
+<li class="toctree-l1"><a class="reference internal" href="connectionwindow.html#debugging-connection-problems">11. Debugging Connection Problems</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preferences.html">12. Preference Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="preferences.html#setting-preferences">13. Setting Preferences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dbc_manager.html">14. DBC File Manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dbc_manager.html#working-with-dbc-files">15. Working with DBC Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dbc_manager.html#dbc-file-ordering">16. DBC File Ordering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dbc_editor.html">17. DBC Message Editor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dbc_editor.html#working-with-nodes">18. Working with Nodes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dbc_editor.html#working-with-messages">19. Working with Messages</a></li>
+<li class="toctree-l1"><a class="reference internal" href="signaleditor.html">20. DBC Signal Editor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="signaleditor.html#defining-and-editing-signals">21. Defining and Editing Signals</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html">22. Graphing Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#creating-a-new-graph">23. Creating a new Graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#selecting-a-graph">24. Selecting a Graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#editing-a-graph">25. Editing a Graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#deleting-graphs">26. Deleting Graphs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#moving-around">27. Moving Around</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#loading-and-saving-graphs">28. Loading and Saving Graphs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#real-time-graphing">29. Real Time Graphing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphwindow.html#hidden-tricks">30. Hidden Tricks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphsetup.html">31. Graph Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphsetup.html#setting-up-a-graph">32. Setting up a Graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphsetup.html#graphing-a-dbc-signal">33. Graphing a DBC Signal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="graphsetup.html#manual-signal-graphing-or-editing">34. Manual Signal Graphing (Or Editing)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html">35. Flow View Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#the-purpose-of-flow-view">36. The Purpose of Flow View</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#selecting-an-id-to-flow">37. Selecting an ID to Flow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#viewing-the-flow">38. Viewing the Flow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#controlling-the-flow">39. Controlling the Flow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#additional-control-options">40. Additional control options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#reference-values">41. Reference Values</a></li>
+<li class="toctree-l1"><a class="reference internal" href="flowview.html#seeking-to-specific-values">42. Seeking to Specific Values</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bisector.html">43. Bisector Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bisector.html#using-the-bisector-window">44. Using the Bisector Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html">45. Sniffer Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#using-the-sniffer-window">46. Using the Sniffer Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#notching-and-unnotching">47. Notching and Unnotching</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#advanced-options">48. Advanced Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#never-expire-ids">49. Never Expire IDs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#mute-notched-bits">50. Mute notched bits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#fade-inactive-bytes">51. Fade inactive bytes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sniffer.html#view-bits">52. View Bits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="framedetails.html">53. Frame Details Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="framedetails.html#the-purpose-of-frame-details-window">54. The Purpose of Frame Details Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filecomparison.html">55. File Comparison Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filecomparison.html#the-purpose-of-the-file-comparator">56. The Purpose of the File Comparator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filecomparison.html#the-layout-of-the-differences-list">57. The layout of the differences list</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fuzzingwindow.html">58. Fuzzing Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fuzzingwindow.html#the-purpose-of-fuzzing">59. The Purpose of Fuzzing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fuzzingwindow.html#fuzzing-is-dangerous">60. Fuzzing is Dangerous</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fuzzingwindow.html#controlling-the-fuzzy-beast">61. Controlling the Fuzzy Beast</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fuzzingwindow.html#pulling-the-trigger">62. Pulling the Trigger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="isotp_decoder.html">63. ISO-TP Decoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="isotp_decoder.html#using-the-iso-tp-decoder">64. Using the ISO-TP Decoder</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rangestate.html">65. Range State Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rangestate.html#using-the-range-state-window">66. Using the Range State Window</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">67. UDS Scan Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#purpose-of-the-uds-scan-window">68. Purpose of the UDS Scan Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#using-the-uds-scan-window">69. Using the UDS Scan Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playbackwindow.html">70. Playback Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playbackwindow.html#preparing-frames-for-playback">71. Preparing Frames for Playback</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playbackwindow.html#playing-back-frames">72. Playing Back Frames</a></li>
+<li class="toctree-l1"><a class="reference internal" href="playbackwindow.html#playback-status">73. Playback Status</a></li>
+<li class="toctree-l1"><a class="reference internal" href="customsender.html">74. Custom Sender Window</a></li>
+<li class="toctree-l1"><a class="reference internal" href="customsender.html#general-overview">75. General Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="customsender.html#layout-of-the-view">76. Layout of the View</a></li>
+<li class="toctree-l1"><a class="reference internal" href="customsender.html#writing-trigger-rules">77. Writing Trigger Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="customsender.html#writing-modifications">78. Writing Modifications</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html">79. Scripting Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#purpose-of-the-scripting-interface">80. Purpose of the Scripting Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#managing-scripts">81. Managing Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#getting-script-status">82. Getting Script Status</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#writing-scripts">83. Writing Scripts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#callback-functions">84. Callback Functions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#the-host-object">85. The host Object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#the-can-object">86. The can Object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#the-isotp-object">87. The isotp Object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#the-uds-object">88. The uds Object</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scriptingwindow.html#a-full-example-script">89. A full example script</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="rangestate.html" title="previous chapter"><span class="section-number">65. </span>Range State Window</a></li>
+      <li>Next: <a href="playbackwindow.html" title="next chapter"><span class="section-number">70. </span>Playback Window</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+        </div>
       </div>
       <div class="clearer"></div>
     </div>
+    <div class="footer">
+      &copy;2018, EVTV.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.5.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      
+      |
+      <a href="_sources/uds_scanner.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
   </body>
 </html>
