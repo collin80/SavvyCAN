@@ -602,6 +602,7 @@ void DBCMainEditor::newSignal()
     }
 
     sig.parentMessage = msg;
+    if (!sig.receiver) sig.receiver = &dbcFile->dbc_nodes[0]; //if receiver not set then set it to... something.
     msg->sigHandler->addSignal(sig);
     sigPtr = msg->sigHandler->findSignalByIdx(msg->sigHandler->getCount() - 1);
     QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
