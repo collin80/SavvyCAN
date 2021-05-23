@@ -451,7 +451,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     QRegularExpressionMatch match;
 
     int offset = 0;
-    bool isMultiplexor = false;
+    bool isMessageMultiplexor = false;
     //bool isMultiplexed = false;
     DBC_SIGNAL sig;
 
@@ -467,7 +467,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     if (match.hasMatch())
     {
         qDebug() << "Multiplexor signal";
-        isMultiplexor = true;
+        isMessageMultiplexor = true;
         sig.isMultiplexor = true;
     }
     else
@@ -490,7 +490,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             if (match.hasMatch())
             {
                 qDebug() << "Extended Multiplexor Signal";
-                sig.isMultiplexor = true; //we don't set the local isMultiplexor variable because this isn't the top level multiplexor
+                sig.isMultiplexor = true; //we don't set the local isMessageMultiplexor variable because this isn't the top level multiplexor
                 sig.isMultiplexed = true; //but, it is both a multiplexor and multiplexed
                 sig.multiplexLowValue = match.captured(2).toInt();
                 sig.multiplexHighValue = sig.multiplexLowValue;
@@ -575,7 +575,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         if (msg)
         {
             msg->sigHandler->addSignal(sig);
-            if (isMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
+            if (isMessageMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
             return msg->sigHandler->findSignalByName(sig.name);
         }
         else return nullptr;
