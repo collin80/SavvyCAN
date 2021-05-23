@@ -1100,10 +1100,14 @@ bool DBCFile::loadFile(QString fileName)
             //if this doesn't have a multiplex parent set but is multiplexed then it must have used
             //simple multiplexing instead of any extended specification. So, fill in the multiplexor signal here
             //and also write the extended entry for it too.
-            if (sig->isMultiplexed && (sig->multiplexParent == nullptr) )
+            if (sig->isMultiplexed && (sig->multiplexParent == nullptr) && (msg->multiplexorSignal) )
             {
                 sig->multiplexParent = msg->multiplexorSignal;
                 msg->multiplexorSignal->multiplexedChildren.append(sig);
+            }
+            if ( sig->isMultiplexed && (!msg->multiplexorSignal) ) //marked multiplexed but there is no multiplexor.
+            {
+                sig->isMultiplexed = false; //can't multiplex if there is no multiplexor!
             }
         }
     }
