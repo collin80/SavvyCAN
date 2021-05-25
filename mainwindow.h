@@ -54,6 +54,8 @@ public:
     CANFrameModel * getCANFrameModel();
     ~MainWindow();
 
+    void handleDroppedFile(const QString &filename);
+
 private slots:
     void handleLoadFile();
     void handleSaveFile();

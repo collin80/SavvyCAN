@@ -1,9 +1,30 @@
 #include "mainwindow.h"
 #include <QApplication>
 
+class SavvyCANApplication : public QApplication
+{
+public:
+    MainWindow *mainWindow;
+    
+    SavvyCANApplication(int &argc, char **argv) : QApplication(argc, argv)
+    {
+    }
+
+    bool event(QEvent *event) override
+    {
+        if (event->type() == QEvent::FileOpen)
+        {
+            QFileOpenEvent *openEvent = static_cast<QFileOpenEvent *>(event);
+            mainWindow->handleDroppedFile(openEvent->file());
+        }
+
+        return QApplication::event(event);
+    }
+};
+
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
+    SavvyCANApplication a(argc, argv);
 
     //Add a local path for Qt extensions, to allow for per-application extensions.
     a.addLibraryPath("plugins");
@@ -14,7 +35,7 @@ int main(int argc, char *argv[])
     a.setOrganizationDomain("evtv.me");
     QSettings::setDefaultFormat(QSettings::IniFormat);
 
-    MainWindow w;
+    a.mainWindow = new MainWindow();
 
     QSettings settings;
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
@@ -22,7 +43,11 @@ int main(int argc, char *argv[])
     sysFont.setPointSize(fontSize);
     a.setFont(sysFont);
 
-    w.show();
+    a.mainWindow->show();
 
-    return a.exec();
+    int retCode = a.exec();
+    
+    delete a.mainWindow; a.mainWindow = NULL;
+    
+    return retCode;
 }
