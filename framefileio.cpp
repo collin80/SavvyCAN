@@ -4627,7 +4627,7 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
 
             if (data[0] == 'C')
             {
-                //We might have a new header here (if files were just concatinated togeather)
+                //We might have a new header here (if files were just concatenated together)
                 //Check to see if we have our full signature
                 qint64 originalPos = inFile->pos();
 
