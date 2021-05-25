@@ -807,6 +807,50 @@ void MainWindow::handleLoadFile()
     }
 }
 
+void MainWindow::handleDroppedFile(const QString &filename)
+{
+    QProgressDialog progress(qApp->activeWindow());
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Loading file...");
+    progress.setCancelButton(nullptr);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
+    
+    QVector<CANFrame> loadedFrames;
+    bool loadResult = FrameFileIO::autoDetectLoadFile(filename, &loadedFrames);
+    
+    progress.cancel();
+    
+    if (!loadResult)
+    {
+        if (loadedFrames.count() > 0) //only ask if at least one frame was decoded.
+        {
+            QMessageBox::StandardButton confirmDialog = QMessageBox::question(this, "Error Loading", "Do you want to salvage what could be loaded?",
+                                      QMessageBox::Yes|QMessageBox::No);
+            if (confirmDialog == QMessageBox::Yes)
+            {
+                loadResult = true;
+            }
+        }
+    }
+
+    if (loadResult)
+    {
+        ui->canFramesView->scrollToTop();
+        model->clearFrames();
+        model->insertFrames(loadedFrames);
+        loadedFileName = filename;
+        model->recalcOverwrite();
+        ui->lbNumFrames->setText(QString::number(model->rowCount()));
+        if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+
+        updateFileStatus();
+        emit framesUpdated(-1);
+    }
+}
+
+
 void MainWindow::handleSaveFile()
 {
     QString filename;
