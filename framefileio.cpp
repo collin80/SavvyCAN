@@ -188,6 +188,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
     filters.append(QString(tr("Tesla Autopilot Snapshot (*.CAN *.can)")));
     filters.append(QString(tr("CLX000 (*.txt *.TXT)")));
+    filters.append(QString(tr("CANServer Binary Log (*.log *.LOG)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -232,6 +233,8 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
         if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
         if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
+        if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
+
 
         progress.cancel();
 
@@ -288,6 +291,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadTeslaAPFile(filename, frames))
         {
             qDebug() << "Loaded as Tesla AP Snapshot successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting CANServer Binary Log";
+    if (isCANServerFile(filename))
+    {
+        if (loadCANServerFile(filename, frames))
+        {
+            qDebug() << "Loaded as CANServer Binary Log successfully!";
             return true;
         }
     }
@@ -3535,7 +3548,26 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             /* timestamp */
             ret = timeExp.exactMatch(tokens[0]);
             if(!ret) continue;
-
+            
+            //Sort out the bus
+            std::string busString = tokens[1].toStdString();
+            const char* busStringPtr = busString.c_str();
+            
+            int busNum = 0;
+            
+            //Search for where we have a bus number (skipping the can or vcan text)
+            for (unsigned int i = 0; i < busString.length(); i++)
+            {
+                if (busStringPtr[i] >= '0' && busStringPtr[i] <= '9')
+                {
+                    //Found where the number starts
+                    busNum = atoi(busStringPtr + i);
+                    break;
+                }
+            }
+            
+            thisFrame.bus = busNum;
+            
             thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0)));
             if(!ret) continue;
 
@@ -3597,7 +3629,6 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
 
             /*NB: should we make sure len <= 8? */
             thisFrame.isReceived = true;
-            thisFrame.bus = 0;
        }
        frames->append(thisFrame);
     }
@@ -4507,5 +4538,214 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
         }
     }
 
+    return !foundErrors;
+}
+
+bool FrameFileIO::isCANServerFile(QString filename)
+{
+    QFile *inFile = new QFile(filename);
+    QByteArray headerData;
+    bool isMatch = false;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+    try
+    {
+        //Read the first 20 bytes from the file to check for the matching signature
+        headerData = inFile->read(22);
+
+        //qDebug() << "header.length: " << headerData.length();
+
+        if (headerData.length() == 22)
+        {
+            //qDebug() << "header: " << headerData;
+            //We have enough bytes to make up our header.  Lets check if it matches
+            if (headerData == "CANSERVER_v2_CANSERVER")
+            {
+                isMatch = true;
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile->close();
+    delete inFile;
+    return isMatch;
+}
+
+bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile *inFile = new QFile(filename);
+    
+    union framedata_U
+    {
+        char data[8];
+        std::uint64_t u64;
+    };
+
+    framedata_U framedata;
+
+    uint64_t timeStampBase = 0;
+    
+    int frameCounter = 0;
+    bool foundErrors = false;
+
+    if (!inFile->open(QIODevice::ReadOnly))
+    {
+        delete inFile;
+        return false;
+    }
+
+    //Skip the header
+
+    bool fileIsGood = false;
+    QByteArray headerData = inFile->read(22);
+    if (headerData.length() == 22)
+    {
+        //qDebug() << "header: " << headerData;
+        //We have enough bytes to make up our header.  Lets check if it matches
+        if (headerData == "CANSERVER_v2_CANSERVER")
+        {
+            fileIsGood = true;
+        }
+    }
+
+    if (fileIsGood)
+    {
+        uint64_t lastFrameTime = 0;
+        
+        uint8_t data[1];
+        while (!inFile->atEnd())
+        {
+            inFile->read((char*)&data, 1);
+
+            if (data[0] == 'C')
+            {
+                //We might have a new header here (if files were just concatenated together)
+                //Check to see if we have our full signature
+                qint64 originalPos = inFile->pos();
+
+                QByteArray possibleHeaderData = inFile->read(21);
+                if (possibleHeaderData.length() == 21)
+                {
+                    if (possibleHeaderData == "ANSERVER_v2_CANSERVER" )
+                    {
+                        //We found another header.  Lets just ignore things and move on
+                    }
+                    else
+                    {
+                        //Hmm.  header wasn't right.  Just move the file pointer back and keep processing
+                        inFile->seek(originalPos);
+                    }
+                }
+            }
+            else if (data[0] == 0xCD)
+            {
+                //Log mark message
+                
+                //Read in the size of the mark
+                uint8_t markSize[1];
+                inFile->read((char*)&markSize, 1);
+                
+                //Read in the mark message
+                QByteArray markData = inFile->read(markSize[0]);
+                
+                /*
+                 Log Marks aren't yet supported by SavvyCAN
+                 
+                //Add this log mark to the list of frames so that it shows up
+                CANFrame markFrame;
+                markFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, lastFrameTime));
+                
+                markFrame.isMark = true;
+                markFrame.markMessage = QString(markData);
+                
+                frames->append(markFrame);
+                 */
+            }
+            else if (data[0] == 0xCE)
+            {
+                //Timesync message
+                framedata_U timesyncvalue;
+                ::memset(timesyncvalue.data, 0, sizeof(timesyncvalue.data));
+                inFile->read(timesyncvalue.data, 8);
+                
+                //This data is a uint64_t that tells us the current file time in us
+                //qDebug() << "Found a time sync message: " << timesyncvalue.u64;
+                timeStampBase = timesyncvalue.u64;
+            }
+            else if (data[0] == 0xCF)
+            {
+                if (frameCounter++ > 100)
+                {
+                    qApp->processEvents();
+                    frameCounter = 0;
+                }
+                
+                //CAN Frame
+                uint8_t frameheaderdata[5];
+                inFile->read((char*)frameheaderdata, 5);
+                
+                //The frame time offset is how long since the last time sync message (now in ms) this frame is
+                uint8_t byte1 = frameheaderdata[0];
+                uint8_t byte2 = frameheaderdata[1];
+                uint16_t frametimeoffset = ((uint16_t)byte2 << 8) | byte1;
+
+                byte1 = frameheaderdata[2];
+                byte2 = frameheaderdata[3];
+                uint16_t messageId = ((uint16_t)byte2 << 8) | byte1;
+                
+                uint8_t framelength = frameheaderdata[4] & 0x0F;
+                uint8_t busid = frameheaderdata[4] >> 4;
+
+                framelength = framelength > 8 ? 8 : framelength;
+                
+
+                //Now that we have a length lets read those bytes
+                ::memset(framedata.data, 0, sizeof(framedata.data));
+                inFile->read(framedata.data, framelength);
+
+                //Setup the frame object and populate it
+                
+                CANFrame thisFrame;
+                thisFrame.setFrameType(QCanBusFrame::DataFrame);
+
+                thisFrame.setFrameId(messageId);
+                thisFrame.isReceived = true;
+                thisFrame.bus = busid;
+
+                uint64_t frameTime = timeStampBase;
+                uint64_t frameoffset = frametimeoffset;
+                frameoffset *= 1000;
+
+                frameTime += frameoffset;
+                lastFrameTime = frameTime;
+
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameTime));
+
+                QByteArray bytes(framelength,0);
+                for (int i = 0; i < framelength; i++)
+                {
+                    bytes[i] = ((framedata.u64 >> (i*8)) & 0xFF);
+                }
+                
+                thisFrame.setPayload(bytes);
+                frames->append(thisFrame);
+            }
+        }
+    }
+    else
+    {
+        foundErrors = true;
+    }
+    
+    inFile->close();
+    delete inFile;
     return !foundErrors;
 }
