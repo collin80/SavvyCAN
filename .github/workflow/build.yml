@@ -1,0 +1,122 @@
+name: Build
+
+on: 
+  workflow_dispatch:
+      
+jobs:
+  buildlinux:
+    name: Linux x64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Prepare Environment
+        run: |
+            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0
+
+      - name: Prepare Qt Libraries
+        uses: jurplel/install-qt-action@v2
+
+      - name: Clone
+        uses: actions/checkout@v2
+
+      - name: Compile
+        run: |
+          qmake CONFIG+=release PREFIX=/usr SavvyCAN.pro
+          make -j`grep -c ^processor /proc/cpuinfo`
+          
+      - name: Package     
+        run: |
+          make INSTALL_ROOT=appdir install
+          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/5/linuxdeployqt-5-x86_64.AppImage"
+          chmod a+x linuxdeployqt-5-x86_64.AppImage
+          ./linuxdeployqt-5-x86_64.AppImage appdir/usr/local/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: SavvyCAN-Linux_x64.AppImage
+          path: SavvyCAN-x86_64.AppImage
+      
+  buildmacos:
+    name: macOS x64
+    runs-on: macos-latest
+
+    steps:
+      - name: Prepare macOS Environment
+        run: |
+            brew install qt5
+            brew link qt5 --force
+
+      - name: Clone
+        uses: actions/checkout@v2
+
+      - name: Compile     
+        run: |
+          qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
+          make -j`sysctl kern.aioprocmax | awk '{print $2}'`
+
+      - name: Package     
+        run: |
+          mkdir -p SavvyCAN.app/Contents/MacOS/help
+          cp -R help/* SavvyCAN.app/Contents/MacOS/help
+          macdeployqt SavvyCAN.app -dmg
+      
+      - uses: actions/upload-artifact@v2
+        with:
+          name: SavvyCAN-macOS_x64.dmg
+          path: SavvyCAN.dmg
+          
+  buildwindows:
+    name: Windows x64
+    runs-on: windows-latest
+
+    steps:      
+      - name: Prepare Qt Libraries
+        uses: jurplel/install-qt-action@v2
+
+      - name: Clone
+        uses: actions/checkout@v2
+      
+      - name: Compile
+        shell: cmd
+        run: | 
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+
+          qmake CONFIG+=release SavvyCAN.pro
+          nmake /C
+
+      - name: Package
+        run: |
+          mkdir package
+          copy "release/SavvyCAN.exe" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Core.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Gui.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Network.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5PrintSupport.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Qml.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5SerialBus.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5SerialPort.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Widgets.dll" package/
+          mkdir package/imageformats
+          copy "${Env:Qt5_Dir}/plugins/imageformats/*.*" package/imageformats/
+          mkdir package/platforms
+          copy "${Env:Qt5_Dir}/plugins/platforms/*.*" package/platforms/
+          mkdir package/styles
+          copy "${Env:Qt5_Dir}/plugins/styles/*.*" package/styles/
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: SavvyCAN-Windows_x64
+          path: package
+          
+  #notify:
+  #  name: Notify Discord
+  #  needs: [buildwindows, buildmacos, buildlinux]
+  #  runs-on: ubuntu-latest
+  #  steps:
+  #    - name: Notify Discord
+  #      run: |
+  #        curl -i -H "Accept: application/json" \
+  #        -H "Content-Type:application/json" \
+  #        -X POST \
+  #        --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} Build Complete\",      \"description\": \"Commit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
+  #        https://discord.com/api/webhooks/${{ secrets.WEBHOOK_ID }}/${{ secrets.WEBHOOK_TOKEN }}
