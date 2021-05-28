@@ -120,18 +120,18 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      - name: Display structure of downloaded files
-        run: ls -R    
-#      - uses: "marvinpinto/action-automatic-releases@latest"
-#        with:
-#          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-#          automatic_release_tag: "continuous"
-#          prerelease: true
-#          title: "Development Build"
-#          files: |
-#            SavvyCAN-Linux_x64.AppImage
-#            SavvyCAN-Windows_x64.zip
-#            SavvyCAN-macOS_x64.dmg
+      #- name: Display structure of downloaded files
+      #  run: ls -R    
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "continuous"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            SavvyCAN-Linux_x64.AppImage
+            SavvyCAN-Windows_x64
+            SavvyCAN-macOS_x64.dmg
           
   #notify:
   #  name: Notify Discord
