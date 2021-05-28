@@ -120,8 +120,8 @@ jobs:
 
       - uses: actions/download-artifact@v2
 
-      #- name: Display structure of downloaded files
-      #  run: ls -R    
+      - name: Display structure of downloaded files
+        run: zip -r SavvyCAN_CIBuild.zip SavvyCAN-Windows_x64/*.*
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -129,9 +129,9 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            SavvyCAN-Linux_x64.AppImage
-            SavvyCAN-Windows_x64
-            SavvyCAN-macOS_x64.dmg
+            SavvyCAN-Linux_x64.AppImage/SavvyCAN-x86_64.AppImage
+            SavvyCAN_CIBuild.zip
+            SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
           
   #notify:
   #  name: Notify Discord
