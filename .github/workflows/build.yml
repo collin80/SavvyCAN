@@ -1,7 +1,9 @@
 name: Build
 
-on: 
-  workflow_dispatch:
+on:
+  push:
+    branches:
+      - "master"
       
 jobs:
   buildlinux:
@@ -107,6 +109,23 @@ jobs:
         with:
           name: SavvyCAN-Windows_x64
           path: package
+ 
+  pre-release:
+    name: "pre-release"
+    runs-on: "ubuntu-latest"
+    needs: [buildwindows, buildmacos, buildlinux]
+
+    steps:
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "continuous"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            SavvyCAN-Linux_x64.AppImage
+            SavvyCAN-Windows_x64.zip
+            SavvyCAN-macOS_x64.dmg
           
   #notify:
   #  name: Notify Discord
