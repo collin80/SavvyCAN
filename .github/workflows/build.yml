@@ -121,7 +121,7 @@ jobs:
       - uses: actions/download-artifact@v2
 
       - name: Display structure of downloaded files
-        run: zip -r SavvyCAN_CIBuild.zip SavvyCAN-Windows_x64/*.*
+        run: zip -r SavvyCAN_CIBuild.zip SavvyCAN-Windows_x64
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
