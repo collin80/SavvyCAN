@@ -133,15 +133,15 @@ jobs:
             SavvyCAN_CIBuild.zip
             SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
           
-  #notify:
-  #  name: Notify Discord
-  #  needs: [buildwindows, buildmacos, buildlinux]
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - name: Notify Discord
-  #      run: |
-  #        curl -i -H "Accept: application/json" \
-  #        -H "Content-Type:application/json" \
-  #        -X POST \
-  #        --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} Build Complete\",      \"description\": \"Commit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
-  #        https://discord.com/api/webhooks/${{ secrets.WEBHOOK_ID }}/${{ secrets.WEBHOOK_TOKEN }}
+  notify:
+    name: Notify Discord
+    needs: [buildwindows, buildmacos, buildlinux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Discord
+        run: |
+          curl -i -H "Accept: application/json" \
+          -H "Content-Type:application/json" \
+          -X POST \
+          --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} Build Complete\",      \"description\": \"Commit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
+          https://discord.com/api/webhooks/${{ secrets.WEBHOOK_ID }}/${{ secrets.WEBHOOK_TOKEN }}
