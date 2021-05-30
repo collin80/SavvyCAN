@@ -135,13 +135,24 @@ jobs:
           
   notify:
     name: Notify Discord
-    needs: [buildwindows, buildmacos, buildlinux]
     runs-on: ubuntu-latest
     steps:
+      - id: msg_var
+        name: remove newlines
+        run: |
+          export release_msg=$(cat << EOF
+          ${{ github.event.head_commit.message }} 
+          EOF
+          )
+          release_msg="${release_msg//$'\n'/'-'}"
+          release_msg="${release_msg//$'\r'/'-'}"
+          echo $release_msg
+          echo "::set-output name=msg::$release_msg"
+                                                                  
       - name: Notify Discord
         run: |
           curl -i -H "Accept: application/json" \
           -H "Content-Type:application/json" \
           -X POST \
-          --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} Build Complete\",      \"description\": \"${{ github.event.head_commit.message }}\\nCommit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
+          --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} Build Complete\",      \"description\": \"${{ steps.msg_var.outputs.msg }} \\nCommit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
           https://discord.com/api/webhooks/${{ secrets.WEBHOOK_ID }}/${{ secrets.WEBHOOK_TOKEN }}
