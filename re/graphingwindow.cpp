@@ -86,6 +86,9 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     if (useOpenGL)
     {
+        //Fix the device pixel ratio for openGL so the graph doesn't render double sized
+        ui->graphingView->setBufferDevicePixelRatio(1);
+        
         ui->graphingView->setAntialiasedElements(QCP::aeAll);
         //ui->graphingView->setNoAntialiasingOnDrag(true);
         ui->graphingView->setOpenGl(true);
