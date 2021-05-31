@@ -90,6 +90,12 @@ jobs:
         run: |
           mkdir package
           copy "release/SavvyCAN.exe" package/
+          mkdir package/help
+          copy  help/*.md package/help/
+          mkdir package/help/images
+          copy help/images/*.* package/help/images/
+          mkdir package/examples
+          copy examples/*.* package/examples/          
           copy "${Env:Qt5_Dir}/bin/Qt5Core.dll" package/
           copy "${Env:Qt5_Dir}/bin/Qt5Gui.dll" package/
           copy "${Env:Qt5_Dir}/bin/Qt5Network.dll" package/
