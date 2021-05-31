@@ -310,7 +310,7 @@ bool DBCSignalEditor::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("signaleditor.html");
+            HelpWindow::getRef()->showHelp("signaleditor.md");
             break;
         }
         return true;

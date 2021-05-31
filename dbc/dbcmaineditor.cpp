@@ -85,7 +85,7 @@ bool DBCMainEditor::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("dbc_editor.html");
+            HelpWindow::getRef()->showHelp("dbc_editor.md");
             break;
         case Qt::Key_F3:
             handleSearchForward();

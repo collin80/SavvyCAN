@@ -121,7 +121,7 @@ bool MainSettingsDialog::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("preferences.html");
+            HelpWindow::getRef()->showHelp("preferences.md");
             break;
         }
         return true;

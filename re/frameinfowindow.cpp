@@ -134,7 +134,7 @@ bool FrameInfoWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("framedetails.html");
+            HelpWindow::getRef()->showHelp("framedetails.md");
             break;
         }
         return true;

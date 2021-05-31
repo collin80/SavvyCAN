@@ -214,7 +214,7 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
             btnFwdOneClick();
             break;
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("flowview.html");
+            HelpWindow::getRef()->showHelp("flowview.md");
             break;
         }
         return true;

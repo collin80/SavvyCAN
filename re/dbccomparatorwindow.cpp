@@ -49,7 +49,7 @@ bool DBCComparatorWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("filecomparison.html");
+            HelpWindow::getRef()->showHelp("filecomparison.md");
             break;
         }
         return true;

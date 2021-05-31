@@ -73,7 +73,7 @@ bool FuzzingWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("fuzzingwindow.html");
+            HelpWindow::getRef()->showHelp("fuzzingwindow.md");
             break;
         }
         return true;

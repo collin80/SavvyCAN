@@ -80,7 +80,7 @@ bool FrameSenderWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("customsender.html");
+            HelpWindow::getRef()->showHelp("customsender.md");
             break;
         }
         return true;

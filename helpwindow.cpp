@@ -60,7 +60,8 @@ HelpWindow* HelpWindow::getRef()
 
 void HelpWindow::showHelp(QString help)
 {
-    QString url = QCoreApplication::applicationDirPath() + "/help/" + help;
+    QString helpfile = QCoreApplication::applicationDirPath() + "/help/" + help;
+    QUrl url = QUrl::fromLocalFile(helpfile);
     qDebug() << "Searching for " << url;
     ui->textHelp->setSource(url);
 

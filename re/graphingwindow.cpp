@@ -462,7 +462,7 @@ bool GraphingWindow::eventFilter(QObject *obj, QEvent *event)
             zoomOut();
             break;
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("graphwindow.html");
+            HelpWindow::getRef()->showHelp("graphwindow.md");
             break;
         }
         return true;

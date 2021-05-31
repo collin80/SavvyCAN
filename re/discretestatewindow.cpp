@@ -82,7 +82,7 @@ bool DiscreteStateWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("discretestate.html");
+            HelpWindow::getRef()->showHelp("discretestate.md");
             break;
         }
         return true;

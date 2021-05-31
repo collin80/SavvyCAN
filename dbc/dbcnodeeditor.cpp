@@ -58,7 +58,7 @@ bool DBCNodeEditor::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("nodeeditor.html");
+            HelpWindow::getRef()->showHelp("nodeeditor.md");
             break;
         }
         return true;

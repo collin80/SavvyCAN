@@ -345,7 +345,7 @@ bool TemporalGraphWindow::eventFilter(QObject *obj, QEvent *event)
             resetView();
             break;
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("temporalwindow.html");
+            HelpWindow::getRef()->showHelp("temporalwindow.md");
             break;
         }
         return true;
