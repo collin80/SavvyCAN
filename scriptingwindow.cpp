@@ -109,7 +109,7 @@ bool ScriptingWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("scriptingwindow.html");
+            HelpWindow::getRef()->showHelp("scriptingwindow.md");
             break;
         }
         return true;

@@ -184,7 +184,7 @@ bool ConnectionWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("connectionwindow.html");
+            HelpWindow::getRef()->showHelp("connectionwindow.md");
             break;
         }
         return true;

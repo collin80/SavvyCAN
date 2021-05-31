@@ -126,7 +126,7 @@ bool FramePlaybackWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("playbackwindow.html");
+            HelpWindow::getRef()->showHelp("playbackwindow.md");
             break;
         }
         return true;

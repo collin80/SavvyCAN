@@ -95,7 +95,7 @@ bool ISOTP_InterpreterWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("isotp_decoder.html");
+            HelpWindow::getRef()->showHelp("isotp_decoder.md");
             break;
         }
         return true;

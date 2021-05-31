@@ -145,7 +145,7 @@ bool SnifferWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("sniffer.html");
+            HelpWindow::getRef()->showHelp("sniffer.md");
             break;
         }
         return true;

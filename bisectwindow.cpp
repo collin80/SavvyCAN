@@ -50,7 +50,7 @@ bool BisectWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("bisector.html");
+            HelpWindow::getRef()->showHelp("bisector.md");
             break;
         }
         return true;

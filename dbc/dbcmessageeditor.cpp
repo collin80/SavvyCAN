@@ -156,7 +156,7 @@ bool DBCMessageEditor::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("messageeditor.html");
+            HelpWindow::getRef()->showHelp("messageeditor.md");
             break;
         }
         return true;

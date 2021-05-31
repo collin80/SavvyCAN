@@ -312,7 +312,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         switch (keyEvent->key())
         {
         case Qt::Key_F1:
-            HelpWindow::getRef()->showHelp("mainscreen.html");
+            HelpWindow::getRef()->showHelp("mainscreen.md");
             return true;
             break;
         }
