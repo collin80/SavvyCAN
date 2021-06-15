@@ -454,6 +454,9 @@
    <property name="text">
     <string>Load Log File</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
   </action>
   <action name="actionSave_Log_File">
    <property name="text">
