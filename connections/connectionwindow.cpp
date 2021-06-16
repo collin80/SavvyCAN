@@ -254,7 +254,11 @@ void ConnectionWindow::handleNewConn()
         newPort = thisDialog->getPortName();
         newDriver = thisDialog->getDriverName();
         conn = create(newType, newPort, newDriver);
-        if (conn) connModel->add(conn);
+        if (conn)
+        {
+            connModel->add(conn);
+            ui->tableConnections->setCurrentIndex(connModel->index(connModel->rowCount() - 1, 1));
+        }
     }
     delete thisDialog;
 }
@@ -423,6 +427,9 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         CANConnection* conn_p = connModel->getAtIdx(selIdx);
         if(!conn_p) return;
 
+        //because this might have already been setup during the initial setup so tear that one down and then create the normal one.
+        //disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
+
         numBuses = conn_p->getNumBuses();
         int numB = ui->tabBuses->count();
         for (int i = 0; i < numB; i++) ui->tabBuses->removeTab(0);
@@ -475,7 +482,11 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
         /* connect signal */
         connect(conn_p, SIGNAL(status(CANConStatus)),
                 this, SLOT(connectionStatus(CANConStatus)));
-
+        if (ui->ckEnableConsole->isChecked())
+        {
+            //set up the debug console to operate if we've selected it. Doing so here allows debugging right away during set up
+            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+        }
         /*TODO add return value and checks */
         conn_p->start();
     }
