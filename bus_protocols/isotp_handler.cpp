@@ -53,7 +53,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     CANFrame frame;
     frame.setFrameType(QCanBusFrame::DataFrame);
     int currByte = 0;
-    int index = 0;
+    int sequence = 1; //Initial Sequence number is 1
     if (bus < 0) return;
     if (bus >= CANConManager::getInstance()->getNumBuses()) return;
 
@@ -90,8 +90,8 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
         while (currByte < data.length())
         {
             for (int b = 0; b < 8; b++) bytes[b] = 0x00;
-            bytes[0] = 0x20 + index;
-            index = (index + 1) & 0xF;
+            bytes[0] = 0x20 + sequence; //Consecutive Frame starts from 0x20 + 1 (2: Frame type, 1: Sequence number)
+            sequence = (sequence + 1) & 0xF;
             int bytesToGo = data.length() - currByte;
             if (bytesToGo > 7) bytesToGo = 7;
             for (int i = 0; i < bytesToGo; i++) bytes[1 + i] = data[currByte++];
