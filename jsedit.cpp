@@ -78,6 +78,7 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_keywords << "break";
     m_keywords << "case";
     m_keywords << "catch";
+    m_keywords << "const";
     m_keywords << "continue";
     m_keywords << "default";
     m_keywords << "delete";
@@ -137,7 +138,6 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_knownIds << "arguments";
     m_knownIds << "arity";
     m_knownIds << "caller";
-    m_knownIds << "constructor";
     m_knownIds << "length";
     m_knownIds << "name";
     m_knownIds << "apply";
