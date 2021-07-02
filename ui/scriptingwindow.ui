@@ -20,6 +20,7 @@
       <widget class="QLabel" name="label_4">
        <property name="text">
         <string>Public Variables:</string>
+        <string>Public Variables</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -48,6 +49,7 @@
         <widget class="QPushButton" name="btnNewScript">
          <property name="text">
           <string>New</string>
+          <string>&amp;New</string>
          </property>
         </widget>
        </item>
@@ -55,6 +57,7 @@
         <widget class="QPushButton" name="btnRemoveScript">
          <property name="text">
           <string>Del</string>
+          <string>&amp;Del</string>
          </property>
         </widget>
        </item>
@@ -62,6 +65,7 @@
         <widget class="QPushButton" name="btnLoadScript">
          <property name="text">
           <string>Load</string>
+          <string>&amp;Load</string>
          </property>
         </widget>
        </item>
@@ -87,6 +91,7 @@
         <widget class="QPushButton" name="btnSaveScript">
          <property name="text">
           <string>Save</string>
+          <string>&amp;Save</string>
          </property>
         </widget>
        </item>
@@ -94,6 +99,7 @@
         <widget class="QPushButton" name="btnRevertScript">
          <property name="text">
           <string>Revert</string>
+          <string>&amp;Revert</string>
          </property>
         </widget>
        </item>
@@ -101,6 +107,7 @@
         <widget class="QPushButton" name="btnRecompile">
          <property name="text">
           <string>Recompile</string>
+          <string>Re&amp;compile</string>
          </property>
         </widget>
        </item>
@@ -110,6 +117,7 @@
       <widget class="QLabel" name="label_3">
        <property name="text">
         <string>Log Window:</string>
+        <string>Log Window</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
@@ -123,6 +131,7 @@
       <widget class="QCheckBox" name="cbAutoScroll">
        <property name="text">
         <string>Auto Scroll Log Window</string>
+        <string>&amp;Auto Scroll Log Window</string>
        </property>
       </widget>
      </item>
@@ -130,6 +139,7 @@
       <widget class="QPushButton" name="btnClearLog">
        <property name="text">
         <string>Clear Log Window</string>
+        <string>Clear Log &amp;Window</string>
        </property>
       </widget>
      </item>
