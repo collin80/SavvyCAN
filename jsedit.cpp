@@ -266,7 +266,8 @@ void JSHighlighter::highlightBlock(const QString &text)
         Identifier = 2,
         String = 3,
         Comment = 4,
-        Regex = 5
+        Regex = 5,
+        HexNumber = 6
     };
 
     QList<int> bracketPositions;
@@ -291,6 +292,10 @@ void JSHighlighter::highlightBlock(const QString &text)
             start = i;
             if (ch.isSpace()) {
                 ++i;
+            } else if (ch == '0' && (next == 'x' || next == 'X')) {
+                ++i;
+                ++i;
+                state = HexNumber;
             } else if (ch.isDigit()) {
                 ++i;
                 state = Number;
@@ -327,6 +332,15 @@ void JSHighlighter::highlightBlock(const QString &text)
 
         case Number:
             if (ch.isSpace() || !ch.isDigit()) {
+                setFormat(start, i - start, m_colors[JSEdit::Number]);
+                state = Start;
+            } else {
+                ++i;
+            }
+            break;
+
+        case HexNumber:
+            if (ch.isSpace() || !(ch.isDigit() || QString("ABCDEF").contains(ch.toUpper()))) {
                 setFormat(start, i - start, m_colors[JSEdit::Number]);
                 state = Start;
             } else {
