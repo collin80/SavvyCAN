@@ -90,6 +90,7 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_keywords << "if";
     m_keywords << "in";
     m_keywords << "instanceof";
+    m_keywords << "let";
     m_keywords << "new";
     m_keywords << "return";
     m_keywords << "switch";
