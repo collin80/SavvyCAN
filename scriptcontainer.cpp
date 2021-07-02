@@ -145,12 +145,12 @@ void ScriptContainer::addParameter(QJSValue name)
 
 void ScriptContainer::updateValuesTable(QTableWidget *widget)
 {
-    QString valu;
+    QString value;
 
     foreach (QString paramName, scriptParams)
     {
-        valu = scriptEngine->globalObject().property(paramName).toString();
-        qDebug() << paramName << " - " << valu;
+        value = scriptEngine->globalObject().property(paramName).toString();
+        qDebug() << paramName << " - " << value;
         bool found = false;
         for (int i = 0; i < widget->rowCount(); i++)
         {
@@ -159,7 +159,7 @@ void ScriptContainer::updateValuesTable(QTableWidget *widget)
                 found = true;
                 if (!widget->item(i, 1)->isSelected())
                 {
-                    widget->item(i,1)->setText(valu);
+                    widget->item(i,1)->setText(value);
                 }
                 break;
             }
@@ -174,7 +174,7 @@ void ScriptContainer::updateValuesTable(QTableWidget *widget)
             item->setFlags(Qt::ItemIsEnabled);
             widget->setItem(row, 0, item);
             item = new QTableWidgetItem();
-            item->setText(valu);
+            item->setText(value);
             widget->setItem(row, 1, item);
         }
     }
@@ -297,7 +297,7 @@ void ISOTPScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     uint32_t idVal = id.toUInt();
     uint32_t maskVal = mask.toUInt();
     int busVal = bus.toInt();
-    qDebug() << "Called isotp set filter";
+    qDebug() << "Called ISOTP set filter";
     qDebug() << idVal << "*" << maskVal << "*" << busVal;
 
     handler->addFilter(busVal, idVal, maskVal);
@@ -306,18 +306,17 @@ void ISOTPScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
 void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue dataBytes)
 {
     ISOTP_MESSAGE msg;
-    QByteArray dataArray;
     msg.setExtendedFrameFormat(false);
     msg.setFrameId(id.toUInt());
-    dataArray.resize(length.toInt());
+    QByteArray dataArray(length.toUInt(), 0);
 
-    int dataLen = msg.payload().length();
+    int dataLen = dataArray.length();
 
     if (!dataBytes.isArray()) qDebug() << "data isn't an array";
 
     for (int i = 0; i < dataLen; i++)
     {
-        dataArray[i] = static_cast<int8_t>(dataBytes.property(i).toInt());
+        dataArray[i] = static_cast<uint8_t>(dataBytes.property(i).toInt());
     }
     msg.setPayload(dataArray);
 
@@ -325,7 +324,8 @@ void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJ
 
     if (msg.frameId() > 0x7FF) msg.setExtendedFrameFormat(true);
 
-    qDebug() << "sending isotp message from script";
+    qDebug() << "sending ISOTP message from script";
+    
     handler->sendISOTPFrame(msg.bus, msg.frameId(), msg.payload());
 }
 
@@ -372,28 +372,29 @@ void UDSScriptHelper::setFilter(QJSValue id, QJSValue mask, QJSValue bus)
     uint32_t idVal = id.toUInt();
     uint32_t maskVal = mask.toUInt();
     int busVal = bus.toInt();
-    qDebug() << "Called uds set filter";
+    qDebug() << "Called UDS set filter";
     qDebug() << idVal << "*" << maskVal << "*" << busVal;
 
     handler->addFilter(busVal, idVal, maskVal);
 }
 
-void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSValue sublen, QJSValue subFunc, QJSValue length, QJSValue data)
+void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSValue sublen, QJSValue subFunc, QJSValue length, QJSValue dataBytes)
 {
     UDS_MESSAGE msg;
-    QByteArray dataArray;
     msg.setExtendedFrameFormat(false);
-    msg.setFrameId( id.toUInt() );
-    dataArray.resize(length.toUInt());
+    msg.setFrameId(id.toUInt());
+    QByteArray dataArray(length.toUInt(), 0);
     msg.service = service.toUInt();
     msg.subFuncLen = sublen.toUInt();
     msg.subFunc = subFunc.toUInt();
 
-    if (!data.isArray()) qDebug() << "data isn't an array";
+    int dataLen = dataArray.length();
 
-    for (int i = 0; i < msg.payload().length(); i++)
+    if (!dataBytes.isArray()) qDebug() << "data isn't an array";
+
+    for (int i = 0; i < dataLen; i++)
     {
-        dataArray[i] = (static_cast<uint8_t>(data.property(static_cast<quint32>(i)).toInt()));
+        dataArray[i] = static_cast<uint8_t>(dataBytes.property(i).toInt());
     }
     msg.setPayload(dataArray);
 
