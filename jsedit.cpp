@@ -249,6 +249,27 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_knownIds << "window";
     m_knownIds << "navigator";
     m_knownIds << "userAgent";
+
+    //Custom objects
+    m_knownIds << "host";
+    m_knownIds << "can";
+    m_knownIds << "isotp";
+    m_knownIds << "uds";
+    //Custom callback functions
+    m_knownIds << "setup";
+    m_knownIds << "tick";
+    m_knownIds << "gotCANFrame";
+    m_knownIds << "gotISOTPMessage";
+    m_knownIds << "gotUDSMessage";
+    //Custom functions
+    m_knownIds << "setTickInterval";
+    m_knownIds << "log";    //Duplicate but anyway
+    m_knownIds << "addParameter";
+    m_knownIds << "setFilter";
+    m_knownIds << "clearFilters";
+    m_knownIds << "sendFrame";
+    m_knownIds << "sendISOTP";
+    m_knownIds << "sendUDS";
 }
 
 void JSHighlighter::setColor(JSEdit::ColorComponent component, const QColor &color)
