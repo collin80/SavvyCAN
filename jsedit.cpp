@@ -78,6 +78,7 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_keywords << "break";
     m_keywords << "case";
     m_keywords << "catch";
+    m_keywords << "const";
     m_keywords << "continue";
     m_keywords << "default";
     m_keywords << "delete";
@@ -89,6 +90,7 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_keywords << "if";
     m_keywords << "in";
     m_keywords << "instanceof";
+    m_keywords << "let";
     m_keywords << "new";
     m_keywords << "return";
     m_keywords << "switch";
@@ -137,7 +139,6 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     m_knownIds << "arguments";
     m_knownIds << "arity";
     m_knownIds << "caller";
-    m_knownIds << "constructor";
     m_knownIds << "length";
     m_knownIds << "name";
     m_knownIds << "apply";
@@ -265,7 +266,8 @@ void JSHighlighter::highlightBlock(const QString &text)
         Identifier = 2,
         String = 3,
         Comment = 4,
-        Regex = 5
+        Regex = 5,
+        HexNumber = 6
     };
 
     QList<int> bracketPositions;
@@ -290,6 +292,10 @@ void JSHighlighter::highlightBlock(const QString &text)
             start = i;
             if (ch.isSpace()) {
                 ++i;
+            } else if (ch == '0' && (next == 'x' || next == 'X')) {
+                ++i;
+                ++i;
+                state = HexNumber;
             } else if (ch.isDigit()) {
                 ++i;
                 state = Number;
@@ -326,6 +332,15 @@ void JSHighlighter::highlightBlock(const QString &text)
 
         case Number:
             if (ch.isSpace() || !ch.isDigit()) {
+                setFormat(start, i - start, m_colors[JSEdit::Number]);
+                state = Start;
+            } else {
+                ++i;
+            }
+            break;
+
+        case HexNumber:
+            if (ch.isSpace() || !(ch.isDigit() || QString("ABCDEF").contains(ch.toUpper()))) {
                 setFormat(start, i - start, m_colors[JSEdit::Number]);
                 state = Start;
             } else {
