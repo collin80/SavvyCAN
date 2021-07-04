@@ -300,7 +300,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             //data[1] contains number of frames to send before waiting for next flow control
             framesUntilFlow = data[1];
             if (framesUntilFlow == 0) framesUntilFlow = -1; //-1 means don't count frames and just keep going
-            //data[2] contains the interframe delay to use (0xF1 through 0xF9 are special through)
+            //data[2] contains the interframe delay to use (0xF1 through 0xF9 are special through - 100 to 900us)
             if (data[2] < 0xF1) frameTimer.start(data[2]); //set proper delay between frames
             else frameTimer.start(1); //can't do sub-millisecond sending with this code so just use 1ms timing
             break;
@@ -368,6 +368,7 @@ void ISOTP_HANDLER::frameTimerTick()
     else //while waiting for a flow frame we didn't get one during timeout period. Try to send anyway with default timeout
     {
         waitingForFlow = false;
+        framesUntilFlow = -1; //don't count frames, just keep sending
         frameTimer.setInterval(20); //pretty slow sending which should be OK as a default
     }
 }
