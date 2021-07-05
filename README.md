@@ -8,7 +8,7 @@ capturing of canbus frames.
 
 Please use the "Discussions" tab here on GitHub to ask questions and interact with the community.
 
-Requires at a resolution of at least 1024x768. Fully multi-monitor capable. Works on 4K monitors as well.
+Requires a resolution of at least 1024x768. Fully multi-monitor capable. Works on 4K monitors as well.
 
 You are highly recommended to use the 
 [CANDue board from EVTV](http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23).
@@ -16,7 +16,7 @@ You are highly recommended to use the
 The CANDue board must be running the GVRET firmware which can also be found
 within the collin80 repos.
 
-It is now possible to use any QT SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
+It is now possible to use any Qt SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
 There may, however, be some loss of some functionality as
 some functions of SavvyCAN are designed for use directly with the
 EVTVDue and CANDue 2.0 boards.
@@ -28,7 +28,7 @@ of this program. It can load and save in several formats:
 2. Microchip log file
 3. CRTD format (OVMS log file format from Mark Webb-Johnson)
 4. GVRET native format
-5. Generic CSV file (ID,D0 D1 D2 D3 D4 D5 D6 D7)
+5. Generic CSV file (ID, D0 D1 D2 D3 D4 D5 D6 D7)
 6. Vector Trace files
 7. IXXAT Minilog files
 8. CAN-DO Logs
@@ -48,10 +48,10 @@ http://www.qcustomplot.com/
 However, this source code is integrated into the source for SavvyCAN and one isn't required 
 to download it separately.
 
-This project requires 5.13.0 or higher because of a dependency on QtSerialBus and other new additions to QT. 
+This project requires 5.13.0 or higher because of a dependency on QtSerialBus and other new additions to Qt. 
 
-NOTE: QT6 currently lacks support for QtSerialBus and many other QT sub-features. At this time you cannot
-use QT6 to compile SavvyCAN. Support for QT6 should be possible around QT6.2.
+NOTE: Qt6 currently lacks support for QtSerialBus and many other Qt sub-features. At this time you cannot
+use Qt6 to compile SavvyCAN. Support for Qt6 should be possible around Qt6.2.
 
 ## Instructions for compiling:
 
