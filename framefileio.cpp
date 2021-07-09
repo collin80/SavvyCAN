@@ -3966,7 +3966,17 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
                     bytes[6] = ((tempData >> 8) & 0xFF);
                     bytes[7] = (tempData & 0xFF);
                 }
-                thisFrame.setPayload(bytes);
+                
+                // Shift the bytes back correctly so we have a frame that is the proper length
+                unsigned int framelength = tokens[3].length() / 2;
+                QByteArray finalbytes(framelength,0);
+                uint8_t bytes_shifted_by = 8 - framelength;
+                for (unsigned int j = 0; j < framelength; j++)
+                {
+                    finalbytes[j] = bytes[j + bytes_shifted_by];
+                }
+                
+                thisFrame.setPayload(finalbytes);
                 frames->append(thisFrame);
             }
             else foundErrors = true;
