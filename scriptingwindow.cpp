@@ -21,6 +21,12 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     editor->setEnabled(false);
     editor->setFont(QFont("Monospace", 12));
     editor->show();
+
+    //Show whitespaces
+    QTextOption option = editor->document()->defaultTextOption();
+    option.setFlags(QTextOption::ShowTabsAndSpaces);
+    editor->document()->setDefaultTextOption(option);
+
     ui->verticalLayout->insertWidget(2,editor, 10);
 
     readSettings();

@@ -57,6 +57,7 @@ public:
         Identifier,
         Keyword,
         BuiltIn,
+        Custom,
         Sidebar,
         LineNumber,
         Cursor,
