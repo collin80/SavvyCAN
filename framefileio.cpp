@@ -1417,38 +1417,48 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
         if (line.startsWith(';')) continue;
         if (line.length() > 41)
         {
+            line = line.simplified();
+            QList<QByteArray> tokens = line.split(' ');
             if (fileVersion == 11)
             {
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(line.mid(10, 8).simplified().toDouble() * 1000.0)));
-                thisFrame.setFrameId(line.mid(28, 8).simplified().toUInt(nullptr, 16));
-                if (thisFrame.frameId() < 0x1FFFFFFF)
+                if (tokens.length() > 4)
                 {
-                    int numBytes = line.mid(38,1).toInt();
-                    QByteArray bytes(numBytes, 0);
-                    thisFrame.isReceived = true;
-                    thisFrame.bus = 0;
-                    if (line.at(28) == ' ') {
-                        thisFrame.setExtendedFrameFormat(false);
-                    } else {
-                        thisFrame.setExtendedFrameFormat(true);
-                    }
-
-                    if (line.at(41) == 'R') {
-                        thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
-                    } else {
-                        QList<QByteArray> tokens = line.mid(41, numBytes * 3).split(' ');
-                        thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                        for (int d = 0; d < numBytes; d++)
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(tokens[1].toDouble() * 1000.0)));
+                    thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
+                    if (thisFrame.frameId() < 0x1FFFFFFF)
+                    {
+                        int numBytes = tokens[4].toInt();
+                        QByteArray bytes(numBytes, 0);
+                        thisFrame.isReceived = true;
+                        thisFrame.bus = 0;
+                        if (thisFrame.frameId() > 0x10000000)
                         {
-                            if (tokens[d] != "")
-                            {
-                                bytes[d] = static_cast<char>(tokens[d].toInt(nullptr, 16));
-                            }
-                            else bytes[d] = 0;
+                            thisFrame.setExtendedFrameFormat(true);
                         }
+                        else
+                        {
+                            thisFrame.setExtendedFrameFormat(false);
+                        }
+
+                        if (tokens[5] == "R")
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                        }
+                        else
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                            for (int d = 0; d < numBytes; d++)
+                            {
+                                if (tokens[d + 5] != "")
+                                {
+                                    bytes[d] = static_cast<char>(tokens[d + 5].toInt(nullptr, 16));
+                                }
+                                else bytes[d] = 0;
+                            }
+                        }
+                        thisFrame.setPayload(bytes);
+                        frames->append(thisFrame);
                     }
-                    thisFrame.setPayload(bytes);
-                    frames->append(thisFrame);
                 }
             }
             // Version 1.3
@@ -1459,72 +1469,89 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             //;---+-- ------+------ +- --+-- ---+---- +- -+-- -+ -- -- -- -- -- -- --
             //   0-6       8-20     22 25-26    38  41-? two chars each + space
             //     1)      1004.898 1  Tx    1fff079B -  8    02 21 04 00 00 00 00 00
+            //    0          1      2    3       4    5  6    7-?
             else if (fileVersion == 13)
             {
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(line.mid(8, 13).simplified().toDouble() * 1000.0)));
-                thisFrame.setFrameId(line.mid(31, 8).simplified().toUInt(nullptr, 16));
-                if (thisFrame.frameId() < 0x1FFFFFFF)
+                if (tokens.length() > 6)
                 {
-                    int numBytes = line.mid(43,2).trimmed().toInt();
-                    QByteArray bytes(numBytes, 0);
-                    //qDebug() << thisFrame.payload().length();
-                    thisFrame.isReceived = true;
-                    thisFrame.bus = line.mid(22,1).trimmed().toInt();
-                    if (line.at(30) == ' ') {
-                        thisFrame.setExtendedFrameFormat(false);
-                    } else {
-                        thisFrame.setExtendedFrameFormat(true);
-                    }
-                    if (line.at(48) == 'R') {
-                        thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
-                    } else {
-                        QList<QByteArray> tokens = line.mid(48, numBytes * 3).split(' ');
-                        thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                        for (int d = 0; d < numBytes; d++)
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[1].toDouble() * 1000.0)));
+                    thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
+                    if (thisFrame.frameId() < 0x1FFFFFFF)
+                    {
+                        int numBytes = tokens[6].toInt();
+                        QByteArray bytes(numBytes, 0);
+                        //qDebug() << thisFrame.payload().length();
+                        thisFrame.isReceived = true;
+                        thisFrame.bus = tokens[2].toInt();
+                        if (thisFrame.frameId() > 0x10000000)
                         {
-                            if (tokens[d] != "")
-                            {
-                                bytes[d] = static_cast<char>(tokens[d].toInt(nullptr, 16));
-                            }
-                            else bytes[d] = 0;
+                            thisFrame.setExtendedFrameFormat(true);
                         }
+                        else
+                        {
+                            thisFrame.setExtendedFrameFormat(false);
+                        }
+                        if (tokens[7] == "R")
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                        }
+                        else
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                            for (int d = 0; d < numBytes; d++)
+                            {
+                                if (tokens[d + 7] != "")
+                                {
+                                    bytes[d] = static_cast<char>(tokens[d + 7].toInt(nullptr, 16));
+                                }
+                                else bytes[d] = 0;
+                            }
+                        }
+                        thisFrame.setPayload(bytes);
+                        frames->append(thisFrame);
                     }
-                    thisFrame.setPayload(bytes);
-                    frames->append(thisFrame);
                 }
             }
             else if (fileVersion == 20)
             {
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(line.mid(8, 13).simplified().toDouble() * 1000.0)));
-                thisFrame.setFrameId(line.mid(25, 8).simplified().toUInt(nullptr, 16));
-                if (thisFrame.frameId() < 0x1FFFFFFF)
+                if (tokens.length() > 5)
                 {
-                    int numBytes = line.mid(37,2).trimmed().toInt();
-                    QByteArray bytes(numBytes, 0);
-                    //qDebug() << thisFrame.payload().length();
-                    thisFrame.isReceived = true;
-                    thisFrame.bus = 0;
-                    if (line.at(25) == ' ') {
-                        thisFrame.setExtendedFrameFormat(false);
-                    } else {
-                        thisFrame.setExtendedFrameFormat(true);
-                    }
-                    if (line.at(40) == 'R') {
-                        thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
-                    } else {
-                        QList<QByteArray> tokens = line.mid(40, numBytes * 3).split(' ');
-                        thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                        for (int d = 0; d < numBytes; d++)
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[1].toDouble() * 1000.0)));
+                    thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
+                    if (thisFrame.frameId() < 0x1FFFFFFF)
+                    {
+                        int numBytes = tokens[5].toInt();
+                        QByteArray bytes(numBytes, 0);
+                        //qDebug() << thisFrame.payload().length();
+                        thisFrame.isReceived = true;
+                        thisFrame.bus = 0;
+                        if (thisFrame.frameId() > 0x10000000)
                         {
-                            if (tokens[d] != "")
-                            {
-                                bytes[d] = static_cast<char>(tokens[d].toInt(nullptr, 16));
-                            }
-                            else bytes[d] = 0;
+                            thisFrame.setExtendedFrameFormat(true);
                         }
+                        else
+                        {
+                            thisFrame.setExtendedFrameFormat(false);
+                        }
+                        if (tokens[6] == "R")
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                        }
+                        else
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                            for (int d = 0; d < numBytes; d++)
+                            {
+                                if (tokens[d + 6] != "")
+                                {
+                                    bytes[d] = static_cast<char>(tokens[d + 6].toInt(nullptr, 16));
+                                }
+                                else bytes[d] = 0;
+                            }
+                        }
+                        thisFrame.setPayload(bytes);
+                        frames->append(thisFrame);
                     }
-                    thisFrame.setPayload(bytes);
-                    frames->append(thisFrame);
                 }
             }
         }
