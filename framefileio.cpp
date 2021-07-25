@@ -1296,7 +1296,7 @@ bool FrameFileIO::isPCANFile(QString filename)
     QFile *inFile = new QFile(filename);
     QByteArray line;
     int lineCounter = 0;
-    int fileVersion = 1;
+    bool hasFileVer = false;
     bool isMatch = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -1314,37 +1314,8 @@ bool FrameFileIO::isPCANFile(QString filename)
                 break;
             }
             line = inFile->readLine();
-            if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 2;
-            if (line.startsWith(';')) continue;
-            if (line.length() > 41)
-            {
-                if (fileVersion == 1)
-                {
-                    uint32_t id = line.mid(28, 8).simplified().toUInt(nullptr, 16);
-                    if (id > 0 && id < 0x1FFFFFFF)
-                    {
-                        int len = line.mid(38,1).toInt();
-                        if (len > - 1 && len < 9) isMatch = true;
-                    }
-                    else isMatch = false;
-                }
-
-                else if (fileVersion == 2)
-                {
-                    uint32_t id = line.mid(25, 8).simplified().toUInt(nullptr, 16);
-                    if (id > 0 && id < 0x1FFFFFFF)
-                    {
-                        int len = line.mid(37,2).trimmed().toInt();
-                        if (len > 0 && len < 9)
-                        {
-                            QList<QByteArray> tokens = line.mid(40, len * 3).split(' ');
-                            if (tokens.length() == len) isMatch = true;
-                        }
-                        else isMatch = false;
-                    }
-                }
-            }
-            //else foundErrors = true;
+            if (line.startsWith(";$FILEVERSION=")) hasFileVer = true;
+            if (line.toUpper().contains("PCAN") && hasFileVer) isMatch = true;
         }
     }
     catch (...)
@@ -1562,12 +1533,13 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
     return !foundErrors;
 }
 
+//supporting two styles now and they have very different line layouts. Just checking for the header for now. That should still match only ASC files.
 bool FrameFileIO::isCanalyzerASC(QString filename)
 {
     QFile *inFile = new QFile(filename);
     QByteArray line;
     int lineCounter = 0;
-    bool isMatch = false;
+    bool isMatch = true;
     bool inHeader = true;
     QList<QByteArray> tokens;
 
@@ -1578,37 +1550,25 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
     }
     try
     {
-        while (!inFile->atEnd() && lineCounter < 10) {
-            lineCounter++;
-            if (lineCounter > 10)
-            {
-                qApp->processEvents();
-                lineCounter = 0;
-            }
+        if (!inFile->atEnd())
+        {
             line = inFile->readLine();
-            if (inHeader)
-            {
-                if (line.startsWith("//") ||  lineCounter > 4)
-                {
-                    inHeader = false;
-                    continue;
-                }
-            }
-            if (inHeader) continue;
-            if (line.length() > 2)
-            {
-                tokens = line.simplified().split(' ');
-                if (tokens.length() > 5)
-                {
-                    uint64_t time = static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0);
-                    if (time > 0) isMatch = true;
-                    uint32_t id = static_cast<uint32_t>(tokens[2].toUInt(nullptr, 16));
-                    if (id > 0 && id < 0x20000000) isMatch = true;
-                    int len = tokens[5].toInt();
-                    if (len > 0 && len < 9) isMatch = true;
-                    if (tokens.count() >= (len + 6)) isMatch = true;
-                }
-            }
+            if (!line.startsWith("date")) isMatch = false;
+        }
+        if (!inFile->atEnd() && isMatch)
+        {
+            line = inFile->readLine();
+            if (!line.startsWith("base")) isMatch = false;
+        }
+        if (!inFile->atEnd() && isMatch)
+        {
+            line = inFile->readLine();
+            if (!line.contains("logged")) isMatch = false;
+        }
+        if (!inFile->atEnd() && isMatch)
+        {
+            line = inFile->readLine();
+            if (!line.contains("version")) isMatch = false;
         }
     }
     catch (...)
@@ -1622,11 +1582,16 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
 
 //There tends to be four lines of header first. The last of which starts with // so first burn off lines
 //until a line starting with // is seen, then the rest are formatted like this:
+//Version 8.0:
 //  47.971842 2  248             Rx   d 8 FF FF FF FF FF FF FF FF
+//version 8.1
+//47244640.194244 CANFD   1 Rx        122                                   0 0 6  6 00 00 18 12 D2 00        0    0   200000        0        0        0        0        0
 //That can be simplified to look like this:
 //47.971842 2 248 Rx d 8 FF FF FF FF FF FF FF FF
+//47244640.194244 CANFD 1 Rx 122 0 0 6 6 00 00 18 12 D2 00 0 0 200000 0 0 0 0 0
 //Which is then easy to parse by splitting on the spaces
-//Time   bus id dir ? len databytes
+//Time   bus id dir ? len databytes (Ver 8.0)
+//Time   type bus dir ID ? ? length length bytes then many values of unknown type (ver 8.1)
 bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -1635,6 +1600,10 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
     int lineCounter = 0;
     bool foundErrors = false;
     bool inHeader = true;
+    int verMajor;
+    int verMinor;
+    int verRevision;
+
     thisFrame.setFrameType(QCanBusFrame::DataFrame);
     QList<QByteArray> tokens;
 
@@ -1654,6 +1623,18 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
         line = inFile->readLine();
         if (inHeader)
         {
+            if (line.startsWith("//"))
+            {
+                // version 8.1.0
+                line = line.right(line.length() - 11);
+                QList<QByteArray> versionTokens = line.split('.');
+                if (versionTokens.length() > 2)
+                {
+                    verMajor = versionTokens[0].toInt();
+                    verMinor = versionTokens[1].toInt();
+                    verRevision = versionTokens[2].toInt();
+                }
+            }
             if (line.startsWith("//") ||  lineCounter > 4)
             {
                 inHeader = false;
@@ -1664,55 +1645,113 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 2)
         {            
             tokens = line.simplified().split(' ');
-            if (tokens.length() > 5)
+            if (verMajor == 8 && verMinor == 0)
             {
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0)));
-                if (tokens[2].endsWith('x'))
+                if (tokens.length() > 5)
                 {
-                    QByteArray copied_id = tokens[2];
-                    copied_id.chop(1);
-                    thisFrame.setFrameId(copied_id.toUInt(nullptr, 16));
-                    thisFrame.setExtendedFrameFormat(true);
-                }
-                else
-                {
-                    thisFrame.setFrameId(tokens[2].toUInt(nullptr, 16));
-                    thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);  //some .asc files have extended IDs without 'x'
-                }
-
-                int payloadLen = tokens[5].toInt();
-                QByteArray bytes(payloadLen, 0);
-
-                if (payloadLen > 8)
-                {
-                    qDebug() << "Payload length too long. Original line: " << line;
-                    return false;
-                }
-                if (payloadLen < 0)
-                {
-                    qDebug() << "Payload length negative! Original line: " << line;
-                    return false;
-                }
-                thisFrame.isReceived = tokens[3].toUpper().contains("RX");
-                thisFrame.bus = tokens[1].toInt();
-                if (tokens[4] == "r") thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
-                for (int d = 6; d < (6 + payloadLen); d++)
-                {
-                    if (tokens.count() > d)
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0)));
+                    if (tokens[2].endsWith('x'))
                     {
-                        bytes[d - 6] = static_cast<char>(tokens[d].toInt(nullptr, 16));
+                        QByteArray copied_id = tokens[2];
+                        copied_id.chop(1);
+                        thisFrame.setFrameId(copied_id.toUInt(nullptr, 16));
+                        thisFrame.setExtendedFrameFormat(true);
                     }
-                    else //expected byte wasn't there to read. Set it zero and set error flag
+                    else
                     {
-                        bytes[d - 6] = 0;
-                        foundErrors = true;
-                        qDebug() << "D:" << d << " Count:" << tokens.count();
-                        qDebug() << "Expected byte missing! Original line: " << line;
+                        thisFrame.setFrameId(tokens[2].toUInt(nullptr, 16));
+                        thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);  //some .asc files have extended IDs without 'x'
                     }
+
+                    int payloadLen = tokens[5].toInt();
+                    QByteArray bytes(payloadLen, 0);
+
+                    if (payloadLen > 8)
+                    {
+                        qDebug() << "Payload length too long. Original line: " << line;
+                        return false;
+                    }
+                    if (payloadLen < 0)
+                    {
+                        qDebug() << "Payload length negative! Original line: " << line;
+                        return false;
+                    }
+                    thisFrame.isReceived = tokens[3].toUpper().contains("RX");
+                    thisFrame.bus = tokens[1].toInt();
+                    if (tokens[4] == "r") thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                    for (int d = 6; d < (6 + payloadLen); d++)
+                    {
+                        if (tokens.count() > d)
+                        {
+                            bytes[d - 6] = static_cast<char>(tokens[d].toInt(nullptr, 16));
+                        }
+                        else //expected byte wasn't there to read. Set it zero and set error flag
+                        {
+                            bytes[d - 6] = 0;
+                            foundErrors = true;
+                            qDebug() << "D:" << d << " Count:" << tokens.count();
+                            qDebug() << "Expected byte missing! Original line: " << line;
+                        }
+                    }
+                    thisFrame.setPayload(bytes);
                 }
-                thisFrame.setPayload(bytes);
+                frames->append(thisFrame);
             }
-            frames->append(thisFrame);
+            if (verMajor == 8 && verMinor == 1)
+            {
+                if (tokens.length() > 5)
+                {
+                    //47244640.194244 CANFD 1 Rx 122 0 0 6 6 00 00 18 12 D2 00 0 0 200000 0 0 0 0 0
+                    //Time   type bus dir ID ? ? length length bytes then many values of unknown type (ver 8.1)
+                    // 0       1   2   3  4  5 6   7       8    9-
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0)));
+                    if (tokens[4].endsWith('x'))
+                    {
+                        QByteArray copied_id = tokens[4];
+                        copied_id.chop(1);
+                        thisFrame.setFrameId(copied_id.toUInt(nullptr, 16));
+                        thisFrame.setExtendedFrameFormat(true);
+                    }
+                    else
+                    {
+                        thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
+                        thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);  //some .asc files have extended IDs without 'x'
+                    }
+
+                    int payloadLen = tokens[8].toInt();
+                    QByteArray bytes(payloadLen, 0);
+
+                    if (payloadLen > 8)
+                    {
+                        qDebug() << "Payload length too long. Original line: " << line;
+                        return false;
+                    }
+                    if (payloadLen < 0)
+                    {
+                        qDebug() << "Payload length negative! Original line: " << line;
+                        return false;
+                    }
+                    thisFrame.isReceived = tokens[3].toUpper().contains("RX");
+                    thisFrame.bus = tokens[2].toInt();
+                    if (tokens[5] == "r") thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                    for (int d = 9; d < (9 + payloadLen); d++)
+                    {
+                        if (tokens.count() > d)
+                        {
+                            bytes[d - 9] = static_cast<char>(tokens[d].toInt(nullptr, 16));
+                        }
+                        else //expected byte wasn't there to read. Set it zero and set error flag
+                        {
+                            bytes[d - 9] = 0;
+                            foundErrors = true;
+                            qDebug() << "D:" << d << " Count:" << tokens.count();
+                            qDebug() << "Expected byte missing! Original line: " << line;
+                        }
+                    }
+                    thisFrame.setPayload(bytes);
+                }
+                frames->append(thisFrame);
+            }
         }
         //else foundErrors = true;
     }
