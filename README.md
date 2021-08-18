@@ -48,14 +48,14 @@ http://www.qcustomplot.com/
 However, this source code is integrated into the source for SavvyCAN and one isn't required 
 to download it separately.
 
-This project requires 5.13.0 or higher because of a dependency on QtSerialBus and other new additions to Qt. 
+This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt. 
 
 NOTE: Qt6 currently lacks support for QtSerialBus and many other Qt sub-features. At this time you cannot
 use Qt6 to compile SavvyCAN. Support for Qt6 should be possible around Qt6.2.
 
 ## Instructions for compiling:
 
-[Download the newest stable version of Qt directly from qt.io](https://www.qt.io/download/) (You need 5.13.x or newer)
+[Download the newest stable version of Qt directly from qt.io](https://www.qt.io/download/) (You need 5.14.x or newer)
 
 ```sh
 cd ~
@@ -64,7 +64,7 @@ git clone https://github.com/collin80/SavvyCAN.git
 
 cd SavvyCAN
 
-~/Qt/5.13/gcc_64/bin/qmake
+~/Qt/5.14/gcc_64/bin/qmake
 
 make
 ```
