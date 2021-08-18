@@ -133,7 +133,11 @@ void CANFrameModel::setTimeFormat(QString format)
 void CANFrameModel::normalizeTiming()
 {
     mutex.lock();
-    if (frames.count() == 0) return;
+    if (frames.count() == 0) 
+    {
+        mutex.unlock();
+        return;
+    }
     timeOffset = frames[0].timeStamp().microSeconds();
     qint64 prevStamp = 0;
 
