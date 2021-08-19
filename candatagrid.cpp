@@ -96,8 +96,8 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 
     qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
 
-    int xSector = xSpan / 10;
-    int ySector = ySpan / 10;
+    int xSector = xSpan / 9;
+    int ySector = ySpan / 9;
 
     blackBrush = QBrush(Qt::black);
     whiteBrush = QBrush(Qt::white);
@@ -105,39 +105,50 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     greenBrush = QBrush(Qt::green);
     grayBrush = QBrush(QColor(230,230,230));
 
-    //the whole thing is broken up into 100 chunks which are allocated as such:
-    //The entirety of the upper row is taken up by "BITS"
-    //The next row down skips two columns and then has 7 6 5 4 3 2 1 0
-    //The bottom right 64 entries are the grid
-    //The left most column has "BYTES" written vertically down it
-    //the next left most column has "0 1 2 3 4 5 6 7" written down along the grid
+    //the whole thing is broken up into 81 chunks which are broken up
+    //into the 8x8 grid of bits in the bottom right and the other parts
+    //taken up by helper text
+
+    //bigTextSize is too large when the grid gets small. Might need to tweak it then.
+    double bigTextSize = qMin(xSector, ySector) * 0.5;
+    double smallTextSize = qMin(xSector, ySector) * 0.3;
 
     painter.setPen(QPen(QApplication::palette().color(QPalette::Text)));
     QFont mainFont;
-    mainFont.setPixelSize(qMin(xSector, ySector) - 10);
+    mainFont.setPixelSize(bigTextSize);
     painter.setFont(mainFont);
     QFont smallFont;
-    smallFont.setPixelSize(qMin(xSector, ySector) - 15);
+    smallFont.setPixelSize(smallTextSize);
     QFont boldFont;
-    boldFont.setPixelSize(qMin(xSector, ySector) - 10);
+    boldFont.setPixelSize(bigTextSize);
     boldFont.setBold(true);
 
-    painter.drawText(QRect(viewport.left(), viewport.top(), xSpan, ySector), Qt::AlignCenter, tr("BITS"));
+    painter.drawText(QRect(viewport.left(), viewport.top(), xSector, ySector), Qt::AlignCenter, "BITS ->");
 
     for (x = 0; x < 8; x++)
     {
-        painter.drawText(QRect(viewport.left() + (x+2) * xSector, viewport.top() + ySector, xSector, ySector), Qt::AlignCenter, QString::number(7-x));
+        painter.drawText(QRect(viewport.left() + (x+1) * xSector, viewport.top(), xSector, ySector), Qt::AlignCenter, QString::number(7-x));
     }
-    for (y = 0; y < 8; y++)
-    {
-        painter.drawText(QRect(viewport.left() + xSector, viewport.top() + ySector * (y + 2), xSector, ySector), Qt::AlignCenter, QString::number(y));
-    }
+    //for (y = 0; y < 8; y++)
+    //{
+    //    painter.drawText(QRect(viewport.left() + xSector, viewport.top() + ySector * (y + 2), xSector, ySector), Qt::AlignCenter, QString::number(y));
+    //}
 
-    painter.drawText(viewport.left() + 10, viewport.top() + ySector * 4, "B");
-    painter.drawText(viewport.left() + 10, viewport.top() + ySector * 5, "Y");
-    painter.drawText(viewport.left() + 10, viewport.top() + ySector * 6, "T");
-    painter.drawText(viewport.left() + 10, viewport.top() + ySector * 7, "E");
-    painter.drawText(viewport.left() + 10, viewport.top() + ySector * 8, "S");
+    painter.drawText(viewport.left() + 4, viewport.top() + ySector * 3, "B");
+    painter.drawText(viewport.left() + 4, viewport.top() + ySector * 4, "Y");
+    painter.drawText(viewport.left() + 4, viewport.top() + ySector * 5, "T");
+    painter.drawText(viewport.left() + 4, viewport.top() + ySector * 6, "E");
+    painter.drawText(viewport.left() + 4, viewport.top() + ySector * 7, "S");
+
+
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 1, xSector, ySector), Qt::AlignCenter, "0");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 2, xSector, ySector), Qt::AlignCenter, "1");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 3, xSector, ySector), Qt::AlignCenter, "2");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 4, xSector, ySector), Qt::AlignCenter, "3");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 5, xSector, ySector), Qt::AlignCenter, "4");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 6, xSector, ySector), Qt::AlignCenter, "5");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 7, xSector, ySector), Qt::AlignCenter, "6");
+    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 8, xSector, ySector), Qt::AlignCenter, "7");
 
     //now, color the bitfield by seeing if a given bit is freshly set/unset in the new data
     //compared to the old. Bits that are not set in either are white, bits set in both are black
@@ -187,7 +198,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
             }
 
             //painter.fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
-            painter.drawRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector);
+            painter.drawRect(viewport.left() + (x+1) * xSector, viewport.top() + (y+1) * ySector, xSector, ySector);
             switch (textStates[x][y])
             {
             case GridTextState::NORMAL:
@@ -205,12 +216,12 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
                 break;
             }
 
-            painter.drawText(viewport.left() + (x+2) * xSector + (xSector / 8), viewport.top() + (y + 3) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
+            painter.drawText(viewport.left() + (x+1) * xSector + (xSector / 8), viewport.top() + (y + 2) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
             painter.setPen(QPen(Qt::gray));
         }
     }
-    upperLeft.setX(viewport.left() + 2 * xSector);
-    upperLeft.setY(viewport.top() + 2 * ySector);
+    upperLeft.setX(viewport.left() + 1 * xSector);
+    upperLeft.setY(viewport.top() + 1 * ySector);
     gridSize.setX(xSector);
     gridSize.setY(ySector);
 }
