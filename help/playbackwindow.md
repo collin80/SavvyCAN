@@ -30,6 +30,6 @@ The top of the window has a series of 6 icons all in a row:
 6. White Right Arrow - Play the next frame (just one frame)
 
 Playback Status
-================
+===============
 
 Below the number spinners for Playback Speed and Burst Rate is text that displays the currently playing sequence item along with the current frame within that capture.

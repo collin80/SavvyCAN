@@ -27,7 +27,7 @@ and will not color the output if those bits are toggled in the future. They will
 be ignored except that you can visually still see them updating. If you click the Notch 
 button repeatedly it will add any new changed bits to the old changed bits. In this way you 
 can build up a set of bits to ignore. Un-notching causes all notched (ignored) bits to be 
-reset and thus all changes will be colored once again. 
+reset and thus all changes will be colored once again. Notching is used to ignore bits that are changing all of the time. Why do this? The biggest reason is that you will probably want to ignore the "steady state" when you are doing research. Here is an example: Let's say you are searching for the steering position in your car. If you aren't moving the steering wheel you could safely assume that the value is not changing either. So, you might notch several times to mask out all the changing bits. You know anything currently changing isn't steering angle because you aren't moving the steering wheel. So, after thoroughly notching you then move the steeering wheel and see if you can spot an ID where suddenly bits changed where they weren't before. This can also be used to find gear selectors, speed and tachometer values, etc. Keep in mind that the default behavior when bits are notched is to still update but no longer change color. You can change this (see below)
 
 Advanced Options
 ==================
@@ -53,7 +53,7 @@ ignore any notched bits and not even change the display to update if only notche
 This completely hides all notched data. The view of the frames will then NOT perfectly or correctly
 represent the actual most up to date data for each ID. So, use this option with caution. But, it
 is handy when you are looking for a needle in a haystack and you don't want things changing if you've
-already told the program to notch them away.
+already told the program to notch them away. This will make changes even more visible but you must be cautious since the data is now somewhat "fake" anywhere there are notched bits.
 
 Fade inactive bytes
 ====================
