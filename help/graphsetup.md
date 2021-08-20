@@ -39,5 +39,12 @@ Once you've set both Data Len and Little Endian you can set the bits to use. The
 
 "Stride" is not often used but will cause only every "x" values to actually be graphed. This can be used to graph a very dense set of data with less points to speed things up.
 
-"Color" changes the color of the graphed line. It is automatically randomly set for new graphs but if you don't like the random color you can click the color and select a better one.
+"Only Points" will graph using disconnected points instead of lines.
 
+"Point Style" has a list of every style you can use for points. The default is to not show the points and instead draw a line through where the points are at. But, there are many other options.
+
+"Line Thickness" will set how many pixels the line should be wide. The default of 1 is the "fastest" but you can use other thicknesses.
+
+"Line Color" changes the color of the graphed line. It is automatically randomly set for new graphs but if you don't like the random color you can click the color and select a better one.
+
+"Fill Color" If you're feeling fancy you can also specify a fill color. The default fill color has an alpha value of 0 meaning it is completely transparent / no used. If you set a fill color you will need to set the alpha channel as well. An alpha of even 40-60 is usually plenty. 
