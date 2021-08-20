@@ -4,6 +4,7 @@
 #include <QPainter>
 #include <QDebug>
 #include <QMouseEvent>
+#include <QRandomGenerator>
 
 CANDataGrid::CANDataGrid(QWidget *parent) :
     QWidget(parent),
@@ -14,7 +15,7 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     memset(data, 0, 8);
     memset(refData, 0, 8);
     memset(usedData, 0, 8);
-    memset(usedSignalNum, 0, 64);
+    memset(usedSignalNum, -1, 64);
     for (int x = 0; x < 8; x++)
         for (int y = 0; y < 8; y++)
             textStates[x][y] = GridTextState::NORMAL;
@@ -63,14 +64,31 @@ GridTextState CANDataGrid::getCellTextState(int x, int y)
     return textStates[x][y];
 }
 
-void CANDataGrid::setUsedSignalNum(int bit, unsigned char signal)
+void CANDataGrid::setSignalNames(int sigIdx, const QString sigName)
+{
+    if (sigIdx < 0) return;
+    if (sigIdx > signalNames.size())
+    {
+        signalNames.resize(sigIdx * 2);
+    }
+    signalNames[sigIdx] = sigName;
+}
+
+void CANDataGrid::clearSignalNames()
+{
+    signalNames.clear();
+    signalNames.resize(40);
+    signalColors.clear();
+}
+
+void CANDataGrid::setUsedSignalNum(int bit, int signal)
 {
     if (bit < 0) return;
     if (bit > 63) return;
     usedSignalNum[bit] = signal;
 }
 
-unsigned char CANDataGrid::getUsedSignalNum(int bit)
+int CANDataGrid::getUsedSignalNum(int bit)
 {
     if (bit < 0) return 0;
     if (bit > 63) return 0;
@@ -82,12 +100,26 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
 {
     Q_UNUSED(event);
     qDebug() << "CANDataGrid Paint Event";
-    int x, y;
+    int x, y, bit;
     unsigned char prevByte, thisByte;
     bool thisBit, prevBit;
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
     QPainter painter(this);
 
+    //if this is true then generate unique colors for each signal
+    if ((signalColors.count() == 0) && (signalNames.count() > 0))
+    {
+        qDebug() << "Generating colors";
+        signalColors.resize(signalNames.count());
+        for (int i = 0; i < signalNames.count(); i++)
+        {
+            QColor newColor;
+            while (newColor.saturation() < 40)
+                newColor.setRgb(QRandomGenerator::global()->bounded(160),QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160));
+            qDebug() << newColor;
+            signalColors[i] = newColor;
+        }
+    }
 
     QRect viewport = painter.viewport();
 
@@ -109,7 +141,6 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     //into the 8x8 grid of bits in the bottom right and the other parts
     //taken up by helper text
 
-    //bigTextSize is too large when the grid gets small. Might need to tweak it then.
     double bigTextSize = qMin(xSector, ySector) * 0.5;
     double smallTextSize = qMin(xSector, ySector) * 0.3;
 
@@ -123,7 +154,10 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     boldFont.setPixelSize(bigTextSize);
     boldFont.setBold(true);
 
+
+    painter.setFont(smallFont);
     painter.drawText(QRect(viewport.left(), viewport.top(), xSector, ySector), Qt::AlignCenter, "BITS ->");
+    painter.setFont(boldFont);
 
     for (x = 0; x < 8; x++)
     {
@@ -141,14 +175,14 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     painter.drawText(viewport.left() + 4, viewport.top() + ySector * 7, "S");
 
 
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 1, xSector, ySector), Qt::AlignCenter, "0");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 2, xSector, ySector), Qt::AlignCenter, "1");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 3, xSector, ySector), Qt::AlignCenter, "2");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 4, xSector, ySector), Qt::AlignCenter, "3");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 5, xSector, ySector), Qt::AlignCenter, "4");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 6, xSector, ySector), Qt::AlignCenter, "5");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 7, xSector, ySector), Qt::AlignCenter, "6");
-    painter.drawText(QRect(viewport.left(), viewport.top() + ySector * 8, xSector, ySector), Qt::AlignCenter, "7");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 1, xSector, ySector), Qt::AlignCenter, "0");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 2, xSector, ySector), Qt::AlignCenter, "1");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 3, xSector, ySector), Qt::AlignCenter, "2");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 4, xSector, ySector), Qt::AlignCenter, "3");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 5, xSector, ySector), Qt::AlignCenter, "4");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 6, xSector, ySector), Qt::AlignCenter, "5");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 7, xSector, ySector), Qt::AlignCenter, "6");
+    painter.drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 8, xSector, ySector), Qt::AlignCenter, "7");
 
     //now, color the bitfield by seeing if a given bit is freshly set/unset in the new data
     //compared to the old. Bits that are not set in either are white, bits set in both are black
@@ -156,7 +190,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     //are green
 
     painter.setPen(QPen(Qt::gray));
-    //painter.setFont(smallFont);
+    painter.setFont(mainFont);
 
     for (y = 0; y < 8; y++)
     {
@@ -164,6 +198,7 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
         prevByte = refData[y];
         for (x = 0; x < 8; x++)
         {
+            bit = (y * 8) + (7 - x);
             thisBit = false;
             prevBit = false;
             if ((thisByte & (1 << (7-x))) == (1 << (7-x))) thisBit = true;
@@ -190,8 +225,13 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
                 {
                     if ((usedData[y] & (1 << (7-x))) == (1 << (7-x)))
                     {
-                        grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
-                        painter.setBrush(grayBrush);
+                        int usedSigNum = getUsedSignalNum(bit);
+                        if (usedSigNum == -1)
+                        {
+                            grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
+                            painter.setBrush(grayBrush);
+                        }
+                        else painter.setBrush(QBrush(signalColors[usedSigNum]));
                     }
                     else painter.setBrush(whiteBrush);
                 }
@@ -215,8 +255,12 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
                 painter.setPen(QColor(255-brushColor.red(), 255-brushColor.green(), 255-brushColor.blue()));
                 break;
             }
+            //change style of bit number output for current signal
+            if (thisBit) painter.setFont(boldFont);
+            else painter.setFont(mainFont);
 
-            painter.drawText(viewport.left() + (x+1) * xSector + (xSector / 8), viewport.top() + (y + 2) * ySector - (ySector / 3), QString::number(y * 8 + (7-x)));
+            painter.drawText(viewport.left() + (x+1) * xSector + (xSector / 8), viewport.top() + (y + 2) * ySector - (ySector / 3), QString::number(bit));
+            painter.setFont(mainFont);
             painter.setPen(QPen(Qt::gray));
         }
     }

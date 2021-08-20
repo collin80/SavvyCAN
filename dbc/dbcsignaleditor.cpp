@@ -371,6 +371,13 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
 
     fillSignalForm(currentSignal);
     fillValueTable(currentSignal);
+
+    ui->bitfield->clearSignalNames();
+    for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
+    {
+        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
+        ui->bitfield->setSignalNames(x, sig->name);
+    }
 }
 
 void DBCSignalEditor::refreshView()
@@ -633,7 +640,7 @@ void DBCSignalEditor::generateUsedBits()
 
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
-        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
+        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);        
 
         startBit = sig->startBit;
 
