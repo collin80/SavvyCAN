@@ -45,8 +45,10 @@ public:
     void saveImage(QString filename, int width, int height);
     void setCellTextState(int x, int y, GridTextState state);
     GridTextState getCellTextState(int x, int y);
-    void setUsedSignalNum(int bit, unsigned char signal);
-    unsigned char getUsedSignalNum(int bit);
+    void setUsedSignalNum(int bit, int signal);
+    void setSignalNames(int sigIdx, const QString sigName);
+    void clearSignalNames();
+    int getUsedSignalNum(int bit);
 
 protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
@@ -59,7 +61,9 @@ private:
     unsigned char refData[8];
     unsigned char data[8];
     unsigned char usedData[8];
-    unsigned char usedSignalNum[64]; //allows a full char per 64 bits we track so we can specify which signal claims this bit
+    int usedSignalNum[64]; //so we can specify which signal claims this bit
+    QVector<QString> signalNames;
+    QVector<QColor> signalColors;
     GridTextState textStates[8][8];
     QPoint upperLeft, gridSize;
 };

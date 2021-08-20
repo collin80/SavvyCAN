@@ -368,6 +368,12 @@ QString DBCMainEditor::createSignalText(DBC_SIGNAL *sig)
         sigInfo += ") ";
     }
     sigInfo.append(sig->name);
+
+    if (sig->intelByteOrder)
+        sigInfo.append(" [" + QString::number(sig->startBit) + "i " + QString::number(sig->signalSize) + "]");
+    else
+        sigInfo.append(" [" + QString::number(sig->startBit) + "m " + QString::number(sig->signalSize) + "]");
+
     if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
     return sigInfo;
 }
