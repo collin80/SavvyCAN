@@ -3,46 +3,19 @@ Connection Window
 
 ![Connection Window](./images/ConnectionWindow.png)
 
-The connection window is used to add, remove, and modify connections. At the moment it is possible
-to use any QT SerialBus compatible device and any GVRET compatible device in any of the supported
-operating systems. SerialBus supports socketcan on linux, passthrough on Linux and Windows 32 
-bit, and Vector, PeakCAN, and TinyCAN on supported OS's.
-
-At this time GVRET compatible devices are: EVTVDue, EVTV CANDue (1.3/2/2.1/2.2), 
-Teensy 3.1-3.6, Macchina M2, EVTV ESP32 Due.
-
+The connection window is used to add, remove, and modify connections.
 
 Connecting To A Dongle
 ==============================
+Click the button "Add New Device Connection" and fill out the screen with the proper settings. Some devices may create more than one bus but will still only take up one row in the list.
 
-SavvyCAN is able to connect to GVRET compatible devices to capture new traffic. These 
-devices will present as serial ports on the connected PC.
-To connect to a dongle select the proper serial port and click "Create New Connection". 
-If a valid device is found on that serial port the first statusbar section will update 
-and the currently set canbus speeds will show in the table at the left of the window. 
-These speeds can then be changed by clicking on the speed (or otherwise selecting the cell 
-in the table) and typing in a new value. Leaving the cell will update the speed to the new 
-value. GVRET devices also support setting "listen only" on each bus. This mode causes the 
-device to not acknowledge any traffic or try to modify the bus at all. It is as it says, 
-a mode where you can only listen to whatever traffic is found on the bus. Some older GVRET 
-devices supported a mode where you could change the second bus between single wire CAN 
-and normal CAN. This is deprecated. However, newer GVRET devices have dedicated single 
-wire CAN buses and the relevant bus will show the checkbox.
+Removing a Device
+==================
+Click on the device in the list in the upper lefthand side of the window then click the "Remove Selected Device" button
 
-SavvyCAN can also connect to a wide variety of CAN hardware through the built-in QT
-SerialBus drivers. These drivers vary by operating system but support socketcan on LINUX
-and Vector tools on both LINUX and Windows. When you select "QT SerialBus Devices" you will
-get a list of device types supported. Select a device type and for most devices you should see
-the Port list fill out with all registered and valid ports for that driver. Socketcan devices, for
-instance, are automatically detected now. Then push "Create New Connection" and you should 
-see the new connection in the table on the left of the window. Note that SocketCAN devices 
-don't support changing the baud rate within a program. You must do this when you set up 
-the connection via console commands. This is outside the scope of this documentation. 
-Consult the SocketCAN documentation for details on configuring such devices.
-
-The last connection option is "Remote Host." If you select this option then Port will change
-to a textbox. Enter the IP address of the remote (but still local to your LAN) IP address. Currently
-this works with EVTV ESP32 boards and M2 boards.
+Modifying Device Settings
+=========================
+Once you have selected a bus from the list you can disconnect it or modify its settings in the parameters at the buttom left. You must click "Save Bus Settings" to confirm the new settings. If the device you have selected has multiple buses then you will see tabs appear below where it says "Bus Details", one for each bus.
 
 Debugging Connection Problems
 ==============================

@@ -83,7 +83,6 @@ uds.sendUDS(bus, id, service, sublen, subfunc, length, data) - Sends a UDS messa
 
 A full example script
 =====================
-
 ::
 
     var newID = 0; //set this to the ID you want your RLEC to become
