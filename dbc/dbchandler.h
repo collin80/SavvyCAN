@@ -125,6 +125,7 @@ public:
     DBCFile* getFileByName(QString name);
     int createBlankFile();
     DBCFile* loadJSONFile(QString);
+    DBCFile* loadSecretCSVFile(QString);
     static DBCHandler *getReference();
 
 private:
