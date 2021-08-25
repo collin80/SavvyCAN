@@ -663,7 +663,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
             }
             else
             {
-                qDebug() << "WTF, could not find the node in the map. That should not happen.";
+                qDebug() << "Could not find the node in the map. That should not happen.";
             }
         }
 
@@ -685,7 +685,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
             }
             else
             {
-                qDebug() << "WTF, could not find the message in the map. That should not happen.";
+                qDebug() << "Could not find the message in the map. That should not happen.";
             }
         }
         break;

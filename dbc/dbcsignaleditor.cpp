@@ -376,7 +376,12 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
         DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
-        ui->bitfield->setSignalNames(x, sig->name);
+        //only set a signal name for signals which match multiplexparent with our currentsignal
+        if (!sig->multiplexParent || ((sig->multiplexParent == currentSignal->multiplexParent) && (sig->multiplexHighValue == currentSignal->multiplexHighValue)) )
+        {
+            ui->bitfield->setSignalNames(x, sig->name);
+            qDebug() << sig->name << sig->multiplexParent;
+        }
     }
 }
 
@@ -640,8 +645,16 @@ void DBCSignalEditor::generateUsedBits()
 
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
-        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);        
+        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
 
+        //only pay attention to this signal if it's multiplexParent matches currentSignal or is null
+
+        if (sig->multiplexParent)
+        {
+            if (sig->multiplexParent != currentSignal->multiplexParent) continue; //go thee away!
+            if (sig->multiplexHighValue != currentSignal->multiplexHighValue) continue; //buzz off
+            if (sig->multiplexLowValue != currentSignal->multiplexLowValue) continue;
+        }
         startBit = sig->startBit;
 
         if (sig->intelByteOrder)

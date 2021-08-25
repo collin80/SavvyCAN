@@ -1717,6 +1717,176 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
     return nullptr;
 }
 
+DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
+{
+    DBCFile *thisFile;
+    DBC_MESSAGE *pMsg;
+    DBC_SIGNAL *pSig;
+    QByteArray line;
+    int lineCounter = 0;
+    createBlankFile();
+    thisFile = &loadedFiles.last();
+
+    QFile *inFile = new QFile(filename);
+
+    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        delete inFile;
+        return nullptr;
+    }
+
+    //burn first two lines. contains header
+    line = inFile->readLine().simplified().toUpper();
+    line = inFile->readLine().simplified().toUpper();
+
+    while (!inFile->atEnd())
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        line = inFile->readLine().simplified().toUpper();
+        qDebug() << line;
+
+        QList<QByteArray> tokens = line.split(',');
+        if (tokens.length() == 10)
+        {
+            //Message,CAN ID,Signal,Short Name,Start Byte,Start Bit,Len,Data,Range,Conversion
+            //Whl_Rotational_Stat_CheckVal_CE,$0C0,Wheel Rotational Status Check Data,WhlRotatStatChkData, 0, 7, 40,PKT,N/A,N/A
+            //                0                1             2                                3            4  5  6  7    8   9
+            if (tokens[0].length() > 2) //start of a signal def that starts a new message
+            {
+                DBC_MESSAGE msg;
+                msg.name = tokens[0];
+                msg.ID =   tokens[1].mid(1).toLong(nullptr, 16);
+                msg.comment = "";
+                msg.len = 8;
+                msg.sender = thisFile->findNodeByIdx(0);
+                msg.bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
+                msg.fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
+                thisFile->messageHandler->addMessage(msg);
+                pMsg = thisFile->messageHandler->findMsgByID(msg.ID);
+
+                DBC_SIGNAL sig;
+                sig.parentMessage = pMsg;
+                sig.name = tokens[3];
+                sig.comment = tokens[2];
+                int startBit = (tokens[4].toInt() * 8) + tokens[5].toInt();
+                sig.startBit = startBit;
+                sig.signalSize = tokens[6].toInt();
+                sig.intelByteOrder = false; //always for global-a?
+                sig.receiver = thisFile->findNodeByIdx(0);
+                QList<QByteArray> rangeToks = tokens[8].split('-');
+                if (rangeToks.length() == 2)
+                {
+                    sig.min = rangeToks[0].simplified().toDouble();
+                    sig.max = rangeToks[1].simplified().toDouble();
+                }
+                if (tokens[9].startsWith("E = N")) //not a value table, instead do scaling and bias
+                {
+                    QList<QByteArray> scalingToks = tokens[9].simplified().split(' ');
+                    sig.factor = scalingToks[4].toDouble();
+                    if (scalingToks.count() > 5)
+                    {
+                        if (scalingToks[5] == "+")
+                        {
+                            sig.bias = scalingToks[6].toDouble();
+                        }
+                        if (scalingToks[5] == "-")
+                        {
+                            sig.bias = scalingToks[6].toDouble() * 1.0;
+                        }
+                    }
+                    else
+                    {
+                        sig.factor = 1;
+                        sig.bias = 0;
+                    }
+                }
+                else if (tokens[9].startsWith("$")) //one or more values table entries
+                {
+                    //$0=Inactive
+                    QList<QByteArray> valToks = tokens[9].simplified().mid(1).split('=');
+                    DBC_VAL_ENUM_ENTRY entry;
+                    entry.value = valToks[0].toInt();
+                    entry.descript = valToks[1];
+                    sig.valList.append(entry);
+                }
+                pMsg->sigHandler->addSignal(sig);
+                pSig = pMsg->sigHandler->findSignalByIdx(pMsg->sigHandler->getCount()-1);
+            }
+            //      0     1    2      3            4         5       6   7    8     9
+            //Message,CAN ID,Signal,Short Name,Start Byte,Start Bit,Len,Data,Range,Conversion
+            //,,Wheel Rotational Status Check Data : Left Driven Sequence Number,WRSCD_LftDrvnSqNm, 0, 7, 2,UNM,0 - 3 ,E = N * 1
+            //    2                                                                3                4  5  6 7    8       9
+            else if (tokens[2].length() > 2) //signal definition continuation of previous message
+            {
+                DBC_SIGNAL sig;
+                sig.parentMessage = pMsg;
+                sig.name = tokens[3];
+                sig.comment = tokens[2];
+                int startBit = (tokens[4].toInt() * 8) + tokens[5].toInt();
+                sig.startBit = startBit;
+                sig.signalSize = tokens[6].toInt();
+                sig.intelByteOrder = false; //always for global-a?
+                sig.receiver = thisFile->findNodeByIdx(0);
+                QList<QByteArray> rangeToks = tokens[8].split('-');
+                if (rangeToks.length() == 2)
+                {
+                    sig.min = rangeToks[0].simplified().toDouble();
+                    sig.max = rangeToks[1].simplified().toDouble();
+                }
+                if (tokens[9].startsWith("E = N")) //not a value table, instead do scaling and bias
+                {
+                    QList<QByteArray> scalingToks = tokens[9].simplified().split(' ');
+                    sig.factor = scalingToks[4].toDouble();
+                    if (scalingToks.count() > 5)
+                    {
+                        if (scalingToks[5] == "+")
+                        {
+                            sig.bias = scalingToks[6].toDouble();
+                        }
+                        if (scalingToks[5] == "-")
+                        {
+                            sig.bias = scalingToks[6].toDouble() * 1.0;
+                        }
+                    }
+                    else
+                    {
+                        sig.bias = 0;
+                        sig.factor = 1;
+                    }
+                }
+                else if (tokens[9].startsWith("$")) //one or more values table entries
+                {
+                    //$0=Inactive
+                    QList<QByteArray> valToks = tokens[9].simplified().mid(1).split('=');
+                    DBC_VAL_ENUM_ENTRY entry;
+                    entry.value = valToks[0].toInt();
+                    entry.descript = valToks[1];
+                    sig.valList.append(entry);
+                }
+                pMsg->sigHandler->addSignal(sig);
+                pSig = pMsg->sigHandler->findSignalByIdx(pMsg->sigHandler->getCount()-1);
+            }
+            else if (tokens[9].length() > 2) //additional values
+            {
+                //$0=Inactive
+                QList<QByteArray> valToks = tokens[9].simplified().mid(1).split('=');
+                DBC_VAL_ENUM_ENTRY entry;
+                entry.value = valToks[0].toInt();
+                entry.descript = valToks[1];
+                pSig->valList.append(entry);
+            }
+        }
+    }
+
+    thisFile->setDirtyFlag();
+    return thisFile;
+}
+
 DBCFile* DBCHandler::loadJSONFile(QString filename)
 {
      QSettings settings;
@@ -1885,7 +2055,6 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
                  }
              }
          }
-
 
          thisFile->setDirtyFlag();
          return thisFile;
