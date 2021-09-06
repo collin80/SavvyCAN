@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include "filterutility.h"
+#include "qcpaxistickerhex.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
                                                Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
@@ -34,6 +35,11 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     ui->graphView->xAxis->setRange(0, 8);
     ui->graphView->yAxis->setRange(-10, 265); //run range a bit outside possible number so they aren't plotted in a hard to see place
+    if (useHexTicker)
+    {
+        QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
+        ui->graphView->yAxis->setTicker(hexTicker);
+    }
     ui->graphView->axisRect()->setupFullAxesBox();
 
     QCPItemText *textLabel = new QCPItemText(ui->graphView);
@@ -46,7 +52,9 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     textLabel->setPen(QPen(Qt::black)); // show black border around text
 
     ui->graphView->xAxis->setLabel("Time Axis");
-    ui->graphView->yAxis->setLabel("Value Axis");
+    if (useHexTicker) ui->graphView->yAxis->setLabel("Value Axis (HEX)");
+    else ui->graphView->yAxis->setLabel("Value Axis (dec)");
+
     QFont legendFont = font();
     legendFont.setPointSize(10);
     QFont legendSelectedFont = font();
@@ -150,6 +158,7 @@ void FlowViewWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     writeSettings();
+    emit rejected(); //can be picked up by main window if needed
 }
 
 void FlowViewWindow::readSettings()
@@ -178,6 +187,7 @@ void FlowViewWindow::readSettings()
 
     secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     openGLMode = settings.value("Main/UseOpenGL", false).toBool();
+    useHexTicker = settings.value("FlowView/GraphHex", false).toBool();
 }
 
 void FlowViewWindow::writeSettings()
