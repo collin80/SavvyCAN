@@ -8,7 +8,7 @@
 #include <QDebug>
 #include <QApplication>
 #include <QRect>
-#include <QDesktopWidget>
+//#include <QDesktopWidget>
 
 class Utility
 {

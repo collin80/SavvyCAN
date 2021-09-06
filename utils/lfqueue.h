@@ -6,8 +6,8 @@
 
 
 /* macros */
-#define IS_EMPTY()  (  mWIdx.load()             == mRIdx.load() )
-#define IS_FULL()   ( (mWIdx.load()+1)%mSize    == mRIdx.load() )
+#define IS_EMPTY()  (  mWIdx.loadAcquire()             == mRIdx.loadAcquire() )
+#define IS_FULL()   ( (mWIdx.loadAcquire()+1)%mSize    == mRIdx.loadAcquire() )
 
 
 template<class T>
@@ -38,8 +38,8 @@ public:
     }
 
     void flush() {
-        mRIdx.store(0);
-        mWIdx.store(0);
+        mRIdx.storeRelease(0);
+        mWIdx.storeRelease(0);
     }
 
     T* get() {
@@ -56,7 +56,7 @@ public:
             qCritical() << "BUG: queueing in full queue";
         #endif
 
-        int wIdx = mWIdx.load();
+        int wIdx = mWIdx.loadAcquire();
         mWIdx.storeRelease((wIdx+1)%mSize);
     }
 
@@ -75,7 +75,7 @@ public:
             qCritical() << "BUG: dequeueing an empty queue";
         #endif
 
-        int rIdx = mRIdx.load();
+        int rIdx = mRIdx.loadAcquire();
         mRIdx.storeRelease((rIdx+1)%mSize);
     }
 

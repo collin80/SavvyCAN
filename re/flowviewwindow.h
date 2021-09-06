@@ -58,6 +58,7 @@ private:
     static const QColor graphColors[8];
     bool secondsMode;
     bool openGLMode;
+    bool useHexTicker;
     QVector<double> x[8], y[8];
     QCPGraph *graphRef[8];
 

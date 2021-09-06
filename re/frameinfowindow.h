@@ -34,6 +34,7 @@ private:
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
     bool useOpenGL;
+    bool useHexTicker;
     static const QColor byteGraphColors[8];
     static QPen bytePens[8];
     DBCHandler *dbcHandler;
