@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT = core gui printsupport qml serialbus serialport widgets help network
+QT = core gui printsupport qml serialbus serialport widgets help network opengl
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
@@ -33,6 +33,7 @@ SOURCES += main.cpp\
     mqtt/qmqtt_timer.cpp \
     mqtt/qmqtt_websocket.cpp \
     mqtt/qmqtt_websocketiodevice.cpp \
+    qcpaxistickerhex.cpp \
     re/dbccomparatorwindow.cpp \
     mainwindow.cpp \
     canframemodel.cpp \
@@ -117,6 +118,7 @@ HEADERS  += mainwindow.h \
     mqtt/qmqtt_timerinterface.h \
     mqtt/qmqtt_websocket_p.h \
     mqtt/qmqtt_websocketiodevice_p.h \
+    qcpaxistickerhex.h \
     re/dbccomparatorwindow.h \
     simplecrypt.h \
     utility.h \

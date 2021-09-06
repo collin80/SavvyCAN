@@ -5,6 +5,7 @@
 #include <QtDebug>
 #include <vector>
 #include "filterutility.h"
+#include "qcpaxistickerhex.h"
 
 const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green,  Qt::black, Qt::red, //0 1 2 3
                                                     Qt::gray, Qt::yellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
@@ -57,10 +58,16 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     ui->graphBytes->xAxis->setRange(0, 63);
     ui->graphBytes->yAxis->setRange(0, 265);
+    if (useHexTicker)
+    {
+        QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
+        ui->graphBytes->yAxis->setTicker(hexTicker);
+    }
     ui->graphBytes->axisRect()->setupFullAxesBox();
 
     ui->graphBytes->xAxis->setLabel("Time");
-    ui->graphBytes->yAxis->setLabel("Value");
+    if (useHexTicker) ui->graphBytes->yAxis->setLabel("Value (HEX)");
+    else ui->graphBytes->yAxis->setLabel("Value (Dec)");
 
     ui->graphBytes->legend->setVisible(false);
 
@@ -154,6 +161,7 @@ void FrameInfoWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event)
     writeSettings();
+    emit rejected();
 }
 
 void FrameInfoWindow::readSettings()
@@ -175,7 +183,7 @@ void FrameInfoWindow::readSettings()
         move(Utility::constrainedWindowPos(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint()));
     }
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
-
+    useHexTicker = settings.value("InfoCompare/GraphHex", false).toBool();
 }
 
 void FrameInfoWindow::writeSettings()
