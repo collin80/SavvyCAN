@@ -110,6 +110,8 @@ jobs:
           copy "${Env:Qt5_Dir}/plugins/platforms/*.*" package/platforms/
           mkdir package/styles
           copy "${Env:Qt5_Dir}/plugins/styles/*.*" package/styles/
+          mkdir package/canbus
+          copy "${Env:Qt5_Dir}/plugins/canbus/*.*" package/canbus/
 
       - uses: actions/upload-artifact@v2
         with:
