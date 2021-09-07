@@ -35,6 +35,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
 
+    ui->bitfield->setMode(GridMode::SIGNAL_VIEW);
+
     connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
     connect(ui->valuesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuValues(QPoint)));
     ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);

@@ -20,8 +20,8 @@ class CANDataGrid;
  * FlowView that uses all of the above functionality plus this functionality in order to show which bits are set as triggers for stopping
  * the flowview playback.
  *
- * Now the control also tracks which signal is using which bit. Currently this is not used for graphical output. I tried but couldn't make it look
- * like I wanted. So, it's un-used as of yet.
+ * Now the control also tracks which signal is using which bit. The graphical representation does exist now but some tweaking is probably
+ * still needed. Also, it seems like it is necessary to allow for a variety of modes.
  */
 
 enum GridTextState
@@ -29,6 +29,12 @@ enum GridTextState
     NORMAL,
     BOLD_BLUE,
     INVERT
+};
+
+enum GridMode
+{
+    CHANGED_BITS,
+    SIGNAL_VIEW
 };
 
 class CANDataGrid : public QWidget
@@ -49,6 +55,8 @@ public:
     void setSignalNames(int sigIdx, const QString sigName);
     void clearSignalNames();
     int getUsedSignalNum(int bit);
+    GridMode getMode();
+    void setMode(GridMode mode);
 
 protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
@@ -66,6 +74,26 @@ private:
     QVector<QColor> signalColors;
     GridTextState textStates[8][8];
     QPoint upperLeft, gridSize;
+    GridMode gridMode;
+    QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
+    QBrush greenHashBrush, blackHashBrush;
+    QPainter *painter;
+    QRect viewport;
+    int xSpan;
+    int ySpan;
+    int xSector;
+    int ySector;
+    double bigTextSize, smallTextSize, sigNameTextSize;
+    QFont mainFont;
+    QFont smallFont;
+    QFont boldFont;
+    QFont sigNameFont;
+    QFontMetrics *smallMetric;
+
+    void paintChangedBits();
+    void paintSignalView();
+    void paintCommonBeginning();
+    void paintCommonEnding();
 };
 
 #endif // CANDATAGRID_H
