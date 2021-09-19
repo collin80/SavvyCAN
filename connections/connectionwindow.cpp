@@ -62,12 +62,17 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->btnMoveUp, &QPushButton::clicked, this, &ConnectionWindow::moveConnUp);
     connect(ui->btnMoveDown, &QPushButton::clicked, this, &ConnectionWindow::moveConnDown);
 
+    ui->cbBusSpeed->addItem("33333");
     ui->cbBusSpeed->addItem("50000");
     ui->cbBusSpeed->addItem("100000");
     ui->cbBusSpeed->addItem("125000");
     ui->cbBusSpeed->addItem("250000");
     ui->cbBusSpeed->addItem("500000");
     ui->cbBusSpeed->addItem("1000000");
+    //ui->cbBusSpeed->addItem("75000");
+    //ui->cbBusSpeed->addItem("166666");
+    //ui->cbBusSpeed->addItem("233333");
+    //ui->cbBusSpeed->addItem("400000");
 
     rxBroadcastGVRET = new QUdpSocket(this);
     //Need to make sure it tries to share the address in case there are
