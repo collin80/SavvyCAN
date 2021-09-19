@@ -723,15 +723,20 @@ void DBCMainEditor::deleteNode(DBC_NODE *node)
         if (dbcFile->messageHandler->findMsgByIdx(i)->sender == node) deleteMessage(dbcFile->messageHandler->findMsgByIdx(i));
     }
 
-    for (int j = 0; j < dbcFile->dbc_nodes.count(); j++)
-    {
-        if (dbcFile->dbc_nodes.at(j).name == node->name) dbcFile->dbc_nodes.removeAt(j);
-    }
-
     nodeToItem.remove(node);
     itemToNode.remove(currItem);
     ui->treeDBC->removeItemWidget(currItem, 0);
     delete currItem;
+
+    for (int j = 0; j < dbcFile->dbc_nodes.count(); j++)
+    {
+        if (dbcFile->dbc_nodes.at(j).name == node->name)
+        {
+            dbcFile->dbc_nodes.removeAt(j);
+            break;
+        }
+    }
+
     dbcFile->setDirtyFlag();
 }
 
