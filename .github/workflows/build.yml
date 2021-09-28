@@ -31,7 +31,7 @@ jobs:
           make INSTALL_ROOT=appdir install
           wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/5/linuxdeployqt-5-x86_64.AppImage"
           chmod a+x linuxdeployqt-5-x86_64.AppImage
-          ./linuxdeployqt-5-x86_64.AppImage appdir/usr/local/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
+          ./linuxdeployqt-5-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
 
       - uses: actions/upload-artifact@v2
         with:
