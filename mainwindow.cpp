@@ -535,6 +535,7 @@ void MainWindow::setupAddToNewGraph()
     setupSendToLatestGraphWindow(); //then call the other function to finish
 }
 
+
 void MainWindow::setupSendToLatestGraphWindow()
 {
     if (!lastGraphingWindow) showGraphingWindow();
@@ -542,26 +543,45 @@ void MainWindow::setupSendToLatestGraphWindow()
     QString signalName = getSignalNameFromPosition(contextMenuPosition);
     param.ID = getMessageIDFromPosition(contextMenuPosition);
     DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(param.ID, nullptr);
-    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(signalName);
-    param.associatedSignal = sig;
-    param.bias = sig->bias;
-    param.intelFormat = sig->intelByteOrder;
-    param.isSigned = sig->valType == SIGNED_INT ? true : false;
-    param.numBits = sig->signalSize;
-    param.scale = sig->factor;
-    param.startBit = sig->startBit;
-    param.stride = 1;
-    param.graphName = sig->name;
-    param.lineColor = QColor(QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160));
-    param.lineWidth = 1;
-    param.fillColor = QColor(128, 128, 128, 0);
-    param.mask = 0xFFFFFFFFFFFFFFFFull;
-    param.drawOnlyPoints = false;
-    param.pointType = 0;
+    if(msg)
+    {
+        DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(signalName);
+        if(sig)
+        {
+            param.associatedSignal = sig;
+            param.bias = sig->bias;
+            param.intelFormat = sig->intelByteOrder;
+            param.isSigned = sig->valType == SIGNED_INT ? true : false;
+            param.numBits = sig->signalSize;
+            param.scale = sig->factor;
+            param.startBit = sig->startBit;
+            param.stride = 1;
+            param.graphName = sig->name;
+            param.lineColor = QColor(QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160), QRandomGenerator::global()->bounded(160));
+            param.lineWidth = 1;
+            param.fillColor = QColor(128, 128, 128, 0);
+            param.mask = 0xFFFFFFFFFFFFFFFFull;
+            param.drawOnlyPoints = false;
+            param.pointType = 0;
 
-    lastGraphingWindow->createGraph(param); //add the new graph to the window
+            lastGraphingWindow->createGraph(param); //add the new graph to the window
+        }
+        else
+        {
+            QMessageBox msgbox;
+            QString boxmsg = "Cannot find ID 0x" + QStringLiteral("%1").arg(param.ID, 3, 16, QLatin1Char('0')) + " in DBC message " + msg->name + ". Not adding graph.";
+            msgbox.setText(boxmsg);
+            msgbox.exec();
+        }
+    }
+    else
+    {
+        QMessageBox msgbox;
+        QString boxmsg = "Cannot find ID 0x" + QStringLiteral("%1").arg(param.ID, 3, 16, QLatin1Char('0')) + " in DBC file(s). Not adding graph.";
+        msgbox.setText(boxmsg);
+        msgbox.exec();
+    }
 }
-
 void MainWindow::interpretToggled(bool state)
 {
     model->setInterpretMode(state);
