@@ -225,8 +225,7 @@ win32-g++ {
 }
 
 unix {
-   isEmpty(PREFIX)
-   {
+   isEmpty(PREFIX) {
       PREFIX=/usr/local
    }
    target.path = $$PREFIX/bin
