@@ -11,7 +11,8 @@ SnifferModel::SnifferModel(QObject *parent)
       mNeverExpire(false),
       mFadeInactive(false),
       mMuteNotched(false),
-      mTimeSequence(0)
+      mTimeSequence(0),
+      mExpireInterval(5000)
 {
     QColor TextColor = QApplication::palette().color(QPalette::Text);
     if (TextColor.red() + TextColor.green() + TextColor.blue() < 200)
@@ -28,6 +29,10 @@ SnifferModel::~SnifferModel()
     mFilters.clear();
 }
 
+void SnifferModel::setExpireInterval(int newVal)
+{
+    mExpireInterval = newVal;
+}
 
 int SnifferModel::columnCount(const QModelIndex &parent) const
 {
@@ -220,6 +225,17 @@ void SnifferModel::clear()
     endResetModel();
 }
 
+void SnifferModel::updateNotchPoint()
+{
+    QMap<quint32, SnifferItem*>::iterator i;
+
+    /* update markers */
+    for (i = mMap.begin(); i != mMap.end(); ++i)
+    {
+        i.value()->updateMarker();
+    }
+}
+
 //Called from window with a timer (currently 200ms)
 void SnifferModel::refresh()
 {
@@ -229,13 +245,10 @@ void SnifferModel::refresh()
 
     mTimeSequence++;
 
-    /* update markers */
-
-
     for (i = mMap.begin(); i != mMap.end(); ++i)
     {
-        i.value()->updateMarker();
-        if(i.value()->elapsed()>5000 && !mNeverExpire)
+        //i.value()->updateMarker();
+        if(i.value()->elapsed() > mExpireInterval && !mNeverExpire)
             toRemove.append(i.key());
     }
 
