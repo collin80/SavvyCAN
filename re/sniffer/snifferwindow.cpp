@@ -12,7 +12,7 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::snifferWindow),
     mModel(this),
-    mTimer(this),
+    mGUITimer(this),
     mFilter(false)
 {
     ui->setupUi(this);
@@ -35,8 +35,12 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     ui->listWidget->setSortingEnabled(true);
 
     /* connect timer */
-    connect(&mTimer, &QTimer::timeout, this, &SnifferWindow::update);
-    mTimer.setInterval(200);
+    connect(&mGUITimer, &QTimer::timeout, this, &SnifferWindow::update);
+    mGUITimer.setInterval(200);
+    connect(&mNotchTimer, &QTimer::timeout,this, &SnifferWindow::notchTick);
+    mNotchTimer.setInterval(ui->spinNotchInterval->value());
+
+    notchPingPong = false;
 
     /* connect buttons */
     connect(ui->btNotch, &QPushButton::clicked, &mModel, &SnifferModel::notch);
@@ -59,6 +63,8 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
                 }
             }
     );
+    connect(ui->spinNotchInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int i){mNotchTimer.setInterval(i);});
+    connect(ui->spinExpireInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int i){mModel.setExpireInterval(i);});
 }
 
 SnifferWindow::~SnifferWindow()
@@ -113,7 +119,8 @@ void SnifferWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, &mModel, &SnifferModel::update);
-    mTimer.start();
+    mGUITimer.start();
+    mNotchTimer.start();
     readSettings();
     installEventFilter(this);
     qDebug() << "show";
@@ -124,7 +131,7 @@ void SnifferWindow::closeEvent(QCloseEvent *event)
 {
     Q_UNUSED(event);
     /* stop timer */
-    mTimer.stop();
+    mGUITimer.stop();
     /* disconnect reception of frames */
     disconnect(CANConManager::getInstance(), 0, this, 0);
     writeSettings();
@@ -161,6 +168,23 @@ void SnifferWindow::update()
     mModel.refresh();
 }
 
+void SnifferWindow::notchTick()
+{
+    notchPingPong = !notchPingPong;
+    if (notchPingPong)
+    {
+        ui->lblNotch->setBackgroundRole(QPalette::Link);
+        ui->lblNotch->repaint();
+        //qDebug() << "Tick";
+    }
+    else
+    {
+        ui->lblNotch->setBackgroundRole(QPalette::Background);
+        ui->lblNotch->repaint();
+        //qDebug() << "Tock";
+    }
+    mModel.updateNotchPoint();
+}
 
 void SnifferWindow::fltAll()
 {

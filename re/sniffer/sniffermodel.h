@@ -46,6 +46,8 @@ public:
     void setNeverExpire(bool val);
     void setFadeInactive(bool val);
     void setMuteNotched(bool val);
+    void setExpireInterval(int newVal);
+    void updateNotchPoint();
 
 
 public slots:
@@ -65,6 +67,7 @@ private:
     bool                        mMuteNotched;
     bool                        mDarkMode;
     quint32                     mTimeSequence;
+    quint32                     mExpireInterval;
 };
 
 #endif // SNIFFERMODEL_H

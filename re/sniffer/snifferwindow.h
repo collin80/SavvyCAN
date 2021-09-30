@@ -39,6 +39,7 @@ public:
 
 public slots:
     void update();
+    void notchTick();
     void idChange(int, bool);
     void fltAll();
     void fltNone();
@@ -52,11 +53,13 @@ private:
 
     Ui::snifferWindow*          ui;
     SnifferModel                mModel;
-    QTimer                      mTimer;
+    QTimer                      mGUITimer;
+    QTimer                      mNotchTimer;
     QMap<int, QListWidgetItem*> mMap;
     bool                        mFilter;
     SnifferDelegate             *sniffDel;
     QAbstractItemDelegate       *defaultDel;
+    bool                        notchPingPong;
 };
 
 #endif // SNIFFER_H
