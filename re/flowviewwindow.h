@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QLocale>
+#include <QSlider>
 #include "qcustomplot.h"
 #include "can_structs.h"
 
@@ -68,6 +69,7 @@ private:
     void refreshIDList();
     void updateFrameLabel();
     void updatePosition(bool forward);
+    void gotoFrame(int frame);
     void updateDataView();
     void removeAllGraphs();
     void createGraph(int);

@@ -114,6 +114,10 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->check_6, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
     connect(ui->check_7, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
 
+//    ui->timelineSlider->setTracking(true);
+    connect(ui->timelineSlider, &QSlider::sliderPressed, this, &FlowViewWindow::btnPauseClick);
+    connect(ui->timelineSlider, &QSlider::valueChanged, this, &FlowViewWindow::gotoFrame);
+
     // Using lambda expression to strip away the possible filter label before passing the ID to updateDetailsWindow
     connect(ui->listFrameID, &QListWidget::currentTextChanged, 
         [this](QString itemText)
@@ -664,6 +668,7 @@ void FlowViewWindow::changeID(QString newID)
 
 void FlowViewWindow::btnBackOneClick()
 {
+    ui->cbLiveMode->setChecked(false);
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
 
@@ -673,6 +678,7 @@ void FlowViewWindow::btnBackOneClick()
 
 void FlowViewWindow::btnPauseClick()
 {
+    ui->cbLiveMode->setChecked(false);
     playbackActive = false;
     playbackTimer->stop();
     updateDataView();
@@ -680,6 +686,7 @@ void FlowViewWindow::btnPauseClick()
 
 void FlowViewWindow::btnReverseClick()
 {
+    ui->cbLiveMode->setChecked(false);
     playbackActive = true;
     playbackForward = false;
     playbackTimer->start();
@@ -687,6 +694,7 @@ void FlowViewWindow::btnReverseClick()
 
 void FlowViewWindow::btnStopClick()
 {
+    ui->cbLiveMode->setChecked(false);
     playbackTimer->stop(); //pushing this button halts automatic playback
     playbackActive = false;
     currentPosition = 0;
@@ -701,6 +709,7 @@ void FlowViewWindow::btnStopClick()
 
 void FlowViewWindow::btnPlayClick()
 {
+    ui->cbLiveMode->setChecked(false);
     playbackActive = true;
     playbackForward = true;
     playbackTimer->start();
@@ -708,6 +717,7 @@ void FlowViewWindow::btnPlayClick()
 
 void FlowViewWindow::btnFwdOneClick()
 {
+    ui->cbLiveMode->setChecked(false);
     playbackTimer->stop();
     playbackActive = false;
     updatePosition(true);
@@ -773,6 +783,9 @@ void FlowViewWindow::updateDataView()
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);
 
+    ui->timelineSlider->setMaximum(frameCache.count() - 1);
+    ui->timelineSlider->setValue(currentPosition);
+
     for (int i = 0; i < 8; i++)
     {
         if (currBytes[i] == triggerValues[i])
@@ -787,6 +800,13 @@ void FlowViewWindow::updateDataView()
 
     updateFrameLabel();
 
+}
+
+void FlowViewWindow::gotoFrame(int frame) {
+    if (frameCache.count() >= frame) currentPosition = frame;
+    else currentPosition = 0;
+
+    if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
 }
 
 void FlowViewWindow::updatePosition(bool forward)
@@ -832,6 +852,7 @@ void FlowViewWindow::updatePosition(bool forward)
     memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
+    ui->timelineSlider->setValue(currentPosition);
 }
 
 void FlowViewWindow::updateGraphLocation()
