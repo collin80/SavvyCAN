@@ -2,6 +2,7 @@
 #define FLOWVIEWWINDOW_H
 
 #include <QDialog>
+#include <QLocale>
 #include "qcustomplot.h"
 #include "can_structs.h"
 
@@ -38,6 +39,8 @@ private slots:
     void gotCenterTimeID(int32_t ID, double timestamp);
     void updateTriggerValues();
     void gotCellClick(int x, int y);
+    void graphRangeChanged(int range);
+    void changeGraphVisibility(int state);
 
 signals:
     void sendCenterTimeID(uint32_t ID, double timestamp);
