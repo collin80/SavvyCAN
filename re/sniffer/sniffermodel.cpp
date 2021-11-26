@@ -151,7 +151,7 @@ QVariant SnifferModel::headerData(int section, Qt::Orientation orientation, int 
             case tc::DELTA:
                 return QString("Delta");
             case tc::FREQUENCY:
-                return QString("Delta");
+                return QString("Frequency");
             case tc::ID:
                 return QString("ID");
             default:
