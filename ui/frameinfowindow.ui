@@ -133,7 +133,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
-        <widget class="QLabel" name="label_6">
+        <widget class="QCheckBox" name="check_0">
          <property name="palette">
           <palette>
            <active>
@@ -162,9 +162,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -181,10 +181,13 @@
          <property name="text">
           <string>0</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_5">
+        <widget class="QCheckBox" name="check_1">
          <property name="palette">
           <palette>
            <active>
@@ -213,9 +216,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -232,10 +235,50 @@
          <property name="text">
           <string>1</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_9">
+        <widget class="QCheckBox" name="check_2">
+         <property name="palette">
+          <palette>
+           <active>
+            <colorrole role="WindowText">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>0</blue>
+              </color>
+             </brush>
+            </colorrole>
+           </active>
+           <inactive>
+            <colorrole role="WindowText">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>0</red>
+               <green>0</green>
+               <blue>0</blue>
+              </color>
+             </brush>
+            </colorrole>
+           </inactive>
+           <disabled>
+            <colorrole role="WindowText">
+             <brush brushstyle="SolidPattern">
+              <color alpha="255">
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
+              </color>
+             </brush>
+            </colorrole>
+           </disabled>
+          </palette>
+         </property>
          <property name="font">
           <font>
            <pointsize>13</pointsize>
@@ -246,10 +289,13 @@
          <property name="text">
           <string>2</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_10">
+        <widget class="QCheckBox" name="check_3">
          <property name="palette">
           <palette>
            <active>
@@ -278,9 +324,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -297,10 +343,13 @@
          <property name="text">
           <string>3</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_7">
+        <widget class="QCheckBox" name="check_4">
          <property name="palette">
           <palette>
            <active>
@@ -329,9 +378,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -348,10 +397,13 @@
          <property name="text">
           <string>4</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_4">
+        <widget class="QCheckBox" name="check_5">
          <property name="palette">
           <palette>
            <active>
@@ -380,9 +432,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -399,10 +451,13 @@
          <property name="text">
           <string>5</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_11">
+        <widget class="QCheckBox" name="check_6">
          <property name="palette">
           <palette>
            <active>
@@ -431,9 +486,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -450,10 +505,13 @@
          <property name="text">
           <string>6</string>
          </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="label_8">
+        <widget class="QCheckBox" name="check_7">
          <property name="palette">
           <palette>
            <active>
@@ -482,9 +540,9 @@
             <colorrole role="WindowText">
              <brush brushstyle="SolidPattern">
               <color alpha="255">
-               <red>190</red>
-               <green>190</green>
-               <blue>190</blue>
+               <red>120</red>
+               <green>120</green>
+               <blue>120</blue>
               </color>
              </brush>
             </colorrole>
@@ -500,6 +558,9 @@
          </property>
          <property name="text">
           <string>7</string>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
          </property>
         </widget>
        </item>

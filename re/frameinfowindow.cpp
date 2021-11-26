@@ -34,6 +34,15 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
 
+    connect(ui->check_0, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_1, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_2, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_3, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_4, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_5, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_6, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    connect(ui->check_7, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+
 
     ui->graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);
@@ -631,7 +640,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->graphBytes->clearGraphs();
         for (int graphs = 0; graphs < 8; graphs++)
         {
-            ui->graphBytes->addGraph();
+            graphRef[graphs] = ui->graphBytes->addGraph();
             ui->graphBytes->graph()->setData(byteGraphX, byteGraphY[graphs]);
             ui->graphBytes->graph()->setPen(bytePens[graphs]);
         }
@@ -652,6 +661,15 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->timeHistogram->axisRect()->setupFullAxesBox();
         ui->timeHistogram->rescaleAxes();
         ui->timeHistogram->replot();
+
+        ui->check_0->setChecked(true);
+        ui->check_1->setChecked(true);
+        ui->check_2->setChecked(true);
+        ui->check_3->setChecked(true);
+        ui->check_4->setChecked(true);
+        ui->check_5->setChecked(true);
+        ui->check_6->setChecked(true);
+        ui->check_7->setChecked(true);
     }
     else
     {
@@ -723,6 +741,24 @@ void FrameInfoWindow::saveDetails()
             outFile->close();
             delete outFile;
         }
+    }
+}
+
+void FrameInfoWindow::changeGraphVisibility(int state){
+    QCheckBox *sender = qobject_cast<QCheckBox *>(QObject::sender());
+    if(sender){
+        sender->objectName();
+        int graphId = sender->objectName().right(1).toInt();
+        for (int k = 0; k < 8; k++)
+        {
+            if (k == graphId && graphRef[k] && graphRef[k]->data()){
+                graphRef[k]->setVisible(state);
+                qDebug() << graphId << state << k;
+            }
+        }
+        qDebug() << graphId << state;
+
+        ui->graphBytes->replot();
     }
 }
 
