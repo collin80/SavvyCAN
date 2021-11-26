@@ -104,6 +104,15 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->txtTrigger5, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
     connect(ui->txtTrigger6, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
     connect(ui->txtTrigger7, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->graphRangeSlider, &QSlider::valueChanged, this, &FlowViewWindow::graphRangeChanged);
+    connect(ui->check_0, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_1, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_2, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_3, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_4, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_5, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_6, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
+    connect(ui->check_7, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
 
     // Using lambda expression to strip away the possible filter label before passing the ID to updateDetailsWindow
     connect(ui->listFrameID, &QListWidget::currentTextChanged, 
@@ -234,6 +243,21 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
     }
 }
 
+void FlowViewWindow::changeGraphVisibility(int state){
+    QCheckBox *sender = qobject_cast<QCheckBox *>(QObject::sender());
+    if(sender){
+        sender->objectName();
+        int graphId = sender->objectName().right(1).toInt();
+        for (int k = 0; k < 8; k++)
+        {
+            if (k == graphId && graphRef[k] && graphRef[k]->data()){
+                graphRef[k]->setVisible(state);
+            }
+        }
+
+        ui->graphView->replot();
+    }
+}
 void FlowViewWindow::gotCellClick(int x, int y)
 {
     int bitnum = (7-x) + (8 * y);
@@ -241,6 +265,11 @@ void FlowViewWindow::gotCellClick(int x, int y)
     if (triggerBits & (1ull << bitnum)) ui->flowView->setCellTextState(x, y, GridTextState::BOLD_BLUE);
     else ui->flowView->setCellTextState(x, y, GridTextState::NORMAL);
     qDebug() << "Bit Num: " << bitnum << "   Hex of trigger bits: " << QString::number(triggerBits, 16);
+}
+
+void FlowViewWindow::graphRangeChanged(int range) {
+    ui->rangeValue->setText(QString::number(range));
+    updateGraphLocation();
 }
 
 void FlowViewWindow::updateTriggerValues()
@@ -623,6 +652,14 @@ void FlowViewWindow::changeID(QString newID)
     memcpy(refBytes, currBytes, 8);
 
     updateDataView();
+    ui->check_0->setChecked(true);
+    ui->check_1->setChecked(true);
+    ui->check_2->setChecked(true);
+    ui->check_3->setChecked(true);
+    ui->check_4->setChecked(true);
+    ui->check_5->setChecked(true);
+    ui->check_6->setChecked(true);
+    ui->check_7->setChecked(true);
 }
 
 void FlowViewWindow::btnBackOneClick()
@@ -800,9 +837,9 @@ void FlowViewWindow::updatePosition(bool forward)
 void FlowViewWindow::updateGraphLocation()
 {
     if (frameCache.count() == 0) return;
-    int start = currentPosition - 5;
+    int start = currentPosition - ui->graphRangeSlider->value();
     if (start < 0) start = 0;
-    int end = currentPosition + 5;
+    int end = currentPosition + ui->graphRangeSlider->value();
     if (end >= frameCache.count()) end = frameCache.count() - 1;
     if (ui->cbTimeGraph->isChecked())
     {
