@@ -9,6 +9,8 @@
 #include "bus_protocols/j1939_handler.h"
 #include "dbc/dbchandler.h"
 
+#include "qcustomplot.h"
+
 namespace Ui {
 class FrameInfoWindow;
 }
@@ -26,6 +28,7 @@ private slots:
     void updateDetailsWindow(QString);
     void updatedFrames(int);
     void saveDetails();
+    void changeGraphVisibility(int state);
 
 private:
     Ui::FrameInfoWindow *ui;
@@ -38,6 +41,8 @@ private:
     static const QColor byteGraphColors[8];
     static QPen bytePens[8];
     DBCHandler *dbcHandler;
+
+    QCPGraph *graphRef[8];
 
     void refreshIDList();
     void closeEvent(QCloseEvent *event);
