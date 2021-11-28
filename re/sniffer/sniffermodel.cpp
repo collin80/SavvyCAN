@@ -65,8 +65,10 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             {
                 case tc::DELTA:
                     return QString::number(item->getDelta(), 'f');
+                case tc::FREQUENCY:
+                    return QString("%1 hz").arg(qRound(1.00 / item->getDelta()));
                 case tc::ID:
-                    return QString("%1").arg(item->getId(), 5, 16, QLatin1Char(' ')).toUpper();
+                    return "0x" + QString("%1").arg(item->getId(), 5, 16, QLatin1Char(' ')).toUpper();
                 default:
                     break;
             }
@@ -148,6 +150,8 @@ QVariant SnifferModel::headerData(int section, Qt::Orientation orientation, int 
         {
             case tc::DELTA:
                 return QString("Delta");
+            case tc::FREQUENCY:
+                return QString("Frequency");
             case tc::ID:
                 return QString("ID");
             default:
