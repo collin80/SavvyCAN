@@ -13,6 +13,7 @@ class snifferWindow;
 enum tc
 {
     DELTA = 0,
+    FREQUENCY,
     ID,
     DATA_0,
     DATA_1,
