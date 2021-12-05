@@ -5,6 +5,9 @@
 #include "helpwindow.h"
 #include <QDebug>
 
+#include <algorithm>
+#include <limits>
+
 GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
@@ -762,15 +765,14 @@ void GraphingWindow::saveSpreadsheet()
         */
 
         QList<GraphParams>::iterator iter;
-        double xMin = 10000000000000, xMax=-10000000000000;
-        int maxCount = 0;
-        int numGraphs = 0;
-        for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
-        {
-            if (iter->x[0] < xMin) xMin = iter->x[0];
-            if (iter->x[iter->x.count() - 1] > xMax) xMax = iter->x[iter->x.count() - 1];
-            if (maxCount < iter->x.count()) maxCount = iter->x.count();
-            numGraphs++;
+        double xMin = std::numeric_limits<double>::max(),
+               xMax = std::numeric_limits<double>::min();
+        size_t maxCount = 0;
+        size_t numGraphs = graphParams.length();
+        for (auto && graph : graphParams) {
+            xMin = std::min(xMin, graph.x[0]);
+            xMax = std::max(xMax, graph.x[graph.x.count() - 1]);
+            maxCount = std::max(maxCount, static_cast<size_t>(graph.x.count()));
         }
         qDebug() << "xMin: " << xMin;
         qDebug() << "xMax: " << xMax;
@@ -787,22 +789,28 @@ void GraphingWindow::saveSpreadsheet()
         indices.reserve(numGraphs);
 
         outFile->write("TimeStamp");
-        for (int zero = 0; zero < numGraphs; zero++)
-        {
+        for (auto && graph : graphParams) {
             indices.append(0);
             outFile->putChar(',');
-            outFile->write(graphParams[zero].graphName.toUtf8());
+            outFile->write(graph.graphName.toUtf8());
         }
         outFile->write("\n");
 
-        for (int j = 1; j < (maxCount - 1); j++)
+        for (size_t j = 1; j < (maxCount - 1); j++)
         {
             currentX = xMin + (j * sliceSize);
             qDebug() << "X: " << currentX;
-            outFile->write(QString::number(currentX).toUtf8());
-            for (int k = 0; k < graphParams.count(); k++)
+            outFile->write(QString::number(currentX, 'f').toUtf8());
+            for (size_t k = 0; k < numGraphs; k++)
             {
                 value = 0.0;
+
+                // move cursor to last sample before currentX
+                while (graphParams[k].x[indices[k]+1] < currentX)
+                {
+                    indices[k]++;
+                }
+
                 //five possibilities.
                 //1: we're at the beginning for this graph but the slice is before this graph even starts
                 if (indices[k] == 0 && graphParams[k].x[indices[k]] > currentX)
@@ -828,14 +836,14 @@ void GraphingWindow::saveSpreadsheet()
                 //the two values will be indices[k] and indices[k] + 1
                 else
                 {
-                    double span = graphParams[k].x[indices[k] + 1] - graphParams[k].x[indices[k]];
-                    double progress = (currentX - graphParams[k].x[indices[k]]) / span;
-                    value = Utility::Lerp(graphParams[k].y[indices[k]], graphParams[k].y[indices[k] + 1], progress);
+                    // find index, where x >= currentX
+                    size_t cursor = indices[k];
+                    double span = graphParams[k].x[cursor+1] - graphParams[k].x[cursor];
+                    double progress = (currentX - graphParams[k].x[cursor]) / span;
+                    Q_ASSERT(progress >= 0.0 && progress <= 1.0);
+                    value = Utility::Lerp(graphParams[k].y[cursor], graphParams[k].y[cursor+1], progress);
                     qDebug() << "Span: " << span << " Prog: " << progress << " Value: " << value;
                 }
-
-                if (currentX >= graphParams[k].x[indices[k]]) indices[k]++;
-
                 outFile->putChar(',');
                 outFile->write(QString::number(value).toUtf8());
             }
