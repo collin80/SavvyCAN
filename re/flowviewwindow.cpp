@@ -131,7 +131,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->graphView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestGraph(QPoint)));
     ui->flowView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
-    connect(ui->flowView, SIGNAL(gridClicked(int,int)), this, SLOT(gotCellClick(int, int)));
+    connect(ui->flowView, SIGNAL(gridClicked(int,int)), this, SLOT(gotCellClick(int,int)));
 
     // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
     ui->listFrameID->horizontalScrollBar()->setEnabled(false);
@@ -336,7 +336,9 @@ void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
             memcpy(refBytes, currBytes, 8);
         }
 
-        memcpy(currBytes, frameCache.at(currentPosition).payload().data(), 8);
+        memset(currBytes, 0, 8); //first zero out all 8 bytes
+
+        memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
 
         updateDataView();
     }
@@ -516,7 +518,8 @@ void FlowViewWindow::updatedFrames(int numFrames)
         if (ui->cbLiveMode->checkState() == Qt::Checked)
         {
             currentPosition = frameCache.count() - 1;
-            memcpy(currBytes, frameCache.at(currentPosition).payload(), 8);
+            memset(currBytes, 0, 8);
+            memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
             memcpy(refBytes, currBytes, 8);
 
         }
@@ -563,8 +566,10 @@ void FlowViewWindow::createGraph(int byteNum)
     {
         frame = &frameCache[j];
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-
-        tempVal = data[byteNum];
+        if (byteNum < frameCache[j].payload().length())
+            tempVal = data[byteNum];
+        else
+            tempVal = 0;
 
         if (graphByTime)
         {
@@ -652,7 +657,8 @@ void FlowViewWindow::changeID(QString newID)
 
     updateGraphLocation();
 
-    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
+    memset(currBytes, 0, 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
     memcpy(refBytes, currBytes, 8);
 
     updateDataView();
@@ -699,8 +705,8 @@ void FlowViewWindow::btnStopClick()
     playbackActive = false;
     currentPosition = 0;
 
-
-    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
+    memset(currBytes, 0, 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
     memcpy(refBytes, currBytes, 8);
 
     updateFrameLabel();
@@ -832,7 +838,7 @@ void FlowViewWindow::updatePosition(bool forward)
     //get through that then they're changed and a trigger so we stop playback at this frame.
     uint64_t changedBits = 0;
     uint8_t cngByte;
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < frameCache.at(currentPosition).payload().length(); i++)
     {
         unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload().data()[i]);
         cngByte = currBytes[i] ^ thisByte;
@@ -849,7 +855,8 @@ void FlowViewWindow::updatePosition(bool forward)
         playbackTimer->stop();
     }
 
-    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), 8);
+    memset(currBytes, 0, 8);
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
     ui->timelineSlider->setValue(currentPosition);
