@@ -144,6 +144,11 @@ public slots:
     bool getBusSettings(int pBusIdx, CANBus& pBus);
 
     /**
+     * updateBusSpeed
+     */
+    void updateBusSpeed(int pBusIdx, int speed);
+
+    /**
      * @brief suspends/restarts data capture
      * @param pSuspend: suspends capture if true else restarts it
      * @note this calls piSuspend (in the working thread context if one has been started)

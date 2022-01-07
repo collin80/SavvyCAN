@@ -155,6 +155,24 @@ void CANConnection::setBusSettings(int pBusIdx, CANBus pBus)
 }
 
 
+void CANConnection::updateBusSpeed(int pBusIdx, int speed)
+{
+    /* make sure we execute in mThread context */
+    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
+        QMetaObject::invokeMethod(this, "updateBusSpeed",
+                                  Qt::BlockingQueuedConnection,
+                                  Q_ARG(int, pBusIdx),
+                                  Q_ARG(int, speed));
+        return;
+    }
+
+
+    if (pBusIdx > mNumBuses) return;
+
+    mBusData[pBusIdx].mBus.setSpeed(speed);
+}
+
+
 bool CANConnection::sendFrame(const CANFrame& pFrame)
 {
     /* make sure we execute in mThread context */
