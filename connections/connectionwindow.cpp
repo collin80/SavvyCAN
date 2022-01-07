@@ -258,7 +258,8 @@ void ConnectionWindow::handleNewConn()
         newType = thisDialog->getConnectionType();
         newPort = thisDialog->getPortName();
         newDriver = thisDialog->getDriverName();
-        conn = create(newType, newPort, newDriver);
+        QVector<int> newBusSpeed;
+        conn = create(newType, newPort, newDriver, 0, newBusSpeed);
         if (conn)
         {
             connModel->add(conn);
@@ -293,6 +294,8 @@ void ConnectionWindow::handleResetConn()
 {
     QString port, driver;
     CANCon::type type;
+    int busnums;
+    QVector<int> busSpeeds;
 
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     if (selIdx <0) return;
@@ -305,13 +308,19 @@ void ConnectionWindow::handleResetConn()
     type = conn_p->getType();
     port = conn_p->getPort();
     driver = conn_p->getDriver();
+    busnums = conn_p->getNumBuses();
+    for (int i = 0; i < busnums; i++) {
+        CANBus bus;
+        conn_p->getBusSettings(i, bus);
+        busSpeeds.append(bus.getSpeed());
+    }
 
     /* stop and delete connection */
     conn_p->stop();
 
     conn_p = nullptr;
 
-    conn_p = create(type, port, driver);
+    conn_p = create(type, port, driver, busnums, busSpeeds);
     if (conn_p) connModel->replace(selIdx, conn_p);
 }
 
@@ -476,7 +485,7 @@ void ConnectionWindow::handleSendText() {
     emit sendDebugData(bytes);
 }
 
-CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver)
+CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int busNum, QVector<int> busSpeeds)
 {
     CANConnection* conn_p;
 
@@ -492,8 +501,18 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
             //set up the debug console to operate if we've selected it. Doing so here allows debugging right away during set up
             connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
         }
-        /*TODO add return value and checks */
+        
         conn_p->start();
+
+        connect(this, SIGNAL(updateBusSpeed(int, int)), conn_p, SLOT(updateBusSpeed(int, int)));
+        // if portNum == 0 will skip
+        for (int i = 0; i < busNum && i < busSpeeds.count(); i++) {
+            CANBus bus;
+            bus.setSpeed(busSpeeds[i]);
+            emit updateBusSpeed(i, busSpeeds[i]);
+        }
+        disconnect(this, SIGNAL(updateBusSpeed(int, int)), conn_p, SLOT(updateBusSpeed(int, int)));
+        /*TODO add return value and checks */
     }
     return conn_p;
 }
@@ -510,13 +529,30 @@ void ConnectionWindow::loadConnections()
     QVector<QString> portNames = settings.value("connections/portNames").value<QVector<QString>>();
     QVector<QString> driverNames = settings.value("connections/driverNames").value<QVector<QString>>();
     QVector<int>    devTypes = settings.value("connections/types").value<QVector<int>>();
-
+    QVector<int>    busNums = settings.value("connections/busNums").value<QVector<int>>();
+    QVector<int>    busSpeedsT = settings.value("connections/busSpeeds").value<QVector<int>>();
+    QVector<QVector<int>> busSpeeds;
     //don't load the connections if the three setting arrays above aren't all the same size.
-    if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count()) return;
+    if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count() || driverNames.count() != busNums.count()) return;
+
+    // connect tthe bus get/set
+
+    qDebug() << "Loading connections";
+    // demangle bus speeds
+    for (int i = 0, j = 0; i < busNums.count(); i++) {
+        QVector<int> busSpeed;
+        for (int k = 0; k < busNums[i] && j+k < busSpeedsT.count(); k++) {
+            busSpeed.append(busSpeedsT[j+k]);
+            qDebug() << "Speed " << busSpeedsT[j+k];
+        }
+        busSpeeds.append(busSpeed);
+        qDebug() << "Load speed" << busNums[i];
+        j += busNums[i];
+    }
 
     for(int i = 0 ; i < portNames.count() ; i++)
     {
-        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i]);
+        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], busNums[i], busSpeeds[i]);
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -534,6 +570,8 @@ void ConnectionWindow::saveConnections()
     QVector<QString> portNames;
     QVector<int> devTypes;
     QVector<QString> driverNames;
+    QVector<int> busNums;
+    QVector<int> busSpeeds;
 
     /* save connections */
     foreach(CANConnection* conn_p, conns)
@@ -541,11 +579,20 @@ void ConnectionWindow::saveConnections()
         portNames.append(conn_p->getPort());
         devTypes.append(conn_p->getType());
         driverNames.append(conn_p->getDriver());
+        busNums.append(conn_p->getNumBuses());
+        for (int i = 0; i < conn_p->getNumBuses(); i++) {
+            CANBus bus;
+            conn_p->getBusSettings(i, bus);
+            busSpeeds.append(bus.getSpeed());
+            qDebug() << "Bus speed " << bus.getSpeed();
+        }
     }
 
     settings.setValue("connections/portNames", QVariant::fromValue(portNames));
     settings.setValue("connections/types", QVariant::fromValue(devTypes));
     settings.setValue("connections/driverNames", QVariant::fromValue(driverNames));
+    settings.setValue("connections/busNums", QVariant::fromValue(busNums));
+    settings.setValue("connections/busSpeeds", QVariant::fromValue(busSpeeds));
 }
 
 void ConnectionWindow::moveConnUp()

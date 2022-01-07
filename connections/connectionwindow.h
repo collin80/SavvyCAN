@@ -34,6 +34,7 @@ signals:
     void updateBusSettings(CANBus *bus);
     void updatePortName(QString port);
     void sendDebugData(QByteArray bytes);
+    void updateBusSpeed(int, int);
 
 public slots:
     void getDebugText(QString debugText);
@@ -65,7 +66,7 @@ private:
     QVector<QString> remoteDeviceIPGVRET;
     QVector<QString> remoteDeviceKayak;
 
-    CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver);
+    CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver, int portNum, QVector<int> portSpeeds);
     void populateBusDetails(int offset);
     void loadConnections();
     void saveConnections();
