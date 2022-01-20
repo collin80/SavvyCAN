@@ -47,6 +47,8 @@ public:
     void setOverwriteMode(bool);
     void setHexMode(bool);
     void setSysTimeMode(bool);
+    void setMillisMode(bool mode);
+    void setIgnoreDBCColors(bool mode);
     void setFilterState(unsigned int ID, bool state);
     void setBusFilterState(unsigned int BusID, bool state);
     void setAllFilters(bool state);
@@ -92,6 +94,7 @@ private:
     bool timeSeconds;
     bool useSystemTime;
     bool needFilterRefresh;
+    bool ignoreDBCColors;
     int64_t timeOffset;
     int lastUpdateNumFrames;
     uint32_t preallocSize;

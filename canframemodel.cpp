@@ -103,6 +103,16 @@ void CANFrameModel::setSysTimeMode(bool mode)
     }
 }
 
+void CANFrameModel::setMillisMode(bool mode)
+{
+    if (Utility::millisMode != mode)
+    {
+        this->beginResetModel();
+        Utility::millisMode = mode;
+        this->endResetModel();
+    }
+}
+
 void CANFrameModel::setInterpretMode(bool mode)
 {
     //if the state of interpretFrames changes then we need to reset the model
@@ -125,6 +135,16 @@ void CANFrameModel::setTimeFormat(QString format)
     Utility::timeFormat = format;
     beginResetModel(); //reset model to show new time format
     endResetModel();
+}
+
+void CANFrameModel::setIgnoreDBCColors(bool mode)
+{
+    if(ignoreDBCColors != mode)
+    {
+        beginResetModel(); //reset model to update the view
+        ignoreDBCColors = mode;
+        endResetModel();
+    }
 }
 
 /*
@@ -385,7 +405,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::BackgroundColorRole)
     {
-        if (dbcHandler != nullptr && interpretFrames)
+        if (dbcHandler != nullptr && interpretFrames && !ignoreDBCColors)
         {
             DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
             if (msg != nullptr)
@@ -418,7 +438,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     if (role == Qt::TextColorRole)
     {
-        if (dbcHandler != nullptr && interpretFrames)
+        if (dbcHandler != nullptr && interpretFrames && !ignoreDBCColors)
         {
             DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
             if (msg != nullptr)
