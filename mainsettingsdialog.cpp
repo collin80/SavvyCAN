@@ -17,7 +17,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QSettings settings;
     ui->setupUi(this);
 
-        //TODO: This is still hard coded to support only two buses. Sometimes there is none, sometimes 1, sometimes much more than 2. Fix this.
+    //TODO: This is still hard coded to support only two buses. Sometimes there is none, sometimes 1, sometimes much more than 2. Fix this.
     ui->comboSendingBus->addItem(tr("None"));
     ui->comboSendingBus->addItem(tr("0"));
     ui->comboSendingBus->addItem(tr("1"));
@@ -51,11 +51,13 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
 
     bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings.value("Main/TimeClock", false).toBool();
+    bool milliMode = settings.value("Main/TimeMillis", false).toBool();
     if (clockMode)
     {
         ui->rbSeconds->setChecked(false);
         ui->rbMicros->setChecked(false);
         ui->rbSysClock->setChecked(true);
+        ui->rbMillis->setChecked(false);
     }
     else
     {
@@ -64,12 +66,21 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
             ui->rbSeconds->setChecked(true);
             ui->rbMicros->setChecked(false);
             ui->rbSysClock->setChecked(false);
+            ui->rbMillis->setChecked(false);
+        }
+        else if (milliMode)
+        {
+            ui->rbSeconds->setChecked(false);
+            ui->rbMicros->setChecked(false);
+            ui->rbSysClock->setChecked(false);
+            ui->rbMillis->setChecked(true);
         }
         else
         {
             ui->rbSeconds->setChecked(false);
             ui->rbMicros->setChecked(true);
             ui->rbSysClock->setChecked(false);
+            ui->rbMillis->setChecked(false);
         }
     }
 
@@ -77,6 +88,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
+    ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -91,6 +103,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->rbSeconds, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->rbMicros, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->rbSysClock, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->rbMillis, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
@@ -103,6 +116,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbFilterLabeling, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbHexGraphFlow, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbHexGraphInfo, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbIgnoreDBCColors, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -155,6 +169,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/ValidateComm", ui->cbValidate->isChecked());
     settings.setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
     settings.setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
+    settings.setValue("Main/TimeMillis", ui->rbMillis->isChecked());
     settings.setValue("Main/TimeClock", ui->rbSysClock->isChecked());
     settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
@@ -167,6 +182,7 @@ void MainSettingsDialog::updateSettings()
     QByteArray encPass = crypto.encryptToByteArray(ui->lineRemotePassword->text());
     settings.setValue("Remote/Pass", encPass);
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
+    settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
 
     settings.sync();
     emit updatedSettings();
