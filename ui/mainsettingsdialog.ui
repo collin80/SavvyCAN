@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>965</width>
-    <height>668</height>
+    <height>678</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -74,13 +74,6 @@
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="cbFilterLabeling">
-          <property name="text">
-           <string>Label filters using messages from DBC files</string>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QCheckBox" name="cbUseOpenGL">
           <property name="text">
            <string>OpenGL Accelerated AntiAliased Graphing</string>
@@ -96,7 +89,7 @@
            <item>
             <widget class="QLabel" name="label_3">
              <property name="text">
-              <string>Seconds/Microseconds are dongle based</string>
+              <string>Seconds/Milli/Micro are dongle based</string>
              </property>
             </widget>
            </item>
@@ -113,6 +106,13 @@
               <widget class="QRadioButton" name="rbMicros">
                <property name="text">
                 <string>Microseconds</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="rbMillis">
+               <property name="text">
+                <string>Milliseconds</string>
                </property>
               </widget>
              </item>
@@ -271,6 +271,29 @@
            <widget class="QComboBox" name="comboSendingBus"/>
           </item>
          </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupBox_9">
+       <property name="title">
+        <string>DBC Settings</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_10">
+        <item>
+         <widget class="QCheckBox" name="cbFilterLabeling">
+          <property name="text">
+           <string>Label DBC Signals by default</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbIgnoreDBCColors">
+          <property name="text">
+           <string>Ignore DBC signal colors</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>

@@ -361,6 +361,11 @@ void MainWindow::readSettings()
     readUpdateableSettings();
 }
 
+
+/*
+ * TODO: The way the frame timing mode is specified is DEAD STUPID. There shouldn't be three boolean values
+ * for this. Instead switch it all to an ENUM or something sane.
+*/
 void MainWindow::readUpdateableSettings()
 {
     QSettings settings;
@@ -371,8 +376,12 @@ void MainWindow::readUpdateableSettings()
     model->setSecondsMode(secondsMode);
     useSystemClock = settings.value("Main/TimeClock", false).toBool();
     model->setSysTimeMode(useSystemClock);
+    millisMode = settings.value("Main/TimeMillis", false).toBool();
+    model->setMillisMode(millisMode);
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
+    ignoreDBCColors = settings.value("Main/IgnoreDBCColors", false).toBool();
+    model->setIgnoreDBCColors(ignoreDBCColors);
 
     if (settings.value("Main/FilterLabeling", false).toBool())
         ui->listFilters->setMaximumWidth(250);

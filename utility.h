@@ -16,6 +16,7 @@ public:
 
     static bool decimalMode;
     static bool secondsMode;
+    static bool millisMode;
     static bool sysTimeMode;
     static QString timeFormat;
 
@@ -148,8 +149,12 @@ public:
     static QVariant formatTimestamp(uint64_t timestamp)
     {
         if (!sysTimeMode) {
+            if (millisMode) return (double)timestamp / 1000.0;
             if (!secondsMode) return (unsigned long long)(timestamp);
-            else return (double)timestamp / 1000000.0;
+            else
+            {
+                return (double)timestamp / 1000000.0;
+            }
         }
         else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
     }
