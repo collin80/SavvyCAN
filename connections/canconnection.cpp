@@ -167,7 +167,7 @@ void CANConnection::updateBusSpeed(int pBusIdx, int speed)
     }
 
 
-    if (pBusIdx > mNumBuses) return;
+    if (pBusIdx >= mNumBuses || pBusIdx >= mBusData.length()) return;
 
     mBusData[pBusIdx].mBus.setSpeed(speed);
 }
