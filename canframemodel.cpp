@@ -559,10 +559,12 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                             displayValues.emplace(*sig, sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong(), true, isInteger));
                         }
                     }
-
-                    for (const auto &kv: displayValues) {
-                        tempString.append(kv.second);
+                    for (int j = 0; j < msg->sigHandler->getCount(); j++)
+                    {                        
+                        DBC_SIGNAL* sig = msg->sigHandler->findSignalByIdx(j);
+                        tempString.append(displayValues[*sig]);
                         tempString.append("\n");
+
                     }
                 }
             }
