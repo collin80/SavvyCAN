@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <iostream>
 #include <memory>
+#include "pcaplite.h"
 
 #include "utility.h"
 #include "blfhandler.h"
@@ -189,6 +190,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("Tesla Autopilot Snapshot (*.CAN *.can)")));
     filters.append(QString(tr("CLX000 (*.txt *.TXT)")));
     filters.append(QString(tr("CANServer Binary Log (*.log *.LOG)")));
+    filters.append(QString(tr("Wireshark (*.pcap *.PCAP *.pcapng *.PCAPNG)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -234,6 +236,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
         if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
         if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
+        if (selectedNameFilter == filters[24]) result = loadWiresharkFile(filename, frameCache);
 
 
         progress.cancel();
@@ -301,6 +304,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadCANServerFile(filename, frames))
         {
             qDebug() << "Loaded as CANServer Binary Log successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting Wireshark Log";
+    if (isWiresharkFile(filename))
+    {
+        if (loadWiresharkFile(filename, frames))
+        {
+            qDebug() << "Loaded as Wireshark Log successfully!";
             return true;
         }
     }
@@ -4824,4 +4837,87 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
     inFile->close();
     delete inFile;
     return !foundErrors;
+}
+
+bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CANFrame>* frames)
+{
+    pcap_t *pcap_data_file;
+    CANFrame thisFrame;
+    long long startTimestamp = 0;
+    long long timeStamp;
+    int lineCounter = 0;
+    bool foundErrors = false;
+    pcap_pkthdr    packetHeader;
+	const char     *packetData = NULL;
+	char errbuf[PCAP_ERRBUF_SIZE];
+
+    thisFrame.setFrameType(QCanBusFrame::DataFrame);
+    
+    QByteArray ba = filename.toLocal8Bit();
+
+    pcap_data_file = pcap_open_offline(ba.data(), errbuf);
+	if (!pcap_data_file) {
+		return false;
+	}
+
+    packetData = (const char*)pcap_next(pcap_data_file, &packetHeader);
+
+    while (packetData) {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        
+        timeStamp = packetHeader.ts.tv_sec * 1000000 + packetHeader.ts.tv_usec;
+        if (0 == startTimestamp) 
+        {
+            startTimestamp = timeStamp;
+        }
+
+        timeStamp -= startTimestamp;
+
+        thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
+        thisFrame.isReceived = true; // TODO: check if tx detection is possible
+            
+        thisFrame.setFrameType(QCanBusFrame::DataFrame);
+        thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
+        if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
+            else thisFrame.setExtendedFrameFormat(true);
+        thisFrame.bus = 0;
+        int numBytes = *(packetData+20);
+        QByteArray bytes(numBytes, 0);
+        if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
+        for (int d = 0; d < numBytes; d++) 
+        { 
+            bytes[d] = *(packetData + 24 + d);
+        }
+        thisFrame.setPayload(bytes);
+        frames->append(thisFrame);
+
+        packetData = (const char*)pcap_next(pcap_data_file, &packetHeader);
+    }
+
+    pcap_close(pcap_data_file);
+	pcap_data_file = NULL;
+    
+    return !foundErrors;
+}
+
+bool FrameFileIO::isWiresharkFile(QString filename)
+{
+    pcap_t *pcap_data_file;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    QByteArray ba = filename.toLocal8Bit();
+
+    pcap_data_file = pcap_open_offline(ba.data(), errbuf);
+	if (!pcap_data_file) {
+		return false;
+	}
+
+    pcap_close(pcap_data_file);
+	pcap_data_file = NULL;
+
+    return true;
 }
