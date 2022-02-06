@@ -92,7 +92,8 @@ SOURCES += main.cpp\
     re/sniffer/SnifferDelegate.cpp \
     connections/newconnectiondialog.cpp \
     re/temporalgraphwindow.cpp \
-    filterutility.cpp
+    filterutility.cpp \
+    pcaplite.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -178,7 +179,8 @@ HEADERS  += mainwindow.h \
     re/sniffer/SnifferDelegate.h \
     connections/newconnectiondialog.h \
     re/temporalgraphwindow.h \
-    filterutility.h
+    filterutility.h \
+    pcaplite.h
 
 FORMS    += ui/candatagrid.ui \
     ui/dbccomparatorwindow.ui \
