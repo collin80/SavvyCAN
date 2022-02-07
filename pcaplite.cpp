@@ -113,7 +113,7 @@ const unsigned char *pcap_next_ng(pcap_t *p, struct pcap_pkthdr *h) {
                         return (NULL);
                     }
                     
-                    // calcualte option length aligned on 4 byte boundary
+                    // calculate option length aligned on 4 byte boundary
                     unsigned int option_file_length = 4*(oh.option_length/4) + ((oh.option_length%4) ? 4:0);
 
                     
