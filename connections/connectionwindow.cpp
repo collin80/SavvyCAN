@@ -532,6 +532,13 @@ void ConnectionWindow::loadConnections()
     QVector<int>    busNums = settings.value("connections/busNums").value<QVector<int>>();
     QVector<int>    busSpeedsT = settings.value("connections/busSpeeds").value<QVector<int>>();
     QVector<QVector<int>> busSpeeds;
+
+    // if values not present (e.g. when you update the program)
+    if (busNums.count() != driverNames.count()) {
+        busNums = QVector<int>(driverNames.count());
+        busSpeedsT = QVector<int>(0);
+    }
+
     //don't load the connections if the three setting arrays above aren't all the same size.
     if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count() || driverNames.count() != busNums.count()) return;
 
