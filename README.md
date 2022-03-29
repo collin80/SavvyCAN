@@ -100,7 +100,7 @@ when you installed Qt.
 
 ### What to do if `qmake` fails with error `Project ERROR: Unknown module(s) in QT: qml serialbus help` on Ubuntu? :
 
-`sudo apt install libqt5serialbus5-dev qtdeclarative5-dev qttools5-dev`
+`sudo apt install libqt5serialbus5-dev libqt5serialport5-dev qtdeclarative5-dev qttools5-dev`
 
 ### Used Items Requiring Attribution
 
