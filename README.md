@@ -1,5 +1,5 @@
 # SavvyCAN
-Qt based cross platform canbus tool 
+Qt based cross platform canbus tool
 (C) 2015-2021 EVTV and Collin Kidder
 
 A Qt5 based cross platform tool which can be used to load, save, and capture canbus frames.
@@ -10,7 +10,7 @@ Please use the "Discussions" tab here on GitHub to ask questions and interact wi
 
 Requires a resolution of at least 1024x768. Fully multi-monitor capable. Works on 4K monitors as well.
 
-You are highly recommended to use the 
+You are highly recommended to use the
 [CANDue board from EVTV](http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23).
 
 The CANDue board must be running the GVRET firmware which can also be found
@@ -43,12 +43,12 @@ from the Qt installer.
 
 Uses QCustomPlot available at:
 
-http://www.qcustomplot.com/ 
+http://www.qcustomplot.com/
 
-However, this source code is integrated into the source for SavvyCAN and one isn't required 
+However, this source code is integrated into the source for SavvyCAN and one isn't required
 to download it separately.
 
-This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt. 
+This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt.
 
 NOTE: Qt6 currently lacks support for QtSerialBus and many other Qt sub-features. At this time you cannot
 use Qt6 to compile SavvyCAN. Support for Qt6 should be possible around Qt6.2.
@@ -74,6 +74,8 @@ Now run SavvyCAN
 ```
 ./SavvyCAN
 ```
+
+On linux systems you can run `./install.sh` to create a desktop shortcut.
 
 ### Compiling in debug mode for additional information
 
@@ -115,4 +117,3 @@ signal by juli from the Noun Project
 signal by yudi from the Noun Project
 
 Death by Adrien Coquet from the Noun Project
-
