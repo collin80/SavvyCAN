@@ -133,6 +133,7 @@ bool CANFrameModel::getInterpretMode()
 void CANFrameModel::setTimeFormat(QString format)
 {
     Utility::timeFormat = format;
+    timeFormat = format;
     beginResetModel(); //reset model to show new time format
     endResetModel();
 }
