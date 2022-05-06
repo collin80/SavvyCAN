@@ -584,10 +584,11 @@ void GVRetSerial::readSerialData()
     {
         c = data.at(i);
         //qDebug() << c << "    " << QString::number(c, 16) << "     " << QString(c);
-        debugBuild = debugBuild % QString::number(c, 16) % " ";
+        debugBuild = debugBuild % QString::number(c, 16).rightJustified(2,'0') % " ";
         procRXChar(c);
     }
     debugOutput(debugBuild);
+    //qDebug() << debugBuild;
 }
 
 //Debugging data sent from connection window. Inject it into Comm traffic.
@@ -640,7 +641,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 9:
             validationCounter = 10;
-            //qDebug() << "Got validated";
+            qDebug() << "Got validated";
             rx_state = IDLE;
             break;
         case 12:
@@ -652,6 +653,15 @@ void GVRetSerial::procRXChar(unsigned char c)
             rx_state = GET_EXT_BUSES;
             qDebug() << "Got extended buses info reply";
             rx_step = 0;
+            break;
+        case 20:
+            rx_state = BUILD_FD_FRAME;
+            rx_step = 0;
+            break;
+        case 22:
+            rx_state = GET_FD_SETTINGS;
+            rx_step = 0;
+            qDebug() << "Got FD settings reply";
             break;
         }
         break;
@@ -704,6 +714,92 @@ void GVRetSerial::procRXChar(unsigned char c)
             if (rx_step < buildData.length() + 9)
             {
                 buildData[rx_step - 9] = c;
+                if (rx_step == buildData.length() + 8) //it's the last data byte so immediately process the frame
+                {
+                    rx_state = IDLE;
+                    rx_step = 0;
+                    buildFrame.isReceived = true;
+                    buildFrame.setPayload(buildData);
+                    buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                    if (!isCapSuspended())
+                    {
+                        /* get frame from queue */
+                        CANFrame* frame_p = getQueue().get();
+                        if(frame_p) {
+                            //qDebug() << "GVRET got frame on bus " << frame_p->bus;
+                            /* copy frame */
+                            *frame_p = buildFrame;
+                            checkTargettedFrame(buildFrame);
+                            /* enqueue frame */
+                            getQueue().queue();
+                        }
+                        else
+                            qDebug() << "can't get a frame, ERROR";
+
+                        //take the time the frame came in and try to resync the time base.
+                        //if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame.timestamp / 1000);
+                    }
+                }
+            }
+            else //should never get here! But, just in case, reset the comm
+            {
+                rx_state = IDLE;
+                rx_step = 0;
+            }
+            break;
+        }
+        rx_step++;
+        break;
+    case BUILD_FD_FRAME:
+        switch (rx_step)
+        {
+        case 0:
+            buildTimestamp = c;
+            break;
+        case 1:
+            buildTimestamp |= (uint)(c << 8);
+            break;
+        case 2:
+            buildTimestamp |= (uint)c << 16;
+            break;
+        case 3:
+            buildTimestamp |= (uint)c << 24;
+
+            buildTimestamp += timeBasis;
+            if (useSystemTime)
+            {
+                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+            }
+            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+            break;
+        case 4:
+            buildId = c;
+            break;
+        case 5:
+            buildId |= c << 8;
+            break;
+        case 6:
+            buildId |= c << 16;
+            break;
+        case 7:
+            buildId |= c << 24;
+            if ((buildId & 1 << 31) == 1u << 31)
+            {
+                buildId &= 0x7FFFFFFF;
+                buildFrame.setExtendedFrameFormat(true);
+            }
+            else buildFrame.setExtendedFrameFormat(false);
+            buildFrame.setFrameId(buildId);
+            break;
+        case 8:
+            buildData.resize(c & 0x3F);
+            break;
+        case 9:
+            buildFrame.bus = c;
+        default:
+            if (rx_step < buildData.length() + 10)
+            {
+                buildData[rx_step - 9] = c;
             }
             else
             {
@@ -719,7 +815,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                     if(frame_p) {
                         //qDebug() << "GVRET got frame on bus " << frame_p->bus;
                         /* copy frame */
-                        *frame_p = buildFrame;                        
+                        *frame_p = buildFrame;
                         checkTargettedFrame(buildFrame);
                         /* enqueue frame */
                         getQueue().queue();

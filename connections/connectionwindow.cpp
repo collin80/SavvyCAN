@@ -78,7 +78,6 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     //Need to make sure it tries to share the address in case there are
     //multiple instances of SavvyCAN running.
     rxBroadcastGVRET->bind(QHostAddress::AnyIPv4, 17222, QAbstractSocket::ShareAddress);
-
     connect(rxBroadcastGVRET, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
 
     //Doing the same for socketcand/kayak hosts:
@@ -415,8 +414,9 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
 
     int selIdx = current.row();
 
-    disconnect(connModel->getAtIdx(previous.row()), SIGNAL(debugOutput(QString)), 0, 0);
-    disconnect(this, SIGNAL(sendDebugData(QByteArray)), connModel->getAtIdx(previous.row()), SLOT(debugInput(QByteArray)));
+    disconnect(connModel->getAtIdx(previous.row()), SIGNAL(debugOutput(QString)), nullptr, nullptr);
+    disconnect(this, SIGNAL(sendDebugData(QByteArray)), nullptr, nullptr);
+
 
     /* set parameters */
     if (selIdx == -1) {
@@ -488,7 +488,7 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
         connect(conn_p, SIGNAL(status(CANConStatus)),
                 this, SLOT(connectionStatus(CANConStatus)));
         if (ui->ckEnableConsole->isChecked())
-        {
+        {            
             //set up the debug console to operate if we've selected it. Doing so here allows debugging right away during set up
             connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
         }

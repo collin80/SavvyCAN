@@ -339,7 +339,10 @@ void CANConnection::checkTargettedFrame(CANFrame &frame)
     //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
     if (mBusData.count() == 0) return;
 
-    if (mBusData[frame.bus].mTargettedFrames.length() == 0) return;
+    int bus = frame.bus;
+    if (bus > (mBusData.length() - 1)) bus = mBusData.length() - 1;
+
+    if (mBusData[bus].mTargettedFrames.length() == 0) return;
     foreach (const CANFltObserver filt, mBusData[frame.bus].mTargettedFrames)
     {
         //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
