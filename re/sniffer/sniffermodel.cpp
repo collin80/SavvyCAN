@@ -66,9 +66,10 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 case tc::DELTA:
                     return QString::number(item->getDelta(), 'f');
                 case tc::FREQUENCY:
+                    if (item->getDelta() == 0) return QString("0 hz");
                     return QString("%1 hz").arg(qRound(1.00 / item->getDelta()));
                 case tc::ID:
-                    return "0x" + QString("%1").arg(item->getId(), 5, 16, QLatin1Char(' ')).toUpper();
+                    return "0x" + QString("%1").arg(item->getId(), 5, 16, QLatin1Char('0')).toUpper();
                 default:
                     break;
             }
@@ -272,7 +273,7 @@ void SnifferModel::refresh()
     }
     else
         /* refresh data */
-        dataChanged(createIndex(0, 0),
+        emit dataChanged(createIndex(0, 0),
                     createIndex(rowCount()-1, columnCount()-1), QVector<int>(Qt::DisplayRole));
 }
 
