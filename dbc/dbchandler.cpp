@@ -192,6 +192,7 @@ bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
         {
             messages.removeAt(i);
             qDebug() << "Removed message at idx " << i;
+            break;
         }
     }
     return true;
