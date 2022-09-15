@@ -631,7 +631,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
 {
     QTreeWidgetItem *currItem = ui->treeDBC->currentItem();
     int typ = currItem->data(0, Qt::UserRole).toInt();
-    QString idString;
+    QString idString, columnText;
     int msgID;
     DBC_MESSAGE *msg;
     DBC_NODE *node;
@@ -642,7 +642,8 @@ void DBCMainEditor::deleteCurrentTreeItem()
     switch (typ)
     {
     case 1: //deleting a node cascades deletion down to messages and signals
-        node = dbcFile->findNodeByName(currItem->text(0));
+        columnText = currItem->text(0);
+        node = dbcFile->findNodeByNameAndComment(columnText);
         if (!node) return;
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {
