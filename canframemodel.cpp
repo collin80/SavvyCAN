@@ -49,7 +49,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 10000000;
+        preallocSize = 10000; //000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
@@ -673,13 +673,39 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 
     if (!overwriteDups)
     {
-        frames.append(tempFrame);
-        if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+        bool alloc_ok = true;
+
+        for(int i=0; i<3; i++)
         {
-            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-            tempFrame.frameCount = 1;
-            filteredFrames.append(tempFrame);
-            if (autoRefresh) endInsertRows();
+            try
+            {
+                if(alloc_ok == false)
+                {
+                    qDebug() << "Trying to remove " << (frames.length() >> 3) << " from frames. Try #" << i ;
+                    frames.remove(0, frames.length() >> 3);
+                    qDebug() << "frames length now: " << (frames.length()) << "trying to alloc again" ;
+                    alloc_ok = true;
+                }
+
+                frames.append(tempFrame);
+                break;
+            }
+            catch (const std::exception& ex)
+            {
+                alloc_ok = false;
+                qDebug() << "addFrame failed to append.  frames.length(): " << frames.length() << " Exception: " << ex.what();
+            }
+        }
+
+        if(alloc_ok)
+        {
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+            {
+                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+                tempFrame.frameCount = 1;
+                filteredFrames.append(tempFrame);
+                if (autoRefresh) endInsertRows();
+            }
         }
     }
     else //yes, overwrite dups
@@ -779,7 +805,7 @@ int CANFrameModel::sendBulkRefresh()
     if (lastUpdateNumFrames == 0 && !overwriteDups) return 0;
     if (filteredFrames.count() == 0) return 0;
 
-    qDebug() << "Bulk refresh of " << lastUpdateNumFrames;
+    //qDebug() << "Bulk refresh of " << lastUpdateNumFrames;
 
     beginResetModel();
     endResetModel();
