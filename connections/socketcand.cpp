@@ -402,6 +402,12 @@ void SocketCANd::procRXData(QString data, int busNum)
             rx_state[busNum] = RAWMODE;
             decodeFrames(data, busNum);
         }
+        else if(data.indexOf("< ok >", 0, Qt::CaseSensitivity::CaseInsensitive) > 0)
+        {
+            qDebug() << "Ok found at in middle of compound message, switching to RAW and decoding immediately";
+            rx_state[busNum] = RAWMODE;
+            decodeFrames(data, busNum);
+        }
         break;
     case RAWMODE:
         decodeFrames(data, busNum);
