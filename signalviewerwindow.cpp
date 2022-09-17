@@ -105,6 +105,7 @@ void SignalViewerWindow::loadMessages()
     for (int f = 0; f < numFiles; f++)
     {
         qDebug() << dbcHandler->getFileByIdx(f)->messageHandler->getCount();
+
         for (int x = 0; x < dbcHandler->getFileByIdx(f)->messageHandler->getCount(); x++)
         {
             ui->cbMessages->addItem(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->name);
@@ -140,7 +141,7 @@ void SignalViewerWindow::addSignal()
 
     int rowIdx = ui->tableViewer->rowCount();
     ui->tableViewer->insertRow(rowIdx);
-    QTableWidgetItem *item = new QTableWidgetItem(sig->name);
+    QTableWidgetItem *item = new QTableWidgetItem(msg->sender->name + " - " + sig->name);
     ui->tableViewer->setItem(rowIdx, 0, item);
 
 }
