@@ -779,7 +779,7 @@ int CANFrameModel::sendBulkRefresh()
     if (lastUpdateNumFrames == 0 && !overwriteDups) return 0;
     if (filteredFrames.count() == 0) return 0;
 
-    qDebug() << "Bulk refresh of " << lastUpdateNumFrames;
+    //qDebug() << "Bulk refresh of " << lastUpdateNumFrames;
 
     beginResetModel();
     endResetModel();
