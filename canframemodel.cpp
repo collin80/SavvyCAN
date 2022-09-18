@@ -49,7 +49,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 10000; //000;
+        preallocSize = 10000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
@@ -679,14 +679,6 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             try
             {
-                if(alloc_ok == false)
-                {
-                    qDebug() << "Trying to remove " << (frames.length() >> 3) << " from frames. Try #" << i ;
-                    frames.remove(0, frames.length() >> 3);
-                    qDebug() << "frames length now: " << (frames.length()) << "trying to alloc again" ;
-                    alloc_ok = true;
-                }
-
                 frames.append(tempFrame);
                 break;
             }
@@ -754,6 +746,20 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 
 void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFrames)
 {
+    if(frames.length() > frames.capacity() * 0.99)
+    {
+        qDebug() << "Frames count: " << frames.length() << " of " << frames.capacity() << " capacity, removing first " << frames.capacity() * 0.05 << " frames";
+        frames.remove(0, frames.capacity() * 0.05);
+        qDebug() << "Frames removed, new count: " << frames.length();
+    }
+
+    if(filteredFrames.length() > filteredFrames.capacity() * 0.99)
+    {
+        qDebug() << "filteredFrames count: " << filteredFrames.length() << " of " << filteredFrames.capacity() << " capacity, removing first " << filteredFrames.capacity() * 0.05 << " frames";
+        filteredFrames.remove(0, filteredFrames.capacity() * 0.05);
+        qDebug() << "filteredFrames removed, new count: " << filteredFrames.length();
+    }
+
     foreach(const CANFrame& frame, pFrames)
     {
         addFrame(frame);
