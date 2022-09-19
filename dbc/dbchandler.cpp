@@ -192,6 +192,7 @@ bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
         {
             messages.removeAt(i);
             qDebug() << "Removed message at idx " << i;
+            break;
         }
     }
     return true;
@@ -336,7 +337,22 @@ DBC_NODE* DBCFile::findNodeByName(QString name)
     if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
-        if (dbc_nodes[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        if (name.compare(dbc_nodes[i].name, Qt::CaseInsensitive) == 0)
+        {
+            return &dbc_nodes[i];
+        }
+    }
+    return nullptr;
+}
+
+DBC_NODE* DBCFile::findNodeByNameAndComment(QString fullname)
+{
+    QString nameAndComment;
+    if (dbc_nodes.length() == 0) return nullptr;
+    for (int i = 0; i < dbc_nodes.length(); i++)
+    {
+        nameAndComment = dbc_nodes[i].name + " - " + dbc_nodes[i].comment;
+        if (fullname.compare(nameAndComment, Qt::CaseInsensitive) == 0)
         {
             return &dbc_nodes[i];
         }
