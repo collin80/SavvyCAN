@@ -20,8 +20,16 @@ private slots:
     void loadMessages();
     void loadSignals(int idx);
     void addSignal();
+    void addSignal(DBC_SIGNAL *sig);
     void removeSelectedSignal();
     void updatedFrames(int);
+    void saveSignalsFile();
+    void loadSignalsFile();
+    void appendSignalsFile();
+    void clearSignalsTable();
+    void clearSignalsTable(bool);
+    void saveDefinitions();
+    void loadDefinitions(bool);
 
 private:
     Ui::SignalViewerWindow *ui;
