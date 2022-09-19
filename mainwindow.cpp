@@ -1159,11 +1159,26 @@ void MainWindow::showTemporalGraphWindow()
     //only create an instance of the object if we dont have one. Otherwise just display the existing one.
     if (!temporalGraphWindow)
     {
+        const QVector<CANFrame> *frames;
         if (!useFiltered)
-            temporalGraphWindow = new TemporalGraphWindow(model->getListReference());
+            frames = model->getListReference();
         else
-            temporalGraphWindow = new TemporalGraphWindow(model->getFilteredListReference());
+            frames = model->getFilteredListReference();
+
+        if(frames->count() > 2000)
+        {
+            QMessageBox::StandardButton confirmDialog;
+            confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "There are a lot of frames (>2000) to plot, this may take a while or crash the app. Crash likely with more than 10k frames. Continue?",
+                                          QMessageBox::Yes|QMessageBox::No);
+            if (confirmDialog == QMessageBox::No)
+            {
+                return;
+            }
+        }
+
+        temporalGraphWindow = new TemporalGraphWindow(frames);
     }
+
     temporalGraphWindow->show();
 }
 

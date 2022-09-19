@@ -27,6 +27,10 @@ SignalViewerWindow::SignalViewerWindow(const QVector<CANFrame> *frames, QWidget 
     connect(ui->btnAdd, SIGNAL(clicked(bool)), this, SLOT(addSignal()));
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
     connect(ui->btnRemove, SIGNAL(clicked(bool)), this, SLOT(removeSelectedSignal()));
+    connect(ui->btnSave, SIGNAL(clicked(bool)), this, SLOT(saveSignalsFile()));
+    connect(ui->btnLoad, SIGNAL(clicked(bool)), this, SLOT(loadSignalsFile()));
+    connect(ui->btnAppend, SIGNAL(clicked(bool)), this, SLOT(appendSignalsFile()));
+    connect(ui->btnClear, SIGNAL(clicked(bool)), this, SLOT(clearSignalsTable()));
 
     loadMessages();
 }
@@ -137,11 +141,179 @@ void SignalViewerWindow::addSignal()
     DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
     if (!sig) return;
 
+    addSignal(sig);
+}
+
+void SignalViewerWindow::addSignal(DBC_SIGNAL *sig)
+{
     signalList.append(sig);
 
     int rowIdx = ui->tableViewer->rowCount();
     ui->tableViewer->insertRow(rowIdx);
-    QTableWidgetItem *item = new QTableWidgetItem(msg->sender->name + " - " + sig->name);
+    QTableWidgetItem *item = new QTableWidgetItem(sig->parentMessage->sender->name + " - " + sig->name);
     ui->tableViewer->setItem(rowIdx, 0, item);
+}
 
+void SignalViewerWindow::saveSignalsFile()
+{
+    saveDefinitions();
+}
+
+void SignalViewerWindow::loadSignalsFile()
+{
+    loadDefinitions(false);
+}
+
+void SignalViewerWindow::appendSignalsFile()
+{
+    loadDefinitions(true);
+}
+
+void SignalViewerWindow::clearSignalsTable()
+{
+    clearSignalsTable(true);
+}
+
+void SignalViewerWindow::clearSignalsTable(bool askForConfirmation)
+{
+    if(askForConfirmation)
+    {
+        QMessageBox::StandardButton confirmDialog;
+        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Are you sure you want to clear all of your signals?",
+                                      QMessageBox::Yes|QMessageBox::No);
+        if (confirmDialog == QMessageBox::No)
+        {
+            return;
+        }
+    }
+
+    signalList.clear();
+    ui->tableViewer->setRowCount(0);
+}
+
+void SignalViewerWindow::saveDefinitions()
+{
+    QString filename;
+    QFileDialog dialog(this);
+    QSettings settings;
+
+    QStringList filters;
+    filters.append(QString(tr("SignalViewer definition (*.sdf)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("SignalViewer/LoadSaveDirectory", dialog.directory().path()).toString());
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        settings.setValue("SignalViewer/LoadSaveDirectory", dialog.directory().path());
+
+        if (!filename.contains('.')) filename += ".sdf";
+
+        QFile *outFile = new QFile(filename);
+
+        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            return;
+
+        DBC_SIGNAL *sig;
+        for (int i = 0; i < signalList.count(); i++)
+        {
+            sig = signalList.at(i);
+
+            outFile->write("SV1");
+            outFile->putChar(',');
+            outFile->write(QString::number(sig->parentMessage->ID, 16).toUtf8());
+            outFile->putChar(',');
+            outFile->write(sig->parentMessage->name.toUtf8());
+            outFile->putChar(',');
+            outFile->write(sig->name.toUtf8());
+
+            outFile->write("\n");
+        }
+        outFile->close();
+    }
+}
+
+void SignalViewerWindow::loadDefinitions(bool append)
+{
+    QString filename;
+    QFileDialog dialog;
+    QSettings settings;
+
+    QStringList filters;
+    filters.append(QString(tr("SignalViewer definition (*.sdf)")));
+
+    QList<DBC_SIGNAL *> loadedSignals;
+
+    if (dbcHandler == nullptr) return;
+    if (dbcHandler->getFileCount() == 0) dbcHandler->createBlankFile();
+
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setDirectory(settings.value("SignalViewer/LoadSaveDirectory", dialog.directory().path()).toString());
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        settings.setValue("SignalViewer/LoadSaveDirectory", dialog.directory().path());
+
+        QFile *inFile = new QFile(filename);
+        QByteArray line;
+
+        if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+            return;
+
+        while (!inFile->atEnd()) {
+            line = inFile->readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(',');
+
+                DBC_SIGNAL *sig;
+
+                if (tokens[0] == "SV1") //signal viewer save format v1
+                {
+                    // = tokens[1].toUInt(nullptr, 16);
+
+                    int msgId = tokens[1].toUInt(nullptr, 16);
+                    QString msgName = QString(tokens[2]);
+                    QString sigName = QString(tokens[3]);
+                    DBC_MESSAGE *msg;;
+                    if (msg  = dbcHandler->findMessage(msgName))
+                    {
+                        sig = msg->sigHandler->findSignalByName(sigName);
+                        loadedSignals.append(sig);
+                    }
+                    else  if(msg = dbcHandler->findMessage(msgId))
+                    {
+                        sig = msg->sigHandler->findSignalByName(sigName);
+                        //fix anything up about the name?
+                        loadedSignals.append(sig);
+                    }
+                    else
+                    {
+                        qDebug() << "Couldn't find the message by name! " << msgName << "  " << sigName;
+                    }
+                }
+            }
+        }
+        inFile->close();
+
+        if(loadedSignals.count() > 0)
+        {
+            if(append == false)
+            {
+                clearSignalsTable(false);
+            }
+
+            for (int i=0; i<loadedSignals.count(); i++)
+            {
+                addSignal(loadedSignals[i]);
+            }
+        }
+    }
 }

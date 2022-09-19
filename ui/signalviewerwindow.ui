@@ -85,6 +85,34 @@
        </property>
       </spacer>
      </item>
+     <item>
+      <widget class="QPushButton" name="btnSave">
+       <property name="text">
+        <string>Save View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnLoad">
+       <property name="text">
+        <string>Load View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnAppend">
+       <property name="text">
+        <string>Append to View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClear">
+       <property name="text">
+        <string>Clear View</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
   </layout>
