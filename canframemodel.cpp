@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QPalette>
 #include <QDateTime>
+#include <QSettings>
 #include "utility.h"
 
 CANFrameModel::~CANFrameModel()
@@ -45,17 +46,20 @@ int CANFrameModel::columnCount(const QModelIndex &index) const
 CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
-
+    int maxFramesDefault;
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 10000000;
+        maxFramesDefault = 10000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
         qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
-        preallocSize = 2000000;
+        maxFramesDefault = 2000000;
     }
+
+    QSettings settings;
+    int preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize); //the goal is to prevent a reallocation from ever happening
