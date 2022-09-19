@@ -55,7 +55,7 @@ MainWindow::MainWindow(QWidget *parent) :
     verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
     QSettings settings;
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
-    QFont sysFont = QFont(); //get default font
+    QFont sysFont = QFontDatabase::systemFont(QFontDatabase::FixedFont); //get default font
     sysFont.setPointSize(fontSize);
     verticalHeader->setDefaultSectionSize(sysFont.pixelSize());
     ui->canFramesView->setFont(sysFont);
