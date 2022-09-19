@@ -67,6 +67,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     dbcHandler = DBCHandler::getReference();
     interpretFrames = false;
     overwriteDups = false;
+    filtersPersistDuringClear = false;
     useHexMode = true;
     timeSeconds = false;
     timeOffset = 0;
@@ -198,6 +199,11 @@ void CANFrameModel::setOverwriteMode(bool mode)
     overwriteDups = mode;
     recalcOverwrite();
     endResetModel();
+}
+
+void CANFrameModel::setClearMode(bool mode)
+{
+    filtersPersistDuringClear = mode;
 }
 
 void CANFrameModel::setFilterState(unsigned int ID, bool state)
@@ -832,8 +838,11 @@ void CANFrameModel::clearFrames()
     this->beginResetModel();
     frames.clear();
     filteredFrames.clear();
-    filters.clear();
-    busFilters.clear();
+    if(filtersPersistDuringClear == false)
+    {
+        filters.clear();
+        busFilters.clear();
+    }
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize);
     this->endResetModel();

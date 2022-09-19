@@ -141,6 +141,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->cbPersistentFilters, &QAbstractButton::toggled, this, &MainWindow::presistentFiltersToggled);
     connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
     connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
 
@@ -613,6 +614,18 @@ void MainWindow::overwriteToggled(bool state)
     else
     {
         model->setOverwriteMode(false);
+    }
+}
+
+void MainWindow::presistentFiltersToggled(bool state)
+{
+    if (state)
+    {
+        model->setClearMode(true);
+    }
+    else
+    {
+        model->setClearMode(false);
     }
 }
 
