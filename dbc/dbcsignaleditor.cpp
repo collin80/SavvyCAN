@@ -86,9 +86,6 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 case 4:
                     currentSignal->valType = STRING;
                     break;
-                case 5:
-                    currentSignal->valType = VALUE_STRING;
-                    break;
                 }
                 dbcFile->setDirtyFlag();
                 fillSignalForm(currentSignal);
@@ -580,9 +577,6 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         break;
     case STRING:
         ui->comboType->setCurrentIndex(4);
-        break;
-    case VALUE_STRING:
-        ui->comboType->setCurrentIndex(5);
         break;
     }
 

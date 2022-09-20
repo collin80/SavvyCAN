@@ -576,9 +576,6 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             sig.valType = DP_FLOAT;
             sig.intelByteOrder = true;
             break;
-        case 7: //double point float in little endian
-            sig.valType = VALUE_STRING;
-            break;
         }
         sig.factor = match.captured(6 + offset).toDouble();
         sig.bias = match.captured(7 + offset).toDouble();
@@ -1448,9 +1445,6 @@ bool DBCFile::saveFile(QString fileName)
                 break;
             case STRING:
                 msgOutput.append("4-");
-                break;
-            case VALUE_STRING:
-                msgOutput.append("7-");
                 break;
             default:
                 msgOutput.append("0-");
