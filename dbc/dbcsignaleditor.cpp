@@ -34,6 +34,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->comboType->addItem("SINGLE PRECISION");
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
+    ui->comboType->addItem("ENUMERATED STRING");
 
     ui->bitfield->setMode(GridMode::SIGNAL_VIEW);
 
@@ -84,7 +85,10 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     break;
                 case 4:
                     currentSignal->valType = STRING;
-                    break;                    
+                    break;
+                case 5:
+                    currentSignal->valType = VALUE_STRING;
+                    break;
                 }
                 dbcFile->setDirtyFlag();
                 fillSignalForm(currentSignal);
@@ -576,6 +580,9 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         break;
     case STRING:
         ui->comboType->setCurrentIndex(4);
+        break;
+    case VALUE_STRING:
+        ui->comboType->setCurrentIndex(5);
         break;
     }
 
