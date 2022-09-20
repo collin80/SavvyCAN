@@ -21,11 +21,14 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     dbcHandler = DBCHandler::getReference();
     referenceFrames = frames;
 
+    ui->treeDBC->setContextMenuPolicy(Qt::CustomContextMenu);
+
     connect(ui->btnSearch, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearch);
     connect(ui->lineSearch, &QLineEdit::returnPressed, this, &DBCMainEditor::handleSearch);
     connect(ui->btnSearchNext, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchForward);
     connect(ui->btnSearchPrev, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchBackward);
     connect(ui->treeDBC, &QTreeWidget::doubleClicked, this, &DBCMainEditor::onTreeDoubleClicked);
+    connect(ui->treeDBC, &QTreeWidget::customContextMenuRequested, this, &DBCMainEditor::onTreeContextMenu);
     connect(ui->treeDBC, &QTreeWidget::currentItemChanged, this, &DBCMainEditor::currentItemChanged);
     connect(ui->btnDelete, &QAbstractButton::clicked, this, &DBCMainEditor::deleteCurrentTreeItem);
     connect(ui->btnNewNode, &QAbstractButton::clicked, this, &DBCMainEditor::newNode);
@@ -298,6 +301,51 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
     }
 }
 
+void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
+{
+    QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
+    bool ret = false;
+    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig;
+    DBC_NODE *node;
+    uint32_t msgID;
+    QString idString;
+
+    qDebug() << firstCol->data(0, Qt::UserRole) << " - " << firstCol->text(0);
+
+    switch (firstCol->data(0, Qt::UserRole).toInt())
+    {
+    case 1: //a node
+        idString = firstCol->text(0).split(" ")[0];
+        node = dbcFile->findNodeByName(idString);
+
+        QAction *actionRebase = new QAction(QIcon(":/Resource/warning32.ico"), tr("Rebase all messages"), this);
+        actionRebase->setStatusTip(tr("Rebase all messages in node"));
+        connect(actionRebase, SIGNAL(triggered()), this, SLOT(onRebaseMessages()));
+
+        QAction *actionDupe = new QAction(QIcon(":/Resource/warning32.ico"), tr("Duplicate node"), this);
+        actionDupe->setStatusTip(tr("Duplicate node and messages"));
+        connect(actionDupe, SIGNAL(triggered()), this, SLOT(onDuplicateNode()));
+
+        QMenu menu(this);
+        menu.addAction(actionRebase);
+        menu.addAction(actionDupe);
+
+        QPoint pt(pos);
+        menu.exec( ui->treeDBC->mapToGlobal(pos) );
+        break;
+    }
+}
+
+void DBCMainEditor::onRebaseMessages()
+{
+    qDebug() << "rebase!!";
+}
+
+void DBCMainEditor::onDuplicateNode()
+{
+    qDebug() << "dupe!!";
+}
 
 /*
  * Recreate the whole tree with pretty icons and custom user roles that give the rest of code an easy way to figure out whether a given tree node
