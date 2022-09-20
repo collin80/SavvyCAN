@@ -285,7 +285,6 @@ void DBCLoadSaveWindow::editFile()
     if (idx < 0) return;
 
     editorWindow->setFileIdx(idx);
-    editorWindow->setModal(true);
     editorWindow->show();
 }
 
