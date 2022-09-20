@@ -286,13 +286,14 @@ void SignalViewerWindow::loadDefinitions(bool append)
                     if (msg  = dbcHandler->findMessage(msgName))
                     {
                         sig = msg->sigHandler->findSignalByName(sigName);
-                        loadedSignals.append(sig);
+                        if(sig)
+                            loadedSignals.append(sig);
                     }
                     else  if(msg = dbcHandler->findMessage(msgId))
                     {
                         sig = msg->sigHandler->findSignalByName(sigName);
-                        //fix anything up about the name?
-                        loadedSignals.append(sig);
+                        if(sig)
+                            loadedSignals.append(sig);
                     }
                     else
                     {
