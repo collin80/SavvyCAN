@@ -263,6 +263,12 @@ void SocketCANd::decodeFrames(QString data, int busNum)
         QString frameStr = frameStrConst;
         QStringList frameParsed = (frameStr.remove(QRegExp("^<")).remove(QRegExp(">$"))).simplified().split(' ');
 
+        if(frameParsed.length() < 2)
+        {
+            qDebug() << "Received datagramm is an incomplete frame: " << data;
+            return;
+        }
+
         buildFrame.setFrameId(frameParsed[1].toUInt(nullptr, 16));
         buildFrame.bus = busNum;
 
@@ -271,6 +277,13 @@ void SocketCANd::decodeFrames(QString data, int busNum)
 
         buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
         //buildFrame.len =  frameParsed[3].length() * 0.5;
+
+        if(frameParsed.length() < 4)
+        {
+            qDebug() << "Received frame doesn't contain any data: " << data;
+            return;
+        }
+
         int framelength = frameParsed[3].length() * 0.5;
 
         buildData.resize(framelength);
@@ -382,6 +395,18 @@ void SocketCANd::procRXData(QString data, int busNum)
         if (data == "< ok >")
         {
             rx_state[busNum] = RAWMODE;
+        }
+        else if(data.indexOf("< ok >", 0, Qt::CaseSensitivity::CaseInsensitive) == 0)
+        {
+            qDebug() << "Ok found at start of compound message, switching to RAW and decoding immediately";
+            rx_state[busNum] = RAWMODE;
+            decodeFrames(data, busNum);
+        }
+        else if(data.indexOf("< ok >", 0, Qt::CaseSensitivity::CaseInsensitive) > 0)
+        {
+            qDebug() << "Ok found at in middle of compound message, switching to RAW and decoding immediately";
+            rx_state[busNum] = RAWMODE;
+            decodeFrames(data, busNum);
         }
         break;
     case RAWMODE:
