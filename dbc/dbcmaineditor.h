@@ -32,6 +32,7 @@ public slots:
 
 private slots:
     void onTreeDoubleClicked(const QModelIndex &index);
+    void onTreeContextMenu(const QPoint & pos);
     void currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *prev);
     void onCustomMenuTree(QPoint);
     void deleteCurrentTreeItem();
@@ -43,7 +44,9 @@ private slots:
     void handleSearchBackward();
     void newNode();
     void newMessage();
-    void newSignal();
+    void newSignal();    
+    void onRebaseMessages();
+    void onDuplicateNode();
 
 private:
     Ui::DBCMainEditor *ui;
