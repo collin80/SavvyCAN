@@ -137,17 +137,6 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         cachedValue = outString;
         return true;
     }
-    else if(valType == VALUE_STRING)
-    {
-        result = Utility::processIntegerSignal(frame.payload(), startBit, signalSize, intelByteOrder, isSigned);
-
-        if(!getValueString(result, outString))
-        {
-            outString = "Signal string value is undefined";
-        }
-
-        return true;
-    }
 
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
@@ -240,7 +229,7 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
     int32_t result = 0;
     bool isSigned = false;
 
-    if (valType == STRING || valType == VALUE_STRING || valType == SP_FLOAT  || valType == DP_FLOAT)
+    if (valType == STRING || valType == SP_FLOAT  || valType == DP_FLOAT)
     {
         return false;
     }
@@ -273,7 +262,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
     bool isSigned = false;
     double endResult;
 
-    if (valType == STRING || valType ==  VALUE_STRING)
+    if (valType == STRING)
     {
         return false;
     }
