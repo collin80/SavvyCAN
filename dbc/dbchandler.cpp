@@ -351,7 +351,11 @@ DBC_NODE* DBCFile::findNodeByNameAndComment(QString fullname)
     if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
-        nameAndComment = dbc_nodes[i].name + " - " + dbc_nodes[i].comment;
+        if(dbc_nodes[i].comment.isEmpty())
+            nameAndComment = dbc_nodes[i].name;
+        else
+            nameAndComment = dbc_nodes[i].name + " - " + dbc_nodes[i].comment;
+
         if (fullname.compare(nameAndComment, Qt::CaseInsensitive) == 0)
         {
             return &dbc_nodes[i];
