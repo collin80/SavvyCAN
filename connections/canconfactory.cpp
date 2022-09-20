@@ -13,6 +13,9 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
     case SERIALBUS:
         return new SerialBusConnection(pPortName, pDriverName);
     case GVRET_SERIAL:
+        if(pPortName.contains("."))
+        return new GVRetSerial(pPortName, true);
+        else
         return new GVRetSerial(pPortName, false);
     case REMOTE:
         return new GVRetSerial(pPortName, true);  //it's a special case of GVRET connected over TCP/IP so it uses the same class
