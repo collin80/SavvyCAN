@@ -453,7 +453,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         DBC_MESSAGE msg;
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
         msg.ID = ID & 0x1FFFFFFFul;
-        msg.extendedID = (ID & 80000000ul) ? true : false;
+        msg.extendedID = (ID & 0x80000000ul) ? true : false;
         msg.name = match.captured(2);
         msg.len = match.captured(3).toUInt();
         msg.sender = findNodeByName(match.captured(4));
@@ -1372,7 +1372,10 @@ bool DBCFile::saveFile(QString fileName)
         }
 
         uint32_t ID = msg->ID;
-        if (msg->ID > 0x7FF || msg->extendedID) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+        if (msg->ID > 0x7FF || msg->extendedID)
+        {
+            msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+        }
 
         msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
@@ -1571,7 +1574,10 @@ bool DBCFile::saveFile(QString fileName)
             DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
 
             uint32_t ID = msg->ID;
-            if (msg->ID > 0x7FF || msg->extendedID) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            if (msg->ID > 0x7FF || msg->extendedID)
+            {
+                msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            }
 
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
             {
