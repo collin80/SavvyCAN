@@ -111,8 +111,11 @@ void DBCNodeEditor::showEvent(QShowEvent* event)
 
 void DBCNodeEditor::refreshView()
 {
-    ui->lineComment->setText(dbcNode->comment);
-    ui->lineMsgName->setText(dbcNode->name);
+    if(dbcNode)
+    {
+        ui->lineComment->setText(dbcNode->comment);
+        ui->lineMsgName->setText(dbcNode->name);
+    }
 
     //generateSampleText();
 }
