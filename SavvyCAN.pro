@@ -67,6 +67,7 @@ SOURCES += main.cpp\
     dbc/dbcmaineditor.cpp \
     dbc/dbcnodeeditor.cpp \
     dbc/dbcsignaleditor.cpp \
+    dbc/dbcnoderebaseeditor.cpp \
     re/discretestatewindow.cpp \
     re/filecomparatorwindow.cpp \
     re/flowviewwindow.cpp \
@@ -100,6 +101,7 @@ HEADERS  += mainwindow.h \
     canframemodel.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
+    dbc/dbcnoderebaseeditor.h \
     mqtt/qmqtt.h \
     mqtt/qmqtt_client.h \
     mqtt/qmqtt_client_p.h \
@@ -188,6 +190,7 @@ FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
     ui/dbcloadsavewindow.ui \
     ui/dbcmaineditor.ui \
+    ui/dbcnoderebaseeditor.ui \
     ui/dbcsignaleditor.ui \
     ui/dbcnodeeditor.ui \
     ui/discretestatewindow.ui \
