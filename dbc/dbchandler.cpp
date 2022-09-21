@@ -177,6 +177,24 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByPartialName(QString name)
     return nullptr;
 }
 
+QList<DBC_MESSAGE*> DBCMessageHandler::findMsgsByNode(DBC_NODE* node)
+{
+    QList<DBC_MESSAGE*> messagesForNode;
+
+    if (messages.count() == 0)
+        return messagesForNode;
+
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].sender == node)
+        {
+            messagesForNode.append(&messages[i]);
+        }
+    }
+
+    return messagesForNode;
+}
+
 bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 {
     messages.append(msg);

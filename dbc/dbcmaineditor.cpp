@@ -38,11 +38,13 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     sigEditor = new DBCSignalEditor(this);
     msgEditor = new DBCMessageEditor(this);
     nodeEditor = new DBCNodeEditor(this);
+    nodeRebaseEditor = new DBCNodeRebaseEditor(this);
 
     //all three might potentially change the data stored and force the tree to be updated
     connect(sigEditor, &DBCSignalEditor::updatedTreeInfo, this, &DBCMainEditor::updatedSignal);
     connect(msgEditor, &DBCMessageEditor::updatedTreeInfo, this, &DBCMainEditor::updatedMessage);
     connect(nodeEditor, &DBCNodeEditor::updatedTreeInfo, this, &DBCMainEditor::updatedNode);
+    connect(nodeRebaseEditor, &DBCNodeRebaseEditor::updatedTreeInfo, this, &DBCMainEditor::updatedMessage);
 
     nodeIcon = QIcon(":/icons/images/node.png");
     messageIcon = QIcon(":/icons/images/message.png");
@@ -339,7 +341,21 @@ void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
 
 void DBCMainEditor::onRebaseMessages()
 {
-    qDebug() << "rebase!!";
+    QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
+    bool ret = false;
+    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig;
+    DBC_NODE *node;
+    uint32_t msgID;
+    QString idString;
+
+    idString = firstCol->text(0).split(" ")[0];
+    node = dbcFile->findNodeByName(idString);
+    nodeRebaseEditor->setFileIdx(fileIdx);
+    nodeRebaseEditor->setNodeRef(node);
+    nodeRebaseEditor->refreshView();
+    nodeRebaseEditor->setModal(true);
+    nodeRebaseEditor->show();
 }
 
 void DBCMainEditor::onDuplicateNode()

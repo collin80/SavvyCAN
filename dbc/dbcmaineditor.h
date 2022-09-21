@@ -10,6 +10,7 @@
 #include "dbcsignaleditor.h"
 #include "dbcmessageeditor.h"
 #include "dbcnodeeditor.h"
+#include "dbcnoderebaseeditor.h"
 #include "utility.h"
 
 namespace Ui {
@@ -55,6 +56,7 @@ private:
     DBCSignalEditor *sigEditor;
     DBCMessageEditor *msgEditor;
     DBCNodeEditor *nodeEditor;
+    DBCNodeRebaseEditor *nodeRebaseEditor;
     DBCFile *dbcFile;
     int fileIdx;
     QIcon nodeIcon;
