@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QPalette>
 #include <QDateTime>
+#include <QSettings>
 #include "utility.h"
 
 CANFrameModel::~CANFrameModel()
@@ -45,17 +46,20 @@ int CANFrameModel::columnCount(const QModelIndex &index) const
 CANFrameModel::CANFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
-
+    int maxFramesDefault;
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        preallocSize = 10000000;
+        maxFramesDefault = 10000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
         qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
-        preallocSize = 2000000;
+        maxFramesDefault = 2000000;
     }
+
+    QSettings settings;
+    preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize); //the goal is to prevent a reallocation from ever happening
@@ -673,13 +677,31 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 
     if (!overwriteDups)
     {
-        frames.append(tempFrame);
-        if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+        bool alloc_ok = true;
+
+        for(int i=0; i<3; i++)
         {
-            if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-            tempFrame.frameCount = 1;
-            filteredFrames.append(tempFrame);
-            if (autoRefresh) endInsertRows();
+            try
+            {
+                frames.append(tempFrame);
+                break;
+            }
+            catch (const std::exception& ex)
+            {
+                alloc_ok = false;
+                qDebug() << "addFrame failed to append.  frames.length(): " << frames.length() << " Exception: " << ex.what();
+            }
+        }
+
+        if(alloc_ok)
+        {
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+            {
+                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+                tempFrame.frameCount = 1;
+                filteredFrames.append(tempFrame);
+                if (autoRefresh) endInsertRows();
+            }
         }
     }
     else //yes, overwrite dups
@@ -728,6 +750,20 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 
 void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFrames)
 {
+    if(frames.length() > frames.capacity() * 0.99)
+    {
+        qDebug() << "Frames count: " << frames.length() << " of " << frames.capacity() << " capacity, removing first " << (int)(frames.capacity() * 0.05) << " frames";
+        frames.remove(0, (int)(frames.capacity() * 0.05));
+        qDebug() << "Frames removed, new count: " << frames.length();
+    }
+
+    if(filteredFrames.length() > filteredFrames.capacity() * 0.99)
+    {
+        qDebug() << "filteredFrames count: " << filteredFrames.length() << " of " << filteredFrames.capacity() << " capacity, removing first " << (int)(filteredFrames.capacity() * 0.05) << " frames";
+        filteredFrames.remove(0, (int)(filteredFrames.capacity() * 0.05));
+        qDebug() << "filteredFrames removed, new count: " << filteredFrames.length();
+    }
+
     foreach(const CANFrame& frame, pFrames)
     {
         addFrame(frame);
@@ -754,8 +790,8 @@ void CANFrameModel::sendRefresh()
     mutex.lock();
     beginResetModel();
     filteredFrames.clear();
-    filteredFrames.reserve(preallocSize);
     filteredFrames.append(tempContainer);
+    filteredFrames.reserve(preallocSize);
 
     lastUpdateNumFrames = 0;
     endResetModel();
