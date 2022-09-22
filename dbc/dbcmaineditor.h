@@ -11,6 +11,7 @@
 #include "dbcmessageeditor.h"
 #include "dbcnodeeditor.h"
 #include "dbcnoderebaseeditor.h"
+#include "dbcnodeduplicateeditor.h"
 #include "utility.h"
 
 namespace Ui {
@@ -43,7 +44,9 @@ private slots:
     void handleSearch();
     void handleSearchForward();
     void handleSearchBackward();
+    void newNode(QString nodeName);
     void newNode();
+    void copyMessageToNode(DBC_NODE *node, DBC_MESSAGE *source, uint newMsgId);
     void newMessage();
     void newSignal();    
     void onRebaseMessages();
@@ -57,6 +60,7 @@ private:
     DBCMessageEditor *msgEditor;
     DBCNodeEditor *nodeEditor;
     DBCNodeRebaseEditor *nodeRebaseEditor;
+    DBCNodeDuplicateEditor *nodeDuplicateEditor;
     DBCFile *dbcFile;
     int fileIdx;
     QIcon nodeIcon;

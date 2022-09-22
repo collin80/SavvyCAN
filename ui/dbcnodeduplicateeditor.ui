@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DBCNodeRebaseEditor</class>
- <widget class="QDialog" name="DBCNodeRebaseEditor">
+ <class>DBCNodeDuplicateEditor</class>
+ <widget class="QDialog" name="DBCNodeDuplicateEditor">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>303</width>
-    <height>159</height>
+    <width>314</width>
+    <height>193</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,8 +17,8 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>20</y>
-     <width>283</width>
+     <y>10</y>
+     <width>290</width>
      <height>116</height>
     </rect>
    </property>
@@ -26,7 +26,7 @@
     <item row="0" column="0">
      <widget class="QLabel" name="label_2">
       <property name="text">
-       <string>Node Name:</string>
+       <string>New Node Name:</string>
       </property>
      </widget>
     </item>
@@ -51,12 +51,12 @@
      </widget>
     </item>
     <item row="2" column="1">
-     <widget class="QLineEdit" name="lineEdit"/>
+     <widget class="QLineEdit" name="lineNewBaseId"/>
     </item>
     <item row="3" column="1">
-     <widget class="QPushButton" name="btnDoRebase">
+     <widget class="QPushButton" name="btnDuplicate">
       <property name="text">
-       <string>Rebase All Messages in Node</string>
+       <string>Duplicate Node</string>
       </property>
      </widget>
     </item>
