@@ -684,20 +684,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 
     if (!overwriteDups)
     {
-        bool alloc_ok = true;
-
         try
         {
             frames.append(tempFrame);
-        }
-        catch (const std::exception& ex)
-        {
-            alloc_ok = false;
-            qDebug() << "addFrame failed to append. App is probably going to crash. frames.length(): " << frames.length() << " Exception: " << ex.what();
-        }
 
-        if(alloc_ok)
-        {
             if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
@@ -705,6 +695,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
+        }
+        catch (const std::exception& ex)
+        {
+            qDebug() << "addFrame failed to append. App is probably going to crash. frames.length(): " << frames.length() << " Exception: " << ex.what();
         }
     }
     else //yes, overwrite dups
