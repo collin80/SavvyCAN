@@ -61,8 +61,9 @@ CANFrameModel::CANFrameModel(QObject *parent)
     QSettings settings;
     int preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
+    //the goal is to prevent a reallocation from ever happening
     frames.reserve(preallocSize);
-    filteredFrames.reserve(preallocSize); //the goal is to prevent a reallocation from ever happening
+    filteredFrames.reserve(preallocSize);
 
     dbcHandler = DBCHandler::getReference();
     interpretFrames = false;
@@ -685,18 +686,14 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     {
         bool alloc_ok = true;
 
-        for(int i=0; i<3; i++)
+        try
         {
-            try
-            {
-                frames.append(tempFrame);
-                break;
-            }
-            catch (const std::exception& ex)
-            {
-                alloc_ok = false;
-                qDebug() << "addFrame failed to append.  frames.length(): " << frames.length() << " Exception: " << ex.what();
-            }
+            frames.append(tempFrame);
+        }
+        catch (const std::exception& ex)
+        {
+            alloc_ok = false;
+            qDebug() << "addFrame failed to append. App is probably going to crash. frames.length(): " << frames.length() << " Exception: " << ex.what();
         }
 
         if(alloc_ok)
