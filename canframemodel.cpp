@@ -59,7 +59,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     }
 
     QSettings settings;
-    int preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
+    preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
     //the goal is to prevent a reallocation from ever happening
     frames.reserve(preallocSize);
@@ -749,15 +749,15 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
 {
     if(frames.length() > frames.capacity() * 0.99)
     {
-        qDebug() << "Frames count: " << frames.length() << " of " << frames.capacity() << " capacity, removing first " << frames.capacity() * 0.05 << " frames";
-        frames.remove(0, frames.capacity() * 0.05);
+        qDebug() << "Frames count: " << frames.length() << " of " << frames.capacity() << " capacity, removing first " << (int)(frames.capacity() * 0.05) << " frames";
+        frames.remove(0, (int)(frames.capacity() * 0.05));
         qDebug() << "Frames removed, new count: " << frames.length();
     }
 
     if(filteredFrames.length() > filteredFrames.capacity() * 0.99)
     {
-        qDebug() << "filteredFrames count: " << filteredFrames.length() << " of " << filteredFrames.capacity() << " capacity, removing first " << filteredFrames.capacity() * 0.05 << " frames";
-        filteredFrames.remove(0, filteredFrames.capacity() * 0.05);
+        qDebug() << "filteredFrames count: " << filteredFrames.length() << " of " << filteredFrames.capacity() << " capacity, removing first " << (int)(filteredFrames.capacity() * 0.05) << " frames";
+        filteredFrames.remove(0, (int)(filteredFrames.capacity() * 0.05));
         qDebug() << "filteredFrames removed, new count: " << filteredFrames.length();
     }
 
@@ -787,8 +787,8 @@ void CANFrameModel::sendRefresh()
     mutex.lock();
     beginResetModel();
     filteredFrames.clear();
-    filteredFrames.reserve(preallocSize);
     filteredFrames.append(tempContainer);
+    filteredFrames.reserve(preallocSize);
 
     lastUpdateNumFrames = 0;
     endResetModel();
