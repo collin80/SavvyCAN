@@ -408,7 +408,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     const unsigned char *data = reinterpret_cast<const unsigned char *>(thisFrame.payload().constData());
     int dataLen = thisFrame.payload().count();
 
-    if (role == Qt::BackgroundColorRole)
+    if (role == Qt::BackgroundRole)
     {
         if (dbcHandler != nullptr && interpretFrames && !ignoreDBCColors)
         {
@@ -441,7 +441,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         }
     }
 
-    if (role == Qt::TextColorRole)
+    if (role == Qt::ForegroundRole)
     {
         if (dbcHandler != nullptr && interpretFrames && !ignoreDBCColors)
         {
