@@ -61,12 +61,14 @@ CANFrameModel::CANFrameModel(QObject *parent)
     QSettings settings;
     preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
+    //the goal is to prevent a reallocation from ever happening
     frames.reserve(preallocSize);
-    filteredFrames.reserve(preallocSize); //the goal is to prevent a reallocation from ever happening
+    filteredFrames.reserve(preallocSize);
 
     dbcHandler = DBCHandler::getReference();
     interpretFrames = false;
     overwriteDups = false;
+    filtersPersistDuringClear = false;
     useHexMode = true;
     timeSeconds = false;
     timeOffset = 0;
@@ -198,6 +200,11 @@ void CANFrameModel::setOverwriteMode(bool mode)
     overwriteDups = mode;
     recalcOverwrite();
     endResetModel();
+}
+
+void CANFrameModel::setClearMode(bool mode)
+{
+    filtersPersistDuringClear = mode;
 }
 
 void CANFrameModel::setFilterState(unsigned int ID, bool state)
@@ -677,24 +684,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 
     if (!overwriteDups)
     {
-        bool alloc_ok = true;
-
-        for(int i=0; i<3; i++)
+        try
         {
-            try
-            {
-                frames.append(tempFrame);
-                break;
-            }
-            catch (const std::exception& ex)
-            {
-                alloc_ok = false;
-                qDebug() << "addFrame failed to append.  frames.length(): " << frames.length() << " Exception: " << ex.what();
-            }
-        }
+            frames.append(tempFrame);
 
-        if(alloc_ok)
-        {
             if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
@@ -702,6 +695,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
+        }
+        catch (const std::exception& ex)
+        {
+            qDebug() << "addFrame failed to append. App is probably going to crash. frames.length(): " << frames.length() << " Exception: " << ex.what();
         }
     }
     else //yes, overwrite dups
@@ -832,8 +829,11 @@ void CANFrameModel::clearFrames()
     this->beginResetModel();
     frames.clear();
     filteredFrames.clear();
-    filters.clear();
-    busFilters.clear();
+    if(filtersPersistDuringClear == false)
+    {
+        filters.clear();
+        busFilters.clear();
+    }
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize);
     this->endResetModel();
