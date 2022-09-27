@@ -117,7 +117,7 @@ void ConnectionWindow::readPendingDatagrams()
           //Kayak can theoretically send multiple busses over one ports
           //TODO: implement this case in socketcand.cpp
           if(CANBeaconXml.name() == "Bus" && !CANBeaconXml.isEndElement())
-                KayakBus.append(CANBeaconXml.attributes().value("name") + ",");
+                KayakBus.append(CANBeaconXml.attributes().value("name").toUtf8() + ",");
 
         }
         KayakHost = KayakBus.left(KayakBus.length() - 1) + "@" + KayakHost;
