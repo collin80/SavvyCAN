@@ -178,7 +178,7 @@ MainWindow::MainWindow(QWidget *parent) :
     updateTimer.setInterval(250);
     updateTimer.start();
 
-    elapsedTime = new QTime;
+    elapsedTime = new QElapsedTimer;
     elapsedTime->start();
 
     isConnected = false;
