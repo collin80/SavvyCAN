@@ -200,7 +200,7 @@ void DBCLoadSaveWindow::loadFile()
 
         DBC_ATTRIBUTE *attr = file->findAttributeByName("matchingcriteria");
         QComboBox * mc_item = addMatchingCriteriaCombobox(idx);
-        if (attr && attr->defaultValue > 0)
+        if (attr && attr->defaultValue.toInt() > 0)
         {
             mc_item->setCurrentIndex(attr->defaultValue.toInt());
         }
@@ -208,7 +208,7 @@ void DBCLoadSaveWindow::loadFile()
         attr = file->findAttributeByName("filterlabeling");
         QTableWidgetItem *item = new QTableWidgetItem("");
         ui->tableFiles->setItem(idx, 3, item);
-        if (attr && attr->defaultValue > 0)
+        if (attr && attr->defaultValue.toInt() > 0)
         {
             item->setCheckState(Qt::Checked);
         }
