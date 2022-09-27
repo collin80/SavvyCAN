@@ -228,6 +228,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="cbPersistentFilters">
+        <property name="text">
+         <string>Keep Filters When Clearing</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QCheckBox" name="cbAutoScroll">
         <property name="text">
          <string>Auto Scroll Window</string>
