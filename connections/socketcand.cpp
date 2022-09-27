@@ -261,7 +261,7 @@ void SocketCANd::decodeFrames(QString data, int busNum)
         QString framePart = data.mid(data.indexOf("< frame "), data.length()); //remove starting beginning of payload if not < frame >
         const QString frameStrConst = framePart.left(framePart.indexOf(">")+1);
         QString frameStr = frameStrConst;
-        QStringList frameParsed = (frameStr.remove(QRegExp("^<")).remove(QRegExp(">$"))).simplified().split(' ');
+        QStringList frameParsed = (frameStr.remove(QRegularExpression("^<")).remove(QRegularExpression(">$"))).simplified().split(' ');
 
         if(frameParsed.length() < 2)
         {
