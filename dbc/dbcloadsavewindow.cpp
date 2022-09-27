@@ -108,10 +108,10 @@ void DBCLoadSaveWindow::updateSettings()
             qDebug() << "Save DBC settings #" << i << " File: " << file->getFullFilename() 
                 << "Bus: " << file->getAssocBus() << "MC: " << file->messageHandler->getMatchingCriteria()
                 << "Filter Labeling: " << (file->messageHandler->filterLabeling() ? "enabled" : "disabled");
-            settings.setValue("DBC/Filename_" + QString(i), file->getFullFilename());
-            settings.setValue("DBC/AssocBus_" + QString(i), file->getAssocBus());
-            settings.setValue("DBC/MatchingCriteria_" + QString(i), file->messageHandler->getMatchingCriteria());            
-            settings.setValue("DBC/FilterLabeling_" + QString(i), file->messageHandler->filterLabeling());   
+            settings.setValue("DBC/Filename_" + QString::number(i), file->getFullFilename());
+            settings.setValue("DBC/AssocBus_" + QString::number(i), file->getAssocBus());
+            settings.setValue("DBC/MatchingCriteria_" + QString::number(i), file->messageHandler->getMatchingCriteria());
+            settings.setValue("DBC/FilterLabeling_" + QString::number(i), file->messageHandler->filterLabeling());
         }
     }
     emit updatedDBCSettings();
