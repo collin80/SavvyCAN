@@ -2,7 +2,7 @@
 #define SNIFFERITEM_H
 
 #include <QVariant>
-#include <QTime>
+#include <QElapsedTimer>
 #include "can_structs.h"
 
 struct fstCan
@@ -50,7 +50,7 @@ private:
     quint64         mCurrentTime;
     quint64         mCurrSeqVal;
 
-    QTime           mTime;
+    QElapsedTimer   mTime;
 };
 
 #endif // SNIFFERITEM_H
