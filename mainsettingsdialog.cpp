@@ -90,6 +90,20 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
 
+    int maxFramesDefault;
+    if (QSysInfo::WordSize > 32)
+    {
+        qDebug() << "64 bit OS detected. Requesting a large preallocation";
+        maxFramesDefault = 10000000;
+    }
+    else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
+    {
+        qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
+        maxFramesDefault = 2000000;
+    }
+
+    ui->spinMaximumFrames->setValue(settings.value("Main/MaximumFrames", maxFramesDefault).toInt());
+
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFlowAutoRef, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -117,6 +131,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbHexGraphFlow, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbHexGraphInfo, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbIgnoreDBCColors, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->spinMaximumFrames, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -183,6 +198,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Remote/Pass", encPass);
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
     settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
+    settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
 
     settings.sync();
     emit updatedSettings();

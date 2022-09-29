@@ -30,8 +30,10 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
     qRegisterMetaTypeStreamOperators<QVector<QString>>();
     qRegisterMetaTypeStreamOperators<QVector<int>>();
+#endif
 
     useHex = true;
 
@@ -55,7 +57,7 @@ MainWindow::MainWindow(QWidget *parent) :
     verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
     QSettings settings;
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
-    QFont sysFont = QFont(); //get default font
+    QFont sysFont = QFontDatabase::systemFont(QFontDatabase::FixedFont); //get default font
     sysFont.setPointSize(fontSize);
     verticalHeader->setDefaultSectionSize(sysFont.pixelSize());
     ui->canFramesView->setFont(sysFont);
@@ -141,6 +143,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->cbPersistentFilters, &QAbstractButton::toggled, this, &MainWindow::presistentFiltersToggled);
     connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
     connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
 
@@ -177,7 +180,7 @@ MainWindow::MainWindow(QWidget *parent) :
     updateTimer.setInterval(250);
     updateTimer.start();
 
-    elapsedTime = new QTime;
+    elapsedTime = new QElapsedTimer;
     elapsedTime->start();
 
     isConnected = false;
@@ -613,6 +616,18 @@ void MainWindow::overwriteToggled(bool state)
     else
     {
         model->setOverwriteMode(false);
+    }
+}
+
+void MainWindow::presistentFiltersToggled(bool state)
+{
+    if (state)
+    {
+        model->setClearMode(true);
+    }
+    else
+    {
+        model->setClearMode(false);
     }
 }
 
@@ -1146,11 +1161,26 @@ void MainWindow::showTemporalGraphWindow()
     //only create an instance of the object if we dont have one. Otherwise just display the existing one.
     if (!temporalGraphWindow)
     {
+        const QVector<CANFrame> *frames;
         if (!useFiltered)
-            temporalGraphWindow = new TemporalGraphWindow(model->getListReference());
+            frames = model->getListReference();
         else
-            temporalGraphWindow = new TemporalGraphWindow(model->getFilteredListReference());
+            frames = model->getFilteredListReference();
+
+        if(frames->count() > 2000)
+        {
+            QMessageBox::StandardButton confirmDialog;
+            confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "There are a lot of frames (>2000) to plot, this may take a while or crash the app. Crash likely with more than 10k frames. Continue?",
+                                          QMessageBox::Yes|QMessageBox::No);
+            if (confirmDialog == QMessageBox::No)
+            {
+                return;
+            }
+        }
+
+        temporalGraphWindow = new TemporalGraphWindow(frames);
     }
+
     temporalGraphWindow->show();
 }
 

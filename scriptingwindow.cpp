@@ -4,6 +4,9 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QSettings>
+#if QT_VERSION >= QT_VERSION_CHECK( 5, 10, 0 )
+#include <QtCore/QRandomGenerator>
+#endif
 
 #include "connections/canconmanager.h"
 #include "helpwindow.h"
@@ -234,7 +237,13 @@ void ScriptingWindow::createNewScript()
 
     container = new ScriptContainer();
 
-    container->fileName = "UNNAMED_" + QString::number((qrand() % 10000)) + ".js";
+    QString randomPart;
+#if QT_VERSION < QT_VERSION_CHECK( 5, 10, 0 )
+    randomPart = QString::number((qrand() % 10000));
+#else
+    randomPart = QString::number((QRandomGenerator::global()->bounded(10000)));
+#endif
+    container->fileName = "UNNAMED_" + randomPart + ".js";
     container->filePath = QString();
     container->scriptText = QString();
     container->setScriptWindow(this);

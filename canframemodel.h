@@ -46,6 +46,7 @@ public:
     bool getInterpretMode();
     void setOverwriteMode(bool);
     void setHexMode(bool);
+    void setClearMode(bool mode);
     void setSysTimeMode(bool);
     void setMillisMode(bool mode);
     void setIgnoreDBCColors(bool mode);
@@ -89,6 +90,7 @@ private:
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
+    bool filtersPersistDuringClear;
     QString timeFormat;
     bool useHexMode;
     bool timeSeconds;
