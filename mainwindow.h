@@ -138,7 +138,7 @@ private:
     DBCHandler *dbcHandler;
     QByteArray inputBuffer;
     QTimer updateTimer;
-    QTime *elapsedTime;
+    QElapsedTimer *elapsedTime;
     int framesPerSec;
     int rxFrames;
     bool inhibitFilterUpdate;
