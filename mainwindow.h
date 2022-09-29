@@ -99,6 +99,7 @@ private slots:
     void setupSendToLatestGraphWindow();
     void interpretToggled(bool);
     void overwriteToggled(bool);
+    void presistentFiltersToggled(bool state);
     void logReceivedFrame(CANConnection*, QVector<CANFrame>);
     void tickGUIUpdate();
     void toggleCapture();
@@ -137,7 +138,7 @@ private:
     DBCHandler *dbcHandler;
     QByteArray inputBuffer;
     QTimer updateTimer;
-    QTime *elapsedTime;
+    QElapsedTimer *elapsedTime;
     int framesPerSec;
     int rxFrames;
     bool inhibitFilterUpdate;
