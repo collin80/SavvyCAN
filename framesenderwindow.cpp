@@ -898,7 +898,11 @@ void FrameSenderWindow::processCellChange(int line, int col)
         case 6: //Data bytes
             for (int i = 0; i < 8; i++) sendingData[line].payload().data()[i] = 0;
 
+#if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
+            tokens = ui->tableSender->item(line, 6)->text().split(" ", Qt::SkipEmptyParts);
+#else
             tokens = ui->tableSender->item(line, 6)->text().split(" ", QString::SkipEmptyParts);
+#endif
             arr.clear();
             arr.reserve(tokens.count());
             for (int j = 0; j < tokens.count(); j++)
