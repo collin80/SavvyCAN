@@ -137,7 +137,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
 Qt::ItemFlags SnifferModel::flags(const QModelIndex &index) const
 {
     if (!index.isValid())
-        return 0;
+        return Qt::NoItemFlags;
 
     return QAbstractItemModel::flags(index);
 }
