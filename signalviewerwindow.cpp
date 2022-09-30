@@ -21,8 +21,23 @@ SignalViewerWindow::SignalViewerWindow(const QVector<CANFrame> *frames, QWidget 
     ui->tableViewer->setHorizontalHeaderLabels(headers);
     ui->tableViewer->setColumnWidth(0, 100);
     ui->tableViewer->setColumnWidth(1, 150);
+
+    QSettings settings;
+    QFont sysFont;
+    int fontSize = settings.value("Main/FontSize", 9).toUInt();
+    if(settings.value("Main/FontFixedWidth", false).toBool())
+        sysFont = QFontDatabase::systemFont(QFontDatabase::FixedFont); //get default fixed width font
+    else
+        sysFont = QFont();  //get default font
+    sysFont.setPointSize(fontSize);
+    ui->tableViewer->setFont(sysFont);
+
     QHeaderView *HorzHdr = ui->tableViewer->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+    HorzHdr->setFont(QFont());
+
+    QHeaderView *verticalHeader = ui->tableViewer->verticalHeader();
+    verticalHeader->setFont(QFont());
 
     dbcHandler = DBCHandler::getReference();
 
