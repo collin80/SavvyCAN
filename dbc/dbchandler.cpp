@@ -100,8 +100,15 @@ void DBCSignalHandler::sort()
 DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
 {
     if (messages.count() == 0) return nullptr;
+    DBC_MESSAGE *bestMatch = nullptr;
+
     for (int i = 0; i < messages.count(); i++)
     {
+        if ( messages[i].ID == id )
+        {
+            return &messages[i];
+        }
+
         if (matchingCriteria == J1939)
         {
             // include data page and extended data page in the pgn
@@ -112,7 +119,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
                 pgn &= 0x3FF00;
                 if ((messages[i].ID & 0x3FF0000) == (pgn << 8))
                 {
-                    return &messages[i];
+                    bestMatch = &messages[i];
                 }
             }
             else
@@ -120,7 +127,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
                 // PDU2 format
                 if ((messages[i].ID & 0x3FFFF00) == (pgn << 8))
                 {
-                    return &messages[i];
+                    bestMatch = &messages[i];
                 }
             }
         }
@@ -129,17 +136,10 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
             // Match the bits 14-26 (Arbitration Id) of GMLAN 29bit header
             uint32_t arbId = id &0x3FFE000;
             if ( (arbId != 0) && (messages[i].ID & 0x3FFE000) == arbId )
-                return &messages[i];
-        }
-        else
-        {
-            if ( messages[i].ID == id )
-            {
-                return &messages[i];
-            }
+                bestMatch = &messages[i];
         }
     }
-    return nullptr;
+    return bestMatch;
 }
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByIdx(int idx)
