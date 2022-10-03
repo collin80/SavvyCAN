@@ -426,13 +426,7 @@ void SocketCANd::procRXData(QString data, int busNum)
         }
         break;
     case RAWMODE:
-        //if(!unprocessedData[busNum].isEmpty())
-        //{
-        //    qDebug() << "busNum: " << busNum << "- "  << unprocessedData[busNum].length() << " bytes of unprocessedData: " << unprocessedData[busNum] << " adding it to new data: " + data.left(50) + "...";
-       // }
         unprocessedData[busNum] = decodeFrames(unprocessedData[busNum] + data, busNum);
-        //if(unprocessedData[busNum].length() > 0)
-        //    qDebug() << "busNum: " << busNum << " has data left over, what was at the end of the last packet?: " << data.right(20);
 
         if(unprocessedData[busNum].length() > 128)
         {
