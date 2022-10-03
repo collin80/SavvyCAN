@@ -76,7 +76,7 @@ protected:
     QByteArray buildData;
     QVarLengthArray<MODE> rx_state;
     CANFrame buildFrame;
-    QString unprocessedData;
+    QVarLengthArray<QString> unprocessedData;
 };
 
 
