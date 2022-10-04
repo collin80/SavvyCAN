@@ -41,9 +41,9 @@ QMQTT::Socket::Socket(QObject* parent)
     connect(_socket.data(), &QTcpSocket::connected,    this, &SocketInterface::connected);
     connect(_socket.data(), &QTcpSocket::disconnected, this, &SocketInterface::disconnected);
     connect(_socket.data(),
-            static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QTcpSocket::error),
+            SIGNAL(error(QTcpSocket::error)),
             this,
-            static_cast<void (SocketInterface::*)(QAbstractSocket::SocketError)>(&SocketInterface::error));
+            SLOT(errorHandler(SocketInterface::error)));
 }
 
 QMQTT::Socket::~Socket()
