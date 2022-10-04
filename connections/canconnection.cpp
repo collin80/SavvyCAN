@@ -5,6 +5,8 @@
 CANConnection::CANConnection(QString pPort,
                              QString pDriver,
                              CANCon::type pType,
+                             int pSerialSpeed,
+                             int pBusSpeed,
                              int pNumBuses,
                              int pQueueLen,
                              bool pUseThread) :
@@ -13,6 +15,7 @@ CANConnection::CANConnection(QString pPort,
     mPort(pPort),
     mDriver(pDriver),
     mType(pType),
+    mSerialSpeed(pSerialSpeed),
     mIsCapSuspended(false),
     mStatus(CANCon::NOT_CONNECTED),
     mStarted(false),
@@ -33,6 +36,8 @@ CANConnection::CANConnection(QString pPort,
     for(int i=0 ; i<mNumBuses ; i++) {
         mBusData[i].mConfigured  = false;
     }
+
+    if (pBusSpeed > 0) mBusData[0].mBus.setSpeed(pBusSpeed);
 
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {

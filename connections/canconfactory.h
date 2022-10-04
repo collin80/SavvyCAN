@@ -7,7 +7,7 @@
 class CanConFactory
 {
 public:
-    static CANConnection* create(CANCon::type, QString pPortName, QString pDriverName);
+    static CANConnection* create(CANCon::type, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed);
 };
 
 #endif // CANCONFACTORY_H
