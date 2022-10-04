@@ -43,6 +43,7 @@ public:
     DBC_MESSAGE *findMsgByIdx(int idx);
     DBC_MESSAGE *findMsgByName(QString name);
     DBC_MESSAGE *findMsgByPartialName(QString name);
+    QList<DBC_MESSAGE*> findMsgsByNode(DBC_NODE *node);
     bool addMessage(DBC_MESSAGE &msg);
     bool removeMessage(DBC_MESSAGE *msg);
     bool removeMessageByIndex(int idx);

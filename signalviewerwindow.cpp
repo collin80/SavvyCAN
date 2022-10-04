@@ -283,16 +283,18 @@ void SignalViewerWindow::loadDefinitions(bool append)
                     QString msgName = QString(tokens[2]);
                     QString sigName = QString(tokens[3]);
                     DBC_MESSAGE *msg;;
-                    if (msg  = dbcHandler->findMessage(msgName))
+                    if(msg = dbcHandler->findMessage(msgId))
                     {
                         sig = msg->sigHandler->findSignalByName(sigName);
-                        loadedSignals.append(sig);
+                        if(sig)
+                            loadedSignals.append(sig);
                     }
-                    else  if(msg = dbcHandler->findMessage(msgId))
+                    else if (msg  = dbcHandler->findMessage(msgName))
                     {
+                        //this is not a very safe way to match since messages names can be duplicated
                         sig = msg->sigHandler->findSignalByName(sigName);
-                        //fix anything up about the name?
-                        loadedSignals.append(sig);
+                        if(sig)
+                            loadedSignals.append(sig);
                     }
                     else
                     {

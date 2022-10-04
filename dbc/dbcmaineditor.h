@@ -10,6 +10,8 @@
 #include "dbcsignaleditor.h"
 #include "dbcmessageeditor.h"
 #include "dbcnodeeditor.h"
+#include "dbcnoderebaseeditor.h"
+#include "dbcnodeduplicateeditor.h"
 #include "utility.h"
 
 namespace Ui {
@@ -32,6 +34,7 @@ public slots:
 
 private slots:
     void onTreeDoubleClicked(const QModelIndex &index);
+    void onTreeContextMenu(const QPoint & pos);
     void currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *prev);
     void onCustomMenuTree(QPoint);
     void deleteCurrentTreeItem();
@@ -41,9 +44,13 @@ private slots:
     void handleSearch();
     void handleSearchForward();
     void handleSearchBackward();
+    void newNode(QString nodeName);
     void newNode();
+    void copyMessageToNode(DBC_NODE *node, DBC_MESSAGE *source, uint newMsgId);
     void newMessage();
-    void newSignal();
+    void newSignal();    
+    void onRebaseMessages();
+    void onDuplicateNode();
 
 private:
     Ui::DBCMainEditor *ui;
@@ -52,6 +59,8 @@ private:
     DBCSignalEditor *sigEditor;
     DBCMessageEditor *msgEditor;
     DBCNodeEditor *nodeEditor;
+    DBCNodeRebaseEditor *nodeRebaseEditor;
+    DBCNodeDuplicateEditor *nodeDuplicateEditor;
     DBCFile *dbcFile;
     int fileIdx;
     QIcon nodeIcon;
