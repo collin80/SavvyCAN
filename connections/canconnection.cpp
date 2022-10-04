@@ -250,11 +250,11 @@ CANCon::type CANConnection::getType() {
 
 
 CANCon::status CANConnection::getStatus() {
-    return (CANCon::status) mStatus.load();
+    return (CANCon::status) mStatus.loadRelaxed();
 }
 
 void CANConnection::setStatus(CANCon::status pStatus) {
-    mStatus.store(pStatus);
+    mStatus.storeRelaxed(pStatus);
 }
 
 bool CANConnection::isCapSuspended() {

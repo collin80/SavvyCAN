@@ -931,7 +931,8 @@ void JSEdit::resizeEvent(QResizeEvent *e)
 void JSEdit::wheelEvent(QWheelEvent *e)
 {
     if (e->modifiers() == Qt::ControlModifier) {
-        int steps = e->delta() / 20;
+        QPoint numDegrees = e->angleDelta();
+        int steps = numDegrees.y() / 20;
         steps = qBound(-3, steps, 3);
         QFont textFont = font();
         int pointSize = textFont.pointSize() + steps;

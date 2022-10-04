@@ -485,6 +485,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
         killConnection = true;
         piStop();
         break;
+#if QT_VERSION <= QT_VERSION_CHECK( 6, 0, 0 )
     case QSerialPort::ParityError:
         errMessage = "Parity error on serial port";
         break;
@@ -494,6 +495,7 @@ void GVRetSerial::serialError(QSerialPort::SerialPortError err)
     case QSerialPort::BreakConditionError:
         errMessage = "Break error on serial port";
         break;
+#endif
     case QSerialPort::WriteError:
         errMessage = "Write error on serial port";
         piStop();
