@@ -381,6 +381,7 @@ void CANFrameModel::recalcOverwrite()
     //Then replace the old list of frames with just the unique list
     frames.clear();
     frames.append(overWriteFrames.values().toVector());
+    frames.reserve(preallocSize);
 
     filteredFrames.clear();
     filteredFrames.reserve(preallocSize);
