@@ -20,6 +20,7 @@ QMAKE_INFO_PLIST = Info.plist.template
 ICON = icons/SavvyIcon.icns
 
 SOURCES += main.cpp\
+    connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
     mqtt/qmqtt_client.cpp \
     mqtt/qmqtt_client_p.cpp \
@@ -98,6 +99,7 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \
+    connections/lawicel_serial.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
     mqtt/qmqtt.h \
