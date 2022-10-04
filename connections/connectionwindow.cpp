@@ -508,8 +508,10 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
 
 void ConnectionWindow::loadConnections()
 {
+#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
     qRegisterMetaTypeStreamOperators<CANBus>();
     qRegisterMetaTypeStreamOperators<QList<CANBus>>();
+#endif
 
     QSettings settings;
 
