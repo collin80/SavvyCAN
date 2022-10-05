@@ -46,9 +46,9 @@ QMQTT::SslSocket::SslSocket(const QSslConfiguration& config, QObject* parent)
     connect(_socket.data(), &QSslSocket::encrypted,    this, &SocketInterface::connected);
     connect(_socket.data(), &QSslSocket::disconnected, this, &SocketInterface::disconnected);
     connect(_socket.data(),
-            static_cast<void (QSslSocket::*)(QAbstractSocket::SocketError)>(&QSslSocket::error),
+            SIGNAL(error(QSslSocket::error)),
             this,
-            static_cast<void (SocketInterface::*)(QAbstractSocket::SocketError)>(&SocketInterface::error));
+            SLOT(errorHandler(SocketInterface::error)));
     connect(_socket.data(),
             static_cast<void (QSslSocket::*)(const QList<QSslError>&)>(&QSslSocket::sslErrors),
             this,
