@@ -48,6 +48,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbLoadConnections->setChecked(settings.value("Main/SaveRestoreConnections", false).toBool());
 
     ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
+    ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", false).toBool());
 
     bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings.value("Main/TimeClock", false).toBool();
@@ -132,6 +133,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbHexGraphInfo, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbIgnoreDBCColors, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinMaximumFrames, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
+    connect(ui->cbFontFixedWidth, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -199,6 +201,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
     settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
     settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
+    settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
 
     settings.sync();
     emit updatedSettings();
