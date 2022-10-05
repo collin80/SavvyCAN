@@ -4,6 +4,9 @@
 #include "mainwindow.h"
 #include <QDebug>
 
+#define MSG_COL     1
+#define VALUE_COL   2
+
 SignalViewerWindow::SignalViewerWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::SignalViewerWindow)
@@ -14,15 +17,31 @@ SignalViewerWindow::SignalViewerWindow(const QVector<CANFrame> *frames, QWidget 
     modelFrames = frames;
 
     QStringList headers;
-    headers << "Signal" << "Value";
+    headers << "Node" << "Signal" << "Value";
     ui->tableViewer->setHorizontalHeaderLabels(headers);
-    ui->tableViewer->setColumnWidth(0, 150);
-    ui->tableViewer->setColumnWidth(1, 300);
+    ui->tableViewer->setColumnWidth(0, 100);
+    ui->tableViewer->setColumnWidth(1, 150);
+
+    QSettings settings;
+    QFont sysFont;
+    int fontSize = settings.value("Main/FontSize", 9).toUInt();
+    if(settings.value("Main/FontFixedWidth", false).toBool())
+        sysFont = QFontDatabase::systemFont(QFontDatabase::FixedFont); //get default fixed width font
+    else
+        sysFont = QFont();  //get default font
+    sysFont.setPointSize(fontSize);
+    ui->tableViewer->setFont(sysFont);
+
     QHeaderView *HorzHdr = ui->tableViewer->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
+    HorzHdr->setFont(QFont());
+
+    QHeaderView *verticalHeader = ui->tableViewer->verticalHeader();
+    verticalHeader->setFont(QFont());
 
     dbcHandler = DBCHandler::getReference();
 
+    connect(ui->cbNodes, SIGNAL(currentIndexChanged(int)), this, SLOT(loadMessages(int)));
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
     connect(ui->btnAdd, SIGNAL(clicked(bool)), this, SLOT(addSignal()));
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
@@ -32,7 +51,7 @@ SignalViewerWindow::SignalViewerWindow(const QVector<CANFrame> *frames, QWidget 
     connect(ui->btnAppend, SIGNAL(clicked(bool)), this, SLOT(appendSignalsFile()));
     connect(ui->btnClear, SIGNAL(clicked(bool)), this, SLOT(clearSignalsTable()));
 
-    loadMessages();
+    loadNodes();
 }
 
 SignalViewerWindow::~SignalViewerWindow()
@@ -79,11 +98,11 @@ void SignalViewerWindow::processFrame(CANFrame &frame)
         {
             if (sig->processAsText(frame, sigString, false)) //if true we could interpret the signal so update it in the list
             {
-                QTableWidgetItem *item = ui->tableViewer->item(i, 1);
+                QTableWidgetItem *item = ui->tableViewer->item(i, VALUE_COL);
                 if (!item)
                 {
                     item = new QTableWidgetItem(sigString);
-                    ui->tableViewer->setItem(i, 1, item);
+                    ui->tableViewer->setItem(i, VALUE_COL, item);
                 }
                 else item->setText(sigString);
             }
@@ -99,10 +118,22 @@ void SignalViewerWindow::removeSelectedSignal()
     ui->tableViewer->removeRow(selRow);
 }
 
-void SignalViewerWindow::loadMessages()
+void SetComboBoxItemEnabled(QComboBox * comboBox, int index, bool enabled)
+{
+    auto * model = qobject_cast<QStandardItemModel*>(comboBox->model());
+    assert(model);
+    if(!model) return;
+
+    auto * item = model->item(index);
+    assert(item);
+    if(!item) return;
+    item->setEnabled(enabled);
+}
+
+void SignalViewerWindow::loadNodes()
 {
     int numFiles;
-    ui->cbMessages->clear();
+    ui->cbNodes->clear();
     if (dbcHandler == nullptr) return;
     if ((numFiles = dbcHandler->getFileCount()) == 0) return;
     qDebug() << numFiles;
@@ -110,9 +141,44 @@ void SignalViewerWindow::loadMessages()
     {
         qDebug() << dbcHandler->getFileByIdx(f)->messageHandler->getCount();
 
+        QList<QString> names;
+
+        for (int x = 0; x < dbcHandler->getFileByIdx(f)->dbc_nodes.count(); x++)
+        {
+            QString name = dbcHandler->getFileByIdx(f)->dbc_nodes[x].name;
+            if(name != "Vector__XXX")
+                names.append(name);
+        }
+
+        if(names.count() > 0)
+        {
+            names.sort();
+            ui->cbNodes->addItem("----" + dbcHandler->getFileByIdx(f)->getFilename());
+            SetComboBoxItemEnabled(ui->cbNodes, ui->cbNodes->count() -1, false);
+            for(int i=0; i<names.count(); i++)
+                ui->cbNodes->addItem(names[i]);
+        }
+    }
+}
+
+void SignalViewerWindow::loadMessages(int idx)
+{
+    int numFiles;
+    ui->cbMessages->clear();
+    if (dbcHandler == nullptr) return;
+    if ((numFiles = dbcHandler->getFileCount()) == 0) return;
+    qDebug() << numFiles;
+
+    QString nodeName = ui->cbNodes->itemText(idx);
+
+    for (int f = 0; f < numFiles; f++)
+    {
+        qDebug() << dbcHandler->getFileByIdx(f)->messageHandler->getCount();
+
         for (int x = 0; x < dbcHandler->getFileByIdx(f)->messageHandler->getCount(); x++)
         {
-            ui->cbMessages->addItem(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->name);
+            if(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->sender->name == nodeName)
+                ui->cbMessages->addItem(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->name);
         }
     }
 }
@@ -150,8 +216,10 @@ void SignalViewerWindow::addSignal(DBC_SIGNAL *sig)
 
     int rowIdx = ui->tableViewer->rowCount();
     ui->tableViewer->insertRow(rowIdx);
-    QTableWidgetItem *item = new QTableWidgetItem(sig->parentMessage->sender->name + " - " + sig->name);
-    ui->tableViewer->setItem(rowIdx, 0, item);
+    QTableWidgetItem *nodeitem = new QTableWidgetItem(sig->parentMessage->sender->name);
+    ui->tableViewer->setItem(rowIdx, 0, nodeitem);
+    QTableWidgetItem *msgitem = new QTableWidgetItem(sig->name);
+    ui->tableViewer->setItem(rowIdx, 1, msgitem);
 }
 
 void SignalViewerWindow::saveSignalsFile()
