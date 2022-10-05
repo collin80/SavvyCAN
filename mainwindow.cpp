@@ -57,12 +57,18 @@ MainWindow::MainWindow(QWidget *parent) :
     verticalHeader->setSectionResizeMode(QHeaderView::Fixed);
     QSettings settings;
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
-    QFont sysFont = QFontDatabase::systemFont(QFontDatabase::FixedFont); //get default font
+    QFont sysFont;
+    if(settings.value("Main/FontFixedWidth", false).toBool())
+        sysFont = QFontDatabase::systemFont(QFontDatabase::FixedFont); //get default fixed width font
+    else
+        sysFont = QFont();  //get default font
     sysFont.setPointSize(fontSize);
     verticalHeader->setDefaultSectionSize(sysFont.pixelSize());
+    verticalHeader->setFont(QFont());
     ui->canFramesView->setFont(sysFont);
 
     QHeaderView *HorzHdr = ui->canFramesView->horizontalHeader();
+    HorzHdr->setFont(QFont());
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
     connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 

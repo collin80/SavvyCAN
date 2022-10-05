@@ -57,7 +57,7 @@ private slots:
     void invokeReadTCPData();
     void deviceConnected(int busNum);
     void switchToRawMode(int busNum);
-    void decodeFrames(QString, int busNum);
+    QString decodeFrames(QString, int busNum);
 
 private:
     void procRXData(QString, int busNum);
@@ -76,6 +76,7 @@ protected:
     QByteArray buildData;
     QVarLengthArray<MODE> rx_state;
     CANFrame buildFrame;
+    QVarLengthArray<QString> unprocessedData;
 };
 
 

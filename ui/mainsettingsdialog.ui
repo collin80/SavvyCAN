@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>965</width>
-    <height>678</height>
+    <height>713</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -191,9 +191,23 @@
         <item>
          <widget class="QGroupBox" name="groupBox_7">
           <property name="title">
-           <string>Font Size</string>
+           <string>Font</string>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_8">
+           <item>
+            <widget class="QCheckBox" name="cbFontFixedWidth">
+             <property name="text">
+              <string>Use fixed-width font in tables</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_11">
+             <property name="text">
+              <string>Size</string>
+             </property>
+            </widget>
+           </item>
            <item>
             <widget class="QSpinBox" name="spinFontSize">
              <property name="minimum">
