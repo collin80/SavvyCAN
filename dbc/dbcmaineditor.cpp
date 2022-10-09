@@ -358,9 +358,11 @@ void DBCMainEditor::onRebaseMessages()
     node = dbcFile->findNodeByName(idString);
     nodeRebaseEditor->setFileIdx(fileIdx);
     nodeRebaseEditor->setNodeRef(node);
-    nodeRebaseEditor->refreshView();
-    nodeRebaseEditor->setModal(true);
-    nodeRebaseEditor->show();
+    if(nodeRebaseEditor->refreshView())
+    {
+        nodeRebaseEditor->setModal(true);
+        nodeRebaseEditor->show();
+    }
 }
 
 void DBCMainEditor::onDuplicateNode()
@@ -376,10 +378,12 @@ void DBCMainEditor::onDuplicateNode()
     idString = firstCol->text(0).split(" ")[0];
     node = dbcFile->findNodeByName(idString);
     nodeDuplicateEditor->setFileIdx(fileIdx);
-    nodeDuplicateEditor->setNodeRef(node);
-    nodeDuplicateEditor->refreshView();
-    nodeDuplicateEditor->setModal(true);
-    nodeDuplicateEditor->show();
+    nodeDuplicateEditor->setNodeRef(node);    
+    if(nodeDuplicateEditor->refreshView())
+    {
+        nodeDuplicateEditor->setModal(true);
+        nodeDuplicateEditor->show();
+    }
 }
 
 /*
