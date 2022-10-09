@@ -146,6 +146,11 @@ public:
         return output;
     }
 
+    static QString formatByteAsHex(uint8_t value)
+    {
+        return QString::number(value, 16).toUpper().rightJustified(2,'0');
+    }
+
     static QVariant formatTimestamp(uint64_t timestamp)
     {
         if (!sysTimeMode) {
@@ -200,17 +205,44 @@ public:
         return (value1 * (1.0 - samplePoint)) + (value2 * samplePoint);
     }
 
+    /* A unified function that can extract a signal from the (up to) 64 bits of data bytes in a CAN frame
+     * handles both little and big endian signals (and floats too but that's untested).
+    */
     static int64_t processIntegerSignal(const QByteArray data, int startBit, int sigSize, bool littleEndian, bool isSigned)
     {
 
-        int64_t result = 0;
-        int bit;
+        uint64_t result = 0;
+        int bit = 0;
 
         int maxBytes = (startBit + sigSize) / 8;
-        if (data.size() < maxBytes) return 0;
+        if (data.size() < maxBytes) return 0; //if signal extends past the end of data then abort
 
         if (littleEndian)
         {
+/*
+            int currByte = (startBit) / 8;
+            int currOffset = startBit - (currByte * 8);
+            int remainingBits = qMax(0, (sigSize - (8 - currOffset)) );
+            int prevBits = qMin((8 - currOffset), sigSize);
+            result = data[currByte] >> currOffset;
+            result &= ( (1 << sigSize) - 1); //doesn't hurt to do this even if sigSize is way larger than the # of bits we've got so far
+
+            while (remainingBits > 0)
+            {
+                currByte++;
+                if (remainingBits >= 8) //use this entire byte, its easy
+                {
+                    result += data[currByte] << prevBits;
+                    remainingBits -= 8;
+                    prevBits += 8;
+                }
+                else //use only part of this byte. We're going to need to mask it
+                {
+                    result += ((data[currByte] & ((1 << remainingBits) - 1) ) << prevBits);
+                    remainingBits = 0;
+                }
+            }*/
+
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
@@ -222,6 +254,7 @@ public:
                 }
                 bit++;
             }
+
         }
         else //motorola / big endian mode
         {
@@ -266,6 +299,7 @@ public:
                 */
                 uint64_t signedMask = ~((1ULL << sigSize) - 1);
                 result = (-1LL & signedMask) | result;
+                return (int64_t)(result);
             }
         }
 
