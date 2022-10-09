@@ -24,6 +24,8 @@ public:
     CANCon::type getConnectionType();
     QString getPortName();
     QString getDriverName();
+    int getSerialSpeed();
+    int getBusSpeed();
 
 public slots:
     void handleConnTypeChanged();
@@ -43,6 +45,7 @@ private:
     void selectRemote();
     void selectKayak();
     void selectMQTT();
+    void selectLawicel();
     bool isSerialBusAvailable();
     void setPortName(CANCon::type pType, QString pPortName, QString pDriver);
 };
