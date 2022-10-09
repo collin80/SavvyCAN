@@ -7,11 +7,17 @@
     <x>0</x>
     <y>0</y>
     <width>303</width>
-    <height>159</height>
+    <height>148</height>
    </rect>
   </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Rebase All Node Messages</string>
   </property>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
@@ -31,7 +37,14 @@
      </widget>
     </item>
     <item row="0" column="1">
-     <widget class="QLineEdit" name="lineNodeName"/>
+     <widget class="QLineEdit" name="lineNodeName">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
     <item row="1" column="0">
      <widget class="QLabel" name="label_8">
@@ -41,7 +54,14 @@
      </widget>
     </item>
     <item row="1" column="1">
-     <widget class="QLineEdit" name="lineOriginalBaseId"/>
+     <widget class="QLineEdit" name="lineOriginalBaseId">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
     </item>
     <item row="2" column="0">
      <widget class="QLabel" name="label">
@@ -51,7 +71,7 @@
      </widget>
     </item>
     <item row="2" column="1">
-     <widget class="QLineEdit" name="lineEdit"/>
+     <widget class="QLineEdit" name="lineNewBaseId"/>
     </item>
     <item row="3" column="1">
      <widget class="QPushButton" name="btnDoRebase">

@@ -4,6 +4,7 @@
 #include <QSettings>
 #include <QKeyEvent>
 #include <QColorDialog>
+#include <QMessageBox>
 #include "helpwindow.h"
 #include "utility.h"
 
@@ -18,60 +19,78 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
     dbcHandler = DBCHandler::getReference();
     dbcNode = nullptr;
 
-        connect(ui->btnDoRebase, &QPushButton::pressed,
-            [=]()
+    connect(ui->btnDoRebase, &QPushButton::pressed,
+        [=]()
+        {
+            if (dbcNode == nullptr)
             {
-                if (dbcNode == nullptr) return;
-                if (lowestMsgId > 0x1FFFFFFFul) return;
+                QMessageBox::question(this, "Node Invalid", "There was an problem identifying the selected node.",
+                                                  QMessageBox::Ok);
+                return;
+            }
 
-                uint newBase = Utility::ParseStringToNum(ui->lineEdit->text());
+            if (lowestMsgId > 0x1FFFFFFFul)
+            {
+                QMessageBox::question(this, "No Valid Messages", "The node has no valid messages to change.",
+                                                  QMessageBox::Ok);
+                return;
+            }
 
-                if (newBase <= 0x1FFFFFFFul && newBase != lowestMsgId)
+            uint newBase = Utility::ParseStringToNum(ui->lineNewBaseId->text());
+
+            if(newBase <= 0 || newBase > 0x1FFFFFFFul)
+            {
+                QMessageBox::question(this, "Invalid Address", "The new address is outside of the valid range.",
+                                                  QMessageBox::Ok);
+                return;
+            }
+
+            if(newBase == lowestMsgId)
+            {
+                QMessageBox::question(this, "Invalid Address", "The new address is the same as the original.",
+                                                  QMessageBox::Ok);
+                return;
+            }
+
+            uint rebaseDiff = newBase - lowestMsgId;
+
+            QList<DBC_MESSAGE*> messagesForNode = dbcFile->messageHandler->findMsgsByNode(dbcNode);
+            if(messagesForNode.count() == 0)
+            {
+                QMessageBox::question(this, "No Messages", "The node has no messages to change.",
+                                                  QMessageBox::Ok);
+                return;
+            }
+
+            for (int i=0; i<messagesForNode.count(); i++)
+            {
+                uint newMsgId = messagesForNode[i]->ID + rebaseDiff;
+
+                if(newMsgId < 0 || newMsgId > 0x1FFFFFFFul)
                 {
-                    uint rebaseDiff = newBase - lowestMsgId;
-
-                    QList<DBC_MESSAGE*> messagesForNode = dbcFile->messageHandler->findMsgsByNode(dbcNode);
-                    if(messagesForNode.count() == 0)
-                    {
-                        return;
-                    }
-
-                    for (int i=0; i<messagesForNode.count(); i++)
-                    {
-                        messagesForNode[i]->ID += rebaseDiff;
-                        emit updatedTreeInfo(messagesForNode[i]);
-                    }
-
-                    dbcFile->setDirtyFlag();
+                    QMessageBox::question(this, "Invalid Address Range", "The new starting address would cause a message to be outside of the valid address range.",
+                                                      QMessageBox::Ok);
+                    return;
                 }
+            }
 
-
-            });
-
-        connect(ui->btnCancel, &QPushButton::pressed,
-            [=]()
+            for (int i=0; i<messagesForNode.count(); i++)
             {
+                messagesForNode[i]->ID += rebaseDiff;
+                emit updatedTreeInfo(messagesForNode[i]);
+            }
 
+            dbcFile->setDirtyFlag();
 
-            });
+            this->close();
 
-//    connect(ui->lineOriginalBaseId, &QLineEdit::editingFinished,
-//        [=]()
-//        {
-//            if (dbcNode == nullptr) return;
-//            if (dbcNode->comment != ui->lineComment->text()) dbcFile->setDirtyFlag();
-//            dbcNode->comment = ui->lineComment->text();
-//            emit updatedTreeInfo(dbcNode);
-//        });
+        });
 
-//    connect(ui->lineMsgName, &QLineEdit::editingFinished,
-//        [=]()
-//        {
-//            if (dbcNode == nullptr) return;
-//            if (dbcNode->name != ui->lineMsgName->text()) dbcFile->setDirtyFlag();
-//            dbcNode->name = ui->lineMsgName->text();
-//            emit updatedTreeInfo(dbcNode);
-//        });
+    connect(ui->btnCancel, &QPushButton::pressed,
+        [=]()
+        {
+            this->close();
+        });
 
     installEventFilter(this);
 }
@@ -146,18 +165,19 @@ void DBCNodeRebaseEditor::showEvent(QShowEvent* event)
     refreshView();
 }
 
-void DBCNodeRebaseEditor::refreshView()
+bool DBCNodeRebaseEditor::refreshView()
 {
+    ui->lineNewBaseId->setText("");
+
     if(dbcNode)
     {
         QList<DBC_MESSAGE*> messagesForNode = dbcFile->messageHandler->findMsgsByNode(dbcNode);
+        lowestMsgId = 0xFFFFFFFF;
+
         if(messagesForNode.count() == 0)
         {
-            //??
-
+            return false;
         }
-
-        lowestMsgId = 0xFFFFFFFF;
 
         for (int i=0; i<messagesForNode.count(); i++)
         {
@@ -167,7 +187,9 @@ void DBCNodeRebaseEditor::refreshView()
 
         ui->lineOriginalBaseId->setText(Utility::formatCANID(lowestMsgId & 0x1FFFFFFFul));
         ui->lineNodeName->setText(dbcNode->name);
+
+        return true;
     }
 
-    //generateSampleText();
+    return false;
 }

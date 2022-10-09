@@ -19,7 +19,7 @@ public:
     void showEvent(QShowEvent*);
     void setNodeRef(DBC_NODE *node);
     void setFileIdx(int idx);
-    void refreshView();
+    bool refreshView();
 
 signals:
     void updatedTreeInfo(DBC_MESSAGE *msg);
