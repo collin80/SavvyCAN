@@ -65,7 +65,7 @@ private:
     QVector<QString> remoteDeviceIPGVRET;
     QVector<QString> remoteDeviceKayak;
 
-    CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver);
+    CANConnection* create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed);
     void populateBusDetails(int offset);
     void loadConnections();
     void saveConnections();
