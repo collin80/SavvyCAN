@@ -34,7 +34,6 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->comboType->addItem("SINGLE PRECISION");
     ui->comboType->addItem("DOUBLE PRECISION");
     ui->comboType->addItem("STRING");
-    ui->comboType->addItem("ENUMERATED STRING");
 
     ui->bitfield->setMode(GridMode::SIGNAL_VIEW);
 
