@@ -177,6 +177,24 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByPartialName(QString name)
     return nullptr;
 }
 
+QList<DBC_MESSAGE*> DBCMessageHandler::findMsgsByNode(DBC_NODE* node)
+{
+    QList<DBC_MESSAGE*> messagesForNode;
+
+    if (messages.count() == 0)
+        return messagesForNode;
+
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].sender == node)
+        {
+            messagesForNode.append(&messages[i]);
+        }
+    }
+
+    return messagesForNode;
+}
+
 bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 {
     messages.append(msg);
@@ -453,7 +471,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         DBC_MESSAGE msg;
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
         msg.ID = ID & 0x1FFFFFFFul;
-        msg.extendedID = (ID & 80000000ul) ? true : false;
+        msg.extendedID = (ID & 0x80000000ul) ? true : false;
         msg.name = match.captured(2);
         msg.len = match.captured(3).toUInt();
         msg.sender = findNodeByName(match.captured(4));
@@ -1369,7 +1387,10 @@ bool DBCFile::saveFile(QString fileName)
         }
 
         uint32_t ID = msg->ID;
-        if (msg->ID > 0x7FF || msg->extendedID) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+        if (msg->ID > 0x7FF || msg->extendedID)
+        {
+            msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+        }
 
         msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
@@ -1565,7 +1586,10 @@ bool DBCFile::saveFile(QString fileName)
             DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
 
             uint32_t ID = msg->ID;
-            if (msg->ID > 0x7FF || msg->extendedID) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            if (msg->ID > 0x7FF || msg->extendedID)
+            {
+                msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            }
 
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
             {
