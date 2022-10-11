@@ -64,6 +64,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
 
     ui->cbBusSpeed->addItem("33333");
     ui->cbBusSpeed->addItem("50000");
+    ui->cbBusSpeed->addItem("83333");
     ui->cbBusSpeed->addItem("100000");
     ui->cbBusSpeed->addItem("125000");
     ui->cbBusSpeed->addItem("250000");
