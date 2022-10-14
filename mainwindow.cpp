@@ -1006,9 +1006,166 @@ void MainWindow::handleSaveDecoded()
     {
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".txt";
-        saveDecodedTextFile(filename);
+        //saveDecodedTextFile(filename);
+        saveDecodedTextFileAsColumns(filename);
         settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
     }
+}
+
+void MainWindow::saveDecodedTextFileAsColumns(QString filename)
+{
+    QFile *outFile = new QFile(filename);
+    const QVector<CANFrame> *frames = model->getFilteredListReference();
+
+    const unsigned char *data;
+    int dataLen;
+    const CANFrame *frame;
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        return;
+/*
+Time: 205.173000   ID: 0x20E Std Bus: 0 Len: 8
+Data Bytes: 88 10 00 13 BB 00 06 00
+    SignalName	Value
+*/
+    QList<QPair<int, int>> msgsAndColumns;
+    int columnsAdded = 0;
+    int dataStartCol = 0;
+
+    QString builderString;
+    //time
+    builderString += tr("Time") + ",";
+    dataStartCol++;
+    //id
+    builderString += tr("ID") + ",";
+    dataStartCol++;
+    //if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
+    //else builderString += tr(" Std ");
+    //bus
+    builderString += tr("Bus") + ",";
+    dataStartCol++;
+    //len
+    builderString += tr("DataLen") + ",";
+    dataStartCol++;
+
+    columnsAdded = dataStartCol;
+
+    //loop through all the frames and the message data therein
+    for (int c = 0; c < frames->count(); c++)
+    {
+        frame = &frames->at(c);
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
+        dataLen = frame->payload().count();
+
+        //add all column names
+        if (dbcHandler != nullptr)
+        {
+            DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
+            if (msg != nullptr)
+            {
+                bool found = false;
+                for (int j = 0; j < msg->sigHandler->getCount(); j++)
+                {
+                    if(j==0)
+                    {
+                        for(int m=0; m<msgsAndColumns.count(); m++)
+                        {
+                            if(msgsAndColumns[m].first == msg->ID)
+                                found = true;
+                        }
+                        if(found == false)
+                            msgsAndColumns.append(QPair<int,int>(msg->ID, columnsAdded));
+                    }
+
+                    if(found == false)
+                    {
+                        QString temp;
+                        if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp))
+                        {
+                            builderString.append(msg->sigHandler->findSignalByIdx(j)->name);
+                            builderString.append(",");
+                            columnsAdded++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //add EOL
+    builderString += "\n";
+    //write out the header row
+    outFile->write(builderString.toUtf8());
+
+        //builderString = tr("Data Bytes: ");
+        //for (int temp = 0; temp < dataLen; temp++)
+        //{
+        //    builderString += Utility::formatNumber(data[temp]) + " ";
+        //}
+        //builderString += "\n";
+        //outFile->write(builderString.toUtf8());
+
+    int dataColumnsAdded = 0;
+    builderString = "";
+    for (int c = 0; c < frames->count(); c++)
+    {
+        dataColumnsAdded = 0;
+        frame = &frames->at(c);
+        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
+        dataLen = frame->payload().count();
+
+        QString builderString;
+        builderString += QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6) + ",";
+        dataColumnsAdded++;
+        //id
+        builderString += Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat()) + ",";
+        dataColumnsAdded++;
+        //if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
+        //else builderString += tr(" Std ");
+        //bus
+        builderString += QString::number(frame->bus) + ",";
+        dataColumnsAdded++;
+        //len
+        builderString += QString::number(dataLen) + ",";
+        dataColumnsAdded++;
+
+        if (dbcHandler != nullptr)
+        {
+            DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
+            if (msg != nullptr)
+            {
+                for (int j = 0; j < msg->sigHandler->getCount(); j++)
+                {
+                    if(j==0)
+                    {
+                        for(int i = 0; i<msgsAndColumns.count(); i++)
+                        {
+                            if(msgsAndColumns[i].first == msg->ID)
+                            {
+                                int startCol = msgsAndColumns[i].second;
+                                while(dataColumnsAdded < startCol)
+                                {
+                                    builderString += ",";
+                                    dataColumnsAdded++;
+                                }
+                            }
+                        }
+                    }
+
+                    QString temp;
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp, false))
+                    {
+                        builderString.append(temp);
+                        builderString.append(",");
+                        dataColumnsAdded++;
+                    }
+                }
+            }
+            builderString.append("\n");
+            outFile->write(builderString.toUtf8());
+        }
+    }
+    outFile->close();
 }
 
 void MainWindow::saveDecodedTextFile(QString filename)
