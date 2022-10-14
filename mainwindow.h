@@ -196,6 +196,7 @@ private:
     QString getSignalNameFromPosition(QPoint pos);
     uint32_t getMessageIDFromPosition(QPoint pos);
     void saveDecodedTextFile(QString);
+    void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);
