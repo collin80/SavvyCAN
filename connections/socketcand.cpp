@@ -326,8 +326,8 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
             getQueue().queue();
         }
     }
-    else
-        qDebug() << "can't get a frame, capture suspended";
+    //else
+    //    qDebug() << "can't get a frame, capture suspended";
 
     //take out the data that we just processed and anything that is in front of it
     //this should keep broken frames from accumulating at in the data buffer
