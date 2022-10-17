@@ -989,6 +989,16 @@ void MainWindow::handleLoadFilters()
 
 void MainWindow::handleSaveDecoded()
 {
+    handleSaveDecodedMethod(false);
+}
+
+void MainWindow::handleSaveDecodedCsv()
+{
+    handleSaveDecodedMethod(true);
+}
+
+void MainWindow::handleSaveDecodedMethod(bool csv)
+{
     QString filename;
     QFileDialog dialog(this);
     QSettings settings;
@@ -1006,8 +1016,12 @@ void MainWindow::handleSaveDecoded()
     {
         filename = dialog.selectedFiles()[0];
         if (!filename.contains('.')) filename += ".txt";
-        //saveDecodedTextFile(filename);
-        saveDecodedTextFileAsColumns(filename);
+
+        if(csv)
+            saveDecodedTextFileAsColumns(filename);
+        else
+            saveDecodedTextFile(filename);
+
         settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
     }
 }
