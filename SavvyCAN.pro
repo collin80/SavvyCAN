@@ -20,7 +20,9 @@ QMAKE_INFO_PLIST = Info.plist.template
 ICON = icons/SavvyIcon.icns
 
 SOURCES += main.cpp\
+    connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
+    dbc/dbcnodeduplicateeditor.cpp \
     mqtt/qmqtt_client.cpp \
     mqtt/qmqtt_client_p.cpp \
     mqtt/qmqtt_frame.cpp \
@@ -67,6 +69,7 @@ SOURCES += main.cpp\
     dbc/dbcmaineditor.cpp \
     dbc/dbcnodeeditor.cpp \
     dbc/dbcsignaleditor.cpp \
+    dbc/dbcnoderebaseeditor.cpp \
     re/discretestatewindow.cpp \
     re/filecomparatorwindow.cpp \
     re/flowviewwindow.cpp \
@@ -98,8 +101,11 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     can_structs.h \
     canframemodel.h \
+    connections/lawicel_serial.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
+    dbc/dbcnodeduplicateeditor.h \
+    dbc/dbcnoderebaseeditor.h \
     mqtt/qmqtt.h \
     mqtt/qmqtt_client.h \
     mqtt/qmqtt_client_p.h \
@@ -183,11 +189,14 @@ HEADERS  += mainwindow.h \
     pcaplite.h
 
 FORMS    += ui/candatagrid.ui \
+    ui/dbcnodeduplicateeditor.ui \
     ui/dbccomparatorwindow.ui \
     ui/dbcmessageeditor.ui \
     ui/connectionwindow.ui \
     ui/dbcloadsavewindow.ui \
     ui/dbcmaineditor.ui \
+    ui/dbcnodeduplicateeditor.ui \
+    ui/dbcnoderebaseeditor.ui \
     ui/dbcsignaleditor.ui \
     ui/dbcnodeeditor.ui \
     ui/discretestatewindow.ui \
