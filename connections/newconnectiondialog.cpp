@@ -97,6 +97,7 @@ void NewConnectionDialog::selectLawicel()
         ui->cbCANSpeed->addItem("10000");
         ui->cbCANSpeed->addItem("20000");
         ui->cbCANSpeed->addItem("50000");
+        ui->cbCANSpeed->addItem("83333");
         ui->cbCANSpeed->addItem("100000");
         ui->cbCANSpeed->addItem("125000");
         ui->cbCANSpeed->addItem("250000");
