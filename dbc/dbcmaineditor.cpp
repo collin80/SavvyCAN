@@ -21,25 +21,35 @@ DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) 
     dbcHandler = DBCHandler::getReference();
     referenceFrames = frames;
 
+    ui->treeDBC->setContextMenuPolicy(Qt::CustomContextMenu);
+
     connect(ui->btnSearch, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearch);
     connect(ui->lineSearch, &QLineEdit::returnPressed, this, &DBCMainEditor::handleSearch);
     connect(ui->btnSearchNext, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchForward);
     connect(ui->btnSearchPrev, &QAbstractButton::clicked, this, &DBCMainEditor::handleSearchBackward);
     connect(ui->treeDBC, &QTreeWidget::doubleClicked, this, &DBCMainEditor::onTreeDoubleClicked);
+    connect(ui->treeDBC, &QTreeWidget::customContextMenuRequested, this, &DBCMainEditor::onTreeContextMenu);
     connect(ui->treeDBC, &QTreeWidget::currentItemChanged, this, &DBCMainEditor::currentItemChanged);
     connect(ui->btnDelete, &QAbstractButton::clicked, this, &DBCMainEditor::deleteCurrentTreeItem);
-    connect(ui->btnNewNode, &QAbstractButton::clicked, this, &DBCMainEditor::newNode);
+    connect(ui->btnNewNode, &QAbstractButton::clicked, this, QOverload<>::of(&DBCMainEditor::newNode));
     connect(ui->btnNewMessage, &QAbstractButton::clicked, this, &DBCMainEditor::newMessage);
     connect(ui->btnNewSignal, &QAbstractButton::clicked, this, &DBCMainEditor::newSignal);
 
     sigEditor = new DBCSignalEditor(this);
     msgEditor = new DBCMessageEditor(this);
     nodeEditor = new DBCNodeEditor(this);
+    nodeRebaseEditor = new DBCNodeRebaseEditor(this);
+    nodeDuplicateEditor = new DBCNodeDuplicateEditor(this);
 
     //all three might potentially change the data stored and force the tree to be updated
     connect(sigEditor, &DBCSignalEditor::updatedTreeInfo, this, &DBCMainEditor::updatedSignal);
     connect(msgEditor, &DBCMessageEditor::updatedTreeInfo, this, &DBCMainEditor::updatedMessage);
     connect(nodeEditor, &DBCNodeEditor::updatedTreeInfo, this, &DBCMainEditor::updatedNode);
+    connect(nodeRebaseEditor, &DBCNodeRebaseEditor::updatedTreeInfo, this, &DBCMainEditor::updatedMessage);
+    connect(nodeDuplicateEditor, &DBCNodeDuplicateEditor::updatedTreeInfo, this, &DBCMainEditor::updatedMessage);
+    connect(nodeDuplicateEditor, &DBCNodeDuplicateEditor::createNode, this, QOverload<QString>::of(&DBCMainEditor::newNode));
+    connect(nodeDuplicateEditor, &DBCNodeDuplicateEditor::cloneMessageToNode, this, &DBCMainEditor::copyMessageToNode);
+    connect(nodeDuplicateEditor, &DBCNodeDuplicateEditor::nodeAdded, this, &DBCMainEditor::refreshTree);
 
     nodeIcon = QIcon(":/icons/images/node.png");
     messageIcon = QIcon(":/icons/images/message.png");
@@ -298,6 +308,83 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
     }
 }
 
+void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
+{
+    QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
+    bool ret = false;
+    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig;
+    DBC_NODE *node;
+    uint32_t msgID;
+    QString idString;
+
+    qDebug() << firstCol->data(0, Qt::UserRole) << " - " << firstCol->text(0);
+
+    switch (firstCol->data(0, Qt::UserRole).toInt())
+    {
+    case 1: //a node
+        idString = firstCol->text(0).split(" ")[0];
+        node = dbcFile->findNodeByName(idString);
+
+        QAction *actionRebase = new QAction(QIcon(":/Resource/warning32.ico"), tr("Rebase all messages"), this);
+        actionRebase->setStatusTip(tr("Rebase all messages in node"));
+        connect(actionRebase, SIGNAL(triggered()), this, SLOT(onRebaseMessages()));
+
+        QAction *actionDupe = new QAction(QIcon(":/Resource/warning32.ico"), tr("Duplicate node"), this);
+        actionDupe->setStatusTip(tr("Duplicate node and messages"));
+        connect(actionDupe, SIGNAL(triggered()), this, SLOT(onDuplicateNode()));
+
+        QMenu menu(this);
+        menu.addAction(actionRebase);
+        menu.addAction(actionDupe);
+
+        QPoint pt(pos);
+        menu.exec( ui->treeDBC->mapToGlobal(pos) );
+        break;
+    }
+}
+
+void DBCMainEditor::onRebaseMessages()
+{
+    QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
+    bool ret = false;
+    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig;
+    DBC_NODE *node;
+    uint32_t msgID;
+    QString idString;
+
+    idString = firstCol->text(0).split(" ")[0];
+    node = dbcFile->findNodeByName(idString);
+    nodeRebaseEditor->setFileIdx(fileIdx);
+    nodeRebaseEditor->setNodeRef(node);
+    if(nodeRebaseEditor->refreshView())
+    {
+        nodeRebaseEditor->setModal(true);
+        nodeRebaseEditor->show();
+    }
+}
+
+void DBCMainEditor::onDuplicateNode()
+{
+    QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
+    bool ret = false;
+    DBC_MESSAGE *msg;
+    DBC_SIGNAL *sig;
+    DBC_NODE *node;
+    uint32_t msgID;
+    QString idString;
+
+    idString = firstCol->text(0).split(" ")[0];
+    node = dbcFile->findNodeByName(idString);
+    nodeDuplicateEditor->setFileIdx(fileIdx);
+    nodeDuplicateEditor->setNodeRef(node);    
+    if(nodeDuplicateEditor->refreshView())
+    {
+        nodeDuplicateEditor->setModal(true);
+        nodeDuplicateEditor->show();
+    }
+}
 
 /*
  * Recreate the whole tree with pretty icons and custom user roles that give the rest of code an easy way to figure out whether a given tree node
@@ -481,11 +568,18 @@ void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
     else qDebug() << "That signal doesn't exist. That's a bug dude.";
 }
 
-void DBCMainEditor::newNode()
+void DBCMainEditor::newNode(QString nodeName)
 {
     DBC_NODE node;
     DBC_NODE *nodePtr;
-    node.name = "Unnamed" + QString::number(randGen.bounded(50000));
+    if(nodeName.isEmpty())
+    {
+        node.name = "Unnamed" + QString::number(randGen.bounded(50000));
+    }
+    else
+    {
+        node.name = nodeName;
+    }
     dbcFile->dbc_nodes.append(node);
     nodePtr = dbcFile->findNodeByName(node.name);
     QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
@@ -499,6 +593,77 @@ void DBCMainEditor::newNode()
     dbcFile->setDirtyFlag();
 }
 
+void DBCMainEditor::newNode()
+{
+    newNode(QString());
+}
+
+void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source, uint newMsgId)
+{
+    DBC_NODE *node = parentNode;
+    if (!node) node = dbcFile->findNodeByIdx(0);
+    QTreeWidgetItem *nodeItem = nullptr;
+    DBC_MESSAGE msg;
+    DBC_MESSAGE *msgPtr;
+
+    nodeItem = ui->treeDBC->currentItem();
+
+    msg.name = source->name;
+    msg.ID = newMsgId;
+    msg.len = source->len;
+    msg.bgColor = source->bgColor;
+    msg.fgColor = source->fgColor;
+    msg.comment = source->comment;
+    msg.sender = node;
+
+    DBC_SIGNAL *sigSource;
+    int sigCount = source->sigHandler->getCount();
+
+    for(int i=0; i<sigCount; i++)
+    {
+        sigSource = source->sigHandler->findSignalByIdx(i);
+
+        DBC_SIGNAL sig;
+
+        //Does not properly handle multiplexed signals, for now
+        sig.name = sigSource->name;
+        sig.bias = sigSource->bias;
+        sig.isMultiplexed = false; //sigSource->isMultiplexed;
+        sig.isMultiplexor = false; //sigSource->isMultiplexor;
+        sig.max = sigSource->max;
+        sig.min = sigSource->min;
+        sig.multiplexLowValue = sigSource->multiplexLowValue;
+        sig.multiplexHighValue = sigSource->multiplexHighValue;
+        sig.factor = sigSource->factor;
+        sig.intelByteOrder = sigSource->intelByteOrder;
+        sig.parentMessage = &msg;
+        sig.multiplexParent = nullptr;  //need to learn about multiplexed signals and track them when copying
+        sig.receiver = node;
+        sig.signalSize = sigSource->signalSize;
+        sig.startBit = sigSource->startBit;
+        sig.valType = sigSource->valType;
+
+
+        sig.parentMessage = &msg;
+        msg.sigHandler->addSignal(sig);
+    }
+
+    msg.sigHandler->sort();
+
+    dbcFile->messageHandler->addMessage(msg);
+    msgPtr = dbcFile->messageHandler->findMsgByIdx(dbcFile->messageHandler->getCount() - 1);
+    QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
+    QString msgInfo = Utility::formatCANID(msg.ID) + " " + msg.name;
+    if (msg.comment.count() > 0) msgInfo.append(" - ").append(msg.comment);
+    newMsgItem->setText(0, msgInfo);
+    newMsgItem->setIcon(0, messageIcon);
+    newMsgItem->setData(0, Qt::UserRole, 2);
+    messageToItem.insert(msgPtr, newMsgItem);
+    itemToMessage.insert(newMsgItem, msgPtr);
+    nodeItem->addChild(newMsgItem);
+    //ui->treeDBC->setCurrentItem(newMsgItem);
+    dbcFile->setDirtyFlag();
+}
 
 //create a new message with it's parent being the node we're currently within
 void DBCMainEditor::newMessage()
