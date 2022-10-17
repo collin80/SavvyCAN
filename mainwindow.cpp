@@ -119,6 +119,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFuzzy_Scope, &QAction::triggered, this, &MainWindow::showFuzzyScopeWindow);
     connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
     connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
+    connect(ui->actionSave_Decoded_Frames_CSV, &QAction::triggered, this, &MainWindow::handleSaveDecodedCsv);
     connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
     connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
     connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
