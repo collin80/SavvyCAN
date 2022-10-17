@@ -84,7 +84,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     break;
                 case 4:
                     currentSignal->valType = STRING;
-                    break;                    
+                    break;
                 }
                 dbcFile->setDirtyFlag();
                 fillSignalForm(currentSignal);
