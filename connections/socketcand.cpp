@@ -288,13 +288,12 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
     //buildFrame.len =  frameParsed[3].length() * 0.5;
 
-    if(frameParsed.length() < 4)
-    {
-        qDebug() << "Received frame doesn't contain any data: " << data;
-        return data;
-    }
+    int framelength = 0;
 
-    int framelength = frameParsed[3].length() * 0.5;
+    if(frameParsed.length() == 4)
+    {
+        framelength = frameParsed[3].length() * 0.5;
+    }
 
     buildData.resize(framelength);
 
