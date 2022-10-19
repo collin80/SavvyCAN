@@ -365,6 +365,7 @@ void ConnectionWindow::saveBusSettings()
         bus.setSpeed(ui->cbBusSpeed->currentText().toInt());
         bus.setActive(ui->ckEnable->isChecked());
         bus.setListenOnly(ui->ckListenOnly->isChecked());
+        bus.setCanFD(ui->canFDEnable->isChecked());
         conn_p->setBusSettings(offset, bus);
     }
 }
@@ -381,7 +382,8 @@ void ConnectionWindow::populateBusDetails(int offset)
     {
         //bool ret;
         //int numBuses;
-
+        ui->canFDEnable->setVisible(false);
+        ui->canFDEnable_label->setVisible(false);
         CANConnection* conn_p = connModel->getAtIdx(selIdx);
         CANBus bus;
         if(!conn_p) return;
@@ -396,6 +398,12 @@ void ConnectionWindow::populateBusDetails(int offset)
         //ui->lblBusNum->setText(QString::number(busBase + offset));
         ui->ckListenOnly->setChecked(bus.isListenOnly());
         ui->ckEnable->setChecked(bus.isActive());
+        if (conn_p->getType() == CANCon::type::SERIALBUS)
+        {
+            ui->canFDEnable->setVisible(true);
+            ui->canFDEnable_label->setVisible(true);
+            ui->canFDEnable->setChecked(bus.isCanFD());
+        }
 
         bool found = false;
         for (int i = 0; i < ui->cbBusSpeed->count(); i++)
