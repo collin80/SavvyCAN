@@ -16,16 +16,18 @@ public:
     bool listenOnly;
     bool singleWire;
     bool active; //is this bus turned on?
-
+    bool canFD;
 
     void setSpeed(int); // new speed
     void setListenOnly(bool); //bool for whether to only listen
     void setSingleWire(bool); //bool for whether to use single wire mode
     void setActive(bool); //whether this bus should be enabled or not.
+    void setCanFD(bool); // enable or disable CANFD support
     int getSpeed();
     bool isListenOnly();
     bool isSingleWire();
     bool isActive();
+    bool isCanFD();
 };
 
 QDataStream& operator<<( QDataStream & pStream, const CANBus& pCanBus );
