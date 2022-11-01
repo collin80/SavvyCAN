@@ -81,7 +81,7 @@ private slots:
     void appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y);
     void editSelectedGraph();
     void updatedFrames(int);
-    void gotCenterTimeID(int32_t ID, double timestamp);
+    void gotCenterTimeID(uint32_t ID, double timestamp);
     void resetView();
     void zoomIn();
     void zoomOut();
