@@ -281,7 +281,7 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     locationText->setText("X: " + QString::number(x) + " Y: " + QString::number(itemTracer->position->value()));
 }
 
-void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
+void GraphingWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 {
     Q_UNUSED(ID)
     //its problematic to try to highlight a graph since we get the ID

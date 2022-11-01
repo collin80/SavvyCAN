@@ -173,6 +173,8 @@ bool CANConnection::sendFrame(const CANFrame& pFrame)
         return ret;
     }
 
+
+
     return piSendFrame(pFrame);
 }
 

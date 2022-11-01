@@ -236,11 +236,11 @@ void CANFrameModel::setAllFilters(bool state)
  * quicksort on the columns and interpret the columns numerically. But, correct or not, this implementation is quite fast
  * and sorts the columns properly.
 */
-uint64_t CANFrameModel::getCANFrameVal(int row, Column col)
+uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Column col)
 {
     uint64_t temp = 0;
-    if (row >= frames.count()) return 0;
-    CANFrame frame = frames[row];
+    if (row >= frames->count()) return 0;
+    CANFrame frame = frames->at(row);
     switch (col)
     {
     case Column::TimeStamp:
@@ -279,18 +279,18 @@ void CANFrameModel::qSortCANFrameAsc(QVector<CANFrame> *frames, Column column, i
     qDebug() << "Lower " << lowerBound << " Upper" << upperBound;
     if (lowerBound < upperBound)
     {
-        uint64_t piv = getCANFrameVal(lowerBound + (upperBound - lowerBound) / 2, column);
+        uint64_t piv = getCANFrameVal(frames, lowerBound + (upperBound - lowerBound) / 2, column);
         i = lowerBound - 1;
         j = upperBound + 1;
         for (;;){
             do {
                 i++;
-            } while ((i < upperBound) && getCANFrameVal(i, column) < piv);
+            } while ((i < upperBound) && getCANFrameVal(frames, i, column) < piv);
 
             do
             {
                 j--;
-            } while ((j > lowerBound) && getCANFrameVal(j, column) > piv);
+            } while ((j > lowerBound) && getCANFrameVal(frames, j, column) > piv);
             if (i < j) {
                 CANFrame temp = frames->at(i);
                 frames->replace(i, frames->at(j));
@@ -310,18 +310,18 @@ void CANFrameModel::qSortCANFrameDesc(QVector<CANFrame> *frames, Column column, 
     qDebug() << "Lower " << lowerBound << " Upper" << upperBound;
     if (lowerBound < upperBound)
     {
-        uint64_t piv = getCANFrameVal(lowerBound + (upperBound - lowerBound) / 2, column);
+        uint64_t piv = getCANFrameVal(frames, lowerBound + (upperBound - lowerBound) / 2, column);
         i = lowerBound - 1;
         j = upperBound + 1;
         for (;;){
             do {
                 i++;
-            } while ((i < upperBound) && getCANFrameVal(i, column) > piv);
+            } while ((i < upperBound) && getCANFrameVal(frames, i, column) > piv);
 
             do
             {
                 j--;
-            } while ((j > lowerBound) && getCANFrameVal(j, column) < piv);
+            } while ((j > lowerBound) && getCANFrameVal(frames, j, column) < piv);
             if (i < j) {
                 CANFrame temp = frames->at(i);
                 frames->replace(i, frames->at(j));
@@ -338,11 +338,13 @@ void CANFrameModel::qSortCANFrameDesc(QVector<CANFrame> *frames, Column column, 
 void CANFrameModel::sortByColumn(int column)
 {
     sortDirAsc = !sortDirAsc;
-    //beginResetModel();
-    if (sortDirAsc) qSortCANFrameAsc(&frames, Column(column), 0, frames.count()-1);
-    else qSortCANFrameDesc(&frames, Column(column), 0, frames.count()-1);
-    //endResetModel();
-    sendRefresh();
+    if (sortDirAsc) qSortCANFrameAsc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
+    else qSortCANFrameDesc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
+
+    mutex.lock();
+    beginResetModel();
+    endResetModel();
+    mutex.unlock();
 }
 
 //End of custom sorting code
@@ -365,34 +367,38 @@ void CANFrameModel::recalcOverwrite()
 
         idAugmented = frame.frameId();
         idAugmented = idAugmented + (frame.bus << 29ull);
-        if (!overWriteFrames.contains(idAugmented))
+        if (filters[frame.frameId()] && busFilters[frame.bus])
         {
-            frame.timedelta = 0;
-            frame.frameCount = 1;
-            overWriteFrames.insert(idAugmented, frame);
-        }
-        else
-        {
-            frame.timedelta = frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds();
-            frame.frameCount = overWriteFrames[idAugmented].frameCount + 1;
-            overWriteFrames[idAugmented] = frame;
+            if (!overWriteFrames.contains(idAugmented))
+            {
+                frame.timedelta = 0;
+                frame.frameCount = 1;
+                overWriteFrames.insert(idAugmented, frame);
+            }
+            else
+            {
+                frame.timedelta = frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds();
+                frame.frameCount = overWriteFrames[idAugmented].frameCount + 1;
+                overWriteFrames[idAugmented] = frame;
+            }
         }
     }
     //Then replace the old list of frames with just the unique list
-    frames.clear();
-    frames.append(overWriteFrames.values().toVector());
-    frames.reserve(preallocSize);
+    //frames.clear();
+    //frames.append(overWriteFrames.values().toVector());
+    //frames.reserve(preallocSize);
 
     filteredFrames.clear();
+    filteredFrames.append(overWriteFrames.values().toVector());
     filteredFrames.reserve(preallocSize);
 
-    for (int i = 0; i < frames.count(); i++)
+    /*for (int i = 0; i < frames.count(); i++)
     {
         if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
         {
             filteredFrames.append(frames[i]);
         }
-    }
+    }*/
 
     endResetModel();
     mutex.unlock();
@@ -705,20 +711,32 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     else //yes, overwrite dups
     {
         bool found = false;
-        for (int i = 0; i < frames.count(); i++)
+//        for (int i = 0; i < frames.count(); i++)
+//        {
+//            if ( (frames[i].frameId() == tempFrame.frameId()) && (frames[i].bus == tempFrame.bus) )
+//            {
+//                tempFrame.frameCount = frames[i].frameCount + 1;
+//                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - frames[i].timeStamp().microSeconds();
+//                frames.replace(i, tempFrame);
+//                found = true;
+//                break;
+//            }
+//        }
+        for (int i = 0; i < filteredFrames.count(); i++)
         {
-            if ( (frames[i].frameId() == tempFrame.frameId()) && (frames[i].bus == tempFrame.bus) )
+            if ( (filteredFrames[i].frameId() == tempFrame.frameId()) && (filteredFrames[i].bus == tempFrame.bus) )
             {
-                tempFrame.frameCount = frames[i].frameCount + 1;
-                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - frames[i].timeStamp().microSeconds();
-                frames.replace(i, tempFrame);
+                tempFrame.frameCount = filteredFrames[i].frameCount + 1;
+                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - filteredFrames[i].timeStamp().microSeconds();
+                filteredFrames.replace(i, tempFrame);
                 found = true;
                 break;
             }
         }
+        frames.append(tempFrame);
         if (!found)
         {
-            frames.append(tempFrame);
+            //frames.append(tempFrame);
             if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
@@ -750,16 +768,20 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
 {
     if(frames.length() > frames.capacity() * 0.99)
     {
+        mutex.lock();
         qDebug() << "Frames count: " << frames.length() << " of " << frames.capacity() << " capacity, removing first " << (int)(frames.capacity() * 0.05) << " frames";
         frames.remove(0, (int)(frames.capacity() * 0.05));
         qDebug() << "Frames removed, new count: " << frames.length();
+        mutex.unlock();
     }
 
     if(filteredFrames.length() > filteredFrames.capacity() * 0.99)
     {
+        mutex.lock();
         qDebug() << "filteredFrames count: " << filteredFrames.length() << " of " << filteredFrames.capacity() << " capacity, removing first " << (int)(filteredFrames.capacity() * 0.05) << " frames";
         filteredFrames.remove(0, (int)(filteredFrames.capacity() * 0.05));
         qDebug() << "filteredFrames removed, new count: " << filteredFrames.length();
+        mutex.unlock();
     }
 
     foreach(const CANFrame& frame, pFrames)
@@ -775,25 +797,33 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
 
 void CANFrameModel::sendRefresh()
 {
-    qDebug() << "Sending mass refresh";
-    QVector<CANFrame> tempContainer;
-    int count = frames.count();
-    for (int i = 0; i < count; i++)
-    {
-        if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
-        {
-            tempContainer.append(frames[i]);
-        }
-    }
-    mutex.lock();
-    beginResetModel();
-    filteredFrames.clear();
-    filteredFrames.append(tempContainer);
-    filteredFrames.reserve(preallocSize);
+    qDebug() << "Sending mass refresh";    
 
-    lastUpdateNumFrames = 0;
-    endResetModel();
-    mutex.unlock();
+    if(overwriteDups)
+    {
+        recalcOverwrite();
+    }
+    else
+    {
+        QVector<CANFrame> tempContainer;
+        int count = frames.count();
+        for (int i = 0; i < count; i++)
+        {
+            if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
+            {
+                tempContainer.append(frames[i]);
+            }
+        }
+
+        mutex.lock();
+        beginResetModel();
+        filteredFrames.clear();
+        filteredFrames.append(tempContainer);
+        filteredFrames.reserve(preallocSize);
+        lastUpdateNumFrames = 0;
+        endResetModel();
+        mutex.unlock();
+    }
 }
 
 void CANFrameModel::sendRefresh(int pos)
@@ -811,7 +841,7 @@ int CANFrameModel::sendBulkRefresh()
     if (lastUpdateNumFrames <= 0) return 0;
 
     if (lastUpdateNumFrames == 0 && !overwriteDups) return 0;
-    if (filteredFrames.count() == 0) return 0;
+    //if (filteredFrames.count() == 0) return 0;
 
     //qDebug() << "Bulk refresh of " << lastUpdateNumFrames;
 
