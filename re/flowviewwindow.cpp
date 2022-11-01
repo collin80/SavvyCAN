@@ -298,7 +298,7 @@ void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMous
     else emit sendCenterTimeID(id, coord / 1000000.0);
 }
 
-void FlowViewWindow::gotCenterTimeID(int32_t ID, double timestamp)
+void FlowViewWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 {
     int64_t t_stamp;
 

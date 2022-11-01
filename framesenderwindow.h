@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QTime>
+#include <QMutex>
 #include "can_structs.h"
 #include "can_trigger_structs.h"
 
@@ -38,6 +39,7 @@ private:
     QTimer *intervalTimer;
     QElapsedTimer elapsedTimer;
     bool inhibitChanged = false;
+    QMutex mutex;
 
     void createBlankRow();
     void doModifiers(int);
