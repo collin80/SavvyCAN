@@ -442,8 +442,7 @@ void MainWindow::headerClicked(int logicalIndex)
     //ui->canFramesView->sortByColumn(logicalIndex);
     model->sortByColumn(logicalIndex);
 
-    if(rowExpansionActive && model->getInterpretMode())
-        ui->canFramesView->resizeRowsToContents();
+    manageRowExpansion();
 }
 
 void MainWindow::expandAllRows()
@@ -467,6 +466,12 @@ void MainWindow::expandAllRows()
 
         rowExpansionActive = true;
     }
+}
+
+void MainWindow::manageRowExpansion()
+{
+    if(rowExpansionActive && model->getInterpretMode())
+        ui->canFramesView->resizeRowsToContents();
 }
 
 void MainWindow::collapseAllRows()
@@ -628,6 +633,7 @@ void MainWindow::overwriteToggled(bool state)
     }
     else
     {
+        rowExpansionActive = false;
         model->setOverwriteMode(false);
     }
 }
@@ -687,8 +693,7 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
 
     model->setFilterState(ID, isSet);
 
-    if(rowExpansionActive && model->getInterpretMode())
-        ui->canFramesView->resizeRowsToContents();
+    manageRowExpansion();
 }
 
 void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
@@ -703,8 +708,7 @@ void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
 
     model->setBusFilterState(ID, isSet);
 
-    if(rowExpansionActive && model->getInterpretMode())
-        ui->canFramesView->resizeRowsToContents();
+    manageRowExpansion();
 }
 
 void MainWindow::filterSetAll()
@@ -717,8 +721,7 @@ void MainWindow::filterSetAll()
     inhibitFilterUpdate = false;
     model->setAllFilters(true);
 
-    if(rowExpansionActive && model->getInterpretMode())
-        ui->canFramesView->resizeRowsToContents();
+    manageRowExpansion();
 }
 
 void MainWindow::filterClearAll()
@@ -754,12 +757,14 @@ void MainWindow::tickGUIUpdate()
             framesPerSec = 0;
 
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
-        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked())
+                ui->canFramesView->scrollToBottom();
         ui->lbFPS->setText(QString::number(framesPerSec));
         if (rxFrames > 0)
         {
             bDirty = true;
             emit framesUpdated(rxFrames); //anyone care that frames were updated?
+            manageRowExpansion();
         }
 
         if (model->needsFilterRefresh()) updateFilterList();
