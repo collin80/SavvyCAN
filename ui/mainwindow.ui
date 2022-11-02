@@ -368,7 +368,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
@@ -415,6 +415,7 @@
     <addaction name="separator"/>
     <addaction name="actionDBC_File_Manager"/>
     <addaction name="actionSave_Decoded_Frames"/>
+    <addaction name="actionSave_Decoded_Frames_CSV"/>
     <addaction name="separator"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
@@ -613,6 +614,11 @@
   <action name="actionDBC_Comparison">
    <property name="text">
     <string>DBC Comparison</string>
+   </property>
+  </action>
+  <action name="actionSave_Decoded_Frames_CSV">
+   <property name="text">
+    <string>Save Decoded Frames CSV</string>
    </property>
   </action>
  </widget>
