@@ -91,6 +91,7 @@ private slots:
     void showDBCComparisonWindow();
     void exitApp();
     void handleSaveDecoded();
+    void handleSaveDecodedCsv();
     void connectionStatusUpdated(int conns);
     void gridClicked(QModelIndex);
     void gridDoubleClicked(QModelIndex);
@@ -196,7 +197,9 @@ private:
     //private methods
     QString getSignalNameFromPosition(QPoint pos);
     uint32_t getMessageIDFromPosition(QPoint pos);
+    void handleSaveDecodedMethod(bool csv);
     void saveDecodedTextFile(QString);
+    void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);

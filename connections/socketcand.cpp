@@ -288,18 +288,12 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
     //buildFrame.len =  frameParsed[3].length() * 0.5;
 
-    if(frameParsed.length() < 4)
+    int framelength = 0;
+
+    if(frameParsed.length() == 4)
     {
-        qDebug() << "Received frame doesn't contain any data: " << data;
-
-        //todo
-        //this is not totally true, ive seen frames come through that look like < frame 1F020240 1664924225.371291  >
-        //if we found the closing token but theres no data then remove the message from the buffer
-        return data;
+        framelength = frameParsed[3].length() * 0.5;
     }
-
-    int framelength = frameParsed[3].length() * 0.5;
-
 
     QByteArray buildData;
     buildData.resize(framelength);
@@ -328,8 +322,8 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
             getQueue().queue();
         }
     }
-    else
-        qDebug() << "can't get a frame, capture suspended";
+    //else
+    //    qDebug() << "can't get a frame, capture suspended";
 
     //take out the data that we just processed and anything that is in front of it
     //this should keep broken frames from accumulating at in the data buffer

@@ -8,6 +8,7 @@ CANBus::CANBus()
     listenOnly  = false;
     singleWire  = false;
     active      = false;
+    canFD       = false;
 }
 
 
@@ -15,14 +16,16 @@ CANBus::CANBus(const CANBus& pBus) :
     speed(pBus.speed),
     listenOnly(pBus.listenOnly),
     singleWire(pBus.singleWire),
-    active(pBus.active) {}
+    active(pBus.active),
+    canFD(pBus.canFD) {}
 
 
 bool CANBus::operator==(const CANBus& bus) const{
     return  speed == bus.speed &&
             listenOnly == bus.listenOnly &&
             singleWire == bus.singleWire &&
-            active == bus.active;
+            active == bus.active &&
+            canFD == bus.canFD;
 }
 
 void CANBus::setSpeed(int newSpeed){
@@ -45,6 +48,11 @@ void CANBus::setActive(bool mode){
     active = mode;
 }
 
+void CANBus::setCanFD(bool mode){
+    //qDebug() << "CANBUS setCanFD = " << mode;
+    canFD = mode;
+}
+
 int CANBus::getSpeed(){
     return speed;
 }
@@ -59,6 +67,10 @@ bool CANBus::isSingleWire(){
 
 bool CANBus::isActive(){
     return active;
+}
+
+bool CANBus::isCanFD(){
+    return canFD;
 }
 
 
