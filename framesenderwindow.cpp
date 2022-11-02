@@ -821,12 +821,13 @@ void FrameSenderWindow::updateGridRow(int idx)
 
     if (item == nullptr)
     {
-        //item = new QTableWidgetItem();
-        //item->setText(QString::number(temp->count));  //crashes here  ---qt_Static_metacall -> handleTick ->here
+        item = new QTableWidgetItem();
+        item->setText(QString::number(temp->count));
+        ui->tableSender->setItem(gridLine, 9, item);
     }
     else
     {
-        item->setText(QString::number(temp->count));  //crashes here  ---qt_Static_metacall -> handleTick ->here
+        item->setText(QString::number(temp->count));
     }
 
     if (temp->frameType() != QCanBusFrame::RemoteRequestFrame)
