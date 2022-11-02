@@ -136,7 +136,7 @@ void GraphingWindow::changeEvent(QEvent *event)
         }
         else
         {
-            setWindowOpacity(0.25);
+            //setWindowOpacity(0.25);
             // widget is now inactive
             qDebug() << "Hide";
         }
@@ -199,7 +199,7 @@ void GraphingWindow::updatedFrames(int numFrames)
         ui->graphingView->replot(); //now, redisplay them all
     }
     else //just got some new frames. See if they are relevant.
-    {
+    {  
         if (numFrames > modelFrames->count()) return;
 
         for (int j = 0; j < graphParams.count(); j++)
