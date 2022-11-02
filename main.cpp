@@ -25,9 +25,9 @@ public:
 int main(int argc, char *argv[])
 {
 #ifdef QT_DEBUG
-    qputenv("QT_FATAL_WARNINGS", "1");
-    //qputenv("QT_MESSAGE_PATTERN", "Type: %{type}\nProduct Name: %{appname}\nFile: %{file}\nLine: %{line}\nMethod: %{function}\nThreadID: %{threadid}\nThreadPtr: %{qthreadptr}\nMessage: %{message}");
-    qSetMessagePattern("Type: %{type}\nProduct Name: %{appname}\nFile: %{file}\nLine: %{line}\nMethod: %{function}\nThreadID: %{threadid}\nThreadPtr: %{qthreadptr}\nMessage: %{message}");
+    //uncomment for verbose debug data in application output
+    //qputenv("QT_FATAL_WARNINGS", "1");
+    //qSetMessagePattern("Type: %{type}\nProduct Name: %{appname}\nFile: %{file}\nLine: %{line}\nMethod: %{function}\nThreadID: %{threadid}\nThreadPtr: %{qthreadptr}\nMessage: %{message}");
 #endif
 
     SavvyCANApplication a(argc, argv);
