@@ -204,7 +204,6 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 {
     int busBase = 0;
     CANFrame workingFrame = pFrame;
-    CANFrame *txFrame;
 
     if (mConns.count() == 0)
     {
@@ -228,45 +227,6 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
                 workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
-
-
-
-
-//            CANFrame frameCopy;
-//            frameCopy.bus = workingFrame.bus;
-//            //cFrame.timedelta
-
-//            /////////////////////////////////////////////
-//            QByteArray copiedData;
-//            for(int i=0; i<workingFrame.payload().length(); i++)
-//                copiedData.append(workingFrame.payload()[i]);
-//            frameCopy.setPayload(copiedData);
-//            //frameCopy.setPayload(pFrame.payload());
-//            frameCopy.bus = workingFrame.bus;
-//            if (workingFrame.frameType() == workingFrame.ErrorFrame)
-//            {
-//                frameCopy.setExtendedFrameFormat(workingFrame.hasExtendedFrameFormat());
-//                frameCopy.setFrameId(workingFrame.frameId() + 0x20000000ull);
-//                frameCopy.isReceived = true;
-//            }
-//            else
-//            {
-//                frameCopy.setExtendedFrameFormat(workingFrame.hasExtendedFrameFormat());
-//                frameCopy.setFrameId(workingFrame.frameId());
-//            }
-//            frameCopy.setTimeStamp(workingFrame.timeStamp());
-//            frameCopy.setFrameType(workingFrame.frameType());
-//            frameCopy.setError(workingFrame.error());
-//                ///* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
-//            frameCopy.isReceived = workingFrame.isReceived;
-//            ////////////////////////////////////////////
-
-
-//            txFrame = conn->getQueue().get();
-//            QCoreApplication::processEvents();
-//            *txFrame = frameCopy;  //workingFrame
-//            conn->getQueue().queue();
-
 
             return conn->sendFrame(workingFrame);
         }
