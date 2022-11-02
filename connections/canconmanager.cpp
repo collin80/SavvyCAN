@@ -228,14 +228,10 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
                 workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
-            //txFrame = conn->getQueue().get();
-            QCoreApplication::processEvents();
-            //*txFrame = workingFrame;
-            //conn->getQueue().queue();
 
 
 
-            //copy pframe so the stack can be used while we send, prevents needing BlockingQueuedConnection
+
 //            CANFrame frameCopy;
 //            frameCopy.bus = workingFrame.bus;
 //            //cFrame.timedelta
@@ -263,7 +259,13 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 //            frameCopy.setError(workingFrame.error());
 //                ///* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
 //            frameCopy.isReceived = workingFrame.isReceived;
-            ////////////////////////////////////////////
+//            ////////////////////////////////////////////
+
+
+//            txFrame = conn->getQueue().get();
+//            QCoreApplication::processEvents();
+//            *txFrame = frameCopy;  //workingFrame
+//            conn->getQueue().queue();
 
 
             return conn->sendFrame(workingFrame);
