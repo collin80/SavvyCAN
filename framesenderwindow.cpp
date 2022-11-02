@@ -32,13 +32,13 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     createBlankRow();
 
     connect(ui->tableSender, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChanged(int,int)));
-    connect(intervalTimer, SIGNAL(timeout()), this, SLOT(handleTick()), Qt::QueuedConnection);
+    connect(intervalTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
     connect(ui->btnClearGrid, SIGNAL(clicked(bool)), this, SLOT(clearGrid()));
     connect(ui->btnDisableAll, SIGNAL(clicked(bool)), this, SLOT(disableAll()));
     connect(ui->btnEnableAll, SIGNAL(clicked(bool)), this, SLOT(enableAll()));
     connect(ui->btnLoadGrid, SIGNAL(clicked(bool)), this, SLOT(loadGrid()));
     connect(ui->btnSaveGrid, SIGNAL(clicked(bool)), this, SLOT(saveGrid()));
-    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)), Qt::QueuedConnection);
+    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
     intervalTimer->start();
     elapsedTimer.start();
@@ -195,7 +195,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
                             sendingData[sd].count++;
                             doModifiers(sd);
                             updateGridRow(sd);
-                            CANConManager::getInstance()->sendFrame(CANFrame(sendingData[sd]));
+                            CANConManager::getInstance()->sendFrame(sendingData[sd]);
                         }
                         else //delayed sending frame
                         {
