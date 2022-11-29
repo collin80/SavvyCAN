@@ -181,8 +181,8 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
         for (int trig = 0; trig < sendingData[sd].triggers.count(); trig++)
         {
             Trigger *thisTrigger = &sendingData[sd].triggers[trig];
-            qDebug() << "Trigger ID: " << thisTrigger->ID;
-            qDebug() << "Frame ID: " << frame->frameId();
+            //qDebug() << "Trigger ID: " << thisTrigger->ID;
+            //qDebug() << "Frame ID: " << frame->frameId();
             if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->frameId())
             {
                 if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
@@ -289,6 +289,8 @@ void FrameSenderWindow::loadGrid()
             settings.setValue("FrameSender/LoadSaveDirectory", dialog.directory().path());
         }
     }
+
+    createBlankRow();
 
     setupGrid();
 }
@@ -424,44 +426,54 @@ void FrameSenderWindow::handleTick()
 {
     FrameSendData *sendData;
     Trigger *trigger;
-    int elapsed = elapsedTimer.restart();
-    if (elapsed == 0) elapsed = 1;
-    //Modifier modifier;
-    for (int i = 0; i < sendingData.count(); i++)
+    if(mutex.tryLock())
     {
-        sendData = &sendingData[i];
-        if (!sendData->enabled)
+        int elapsed = elapsedTimer.restart();
+        if (elapsed == 0) elapsed = 1;
+        //Modifier modifier;
+        for (int i = 0; i < sendingData.count(); i++)
         {
-            if (sendData->triggers.count() > 0)
+            sendData = &sendingData[i];
+            if (!sendData->enabled)
             {
-                for (int j = 0; j < sendData->triggers.count(); j++)    //resetting currCount when line is disabled
+                if (sendData->triggers.count() > 0)
                 {
-                  sendData->triggers[j].currCount = 0;
+                    for (int j = 0; j < sendData->triggers.count(); j++)    //resetting currCount when line is disabled
+                    {
+                      sendData->triggers[j].currCount = 0;
+                    }
+                }
+                continue; //abort any processing on this if it is not enabled.
+            }
+            if (sendData->triggers.count() == 0) break;
+            for (int j = 0; j < sendData->triggers.count(); j++)
+            {
+                trigger = &sendData->triggers[j];
+                if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
+                if (!trigger->readyCount) continue; //don't tick if not ready to tick
+                //is it time to fire?
+                trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
+                if (trigger->msCounter >= trigger->milliseconds)
+                {
+                    trigger->msCounter = 0;
+                    sendData->count++;
+                    trigger->currCount++;
+                    doModifiers(i);
+                    updateGridRow(i);
+                    //qDebug() << "About to try to send a frame";
+                    CANConManager::getInstance()->sendFrame(sendingData[i]);
+                    if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
                 }
             }
-            continue; //abort any processing on this if it is not enabled.
         }
-        if (sendData->triggers.count() == 0) return;
-        for (int j = 0; j < sendData->triggers.count(); j++)
-        {
-            trigger = &sendData->triggers[j];
-            if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
-            if (!trigger->readyCount) continue; //don't tick if not ready to tick
-            //is it time to fire?
-            trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
-            if (trigger->msCounter >= trigger->milliseconds)
-            {
-                trigger->msCounter = 0;
-                sendData->count++;
-                trigger->currCount++;
-                doModifiers(i);
-                updateGridRow(i);
-                qDebug() << "About to try to send a frame";
-                CANConManager::getInstance()->sendFrame(sendingData[i]);
-                if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
-            }
-        }
+
+        mutex.unlock();
     }
+    else
+    {
+        qDebug() << "framesenderwindow::handleTick() couldn't get mutex, elapsed is: " << elapsedTimer.elapsed();
+    }
+
 }
 
 /// <summary>
@@ -479,7 +491,7 @@ void FrameSenderWindow::doModifiers(int idx)
 
     if (sendData->modifiers.count() == 0) return; //if no modifiers just leave right now
 
-    qDebug() << "Executing mods";
+    //qDebug() << "Executing mods";
 
     for (int i = 0; i < sendData->modifiers.count(); i++)
     {
@@ -648,10 +660,10 @@ void FrameSenderWindow::processModifierText(int line)
                 {
                     thisOp.operation = parseOperation(operation);
                     QString secondOp = Utility::grabAlphaNumeric(mods[i]);
-                    if (mods[i][0] == '~')
+                    if (secondOp.length() > 0 && secondOp[0] == '~')
                     {
                         thisOp.second.notOper = true;
-                        mods[i] = mods[i].remove(0, 1); //remove the ~ character
+                        secondOp = secondOp.remove(0, 1); //remove the ~ character
                     }
                     else thisOp.second.notOper = false;
                     thisOp.second.bus = sendingData[line].bus;
@@ -797,7 +809,7 @@ ModifierOperationType FrameSenderWindow::parseOperation(QString op)
 /// <param name="idx"></param>
 void FrameSenderWindow::updateGridRow(int idx)
 {
-    qDebug() << "updateGridRow";
+    //qDebug() << "updateGridRow";
 
     inhibitChanged = true;
     FrameSendData *temp = &sendingData[idx];
@@ -807,16 +819,28 @@ void FrameSenderWindow::updateGridRow(int idx)
     const unsigned char *data = reinterpret_cast<const unsigned char *>(temp->payload().constData());
     int dataLen = temp->payload().length();
 
-    if (item == nullptr) item = new QTableWidgetItem();
-    item->setText(QString::number(temp->count));
-    if (temp->frameType() != QCanBusFrame::RemoteRequestFrame) {
+    if (item == nullptr)
+    {
+        item = new QTableWidgetItem();
+        item->setText(QString::number(temp->count));
+        ui->tableSender->setItem(gridLine, 9, item);
+    }
+    else
+    {
+        item->setText(QString::number(temp->count));
+    }
+
+    if (temp->frameType() != QCanBusFrame::RemoteRequestFrame)
+    {
         for (int i = 0; i < dataLen; i++)
         {
             dataString.append(Utility::formatNumber(data[i]));
             dataString.append(" ");
         }
         ui->tableSender->item(gridLine, 6)->setText(dataString);
-    } else {
+    }
+    else
+    {
         ui->tableSender->item(gridLine, 6)->setText("");
     }
     inhibitChanged = false;

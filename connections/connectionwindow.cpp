@@ -426,13 +426,11 @@ void ConnectionWindow::currentTabChanged(int newIdx)
 
 void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
-    Q_UNUSED(previous);
-
     int selIdx = current.row();
-
-    disconnect(connModel->getAtIdx(previous.row()), SIGNAL(debugOutput(QString)), nullptr, nullptr);
+    CANConnection* prevConn = connModel->getAtIdx(previous.row());
+    if(prevConn != nullptr)
+        disconnect(prevConn, SIGNAL(debugOutput(QString)), nullptr, nullptr);
     disconnect(this, SIGNAL(sendDebugData(QByteArray)), nullptr, nullptr);
-
 
     /* set parameters */
     if (selIdx == -1) {

@@ -204,7 +204,6 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 {
     int busBase = 0;
     CANFrame workingFrame = pFrame;
-    CANFrame *txFrame;
 
     if (mConns.count() == 0)
     {
@@ -228,10 +227,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
                 workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
-            txFrame = conn->getQueue().get();
-            QCoreApplication::processEvents();
-            *txFrame = workingFrame;
-            conn->getQueue().queue();
+
             return conn->sendFrame(workingFrame);
         }
         busBase += conn->getNumBuses();
