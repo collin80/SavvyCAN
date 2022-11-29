@@ -442,6 +442,8 @@ void MainWindow::headerClicked(int logicalIndex)
 {
     //ui->canFramesView->sortByColumn(logicalIndex);
     model->sortByColumn(logicalIndex);
+
+    manageRowExpansion();
 }
 
 void MainWindow::expandAllRows()
@@ -462,7 +464,15 @@ void MainWindow::expandAllRows()
     if (goAhead)
     {
         ui->canFramesView->resizeRowsToContents();
+
+        rowExpansionActive = true;
     }
+}
+
+void MainWindow::manageRowExpansion()
+{
+    if(rowExpansionActive && model->getInterpretMode())
+        ui->canFramesView->resizeRowsToContents();
 }
 
 void MainWindow::collapseAllRows()
@@ -483,6 +493,8 @@ void MainWindow::collapseAllRows()
     if (goAhead)
     {
         for (int i = 0; i < numRows; i++) ui->canFramesView->setRowHeight(i, normalRowHeight);
+
+        rowExpansionActive = false;
     }
 }
 
@@ -622,6 +634,7 @@ void MainWindow::overwriteToggled(bool state)
     }
     else
     {
+        rowExpansionActive = false;
         model->setOverwriteMode(false);
     }
 }
@@ -680,6 +693,8 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setFilterState(ID, isSet);
+
+    manageRowExpansion();
 }
 
 void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
@@ -693,6 +708,8 @@ void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
     if (item->checkState() == Qt::Checked) isSet = true;
 
     model->setBusFilterState(ID, isSet);
+
+    manageRowExpansion();
 }
 
 void MainWindow::filterSetAll()
@@ -704,6 +721,8 @@ void MainWindow::filterSetAll()
     }
     inhibitFilterUpdate = false;
     model->setAllFilters(true);
+
+    manageRowExpansion();
 }
 
 void MainWindow::filterClearAll()
@@ -739,12 +758,14 @@ void MainWindow::tickGUIUpdate()
             framesPerSec = 0;
 
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
-        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
+        if (rxFrames > 0 && /*allowCapture && */ ui->cbAutoScroll->isChecked())
+                ui->canFramesView->scrollToBottom();
         ui->lbFPS->setText(QString::number(framesPerSec));
         if (rxFrames > 0)
         {
             bDirty = true;
             emit framesUpdated(rxFrames); //anyone care that frames were updated?
+            manageRowExpansion();
         }
 
         if (model->needsFilterRefresh()) updateFilterList();
@@ -795,7 +816,7 @@ void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
 
 //A sub-window is sending us a center on timestamp and ID signal
 //try to find the relevant frame in the list and focus on it.
-void MainWindow::gotCenterTimeID(int32_t ID, double timestamp)
+void MainWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 {
     int idx = model->getIndexFromTimeID(ID, timestamp);
     if (idx > -1)
@@ -1322,13 +1343,13 @@ void MainWindow::showGraphingWindow()
     lastGraphingWindow = new GraphingWindow(model->getListReference());
     graphWindows.append(lastGraphingWindow);
 
-    connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(int32_t,double)));
-    connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+    connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(uint32_t,double)));
+    connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(uint32_t,double)));
 
     if (flowViewWindow) //connect the two external windows together
     {
-        connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(int32_t,double)));
-        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
+        connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), flowViewWindow, SLOT(gotCenterTimeID(uint32_t,double)));
+        connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(uint32_t,double)));
     }
 
     lastGraphingWindow->show();

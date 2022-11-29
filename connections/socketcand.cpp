@@ -64,7 +64,7 @@ void SocketCANd::sendBytesToTCP(const QByteArray &bytes, int busNum)
         byt = (unsigned char)byt;
         buildDebug = buildDebug % QString::number(byt, 16) % " ";
     }
-    sendDebug(buildDebug);
+    //sendDebug(buildDebug);
 
     if (tcpClient[busNum]) tcpClient[busNum]->write(bytes);
 }
@@ -77,9 +77,9 @@ void SocketCANd::sendStringToTCP(const char* data, int busNum)
         return;
     }
 
-    QString buildDebug;
-    buildDebug = "Send data to " + hostIP.toString() + ":" + QString::number(hostPort) + " -> " + data;
-    sendDebug(buildDebug);
+    //QString buildDebug;
+    //buildDebug = "Send data to " + hostIP.toString() + ":" + QString::number(hostPort) + " -> " + data;
+    //sendDebug(buildDebug);
     //qInfo() << buildDebug;
 
     if (tcpClient[busNum]) tcpClient[busNum]->write(data);
@@ -295,6 +295,7 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
         framelength = frameParsed[3].length() * 0.5;
     }
 
+    QByteArray buildData;
     buildData.resize(framelength);
 
     int c;
@@ -366,14 +367,14 @@ void SocketCANd::invokeReadTCPData()
 
 void SocketCANd::readTCPData(int busNum)
 {
-    QByteArray data;
+    QString data;
 
-    if (tcpClient[busNum]) data = tcpClient[busNum]->readAll();
+    if (tcpClient[busNum])
+        data = QString(tcpClient[busNum]->readAll());
     //sendDebug("Got data from TCP. Len = " % QString::number(data.length()));
     //qDebug() << "Received datagramm: " << data;
     procRXData(data, busNum);
 }
-
 
 void SocketCANd::procRXData(QString data, int busNum)
 {

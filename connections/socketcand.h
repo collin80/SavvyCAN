@@ -73,7 +73,6 @@ protected:
     int hostPort;
     QList<QString> hostCanIDs;
     int framesRapid;
-    QByteArray buildData;
     QVarLengthArray<MODE> rx_state;
     CANFrame buildFrame;
     QVarLengthArray<QString> unprocessedData;
