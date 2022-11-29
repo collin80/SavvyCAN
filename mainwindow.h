@@ -117,7 +117,7 @@ public slots:
     void gotFrames(int);
     void updateSettings();
     void readUpdateableSettings();
-    void gotCenterTimeID(int32_t ID, double timestamp);
+    void gotCenterTimeID(uint32_t ID, double timestamp);
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 signals:
@@ -192,6 +192,7 @@ private:
     int normalRowHeight;
     bool isConnected;
     QPoint contextMenuPosition;
+    bool rowExpansionActive = false;
 
     //private methods
     QString getSignalNameFromPosition(QPoint pos);
@@ -207,6 +208,7 @@ private:
     void readSettings();
     void writeSettings();
     bool eventFilter(QObject *obj, QEvent *event);
+    void manageRowExpansion();
 };
 
 #endif // MAINWINDOW_H
