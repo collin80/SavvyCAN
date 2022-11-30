@@ -25,6 +25,7 @@ public:
     double scale;
     int stride;
     int strideSoFar;
+    int bus;
     QColor lineColor;
     QColor fillColor;
     int lineWidth;
@@ -33,6 +34,7 @@ public:
     QCPGraph *ref;
     QString graphName;
     DBC_SIGNAL *associatedSignal;
+
     //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;

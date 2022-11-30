@@ -210,7 +210,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
                 thisFrame = modelFrames->at(i);
-                if (graphParams[j].ID == thisFrame.frameId())
+                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.bus) ) )
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
@@ -614,7 +614,8 @@ void GraphingWindow::removeAllGraphs()
     QMessageBox::StandardButton confirmDialog;
     confirmDialog = QMessageBox::question(this, "Really?", "Remove all graphs?",
                                   QMessageBox::Yes|QMessageBox::No);
-    if (confirmDialog == QMessageBox::Yes) {
+    if (confirmDialog == QMessageBox::Yes)
+    {
         ui->graphingView->clearGraphs();
         ui->graphingView->clearItems();
         graphParams.clear();
@@ -885,7 +886,7 @@ void GraphingWindow::saveDefinitions()
         QList<GraphParams>::iterator iter;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
         {
-            outFile->write("X,");
+            outFile->write("Z,");
             outFile->write(QString::number(iter->ID, 16).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->mask, 16).toUtf8());
@@ -903,6 +904,8 @@ void GraphingWindow::saveDefinitions()
             outFile->write(QString::number(iter->scale).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->stride).toUtf8());
+            outFile->putChar(',');
+            outFile->write(QString::number(iter->bus).toUtf8());
             outFile->putChar(',');
             outFile->write(QString::number(iter->lineColor.red()).toUtf8());
             outFile->putChar(',');
@@ -978,7 +981,56 @@ void GraphingWindow::loadDefinitions()
 
                 gp.associatedSignal = nullptr; //might not be saved in the graph definition so default it to nothing
 
-                if (tokens[0] == "X") //newest format based around signals
+                //should probably do better at merging all the code that is the same between all these formats instead of duplication...
+                if (tokens[0] == "Z") //very newest format, adds ability to set bus number
+                {
+                    gp.ID = tokens[1].toUInt(nullptr, 16);
+                    gp.mask = tokens[2].toULongLong(nullptr, 16);
+                    gp.startBit = tokens[3].toInt();
+                    if (gp.startBit < 0) {
+                        gp.intelFormat = false;
+                        gp.startBit *= -1;
+                    }
+                    else gp.intelFormat = true;
+                    gp.numBits = tokens[4].toInt();
+                    if (tokens[5] == "Y") gp.isSigned = true;
+                        else gp.isSigned = false;
+                    gp.bias = tokens[6].toFloat();
+                    gp.scale = tokens[7].toFloat();
+                    gp.stride = tokens[8].toInt();
+                    gp.bus = tokens[9].toInt();
+
+                    gp.lineColor.setRed( tokens[10].toInt() );
+                    gp.lineColor.setGreen( tokens[11].toInt() );
+                    gp.lineColor.setBlue( tokens[12].toInt() );
+                    if (tokens.length() > 13)
+                        gp.graphName = tokens[13];
+                    else
+                        gp.graphName = QString();
+                   if (tokens.length() > 20) //even newer format with extra graph formatting options
+                   {
+                       gp.fillColor.setRed( tokens[14].toInt() );
+                       gp.fillColor.setGreen( tokens[15].toInt() );
+                       gp.fillColor.setBlue( tokens[16].toInt() );
+                       gp.fillColor.setAlpha( tokens[17].toInt() );
+                       if (tokens[18] == "Y") gp.drawOnlyPoints = true;
+                       else gp.drawOnlyPoints = false;
+                       gp.pointType = tokens[19].toInt();
+                       gp.lineWidth = tokens[20].toInt();
+                   }
+                   if (tokens.length() > 22)
+                   {
+                       DBC_MESSAGE *msg = dbcHandler->findMessage(QString(tokens[21]));
+                       if (msg)
+                       {
+                            gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[22]);
+                       }
+                       else qDebug() << "Couldn't find the message by name! " << tokens[21] << "  " << tokens[22];
+                   }
+
+                   createGraph(gp, true);
+                }
+                else if (tokens[0] == "X") //second newest format based around signals
                 {
                     gp.ID = tokens[1].toUInt(nullptr, 16);
                     gp.mask = tokens[2].toULongLong(nullptr, 16);
@@ -1271,7 +1323,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        if (thisFrame.frameId() == params.ID && thisFrame.frameType() == QCanBusFrame::DataFrame) frameCache.append(thisFrame);
+        if (thisFrame.frameId() == params.ID && thisFrame.frameType() == QCanBusFrame::DataFrame &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.bus) ) ) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1508,6 +1560,7 @@ GraphParams::GraphParams()
     scale = 1;
     stride = 1;
     strideSoFar = 1;
+    bus = -1;
     lineColor = QColor(0,0,0);
     fillColor = QColor(255,255,255,0);
     lineWidth = 1;

@@ -199,6 +199,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->txtDataLen->setText(QString::number(dataLen));
     ui->txtID->setText(Utility::formatCANID(params.ID));
     ui->txtName->setText(params.graphName);
+    ui->editBus->setText(QString::number(params.bus));
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.lineColor);
     ui->colorSwatch->setPalette(p);
@@ -234,6 +235,7 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.mask = Utility::ParseStringToNum(ui->txtMask->text());
     params.scale = ui->txtScale->text().toFloat();
     params.stride = Utility::ParseStringToNum(ui->txtStride->text());
+    params.bus = Utility::ParseStringToNum(ui->editBus->text());
 
     params.startBit = startBit;
     params.numBits = dataLen;
