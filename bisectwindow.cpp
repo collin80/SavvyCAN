@@ -25,7 +25,14 @@ BisectWindow::BisectWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->slidePercentage, &QSlider::sliderReleased, this, &BisectWindow::updatePercentText);
     connect(ui->editFrameNumber, &QLineEdit::editingFinished, this, &BisectWindow::updateFrameNumSlider);
     connect(ui->editPercentage, &QLineEdit::editingFinished, this, &BisectWindow::updatePercentSlider);
+    connect(ui->rbFrameNumber, &QRadioButton::toggled, this, &BisectWindow::updateSectionsText);
+    connect(ui->rbPercentage, &QRadioButton::toggled, this, &BisectWindow::updateSectionsText);
+    connect(ui->rbBusNum, &QRadioButton::toggled, this, &BisectWindow::updateSectionsText);
+    connect(ui->rbIDRange, &QRadioButton::toggled, this, &BisectWindow::updateSectionsText);
+
     installEventFilter(this);
+
+    updateSectionsText();
 }
 
 BisectWindow::~BisectWindow()
@@ -59,6 +66,31 @@ bool BisectWindow::eventFilter(QObject *obj, QEvent *event)
         return QObject::eventFilter(obj, event);
     }
     return false;
+}
+
+void BisectWindow::updateSectionsText()
+{
+    if (ui->rbBusNum->isChecked())
+    {
+        ui->rbLowerSection->setText("Only this bus");
+        ui->rbUpperSection->setText("Not this bus");
+    }
+    if (ui->rbFrameNumber->isChecked())
+    {
+        ui->rbLowerSection->setText("Up to this frame number");
+        ui->rbUpperSection->setText("After this frame number");
+    }
+    if (ui->rbIDRange->isChecked())
+    {
+        ui->rbLowerSection->setText("Inside the ID range");
+        ui->rbUpperSection->setText("Outside the ID range");
+    }
+    if (ui->rbPercentage->isChecked())
+    {
+        ui->rbLowerSection->setText("Up to this percentage into the file");
+        ui->rbUpperSection->setText("After this percentage into the file");
+    }
+
 }
 
 void BisectWindow::refreshIDList()
@@ -112,11 +144,12 @@ void BisectWindow::handleCalculateButton()
 {
     splitFrames.clear();
     bool saveLower = ui->rbLowerSection->isChecked();
-    int targetFrameNum;
+    int targetFrameNum = 0;
     if (ui->rbFrameNumber->isChecked() || ui->rbPercentage->isChecked())
     {
         if (ui->rbFrameNumber->isChecked()) targetFrameNum = ui->slideFrameNumber->value();
-        else targetFrameNum = modelFrames->count() * ui->slidePercentage->value() / 10000;
+        else targetFrameNum = modelFrames->count() * (ui->slidePercentage->value() / 10000.0);
+        qDebug() << "Target frame num " << targetFrameNum;
         if (saveLower)
         {
             for (int i = 0; i < targetFrameNum; i++) splitFrames.append(modelFrames->at(i));
@@ -132,7 +165,29 @@ void BisectWindow::handleCalculateButton()
         uint32_t upperID = Utility::ParseStringToNum2(ui->cbIDUpper->currentText());
         for (int i = 0; i < modelFrames->count(); i++)
         {
-            if (modelFrames->at(i).frameId() >= lowerID && modelFrames->at(i).frameId() <= upperID) splitFrames.append(modelFrames->at(i));
+            if (modelFrames->at(i).frameId() >= lowerID && modelFrames->at(i).frameId() <= upperID)
+            {
+                if (saveLower) splitFrames.append(modelFrames->at(i));
+            }
+            else
+            {
+                if (!saveLower) splitFrames.append(modelFrames->at(i));
+            }
+        }
+    }
+    else if (ui->rbBusNum->isChecked())
+    {
+        int targetBus = Utility::ParseStringToNum(ui->editBusNum->text());
+        for (int i = 0; i < modelFrames->count(); i++)
+        {
+            if (modelFrames->at(i).bus == targetBus)
+            {
+                if (saveLower) splitFrames.append(modelFrames->at(i));
+            }
+            else
+            {
+                if (!saveLower) splitFrames.append(modelFrames->at(i));
+            }
         }
     }
     refreshFrameNumbers();
