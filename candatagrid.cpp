@@ -14,12 +14,13 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
 
     gridMode = GridMode::CHANGED_BITS;
 
-    memset(data, 0, 8);
-    memset(refData, 0, 8);
-    memset(usedData, 0, 8);
-    memset(usedSignalNum, -1, 64);
+    memset(data, 0, 64);
+    memset(refData, 0, 64);
+    memset(usedData, 0, 64);
+    for (int j = 0; j < 512; j++) usedSignalNum[j] = -1;
+    bytesToDraw = 16; //default to the old behavior
     for (int x = 0; x < 8; x++)
-        for (int y = 0; y < 8; y++)
+        for (int y = 0; y < 64; y++)
             textStates[x][y] = GridTextState::NORMAL;
 
     blackBrush = QBrush(Qt::black);
@@ -29,6 +30,8 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     greenHashBrush = QBrush(QColor(0, 0xB6, 0), Qt::BDiagPattern);
     blackHashBrush = QBrush(QColor(0, 0, 0), Qt::FDiagPattern);
     grayBrush = QBrush(QColor(230,230,230));
+    xOffset = 0;
+    yOffset = 0;
 }
 
 CANDataGrid::~CANDataGrid()
@@ -46,6 +49,12 @@ void CANDataGrid::setMode(GridMode mode)
     gridMode = mode;
 }
 
+void CANDataGrid::setBytesToDraw(int num)
+{
+    bytesToDraw = num;
+    //this->update();
+}
+
 void CANDataGrid::mousePressEvent(QMouseEvent *event)
 {
     QPoint clickedPoint = event->pos();
@@ -60,7 +69,7 @@ void CANDataGrid::mousePressEvent(QMouseEvent *event)
         }
         int x = clickedPoint.x() / gridSize.x();
         int y = clickedPoint.y() / gridSize.y();
-        //qDebug() << "Grid square clicked " << x << " " << y;
+        qDebug() << "Grid square clicked " << x << " " << y;
         emit gridClicked(x,y);
     }
 }
@@ -70,7 +79,7 @@ void CANDataGrid::setCellTextState(int x, int y, GridTextState state)
     if (x < 0) return;
     if (x > 7) return;
     if (y < 0) return;
-    if (y > 7) return;
+    if (y > 63) return;
     textStates[x][y] = state;
     this->update();
 }
@@ -80,7 +89,7 @@ GridTextState CANDataGrid::getCellTextState(int x, int y)
     if (x < 0) return GridTextState::NORMAL;
     if (x > 7) return GridTextState::NORMAL;
     if (y < 0) return GridTextState::NORMAL;
-    if (y > 7) return GridTextState::NORMAL;
+    if (y > 63) return GridTextState::NORMAL;
     return textStates[x][y];
 }
 
@@ -104,14 +113,14 @@ void CANDataGrid::clearSignalNames()
 void CANDataGrid::setUsedSignalNum(int bit, int signal)
 {
     if (bit < 0) return;
-    if (bit > 63) return;
+    if (bit > 511) return;
     usedSignalNum[bit] = signal;
 }
 
 int CANDataGrid::getUsedSignalNum(int bit)
 {
     if (bit < 0) return 0;
-    if (bit > 63) return 0;
+    if (bit > 511) return 0;
     return usedSignalNum[bit];
 }
 
@@ -125,6 +134,13 @@ void CANDataGrid::paintEvent(QPaintEvent *event)
     paintCommonEnding();
 }
 
+/*
+ * CAN-FD causes the need to support these sizes: 8, 12, 16, 20, 24, 32, 48, 64 bytes.
+ * It's probably OK to ignore 12 and just go straight from 8 to 16 where each cell is subdivided in half along the X axis
+ * Then 12 is just 16 minus some bits that never can get used. Then jump to 32 drawn cells from there. That would be also
+ * subdividing along the Y axis. Obviously, as before, 24 is just 32 but with unusable bits. Lastly, subdivide X yet again
+ * so now it's in quarters. This allows for 64 bits (48 is likewise just 64 with unusable bits)
+*/
 void CANDataGrid::paintCommonBeginning()
 {
     int x;
@@ -132,29 +148,36 @@ void CANDataGrid::paintCommonBeginning()
     painter = new QPainter(this);
     viewport = painter->viewport();
 
-    xSpan = viewport.right() - viewport.left();
-    ySpan = viewport.bottom() - viewport.top();
+    neededXDivisions = 8;
+    neededYDivisions = 8;
 
-    qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
+    int textRestrict = qMax(neededXDivisions, neededYDivisions);
 
-    xSector = xSpan / 9;
-    ySector = ySpan / 9;
-
-    //the whole thing is broken up into 81 chunks which are broken up
-    //into the 8x8 grid of bits in the bottom right and the other parts
-    //taken up by helper text
+    if (bytesToDraw > 8)
+    {
+        neededXDivisions = 16;
+    }
+    if (bytesToDraw > 16)
+    {
+        neededXDivisions = 16;
+        neededYDivisions = 16;
+    }
+    if (bytesToDraw > 32)
+    {
+        neededXDivisions = 32;
+    }
 
     if (gridMode == GridMode::CHANGED_BITS)
     {
-        bigTextSize = qMin(xSector, ySector) * 0.6;
-        smallTextSize = qMin(xSector, ySector) * 0.5;
+        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 1.5);
+        smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 3.5);
     }
     if (gridMode == GridMode::SIGNAL_VIEW)
     {
-        bigTextSize = qMin(xSector, ySector) * 0.5;
-        smallTextSize = qMin(xSector, ySector) * 0.25;
+        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / 12;
+        smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / 24;
     }
-    sigNameTextSize = qMin(xSector, ySector) * 0.19;
+    sigNameTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 4);
 
     painter->setPen(QPen(QApplication::palette().color(QPalette::Text)));
     mainFont.setPixelSize(bigTextSize);
@@ -166,34 +189,52 @@ void CANDataGrid::paintCommonBeginning()
 
     smallMetric = new QFontMetrics(sigNameFont);
 
-    painter->setFont(smallFont);
-    painter->drawText(QRect(viewport.left(), viewport.top(), xSector, ySector), Qt::AlignCenter, "BITS ->");
-    painter->setFont(boldFont);
+    xOffset = smallMetric->maxWidth();
+    yOffset = smallMetric->height();
 
-    for (x = 0; x < 8; x++)
+    xSpan = viewport.right() - viewport.left() - xOffset;
+    ySpan = viewport.bottom() - viewport.top() - yOffset;
+
+    qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
+
+    xSector = xSpan / neededXDivisions;
+    ySector = ySpan / neededYDivisions;
+
+    qDebug() << "XSector " << xSector << " YSector " << ySector;
+
+    nearX = viewport.left() + xOffset;
+    nearY = viewport.top() + yOffset;
+    farX = nearX + xSector * neededXDivisions;
+    farY = nearY + ySector * neededYDivisions;
+
+    //painter->setFont(boldFont);
+    painter->setFont(sigNameFont);
+
+    //draw grid by doing vertical and horizontal lines. This is not needed normally but helps when developing new code. Only uncomment for testing
+/*
+    for (int y = 0; y <= neededYDivisions; y++)
     {
-        painter->drawText(QRect(viewport.left() + (x+1) * xSector, viewport.top(), xSector, ySector), Qt::AlignCenter, QString::number(7-x));
+        painter->drawLine(nearX, nearY + (y * ySector), farX, nearY + (y * ySector) );
     }
-    //for (y = 0; y < 8; y++)
-    //{
-    //    painter->drawText(QRect(viewport.left() + xSector, viewport.top() + ySector * (y + 2), xSector, ySector), Qt::AlignCenter, QString::number(y));
-    //}
 
-    painter->drawText(viewport.left() + 4, viewport.top() + ySector * 3, "B");
-    painter->drawText(viewport.left() + 4, viewport.top() + ySector * 4, "Y");
-    painter->drawText(viewport.left() + 4, viewport.top() + ySector * 5, "T");
-    painter->drawText(viewport.left() + 4, viewport.top() + ySector * 6, "E");
-    painter->drawText(viewport.left() + 4, viewport.top() + ySector * 7, "S");
+    for (int x = 0; x <= neededXDivisions; x++)
+    {
+        painter->drawLine(nearX + (x * xSector), nearY, nearX + (x * xSector), farY);
+    }
+*/
 
+    for (x = 0; x < neededXDivisions; x++)
+    {
+        int num = (neededXDivisions - 1) - x;
+        num = num & 7;
+        painter->drawText(QRect(nearX + (x * xSector), viewport.top(), xSector, viewport.top() + smallMetric->height()), Qt::AlignCenter, QString::number(num));
+    }
 
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 1, xSector, ySector), Qt::AlignCenter, "0");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 2, xSector, ySector), Qt::AlignCenter, "1");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 3, xSector, ySector), Qt::AlignCenter, "2");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 4, xSector, ySector), Qt::AlignCenter, "3");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 5, xSector, ySector), Qt::AlignCenter, "4");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 6, xSector, ySector), Qt::AlignCenter, "5");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 7, xSector, ySector), Qt::AlignCenter, "6");
-    painter->drawText(QRect(viewport.left() + (xSector / 4.0), viewport.top() + ySector * 8, xSector, ySector), Qt::AlignCenter, "7");
+    int skip = neededXDivisions / 8;
+    for (int y = 0; y < neededYDivisions; y++)
+    {
+        painter->drawText(QRect(viewport.left() + 2, nearY + (ySector * y), xOffset, ySector), Qt::AlignCenter, QString::number(y * skip));
+    }
 
     painter->setPen(QPen(Qt::black));
     painter->setFont(mainFont);
@@ -212,17 +253,19 @@ void CANDataGrid::paintChangedBits()
     //bits that used to be set but now are unset are red, bits that used to be unset but now are set
     //are green
 
-    for (y = 0; y < 8; y++)
+    for (y = 0; y < neededYDivisions; y++)
     {
-        thisByte = data[y];
-        prevByte = refData[y];
-        for (x = 0; x < 8; x++)
+        for (x = 0; x < neededXDivisions; x++)
         {
-            bit = (y * 8) + (7 - x);
+            int byteIdx = (y * (neededXDivisions / 8) + (x / 8));
+            thisByte = data[byteIdx];
+            prevByte = refData[byteIdx];
+            int bitIdx = ((neededXDivisions - 1) - x) & 7;
+            bit = (byteIdx * 8) + bitIdx;
             thisBit = false;
             prevBit = false;
-            if ((thisByte & (1 << (7-x))) == (1 << (7-x))) thisBit = true;
-            if ((prevByte & (1 << (7-x))) == (1 << (7-x))) prevBit = true;
+            if ((thisByte & (1 << bitIdx)) == (1 << bitIdx)) thisBit = true;
+            if ((prevByte & (1 << bitIdx)) == (1 << bitIdx)) prevBit = true;
 
             if (thisBit)
             {
@@ -244,7 +287,7 @@ void CANDataGrid::paintChangedBits()
                 else
                 {
                     usedSigNum = -1;
-                    if ((usedData[y] & (1 << (7-x))) == (1 << (7-x)))
+                    if ((usedData[byteIdx] & (1 << bitIdx)) == (1 << bitIdx))
                     {
                         grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
                         painter->setBrush(grayBrush);
@@ -252,10 +295,8 @@ void CANDataGrid::paintChangedBits()
                     else painter->setBrush(whiteBrush);
                 }
             }
-
-            //painter->fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
-            painter->drawRect(viewport.left() + (x+1) * xSector, viewport.top() + (y+1) * ySector, xSector, ySector);
-            switch (textStates[x][y])
+            painter->drawRect(nearX + (x * xSector), nearY + (y * ySector), xSector, ySector);
+            switch (textStates[bitIdx][byteIdx])
             {
             case GridTextState::NORMAL:
                 if (thisBit && prevBit) painter->setPen(QPen(Qt::gray));
@@ -277,7 +318,7 @@ void CANDataGrid::paintChangedBits()
            // else painter->setFont(mainFont);
             painter->setFont(smallFont);
 
-            painter->drawText(viewport.left() + (x+1) * xSector + (xSector / 3), viewport.top() + (y + 2) * ySector - (ySector * 0.4), QString::number(bit));
+            painter->drawText(QRect(nearX + (x * xSector), nearY + (y * ySector), xSector, ySector), Qt::AlignCenter, QString::number(bit));
 
             painter->setFont(mainFont);
             painter->setPen(QPen(Qt::black));
@@ -285,6 +326,8 @@ void CANDataGrid::paintChangedBits()
     }
 }
 
+
+//not converted to the new format where CAN-FD is supported. This is probably broken badly!
 void CANDataGrid::paintSignalView()
 {
     int x, y, bit;
@@ -357,7 +400,7 @@ void CANDataGrid::paintSignalView()
             }
 
             //painter->fillRect(viewport.left() + (x+2) * xSector, viewport.top() + (y+2) * ySector, xSector, ySector, redBrush);
-            painter->drawRect(viewport.left() + (x+1) * xSector, viewport.top() + (y+1) * ySector, xSector, ySector);
+            painter->drawRect(viewport.left() + (x) * xSector, viewport.top() + (y) * ySector, xSector, ySector);
             switch (textStates[x][y])
             {
             case GridTextState::NORMAL:
@@ -380,7 +423,7 @@ void CANDataGrid::paintSignalView()
            // else painter->setFont(mainFont);
             painter->setFont(smallFont);
 
-            painter->drawText(viewport.left() + (x+1) * xSector + (xSector / 8), viewport.top() + (y + 2) * ySector - (ySector * 0.7), QString::number(bit));
+            painter->drawText(viewport.left() + (x) * xSector + (xSector / 8), viewport.top() + (y + 1) * ySector - (ySector * 0.7), QString::number(bit));
 
             painter->setFont(mainFont);
             painter->setPen(QPen(Qt::black));
@@ -409,17 +452,17 @@ void CANDataGrid::paintSignalView()
                         if (textWidth > xSector) //signal name is too long for a single cell. Try to wrap it
                         {
                             int numAvgChars = xSector / smallMetric->averageCharWidth();
-                            painter->drawText(viewport.left() + (x+1) * xSector, viewport.top() + (y + 2) * ySector - (ySector * 0.4), prevSigName.left(numAvgChars - 1));
+                            painter->drawText(viewport.left() + (x) * xSector, viewport.top() + (y + 1) * ySector - (ySector * 0.4), prevSigName.left(numAvgChars - 1));
                             QString remainder = prevSigName.mid(numAvgChars - 1, -1);
                             textWidth = smallMetric->horizontalAdvance(prevSigName);
                             if (textWidth > xSector)
                             {
-                                painter->drawText(viewport.left() + (x+1) * xSector, viewport.top() + (y + 2) * ySector - (ySector * 0.2), remainder.left(numAvgChars - 1));
+                                painter->drawText(viewport.left() + (x) * xSector, viewport.top() + (y + 1) * ySector - (ySector * 0.2), remainder.left(numAvgChars - 1));
 
                             }
-                            else painter->drawText(viewport.left() + (x+1) * xSector, viewport.top() + (y + 2) * ySector - (ySector * 0.2), remainder);
+                            else painter->drawText(viewport.left() + (x) * xSector, viewport.top() + (y + 1) * ySector - (ySector * 0.2), remainder);
                         }
-                        else painter->drawText(viewport.left() + (x+1) * xSector, viewport.top() + (y + 2) * ySector - (ySector * 0.4), prevSigName);
+                        else painter->drawText(viewport.left() + (x) * xSector, viewport.top() + (y + 1) * ySector - (ySector * 0.4), prevSigName);
                     }
                 }
             }
@@ -429,11 +472,13 @@ void CANDataGrid::paintSignalView()
 
 void CANDataGrid::paintCommonEnding()
 {
-    upperLeft.setX(viewport.left() + 1 * xSector);
-    upperLeft.setY(viewport.top() + 1 * ySector);
+    //these are used to make it easy to figure out which grid has been clicked on during mousedown events
+    upperLeft.setX(nearX);
+    upperLeft.setY(nearY);
     gridSize.setX(xSector);
     gridSize.setY(ySector);
 
+    //and we don't need these anymore after we're done drawing
     delete painter;
     delete smallMetric;
 }
@@ -462,20 +507,26 @@ void CANDataGrid::saveImage(QString filename, int width, int height)
     pixmap.save(filename); //QT will automatically pick the file format given the extension
 }
 
+//these next three functions will copy the needed number of bytes from the passed buffer but you'd better have a large enough buffer or they'll get junk
+//this probably won't crash the program but it would yield some really strange output. This is only really an issue for CAN-FD traffic. Make sure you
+//have large enough buffers!
 void CANDataGrid::setReference(unsigned char *newRef, bool bUpdate = true)
 {
-    memcpy(refData, newRef, 8);
+    int bytesToTransfer = (bytesToDraw + 7) & 0xF8; //force copying in 8 byte increments
+    memcpy(refData, newRef, bytesToTransfer);
     if (bUpdate) this->update();
 }
 
 void CANDataGrid::updateData(unsigned char *newData, bool bUpdate = true)
 {
-    memcpy(data, newData, 8); //on a 64 bit processor this is probably optimized to a single instruction
+    int bytesToTransfer = (bytesToDraw + 7) & 0xF8; //force copying in 8 byte increments
+    memcpy(data, newData, bytesToTransfer);
     if (bUpdate) this->update();
 }
 
 void CANDataGrid::setUsed(unsigned char *newData, bool bUpdate = false)
 {
-    memcpy(usedData, newData, 8);
+    int bytesToTransfer = (bytesToDraw + 7) & 0xF8; //force copying in 8 byte increments
+    memcpy(usedData, newData, bytesToTransfer);
     if (bUpdate) this->update();
 }
