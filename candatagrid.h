@@ -22,6 +22,8 @@ class CANDataGrid;
  *
  * Now the control also tracks which signal is using which bit. The graphical representation does exist now but some tweaking is probably
  * still needed. Also, it seems like it is necessary to allow for a variety of modes.
+ *
+ * And now, CAN-FD added as the cherry on top! It's a mess but really, all this functionality is handy to have.
  */
 
 enum GridTextState
@@ -33,8 +35,8 @@ enum GridTextState
 
 enum GridMode
 {
-    CHANGED_BITS,
-    SIGNAL_VIEW
+    CHANGED_BITS, //traditional view, bunch of bits we color to show what's set and how the bits have changed over time
+    SIGNAL_VIEW //special view for DBC window where we draw the signals in the bits they take up
 };
 
 class CANDataGrid : public QWidget
@@ -57,6 +59,7 @@ public:
     int getUsedSignalNum(int bit);
     GridMode getMode();
     void setMode(GridMode mode);
+    void setBytesToDraw(int num);
 
 protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
@@ -66,13 +69,14 @@ signals:
 
 private:
     Ui::CANDataGrid *ui;
-    unsigned char refData[8];
-    unsigned char data[8];
-    unsigned char usedData[8];
-    int usedSignalNum[64]; //so we can specify which signal claims this bit
+    int bytesToDraw;
+    unsigned char refData[64];
+    unsigned char data[64];
+    unsigned char usedData[64];
+    int usedSignalNum[512]; //so we can specify which signal claims this bit
     QVector<QString> signalNames;
     QVector<QColor> signalColors;
-    GridTextState textStates[8][8];
+    GridTextState textStates[8][64]; //first dimension is bits, second is bytes
     QPoint upperLeft, gridSize;
     GridMode gridMode;
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
@@ -84,6 +88,11 @@ private:
     int xSector;
     int ySector;
     double bigTextSize, smallTextSize, sigNameTextSize;
+    int xOffset;
+    int yOffset;
+    int farX, farY, nearX, nearY;
+    int neededXDivisions;
+    int neededYDivisions;
     QFont mainFont;
     QFont smallFont;
     QFont boldFont;
