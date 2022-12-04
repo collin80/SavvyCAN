@@ -39,7 +39,7 @@ private slots:
     void setAllFilters();
     void toggleFuzzing();
     void idListChanged(QListWidgetItem *item);
-    void bitfieldClicked(int, int);
+    void bitfieldClicked(int);
     void changedNumDataBytes(int newVal);
     void updatedFrames(int numFrames);
 
@@ -54,8 +54,8 @@ private:
     bool seqIDScan, rangeIDSelect;
     int bitSequenceType;
     bool currentlyFuzzing;
-    uint8_t currentBytes[8];
-    uint8_t bitGrid[64];
+    uint8_t currentBytes[64];
+    uint8_t bitGrid[512];
     uint8_t numBits;
     uint64_t bitAccum;
     int numSentFrames;

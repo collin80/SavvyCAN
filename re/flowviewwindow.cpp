@@ -26,10 +26,10 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     playbackActive = false;
     playbackForward = true;
 
-    memset(refBytes, 0, 8);
-    memset(currBytes, 0, 8);
+    memset(refBytes, 0, 64);
+    memset(currBytes, 0, 64);
     memset(triggerValues, -1, sizeof(int) * 8);
-    triggerBits = 0;
+    for (int i = 0; i < 8; i++) triggerBits[i] = 0;
 
     //ui->graphView->setInteractions();
 
@@ -131,7 +131,7 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->graphView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestGraph(QPoint)));
     ui->flowView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->flowView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextMenuRequestFlow(QPoint)));
-    connect(ui->flowView, SIGNAL(gridClicked(int,int)), this, SLOT(gotCellClick(int,int)));
+    connect(ui->flowView, SIGNAL(gridClicked(int)), this, SLOT(gotCellClick(int)));
 
     // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
     ui->listFrameID->horizontalScrollBar()->setEnabled(false);
@@ -262,13 +262,14 @@ void FlowViewWindow::changeGraphVisibility(int state){
         ui->graphView->replot();
     }
 }
-void FlowViewWindow::gotCellClick(int x, int y)
+void FlowViewWindow::gotCellClick(int bitPosition)
 {
-    int bitnum = (7-x) + (8 * y);
-    triggerBits = triggerBits ^ (1ull << bitnum);
-    if (triggerBits & (1ull << bitnum)) ui->flowView->setCellTextState(x, y, GridTextState::BOLD_BLUE);
-    else ui->flowView->setCellTextState(x, y, GridTextState::NORMAL);
-    qDebug() << "Bit Num: " << bitnum << "   Hex of trigger bits: " << QString::number(triggerBits, 16);
+    int chunk = bitPosition / 64;
+    int idx = bitPosition & 63;
+    triggerBits[chunk] = triggerBits[chunk] ^ (1ull << idx);
+    if (triggerBits[chunk] & (1ull << idx)) ui->flowView->setCellTextState(bitPosition, GridTextState::BOLD_BLUE);
+    else ui->flowView->setCellTextState(bitPosition, GridTextState::NORMAL);
+    qDebug() << "Bit Num: " << bitPosition << "   Hex of trigger bits: " << QString::number(triggerBits[chunk], 16);
 }
 
 void FlowViewWindow::graphRangeChanged(int range) {
@@ -454,8 +455,8 @@ void FlowViewWindow::updatedFrames(int numFrames)
         refreshIDList();
         updateFrameLabel();
         removeAllGraphs();
-        memset(refBytes, 0, 8);
-        memset(currBytes, 0, 8);
+        memset(refBytes, 0, 64);
+        memset(currBytes, 0, 64);
         updateDataView();
     }
     else if (numFrames == -2) //all new set of frames. Reset
@@ -518,9 +519,9 @@ void FlowViewWindow::updatedFrames(int numFrames)
         if (ui->cbLiveMode->checkState() == Qt::Checked)
         {
             currentPosition = frameCache.count() - 1;
-            memset(currBytes, 0, 8);
+            memset(currBytes, 0, 64);
             memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
-            memcpy(refBytes, currBytes, 8);
+            memcpy(refBytes, currBytes, 64);
 
         }
         if (needRefresh)
@@ -657,9 +658,9 @@ void FlowViewWindow::changeID(QString newID)
 
     updateGraphLocation();
 
-    memset(currBytes, 0, 8);
+    memset(currBytes, 0, 64);
     memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
-    memcpy(refBytes, currBytes, 8);
+    memcpy(refBytes, currBytes, 64);
 
     updateDataView();
     ui->check_0->setChecked(true);
@@ -705,9 +706,9 @@ void FlowViewWindow::btnStopClick()
     playbackActive = false;
     currentPosition = 0;
 
-    memset(currBytes, 0, 8);
+    memset(currBytes, 0, 64);
     memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
-    memcpy(refBytes, currBytes, 8);
+    memcpy(refBytes, currBytes, 64);
 
     updateFrameLabel();
     updateDataView();
@@ -831,31 +832,36 @@ void FlowViewWindow::updatePosition(bool forward)
 
     if (ui->cbAutoRef->isChecked())
     {
-        memcpy(refBytes, currBytes, 8);
+        memcpy(refBytes, currBytes, 64);
     }
 
     //figure out which bits changed since the previous frame and then AND that with the trigger bits. If any bits
     //get through that then they're changed and a trigger so we stop playback at this frame.
-    uint64_t changedBits = 0;
-    uint8_t cngByte;
-    for (int i = 0; i < frameCache.at(currentPosition).payload().length(); i++)
+    //This is complicated by the fact that CAN-FD frames might have far more than 64 bits. It is necessary
+    //to thus process them 64 bits at a time and just move chunk to chunk until done.
+    for (int chunk = 0; chunk < frameCache.at(currentPosition).payload().length(); chunk += 8)
     {
-        unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload().data()[i]);
-        cngByte = currBytes[i] ^ thisByte;
-        changedBits |= (uint64_t)cngByte << (8ull * i);
-    }
+        uint64_t changedBits = 0;
+        uint8_t cngByte;
+        int maxVal = qMin(chunk * 8 + 8, frameCache.at(currentPosition).payload().length());
+        for (int i = chunk * 8; i < maxVal; i++)
+        {
+            unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload().data()[i]);
+            cngByte = currBytes[i] ^ thisByte;
+            changedBits |= (uint64_t)cngByte << (8ull * (i & 7));
+        }
 
-    qDebug() << "ChangedBits: " << QString::number(changedBits, 16);
-    qDebug() << "TriggerBits: " << QString::number(triggerBits, 16);
-    changedBits &= triggerBits;
-    qDebug() << "Final ChangedBits: " << QString::number(changedBits, 16);
-    if (changedBits)
-    {
-        playbackActive = false;
-        playbackTimer->stop();
+        qDebug() << "ChangedBits: " << QString::number(changedBits, 16);
+        qDebug() << "TriggerBits: " << QString::number(triggerBits[chunk / 8], 16);
+        changedBits &= triggerBits[chunk / 8];
+        qDebug() << "Final ChangedBits: " << QString::number(changedBits, 16);
+        if (changedBits)
+        {
+            playbackActive = false;
+            playbackTimer->stop();
+        }
     }
-
-    memset(currBytes, 0, 8);
+    memset(currBytes, 0, 64);
     memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
