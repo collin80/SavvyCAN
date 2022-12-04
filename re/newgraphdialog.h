@@ -27,7 +27,7 @@ private slots:
     void fillSwatchClick();
     void loadMessages();
     void loadSignals(int idx);
-    void bitfieldClicked(int,int);
+    void bitfieldClicked(int);
     void handleDataLenUpdate();
     void drawBitfield();
     void copySignalToParamsUI();

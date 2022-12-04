@@ -199,6 +199,16 @@ public:
         return builder;
     }
 
+    static int getByteFromBitPosition(int bitPos)
+    {
+        return bitPos / 8;
+    }
+
+    static int getBitFromBitPosition(int bitPos)
+    {
+        return bitPos & 7;
+    }
+
     //simple linear interpolation between value1 and value2. sample point is 0.0 to 1.0
     static double Lerp(double value1, double value2, double samplePoint)
     {
