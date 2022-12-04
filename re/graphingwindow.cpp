@@ -1046,6 +1046,7 @@ void GraphingWindow::loadDefinitions()
                     gp.bias = tokens[6].toFloat();
                     gp.scale = tokens[7].toFloat();
                     gp.stride = tokens[8].toInt();
+                    gp.bus = -1;
 
                     gp.lineColor.setRed( tokens[9].toInt() );
                     gp.lineColor.setGreen( tokens[10].toInt() );
@@ -1080,6 +1081,7 @@ void GraphingWindow::loadDefinitions()
                 else //one of the two older formats then
                 {
                     gp.ID = tokens[0].toUInt(nullptr, 16);
+                    gp.bus = -1;
                     if (tokens[1] == "S") //old signal based graph definition
                     {
                         //tokens[2] is the signal name. Need to use the message ID and this name to look it up

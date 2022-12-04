@@ -46,13 +46,13 @@ class CANDataGrid : public QWidget
 public:
     explicit CANDataGrid(QWidget *parent = 0);
     ~CANDataGrid();
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
     void setReference(unsigned char *, bool);
     void updateData(unsigned char *, bool);
     void setUsed(unsigned char *, bool);
     void saveImage(QString filename, int width, int height);
-    void setCellTextState(int x, int y, GridTextState state);
-    GridTextState getCellTextState(int x, int y);
+    void setCellTextState(int bitPos, GridTextState state);
+    GridTextState getCellTextState(int bitPos);
     void setUsedSignalNum(int bit, int signal);
     void setSignalNames(int sigIdx, const QString sigName);
     void clearSignalNames();
@@ -65,7 +65,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 
 signals:
-    void gridClicked(int x,int y);
+    void gridClicked(int bitClicked);
 
 private:
     Ui::CANDataGrid *ui;
@@ -76,7 +76,7 @@ private:
     int usedSignalNum[512]; //so we can specify which signal claims this bit
     QVector<QString> signalNames;
     QVector<QColor> signalColors;
-    GridTextState textStates[8][64]; //first dimension is bits, second is bytes
+    GridTextState textStates[64][8]; //first dimension is bytes, second is bits
     QPoint upperLeft, gridSize;
     GridMode gridMode;
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
@@ -99,10 +99,11 @@ private:
     QFont sigNameFont;
     QFontMetrics *smallMetric;
 
-    void paintChangedBits();
-    void paintSignalView();
+    void paintGridCells();
     void paintCommonBeginning();
-    void paintCommonEnding();
+    void paintCommonEnding();    
+    int gridToBitPosition(int x, int y);
+    QPoint getGridPointFromBitPosition(int bitPos);
 };
 
 #endif // CANDATAGRID_H

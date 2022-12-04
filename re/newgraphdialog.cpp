@@ -44,7 +44,7 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     ui->coPointStyle->addItem("Peace Sign");
 
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
-    connect(ui->gridData, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->gridData, SIGNAL(gridClicked(int)), this, SLOT(bitfieldClicked(int)));
     connect(ui->txtDataLen, SIGNAL(textChanged(QString)), this, SLOT(handleDataLenUpdate()));
     connect(ui->cbIntel, SIGNAL(toggled(bool)), this, SLOT(drawBitfield()));
     connect(ui->btnCopySignal, SIGNAL(clicked(bool)), this, SLOT(copySignalToParamsUI()));
@@ -300,10 +300,8 @@ void NewGraphDialog::loadSignals(int idx)
     checkSignalAgreement();
 }
 
-void NewGraphDialog::bitfieldClicked(int x,int y)
+void NewGraphDialog::bitfieldClicked(int bit)
 {
-    int bit = (y * 8 + (7-x));
-
     qDebug() << "Clicked bit: " << bit;
     startBit = bit;
     drawBitfield();    
@@ -312,20 +310,25 @@ void NewGraphDialog::bitfieldClicked(int x,int y)
 void NewGraphDialog::drawBitfield()
 {
     qDebug() << "Draw Bitfield";
-    int64_t bitField = 0;
+    uint8_t bitField[64];
     int endBit, sBit;
 
-    bitField |= 1ull << (startBit); //make the start bit a different color to set it apart
+    memset(bitField, 0, 64);
+
+    //make the start bit a different color to set it apart
+    bitField[Utility::getByteFromBitPosition(startBit)] |= 1 << Utility::getBitFromBitPosition(startBit);
+
     ui->gridData->setReference((unsigned char *)&bitField, false);
 
     if (ui->cbIntel->isChecked())
     {
         endBit = startBit + dataLen - 1;
         if (startBit < 0) startBit = 0;
-        if (endBit > 63) endBit = 63;
+        if (endBit > 511) endBit = 511;
         for (int y = startBit; y <= endBit; y++)
         {
-            bitField |= 1ull << y;
+            //bitField |= 1ull << y;
+            bitField[Utility::getByteFromBitPosition(y)] |= 1 << Utility::getBitFromBitPosition(y);
         }
     }
     else //big endian / motorola format
@@ -335,11 +338,12 @@ void NewGraphDialog::drawBitfield()
         sBit = startBit;
         while (size > 0)
         {
-            bitField |= 1ull << sBit;
+            //bitField |= 1ull << sBit;
+            bitField[Utility::getByteFromBitPosition(sBit)] |= 1 << Utility::getBitFromBitPosition(sBit);
             size--;
             if ((sBit % 8) == 0) sBit += 15;
             else sBit--;
-            if (sBit > 63) sBit = 63;
+            if (sBit > 511) sBit = 511;
         }
     }
 
@@ -352,7 +356,7 @@ void NewGraphDialog::handleDataLenUpdate()
 {
     dataLen = ui->txtDataLen->text().toInt();
     if (dataLen < 1) dataLen = 1;
-    if (dataLen > 63) dataLen = 63;
+    if (dataLen > 64) dataLen = 64;
     drawBitfield();
     checkSignalAgreement();
 }

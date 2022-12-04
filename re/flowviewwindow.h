@@ -39,7 +39,7 @@ private slots:
     void plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event);
     void gotCenterTimeID(uint32_t ID, double timestamp);
     void updateTriggerValues();
-    void gotCellClick(int x, int y);
+    void gotCellClick(int bitPosition);
     void graphRangeChanged(int range);
     void changeGraphVisibility(int state);
 
@@ -51,10 +51,10 @@ private:
     QList<quint32> foundID;
     QList<CANFrame> frameCache;
     const QVector<CANFrame> *modelFrames;
-    unsigned char refBytes[8];
-    unsigned char currBytes[8];
+    unsigned char refBytes[64];
+    unsigned char currBytes[64];
     int triggerValues[8];
-    uint64_t triggerBits;
+    uint64_t triggerBits[8];
     int currentPosition;
     QTimer *playbackTimer;
     bool playbackActive;
