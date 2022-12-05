@@ -636,6 +636,7 @@ void FlowViewWindow::changeID(QString newID)
 
     playbackTimer->stop();
     playbackActive = false;
+    int maxBytes = 0;
     for (int x = 0; x < modelFrames->count(); x++)
     {
         CANFrame thisFrame = modelFrames->at(x);
@@ -643,8 +644,10 @@ void FlowViewWindow::changeID(QString newID)
         {
             thisFrame.payload().clear();
             frameCache.append(thisFrame);
+            if (thisFrame.payload().length() > maxBytes) maxBytes = thisFrame.payload().length();
         }
     }
+    ui->flowView->setBytesToDraw(maxBytes);
     currentPosition = 0;
 
     if (frameCache.count() == 0) return;
