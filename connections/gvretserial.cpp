@@ -798,6 +798,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 9:
             buildFrame.bus = c;
+            break;
         default:
             if (rx_step < buildData.length() + 10)
             {
@@ -1009,6 +1010,8 @@ void GVRetSerial::procRXChar(unsigned char c)
         sendToSerial(output);
 
         emit status(stats);
+        break;
+    case GET_FD_SETTINGS:
         break;
     case GET_EXT_BUSES:
         switch (rx_step)

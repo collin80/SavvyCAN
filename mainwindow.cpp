@@ -677,7 +677,7 @@ void MainWindow::updateFilterList()
 
     for (filterIter = busFilters->begin(); filterIter != busFilters->end(); ++filterIter)
     {
-        QListWidgetItem *thisItem = FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listBusFilters);
+        /*QListWidgetItem *thisItem = */ FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listBusFilters);
     }
     inhibitFilterUpdate = false;
 }
@@ -738,6 +738,7 @@ void MainWindow::filterClearAll()
 
 void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CANFrame> frames)
 {
+    Q_UNUSED(conn);
     if (continuousLogging)
     {
         FrameFileIO::writeContinuousNative(&frames, 0);
@@ -1053,7 +1054,7 @@ void MainWindow::saveDecodedTextFileAsColumns(QString filename)
     QFile *outFile = new QFile(filename);
     const QVector<CANFrame> *frames = model->getFilteredListReference();
 
-    const unsigned char *data;
+    //const unsigned char *data;
     int dataLen;
     const CANFrame *frame;
 
@@ -1064,7 +1065,7 @@ Time: 205.173000   ID: 0x20E Std Bus: 0 Len: 8
 Data Bytes: 88 10 00 13 BB 00 06 00
     SignalName	Value
 */
-    QList<QPair<int, int>> msgsAndColumns;
+    QList<QPair<uint32_t, int>> msgsAndColumns;
     int columnsAdded = 0;
     int dataStartCol = 0;
 
@@ -1090,7 +1091,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     for (int c = 0; c < frames->count(); c++)
     {
         frame = &frames->at(c);
-        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
+        //data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         //add all column names
@@ -1110,7 +1111,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
                                 found = true;
                         }
                         if(found == false)
-                            msgsAndColumns.append(QPair<int,int>(msg->ID, columnsAdded));
+                            msgsAndColumns.append(QPair<uint32_t,int>(msg->ID, columnsAdded));
                     }
 
                     if(found == false)
@@ -1147,7 +1148,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     {
         dataColumnsAdded = 0;
         frame = &frames->at(c);
-        data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
+        //data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().count();
 
         QString builderString;

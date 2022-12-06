@@ -1434,7 +1434,6 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     if (params.prevValLocation != QPointF(0,0))
     {
-        int j = numEntries - 1;
         QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
         bracket->left->setCoords(params.prevValLocation);
         bracket->right->setCoords(x, params.prevValLocation.y());

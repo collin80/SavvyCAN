@@ -228,8 +228,8 @@ void MQTT_BUS::piSetBusSettings(int pBusIdx, CANBus bus)
 bool MQTT_BUS::piSendFrame(const CANFrame& frame)
 {
     QByteArray buffer;
-    int c;
-    quint32 ID;
+    //int c;
+    //quint32 ID;
 
     //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
@@ -278,7 +278,7 @@ void MQTT_BUS::readSettings()
 
 void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
 {
-    uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
+    //uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
 
 
     /* drop frame if capture is suspended */
