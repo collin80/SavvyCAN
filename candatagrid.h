@@ -104,6 +104,7 @@ private:
     void paintCommonEnding();    
     int gridToBitPosition(int x, int y);
     QPoint getGridPointFromBitPosition(int bitPos);
+    int getSignalRowRun(int sigNum, int startBit);
 };
 
 #endif // CANDATAGRID_H

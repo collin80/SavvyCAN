@@ -178,15 +178,15 @@ void CANDataGrid::paintCommonBeginning()
 
     if (gridMode == GridMode::CHANGED_BITS)
     {
-        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 1.5);
-        smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 3.5);
+        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 3.25);
+        smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 4.0);
     }
     if (gridMode == GridMode::SIGNAL_VIEW)
     {
-        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / 12;
-        smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / 24;
+        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 4.50);
+        smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 5.5);
     }
-    sigNameTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 4.5);
+    sigNameTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 5.0);
 
     painter->setPen(QPen(QApplication::palette().color(QPalette::Text)));
     mainFont.setPixelSize(bigTextSize);
@@ -217,7 +217,7 @@ void CANDataGrid::paintCommonBeginning()
     farY = nearY + ySector * neededYDivisions;
 
     //painter->setFont(boldFont);
-    painter->setFont(sigNameFont);
+    painter->setFont(smallFont);
 
     //draw grid by doing vertical and horizontal lines. This is not needed normally but helps when developing new code. Only uncomment for testing
 /*
@@ -347,7 +347,7 @@ void CANDataGrid::paintGridCells()
             //change style of bit number output for current signal
             //if (thisBit) painter->setFont(boldFont);
            // else painter->setFont(mainFont);
-            painter->setFont(smallFont);
+            //painter->setFont(smallFont);
             if (gridMode != GridMode::SIGNAL_VIEW)
                 painter->drawText(QRect(nearX + (x * xSector), nearY + (y * ySector), xSector, ySector), Qt::AlignCenter, QString::number(bit)); //center center of grid
             else
@@ -359,7 +359,11 @@ void CANDataGrid::paintGridCells()
     }
 
 
-    //now if signal names are loaded we'll go through all the bits again and try to label over top of the grid
+    /*
+     * now if signal names are loaded we'll go through all the bits again and try to label over top of the grid
+     * We already have a big bitmap that tells us which signals occupy which bits so every time there is a new
+     * signal look ahead to see if there's room in the row to just run the signal name through as long as needed.
+    */
     if (signalNames.count() > 0)
     {
         painter->setFont(sigNameFont);
@@ -381,20 +385,24 @@ void CANDataGrid::paintGridCells()
 
                         int textWidth = smallMetric->horizontalAdvance(prevSigName);
 
-                        if (textWidth > xSector) //signal name is too long for a single cell. Try to wrap it
+                        int usableWidth = getSignalRowRun(usedSigNum, bit);
+                        qDebug() << "Width this row: " << usableWidth;
+                        usableWidth *= xSector;
+
+                        if (textWidth > usableWidth) //signal name is too long for space we've got on this row. Try to wrap it
                         {
                             int numAvgChars = xSector / smallMetric->averageCharWidth();
-                            painter->drawText(nearX + x * xSector + 5, nearY + (y * ySector) + smallMetric->height() * 2, prevSigName.left(numAvgChars - 1));
+                            painter->drawText(nearX + x * xSector + 5, nearY + (y * ySector) + smallMetric->height() * 1.6, prevSigName.left(numAvgChars - 1));
                             QString remainder = prevSigName.mid(numAvgChars - 1, -1);
                             textWidth = smallMetric->horizontalAdvance(prevSigName);
                             if (textWidth > xSector)
                             {
-                                painter->drawText(nearX + x * xSector + 12, nearY + (y * ySector) + smallMetric->height() * 3, remainder.left(numAvgChars - 1));
+                                painter->drawText(nearX + x * xSector + 12, nearY + (y * ySector) + smallMetric->height() * 2.6, remainder.left(numAvgChars - 1));
                             }
-                            else painter->drawText(nearX + x * xSector + 12, nearY + (y * ySector) + smallMetric->height() * 3, remainder);
+                            else painter->drawText(nearX + x * xSector + 12, nearY + (y * ySector) + smallMetric->height() * 2.6, remainder);
 
                         }
-                        else painter->drawText(nearX + x * xSector + 5, nearY + (y * ySector) + smallMetric->height() * 2, prevSigName);
+                        else painter->drawText(nearX + x * xSector + 5, nearY + (y * ySector) + smallMetric->height() * 1.6, prevSigName);
                     }
                 }
             }
@@ -402,6 +410,24 @@ void CANDataGrid::paintGridCells()
     }
 }
 
+//starting at the given coords, go right / increment X until either we hit the end of the signal or the end of the row, whichever is first.
+//return how many grid cells that was. The part that sucks is that bits aren't really in "bit" order so you can't just increment the bit number
+int CANDataGrid::getSignalRowRun(int sigNum, int startBit)
+{
+    qDebug() << "SigNum: " << sigNum << " startBit " << startBit;
+    int width = 0;
+    QPoint gridPt = getGridPointFromBitPosition(startBit);
+    int x = gridPt.x();
+    int y = gridPt.y();
+    for (int xx = x; xx < neededXDivisions; xx++)
+    {
+        int bit = gridToBitPosition(xx, y);
+        if (usedSignalNum[bit] == sigNum) width++;
+        else return width;
+    }
+
+    return width;
+}
 
 void CANDataGrid::paintCommonEnding()
 {
