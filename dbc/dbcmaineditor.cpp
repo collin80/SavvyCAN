@@ -160,6 +160,7 @@ void DBCMainEditor::writeSettings()
 
 void DBCMainEditor::onCustomMenuTree(QPoint point)
 {
+    Q_UNUSED(point);
     QMenu *menu = new QMenu(this);
     menu->setAttribute(Qt::WA_DeleteOnClose);
 
@@ -259,7 +260,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
     Q_UNUSED(index)
 
     QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
-    bool ret = false;
+    //bool ret = false;
     DBC_MESSAGE *msg;
     DBC_SIGNAL *sig;
     DBC_NODE *node;
@@ -311,11 +312,6 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
 void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
 {
     QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
-    bool ret = false;
-    DBC_MESSAGE *msg;
-    DBC_SIGNAL *sig;
-    DBC_NODE *node;
-    uint32_t msgID;
     QString idString;
 
     qDebug() << firstCol->data(0, Qt::UserRole) << " - " << firstCol->text(0);
@@ -324,7 +320,7 @@ void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
     {
     case 1: //a node
         idString = firstCol->text(0).split(" ")[0];
-        node = dbcFile->findNodeByName(idString);
+        //node = dbcFile->findNodeByName(idString);
 
         QAction *actionRebase = new QAction(QIcon(":/Resource/warning32.ico"), tr("Rebase all messages"), this);
         actionRebase->setStatusTip(tr("Rebase all messages in node"));
@@ -338,7 +334,7 @@ void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
         menu.addAction(actionRebase);
         menu.addAction(actionDupe);
 
-        QPoint pt(pos);
+        //QPoint pt(pos);
         menu.exec( ui->treeDBC->mapToGlobal(pos) );
         break;
     }
@@ -347,11 +343,7 @@ void DBCMainEditor::onTreeContextMenu(const QPoint & pos)
 void DBCMainEditor::onRebaseMessages()
 {
     QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
-    bool ret = false;
-    DBC_MESSAGE *msg;
-    DBC_SIGNAL *sig;
     DBC_NODE *node;
-    uint32_t msgID;
     QString idString;
 
     idString = firstCol->text(0).split(" ")[0];
@@ -368,11 +360,11 @@ void DBCMainEditor::onRebaseMessages()
 void DBCMainEditor::onDuplicateNode()
 {
     QTreeWidgetItem* firstCol = ui->treeDBC->currentItem();
-    bool ret = false;
-    DBC_MESSAGE *msg;
-    DBC_SIGNAL *sig;
+    //bool ret = false;
+    //DBC_MESSAGE *msg;
+    //DBC_SIGNAL *sig;
+    //uint32_t msgID;
     DBC_NODE *node;
-    uint32_t msgID;
     QString idString;
 
     idString = firstCol->text(0).split(" ")[0];

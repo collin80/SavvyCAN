@@ -311,7 +311,7 @@ void FlowViewWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 
     for (int j = 0; j < ui->listFrameID->count(); j++)
     {
-        int thisNum = FilterUtility::getIdAsInt(ui->listFrameID->item(j));
+        uint32_t thisNum = FilterUtility::getIdAsInt(ui->listFrameID->item(j));
         if (thisNum == ID)
         {
             ui->listFrameID->setCurrentRow(j);

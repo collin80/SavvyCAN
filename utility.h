@@ -287,7 +287,7 @@ public:
 
         if (isSigned)
         {
-            int64_t mask = (1ULL << (sigSize - 1));
+            uint64_t mask = (1ULL << (sigSize - 1));
             if ((result & mask) == mask) //is the highest bit possible for this signal size set?
             {
                 /*

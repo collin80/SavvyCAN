@@ -195,7 +195,6 @@ FORMS    += ui/candatagrid.ui \
     ui/connectionwindow.ui \
     ui/dbcloadsavewindow.ui \
     ui/dbcmaineditor.ui \
-    ui/dbcnodeduplicateeditor.ui \
     ui/dbcnoderebaseeditor.ui \
     ui/dbcsignaleditor.ui \
     ui/dbcnodeeditor.ui \

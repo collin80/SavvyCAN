@@ -62,11 +62,11 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
                 return;
             }
 
-            for (int i=0; i<messagesForNode.count(); i++)
+            for (int i = 0; i < messagesForNode.count(); i++)
             {
-                uint newMsgId = messagesForNode[i]->ID + rebaseDiff;
+                int32_t newMsgId = messagesForNode[i]->ID + rebaseDiff;
 
-                if(newMsgId < 0 || newMsgId > 0x1FFFFFFFul)
+                if(newMsgId < 0 || newMsgId > 0x1FFFFFFFl)
                 {
                     QMessageBox::question(this, "Invalid Address Range", "The new starting address would cause a message to be outside of the valid address range.",
                                                       QMessageBox::Ok);
@@ -74,7 +74,7 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
                 }
             }
 
-            for (int i=0; i<messagesForNode.count(); i++)
+            for (int i = 0; i < messagesForNode.count(); i++)
             {
                 messagesForNode[i]->ID += rebaseDiff;
                 emit updatedTreeInfo(messagesForNode[i]);

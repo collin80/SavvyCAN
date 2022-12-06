@@ -155,7 +155,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
         result = Utility::processIntegerSignal(frame.payload(), startBit, 32, intelByteOrder, false);
-        endResult = (*((float *)(&result)) * factor) + bias;
+        endResult = (*((float *)(&result)) * factor) + bias; //look away! This is awful. I don't even know for sure if it works. Should test that.
     }
     else //double precision float
     {
