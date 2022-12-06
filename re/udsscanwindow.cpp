@@ -178,7 +178,6 @@ void UDSScanWindow::loadScans()
     QString filename;
     QFileDialog dialog(qApp->activeWindow());
     QSettings settings;
-    bool result = false;
 
     QStringList filters;
     filters.append(QString(tr("UDS Test Specification (*.uds *.UDS)")));
@@ -231,7 +230,6 @@ void UDSScanWindow::saveScans()
     QString filename;
     QFileDialog dialog(qApp->activeWindow());
     QSettings settings;
-    bool result = false;
 
     QStringList filters;
     filters.append(QString(tr("UDS Test Specification (*.uds *.UDS)")));

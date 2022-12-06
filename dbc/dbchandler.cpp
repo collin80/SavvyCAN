@@ -1527,6 +1527,8 @@ bool DBCFile::saveFile(QString fileName)
         case ATTR_TYPE_SIG:
             msgOutput.append("SG_ ");
             break;
+        case ATTR_TYPE_ANY:
+            break;
         }
 
         msgOutput.append("\"" + dbc_attributes[x].name + "\" ");

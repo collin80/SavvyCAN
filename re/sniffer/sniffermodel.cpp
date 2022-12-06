@@ -253,7 +253,7 @@ void SnifferModel::refresh()
     for (i = mMap.begin(); i != mMap.end(); ++i)
     {
         //i.value()->updateMarker();
-        if(i.value()->elapsed() > mExpireInterval && !mNeverExpire)
+        if(i.value()->elapsed() > (int)mExpireInterval && !mNeverExpire)
             toRemove.append(i.key());
     }
 

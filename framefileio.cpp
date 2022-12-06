@@ -1551,9 +1551,9 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
 {
     QFile *inFile = new QFile(filename);
     QByteArray line;
-    int lineCounter = 0;
+    //int lineCounter = 0;
+    //bool inHeader = true;
     bool isMatch = true;
-    bool inHeader = true;
     QList<QByteArray> tokens;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -4188,8 +4188,8 @@ bool FrameFileIO::loadTeslaAPFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     int lineCounter = 0;
     QByteArray data;
-    int timeOffset = 0;
-    int64_t lastTimeStamp = 0;
+    //int timeOffset = 0;
+    //int64_t lastTimeStamp = 0;
     bool foundErrors = false;
     thisFrame.setFrameType(QCanBusFrame::DataFrame);
     TeslaAPCANRecord record;
@@ -4246,7 +4246,7 @@ bool FrameFileIO::isCLX000File(QString filename) {
     }
 
     QTextStream fileStream(inFile.get());
-    bool foundErrors = false;
+    //bool foundErrors = false;
 
     // Contains 16 lines of header prior to (potential) data.
     QString headerLine;
@@ -4298,7 +4298,7 @@ bool FrameFileIO::isCLX000File(QString filename) {
         qDebug() << "Could not decode time format" << headerLine << "using pattern" << timeFormatPattern;
         return false;
     }
-    auto timeFormat = matchTimeFormat.captured("timeFormat").front().digitValue();
+    //auto timeFormat = matchTimeFormat.captured("timeFormat").front().digitValue();
 
     headerLine = fileStream.readLine();
     QString const timeSeparatorPattern = "# Time separator: \"(?<timeSeparator>[" + validSeparators + "]?)\"";
@@ -4308,7 +4308,7 @@ bool FrameFileIO::isCLX000File(QString filename) {
         qDebug() << "Could not decode time format" << headerLine << "using pattern" << timeSeparatorPattern;
         return false;
     }
-    QChar timeSeparator = matchTimeSeparator.captured("timeSeparator").front();
+    //QChar timeSeparator = matchTimeSeparator.captured("timeSeparator").front();
 
     headerLine = fileStream.readLine();
     QString const timeSeparatorMsPattern = "# Time separator ms: \"(?<timeSeparatorMs>[" + validSeparators + "]?)\"";
@@ -4318,7 +4318,7 @@ bool FrameFileIO::isCLX000File(QString filename) {
         qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << timeSeparatorMsPattern;
         return false;
     }
-    QChar timeSeparatorMs = matchTimeSeparatorMs.captured("timeSeparatorMs").front();
+    //QChar timeSeparatorMs = matchTimeSeparatorMs.captured("timeSeparatorMs").front();
 
     headerLine = fileStream.readLine();
     QString const dateSeparatorPattern = "# Date separator: \"(?<dateSeparator>[" + validSeparators + "]?)\"";
@@ -4328,7 +4328,7 @@ bool FrameFileIO::isCLX000File(QString filename) {
         qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << dateSeparatorPattern;
         return false;
     }
-    QChar dateSeparator = matchDateSeparator.captured("dateSeparator").front();
+    //QChar dateSeparator = matchDateSeparator.captured("dateSeparator").front();
 
     headerLine = fileStream.readLine();
     QString const timeDateSeparatorPattern = "# Time and date separator: \"(?<timeDateSeparator>[" + validSeparators + "]?)\"";
@@ -4338,7 +4338,7 @@ bool FrameFileIO::isCLX000File(QString filename) {
         qDebug() << "Could not decode time format ms" << headerLine << "using pattern" << timeDateSeparatorPattern;
         return false;
     }
-    QChar timeDateSeparator = matchTimeDateSeparator.captured("timeDateSeparator").front();
+    //QChar timeDateSeparator = matchTimeDateSeparator.captured("timeDateSeparator").front();
 
     // Skip remaining header lines.
     fileStream.readLine();
@@ -4509,6 +4509,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
                 }
 
                 // Fallthrough
+                [[fallthrough]];
             }
             case 5: {
                 // Handle month.
@@ -4519,6 +4520,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
                 }
 
                 // Fallthrough
+                [[fallthrough]];
             }
             case 4: {
                 // Handle day.
@@ -4529,6 +4531,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
                 }
 
                 // Fallthrough
+                [[fallthrough]];
             }
             case 3: {
                 // Handle hours.
@@ -4539,6 +4542,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
                 }
 
                 // Fallthrough
+                [[fallthrough]];
             }
             case 2: {
                 // Handle minutes.
@@ -4549,6 +4553,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
                 }
 
                 // Fallthrough
+                [[fallthrough]];
             }
             case 1: {
                 // Handle seconds.
@@ -4559,6 +4564,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
                 }
 
                 // Fallthrough
+                [[fallthrough]];
             }
             case 0: {
                 // Handle milliseconds.
@@ -4736,7 +4742,7 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
 
     if (fileIsGood)
     {
-        uint64_t lastFrameTime = 0;
+        //uint64_t lastFrameTime = 0;
         
         uint8_t data[1];
         while (!inFile->atEnd())
@@ -4843,7 +4849,7 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
                 frameoffset *= 1000;
 
                 frameTime += frameoffset;
-                lastFrameTime = frameTime;
+                //lastFrameTime = frameTime;
 
                 thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameTime));
 
