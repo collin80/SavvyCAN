@@ -460,7 +460,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
     DBC_MESSAGE *msgPtr;
 
     qDebug() << "Found a BO line";
-    regex.setPattern("^BO\\_ (\\w+) (\\w+) *: (\\w+) (\\w+)");
+    regex.setPattern("^BO\\_ (\\w+) ([-\\w]+) *: (\\w+) ([-\\w]+)");
     match = regex.match(line);
     //captured 1 = the ID in decimal
     //captured 2 = The message name
@@ -499,7 +499,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     sig.isMultiplexor = false;
 
     qDebug() << "Found a SG line";
-    regex.setPattern("^SG\\_ *(\\w+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+    regex.setPattern("^SG\\_ *([-\\w]+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
     match = regex.match(line);
     if (match.hasMatch())
@@ -510,7 +510,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     }
     else
     {
-        regex.setPattern("^SG\\_ *(\\w+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+        regex.setPattern("^SG\\_ *([-\\w]+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
         match = regex.match(line);
         if (match.hasMatch())
         {
@@ -523,7 +523,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         }
         else
         {
-            regex.setPattern("^SG\\_ *(\\w+) +m(\\d+)M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *([-\\w]+) +m(\\d+)M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
             match = regex.match(line);
             if (match.hasMatch())
             {
@@ -537,7 +537,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             else
             {
                 qDebug() << "standard signal";
-                regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                regex.setPattern("^SG\\_ *([-\\w]+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                 match = regex.match(line);
                 sig.isMultiplexed = false;
                 sig.isMultiplexor = false;
@@ -629,7 +629,7 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     QRegularExpressionMatch match;
 
     qDebug() << "Found a multiplex definition line";
-    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) (\\w+) (\\w+) (\\d+)\\-(\\d+);");
+    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) (\\d+)\\-(\\d+);");
     match = regex.match(line);
     //captured 1 is message ID
     //Captured 2 is signal name
@@ -650,6 +650,8 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
                     //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
                     parentSignal->multiplexedChildren.append(thisSignal);
                     thisSignal->multiplexParent = parentSignal;
+                    thisSignal->multiplexLowValue = match.captured(4).toInt();
+                    thisSignal->multiplexHighValue = match.captured(5).toInt();
                     return true;
                 }
             }
@@ -664,7 +666,7 @@ bool DBCFile::parseValueLine(QString line)
     QRegularExpressionMatch match;
 
     qDebug() << "Found a value definition line";
-    regex.setPattern("^VAL\\_ (\\w+) (\\w+) (.*);");
+    regex.setPattern("^VAL\\_ (\\w+) ([-\\w]+) (.*);");
     match = regex.match(line);
     //captured 1 is the ID to match against
     //captured 2 is the signal name to match against
@@ -709,7 +711,7 @@ bool DBCFile::parseAttributeLine(QString line)
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
-    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
+    regex.setPattern("^BA\\_ \\\"*([-\\w]+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
     match = regex.match(line);
     //captured 1 is the attribute name
     //captured 2 is the message ID number (frame ID)
@@ -740,7 +742,7 @@ bool DBCFile::parseAttributeLine(QString line)
         }
     }
 
-    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
+    regex.setPattern("^BA\\_ \\\"*([-\\w]+)\\\"* SG\\_ (\\d+) \\\"*([-\\w]+)\\\"* \\\"*([#\\w]+)\\\"*");
     match = regex.match(line);
     //captured 1 is the attribute name
     //captured 2 is the message ID number (frame ID)
@@ -774,7 +776,7 @@ bool DBCFile::parseAttributeLine(QString line)
         }
     }
 
-    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
+    regex.setPattern("^BA\\_ \\\"*([-\\w]+)\\\"* BU\\_ \\\"*([-\\w]+)\\\"* \\\"*([#\\w]+)\\\"*");
     match = regex.match(line);
     //captured 1 is the attribute name
     //captured 2 is the name of the node
@@ -812,7 +814,7 @@ bool DBCFile::parseDefaultAttrLine(QString line)
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
-    regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]*)\\\"*");
+    regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*([-\\w]+)\\\"* \\\"*([#\\w]*)\\\"*");
     match = regex.match(line);
     //captured 1 is the name of the attribute
     //captured 2 is the default value for that attribute
@@ -949,7 +951,7 @@ bool DBCFile::loadFile(QString fileName)
             if (line.startsWith("CM_ SG_ "))
             {
                 qDebug() << "Found an SG comment line";
-                regex.setPattern("^CM\\_ SG\\_ *(\\w+) *(\\w+) *\\\"(.*)\\\";");
+                regex.setPattern("^CM\\_ SG\\_ *(\\w+) *([-\\w]+) *\\\"(.*)\\\";");
                 match = regex.match(line);
                 //captured 1 is the ID to match against to get to the message
                 //captured 2 is the signal name from that message
@@ -988,7 +990,7 @@ bool DBCFile::loadFile(QString fileName)
             if (line.startsWith("CM_ BU_ "))
             {
                 qDebug() << "Found a BU comment line";
-                regex.setPattern("^CM\\_ BU\\_ *(\\w+) *\\\"(.*)\\\";");
+                regex.setPattern("^CM\\_ BU\\_ *([-\\w]+) *\\\"(.*)\\\";");
                 match = regex.match(line);
                 //captured 1 is the Node name
                 //captured 2 is the comment itself
@@ -1361,7 +1363,7 @@ bool DBCFile::saveFile(QString fileName)
                     attrValOutput.append("BA_ \"" + val.attrName + "\" BU_ ");
                     switch (val.value.type())
                     {
-                    case QMetaType::QString:
+                    case QVariant::Type::String:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
                     default:
@@ -1406,7 +1408,7 @@ bool DBCFile::saveFile(QString fileName)
                 attrValOutput.append("BA_ \"" + val.attrName + "\" BO_ " + QString::number(ID) + " ");
                 switch (val.value.type())
                 {
-                case QMetaType::QString:
+                case QVariant::Type::String:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
                     break;
                 default:
@@ -1483,7 +1485,7 @@ bool DBCFile::saveFile(QString fileName)
                     attrValOutput.append("BA_ \"" + val.attrName + "\" SG_ " + QString::number(ID) + " " + sig->name + " ");
                     switch (val.value.type())
                     {
-                    case QMetaType::QString:
+                    case QVariant::Type::String:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
                     default:
@@ -1600,7 +1602,7 @@ bool DBCFile::saveFile(QString fileName)
                 if (sig->isMultiplexed)
                 {
                     msgOutput.append("SG_MUL_VAL_ " + QString::number(ID) + " ");
-                    msgOutput.append(sig->name + " " + sig->parentMessage->name + " ");
+                    msgOutput.append(sig->name + " " + sig->multiplexParent->name + " ");
                     msgOutput.append(QString::number(sig->multiplexLowValue) + "-" + QString::number(sig->multiplexHighValue) + ";");
                     msgOutput.append("\n");
                     outFile->write(msgOutput.toUtf8());

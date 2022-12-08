@@ -166,7 +166,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.payload(), 0, 64, intelByteOrder, false);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, 64, intelByteOrder, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
 
@@ -306,7 +306,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.payload(), 0, 64, false, false);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, 64, false, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
     cachedValue = endResult;
