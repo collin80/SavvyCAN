@@ -37,7 +37,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
 
     ui->bitfield->setMode(GridMode::SIGNAL_VIEW);
 
-    connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->bitfield, SIGNAL(gridClicked(int)), this, SLOT(bitfieldClicked(int)));
     connect(ui->valuesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuValues(QPoint)));
     ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->valuesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onValuesCellChanged(int,int)));
@@ -74,12 +74,23 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     break;
                 case 2:
                     currentSignal->valType = SP_FLOAT;
-                    if (currentSignal->startBit > 39) currentSignal->startBit = 39;
+                    if (dbcMessage) //if we have a good msg reference we can use it to get the # of bytes expected.
+                    {
+                        int maxBit = ((dbcMessage->len * 8) - 32 + 7);
+                        if (maxBit < 0) maxBit = 0;
+                        if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+                    }
+                    else if (currentSignal->startBit > 39) currentSignal->startBit = 39;
                     currentSignal->signalSize = 32;
                     break;
                 case 3:
                     currentSignal->valType = DP_FLOAT;
-                    currentSignal->startBit = 7; //has to be!
+                    if (dbcMessage)
+                    {
+                        int maxBit = ((dbcMessage->len * 8) - 64 + 7);
+                        if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+                    }
+                    else currentSignal->startBit = 7; //has to be!
                     currentSignal->signalSize = 64;
                     break;
                 case 4:
@@ -166,7 +177,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtBitLength->text());
                 if (temp < 1) return;
-                if (temp > 64) return;
+                if (dbcMessage)
+                {
+                    if (temp > (int)(dbcMessage->len * 8)) return;
+                }
+                else if (temp > 64) return;
                 if (currentSignal->signalSize != temp) dbcFile->setDirtyFlag();
                 if (currentSignal->valType != SP_FLOAT && currentSignal->valType != DP_FLOAT)
                     currentSignal->signalSize = temp;
@@ -197,7 +212,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     connect(ui->txtMultiplexHigh, &QLineEdit::editingFinished,
             [=]()
             {
-                if (currentSignal == nullptr) return;
+                if (!currentSignal) return;
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtMultiplexHigh->text());
                 if (currentSignal->multiplexHighValue != temp) dbcFile->setDirtyFlag();
@@ -208,6 +223,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     connect(ui->rbExtended, &QRadioButton::toggled,
             [=](bool state)
             {
+                if (!currentSignal) return;
                 if (state && currentSignal) //signal is now set as an extended multiplex/multiplexor
                 {
                     currentSignal->isMultiplexed = true;
@@ -224,6 +240,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     connect(ui->rbMultiplexed, &QRadioButton::toggled,
             [=](bool state)
             {
+                if (!currentSignal) return;
                 if (state && currentSignal) //signal is now set as a multiplexed signal
                 {
                     currentSignal->isMultiplexed = true;
@@ -240,6 +257,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     connect(ui->rbMultiplexor, &QRadioButton::toggled,
             [=](bool state)
             {
+                if (!currentSignal) return;
                 if (state && currentSignal) //signal is now set as a multiplexed signal
                 {
                     //don't allow this signal to be a multiplexor if there is already one for this message.
@@ -258,6 +276,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     connect(ui->rbNotMulti, &QRadioButton::toggled,
             [=](bool state)
             {
+                if (!currentSignal) return;
                 if (state && currentSignal) //signal is now set as a multiplexed signal
                 {
                     currentSignal->isMultiplexed = false;
@@ -448,7 +467,7 @@ void DBCSignalEditor::deleteCurrentValue()
 /* WARNING: fillSignalForm can be called recursively since it is in the listener of cbIntelFormat */
 void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
-    unsigned char bitpattern[8];
+    unsigned char bitpattern[64];
 
     inhibitMsgProc = true;
 
@@ -467,7 +486,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         ui->rbMultiplexed->setChecked(false);
         ui->rbMultiplexor->setChecked(false);
         ui->rbNotMulti->setChecked(true);
-        memset(bitpattern, 0, 8); //clear it out
+        memset(bitpattern, 0, 64); //clear it out
         ui->bitfield->setReference(bitpattern, false);
         ui->bitfield->updateData(bitpattern, true);
         ui->comboReceiver->setCurrentIndex(0);
@@ -522,7 +541,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     ui->txtMultiplexHigh->setEnabled(sig->isMultiplexed);
     ui->cbMultiplexParent->setEnabled(sig->isMultiplexed);
 
-    memset(bitpattern, 0, 8); //clear it out first.
+    memset(bitpattern, 0, 64); //clear it out first.
 
     int startBit, endBit;
 
@@ -535,7 +554,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     {
         endBit = startBit + sig->signalSize - 1;
         if (startBit < 0) startBit = 0;
-        if (endBit > 63) endBit = 63;
+        if (endBit > 511) endBit = 511;
         for (int y = startBit; y <= endBit; y++)
         {
             int byt = y / 8;
@@ -553,7 +572,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
             size--;
             if ((startBit % 8) == 0) startBit += 15;            
             else startBit--;
-            if (startBit > 63) startBit = 63;
+            if (startBit > 511) startBit = 511;
         }
     }
 
@@ -625,25 +644,42 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
     inhibitCellChanged = false;
 }
 
-void DBCSignalEditor::bitfieldClicked(int x, int y)
+void DBCSignalEditor::bitfieldClicked(int bit)
 {
-    int bit = (7 - x) + (y * 8);
     if (currentSignal == nullptr) return;
     currentSignal->startBit = bit;
     if (currentSignal->valType == SP_FLOAT)
     {
-        if (currentSignal->startBit > 31) currentSignal->startBit = 39;
+        if (dbcMessage)
+        {
+            int maxBit = ((dbcMessage->len * 8) - 32 + 7);
+            if (maxBit < 0) maxBit = 0;
+            if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+        }
+        else if (currentSignal->startBit > 31) currentSignal->startBit = 39;
     }
 
     if (currentSignal->valType == DP_FLOAT)
-        currentSignal->startBit = 7;
+    {
+        if (dbcMessage)
+        {
+            int maxBit = ((dbcMessage->len * 8) - 64 + 7);
+            if (maxBit < 0) maxBit = 0;
+            if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+        }
+        else currentSignal->startBit = 7;
+    }
     fillSignalForm(currentSignal);
 }
 
 void DBCSignalEditor::generateUsedBits()
 {
-    uint8_t usedBits[8] = {0,0,0,0,0,0,0,0};
+    uint8_t usedBits[64];
     int startBit, endBit;
+
+    memset(usedBits, 0, 64);
+
+    if (!dbcMessage || !dbcMessage->sigHandler) return;
 
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
@@ -663,7 +699,8 @@ void DBCSignalEditor::generateUsedBits()
         {
             endBit = startBit + sig->signalSize - 1;
             if (startBit < 0) startBit = 0;
-            if (endBit > 63) endBit = 63;
+            int maxBit = (dbcMessage->len * 8) - 1;
+            if (endBit > maxBit) endBit = maxBit;
             for (int y = startBit; y <= endBit; y++)
             {
                 int byt = y / 8;
@@ -683,9 +720,11 @@ void DBCSignalEditor::generateUsedBits()
                 size--;
                 if ((startBit % 8) == 0) startBit += 15;
                 else startBit--;
-                if (startBit > 63) startBit = 63;
+                int maxBit = (dbcMessage->len * 8) - 1;
+                if (startBit > maxBit) startBit = maxBit;
             }
         }
     }
     ui->bitfield->setUsed(usedBits, false);
+    ui->bitfield->setBytesToDraw(dbcMessage->len);
 }
