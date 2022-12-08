@@ -860,7 +860,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
             }
             else
             {
-                qDebug() << "WTF, could not find the signal in the map. That should not happen.";
+                qDebug() << "Could not find the signal in the map. That should not happen.";
             }
         }
         break;
