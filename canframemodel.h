@@ -55,6 +55,7 @@ public:
     void setAllFilters(bool state);
     void setSecondsMode(bool);
     void setTimeFormat(QString);
+    void setBytesPerLine(int bpl);
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);
     void normalizeTiming();
@@ -101,6 +102,7 @@ private:
     int lastUpdateNumFrames;
     uint32_t preallocSize;
     bool sortDirAsc;
+    int bytesPerLine;
 };
 
 

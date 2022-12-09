@@ -392,6 +392,8 @@ void MainWindow::readUpdateableSettings()
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
     ignoreDBCColors = settings.value("Main/IgnoreDBCColors", false).toBool();
     model->setIgnoreDBCColors(ignoreDBCColors);
+    int bpl = settings.value("Main/BytesPerLine", 8).toInt();
+    model->setBytesPerLine(bpl);
 
     if (settings.value("Main/FilterLabeling", false).toBool())
         ui->listFilters->setMaximumWidth(250);

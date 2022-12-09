@@ -21,7 +21,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->comboSendingBus->addItem(tr("None"));
     ui->comboSendingBus->addItem(tr("0"));
     ui->comboSendingBus->addItem(tr("1"));
-    ui->comboSendingBus->addItem(tr("Both"));
+    ui->comboSendingBus->addItem(tr("All"));
     ui->comboSendingBus->addItem(tr("From File"));
 
     //update the GUI with all the settings we have stored giving things
@@ -104,6 +104,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     }
 
     ui->spinMaximumFrames->setValue(settings.value("Main/MaximumFrames", maxFramesDefault).toInt());
+    ui->spinBytesPerLine->setValue(settings.value("Main/BytesPerLine", 8).toInt());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -134,6 +135,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbIgnoreDBCColors, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinMaximumFrames, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbFontFixedWidth, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->spinBytesPerLine, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -201,6 +203,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
     settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
     settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
+    settings.setValue("Main/BytesPerLine", ui->spinBytesPerLine->value());
     settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
 
     settings.sync();
