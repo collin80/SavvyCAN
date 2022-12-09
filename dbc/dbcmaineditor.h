@@ -18,6 +18,13 @@ namespace Ui {
 class DBCMainEditor;
 }
 
+enum DBCItemTypes
+{
+    NODE = 1,
+    MSG = 2,
+    SIG = 3
+};
+
 class DBCMainEditor : public QDialog
 {
     Q_OBJECT

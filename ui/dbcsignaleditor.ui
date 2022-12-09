@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>967</width>
+    <width>995</width>
     <height>644</height>
    </rect>
   </property>
@@ -259,9 +259,23 @@
  </customwidgets>
  <tabstops>
   <tabstop>txtName</tabstop>
+  <tabstop>txtBitLength</tabstop>
+  <tabstop>cbIntelFormat</tabstop>
+  <tabstop>comboType</tabstop>
+  <tabstop>txtScale</tabstop>
+  <tabstop>txtBias</tabstop>
+  <tabstop>txtMinVal</tabstop>
+  <tabstop>txtMaxVal</tabstop>
+  <tabstop>txtUnitName</tabstop>
+  <tabstop>comboReceiver</tabstop>
   <tabstop>rbNotMulti</tabstop>
   <tabstop>rbMultiplexed</tabstop>
   <tabstop>rbMultiplexor</tabstop>
+  <tabstop>rbExtended</tabstop>
+  <tabstop>txtMultiplexLow</tabstop>
+  <tabstop>txtMultiplexHigh</tabstop>
+  <tabstop>cbMultiplexParent</tabstop>
+  <tabstop>txtComment</tabstop>
   <tabstop>valuesTable</tabstop>
  </tabstops>
  <resources/>
