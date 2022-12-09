@@ -299,7 +299,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 //add it to this one, update this signal's parent multiplexor
                 DBC_SIGNAL *newSig = dbcMessage->sigHandler->findSignalByName(ui->cbMultiplexParent->currentText());
                 DBC_SIGNAL *oldParent = currentSignal->multiplexParent;
-                if (newSig)
+                if (newSig && oldParent)
                 {
                     oldParent->multiplexedChildren.removeOne(currentSignal);
                     currentSignal->multiplexParent = newSig;
