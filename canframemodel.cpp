@@ -76,6 +76,12 @@ CANFrameModel::CANFrameModel(QObject *parent)
     lastUpdateNumFrames = 0;
     timeFormat =  "MMM-dd HH:mm:ss.zzz";
     sortDirAsc = false;
+    bytesPerLine = 8;
+}
+
+void CANFrameModel::setBytesPerLine(int bpl)
+{
+    bytesPerLine = bpl;
 }
 
 void CANFrameModel::setHexMode(bool mode)
@@ -514,6 +520,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                     if (byt < 0x20) byt = 0x2E; //dot character
                     if (byt > 0x7E) byt = 0x2E;
                     tempString.append(QString::fromUtf8(&byt, 1));
+                    if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
                 }
             }
             if (thisFrame.frameType() == QCanBusFrame::ErrorFrame)
@@ -531,7 +538,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             {
                 if (useHexMode) tempString.append( QString::number(data[i], 16).toUpper().rightJustified(2, '0'));
                 else tempString.append(QString::number(data[i], 10));
-                tempString.append(" ");
+                if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
+                else tempString.append(" ");
             }
             if (thisFrame.frameType() == thisFrame.ErrorFrame)
             {
