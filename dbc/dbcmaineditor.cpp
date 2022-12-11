@@ -222,7 +222,7 @@ void DBCMainEditor::currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem
         ui->btnNewSignal->setEnabled(false);
         ui->btnDelete->setEnabled(true);
         break;
-    case DBCItemTypes::MSG: //message
+    case DBCItemTypes::MESG: //message
         ui->btnNewNode->setEnabled(true);
         ui->btnNewMessage->setEnabled(true);
         ui->btnNewSignal->setEnabled(true);
@@ -243,7 +243,7 @@ void DBCMainEditor::currentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem
 
 uint32_t DBCMainEditor::getParentMessageID(QTreeWidgetItem *cell)
 {
-    if (cell->data(0, Qt::UserRole) == DBCItemTypes::MSG)
+    if (cell->data(0, Qt::UserRole) == DBCItemTypes::MESG)
     {
         return static_cast<uint32_t>(Utility::ParseStringToNum(cell->text(0).split(" ")[0]));
     }
@@ -279,7 +279,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         nodeEditor->refreshView();
         nodeEditor->show();
         break;
-    case DBCItemTypes::MSG: //a message
+    case DBCItemTypes::MESG: //a message
         idString = firstCol->text(0).split(" ")[0];
         msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
         msg = dbcFile->messageHandler->findMsgByID(msgID);
@@ -421,7 +421,7 @@ void DBCMainEditor::refreshTree()
                 if (msg->comment.count() > 0) msgInfo.append(" - ").append(msg->comment);
                 msgItem->setText(0, msgInfo);
                 msgItem->setIcon(0, messageIcon);
-                msgItem->setData(0, Qt::UserRole, DBCItemTypes::MSG);
+                msgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
                 messageToItem.insert(msg, msgItem);
                 itemToMessage.insert(msgItem, msg);
                 for (int i = 0; i < msg->sigHandler->getCount(); i++)
@@ -649,7 +649,7 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
     if (msg.comment.count() > 0) msgInfo.append(" - ").append(msg.comment);
     newMsgItem->setText(0, msgInfo);
     newMsgItem->setIcon(0, messageIcon);
-    newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MSG);
+    newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
     messageToItem.insert(msgPtr, newMsgItem);
     itemToMessage.insert(newMsgItem, msgPtr);
     nodeItem->addChild(newMsgItem);
@@ -665,7 +665,7 @@ void DBCMainEditor::newMessage()
     nodeItem = ui->treeDBC->currentItem();
     int typ = nodeItem->data(0, Qt::UserRole).toInt();
     if (!nodeItem) return; //nothing selected!
-    if (typ == DBCItemTypes::MSG)
+    if (typ == DBCItemTypes::MESG)
     {
         msgItem = nodeItem;
         nodeItem = nodeItem->parent();
@@ -719,7 +719,7 @@ void DBCMainEditor::newMessage()
     if (msg.comment.count() > 0) msgInfo.append(" - ").append(msg.comment);
     newMsgItem->setText(0, msgInfo);
     newMsgItem->setIcon(0, messageIcon);
-    newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MSG);
+    newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
     messageToItem.insert(msgPtr, newMsgItem);
     itemToMessage.insert(newMsgItem, msgPtr);
     nodeItem->addChild(newMsgItem);
@@ -743,7 +743,7 @@ void DBCMainEditor::newSignal()
         msgItem = msgItem->parent();
         parentItem = msgItem;
         //walk up the tree to find the parent msg
-        while (msgItem && msgItem->data(0, Qt::UserRole).toInt() != DBCItemTypes::MSG) msgItem = msgItem->parent();
+        while (msgItem && msgItem->data(0, Qt::UserRole).toInt() != DBCItemTypes::MESG) msgItem = msgItem->parent();
         if (!msgItem) return; //something bad happened. abort.
     }
 
@@ -836,7 +836,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
         }
 
         break;
-    case DBCItemTypes::MSG: //cascades to removing all signals too.
+    case DBCItemTypes::MESG: //cascades to removing all signals too.
         idString = currItem->text(0).split(" ")[0];
         msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
         msg = dbcFile->messageHandler->findMsgByID(msgID);
