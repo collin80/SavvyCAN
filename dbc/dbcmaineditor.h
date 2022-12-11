@@ -21,7 +21,7 @@ class DBCMainEditor;
 enum DBCItemTypes
 {
     NODE = 1,
-    MSG = 2,
+    MESG = 2,
     SIG = 3
 };
 
