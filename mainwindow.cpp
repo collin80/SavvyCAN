@@ -473,8 +473,21 @@ void MainWindow::expandAllRows()
 
 void MainWindow::manageRowExpansion()
 {
-    if(rowExpansionActive && model->getInterpretMode())
-        ui->canFramesView->resizeRowsToContents();
+    int numRows = ui->canFramesView->model()->rowCount();
+    if(numRows < 20000)
+    {
+        if(rowExpansionActive && model->getInterpretMode())
+            ui->canFramesView->resizeRowsToContents();
+    }
+    else
+    {
+        disableAutoRowExpansion();
+    }
+}
+
+void MainWindow::disableAutoRowExpansion()
+{
+    rowExpansionActive = false;
 }
 
 void MainWindow::collapseAllRows()
@@ -869,6 +882,7 @@ void MainWindow::handleLoadFile()
 
     if (loadResult)
     {
+        disableAutoRowExpansion();
         ui->canFramesView->scrollToTop();
         model->clearFrames();
         model->insertFrames(tempFrames);
@@ -912,6 +926,7 @@ void MainWindow::handleDroppedFile(const QString &filename)
 
     if (loadResult)
     {
+        disableAutoRowExpansion();
         ui->canFramesView->scrollToTop();
         model->clearFrames();
         model->insertFrames(loadedFrames);
