@@ -209,6 +209,7 @@ private:
     void writeSettings();
     bool eventFilter(QObject *obj, QEvent *event);
     void manageRowExpansion();
+    void disableAutoRowExpansion();
 };
 
 #endif // MAINWINDOW_H
