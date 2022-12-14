@@ -43,6 +43,7 @@ private:
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);
     void generateUsedBits();
+    void refreshBitGrid();
 
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);

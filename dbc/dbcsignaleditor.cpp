@@ -49,7 +49,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal == nullptr) return;
                 if (currentSignal->intelByteOrder != ui->cbIntelFormat->isChecked()) dbcFile->setDirtyFlag();
                 currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
-                fillSignalForm(currentSignal);
+                //fillSignalForm(currentSignal);
+                refreshBitGrid();
             });
 
     connect(ui->comboReceiver, &QComboBox::currentTextChanged,
@@ -185,7 +186,8 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal->signalSize != temp) dbcFile->setDirtyFlag();
                 if (currentSignal->valType != SP_FLOAT && currentSignal->valType != DP_FLOAT)
                     currentSignal->signalSize = temp;
-                fillSignalForm(currentSignal);
+                //fillSignalForm(currentSignal);
+                refreshBitGrid();
             });
     connect(ui->txtName, &QLineEdit::editingFinished,
             [=]()
@@ -194,6 +196,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 QString tempNameStr = ui->txtName->text().simplified().replace(' ', '_');
                 if (currentSignal->name != tempNameStr) dbcFile->setDirtyFlag();
                 if (tempNameStr.length() > 0) currentSignal->name = tempNameStr;
+                refreshBitGrid();
                 //need to update the tree too.
                 emit updatedTreeInfo(currentSignal);
             });
@@ -234,6 +237,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
                 ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                fillSignalForm(currentSignal);
                 dbcFile->setDirtyFlag();
             });
 
@@ -251,6 +255,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
                 ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                fillSignalForm(currentSignal);
                 dbcFile->setDirtyFlag();
             });
 
@@ -270,6 +275,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
                 ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                fillSignalForm(currentSignal);
                 dbcFile->setDirtyFlag();
             });
 
@@ -286,6 +292,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
                 ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
                 ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                fillSignalForm(currentSignal);
                 dbcFile->setDirtyFlag();
             });
 
@@ -305,6 +312,7 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     currentSignal->multiplexParent = newSig;
                     newSig->multiplexedChildren.append(currentSignal);
                     dbcFile->setDirtyFlag();
+                    refreshBitGrid();
                     emit updatedTreeInfo(currentSignal);
                 }
             });
@@ -392,18 +400,6 @@ void DBCSignalEditor::showEvent(QShowEvent* event)
 
     fillSignalForm(currentSignal);
     fillValueTable(currentSignal);
-
-    ui->bitfield->clearSignalNames();
-    for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
-    {
-        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
-        //only set a signal name for signals which match multiplexparent with our currentsignal
-        if (!sig->multiplexParent || ((sig->multiplexParent == currentSignal->multiplexParent) && (sig->multiplexHighValue == currentSignal->multiplexHighValue)) )
-        {
-            ui->bitfield->setSignalNames(x, sig->name);
-            qDebug() << sig->name << sig->multiplexParent;
-        }
-    }
 }
 
 void DBCSignalEditor::refreshView()
@@ -467,8 +463,6 @@ void DBCSignalEditor::deleteCurrentValue()
 /* WARNING: fillSignalForm can be called recursively since it is in the listener of cbIntelFormat */
 void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
-    unsigned char bitpattern[64];
-
     inhibitMsgProc = true;
 
     if (sig == nullptr) {
@@ -486,9 +480,6 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         ui->rbMultiplexed->setChecked(false);
         ui->rbMultiplexor->setChecked(false);
         ui->rbNotMulti->setChecked(true);
-        memset(bitpattern, 0, 64); //clear it out
-        ui->bitfield->setReference(bitpattern, false);
-        ui->bitfield->updateData(bitpattern, true);
         ui->comboReceiver->setCurrentIndex(0);
         ui->comboType->setCurrentIndex(0);
         inhibitMsgProc = false;
@@ -498,7 +489,6 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     /* we have a signal */
     ui->groupBox->setEnabled(true);
 
-    generateUsedBits();
     ui->txtName->setText(sig->name);
     ui->txtBias->setText(QString::number(sig->bias));
     ui->txtBitLength->setText(QString::number(sig->signalSize));
@@ -532,7 +522,9 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         DBC_SIGNAL *sig_iter = dbcMessage->sigHandler->findSignalByIdx(i);
         if (sig_iter && sig_iter->isMultiplexor && (sig_iter != sig))
         {
-            ui->cbMultiplexParent->addItem(sig_iter->name);
+            //only add this entry if there are no other entries with that name yet
+            if (ui->cbMultiplexParent->findText(sig_iter->name) == -1)
+                ui->cbMultiplexParent->addItem(sig_iter->name);
             if (sig->multiplexParent == sig_iter) ui->cbMultiplexParent->setCurrentIndex(ui->cbMultiplexParent->count() - 1);
         }
     }
@@ -541,42 +533,6 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     ui->txtMultiplexHigh->setEnabled(sig->isMultiplexed);
     ui->cbMultiplexParent->setEnabled(sig->isMultiplexed);
 
-    memset(bitpattern, 0, 64); //clear it out first.
-
-    int startBit, endBit;
-
-    startBit = sig->startBit;
-
-    bitpattern[startBit / 8] |= 1 << (startBit % 8); //make the start bit a different color to set it apart
-    ui->bitfield->setReference(bitpattern, false);
-
-    if (sig->intelByteOrder)
-    {
-        endBit = startBit + sig->signalSize - 1;
-        if (startBit < 0) startBit = 0;
-        if (endBit > 511) endBit = 511;
-        for (int y = startBit; y <= endBit; y++)
-        {
-            int byt = y / 8;
-            bitpattern[byt] |= 1 << (y % 8);
-        }
-    }
-    else //big endian / motorola format
-    {
-        //much more irritating than the intel version...
-        int size = sig->signalSize;
-        while (size > 0)
-        {
-            int byt = startBit / 8;
-            bitpattern[byt] |= 1 << (startBit % 8);
-            size--;
-            if ((startBit % 8) == 0) startBit += 15;            
-            else startBit--;
-            if (startBit > 511) startBit = 511;
-        }
-    }
-
-    ui->bitfield->updateData(bitpattern, true);
     ui->cbIntelFormat->setChecked(sig->intelByteOrder);
 
     switch (sig->valType)
@@ -607,7 +563,69 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
         }
     }
 
+    refreshBitGrid();
+
     inhibitMsgProc = false;
+}
+
+void DBCSignalEditor::refreshBitGrid()
+{
+    unsigned char bitpattern[64];
+
+    memset(bitpattern, 0, 64); //clear it out
+    ui->bitfield->setReference(bitpattern, false);
+    ui->bitfield->updateData(bitpattern, true);
+
+    ui->bitfield->clearSignalNames();
+    for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
+    {
+        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
+        //only set a signal name for signals which match multiplexparent with our currentsignal
+        if (!sig->multiplexParent || ((sig->multiplexParent == currentSignal->multiplexParent) && (sig->multiplexHighValue == currentSignal->multiplexHighValue)) )
+        {
+            ui->bitfield->setSignalNames(x, sig->name);
+            //qDebug() << sig->name << sig->multiplexParent;
+        }
+    }
+
+    generateUsedBits();
+    memset(bitpattern, 0, 64); //clear it out first.
+
+    int startBit, endBit;
+
+    startBit = currentSignal->startBit;
+
+    bitpattern[startBit / 8] |= 1 << (startBit % 8); //make the start bit a different color to set it apart
+    ui->bitfield->setReference(bitpattern, false);
+
+    if (currentSignal->intelByteOrder)
+    {
+        endBit = startBit + currentSignal->signalSize - 1;
+        if (startBit < 0) startBit = 0;
+        if (endBit > 511) endBit = 511;
+        for (int y = startBit; y <= endBit; y++)
+        {
+            int byt = y / 8;
+            bitpattern[byt] |= 1 << (y % 8);
+        }
+    }
+    else //big endian / motorola format
+    {
+        //much more irritating than the intel version...
+        int size = currentSignal->signalSize;
+        while (size > 0)
+        {
+            int byt = startBit / 8;
+            bitpattern[byt] |= 1 << (startBit % 8);
+            size--;
+            if ((startBit % 8) == 0) startBit += 15;
+            else startBit--;
+            if (startBit > 511) startBit = 511;
+        }
+    }
+
+    ui->bitfield->updateData(bitpattern, true);
+
 }
 
 /* fillValueTable also handles "enabled" state */
