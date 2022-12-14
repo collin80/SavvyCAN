@@ -39,6 +39,8 @@ enum GridMode
     SIGNAL_VIEW //special view for DBC window where we draw the signals in the bits they take up
 };
 
+extern QVector<QColor> signalColors;
+
 class CANDataGrid : public QWidget
 {
     Q_OBJECT
@@ -75,7 +77,6 @@ private:
     unsigned char usedData[64];
     int usedSignalNum[512]; //so we can specify which signal claims this bit
     QVector<QString> signalNames;
-    QVector<QColor> signalColors;
     GridTextState textStates[64][8]; //first dimension is bytes, second is bits
     QPoint upperLeft, gridSize;
     GridMode gridMode;
