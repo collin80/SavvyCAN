@@ -463,6 +463,10 @@ void DBCSignalEditor::deleteCurrentValue()
 /* WARNING: fillSignalForm can be called recursively since it is in the listener of cbIntelFormat */
 void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
 {
+    //sanity checks
+    if (!dbcMessage) return;
+    if (!dbcMessage->sigHandler) return;
+
     inhibitMsgProc = true;
 
     if (sig == nullptr) {
