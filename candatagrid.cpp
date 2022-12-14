@@ -6,6 +6,57 @@
 #include <QMouseEvent>
 #include <QRandomGenerator>
 
+//The program used to generate new colors every time the grid was displayed but that's ugly
+//and disorienting. Instead use this list colors I've picked because they're "bright".
+//It may need a bit of reorganizing to keep like colors apart and feel free to add some more
+//if you want. The program will wrap around if the number of signals in a single message exceeds
+//this amount of colors.
+//Colors here were generated with: https://colordesigner.io/random-color-generator set to random
+//hue bright colors and 40 total colors. I clicked until I kind of liked it.
+QVector<QColor> signalColors =
+{
+    QColor(101, 104, 159),
+    QColor(237, 35, 109),
+    QColor(216, 53, 221),
+    QColor(37, 252, 220),
+    QColor(8, 160, 53),
+    QColor(226, 111, 11),
+    QColor(216, 59, 2),
+    QColor(249, 246, 27),
+    QColor(214, 21, 34),
+    QColor(178, 219, 74),
+    QColor(214, 55, 71),
+    QColor(80, 198, 206),
+    QColor(83, 214, 201),
+    QColor(35, 210, 237),
+    QColor(25, 170, 105),
+    QColor(110, 221, 55),
+    QColor(30, 38, 181),
+    QColor(79, 124, 209),
+    QColor(7, 91, 175),
+    QColor(14, 234, 208),
+    QColor(125, 45, 168),
+    QColor(176, 211, 80),
+    QColor(255, 206, 48),
+    QColor(202, 226, 93),
+    QColor(201, 99, 232),
+    QColor(13, 72, 135),
+    QColor(32, 45, 219),
+    QColor(197, 26, 216),
+    QColor(119, 15, 216),
+    QColor(97, 18, 150),
+    QColor(242, 16, 242),
+    QColor(177, 5, 196),
+    QColor(214, 10, 102),
+    QColor(9, 50, 155),
+    QColor(201, 38, 76),
+    QColor(202, 234, 72),
+    QColor(59, 191, 57),
+    QColor(0, 25, 170),
+    QColor(7, 186, 93),
+    QColor(29, 211, 147)
+};
+
 CANDataGrid::CANDataGrid(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::CANDataGrid)
@@ -117,7 +168,6 @@ void CANDataGrid::clearSignalNames()
 {
     signalNames.clear();
     signalNames.resize(40);
-    signalColors.clear();
 }
 
 void CANDataGrid::setUsedSignalNum(int bit, int signal)
@@ -257,21 +307,6 @@ void CANDataGrid::paintGridCells()
     int usedSigNum;
     QString prevSigName;
 
-    //if this is true then generate unique colors for each signal
-    if ((signalColors.count() == 0) && (signalNames.count() > 0) && gridMode == GridMode::SIGNAL_VIEW)
-    {
-        qDebug() << "Generating colors";
-        signalColors.resize(signalNames.count());
-        for (int i = 0; i < signalNames.count(); i++)
-        {
-            QColor newColor;
-            while (newColor.saturation() < 40)
-                newColor.setRgb(QRandomGenerator::global()->bounded(160) + 60,QRandomGenerator::global()->bounded(160) + 60, QRandomGenerator::global()->bounded(160) + 60);
-            qDebug() << newColor;
-            signalColors[i] = newColor;
-        }
-    }
-
     //now, color the bitfield by seeing if a given bit is freshly set/unset in the new data
     //compared to the old. Bits that are not set in either are white, bits set in both are black
     //bits that used to be set but now are unset are red, bits that used to be unset but now are set
@@ -321,7 +356,11 @@ void CANDataGrid::paintGridCells()
                             grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
                             painter->setBrush(grayBrush);
                         }
-                        else painter->setBrush(QBrush(signalColors[usedSigNum]));
+                        else
+                        {
+                            int idx = usedSigNum % signalColors.length(); //can only use as many colors as have been defined
+                            painter->setBrush(QBrush(signalColors[idx]));
+                        }
                     }
                     else painter->setBrush(whiteBrush);
                 }
