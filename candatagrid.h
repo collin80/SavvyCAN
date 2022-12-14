@@ -99,6 +99,7 @@ private:
     QFont boldFont;
     QFont sigNameFont;
     QFontMetrics *smallMetric;
+    QFontMetrics *largeMetric;
 
     void paintGridCells();
     void paintCommonBeginning();

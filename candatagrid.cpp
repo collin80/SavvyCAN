@@ -233,7 +233,7 @@ void CANDataGrid::paintCommonBeginning()
     }
     if (gridMode == GridMode::SIGNAL_VIEW)
     {
-        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 4.50);
+        bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 3.50);
         smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 5.5);
     }
     sigNameTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 5.0);
@@ -247,6 +247,7 @@ void CANDataGrid::paintCommonBeginning()
     sigNameFont.setPixelSize(sigNameTextSize);
 
     smallMetric = new QFontMetrics(sigNameFont);
+    largeMetric = new QFontMetrics(mainFont);
 
     xOffset = smallMetric->maxWidth();
     yOffset = smallMetric->height();
@@ -441,7 +442,23 @@ void CANDataGrid::paintGridCells()
                             else painter->drawText(nearX + x * xSector + 12, nearY + (y * ySector) + smallMetric->height() * 2.6, remainder);
 
                         }
-                        else painter->drawText(nearX + x * xSector + 5, nearY + (y * ySector) + smallMetric->height() * 1.6, prevSigName);
+                        else
+                        {
+                            //first see if we even have enough room to use a bigger font and use that if so. Otherwise stick with the normal font
+                            textWidth = largeMetric->horizontalAdvance(prevSigName);
+                            if (textWidth < usableWidth)
+                            {
+                                painter->setFont(mainFont);
+                                QSize size = QSize(usableWidth, ySector - smallMetric->height() * 1.0);
+                                painter->drawText(QRect(nearX + x * xSector, nearY + (y * ySector) + smallMetric->height() * 1.0, size.width(), size.height()), Qt::AlignCenter, prevSigName);
+                                painter->setFont(sigNameFont);
+                            }
+                            else
+                            {
+                                QSize size = QSize(usableWidth, ySector - smallMetric->height() * 1.0);
+                                painter->drawText(QRect(nearX + x * xSector, nearY + (y * ySector) + smallMetric->height() * 1.0, size.width(), size.height()), Qt::AlignCenter, prevSigName);
+                            }
+                        }
                     }
                 }
             }
