@@ -470,7 +470,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     inhibitMsgProc = true;
 
     if (sig == nullptr) {
-        ui->groupBox->setEnabled(false);
+        //ui->groupBox->setEnabled(false);
         ui->txtName->setText("");
         ui->txtBias->setText("");
         ui->txtBitLength->setText("");
@@ -491,7 +491,7 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     }
 
     /* we have a signal */
-    ui->groupBox->setEnabled(true);
+    //ui->groupBox->setEnabled(true);
 
     ui->txtName->setText(sig->name);
     ui->txtBias->setText(QString::number(sig->bias));
