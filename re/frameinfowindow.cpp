@@ -56,6 +56,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui->graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
 
     ui->graphHistogram->axisRect()->setupFullAxesBox();
+    ui->graphHistogram->setBufferDevicePixelRatio(1);
 
     ui->graphHistogram->xAxis->setLabel("Bits");
     ui->graphHistogram->yAxis->setLabel("Instances");
@@ -79,6 +80,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     else ui->graphBytes->yAxis->setLabel("Value (Dec)");
 
     ui->graphBytes->legend->setVisible(false);
+    ui->graphBytes->setBufferDevicePixelRatio(1);
 
     ui->timeHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                         QCP::iSelectLegend | QCP::iSelectPlottables);
@@ -97,6 +99,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui->timeHistogram->yAxis->setLabel("Occurrences");
 
     ui->timeHistogram->legend->setVisible(false);
+    ui->timeHistogram->setBufferDevicePixelRatio(1);
 
     if (useOpenGL)
     {

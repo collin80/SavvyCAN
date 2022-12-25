@@ -86,6 +86,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
         ui->graphView->setAntialiasedElements(QCP::aeNone);
     }
 
+    ui->graphView->setBufferDevicePixelRatio(1);
+
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
     connect(ui->btnReverse, SIGNAL(clicked(bool)), this, SLOT(btnReverseClick()));
