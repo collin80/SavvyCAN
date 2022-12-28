@@ -419,7 +419,7 @@ void CANDataGrid::paintGridCells()
                 if ((usedData[byteIdx] & (1 << bitIdx)) == (1 << bitIdx))
                 {
                     usedSigNum = getUsedSignalNum(bit);
-                    if (prevSigName != signalNames[usedSigNum])
+                    if ((usedSigNum > -1) && (prevSigName != signalNames[usedSigNum]) )
                     {
                         prevSigName = signalNames[usedSigNum];
 
