@@ -37,7 +37,9 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
 
     ui->bitfield->setMode(GridMode::SIGNAL_VIEW);
 
-    connect(ui->bitfield, SIGNAL(gridClicked(int)), this, SLOT(bitfieldClicked(int)));
+    connect(ui->bitfield, SIGNAL(gridClicked(int)), this, SLOT(bitfieldLeftClicked(int)));
+    connect(ui->bitfield, SIGNAL(gridRightClicked(int)), this, SLOT(bitfieldRightClicked(int)));
+
     connect(ui->valuesTable, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(onCustomMenuValues(QPoint)));
     ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->valuesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onValuesCellChanged(int,int)));
@@ -666,7 +668,8 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
     inhibitCellChanged = false;
 }
 
-void DBCSignalEditor::bitfieldClicked(int bit)
+//Left clicking the grid sets the "starting bit" for the current signal
+void DBCSignalEditor::bitfieldLeftClicked(int bit)
 {
     if (currentSignal == nullptr) return;
     currentSignal->startBit = bit;
@@ -693,6 +696,25 @@ void DBCSignalEditor::bitfieldClicked(int bit)
     }
     fillSignalForm(currentSignal);
 }
+
+//Right clicking the grid starts editing on whichever signal currently "owns" that bit.
+//If there is no other signal then nothing happens (right now).
+//Would be possible to create a new signal in that case
+void DBCSignalEditor::bitfieldRightClicked(int bit)
+{
+    //will return -1 if there is no signal there. Otherwise, returns signal number
+    //which is quite luckily also the index into the signal handler table
+    int sigNum = ui->bitfield->getUsedSignalNum(bit);
+    if (sigNum < 0) return;
+    currentSignal = dbcMessage->sigHandler->findSignalByIdx(sigNum);
+
+    if (currentSignal)
+    {
+        fillSignalForm(currentSignal);
+        fillValueTable(currentSignal);
+    }
+}
+
 
 void DBCSignalEditor::generateUsedBits()
 {
