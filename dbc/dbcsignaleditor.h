@@ -37,6 +37,7 @@ private:
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
     DBC_SIGNAL *currentSignal;
+    QList<DBC_SIGNAL> undoBuffer;
     DBCFile *dbcFile;
     bool inhibitCellChanged;
     bool inhibitMsgProc;
@@ -50,6 +51,8 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
+    void pushToUndoBuffer();
+    void popFromUndoBuffer();
 };
 
 #endif // DBCSIGNALEDITOR_H

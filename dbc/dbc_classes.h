@@ -110,6 +110,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     QList<DBC_VAL_ENUM_ENTRY> valList;
     QList<DBC_SIGNAL *> multiplexedChildren;
     DBC_SIGNAL *multiplexParent;
+    DBC_SIGNAL *self;
 
     DBC_SIGNAL();
     bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
