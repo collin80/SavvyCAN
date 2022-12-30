@@ -68,6 +68,7 @@ protected:
 
 signals:
     void gridClicked(int bitClicked);
+    void gridRightClicked(int bitClicked);
 
 private:
     Ui::CANDataGrid *ui;

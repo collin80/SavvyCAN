@@ -136,6 +136,21 @@ void CANDataGrid::mousePressEvent(QMouseEvent *event)
         else if (bytesToDraw > 32) bytesToDraw = 8;
         this->update();
     }
+
+    //right click is exactly like left click but the emitted signal is different so that
+    //external code can differentiate which button was pressed
+    if (event->button() == Qt::RightButton)
+    {
+        clickedPoint -= upperLeft;
+        if (clickedPoint.x() < 0 || clickedPoint.y() < 0)
+        {
+            return;
+        }
+        int x = clickedPoint.x() / gridSize.x();
+        int y = clickedPoint.y() / gridSize.y();
+        int bitClicked = gridToBitPosition(x, y);
+        emit gridRightClicked(bitClicked);
+    }
 }
 
 void CANDataGrid::setCellTextState(int bitPos, GridTextState state)
@@ -553,6 +568,8 @@ void CANDataGrid::setReference(unsigned char *newRef, bool bUpdate = true)
 {
     int bytesToTransfer = (bytesToDraw + 7) & 0xF8; //force copying in 8 byte increments
     memcpy(refData, newRef, bytesToTransfer);
+    //clear all data past that point just to be sure we don't have garbage left over
+    if (bytesToTransfer < 64) memset(refData + bytesToTransfer, 0, 64 - bytesToTransfer);
     if (bUpdate) this->update();
 }
 
@@ -560,6 +577,8 @@ void CANDataGrid::updateData(unsigned char *newData, bool bUpdate = true)
 {
     int bytesToTransfer = (bytesToDraw + 7) & 0xF8; //force copying in 8 byte increments
     memcpy(data, newData, bytesToTransfer);
+    //clear all data past that point just to be sure we don't have garbage left over
+    if (bytesToTransfer < 64) memset(refData + bytesToTransfer, 0, 64 - bytesToTransfer);
     if (bUpdate) this->update();
 }
 
@@ -567,5 +586,7 @@ void CANDataGrid::setUsed(unsigned char *newData, bool bUpdate = false)
 {
     int bytesToTransfer = (bytesToDraw + 7) & 0xF8; //force copying in 8 byte increments
     memcpy(usedData, newData, bytesToTransfer);
+    //clear all data past that point just to be sure we don't have garbage left over
+    if (bytesToTransfer < 64) memset(refData + bytesToTransfer, 0, 64 - bytesToTransfer);
     if (bUpdate) this->update();
 }
