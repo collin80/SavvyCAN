@@ -49,19 +49,29 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             [=]()
             {
                 if (currentSignal == nullptr) return;
-                if (currentSignal->intelByteOrder != ui->cbIntelFormat->isChecked()) dbcFile->setDirtyFlag();
-                currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
-                //fillSignalForm(currentSignal);
-                refreshBitGrid();
+                if (currentSignal->intelByteOrder != ui->cbIntelFormat->isChecked())
+                {
+                    dbcFile->setDirtyFlag();
+                    pushToUndoBuffer();
+                    currentSignal->intelByteOrder = ui->cbIntelFormat->isChecked();
+                    //fillSignalForm(currentSignal);
+                    refreshBitGrid();
+                }
             });
 
     connect(ui->comboReceiver, &QComboBox::currentTextChanged,
             [=]()
             {
                 if (currentSignal == nullptr) return;
+                if (inhibitMsgProc) return;
+
                 DBC_NODE *node = dbcFile->findNodeByName(ui->comboReceiver->currentText());
-                if (currentSignal->receiver != node) dbcFile->setDirtyFlag();
-                currentSignal->receiver = node;
+                if (currentSignal->receiver != node)
+                {
+                    dbcFile->setDirtyFlag();
+                    pushToUndoBuffer();
+                    currentSignal->receiver = node;
+                }
             });
     connect(ui->comboType, &QComboBox::currentTextChanged,
             [=]()
@@ -70,38 +80,66 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 switch (ui->comboType->currentIndex())
                 {
                 case 0:
-                    currentSignal->valType = UNSIGNED_INT;
+                    if (currentSignal->valType != UNSIGNED_INT)
+                    {
+                        pushToUndoBuffer();
+                        currentSignal->valType = UNSIGNED_INT;
+                        dbcFile->setDirtyFlag();
+                        fillSignalForm(currentSignal);
+                    }
                     break;
                 case 1:
-                    currentSignal->valType = SIGNED_INT;
+                    if (currentSignal->valType != SIGNED_INT)
+                    {
+                        pushToUndoBuffer();
+                        currentSignal->valType = SIGNED_INT;
+                        dbcFile->setDirtyFlag();
+                        fillSignalForm(currentSignal);
+                    }
                     break;
                 case 2:
-                    currentSignal->valType = SP_FLOAT;
-                    if (dbcMessage) //if we have a good msg reference we can use it to get the # of bytes expected.
+                    if (currentSignal->valType != SP_FLOAT)
                     {
-                        int maxBit = ((dbcMessage->len * 8) - 32 + 7);
-                        if (maxBit < 0) maxBit = 0;
-                        if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+                        pushToUndoBuffer();
+                        currentSignal->valType = SP_FLOAT;
+                        dbcFile->setDirtyFlag();
+                        if (dbcMessage) //if we have a good msg reference we can use it to get the # of bytes expected.
+                        {
+                            int maxBit = ((dbcMessage->len * 8) - 32 + 7);
+                            if (maxBit < 0) maxBit = 0;
+                            if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+                        }
+                        else if (currentSignal->startBit > 39) currentSignal->startBit = 39;
+                        currentSignal->signalSize = 32;
+                        fillSignalForm(currentSignal);
                     }
-                    else if (currentSignal->startBit > 39) currentSignal->startBit = 39;
-                    currentSignal->signalSize = 32;
                     break;
                 case 3:
-                    currentSignal->valType = DP_FLOAT;
-                    if (dbcMessage)
+                    if (currentSignal->valType != DP_FLOAT)
                     {
-                        int maxBit = ((dbcMessage->len * 8) - 64 + 7);
-                        if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+                        pushToUndoBuffer();
+                        currentSignal->valType = DP_FLOAT;
+                        dbcFile->setDirtyFlag();
+                        if (dbcMessage)
+                        {
+                            int maxBit = ((dbcMessage->len * 8) - 64 + 7);
+                            if (currentSignal->startBit > maxBit) currentSignal->startBit = maxBit;
+                        }
+                        else currentSignal->startBit = 7; //has to be!
+                        currentSignal->signalSize = 64;
+                        fillSignalForm(currentSignal);
                     }
-                    else currentSignal->startBit = 7; //has to be!
-                    currentSignal->signalSize = 64;
                     break;
                 case 4:
-                    currentSignal->valType = STRING;
+                    if (currentSignal->valType != STRING)
+                    {
+                        pushToUndoBuffer();
+                        currentSignal->valType = STRING;
+                        dbcFile->setDirtyFlag();
+                        fillSignalForm(currentSignal);
+                    }
                     break;
                 }
-                dbcFile->setDirtyFlag();
-                fillSignalForm(currentSignal);
             });
     connect(ui->txtBias, &QLineEdit::editingFinished,
             [=]()
@@ -112,8 +150,12 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 temp = ui->txtBias->text().toDouble(&result);
                 if (result)
                 {
-                    if (currentSignal->bias != temp) dbcFile->setDirtyFlag();
-                    currentSignal->bias = temp;
+                    if (currentSignal->bias != temp)
+                    {
+                        pushToUndoBuffer();
+                        dbcFile->setDirtyFlag();
+                        currentSignal->bias = temp;
+                    }
                 }
             });
 
@@ -126,8 +168,12 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 temp = ui->txtMaxVal->text().toDouble(&result);
                 if (result)
                 {
-                    if (currentSignal->max != temp) dbcFile->setDirtyFlag();
-                    currentSignal->max = temp;
+                    if (currentSignal->max != temp)
+                    {
+                        pushToUndoBuffer();
+                        dbcFile->setDirtyFlag();
+                        currentSignal->max = temp;
+                    }
                 }
             });
 
@@ -140,10 +186,15 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 temp = ui->txtMinVal->text().toDouble(&result);
                 if (result)
                 {
-                    if (currentSignal->min != temp) dbcFile->setDirtyFlag();
-                    currentSignal->min = temp;
+                    if (currentSignal->min != temp)
+                    {
+                        pushToUndoBuffer();
+                        dbcFile->setDirtyFlag();
+                        currentSignal->min = temp;
+                    }
                 }
             });
+
     connect(ui->txtScale, &QLineEdit::editingFinished,
             [=]()
             {
@@ -153,26 +204,40 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 temp = ui->txtScale->text().toDouble(&result);
                 if (result)
                 {
-                    if (currentSignal->factor != temp) dbcFile->setDirtyFlag();
-                    currentSignal->factor = temp;
+                    if (currentSignal->factor != temp)
+                    {
+                        pushToUndoBuffer();
+                        dbcFile->setDirtyFlag();
+                        currentSignal->factor = temp;
+                    }
                 }
             });
+
     connect(ui->txtComment, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == nullptr) return;
-                if (currentSignal->comment != ui->txtComment->text().simplified().replace(' ','_')) dbcFile->setDirtyFlag();
-                currentSignal->comment = ui->txtComment->text().simplified().replace(' ', '_');
-                emit updatedTreeInfo(currentSignal);
+                if (currentSignal->comment != ui->txtComment->text().simplified().replace(' ','_'))
+                {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
+                    currentSignal->comment = ui->txtComment->text().simplified().replace(' ', '_');
+                    emit updatedTreeInfo(currentSignal);
+                }
             });
 
     connect(ui->txtUnitName, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == nullptr) return;
-                if (currentSignal->unitName != ui->txtUnitName->text().simplified().replace(' ','_')) dbcFile->setDirtyFlag();
-                currentSignal->unitName = ui->txtUnitName->text().simplified().replace(' ', '_');
+                if (currentSignal->unitName != ui->txtUnitName->text().simplified().replace(' ','_'))
+                {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
+                    currentSignal->unitName = ui->txtUnitName->text().simplified().replace(' ', '_');
+                }
             });
+
     connect(ui->txtBitLength, &QLineEdit::textChanged,
             [=]()
             {
@@ -185,22 +250,35 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                     if (temp > (int)(dbcMessage->len * 8)) return;
                 }
                 else if (temp > 64) return;
-                if (currentSignal->signalSize != temp) dbcFile->setDirtyFlag();
-                if (currentSignal->valType != SP_FLOAT && currentSignal->valType != DP_FLOAT)
+
+                if (currentSignal->valType == SP_FLOAT) temp = 32;
+                if (currentSignal->valType == DP_FLOAT) temp = 64;
+
+                if (currentSignal->signalSize != temp)
+                {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
                     currentSignal->signalSize = temp;
-                //fillSignalForm(currentSignal);
-                refreshBitGrid();
+                    //fillSignalForm(currentSignal);
+                    refreshBitGrid();
+                }
             });
+
     connect(ui->txtName, &QLineEdit::editingFinished,
             [=]()
             {
                 if (currentSignal == nullptr) return;
                 QString tempNameStr = ui->txtName->text().simplified().replace(' ', '_');
-                if (currentSignal->name != tempNameStr) dbcFile->setDirtyFlag();
-                if (tempNameStr.length() > 0) currentSignal->name = tempNameStr;
-                refreshBitGrid();
-                //need to update the tree too.
-                emit updatedTreeInfo(currentSignal);
+                if (tempNameStr.length() == 0) return; //can't do that!
+                if (currentSignal->name != tempNameStr)
+                {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
+                    currentSignal->name = tempNameStr;
+                    refreshBitGrid();
+                    //need to update the tree too.
+                    emit updatedTreeInfo(currentSignal);
+                }
             });
 
     connect(ui->txtMultiplexLow, &QLineEdit::editingFinished,
@@ -209,9 +287,13 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (currentSignal == nullptr) return;
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtMultiplexLow->text());
-                if (currentSignal->multiplexLowValue != temp) dbcFile->setDirtyFlag();
-                //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
-                currentSignal->multiplexLowValue = temp;
+                if (currentSignal->multiplexLowValue != temp)
+                {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
+                    //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
+                    currentSignal->multiplexLowValue = temp;
+                }
             });
 
     connect(ui->txtMultiplexHigh, &QLineEdit::editingFinished,
@@ -220,82 +302,98 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
                 if (!currentSignal) return;
                 int temp;
                 temp = Utility::ParseStringToNum(ui->txtMultiplexHigh->text());
-                if (currentSignal->multiplexHighValue != temp) dbcFile->setDirtyFlag();
-                //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
-                currentSignal->multiplexHighValue = temp;
+                if (currentSignal->multiplexHighValue != temp)
+                {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
+                    //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
+                    currentSignal->multiplexHighValue = temp;
+                }
             });
 
     connect(ui->rbExtended, &QRadioButton::toggled,
             [=](bool state)
             {
                 if (!currentSignal) return;
-                if (state && currentSignal) //signal is now set as an extended multiplex/multiplexor
+                if (!state) return; //we only need to handle the case where it is true
+
+                //only do anything if this is different from the current state. It should be because we're in a toggle event but let's be sure
+                if (!currentSignal->isMultiplexed || !currentSignal->isMultiplexor)
                 {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
                     currentSignal->isMultiplexed = true;
                     currentSignal->isMultiplexor = true;
                     //an extended multi signal cannot be the root multiplexor for a message so make sure to remove it if it was.
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
+                    ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                    ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
+                    ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                    fillSignalForm(currentSignal);
                 }
-                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
-                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
-                ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
-                fillSignalForm(currentSignal);
-                dbcFile->setDirtyFlag();
             });
 
     connect(ui->rbMultiplexed, &QRadioButton::toggled,
             [=](bool state)
             {
                 if (!currentSignal) return;
-                if (state && currentSignal) //signal is now set as a multiplexed signal
+                if (!state) return; //we only need to handle the case where it is true
+
+                //only do anything if this is different from the current state. It should be because we're in a toggle event but let's be sure
+                if (!currentSignal->isMultiplexed || currentSignal->isMultiplexor)
                 {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
                     currentSignal->isMultiplexed = true;
                     currentSignal->isMultiplexor = false;
                     //if the set multiplexor for the message was this signal then clear it
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
+                    ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                    ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
+                    ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                    fillSignalForm(currentSignal);
                 }
-                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
-                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
-                ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
-                fillSignalForm(currentSignal);
-                dbcFile->setDirtyFlag();
             });
 
     connect(ui->rbMultiplexor, &QRadioButton::toggled,
             [=](bool state)
             {
                 if (!currentSignal) return;
-                if (state && currentSignal) //signal is now set as a multiplexed signal
+                if (!state) return; //we only need to handle the case where it is true
+
+                if (currentSignal->isMultiplexed || !currentSignal->isMultiplexor)
                 {
-                    //don't allow this signal to be a multiplexor if there is already one for this message.
-                    //if (dbcMessage->multiplexorSignal != currentSignal && dbcMessage->multiplexorSignal != nullptr) return; //I spoke too soon above...
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
                     currentSignal->isMultiplexed = false;
                     currentSignal->isMultiplexor = true;
                     //we just set that this is the multiplexor so update the message to show that as well.
                     dbcMessage->multiplexorSignal = currentSignal;
+                    ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                    ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
+                    ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                    fillSignalForm(currentSignal);
                 }
-                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
-                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
-                ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
-                fillSignalForm(currentSignal);
-                dbcFile->setDirtyFlag();
             });
 
     connect(ui->rbNotMulti, &QRadioButton::toggled,
             [=](bool state)
             {
                 if (!currentSignal) return;
-                if (state && currentSignal) //signal is now set as a multiplexed signal
+                if (!state) return; //we only need to handle the case where it is true
+
+                if (currentSignal->isMultiplexed || currentSignal->isMultiplexor)
                 {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
                     currentSignal->isMultiplexed = false;
                     currentSignal->isMultiplexor = false;
                     if (dbcMessage->multiplexorSignal == currentSignal) dbcMessage->multiplexorSignal = nullptr;
+                    ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
+                    ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
+                    ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
+                    fillSignalForm(currentSignal);
                 }
-                ui->txtMultiplexLow->setEnabled(currentSignal->isMultiplexed);
-                ui->txtMultiplexHigh->setEnabled(currentSignal->isMultiplexed);
-                ui->cbMultiplexParent->setEnabled(currentSignal->isMultiplexed);
-                fillSignalForm(currentSignal);
-                dbcFile->setDirtyFlag();
             });
 
     connect(ui->cbMultiplexParent, &QComboBox::textActivated,
@@ -303,17 +401,19 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             {
                 if (currentSignal == nullptr) return;
                 if (inhibitMsgProc) return;
+
                 //qDebug() << "Curr text: :" << ui->cbMultiplexParent->currentText();
                 //try to look up the signal that we're set to now, remove this signal from existing children list
                 //add it to this one, update this signal's parent multiplexor
                 DBC_SIGNAL *newSig = dbcMessage->sigHandler->findSignalByName(ui->cbMultiplexParent->currentText());
                 DBC_SIGNAL *oldParent = currentSignal->multiplexParent;
-                if (newSig && oldParent)
+                if (newSig && oldParent && (newSig != oldParent))
                 {
+                    pushToUndoBuffer();
+                    dbcFile->setDirtyFlag();
                     oldParent->multiplexedChildren.removeOne(currentSignal);
                     currentSignal->multiplexParent = newSig;
                     newSig->multiplexedChildren.append(currentSignal);
-                    dbcFile->setDirtyFlag();
                     refreshBitGrid();
                     emit updatedTreeInfo(currentSignal);
                 }
@@ -342,6 +442,12 @@ bool DBCSignalEditor::eventFilter(QObject *obj, QEvent *event)
         {
         case Qt::Key_F1:
             HelpWindow::getRef()->showHelp("signaleditor.md");
+            break;
+        case Qt::Key_Z:
+            if (keyEvent->modifiers() == Qt::ControlModifier)
+            {
+                popFromUndoBuffer();
+            }
             break;
         }
         return true;
@@ -771,4 +877,34 @@ void DBCSignalEditor::generateUsedBits()
     }
     ui->bitfield->setUsed(usedBits, false);
     ui->bitfield->setBytesToDraw(dbcMessage->len);
+}
+
+//Copy the current signal in its entirety to the undo buffer. Just for safe keeping
+//Called before an edit is done to save the state so we can revert if necessary
+void DBCSignalEditor::pushToUndoBuffer()
+{
+    if (!currentSignal) return;
+    //store a copy of the pointer so that if we need to pop we can pop to the proper place
+    currentSignal->self = currentSignal;
+    undoBuffer.append(*currentSignal); //save the whole thing
+    qDebug() << "Pushing to undo buffer";
+}
+
+//Pop the last copy of a signal from the stack and begin editing it
+void DBCSignalEditor::popFromUndoBuffer()
+{
+    if (undoBuffer.empty())
+    {
+        dbcFile->clearDirtyFlag(); //TODO: Don't do this. Implement per-item dirty flags.
+        qDebug() << "Undo buffer empty";
+        return; //can't pop if there are no stored entries!
+    }
+    qDebug() << "Popping undo buffer";
+    DBC_SIGNAL sig = undoBuffer.back();
+    undoBuffer.pop_back();
+    currentSignal = sig.self; //restore the pointer
+    *currentSignal = sig; //write the contents into the memory pointed to
+
+    fillSignalForm(currentSignal);
+    fillValueTable(currentSignal);
 }
