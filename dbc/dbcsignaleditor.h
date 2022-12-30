@@ -26,7 +26,8 @@ signals:
     void updatedTreeInfo(DBC_SIGNAL *sig);
 
 private slots:
-    void bitfieldClicked(int bit);
+    void bitfieldLeftClicked(int bit);
+    void bitfieldRightClicked(int bit);
     void onValuesCellChanged(int row,int col);
     void onCustomMenuValues(QPoint);
     void deleteCurrentValue();
