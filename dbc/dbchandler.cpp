@@ -441,10 +441,19 @@ void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> 
     }
 }
 
-//there's no external way to clear the flag. It is only cleared when the file is saved by this object.
 void DBCFile::setDirtyFlag()
 {
     isDirty = true;
+}
+
+//BE CAREFUL HERE. Do not clear the dirty flag unless you're absolutely sure nothing has changed.
+//Currently the signal editor clears this flag if the entire undo buffer is emptied but still
+//it's possible that signals or messages were deleted or added so this is potentially not that safe
+//It would be better if every node, message, and signal had a dirty flag. Then the DBCFile getDirtyFlag
+//function could traverse the tree and see if anything is dirty.
+void DBCFile::clearDirtyFlag()
+{
+    isDirty = false;
 }
 
 bool DBCFile::getDirtyFlag()

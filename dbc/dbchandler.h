@@ -87,6 +87,7 @@ public:
     void setAssocBus(int bus);
     void setDirtyFlag();
     bool getDirtyFlag();
+    void clearDirtyFlag();
     void sort();
 
     DBCMessageHandler *messageHandler;
