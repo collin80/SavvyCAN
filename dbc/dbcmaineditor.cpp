@@ -675,6 +675,9 @@ void DBCMainEditor::newMessage()
         msgItem = nodeItem->parent();
         nodeItem = msgItem->parent();
     }
+    if (typ == DBCItemTypes::NODE){
+        msgItem = nodeItem;
+    }
 
     //if there was a comment this will find the location of the comment and snip it out.
     QString nodeName = nodeItem->data(0, Qt::DisplayRole).toString().split(" - ")[0];
@@ -702,6 +705,7 @@ void DBCMainEditor::newMessage()
             msg.name = nodeName + "Msg" + QString::number(randGen.bounded(500));
             msg.ID = 0;
             msg.len = 8;
+            msg.bgColor = QApplication::palette().color(QPalette::Base);
         }
     }
     else
