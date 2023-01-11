@@ -1303,7 +1303,7 @@ bool DBCFile::saveFile(QString fileName)
     int msgNumber = 1;
     int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
-    QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
+    QString nodesOutput, msgOutput, commentsOutput, valuesOutput, extMultiplexOutput;
     QString defaultsOutput, attrValOutput;
     bool hasExtendedMultiplexing = false;
 
@@ -1400,7 +1400,7 @@ bool DBCFile::saveFile(QString fileName)
         uint32_t ID = msg->ID;
         if (msg->ID > 0x7FF || msg->extendedID)
         {
-            msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            ID += 0x80000000ul; //set bit 31 if this ID is extended.
         }
 
         msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
@@ -1582,6 +1582,8 @@ bool DBCFile::saveFile(QString fileName)
                 defaultsOutput.append("\"" + dbc_attributes[x].enumVals[dbc_attributes[x].defaultValue.toInt()] + "\";\n");
                 break;
             case ATTR_INT:
+                defaultsOutput.append(QString::number(dbc_attributes[x].defaultValue.toLongLong()) + ";\n");
+                break;
             case ATTR_FLOAT:
                 defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
                 break;
@@ -1601,7 +1603,7 @@ bool DBCFile::saveFile(QString fileName)
             uint32_t ID = msg->ID;
             if (msg->ID > 0x7FF || msg->extendedID)
             {
-                msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+                ID += 0x80000000ul; //set bit 31 if this ID is extended.
             }
 
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
@@ -1614,7 +1616,7 @@ bool DBCFile::saveFile(QString fileName)
                     msgOutput.append(sig->name + " " + sig->multiplexParent->name + " ");
                     msgOutput.append(QString::number(sig->multiplexLowValue) + "-" + QString::number(sig->multiplexHighValue) + ";");
                     msgOutput.append("\n");
-                    outFile->write(msgOutput.toUtf8());
+                    extMultiplexOutput.append(msgOutput);
                     msgOutput.clear(); //got to reset it after writing
                 }
             }
@@ -1622,15 +1624,17 @@ bool DBCFile::saveFile(QString fileName)
     }
 
     //now write out all of the accumulated comments and value tables from above
-    outFile->write(attrValOutput.toUtf8());
-    outFile->write(defaultsOutput.toUtf8());
     outFile->write(commentsOutput.toUtf8());
+    outFile->write(defaultsOutput.toUtf8());
+    outFile->write(attrValOutput.toUtf8());    
     outFile->write(valuesOutput.toUtf8());
+    outFile->write(extMultiplexOutput.toUtf8());
 
     attrValOutput.clear();
     defaultsOutput.clear();
     commentsOutput.clear();
     valuesOutput.clear();
+    extMultiplexOutput.clear();
 
     outFile->close();
     delete outFile;
