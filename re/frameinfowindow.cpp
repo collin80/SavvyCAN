@@ -293,6 +293,11 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
+
+    //these two used by bitflip heatmap functionality
+    uint8_t refByte[8];
+    double bitFlipHeat[64];
+
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
     if (modelFrames->count() == 0) return;
@@ -400,7 +405,11 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             maxData[i] = -1;
             for (int k = 0; k < 256; k++) dataHistogram[k][i] = 0;
         }
-        for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
+        for (int j = 0; j < 64; j++)
+        {
+            bitfieldHistogram[j] = 0;
+            bitFlipHeat[j] = 0;
+        }
         signalInstances.clear();
 
         data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
@@ -410,6 +419,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         {
             changedBits[c] = 0;
             referenceBits[c] = data[c];
+            refByte[c] = data[c];
             //qDebug() << referenceBits[c];
         }
 
@@ -463,6 +473,16 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                     }
                 }
                 changedBits[c] |= referenceBits[c] ^ dat;
+
+                if (refByte[c] != dat) //if this byte doesn't match the value it last had
+                {
+                    uint8_t newBits = refByte[c] ^ dat; //get changed bits since last ref
+                    for (int l = 0; l < 8; l++)
+                    {
+                        if (newBits & (1 << l)) bitFlipHeat[(c * 8) + l]++;
+                    }
+                    refByte[c] = dat; //set the reference to this current byte now that processing is done
+                }
             }
 
             //Search every signal in the selected message and give output of the range the signal took and
@@ -487,6 +507,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 }
             }
         }
+
+        //Divide all the bit flip heat values by the number of frames to get a ratio
+        for (int j = 0; j < 64; j++) bitFlipHeat[j] /= (double)frameCache.count();
 
         std::sort(sortedIntervals.begin(), sortedIntervals.end());
         int64_t intervalStdDiv = 0, intervalPctl5 = 0, intervalPctl95 = 0, intervalMean = 0, intervalVariance = 0;
@@ -532,6 +555,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         if (frameCache.count() > 1)
             avgInterval = avgInterval / (frameCache.count() - 1);
         else avgInterval = 0;
+
+        //now that data processing is done, create all of our output
 
         tempItem = new QTreeWidgetItem();
 
@@ -599,7 +624,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         {
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
-                            + QString::number(c % 8) + ") :" + QString::number(bitfieldHistogram[c]));
+                            + QString::number(c % 8) + ") : " + QString::number(bitfieldHistogram[c]));
 
             dataBase->addChild(tempItem);
             histGraphX.append(c);
@@ -607,6 +632,23 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
         }
         baseNode->addChild(dataBase);
+
+        //heat map output
+        dataBase = new QTreeWidgetItem();
+        dataBase->setText(0, tr("Bitchange Heatmap"));
+        for (int c = 0; c < 8 * maxLen; c++)
+        {
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
+                            + QString::number(c % 8) + ") : " + QString::number(bitFlipHeat[c] * 100.0, 'f', 2));
+
+            dataBase->addChild(tempItem);
+            histGraphX.append(c);
+            histGraphY.append(bitfieldHistogram[c]);
+            if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
+        }
+        baseNode->addChild(dataBase);
+
 
         QHash<QString, QHash<QString, int>>::const_iterator it = signalInstances.constBegin();
         while (it != signalInstances.constEnd()) {
