@@ -318,6 +318,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (thisFrame.frameId() == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
 
+        if (frameCache.count() == 0) return; //nothing to do if there are no frames!
+
         const unsigned char *data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
         int dataLen = frameCache.at(0).payload().length();
 
