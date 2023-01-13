@@ -643,7 +643,7 @@ void UDSScanWindow::setupScan(int idx)
         case ST_READ_DTC:
             test.service = UDS_SERVICES::READ_DTC;
             test.subFuncLen = 2;
-            test.subFunc = 0x8702; //get DTCs by mask (87 is the mask)
+            test.subFunc = 0x02FF; //get DTCs by mask (FF is the mask)
             sendOnBuses(test, scanEntries[idx].busToScan);
             break;
         case ST_SEC_ACCESS:
