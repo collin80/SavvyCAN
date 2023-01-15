@@ -34,15 +34,15 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
 
-    connect(ui->check_0, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_1, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_2, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_3, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_4, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_5, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_6, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_7, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    ui->splitter->setStretchFactor(0, 1); //idx, stretch factor
+    ui->splitter->setStretchFactor(1, 4); //goal is to make right hand side larger by default
 
+    for (int i = 0; i < 8; i++)
+    {
+        graphByte[i] = new QCustomPlot();
+        setupByteGraph(graphByte[i], i);
+        ui->gridLayout->addWidget(graphByte[i], i / 4, i & 3);
+    }
 
     ui->graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);
@@ -62,25 +62,6 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui->graphHistogram->yAxis->setLabel("Instances");
 
     ui->graphHistogram->legend->setVisible(false);
-
-    ui->graphBytes->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                    QCP::iSelectLegend | QCP::iSelectPlottables);
-
-    ui->graphBytes->xAxis->setRange(0, 63);
-    ui->graphBytes->yAxis->setRange(0, 265);
-    if (useHexTicker)
-    {
-        QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
-        ui->graphBytes->yAxis->setTicker(hexTicker);
-    }
-    ui->graphBytes->axisRect()->setupFullAxesBox();
-
-    ui->graphBytes->xAxis->setLabel("Time");
-    if (useHexTicker) ui->graphBytes->yAxis->setLabel("Value (HEX)");
-    else ui->graphBytes->yAxis->setLabel("Value (Dec)");
-
-    ui->graphBytes->legend->setVisible(false);
-    ui->graphBytes->setBufferDevicePixelRatio(1);
 
     ui->timeHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                         QCP::iSelectLegend | QCP::iSelectPlottables);
@@ -105,8 +86,6 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     {
         ui->graphHistogram->setAntialiasedElements(QCP::aeAll);
         ui->graphHistogram->setOpenGl(true);
-        ui->graphBytes->setAntialiasedElements(QCP::aeAll);
-        ui->graphBytes->setOpenGl(true);
         ui->timeHistogram->setAntialiasedElements(QCP::aeAll);
         ui->timeHistogram->setOpenGl(true);
     }
@@ -114,8 +93,6 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     {
         ui->graphHistogram->setOpenGl(false);
         ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
-        ui->graphBytes->setOpenGl(false);
-        ui->graphBytes->setAntialiasedElements(QCP::aeNone);
         ui->timeHistogram->setOpenGl(false);
         ui->timeHistogram->setAntialiasedElements(QCP::aeNone);
     }
@@ -132,6 +109,40 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     }
 
     dbcHandler = DBCHandler::getReference();
+}
+
+void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
+{
+    plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                    QCP::iSelectLegend | QCP::iSelectPlottables);
+
+    plot->xAxis->setRange(0, 63);
+    plot->yAxis->setRange(0, 265);
+    if (useHexTicker)
+    {
+        QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
+        plot->yAxis->setTicker(hexTicker);
+    }
+    plot->axisRect()->setupFullAxesBox();
+
+    plot->xAxis->setLabel("Time [" + QString::number(num) + "]");
+    //if (useHexTicker) plot->yAxis->setLabel("Value (HEX)");
+    //else plot->yAxis->setLabel("Value (Dec)");
+    plot->yAxis->setLabel("");
+
+    plot->legend->setVisible(false);
+    plot->setBufferDevicePixelRatio(1);
+
+    if (useOpenGL)
+    {
+        plot->setAntialiasedElements(QCP::aeAll);
+        plot->setOpenGl(true);
+    }
+    else
+    {
+        plot->setOpenGl(false);
+        plot->setAntialiasedElements(QCP::aeNone);
+    }
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -270,7 +281,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         }
         //default is to sort in ascending order
         ui->listFrameID->sortItems();
-        ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
+        ui->lblUniqueID->setText(")" + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
     }
 }
 
@@ -684,15 +695,15 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->graphHistogram->axisRect()->setupFullAxesBox();
         ui->graphHistogram->replot();
 
-        ui->graphBytes->clearGraphs();
         for (int graphs = 0; graphs < 8; graphs++)
         {
-            graphRef[graphs] = ui->graphBytes->addGraph();
-            ui->graphBytes->graph()->setData(byteGraphX, byteGraphY[graphs]);
-            ui->graphBytes->graph()->setPen(bytePens[graphs]);
+            graphByte[graphs]->clearGraphs();
+            graphRef[graphs] = graphByte[graphs]->addGraph();
+            graphByte[graphs]->graph()->setData(byteGraphX, byteGraphY[graphs]);
+            graphByte[graphs]->graph()->setPen(bytePens[graphs]);
+            graphByte[graphs]->xAxis->setRange(0, byteGraphX.count());
+            graphByte[graphs]->replot();
         }
-        ui->graphBytes->xAxis->setRange(0, byteGraphX.count());
-        ui->graphBytes->replot();
 
         ui->timeHistogram->clearGraphs();
         ui->timeHistogram->addGraph();
@@ -708,15 +719,6 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->timeHistogram->axisRect()->setupFullAxesBox();
         ui->timeHistogram->rescaleAxes();
         ui->timeHistogram->replot();
-
-        ui->check_0->setChecked(true);
-        ui->check_1->setChecked(true);
-        ui->check_2->setChecked(true);
-        ui->check_3->setChecked(true);
-        ui->check_4->setChecked(true);
-        ui->check_5->setChecked(true);
-        ui->check_6->setChecked(true);
-        ui->check_7->setChecked(true);
     }
     else
     {
@@ -744,7 +746,7 @@ void FrameInfoWindow::refreshIDList()
     }
     //default is to sort in ascending order
     ui->listFrameID->sortItems();
-    ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
+    ui->lblUniqueID->setText("(" + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
 }
 
 void FrameInfoWindow::saveDetails()
@@ -788,24 +790,6 @@ void FrameInfoWindow::saveDetails()
             outFile->close();
             delete outFile;
         }
-    }
-}
-
-void FrameInfoWindow::changeGraphVisibility(int state){
-    QCheckBox *sender = qobject_cast<QCheckBox *>(QObject::sender());
-    if(sender){
-        sender->objectName();
-        int graphId = sender->objectName().right(1).toInt();
-        for (int k = 0; k < 8; k++)
-        {
-            if (k == graphId && graphRef[k] && graphRef[k]->data()){
-                graphRef[k]->setVisible(state);
-                qDebug() << graphId << state << k;
-            }
-        }
-        qDebug() << graphId << state;
-
-        ui->graphBytes->replot();
     }
 }
 
