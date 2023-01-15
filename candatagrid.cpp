@@ -72,7 +72,10 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     bytesToDraw = 8; //default to the old behavior
     for (int x = 0; x < 8; x++)
         for (int y = 0; y < 64; y++)
+        {
             textStates[y][x] = GridTextState::NORMAL;
+            heatData[y * 8 + x] = 0;
+        }
 
     blackBrush = QBrush(Qt::black);
     whiteBrush = QBrush(Qt::white);
@@ -83,6 +86,26 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     grayBrush = QBrush(QColor(230,230,230));
     xOffset = 0;
     yOffset = 0;
+
+    //generate the palette
+
+    /* //this one looks sort of like a fire. It was my first idea but never really got to where I liked it
+    for(int x = 1; x < 256; x++)
+    {
+        int lum = x * 2;
+        if (lum < 40) lum = 40;
+        if (lum > 250) lum = 250;
+        fire[x] = QColor::fromHsl((int)(x / 3.5), 255 - ((256 - x) / 10), lum);
+    }
+    */
+
+    for(int x = 1; x < 256; x++)
+    {
+        int hue = 256 - x;
+        fire[x] = QColor::fromHsl(hue, 255, 127);
+    }
+
+    fire[0] = Qt::black;
 }
 
 CANDataGrid::~CANDataGrid()
@@ -241,12 +264,12 @@ void CANDataGrid::paintCommonBeginning()
         neededXDivisions = 32;
     }
 
-    if (gridMode == GridMode::CHANGED_BITS)
+    if (gridMode != GridMode::SIGNAL_VIEW)
     {
         bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 3.25);
         smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 4.0);
     }
-    if (gridMode == GridMode::SIGNAL_VIEW)
+    else
     {
         bigTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 3.50);
         smallTextSize = qMin(viewport.size().height(), viewport.size().width()) / (textRestrict * 5.5);
@@ -342,45 +365,53 @@ void CANDataGrid::paintGridCells()
             if ((thisByte & (1 << bitIdx)) == (1 << bitIdx)) thisBit = true;
             if ((prevByte & (1 << bitIdx)) == (1 << bitIdx)) prevBit = true;
 
-            if (thisBit)
+            if (gridMode == GridMode::HEAT_VIEW)
             {
-                if (prevBit)
-                {
-                    if ((signalColors.count() > 0) && (gridMode == GridMode::SIGNAL_VIEW)) painter->setBrush(blackHashBrush);
-                    else painter->setBrush(blackBrush);
-                }
-                else
-                {
-                    if ((signalColors.count() > 0) && (gridMode == GridMode::SIGNAL_VIEW)) painter->setBrush(greenHashBrush);
-                    else painter->setBrush(greenBrush);
-                }
+                painter->setBrush(QBrush(fire[heatData[bit]]));
             }
             else
             {
-                if (prevBit)
+                if (thisBit)
                 {
-                    painter->setBrush(redBrush);
+                    if (prevBit)
+                    {
+                        if ((signalColors.count() > 0) && (gridMode == GridMode::SIGNAL_VIEW)) painter->setBrush(blackHashBrush);
+                        else painter->setBrush(blackBrush);
+                    }
+                    else
+                    {
+                        if ((signalColors.count() > 0) && (gridMode == GridMode::SIGNAL_VIEW)) painter->setBrush(greenHashBrush);
+                        else painter->setBrush(greenBrush);
+                    }
                 }
                 else
-                {                    
-                    usedSigNum = -1;
-                    if ((usedData[byteIdx] & (1 << bitIdx)) == (1 << bitIdx))
+                {
+                    if (prevBit)
                     {
-                        if (gridMode == GridMode::SIGNAL_VIEW) usedSigNum = getUsedSignalNum(bit);
-                        if (usedSigNum == -1)
-                        {
-                            grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
-                            painter->setBrush(grayBrush);
-                        }
-                        else
-                        {
-                            int idx = usedSigNum % signalColors.length(); //can only use as many colors as have been defined
-                            painter->setBrush(QBrush(signalColors[idx]));
-                        }
+                        painter->setBrush(redBrush);
                     }
-                    else painter->setBrush(whiteBrush);
+                    else
+                    {
+                        usedSigNum = -1;
+                        if ((usedData[byteIdx] & (1 << bitIdx)) == (1 << bitIdx))
+                        {
+                            if (gridMode == GridMode::SIGNAL_VIEW) usedSigNum = getUsedSignalNum(bit);
+                            if (usedSigNum == -1)
+                            {
+                                grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
+                                painter->setBrush(grayBrush);
+                            }
+                            else
+                            {
+                                int idx = usedSigNum % signalColors.length(); //can only use as many colors as have been defined
+                                painter->setBrush(QBrush(signalColors[idx]));
+                            }
+                        }
+                        else painter->setBrush(whiteBrush);
+                    }
                 }
             }
+
             painter->drawRect(nearX + (x * xSector), nearY + (y * ySector), xSector, ySector);
             switch (textStates[byteIdx][bitIdx])
             {
@@ -419,7 +450,7 @@ void CANDataGrid::paintGridCells()
      * We already have a big bitmap that tells us which signals occupy which bits so every time there is a new
      * signal look ahead to see if there's room in the row to just run the signal name through as long as needed.
     */
-    if (signalNames.count() > 0)
+    if ( (signalNames.count() > 0) && (gridMode == GridMode::SIGNAL_VIEW) )
     {
         painter->setFont(sigNameFont);
 
@@ -589,4 +620,10 @@ void CANDataGrid::setUsed(unsigned char *newData, bool bUpdate = false)
     //clear all data past that point just to be sure we don't have garbage left over
     if (bytesToTransfer < 64) memset(refData + bytesToTransfer, 0, 64 - bytesToTransfer);
     if (bUpdate) this->update();
+}
+
+void CANDataGrid::setHeat(unsigned char *newData)
+{
+    memcpy(heatData, newData, 512);
+    this->update();
 }

@@ -22,7 +22,7 @@
      <property name="handleWidth">
       <number>8</number>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,4">
@@ -120,20 +120,10 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="">
-      <layout class="QVBoxLayout" name="verticalLayout_4" stretch="0,1,0,2">
+     <widget class="QWidget" name="layoutWidget">
+      <layout class="QVBoxLayout" name="verticalLayout_4" stretch="2,0,2">
        <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Bit Histograph</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCustomPlot" name="graphHistogram" native="true"/>
+        <layout class="QGridLayout" name="gridUpper"/>
        </item>
        <item>
         <widget class="QLabel" name="label_3">
@@ -146,7 +136,7 @@
         </widget>
        </item>
        <item>
-        <layout class="QGridLayout" name="gridLayout" rowstretch="0"/>
+        <layout class="QGridLayout" name="gridLower" rowstretch="0"/>
        </item>
       </layout>
      </widget>

@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QListWidget>
 #include <QTreeWidget>
+#include <candatagrid.h>
 #include "can_structs.h"
 #include "bus_protocols/j1939_handler.h"
 #include "dbc/dbchandler.h"
@@ -32,6 +33,8 @@ private slots:
 private:
     Ui::FrameInfoWindow *ui;
     QCustomPlot *graphByte[8];
+    QCustomPlot *graphHistogram;
+    CANDataGrid *heatmap;
 
     QList<int> foundID;
     QList<CANFrame> frameCache;
