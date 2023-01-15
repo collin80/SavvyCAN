@@ -41,27 +41,40 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     {
         graphByte[i] = new QCustomPlot();
         setupByteGraph(graphByte[i], i);
-        ui->gridLayout->addWidget(graphByte[i], i / 4, i & 3);
+        ui->gridLower->addWidget(graphByte[i], i / 4, i & 3);
     }
 
-    ui->graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+    ui->gridUpper->addWidget(new QLabel("Heatmap"), 0, 0);
+    heatmap = new CANDataGrid();
+    heatmap->setMode(GridMode::HEAT_VIEW);
+    ui->gridUpper->addWidget(heatmap, 1, 0);
+
+    ui->gridUpper->addWidget(new QLabel("Bit Histogram"), 0, 1);
+    graphHistogram = new QCustomPlot();
+    ui->gridUpper->addWidget(graphHistogram, 1, 1);
+
+    ui->gridUpper->setRowMinimumHeight(0, 20);
+    ui->gridUpper->setRowStretch(0, 1);
+    ui->gridUpper->setRowStretch(1, 10);
+
+    graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                     QCP::iSelectLegend | QCP::iSelectPlottables);
 
-    ui->graphHistogram->xAxis->setRange(0, 63);
-    ui->graphHistogram->yAxis->setRange(0, 100);
+    graphHistogram->xAxis->setRange(0, 63);
+    graphHistogram->yAxis->setRange(0, 100);
     QSharedPointer<QCPAxisTickerLog> graphHistoLogTicker(new QCPAxisTickerLog);
-    ui->graphHistogram->yAxis->setTicker(graphHistoLogTicker);
-    ui->graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
-    ui->graphHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
-    ui->graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
+    graphHistogram->yAxis->setTicker(graphHistoLogTicker);
+    graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
+    graphHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
+    graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
 
-    ui->graphHistogram->axisRect()->setupFullAxesBox();
-    ui->graphHistogram->setBufferDevicePixelRatio(1);
+    graphHistogram->axisRect()->setupFullAxesBox();
+    graphHistogram->setBufferDevicePixelRatio(1);
 
-    ui->graphHistogram->xAxis->setLabel("Bits");
-    ui->graphHistogram->yAxis->setLabel("Instances");
+    graphHistogram->xAxis->setLabel("Bits");
+    graphHistogram->yAxis->setLabel("Instances");
 
-    ui->graphHistogram->legend->setVisible(false);
+    graphHistogram->legend->setVisible(false);
 
     ui->timeHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
                                         QCP::iSelectLegend | QCP::iSelectPlottables);
@@ -84,15 +97,15 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
 
     if (useOpenGL)
     {
-        ui->graphHistogram->setAntialiasedElements(QCP::aeAll);
-        ui->graphHistogram->setOpenGl(true);
+        graphHistogram->setAntialiasedElements(QCP::aeAll);
+        graphHistogram->setOpenGl(true);
         ui->timeHistogram->setAntialiasedElements(QCP::aeAll);
         ui->timeHistogram->setOpenGl(true);
     }
     else
     {
-        ui->graphHistogram->setOpenGl(false);
-        ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
+        graphHistogram->setOpenGl(false);
+        graphHistogram->setAntialiasedElements(QCP::aeNone);
         ui->timeHistogram->setOpenGl(false);
         ui->timeHistogram->setAntialiasedElements(QCP::aeNone);
     }
@@ -304,6 +317,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
+    uint8_t heatVals[512];
 
     //these two used by bitflip heatmap functionality
     uint8_t refByte[8];
@@ -649,6 +663,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         //heat map output
         dataBase = new QTreeWidgetItem();
         dataBase->setText(0, tr("Bitchange Heatmap"));
+        memset(heatVals, 0, 512); //always clear the array before populating it.
         for (int c = 0; c < 8 * maxLen; c++)
         {
             tempItem = new QTreeWidgetItem();
@@ -659,9 +674,13 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             histGraphX.append(c);
             histGraphY.append(bitfieldHistogram[c]);
             if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
+            uint8_t heat = bitFlipHeat[c] * 255;
+            if ((heat < 1) && (bitFlipHeat[c] > 0.0001)) heat = 1; //make sure any little bit of heat causes at least some output
+            qDebug() << "Heat for bit " << c <<  " is " << heat;
+            heatVals[c] = heat;
         }
         baseNode->addChild(dataBase);
-
+        heatmap->setHeat(heatVals);
 
         QHash<QString, QHash<QString, int>>::const_iterator it = signalInstances.constBegin();
         while (it != signalInstances.constEnd()) {
@@ -681,19 +700,19 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         ui->treeDetails->insertTopLevelItem(0, baseNode);
 
-        ui->graphHistogram->clearGraphs();
-        ui->graphHistogram->addGraph();
-        ui->graphHistogram->graph()->setData(histGraphX, histGraphY);
-        ui->graphHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
+        graphHistogram->clearGraphs();
+        graphHistogram->addGraph();
+        graphHistogram->graph()->setData(histGraphX, histGraphY);
+        graphHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
         QBrush graphBrush;
         graphBrush.setColor(Qt::red);
         graphBrush.setStyle(Qt::SolidPattern);
-        ui->graphHistogram->graph()->setPen(Qt::NoPen);
-        ui->graphHistogram->graph()->setBrush(graphBrush);
-        ui->graphHistogram->yAxis->setRange(0.8, maxY * 1.2);
-        ui->graphHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
-        ui->graphHistogram->axisRect()->setupFullAxesBox();
-        ui->graphHistogram->replot();
+        graphHistogram->graph()->setPen(Qt::NoPen);
+        graphHistogram->graph()->setBrush(graphBrush);
+        graphHistogram->yAxis->setRange(0.8, maxY * 1.2);
+        graphHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
+        graphHistogram->axisRect()->setupFullAxesBox();
+        graphHistogram->replot();
 
         for (int graphs = 0; graphs < 8; graphs++)
         {
