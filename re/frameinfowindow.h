@@ -28,10 +28,10 @@ private slots:
     void updateDetailsWindow(QString);
     void updatedFrames(int);
     void saveDetails();
-    void changeGraphVisibility(int state);
 
 private:
     Ui::FrameInfoWindow *ui;
+    QCustomPlot *graphByte[8];
 
     QList<int> foundID;
     QList<CANFrame> frameCache;
@@ -47,6 +47,7 @@ private:
     void refreshIDList();
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
+    void setupByteGraph(QCustomPlot *plot, int num);
     void readSettings();
     void writeSettings();
     void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);
