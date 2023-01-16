@@ -58,17 +58,17 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui->gridUpper->setRowStretch(1, 10);
 
     graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                    QCP::iSelectLegend | QCP::iSelectPlottables);
+                                    QCP::iSelectLegend);
 
     graphHistogram->xAxis->setRange(0, 63);
     graphHistogram->yAxis->setRange(0, 100);
     QSharedPointer<QCPAxisTickerLog> graphHistoLogTicker(new QCPAxisTickerLog);
     graphHistogram->yAxis->setTicker(graphHistoLogTicker);
-    graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
+    //graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
     graphHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
     graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
 
-    graphHistogram->axisRect()->setupFullAxesBox();
+    //graphHistogram->axisRect()->setupFullAxesBox();
     graphHistogram->setBufferDevicePixelRatio(1);
 
     graphHistogram->xAxis->setLabel("Bits");
@@ -77,17 +77,17 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     graphHistogram->legend->setVisible(false);
 
     ui->timeHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                        QCP::iSelectLegend | QCP::iSelectPlottables);
+                                        QCP::iSelectLegend);
 
     ui->timeHistogram->xAxis->setRange(0, numIntervalHistBars);
     ui->timeHistogram->yAxis->setRange(0, 100);
     QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
     ui->timeHistogram->yAxis->setTicker(logTicker);
-    ui->timeHistogram->yAxis2->setTicker(logTicker);
+    //ui->timeHistogram->yAxis2->setTicker(logTicker);
     ui->timeHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
     ui->timeHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
     ui->timeHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
-    ui->timeHistogram->axisRect()->setupFullAxesBox();
+    //ui->timeHistogram->axisRect()->setupFullAxesBox();
 
     ui->timeHistogram->xAxis->setLabel("Interval (ms)");
     ui->timeHistogram->yAxis->setLabel("Occurrences");
@@ -121,13 +121,18 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
         bytePens[i].setWidth(1);
     }
 
+    connect(graphHistogram, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(graphHistogram, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+    connect(ui->timeHistogram, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(ui->timeHistogram, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+
     dbcHandler = DBCHandler::getReference();
 }
 
 void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
 {
     plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                    QCP::iSelectLegend | QCP::iSelectPlottables);
+                                    QCP::iSelectLegend);
 
     plot->xAxis->setRange(0, 63);
     plot->yAxis->setRange(0, 265);
@@ -136,7 +141,7 @@ void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
         QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
         plot->yAxis->setTicker(hexTicker);
     }
-    plot->axisRect()->setupFullAxesBox();
+    //plot->axisRect()->setupFullAxesBox();
 
     plot->xAxis->setLabel("Time [" + QString::number(num) + "]");
     //if (useHexTicker) plot->yAxis->setLabel("Value (HEX)");
@@ -156,6 +161,40 @@ void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
         plot->setOpenGl(false);
         plot->setAntialiasedElements(QCP::aeNone);
     }
+
+    connect(plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(plot, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+}
+
+void FrameInfoWindow::mousePress()
+{
+    QCustomPlot *plot = qobject_cast<QCustomPlot *>(sender());
+    if (!plot) return;
+    // if an axis is selected, only allow the direction of that axis to be dragged
+    // if no axis is selected, both directions may be dragged
+
+    if (plot->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeDrag(plot->xAxis->orientation());
+    else if (plot->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeDrag(plot->yAxis->orientation());
+    else
+        plot->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
+}
+
+void FrameInfoWindow::mouseWheel()
+{
+    QCustomPlot *plot = qobject_cast<QCustomPlot *>(sender());
+    if (!plot) return;
+
+    // if an axis is selected, only allow the direction of that axis to be zoomed
+    // if no axis is selected, both directions may be zoomed
+
+    if (plot->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeZoom(plot->xAxis->orientation());
+    else if (plot->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeZoom(plot->yAxis->orientation());
+    else
+        plot->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -676,7 +715,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
             uint8_t heat = bitFlipHeat[c] * 255;
             if ((heat < 1) && (bitFlipHeat[c] > 0.0001)) heat = 1; //make sure any little bit of heat causes at least some output
-            qDebug() << "Heat for bit " << c <<  " is " << heat;
+            //qDebug() << "Heat for bit " << c <<  " is " << heat;
             heatVals[c] = heat;
         }
         baseNode->addChild(dataBase);
