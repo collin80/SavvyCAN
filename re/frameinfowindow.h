@@ -29,6 +29,8 @@ private slots:
     void updateDetailsWindow(QString);
     void updatedFrames(int);
     void saveDetails();
+    void mousePress();
+    void mouseWheel();
 
 private:
     Ui::FrameInfoWindow *ui;
