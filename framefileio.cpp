@@ -4402,7 +4402,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
         return false;
     }
 
-    QString const validSeparators(" -~");
+    QString const validSeparators(" -~;");
 
     // Decode separators and format for later decoding.
     headerLine = fileStream.readLine();
@@ -4611,17 +4611,34 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
             currentFrame.setFrameType(QCanBusFrame::DataFrame);
             currentFrame.bus = 0;
 
-            currentTime = currentTime.addYears(res.captured("year").toUInt());
-            currentTime = currentTime.addMonths(res.captured("month").toUInt());
-            currentTime = currentTime.addDays(res.captured("day").toUInt());
-            currentTime = currentTime.addSecs(
-                res.captured("hours").toUInt() * 60 * 60 +
-                res.captured("minutes").toUInt() * 60 +
-                res.captured("seconds").toUInt()
-            );
-            currentTime = currentTime.addMSecs(res.captured("ms").toUInt());
+            //currentTime is already initialized with startDate so it already has year,month,etc filled out.
+            //For each timestamp on the line we need to figure out how it differs from the already set time
+            //and move the timestamp accordingly.
+            if (res.captured("year").length() > 0)
+            {
+                //for all of these, only add the difference not the whole value!
+                currentTime = currentTime.addYears(res.captured("year").toUInt() - startDate.date().year());
+            }
 
-            currentFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, currentTime.toMSecsSinceEpoch()));
+            if (res.captured("month").length() > 0)
+            {
+                currentTime = currentTime.addMonths(res.captured("month").toUInt() - startDate.date().month());
+            }
+
+            if (res.captured("day").length() > 0)
+            {
+                currentTime = currentTime.addMonths(res.captured("day").toUInt() - startDate.date().day());
+            }
+
+            unsigned int seconds = res.captured("hours").toUInt() * 60 * 60 + res.captured("minutes").toUInt() * 60 +
+                    res.captured("seconds").toUInt() - (startDate.time().msecsSinceStartOfDay() / 1000);
+
+            currentTime = currentTime.addSecs(seconds);
+            currentTime = currentTime.addMSecs(res.captured("ms").toUInt() - (startDate.time().msecsSinceStartOfDay() % 1000));
+
+            //time is stored in microseconds so we need to get the timestamp as milliseconds since the epoch
+            //then multiplyby 1000 to get microseconds since the epoch.
+            currentFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, currentTime.toMSecsSinceEpoch() * 1000));
 
             if(res.captured("type").length() != 0) {
                 auto frameType = res.captured("type").toUInt();
