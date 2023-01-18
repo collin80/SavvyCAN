@@ -31,6 +31,7 @@ private slots:
     void saveDetails();
     void mousePress();
     void mouseWheel();
+    void mouseDoubleClick();
 
 private:
     Ui::FrameInfoWindow *ui;

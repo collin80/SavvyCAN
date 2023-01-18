@@ -105,6 +105,7 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
         fire[x] = QColor::fromHsl(hue, 255, 127);
     }
 
+    //the 0th entry should always be black and really stand out from the rest
     fire[0] = Qt::black;
 }
 
