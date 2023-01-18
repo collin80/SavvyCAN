@@ -164,6 +164,7 @@ void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
 
     connect(plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
     connect(plot, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+    connect(plot, &QCustomPlot::mouseDoubleClick, this, &FrameInfoWindow::mouseDoubleClick);
 }
 
 void FrameInfoWindow::mousePress()
@@ -195,6 +196,36 @@ void FrameInfoWindow::mouseWheel()
         plot->axisRect()->setRangeZoom(plot->yAxis->orientation());
     else
         plot->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
+}
+
+
+//two modes here. If none of the 8 sub graphs are hidden then hide all except the one the user
+//just double clicked on. Otherwise unhide the 7 hidden ones
+void FrameInfoWindow::mouseDoubleClick()
+{
+    QCustomPlot *plot = qobject_cast<QCustomPlot *>(sender());
+    bool hideMode = true;
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (ui->gridLower->itemAt(i)->widget()->isHidden()) hideMode = false;
+    }
+
+    if (hideMode)
+    {
+    for (int i = 0; i < 8; i++)
+        {
+            if (ui->gridLower->itemAt(i)->widget() == (plot)) qDebug() << "Idx " << i << " matched!";
+            else ui->gridLower->itemAt(i)->widget()->setHidden(true);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            ui->gridLower->itemAt(i)->widget()->setHidden(false);
+        }
+    }
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
