@@ -46,6 +46,7 @@ private:
     void selectKayak();
     void selectMQTT();
     void selectLawicel();
+    void selectCANserver();
     bool isSerialBusAvailable();
     void setPortName(CANCon::type pType, QString pPortName, QString pDriver);
 };
