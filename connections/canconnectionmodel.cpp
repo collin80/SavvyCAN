@@ -87,6 +87,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                         case CANCon::GVRET_SERIAL: return "GVRET";
                         case CANCon::KAYAK: return "socketcand";
                         case CANCon::LAWICEL: return "LAWICEL";
+                        case CANCon::CANSERVER: return "CANserver";
                         default: {}
                     }
                 else qDebug() << "Tried to show connection type but connection was nullptr";
