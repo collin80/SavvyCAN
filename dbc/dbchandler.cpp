@@ -1521,6 +1521,9 @@ bool DBCFile::saveFile(QString fileName)
         msgOutput.clear(); //got to reset it after writing
     }
 
+    outFile->write(commentsOutput.toUtf8());
+    commentsOutput.clear();
+
     //Now dump out all of the stored attributes
     for (int x = 0; x < dbc_attributes.count(); x++)
     {
@@ -1624,7 +1627,6 @@ bool DBCFile::saveFile(QString fileName)
     }
 
     //now write out all of the accumulated comments and value tables from above
-    outFile->write(commentsOutput.toUtf8());
     outFile->write(defaultsOutput.toUtf8());
     outFile->write(attrValOutput.toUtf8());    
     outFile->write(valuesOutput.toUtf8());
@@ -1632,7 +1634,6 @@ bool DBCFile::saveFile(QString fileName)
 
     attrValOutput.clear();
     defaultsOutput.clear();
-    commentsOutput.clear();
     valuesOutput.clear();
     extMultiplexOutput.clear();
 
