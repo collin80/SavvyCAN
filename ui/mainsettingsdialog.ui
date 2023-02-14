@@ -355,14 +355,14 @@
         <item>
          <widget class="QCheckBox" name="cbFilterLabeling">
           <property name="text">
-           <string>Label DBC Signals by default</string>
+           <string>Label DBC messages by default</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QCheckBox" name="cbIgnoreDBCColors">
           <property name="text">
-           <string>Ignore DBC signal colors</string>
+           <string>Ignore DBC message colors</string>
           </property>
          </widget>
         </item>
