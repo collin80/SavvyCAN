@@ -77,6 +77,9 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
 //not handling show no reply, max reply delay, reply offset, increment
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
+
+    connect(ui->cbBuses, &QComboBox::currentTextChanged, this, &UDSScanWindow::setBusToScan);
+
     installEventFilter(this);
 
     addNewScan();
@@ -332,6 +335,12 @@ void UDSScanWindow::setSessType()
 {
     if (inhibitUpdates) return;
     if (currEditEntry) currEditEntry->sessType = ui->cbSessType->currentIndex();
+}
+
+void UDSScanWindow::setBusToScan()
+{
+    if (inhibitUpdates) return;
+    if (currEditEntry) currEditEntry->busToScan = ui->cbBuses->currentIndex();
 }
 
 void UDSScanWindow::setNoReplyVal()
