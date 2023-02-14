@@ -61,6 +61,9 @@ CANFrameModel::CANFrameModel(QObject *parent)
     QSettings settings;
     preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
+    //Each CANFrame object takes up 56 bytes and we're allocating two arrays here so take the
+    //# of pre-alloc frames and multiply by 112 to get the RAM usage. This is around 1GiB for the default.
+
     //the goal is to prevent a reallocation from ever happening
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize);

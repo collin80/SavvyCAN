@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>965</width>
-    <height>815</height>
+    <height>852</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -115,7 +115,7 @@
           <item>
            <widget class="QLabel" name="label_10">
             <property name="text">
-             <string>Maximum Frames to Capture</string>
+             <string>CAN Frame Pre-allocation Size</string>
             </property>
            </widget>
           </item>

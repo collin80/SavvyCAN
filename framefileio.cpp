@@ -2024,6 +2024,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                 if (tokens[2].toUpper().contains("TRUE")) thisFrame.setExtendedFrameFormat(true);
                     else thisFrame.setExtendedFrameFormat(false);
 
+                //fix for faulty files that fail to set the extended flag when they should
+                if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
+
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
 
                 if (fileVersion == 1)
