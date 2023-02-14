@@ -216,7 +216,7 @@ public:
     }
 
     /* A unified function that can extract a signal from the (up to) 64 bits of data bytes in a CAN frame
-     * handles both little and big endian signals (and floats too but that's untested).
+     * handles both little and big endian signals (and floats too).
     */
     static int64_t processIntegerSignal(const QByteArray data, int startBit, int sigSize, bool littleEndian, bool isSigned)
     {
