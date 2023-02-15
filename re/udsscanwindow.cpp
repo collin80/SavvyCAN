@@ -445,8 +445,9 @@ void UDSScanWindow::numBytesChanged()
 void UDSScanWindow::checkIDRange()
 {
     if (inhibitUpdates) return;
-    ui->spinStartID->setMaximum(ui->spinEndID->value());
-    ui->spinEndID->setMinimum(ui->spinStartID->value());
+    //ui->spinStartID->setMaximum(ui->spinEndID->value());
+    //ui->spinEndID->setMinimum(ui->spinStartID->value());
+    if (ui->spinStartID->value() > ui->spinEndID->value()) ui->spinEndID->setValue(ui->spinStartID->value());
     if (currEditEntry) currEditEntry->startID = ui->spinStartID->value();
     if (currEditEntry) currEditEntry->endID = ui->spinEndID->value();
     QListWidgetItem* item = ui->listScansToRun->currentItem();
@@ -456,8 +457,9 @@ void UDSScanWindow::checkIDRange()
 void UDSScanWindow::checkServiceRange()
 {
     if (inhibitUpdates) return;
-    ui->spinLowerService->setMaximum(ui->spinUpperService->value());
-    ui->spinUpperService->setMinimum(ui->spinLowerService->value());
+    //ui->spinLowerService->setMaximum(ui->spinUpperService->value());
+    //ui->spinUpperService->setMinimum(ui->spinLowerService->value());
+    if (ui->spinLowerService->value() > ui->spinUpperService->value()) ui->spinUpperService->setValue(ui->spinLowerService->value());
     if (currEditEntry) currEditEntry->serviceLower = ui->spinLowerService->value();
     if (currEditEntry) currEditEntry->serviceUpper = ui->spinUpperService->value();
 }
@@ -465,8 +467,9 @@ void UDSScanWindow::checkServiceRange()
 void UDSScanWindow::checkSubFuncRange()
 {
     if (inhibitUpdates) return;
-    ui->spinLowerSubfunc->setMaximum(ui->spinUpperSubfunc->value());
-    ui->spinUpperSubfunc->setMinimum(ui->spinLowerSubfunc->value());
+    //ui->spinLowerSubfunc->setMaximum(ui->spinUpperSubfunc->value());
+    //ui->spinUpperSubfunc->setMinimum(ui->spinLowerSubfunc->value());
+    if (ui->spinLowerSubfunc->value() > ui->spinUpperSubfunc->value()) ui->spinUpperSubfunc->setValue(ui->spinLowerSubfunc->value());
     if (currEditEntry) currEditEntry->subfunctLower = ui->spinLowerSubfunc->value();
     if (currEditEntry) currEditEntry->subfunctUpper = ui->spinUpperSubfunc->value();
 }
