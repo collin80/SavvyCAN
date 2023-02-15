@@ -81,6 +81,7 @@ private slots:
     void setIncrementVal();
     void setReplyOffset();
     void setSessType();
+    void setBusToScan();
 
 private:
     Ui::UDSScanWindow *ui;
