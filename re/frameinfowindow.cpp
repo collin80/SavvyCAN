@@ -8,7 +8,7 @@
 #include "qcpaxistickerhex.h"
 
 const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green,  Qt::black, Qt::red, //0 1 2 3
-                                                    Qt::gray, Qt::yellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
+                                                    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
 QPen FrameInfoWindow::bytePens[8];
 
 const int numIntervalHistBars = 20;
