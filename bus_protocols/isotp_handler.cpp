@@ -249,7 +249,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         messageBuffer.insert(msg.frameId(), msg);
         //The sending ID is set to the last ID we used to send from this class which is
         //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
-        if (issueFlowMsgs && lastSenderID > 0 && lastSenderBus==frame.bus)
+        if (issueFlowMsgs && lastSenderID > 0 && lastSenderBus==static_cast<uint32_t>(frame.bus))
         {
             CANFrame outFrame;
             outFrame.bus = lastSenderBus;
