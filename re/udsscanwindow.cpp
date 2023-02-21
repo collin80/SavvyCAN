@@ -83,6 +83,10 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     installEventFilter(this);
 
     addNewScan();
+
+    checkIDRange();
+    checkServiceRange();
+    checkSubFuncRange();
 }
 
 UDSScanWindow::~UDSScanWindow()
@@ -110,6 +114,13 @@ bool UDSScanWindow::eventFilter(QObject *obj, QEvent *event)
         return QObject::eventFilter(obj, event);
     }
     return false;
+}
+
+void UDSScanWindow::setControlState(QWidget & widget, bool valid)
+{
+    QPalette pal = widget.palette();
+    pal.setColor(QPalette::ColorRole::Base , valid ? Qt::white : Qt::red);
+    widget.setPalette(pal);
 }
 
 void UDSScanWindow::displayScanEntry(int idx)
@@ -189,7 +200,7 @@ void UDSScanWindow::loadScans()
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);    
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -242,6 +253,7 @@ void UDSScanWindow::saveScans()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDefaultSuffix(".uds");
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -448,27 +460,33 @@ void UDSScanWindow::numBytesChanged()
     uint64_t upperBound =  (1ull << (8ull * ui->spinNumBytes->value())) - 1;
     if (upperBound > 0x7FFFFFFF) upperBound = 0x7FFFFFFF;
     ui->spinUpperSubfunc->setMaximum(upperBound);
+    ui->spinLowerSubfunc->setMaximum(upperBound);
     if (currEditEntry) currEditEntry->subfunctLen = ui->spinNumBytes->value();
 }
 
 void UDSScanWindow::checkIDRange()
 {
     if (inhibitUpdates) return;
-    //ui->spinStartID->setMaximum(ui->spinEndID->value());
-    //ui->spinEndID->setMinimum(ui->spinStartID->value());
-    if (ui->spinStartID->value() > ui->spinEndID->value()) ui->spinEndID->setValue(ui->spinStartID->value());
+
+    const bool isValid = ui->spinStartID->value() <= ui->spinEndID->value();
+    setControlState(*ui->spinStartID, isValid);
+    setControlState(*ui->spinEndID, isValid);
+    
     if (currEditEntry) currEditEntry->startID = ui->spinStartID->value();
     if (currEditEntry) currEditEntry->endID = ui->spinEndID->value();
-    QListWidgetItem* item = ui->listScansToRun->currentItem();
-    item->setText(generateListDesc(ui->listScansToRun->currentRow()));
+    if (QListWidgetItem* item = ui->listScansToRun->currentItem())
+    {
+        item->setText(generateListDesc(ui->listScansToRun->currentRow()));
+    }
 }
 
 void UDSScanWindow::checkServiceRange()
 {
     if (inhibitUpdates) return;
-    //ui->spinLowerService->setMaximum(ui->spinUpperService->value());
-    //ui->spinUpperService->setMinimum(ui->spinLowerService->value());
-    if (ui->spinLowerService->value() > ui->spinUpperService->value()) ui->spinUpperService->setValue(ui->spinLowerService->value());
+
+    const bool isValid = ui->spinLowerService->value() <= ui->spinUpperService->value();
+    setControlState(*ui->spinLowerService, isValid);
+    setControlState(*ui->spinUpperService, isValid);    
     if (currEditEntry) currEditEntry->serviceLower = ui->spinLowerService->value();
     if (currEditEntry) currEditEntry->serviceUpper = ui->spinUpperService->value();
 }
@@ -476,9 +494,9 @@ void UDSScanWindow::checkServiceRange()
 void UDSScanWindow::checkSubFuncRange()
 {
     if (inhibitUpdates) return;
-    //ui->spinLowerSubfunc->setMaximum(ui->spinUpperSubfunc->value());
-    //ui->spinUpperSubfunc->setMinimum(ui->spinLowerSubfunc->value());
-    if (ui->spinLowerSubfunc->value() > ui->spinUpperSubfunc->value()) ui->spinUpperSubfunc->setValue(ui->spinLowerSubfunc->value());
+    const bool isValid = ui->spinLowerSubfunc->value() <= ui->spinUpperSubfunc->value();
+    setControlState(*ui->spinLowerSubfunc, isValid);
+    setControlState(*ui->spinUpperSubfunc, isValid);
     if (currEditEntry) currEditEntry->subfunctLower = ui->spinLowerSubfunc->value();
     if (currEditEntry) currEditEntry->subfunctUpper = ui->spinUpperSubfunc->value();
 }
@@ -559,6 +577,8 @@ void UDSScanWindow::scanSelected()
 
 void UDSScanWindow::startScan()
 {
+    if (sendingFrames.isEmpty()) return;
+
     udsHandler->setReception(true);
     udsHandler->setProcessAllIDs(true);
     udsHandler->setFlowCtrl(true);
