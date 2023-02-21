@@ -108,5 +108,7 @@ private:
     void setupNodes(uint32_t replyID);
     void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);
     bool eventFilter(QObject *obj, QEvent *event);
+
+    static void setControlState(QWidget & widget, bool valid);
 };
 #endif // UDSSCANWINDOW_H
