@@ -369,8 +369,8 @@ void SocketCANd::readTCPData(int busNum)
 {
     QString data;
 
-    if (tcpClient[busNum])
-        data = QString(tcpClient[busNum]->readAll());
+    if (QTcpSocket* socket = tcpClient.value(busNum))
+        data = QString(socket->readAll());
     //sendDebug("Got data from TCP. Len = " % QString::number(data.length()));
     //qDebug() << "Received datagramm: " << data;
     procRXData(data, busNum);
