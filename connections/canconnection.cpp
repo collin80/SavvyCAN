@@ -175,7 +175,10 @@ bool CANConnection::sendFrame(const CANFrame& pFrame)
 
     CANFrame *txFrame;
     txFrame = getQueue().get();
-    *txFrame = pFrame;
+    if (txFrame)
+    {
+        *txFrame = pFrame;        
+    }    
     getQueue().queue();
 
     return piSendFrame(pFrame);
