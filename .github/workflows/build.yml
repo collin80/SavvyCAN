@@ -36,7 +36,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: SavvyCAN-Linux_x64.AppImage
-          path: SavvyCAN-x86_64.AppImage
+          path: SavvyCAN-*x86_64.AppImage
       
   buildmacos:
     name: macOS x64
