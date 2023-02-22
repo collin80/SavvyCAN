@@ -137,7 +137,7 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            SavvyCAN-Linux_x64.AppImage/SavvyCAN-x86_64.AppImage
+            SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
             SavvyCAN-Windows_x64_CIBuild.zip
             SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
           
