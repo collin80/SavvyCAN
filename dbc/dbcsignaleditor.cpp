@@ -778,6 +778,8 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 void DBCSignalEditor::bitfieldLeftClicked(int bit)
 {
     if (currentSignal == nullptr) return;
+
+    pushToUndoBuffer();
     currentSignal->startBit = bit;
     if (currentSignal->valType == SP_FLOAT)
     {
@@ -812,6 +814,9 @@ void DBCSignalEditor::bitfieldRightClicked(int bit)
     //which is quite luckily also the index into the signal handler table
     int sigNum = ui->bitfield->getUsedSignalNum(bit);
     if (sigNum < 0) return;
+
+    pushToUndoBuffer(); // undo to resume editing the previous signal
+
     currentSignal = dbcMessage->sigHandler->findSignalByIdx(sigNum);
 
     if (currentSignal)
