@@ -66,6 +66,9 @@ CANFrameModel::CANFrameModel(QObject *parent)
 
     //the goal is to prevent a reallocation from ever happening
     frames.reserve(preallocSize);
+    //this is pretty wasteful. We're storing all frames twice. It may be better for filteredFrames to be a list of pointers.
+    //Pointers take up 8 bytes instead of 56 so this is quite a savings for RAM usage. But, then filteredFrames would
+    //work differently from frames above so the two could not be used interchangeably. Still think about what can be done.
     filteredFrames.reserve(preallocSize);
 
     dbcHandler = DBCHandler::getReference();
