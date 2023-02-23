@@ -3,12 +3,23 @@ DBC Signal Editor
 
 ![Signal Editor](./images/SignalEditor.png)
 
+Not So Secret Things
+=====================
+First of all, here are the things that might otherwise pass under the radar but are functions of this form:
+
+* Pretty much everything on this form now has secret undo functionality. If you make a mistake you can press CTRL-Z to revert it. This will revert practically anything you've done on this form.
+
+* The 8x8 data grid is not locked that way. CAN-FD signals are supported and so up to 64 bytes can be shown in the bitfield. The bitfield will automatically adjust for the number of bytes in a given message. However, you can also switch the views yourself by middle clicking in the bitfield.
+
+* If you right click a different signal in the bitfield you will then be editing that signal instead. This lets you quickly move between signals in the same message. However, this only works for other signals that are either not multiplexed (if you started with a non-multiplexed signal when editing) or otherwise only other signals that have the same multiplexor value.
+
+
 Defining and Editing Signals
 ============================
 
 At the top you can rename the signal and you'll see that it is renamed in the DBC window as well.
 
-The majority of the view is taken up by the bitfield grid. This view shows all the signals contained within this message (that have the same multiplexor value as this one). They're all labeled as well. Bonus fun fact - SavvyCAN technically does support CAN-FD DBC files! That's right, you can load DBC files with CAN-FD signals and they will work. Now, you might wonder how this could work since the grid is 8x8. Well, it won't be if the message you're working on says it has more than 8 data bytes. Up to 64 are supported and the bitfield will adjust accordingly. If you want to see that beautiful 64 byte footage without a CAN-FD signal then try middle clicking on the bitfield. This actually works basically anywhere the bitfield is found in the program. You heard it here first.
+The majority of the view is taken up by the bitfield grid. This view shows all the signals contained within this message (that have the same multiplexor value as this one). They're all labeled as well. Bonus fun fact - SavvyCAN technically does support CAN-FD DBC files! That's right, you can load DBC files with CAN-FD signals and they will work. The bitfield will adjust to show enough bits to show the whole message.
 
 "Bit Length" - This sets how many bits the signal uses. Once you do this you'll see that that many bits are now highlighted in the data grid. The black bit with diagonal stripes is the "start" bit, green bits (with stripes the other way) are the other bits in the signal. Bits used by other signals are colored according to a secret list of colors. They also have the signal name. You should not overlap onto other signals. This could be possible with multiplexed signals but you will NOT see signals on this grid that are not part of the same multiplexor value as this signal so you should NOT overlap here.
 
