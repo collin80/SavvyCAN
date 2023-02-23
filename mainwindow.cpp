@@ -593,7 +593,7 @@ void MainWindow::setupSendToLatestGraphWindow()
     GraphParams param;
     QString signalName = getSignalNameFromPosition(contextMenuPosition);
     param.ID = getMessageIDFromPosition(contextMenuPosition);
-    DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(param.ID, nullptr);
+    DBC_MESSAGE *msg = dbcHandler->findMessage(param.ID);
     if(msg)
     {
         DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(signalName);
