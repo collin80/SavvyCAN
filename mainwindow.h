@@ -33,6 +33,7 @@
 #include "signalviewerwindow.h"
 #include "re/temporalgraphwindow.h"
 #include "re/dbccomparatorwindow.h"
+#include "canbridgewindow.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -89,6 +90,7 @@ private slots:
     void showSignalViewer();
     void showTemporalGraphWindow();
     void showDBCComparisonWindow();
+    void showCANBridgeWindow();
     void exitApp();
     void handleSaveDecoded();
     void handleSaveDecodedCsv();
@@ -183,6 +185,7 @@ private:
     SignalViewerWindow *signalViewerWindow;
     TemporalGraphWindow *temporalGraphWindow;
     DBCComparatorWindow *dbcComparatorWindow;
+    CANBridgeWindow *canBridgeWindow;
 
     //various private storage
     QLabel lbStatusConnected;

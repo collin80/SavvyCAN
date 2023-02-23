@@ -32,7 +32,6 @@
       <property name="font">
        <font>
         <pointsize>11</pointsize>
-        <weight>50</weight>
         <bold>false</bold>
        </font>
       </property>
@@ -81,7 +80,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <bold>false</bold>
          </font>
         </property>
@@ -138,7 +136,6 @@
         <property name="font">
          <font>
           <pointsize>11</pointsize>
-          <weight>75</weight>
           <italic>true</italic>
           <bold>true</bold>
          </font>
@@ -338,6 +335,9 @@
           <height>16777215</height>
          </size>
         </property>
+        <property name="alternatingRowColors">
+         <bool>false</bool>
+        </property>
        </widget>
       </item>
       <item>
@@ -368,7 +368,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_RE_Tools">
@@ -399,6 +399,7 @@
     <addaction name="actionUDS_Scanner"/>
     <addaction name="actionFirmware_Update"/>
     <addaction name="actionMotorControlConfig"/>
+    <addaction name="actionCAN_Bridge"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -619,6 +620,11 @@
   <action name="actionSave_Decoded_Frames_CSV">
    <property name="text">
     <string>Save Decoded Frames CSV</string>
+   </property>
+  </action>
+  <action name="actionCAN_Bridge">
+   <property name="text">
+    <string>CAN Bridge</string>
    </property>
   </action>
  </widget>

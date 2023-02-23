@@ -95,6 +95,7 @@ MainWindow::MainWindow(QWidget *parent) :
     signalViewerWindow = nullptr;
     temporalGraphWindow = nullptr;
     dbcComparatorWindow = nullptr;
+    canBridgeWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -136,6 +137,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
+    connect(ui->actionCAN_Bridge, &QAction::triggered, this, &MainWindow::showCANBridgeWindow);
 
     //handlers fror interactions with the main can frame view table
     connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
@@ -262,8 +264,11 @@ void MainWindow::killEmAll()
     killWindow(firmwareUploaderWindow);
     killWindow(motorctrlConfigWindow);
     killWindow(signalViewerWindow);
-    killWindow(connectionWindow);
     killWindow(temporalGraphWindow);
+    killWindow(canBridgeWindow);
+
+    //trying to kill this window can cause a fault to happen. It's closed last just in case.
+    killWindow(connectionWindow);
 }
 
 //forcefully close the window, kill it, and salt the earth
@@ -1440,6 +1445,15 @@ void MainWindow::showBisectWindow()
         bisectWindow = new BisectWindow(model->getListReference());
     }
     bisectWindow->show();
+}
+
+void MainWindow::showCANBridgeWindow()
+{
+    if (!canBridgeWindow)
+    {
+        canBridgeWindow = new CANBridgeWindow(model->getListReference());
+    }
+    canBridgeWindow->show();
 }
 
 void MainWindow::showFrameSenderWindow()
