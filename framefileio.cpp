@@ -1062,6 +1062,9 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
     int lineCounter = 0;
     bool foundErrors = false;
+    int addendumTime = 0;
+    double previousTime = 0;
+
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -1097,7 +1100,11 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
                     multiplier = 1; //special case. Assume no decimal means microseconds
                 }
                 //qDebug() << "decimal places " << decimalPlaces;
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[0].toDouble() * multiplier)));
+                if (previousTime > tokens[0].toDouble()) {
+                    addendumTime += 60;
+                }
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>((tokens[0].toDouble() + addendumTime) * multiplier)));
+                previousTime = tokens[0].toDouble();
                 thisFrame.setFrameId( static_cast<uint32_t>(tokens[1].toInt(nullptr, 16)) );
                 thisFrame.setExtendedFrameFormat((thisFrame.frameId() > 0x7FF));
                 thisFrame.isReceived = true;
