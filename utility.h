@@ -10,14 +10,20 @@
 #include <QRect>
 //#include <QDesktopWidget>
 
+enum TimeStyle
+{
+    TS_SECONDS,
+    TS_MICROS,
+    TS_MILLIS,
+    TS_CLOCK
+};
+
 class Utility
 {
 public:
 
     static bool decimalMode;
-    static bool secondsMode;
-    static bool millisMode;
-    static bool sysTimeMode;
+    static TimeStyle timeStyle;
     static QString timeFormat;
 
     //determines whether the window position is within any available screens. If it is not we default
@@ -153,15 +159,21 @@ public:
 
     static QVariant formatTimestamp(uint64_t timestamp)
     {
-        if (!sysTimeMode) {
-            if (millisMode) return (double)timestamp / 1000.0;
-            if (!secondsMode) return (unsigned long long)(timestamp);
-            else
-            {
-                return (double)timestamp / 1000000.0;
-            }
+        switch (timeStyle)
+        {
+        case TS_CLOCK:
+            return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
+            break;
+        case TS_MILLIS:
+            return (double)timestamp / 1000.0;
+            break;
+        case TS_MICROS:
+            return (unsigned long long)(timestamp);
+            break;
+        case TS_SECONDS:
+            return (double)timestamp / 1000000.0;
+            break;
         }
-        else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric

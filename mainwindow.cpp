@@ -387,12 +387,17 @@ void MainWindow::readUpdateableSettings()
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
     Utility::decimalMode = !useHex;
-    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
-    model->setSecondsMode(secondsMode);
-    useSystemClock = settings.value("Main/TimeClock", false).toBool();
-    model->setSysTimeMode(useSystemClock);
-    millisMode = settings.value("Main/TimeMillis", false).toBool();
-    model->setMillisMode(millisMode);
+
+    bool tempBool;
+    TimeStyle ts = TS_MICROS;
+    tempBool = settings.value("Main/TimeSeconds", false).toBool();
+    if (tempBool) ts = TS_SECONDS;
+    tempBool = settings.value("Main/TimeClock", false).toBool();
+    if (tempBool) ts = TS_CLOCK;
+    tempBool = settings.value("Main/TimeMillis", false).toBool();
+    if (tempBool) ts = TS_MILLIS;
+    model->setTimeStyle(ts);
+
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
     ignoreDBCColors = settings.value("Main/IgnoreDBCColors", false).toBool();
