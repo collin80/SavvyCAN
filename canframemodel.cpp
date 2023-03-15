@@ -76,7 +76,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     overwriteDups = false;
     filtersPersistDuringClear = false;
     useHexMode = true;
-    timeSeconds = false;
+    timeStyle = TS_MICROS;
     timeOffset = 0;
     needFilterRefresh = false;
     lastUpdateNumFrames = 0;
@@ -101,32 +101,13 @@ void CANFrameModel::setHexMode(bool mode)
     }
 }
 
-void CANFrameModel::setSecondsMode(bool mode)
+void CANFrameModel::setTimeStyle(TimeStyle newStyle)
 {
-    if (Utility::secondsMode != mode)
+    if (timeStyle != newStyle)
     {
         this->beginResetModel();
-        Utility::secondsMode = mode;
-        this->endResetModel();
-    }
-}
-
-void CANFrameModel::setSysTimeMode(bool mode)
-{
-    if (Utility::sysTimeMode != mode)
-    {
-        this->beginResetModel();
-        Utility::sysTimeMode = mode;
-        this->endResetModel();
-    }
-}
-
-void CANFrameModel::setMillisMode(bool mode)
-{
-    if (Utility::millisMode != mode)
-    {
-        this->beginResetModel();
-        Utility::millisMode = mode;
+        timeStyle = newStyle;
+        Utility::timeStyle = newStyle;
         this->endResetModel();
     }
 }
@@ -487,7 +468,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             //Reformatting the output a bit with custom code
             if (overwriteDups)
             {
-                if (timeSeconds) return QString::number(thisFrame.timedelta / 1000000.0, 'f', 5);
+                if (timeStyle == TS_SECONDS) return QString::number(thisFrame.timedelta / 1000000.0, 'f', 5);
                 return QString::number(thisFrame.timedelta);
             }
             else ts = Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
