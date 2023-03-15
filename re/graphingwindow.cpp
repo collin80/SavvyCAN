@@ -3,6 +3,7 @@
 #include "newgraphdialog.h"
 #include "mainwindow.h"
 #include "helpwindow.h"
+#include "utility.h"
 #include <QDebug>
 
 #include <algorithm>
@@ -33,8 +34,15 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphingView->xAxis->setLabel("Time Axis");
     ui->graphingView->yAxis->setLabel("Value Axis");
     ui->graphingView->xAxis->setNumberFormat("f");
-    if (secondsMode) ui->graphingView->xAxis->setNumberPrecision(6);
+    if (Utility::timeStyle == TS_SECONDS) ui->graphingView->xAxis->setNumberPrecision(6);
         else ui->graphingView->xAxis->setNumberPrecision(0);
+
+    if (Utility::timeStyle == TS_CLOCK)
+    {
+        QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+        timeTicker->setTimeFormat("%h:%m:%s.%z");
+        ui->graphingView->xAxis->setTicker(timeTicker);
+    }
 
     ui->graphingView->legend->setVisible(true);
     QFont legendFont = font();
@@ -154,7 +162,7 @@ void GraphingWindow::readSettings()
         resize(settings.value("Graphing/WindowSize", QSize(800, 600)).toSize());
         move(Utility::constrainedWindowPos(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint()));
     }
-    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
 }
 
@@ -267,7 +275,7 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     //apply transforms to get the X axis value where we double clicked
     double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
     id = plottable->property("id").toInt();
-    if (secondsMode) emit sendCenterTimeID(id, coord);
+    if (Utility::timeStyle == TS_SECONDS) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
 
     double x, y;
@@ -298,7 +306,7 @@ void GraphingWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 
     QCPRange range = ui->graphingView->xAxis->range();
     double offset = range.size() / 2.0;
-    if (!secondsMode) timestamp *= 1000000.0; //timestamp is always in seconds when being passed so convert if necessary
+    if (Utility::timeStyle != TS_SECONDS) timestamp *= 1000000.0; //timestamp is always in seconds when being passed so convert if necessary
     ui->graphingView->xAxis->setRange(timestamp - offset, timestamp + offset);
     ui->graphingView->replot();
 }
@@ -1242,9 +1250,14 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         int64_t tempVal; //64 bit temp value.
         tempVal = Utility::processIntegerSignal(frame.payload(), params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
         double xVal, yVal;
-        if (secondsMode)
+        if (Utility::timeStyle == TS_SECONDS)
         {
             xVal = ((double)(frame.timeStamp().microSeconds()) / 1000000.0 - params.xbias);
+        }
+        else if (Utility::timeStyle == TS_CLOCK)
+        {
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch((frame.timeStamp().microSeconds() / 1000) - params.xbias);
+            xVal = (dt.time().second() + dt.time().minute() * 60 + dt.time().hour() * 3600);
         }
         else
         {
@@ -1375,9 +1388,14 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         y = (tempVal * params.scale) + params.bias;
         params.y.append( y );
 
-        if (secondsMode)
+        if (Utility::timeStyle == TS_SECONDS)
         {
             x = (frameCache[k].timeStamp().microSeconds()) / 1000000.0;
+        }
+        else if (Utility::timeStyle == TS_CLOCK)
+        {
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch((frameCache[k].timeStamp().microSeconds() / 1000) - params.xbias);
+            x = (dt.time().msecsSinceStartOfDay() / 1000.0);
         }
         else
         {
