@@ -127,6 +127,7 @@ void UDSScanWindow::displayScanEntry(int idx)
 {
     if (inhibitUpdates) return;
     if (idx == -1) return;
+    inhibitUpdates = true; //need to do this so it doesn't mess things up as we fill in the fields
     currEditEntry = &scanEntries.data()[idx];
     ui->spinStartID->setValue(currEditEntry->startID);
     ui->spinEndID->setValue(currEditEntry->endID);
@@ -143,6 +144,7 @@ void UDSScanWindow::displayScanEntry(int idx)
     ui->spinLowerSubfunc->setValue(currEditEntry->subfunctLower);
     ui->spinUpperSubfunc->setValue(currEditEntry->subfunctUpper);
     ui->spinIncrement->setValue(currEditEntry->subfunctIncrement);
+    inhibitUpdates = false;
 }
 
 void UDSScanWindow::deleteSelectedScan()
@@ -215,7 +217,7 @@ void UDSScanWindow::loadScans()
             QMessageBox::warning(this, "Cannot Load File", "File is not a supported version.\nCannot load it!");
             return;
         }
-        inhibitUpdates = true;;
+        inhibitUpdates = true;
         scanEntries.clear();
         ui->listScansToRun->clear();
         int numEntries;
@@ -223,12 +225,22 @@ void UDSScanWindow::loadScans()
         for (int i = 0; i < numEntries; i++)
         {
             ScanEntry entry;
-            load >> entry.startID >> entry.endID;
-            load >> entry.idOffset >> entry.bAdaptiveOffset >> entry.bShowNoReplies;
-            load >> entry.busToScan >> entry.maxWaitTime >> entry.scanType;
-            load >> entry.sessType >> entry.subfunctLen >> entry.subfunctLower;
-            load >> entry.subfunctUpper >> entry.subfunctIncrement;
-            load >> entry.serviceLower >> entry.serviceUpper;
+            load >> entry.startID;
+            load >> entry.endID;
+            load >> entry.idOffset;
+            load >> entry.bAdaptiveOffset;
+            load >> entry.bShowNoReplies;
+            load >> entry.busToScan;
+            load >> entry.maxWaitTime;
+            load >> entry.scanType;
+            load >> entry.sessType;
+            load >> entry.subfunctLen;
+            load >> entry.subfunctLower;
+            load >> entry.subfunctUpper;
+            load >> entry.subfunctIncrement;
+            load >> entry.serviceLower;
+            load >> entry.serviceUpper;
+
             scanEntries.append(entry);
             ui->listScansToRun->addItem(generateListDesc(scanEntries.length() - 1));
         }
