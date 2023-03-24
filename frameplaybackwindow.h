@@ -69,6 +69,7 @@ private:
     void readSettings();
     void writeSettings();
     void calculateWhichBus();
+    bool checkNoSeqLoaded();
     bool eventFilter(QObject *obj, QEvent *event);
 };
 
