@@ -576,6 +576,7 @@ void FramePlaybackWindow::btnLoadLive()
 
 void FramePlaybackWindow::btnBackOneClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = false;
     isPlaying = false;
     wantPlaying = false;
@@ -593,6 +594,7 @@ void FramePlaybackWindow::btnPauseClick()
 
 void FramePlaybackWindow::btnReverseClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = false;
     wantPlaying = true;
     if (!ui->ckWaitForTraffic->isChecked())
@@ -628,6 +630,7 @@ void FramePlaybackWindow::btnStopClick()
 
 void FramePlaybackWindow::btnPlayClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = true;
     wantPlaying = true;
     if (!ui->ckWaitForTraffic->isChecked())
@@ -640,11 +643,22 @@ void FramePlaybackWindow::btnPlayClick()
 
 void FramePlaybackWindow::btnFwdOneClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = true;
     isPlaying = false;
     wantPlaying = false;
     playbackObject.stepPlaybackForward();
     updateFrameLabel();
+}
+
+bool FramePlaybackWindow::checkNoSeqLoaded()
+{
+    if (seqItems.count() == 0)
+    {
+        QMessageBox::warning(this, "Warning", "Cannot begin playback until at\nleast one playback source is loaded.");
+        return false;
+    }
+    return true;
 }
 
 void FramePlaybackWindow::changePlaybackSpeed(int newSpeed)
