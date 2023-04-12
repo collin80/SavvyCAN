@@ -867,7 +867,7 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
         line = txt.readLine().simplified();
         if (line.length() > 2)
         {
-            QList<QString> tokens = line.split(QRegExp("\\s+"));
+            QList<QString> tokens = line.split(QRegularExpression("\\s+"));
             if (tokens.length() > 3)
             {
                 QString time = tokens[0].replace(",", "");
@@ -3507,9 +3507,9 @@ bool FrameFileIO::isCanDumpFile(QString filename)
     QFile *inFile = new QFile(filename);
     QByteArray line;
     QList<QByteArray> tokens;
-    QRegExp timeExp("^\\((\\S+)\\)$");
-    QRegExp IdValExp("^(\\S+)#(\\S+)$");
-    QRegExp valExp("(\\S{2})");
+    QRegularExpression timeExp(QRegularExpression::anchoredPattern("^\\((\\S+)\\)$")); //anchored pattern causes exact match
+    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
+    QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
     int pos = 0;
     bool isMatch = true;
@@ -3534,11 +3534,13 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                 tokens = line.simplified().split(' ');
                 if(tokens.count() < 3) isMatch = false;
 
-                /* timestamp */
-                ret = timeExp.exactMatch(tokens[0]);
-                if(!ret) isMatch = false;
+                /* timestamp */                
+                QRegularExpressionMatch timeExpMatched = timeExp.match(tokens[0]);
+                if(!timeExpMatched.hasMatch()) {
+                    isMatch = false;
+                }
 
-                /*uint64_t timestamp = (uint64_t)*/(timeExp.cap(1).toDouble(&ret) /** (double)1000000.0*/);
+                /*uint64_t timestamp = (uint64_t)*/(timeExpMatched.captured(1).toDouble(&ret) /** (double)1000000.0*/);
                 if(!ret) isMatch = false;
 
                 if (line.contains('[')) //the expanded format
@@ -3568,17 +3570,19 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                         isMatch = false;
                         continue;
                     }
-                    ret = IdValExp.exactMatch(tokens[2]);
-                    if(!ret)
+
+
+                    QRegularExpressionMatch IdValExpMatched = IdValExp.match(tokens[2]);
+                    if(!IdValExpMatched.hasMatch())
                     {
                         isMatch = false;
                         continue;
                     }
 
                     /* ID */
-                    /*int ID = */IdValExp.cap(1).toInt(&ret, 16);
+                    /*int ID = */IdValExpMatched.captured(1).toInt(&ret, 16);
 
-                    QString val= IdValExp.cap(2);
+                    QString val= IdValExpMatched.captured(2);
 
                     pos = 0;
                     int len = 0;
@@ -3592,22 +3596,23 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                     } else {
                         /* val byte per byte */
                         int lng = 0;
-                        while ((pos = valExp.indexIn(val, pos)) != -1)
-                        {
+                        QRegularExpressionMatch valExpMatch;
+                        QRegularExpressionMatchIterator i = valExp.globalMatch(val);
+                        while (i.hasNext()) {
+                            valExpMatch = i.next();
                             lng++;
                             if (lng > 8)
                             {
                                 isMatch = false;
                                 break;
                             }
-                            /*int data = */valExp.cap(1).toInt(&ret, 16);
+                            /*int data = */valExpMatch.captured(1).toInt(&ret, 16);
                             if(!ret)
                             {
                                 isMatch = false;
                                 break;
                             }
 
-                            pos += valExp.matchedLength();
                         }
                     }
                 }
@@ -3634,11 +3639,10 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     QByteArray line;
     QList<QByteArray> tokens;
-    QRegExp timeExp("^\\((\\S+)\\)$");
-    QRegExp IdValExp("^(\\S+)#(\\S+)$");
-    QRegExp valExp("(\\S{2})");
+    QRegularExpression timeExp(QRegularExpression::anchoredPattern("^\\((\\S+)\\)$")); //anchored pattern causes exact match
+    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
+    QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
-    int pos = 0;
     bool ret;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -3664,8 +3668,8 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             if(tokens.count()<3) continue;
 
             /* timestamp */
-            ret = timeExp.exactMatch(tokens[0]);
-            if(!ret) continue;
+            QRegularExpressionMatch timeExpMatched = timeExp.match(tokens[0]);
+            if(!timeExpMatched.hasMatch()) continue;
             
             //Sort out the bus
             std::string busString = tokens[1].toStdString();
@@ -3686,7 +3690,7 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             
             thisFrame.bus = busNum;
             
-            thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0)));
+            thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(timeExpMatched.captured(1).toDouble(&ret) * (double)1000000.0)));
             if(!ret) continue;
 
             if (line.contains('[')) //the expanded format (second one from the above list)
@@ -3709,24 +3713,26 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             {
                 /* ID & value */
                 //qDebug() << tokens[2];
-                ret = IdValExp.exactMatch(tokens[2]);
-                if(!ret)
+                QRegularExpressionMatch IdValExpMatched = IdValExp.match(tokens[2]);
+                if(!IdValExpMatched.hasMatch())
                 {
                     qDebug() << "ID regex didn't match!";
                     continue;
                 }
 
                 /* ID */
-                thisFrame.setFrameId(static_cast<uint32_t>(IdValExp.cap(1).toInt(&ret, 16)));
-                if (IdValExp.cap(1).length() > 3) {
+                thisFrame.setFrameId(static_cast<uint32_t>(IdValExpMatched.captured(1).toInt(&ret, 16)));
+                if (IdValExpMatched.captured(1).length() > 3)
+                {
                     thisFrame.setExtendedFrameFormat(true);
-                } else {
+                }
+                else
+                {
                     thisFrame.setExtendedFrameFormat(false);
                 }
 
-                QString val= IdValExp.cap(2);
+                QString val = IdValExpMatched.captured(2);
 
-                pos = 0;
                 QByteArray bytes;
                 if (val.startsWith("R") && val.at(1).isDigit()) {
                     thisFrame.payload().resize( val.at(1).toLatin1() - '0' );
@@ -3734,12 +3740,13 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
                 } else {
                     thisFrame.setFrameType(QCanBusFrame::DataFrame);
                     /* val byte per byte */
-                    while ((pos = valExp.indexIn(val, pos)) != -1)
+                    QRegularExpressionMatch valExpMatch;
+                    QRegularExpressionMatchIterator i = valExp.globalMatch(val);
+                    while (i.hasNext())
                     {
-                        bytes.append((char)valExp.cap(1).toInt(&ret, 16));
+                        valExpMatch = i.next();
+                        bytes.append((char)valExpMatch.captured(1).toInt(&ret, 16));
                         if(!ret) continue;
-
-                        pos += valExp.matchedLength();
                     }
                 }
                 thisFrame.setPayload(bytes);

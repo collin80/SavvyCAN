@@ -109,16 +109,16 @@ void ConnectionWindow::readPendingDatagrams()
         while(!CANBeaconXml.atEnd() && !CANBeaconXml.hasError())
         {
           CANBeaconXml.readNext();
-          if(CANBeaconXml.name() == "CANBeacon" && !CANBeaconXml.isEndElement())
+          if(CANBeaconXml.name() == QString("CANBeacon") && !CANBeaconXml.isEndElement())
                 KayakHost.append(CANBeaconXml.attributes().value("name"));
 
-          if(CANBeaconXml.name() == "URL")
+          if(CANBeaconXml.name() == QString("URL"))
                 KayakHost.append(" (" + CANBeaconXml.readElementText() + ')');
 
           //Kayak can theoretically send multiple busses over one ports
           //TODO: implement this case in socketcand.cpp
-          if(CANBeaconXml.name() == "Bus" && !CANBeaconXml.isEndElement())
-                KayakBus.append(CANBeaconXml.attributes().value("name") + ",");
+          if(CANBeaconXml.name() == QString("Bus") && !CANBeaconXml.isEndElement())
+                KayakBus.append(CANBeaconXml.attributes().value("name").toUtf8() + ",");
 
         }
         KayakHost = KayakBus.left(KayakBus.length() - 1) + "@" + KayakHost;
