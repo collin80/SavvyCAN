@@ -2249,14 +2249,14 @@ DBCHandler::DBCHandler()
     qDebug() << "Previously loaded DBC file count: " << filecount;
     for (int i=0; i<filecount; i++)
     {
-        QString filename = settings.value("DBC/Filename_" + QString(i),"").toString();
+        QString filename = settings.value("DBC/Filename_" + QString::number(i),"").toString();
         DBCFile * file = loadDBCFile(filename);
         if (file)
         {
-            int bus = settings.value("DBC/AssocBus_" + QString(i),0).toInt();
+            int bus = settings.value("DBC/AssocBus_" + QString::number(i),0).toInt();
             file->setAssocBus(bus);
 
-            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString(i),0).toInt();
+            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString::number(i),0).toInt();
 
             DBC_ATTRIBUTE attr;
 
@@ -2270,7 +2270,7 @@ DBCHandler::DBCHandler()
             file->dbc_attributes.append(attr);
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
-            bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
+            bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString::number(i),0).toBool();
             attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = filterLabeling;
             attr.enumVals.clear();
