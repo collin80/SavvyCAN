@@ -30,14 +30,14 @@ DBCNodeDuplicateEditor::DBCNodeDuplicateEditor(QWidget *parent) :
             if(newBase <= 0 || newBase > 0x1FFFFFFFul)
             {
                 QMessageBox::question(this, "Invalid Address", "The new address is outside of the valid range.",
-                                                  QMessageBox::Ok);
+                                                  QMessageBox::StandardButtons(QMessageBox::Ok));
                 return;
             }
 
             if(newBase == lowestMsgId)
             {
                 QMessageBox::question(this, "Invalid Address", "The new address is the same as the original.",
-                                                  QMessageBox::Ok);
+                                                  QMessageBox::StandardButtons(QMessageBox::Ok));
                 return;
             }
 
@@ -47,14 +47,14 @@ DBCNodeDuplicateEditor::DBCNodeDuplicateEditor(QWidget *parent) :
             if(messagesForNode.count() == 0)
             {
                 QMessageBox::question(this, "No Messages", "The node has no messages to duplicate.",
-                                                  QMessageBox::Ok);
+                                                  QMessageBox::StandardButtons(QMessageBox::Ok));
                 return;
             }
 
             if(ui->lineNodeName->text().isEmpty())
             {
                 QMessageBox::question(this, "No Name", "The new node needs a name before it can be created.",
-                                                  QMessageBox::Ok);
+                                                  QMessageBox::StandardButtons(QMessageBox::Ok));
                 return;
             }
 
@@ -66,7 +66,7 @@ DBCNodeDuplicateEditor::DBCNodeDuplicateEditor(QWidget *parent) :
             if(nodePtr == nullptr)
             {
                 QMessageBox::question(this, "Node Invalid", "There was an problem identifying the selected node.",
-                                                  QMessageBox::Ok);
+                                                  QMessageBox::StandardButtons(QMessageBox::Ok));
                 return;
             }
 
@@ -77,7 +77,7 @@ DBCNodeDuplicateEditor::DBCNodeDuplicateEditor(QWidget *parent) :
                 if(newMsgId < 0 || newMsgId > 0x1FFFFFFFl)
                 {
                     QMessageBox::question(this, "Invalid Address Range", "The new starting address would cause a message to be outside of the valid address range.",
-                                                      QMessageBox::Ok);
+                                                      QMessageBox::StandardButtons(QMessageBox::Ok));
                     return;
                 }
             }

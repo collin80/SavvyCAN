@@ -202,7 +202,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         {       
             for (int j = 0; j < frameLen; j++)
             {
-                if (frame.payload().count() > (j+2))
+                if (frame.payload().length() > (j+2))
                     dataBytes.append(data[j+2]);
             }
         }
@@ -210,7 +210,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         {
             for (int j = 0; j < frameLen; j++)
             {
-                if (frame.payload().count() > (j+1))
+                if (frame.payload().length() > (j+1))
                     dataBytes.append(data[j+1]);
             }
         }
@@ -221,7 +221,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     case 1: //first frame of a multi-frame message
         checkNeedFlush(ID);
         msg.bus = frame.bus;
-        if (frame.payload().count() < 8) return; //MUST have all 8 data bytes in this first frame.
+        if (frame.payload().length() < 8) return; //MUST have all 8 data bytes in this first frame.
         msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
         msg.setFrameId(ID);
         msg.setTimeStamp(frame.timeStamp());
@@ -273,8 +273,8 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (!pMsg->isMultiframe) return; //if we didn't get a frame type 1 (start of multiframe) first then ignore this frame.
         dataBytes.clear();
         dataBytes.append(pMsg->payload());
-        ln = pMsg->reportedLength - pMsg->payload().count();
-        //offset = pMsg->data.count();
+        ln = pMsg->reportedLength - pMsg->payload().length();
+        //offset = pMsg->data.length();
         if (useExtendedAddressing)
         {
             if (ln > 6) ln = 6;
@@ -286,7 +286,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             for (int j = 0; j < ln; j++) dataBytes.append(frame.payload()[j+1]);
         }
         pMsg->setPayload(dataBytes);
-        if (pMsg->reportedLength <= pMsg->payload().count())
+        if (pMsg->reportedLength <= pMsg->payload().length())
         {
             qDebug() << "Emitting multiframe ISOTP message";
             checkNeedFlush(pMsg->frameId());
@@ -326,16 +326,16 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
     if (messageBuffer.contains(ID))
     {
         msg = &messageBuffer[ID];
-        if (msg->reportedLength <= msg->payload().count())
+        if (msg->reportedLength <= msg->payload().length())
         {
-            qDebug() << "Flushing full frame" << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
+            qDebug() << "Flushing full frame" << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().length();
             if (msg->reportedLength > 0) emit newISOMessage(*msg);
         }
         else
         {
             if (sendPartialMessages)
             {
-                qDebug() << "Flushing a partial frame " << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().count();
+                qDebug() << "Flushing a partial frame " << QString::number(msg->frameId(), 16) << "  " << msg->reportedLength << "  " << msg->payload().length();
                 if (msg->reportedLength > 0) emit newISOMessage(*msg);
             }
             else qDebug() << "Have a partial message but sending of such is disabled. Throwing it away";

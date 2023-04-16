@@ -158,7 +158,7 @@ void FileComparatorWindow::calculateDetails()
         CANFrame frame = interestedFrames.at(x);
         DBC_MESSAGE *msg = dbcHandler->findMessage(frame.frameId());
         data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
-        dataLen = frame.payload().count();
+        dataLen = frame.payload().length();
 
         if (interestedIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {
@@ -250,7 +250,7 @@ void FileComparatorWindow::calculateDetails()
         CANFrame frame = referenceFrames.at(x);
         DBC_MESSAGE *msg = dbcHandler->findMessage(frame.frameId());
         data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
-        dataLen = frame.payload().count();
+        dataLen = frame.payload().length();
 
         if (referenceIDs.contains(frame.frameId())) //if we saw this ID before then add to the QList in there
         {

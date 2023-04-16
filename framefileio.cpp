@@ -1279,7 +1279,7 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CANFrame>* frames
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         outFile->write(QString::number(frame->timeStamp().microSeconds() / 1000000.0, 'f', 6).toUtf8());
         outFile->putChar(' ');
@@ -1848,7 +1848,7 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CANFrame>* fr
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         uint64_t timeStamp = (frame->timeStamp().microSeconds() - offsetTime) / 1000000ull;
         int tsLen = QString::number(timeStamp).length();
@@ -2105,7 +2105,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CANFrame>* f
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         outFile->write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
         outFile->putChar(44);
@@ -2197,7 +2197,7 @@ bool FrameFileIO::writeContinuousNative(const QVector<CANFrame>* frames, int beg
     {
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         continuousFile.write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
         continuousFile.putChar(44);
@@ -2376,7 +2376,7 @@ bool FrameFileIO::saveGenericCSVFile(QString filename, const QVector<CANFrame>* 
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         outFile->write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         outFile->putChar(44);
@@ -2597,7 +2597,7 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CANFrame>* frames)
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         tempStamp = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
         outFile->write(tempStamp.toString("hh:mm:ss:zzz").toUtf8());
@@ -2787,7 +2787,7 @@ bool FrameFileIO::saveIXXATFile(QString filename, const QVector<CANFrame>* frame
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         tempStamp = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
         outFile->write("\"" + tempStamp.toString("h:m:s.").toUtf8() + tempStamp.toString("z").rightJustified(3, '0').toUtf8() + "\"");
@@ -2967,7 +2967,7 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CANFrame>* frame
 
         frame = &frames->at(c);
         inData = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        inDataLen = frame->payload().count();
+        inDataLen = frame->payload().length();
 
         for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
 
@@ -3167,7 +3167,7 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CANFrame>* f
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         outFile->write(QString::number((frame->timeStamp().microSeconds() / 1000)).toUtf8());
         if (frame->isReceived) outFile->write(";RX;");
@@ -3395,7 +3395,7 @@ bool FrameFileIO::saveTraceFile(QString filename, const QVector<CANFrame> * fram
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
          //1F D3 3F FF 08 FF E0 CB
         outFile->write(QString::number(lineCounter).rightJustified(10, ' ').toUtf8());
@@ -3468,7 +3468,7 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CANFrame> * fr
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         outFile->write("(");
 
@@ -3511,7 +3511,6 @@ bool FrameFileIO::isCanDumpFile(QString filename)
     QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
     QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
-    int pos = 0;
     bool isMatch = true;
     bool ret;
 
@@ -3584,7 +3583,6 @@ bool FrameFileIO::isCanDumpFile(QString filename)
 
                     QString val= IdValExpMatched.captured(2);
 
-                    pos = 0;
                     int len = 0;
                     if (val.startsWith("R") && val.at(1).isDigit()) {
                         len = val.at(1).toLatin1() - '0';
@@ -4141,7 +4139,7 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CANFrame>* fram
 
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().length();
 
         double tempTimeStamp = frame->timeStamp().microSeconds();
         tempTimeStamp /= 1000000;

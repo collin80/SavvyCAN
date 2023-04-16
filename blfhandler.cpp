@@ -80,19 +80,19 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                 {
                     qDebug() << "Dunno what this is... " << objHeader.containerObj.compressionMethod;
                 }
-                qDebug() << "Uncompressed size: " << uncompressedData.count();
+                qDebug() << "Uncompressed size: " << uncompressedData.length();
                 qDebug() << "Currently loaded frames at this point: " << frames->count();
                 pos = 0;
                 //bool foundHeader = false;
                 //first skip forward to find a header signature - usually not necessary
-                while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.count())
+                while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.length())
                 {
                     int32_t *headerSig = (int32_t *)(uncompressedData.constData() + pos);
                     if (*headerSig == 0x4A424F4C) break;
                     pos += 4;
                 }
                 //then process all the objects
-                while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.count())
+                while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.length())
                 {
                     memcpy(&obj.header.base, (uncompressedData.constData() + pos), sizeof(BLF_OBJ_HEADER_BASE));
                     memcpy(&obj.header.v1Obj, (uncompressedData.constData() + pos) + sizeof(BLF_OBJ_HEADER_BASE), sizeof(BLF_OBJ_HEADER_V1));
@@ -158,7 +158,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                     }
                 }
                 uncompressedData.remove(0, pos);
-                qDebug() << "After removing used data uncompressedData is now this big: " << uncompressedData.count();
+                qDebug() << "After removing used data uncompressedData is now this big: " << uncompressedData.length();
 
                 break;
             }

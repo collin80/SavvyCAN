@@ -1,6 +1,5 @@
 #include "uds_handler.h"
 #include "connections/canconmanager.h"
-#include "mainwindow.h"
 #include "isotp_handler.h"
 #include <QDebug>
 
@@ -186,7 +185,7 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
 {
     qDebug() << "UDS handler got ISOTP frame";
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
-    int dataLen = msg.payload().count();
+    int dataLen = msg.payload().length();
     UDS_MESSAGE udsMsg;
     udsMsg.bus = msg.bus;
     udsMsg.setExtendedFrameFormat(msg.hasExtendedFrameFormat());
@@ -219,10 +218,8 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
             if (dataLen > 1) udsMsg.subFunc = data[1];
             udsMsg.payload().remove(0, 1);
         }
+        emit newUDSMessage(udsMsg);
     }
-    else return;
-
-    emit newUDSMessage(udsMsg);
 }
 
 void UDS_HANDLER::setFlowCtrl(bool state)

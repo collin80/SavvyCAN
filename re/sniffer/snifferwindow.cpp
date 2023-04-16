@@ -181,7 +181,7 @@ void SnifferWindow::notchTick()
     }
     else
     {
-        ui->lblNotch->setBackgroundRole(QPalette::Background);
+        ui->lblNotch->setBackgroundRole(QPalette::Window);
         ui->lblNotch->repaint();
         //qDebug() << "Tock";
     }

@@ -1370,9 +1370,9 @@ bool DBCFile::saveFile(QString fileName)
             {
                 foreach (DBC_ATTRIBUTE_VALUE val, node.attributes) {
                     attrValOutput.append("BA_ \"" + val.attrName + "\" BU_ ");
-                    switch (val.value.type())
+                    switch (val.value.typeId())
                     {
-                    case QVariant::Type::String:
+                    case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
                     default:
@@ -1415,9 +1415,9 @@ bool DBCFile::saveFile(QString fileName)
         {
             foreach (DBC_ATTRIBUTE_VALUE val, msg->attributes) {
                 attrValOutput.append("BA_ \"" + val.attrName + "\" BO_ " + QString::number(ID) + " ");
-                switch (val.value.type())
+                switch (val.value.typeId())
                 {
-                case QVariant::Type::String:
+                case QMetaType::QString:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
                     break;
                 default:
@@ -1492,9 +1492,9 @@ bool DBCFile::saveFile(QString fileName)
             {
                 foreach (DBC_ATTRIBUTE_VALUE val, sig->attributes) {
                     attrValOutput.append("BA_ \"" + val.attrName + "\" SG_ " + QString::number(ID) + " " + sig->name + " ");
-                    switch (val.value.type())
+                    switch (val.value.typeId())
                     {
-                    case QVariant::Type::String:
+                    case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
                     default:

@@ -263,7 +263,7 @@ void GraphingWindow::plottableClick(QCPAbstractPlottable* plottable, int dataIdx
     qDebug() << "plottableClick";
     double x, y;
     QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
-    graph->pixelsToCoords(event->localPos(), x, y);
+    graph->pixelsToCoords(event->position(), x, y);
     locationText->setText("X: " + QString::number(x, 'f', 3) + " Y: " + QString::number(y, 'f', 3));
 }
 
@@ -273,15 +273,15 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     qDebug() << "plottableDoubleClick";
     int id = 0;
     //apply transforms to get the X axis value where we double clicked
-    double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
+    double coord = plottable->keyAxis()->pixelToCoord(event->position().x());
     id = plottable->property("id").toInt();
     if (Utility::timeStyle == TS_SECONDS) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
 
     double x, y;
     QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
-    graph->pixelsToCoords(event->localPos(), x, y);
-    x = ui->graphingView->xAxis->pixelToCoord(event->localPos().x());
+    graph->pixelsToCoords(event->position(), x, y);
+    x = ui->graphingView->xAxis->pixelToCoord(event->position().x());
 
     itemTracer->setGraph(graph);
     itemTracer->setVisible(true);
