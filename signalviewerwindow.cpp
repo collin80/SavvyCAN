@@ -145,7 +145,7 @@ void SignalViewerWindow::loadNodes()
 
         for (int x = 0; x < dbcHandler->getFileByIdx(f)->dbc_nodes.count(); x++)
         {
-            QString name = dbcHandler->getFileByIdx(f)->dbc_nodes[x].name;
+            QString name = dbcHandler->getFileByIdx(f)->dbc_nodes[x]->name;
             if(name != "Vector__XXX")
                 names.append(name);
         }

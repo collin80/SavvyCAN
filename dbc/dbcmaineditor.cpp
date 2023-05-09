@@ -394,15 +394,15 @@ void DBCMainEditor::refreshTree()
 
     if (dbcFile->findNodeByName("Vector__XXX") == nullptr)
     {
-        DBC_NODE newNode;
-        newNode.name = "Vector__XXX";
-        newNode.comment = "Default node if no other node is specified";
+        DBC_NODE *newNode = new DBC_NODE;
+        newNode->name = "Vector__XXX";
+        newNode->comment = "Default node if no other node is specified";
         dbcFile->dbc_nodes.append(newNode);
     }
 
     for (int n = 0; n < dbcFile->dbc_nodes.count(); n++)
     {
-        DBC_NODE *node = &dbcFile->dbc_nodes[n];
+        DBC_NODE *node = dbcFile->dbc_nodes[n];
         QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
         QString nodeInfo = node->name;
         if (node->comment.length() > 0) nodeInfo.append(" - ").append(node->comment);
@@ -566,20 +566,18 @@ void DBCMainEditor::updatedSignal(DBC_SIGNAL *sig)
 
 void DBCMainEditor::newNode(QString nodeName)
 {
-    DBC_NODE node;
-    DBC_NODE *nodePtr;
+    DBC_NODE *nodePtr = new DBC_NODE;
     if(nodeName.isEmpty())
     {
-        node.name = "Unnamed" + QString::number(randGen.bounded(50000));
+        nodePtr->name = "Unnamed" + QString::number(randGen.bounded(50000));
     }
     else
     {
-        node.name = nodeName;
+        nodePtr->name = nodeName;
     }
-    dbcFile->dbc_nodes.append(node);
-    nodePtr = dbcFile->findNodeByName(node.name);
+    dbcFile->dbc_nodes.append(nodePtr);
     QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
-    nodeItem->setText(0, node.name);
+    nodeItem->setText(0, nodePtr->name);
     nodeItem->setIcon(0, nodeIcon);
     nodeItem->setData(0, Qt::UserRole, DBCItemTypes::NODE);
     nodeToItem.insert(nodePtr, nodeItem);
@@ -777,7 +775,7 @@ void DBCMainEditor::newSignal()
     }
 
     sigPtr->parentMessage = msg;
-    if (!sigPtr->receiver) sigPtr->receiver = &dbcFile->dbc_nodes[0]; //if receiver not set then set it to... something.
+    if (!sigPtr->receiver) sigPtr->receiver = dbcFile->dbc_nodes[0]; //if receiver not set then set it to... something.
     msg->sigHandler->addSignal(sigPtr);
     QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
     QString sigInfo = sigPtr->name;
@@ -901,8 +899,9 @@ void DBCMainEditor::deleteNode(DBC_NODE *node)
 
     for (int j = 0; j < dbcFile->dbc_nodes.count(); j++)
     {
-        if (dbcFile->dbc_nodes.at(j).name == node->name)
+        if (dbcFile->dbc_nodes.at(j)->name == node->name)
         {
+            delete dbcFile->dbc_nodes[j];
             dbcFile->dbc_nodes.removeAt(j);
             break;
         }

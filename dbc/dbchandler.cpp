@@ -287,7 +287,7 @@ DBC_NODE* DBCFile::findNodeByIdx(int idx)
 {
     if (idx < 0) return nullptr;
     if (idx >= dbc_nodes.count()) return nullptr;
-    return &dbc_nodes[idx];
+    return dbc_nodes[idx];
 }
 
 DBC_NODE* DBCFile::findNodeByName(QString name)
@@ -296,10 +296,10 @@ DBC_NODE* DBCFile::findNodeByName(QString name)
     if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
-        if (name.compare(dbc_nodes[i].name, Qt::CaseInsensitive) == 0)
+        if (name.compare(dbc_nodes[i]->name, Qt::CaseInsensitive) == 0)
         {
             qDebug() << "GOT IT!";
-            return &dbc_nodes[i];
+            return dbc_nodes[i];
         }
     }
     qDebug() << "Couldn't find it!";
@@ -312,14 +312,14 @@ DBC_NODE* DBCFile::findNodeByNameAndComment(QString fullname)
     if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
-        if(dbc_nodes[i].comment.isEmpty())
-            nameAndComment = dbc_nodes[i].name;
+        if(dbc_nodes[i]->comment.isEmpty())
+            nameAndComment = dbc_nodes[i]->name;
         else
-            nameAndComment = dbc_nodes[i].name + " - " + dbc_nodes[i].comment;
+            nameAndComment = dbc_nodes[i]->name + " - " + dbc_nodes[i]->comment;
 
         if (fullname.compare(nameAndComment, Qt::CaseInsensitive) == 0)
         {
-            return &dbc_nodes[i];
+            return dbc_nodes[i];
         }
     }
     return nullptr;
@@ -840,9 +840,9 @@ bool DBCFile::loadFile(QString fileName)
     messageHandler->setMatchingCriteria(EXACT);
     messageHandler->setFilterLabeling(false);
 
-    DBC_NODE falseNode;
-    falseNode.name = "Vector__XXX";
-    falseNode.comment = "Default node if none specified";
+    DBC_NODE *falseNode = new DBC_NODE;
+    falseNode->name = "Vector__XXX";
+    falseNode->comment = "Default node if none specified";
     dbc_nodes.append(falseNode);
 
     while (!inFile->atEnd()) {
@@ -859,8 +859,8 @@ bool DBCFile::loadFile(QString fileName)
         {
             if (rawLine.startsWith("\t") || rawLine.startsWith("   "))
             {
-                DBC_NODE node;
-                node.name = line;
+                DBC_NODE *node = new DBC_NODE;
+                node->name = line;
                 dbc_nodes.append(node);
             }
             else inMultilineBU = false;
@@ -898,8 +898,8 @@ bool DBCFile::loadFile(QString fileName)
                         //qDebug() << nodeStrings[i];
                         if (nodeStrings[i].length() > 1)
                         {
-                            DBC_NODE node;
-                            node.name = nodeStrings[i];
+                            DBC_NODE *node = new DBC_NODE;
+                            node->name = nodeStrings[i];
                             dbc_nodes.append(node);
                         }
                     }
@@ -1307,22 +1307,22 @@ bool DBCFile::saveFile(QString fileName)
     nodesOutput.append("BU_: ");
     for (int x = 0; x < dbc_nodes.count(); x++)
     {
-        DBC_NODE node = dbc_nodes[x];
-        if (node.name.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
+        DBC_NODE *node = dbc_nodes[x];
+        if (node->name.compare("Vector__XXX", Qt::CaseInsensitive) != 0)
         {
-            if (node.name.length() < 1) //detect an empty string and fill it out with something
+            if (node->name.length() < 1) //detect an empty string and fill it out with something
             {
-                node.name = "NODE" + QString::number(nodeNumber);
+                node->name = "NODE" + QString::number(nodeNumber);
                 nodeNumber++;
             }
-            nodesOutput.append(node.name + " ");
-            if (node.comment.length() > 0)
+            nodesOutput.append(node->name + " ");
+            if (node->comment.length() > 0)
             {
-                commentsOutput.append("CM_ BU_ " + node.name + " \"" + node.comment + "\";\n");
+                commentsOutput.append("CM_ BU_ " + node->name + " \"" + node->comment + "\";\n");
             }
-            if (node.attributes.count() > 0)
+            if (node->attributes.count() > 0)
             {
-                foreach (DBC_ATTRIBUTE_VALUE val, node.attributes) {
+                foreach (DBC_ATTRIBUTE_VALUE val, node->attributes) {
                     attrValOutput.append("BA_ \"" + val.attrName + "\" BU_ ");
                     switch (val.value.typeId())
                     {
@@ -1682,9 +1682,9 @@ int DBCHandler::createBlankFile()
     attr.valType = ATTR_INT;
     newFile.dbc_attributes.append(attr);
 
-    DBC_NODE falseNode;
-    falseNode.name = "Vector__XXX";
-    falseNode.comment = "Default node if none specified";
+    DBC_NODE *falseNode = new DBC_NODE;
+    falseNode->name = "Vector__XXX";
+    falseNode->comment = "Default node if none specified";
     newFile.dbc_nodes.append(falseNode);
     newFile.setAssocBus(-1);
 
@@ -1955,10 +1955,10 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
              msg->fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
              if (!msg->sender && nodeName.length() > 1)
              {
-                 DBC_NODE node;
-                 node.name = nodeName;
+                 DBC_NODE *node = new DBC_NODE;
+                 node->name = nodeName;
                  thisFile->dbc_nodes.append(node);
-                 msg->sender = thisFile->findNodeByName(nodeName);
+                 msg->sender = node;
              }
              if (nodeName.length() < 2) msg->sender = thisFile->findNodeByIdx(0);
              thisFile->messageHandler->addMessage(msg);
@@ -2033,10 +2033,10 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
                     sig->receiver = thisFile->findNodeByName(rxArray[0].toString());
                     if (!sig->receiver && rxArray[0].toString().length() > 1)
                     {
-                        DBC_NODE node;
-                        node.name = rxArray[0].toString();
+                        DBC_NODE *node = new DBC_NODE;
+                        node->name = rxArray[0].toString();
                         thisFile->dbc_nodes.append(node);
-                        sig->receiver = thisFile->findNodeByName(rxArray[0].toString());
+                        sig->receiver = node;
                     }
                     if (!sig->receiver) sig->receiver = thisFile->findNodeByIdx(0);
                 }

@@ -85,7 +85,7 @@ public:
     void sort();
 
     DBCMessageHandler *messageHandler;
-    QList<DBC_NODE> dbc_nodes;
+    QList<DBC_NODE *> dbc_nodes;
     QList<DBC_ATTRIBUTE> dbc_attributes;
 private:
     QString fileName;

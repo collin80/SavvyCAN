@@ -79,8 +79,8 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
                 DBC_NODE *node = dbcFile->findNodeByName(newText);
                 if (!node)
                 {
-                    DBC_NODE newNode;
-                    newNode.name = newText;
+                    DBC_NODE *newNode = new DBC_NODE;
+                    newNode->name = newText;
                     dbcFile->dbc_nodes.append(newNode);
                     node = dbcFile->findNodeByName(newText);
                     ui->comboSender->addItem(newText);
@@ -176,7 +176,7 @@ void DBCMessageEditor::setFileIdx(int idx)
     ui->comboSender->clear();
     for (int x = 0; x < dbcFile->dbc_nodes.count(); x++)
     {
-        ui->comboSender->addItem(dbcFile->dbc_nodes[x].name);
+        ui->comboSender->addItem(dbcFile->dbc_nodes[x]->name);
     }
     suppressEditCallbacks = false;
 }

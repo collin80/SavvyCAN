@@ -171,7 +171,7 @@ void DBCComparatorWindow::calculateDetails()
 
     for (int i = 0; i < firstDBC->dbc_nodes.count(); i++)
     {
-        QString nodeName = firstDBC->dbc_nodes[i].name;
+        QString nodeName = firstDBC->dbc_nodes[i]->name;
         DBC_NODE *node = secondDBC->findNodeByName(nodeName);
         if (!node)
         {
@@ -183,7 +183,7 @@ void DBCComparatorWindow::calculateDetails()
 
     for (int i = 0; i < secondDBC->dbc_nodes.count(); i++)
     {
-        QString nodeName = secondDBC->dbc_nodes[i].name;
+        QString nodeName = secondDBC->dbc_nodes[i]->name;
         DBC_NODE *node = firstDBC->findNodeByName(nodeName);
         if (!node)
         {

@@ -465,7 +465,7 @@ void DBCSignalEditor::setFileIdx(int idx)
 
     for (int x = 0; x < dbcFile->dbc_nodes.count(); x++)
     {
-        ui->comboReceiver->addItem(dbcFile->dbc_nodes[x].name);
+        ui->comboReceiver->addItem(dbcFile->dbc_nodes[x]->name);
     }
 }
 
