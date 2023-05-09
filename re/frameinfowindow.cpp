@@ -587,9 +587,10 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (msg)
             {
                 int numSignals = msg->sigHandler->getCount();
+                QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
                 for (int i = 0; i < numSignals; i++)
                 {
-                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    DBC_SIGNAL *sig = sigs[i];
                     if (sig)
                     {
                         if (sig->isSignalInMessage(frameCache.at(j)))

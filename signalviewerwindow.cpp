@@ -175,10 +175,11 @@ void SignalViewerWindow::loadMessages(int idx)
     {
         qDebug() << dbcHandler->getFileByIdx(f)->messageHandler->getCount();
 
-        for (int x = 0; x < dbcHandler->getFileByIdx(f)->messageHandler->getCount(); x++)
+        QList<DBC_MESSAGE *> msgs = dbcHandler->getFileByIdx(f)->messageHandler->getMsgsAsList();
+        for (int x = 0; x < msgs.length(); x++)
         {
-            if(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->sender->name == nodeName)
-                ui->cbMessages->addItem(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->name);
+            if(msgs[x]->sender->name == nodeName)
+                ui->cbMessages->addItem(msgs[x]->name);
         }
     }
 }
@@ -194,9 +195,10 @@ void SignalViewerWindow::loadSignals(int idx)
 
     if (msg == nullptr) return;
     ui->cbSignals->clear();
+    QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
     for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
-        ui->cbSignals->addItem(msg->sigHandler->findSignalByIdx(x)->name);
+        ui->cbSignals->addItem(sigs[x]->name);
     }
 }
 

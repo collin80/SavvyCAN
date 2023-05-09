@@ -1123,16 +1123,17 @@ Data Bytes: 88 10 00 13 BB 00 06 00
 
         //add all column names
         if (dbcHandler != nullptr)
-        {
+        {            
             DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
             if (msg != nullptr)
-            {
+            {                
+                QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
                 bool found = false;
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
                     if(j==0)
                     {
-                        for(int m=0; m<msgsAndColumns.count(); m++)
+                        for(int m = 0; m < msgsAndColumns.count(); m++)
                         {
                             if(msgsAndColumns[m].first == msg->ID)
                                 found = true;
@@ -1144,9 +1145,9 @@ Data Bytes: 88 10 00 13 BB 00 06 00
                     if(found == false)
                     {
                         QString temp;
-                        if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp))
+                        if (sigs[j]->processAsText(*frame, temp))
                         {
-                            builderString.append(msg->sigHandler->findSignalByIdx(j)->name);
+                            builderString.append(sigs[j]->name);
                             builderString.append(",");
                             columnsAdded++;
                         }
@@ -1198,6 +1199,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
             DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
             if (msg != nullptr)
             {
+                QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
                     if(j==0)
@@ -1217,7 +1219,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
                     }
 
                     QString temp;
-                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp, false))
+                    if (sigs[j]->processAsText(*frame, temp, false))
                     {
                         builderString.append(temp);
                         builderString.append(",");
@@ -1277,11 +1279,12 @@ Data Bytes: 88 10 00 13 BB 00 06 00
             DBC_MESSAGE *msg = dbcHandler->findMessage(*frame);
             if (msg != nullptr)
             {
+                QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
                 for (int j = 0; j < msg->sigHandler->getCount(); j++)
                 {
 
                     QString temp;
-                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp))
+                    if (sigs[j]->processAsText(*frame, temp))
                     {
                         builderString.append("\t" + temp);
                         builderString.append("\n");

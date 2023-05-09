@@ -12,78 +12,48 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include "utility.h"
-#include "connections/canconmanager.h"
 
 DBCHandler* DBCHandler::instance = nullptr;
-
-DBC_SIGNAL* DBCSignalHandler::findSignalByIdx(int idx)
-{
-    if (sigs.count() == 0) return nullptr;
-    if (idx < 0) return nullptr;
-    if (idx >= sigs.count()) return nullptr;
-
-    return &sigs[idx];
-}
 
 DBC_SIGNAL* DBCSignalHandler::findSignalByName(QString name)
 {
     if (sigs.count() == 0) return nullptr;
-    for (int i = 0; i < sigs.count(); i++)
-    {
-        if (sigs[i].name.compare(name, Qt::CaseInsensitive) == 0)
-        {
-            return &sigs[i];
-        }
-    }
+    if (sigs.contains(name)) return sigs.value(name);
     return nullptr;
 }
 
-bool DBCSignalHandler::addSignal(DBC_SIGNAL &sig)
+QList<DBC_SIGNAL*> DBCSignalHandler::getSignalsAsList()
 {
-    sigs.append(sig);
-    return true;
+    return sigs.values();
 }
 
-bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
+bool DBCSignalHandler::addSignal(DBC_SIGNAL *sig)
 {
-    qDebug() << "Total # of signals: " << getCount();
-    for (int i = 0; i < getCount(); i++)
-    {
-        if (sigs[i].name == sig->name)
-        {
-            sigs.removeAt(i);
-            qDebug() << "Removed signal at idx " << i;
-        }
-    }
-    return true;
-}
-
-bool DBCSignalHandler::removeSignal(int idx)
-{
-    if (sigs.count() == 0) return false;
-    if (idx < 0) return false;
-    if (idx >= sigs.count()) return false;
-    sigs.removeAt(idx);
+    sigs.insert(sig->name, sig);
     return true;
 }
 
 bool DBCSignalHandler::removeSignal(QString name)
 {
-    bool foundSome = false;
     if (sigs.count() == 0) return false;
-    for (int i = sigs.count() - 1; i >= 0; i--)
+    if (sigs.contains(name))
     {
-        if (sigs[i].name.compare(name, Qt::CaseInsensitive) == 0)
-        {
-            sigs.removeAt(i);
-            foundSome = true;
-        }
+        free(sigs.value(name));
+        sigs.remove(name);
+        return true;
     }
-    return foundSome;
+
+    return false;
 }
 
 void DBCSignalHandler::removeAllSignals()
 {
+    //need to free all pointers then zap the actual hashtable itself
+    QMapIterator<QString, DBC_SIGNAL *> i(sigs);
+    while (i.hasNext()) {
+        i.next();
+        free(i.value());
+    }
     sigs.clear();
 }
 
@@ -92,74 +62,67 @@ int DBCSignalHandler::getCount()
     return sigs.count();
 }
 
-void DBCSignalHandler::sort()
-{
-    std::sort(sigs.begin(), sigs.end());
-}
-
-DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
+DBC_MESSAGE* DBCMessageHandler::findMsgByID(quint32 id)
 {
     if (messages.count() == 0) return nullptr;
-    DBC_MESSAGE *bestMatch = nullptr;
 
-    for (int i = 0; i < messages.count(); i++)
-    {
-        if ( messages[i].ID == id )
-        {
-            return &messages[i];
-        }
+    //an exact match always returns the actual pointer
+    if (messages.contains(id)) return messages.value(id);
 
+    //if no exact match then iterate and try doing J1939 or GMLAN matching
+    //note that QMap is sorted so these might even be able to abort as soon
+    //as the ID goes past the target value. This is not yet attempted.
+    uint32_t pgn = (id & 0x3FFFF00) >> 8;
+    uint32_t arbId = id &0x3FFE000;
+    QMapIterator<quint32, DBC_MESSAGE *> i(messages);
+    while (i.hasNext()) {
+        i.next();
         if (matchingCriteria == J1939)
         {
             // include data page and extended data page in the pgn
-            uint32_t pgn = (id & 0x3FFFF00) >> 8;
             if ( (pgn & 0xFF00) <= 0xEF00 )
             {
                 // PDU1 format
                 pgn &= 0x3FF00;
-                if ((messages[i].ID & 0x3FF0000) == (pgn << 8))
+                if ((i.key() & 0x3FF0000) == (pgn << 8))
                 {
-                    bestMatch = &messages[i];
+                    return i.value();
                 }
             }
             else
             {
                 // PDU2 format
-                if ((messages[i].ID & 0x3FFFF00) == (pgn << 8))
+                if ((i.key() & 0x3FFFF00) == (pgn << 8))
                 {
-                    bestMatch = &messages[i];
+                    return i.value();
                 }
             }
         }
         else if (matchingCriteria == GMLAN)
         {
             // Match the bits 14-26 (Arbitration Id) of GMLAN 29bit header
-            uint32_t arbId = id &0x3FFE000;
-            if ( (arbId != 0) && (messages[i].ID & 0x3FFE000) == arbId )
-                bestMatch = &messages[i];
+            if ( (arbId != 0) && (i.key() & 0x3FFE000) == arbId )
+                i.value();
         }
     }
-    return bestMatch;
 }
 
-DBC_MESSAGE* DBCMessageHandler::findMsgByIdx(int idx)
-{
-    if (messages.count() == 0) return nullptr;
-    if (idx < 0) return nullptr;
-    if (idx >= messages.count()) return nullptr;
-    return &messages[idx];
-}
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
 {
     if (messages.count() == 0) return nullptr;
-    for (int i = 0; i < messages.count(); i++)
-    {
-        if (messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
+
+    //unfortunately we're mapped on ID, not name. Have to exhaustively search the entire map to find a name
+
+    QMapIterator<quint32, DBC_MESSAGE *> i(messages);
+    while (i.hasNext()) {
+        i.next();
+        if (i.value()->name.compare(name, Qt::CaseInsensitive) == 0)
         {
-            return &messages[i];
+            return i.value();
         }
     }
+
     return nullptr;
 }
 
@@ -167,11 +130,13 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByName(QString name)
 DBC_MESSAGE* DBCMessageHandler::findMsgByPartialName(QString name)
 {
     if (messages.count() == 0) return nullptr;
-    for (int i = 0; i < messages.count(); i++)
-    {
-        if (messages[i].name.contains(name, Qt::CaseInsensitive))
+
+    QMapIterator<quint32, DBC_MESSAGE *> i(messages);
+    while (i.hasNext()) {
+        i.next();
+        if (i.value()->name.contains(name, Qt::CaseInsensitive))
         {
-            return &messages[i];
+            return i.value();
         }
     }
     return nullptr;
@@ -184,75 +149,57 @@ QList<DBC_MESSAGE*> DBCMessageHandler::findMsgsByNode(DBC_NODE* node)
     if (messages.count() == 0)
         return messagesForNode;
 
-    for (int i = 0; i < messages.count(); i++)
-    {
-        if (messages[i].sender == node)
+    QMapIterator<quint32, DBC_MESSAGE *> i(messages);
+    while (i.hasNext()) {
+        i.next();
+        if (i.value()->sender == node)
         {
-            messagesForNode.append(&messages[i]);
+            messagesForNode.append(i.value());
         }
     }
 
     return messagesForNode;
 }
 
-bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
+QList<DBC_MESSAGE*> DBCMessageHandler::getMsgsAsList()
 {
-    messages.append(msg);
-    return true;
+    return messages.values();
 }
 
-bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
+bool DBCMessageHandler::addMessage(DBC_MESSAGE *msg)
 {
-    qDebug() << "Total # of messages: " << getCount();
-    for (int i = 0; i < getCount(); i++)
-    {
-        if (messages[i].name == msg->name)
-        {
-            messages.removeAt(i);
-            qDebug() << "Removed message at idx " << i;
-            break;
-        }
-    }
-    return true;
-}
-
-bool DBCMessageHandler::removeMessageByIndex(int idx)
-{
-    if (messages.count() == 0) return false;
-    if (idx < 0) return false;
-    if (idx >= messages.count()) return false;
-    messages.removeAt(idx);
+    messages.insert(msg->ID, msg);
     return true;
 }
 
 bool DBCMessageHandler::removeMessage(uint32_t ID)
 {
-    bool foundSome = false;
     if (messages.count() == 0) return false;
-    for (int i = messages.count() - 1; i >= 0; i--)
+
+    if (messages.contains(ID))
     {
-        if (messages[i].ID == ID)
-        {
-            messages.removeAt(i);
-            foundSome = true;
-        }
+        free(messages.value(ID)); //clean pointer
+        messages.remove(ID);
+        return true;
     }
-    return foundSome;
+    return false;
 }
 
 bool DBCMessageHandler::removeMessage(QString name)
 {
-    bool foundSome = false;
     if (messages.count() == 0) return false;
-    for (int i = messages.count() - 1; i >= 0; i--)
-    {
-        if (messages[i].name.compare(name, Qt::CaseInsensitive) == 0)
+
+    QMapIterator<quint32, DBC_MESSAGE *> i(messages);
+    while (i.hasNext()) {
+        i.next();
+        if (i.value()->name.compare(name, Qt::CaseInsensitive) == 0)
         {
-            messages.removeAt(i);
-            foundSome = true;
+            free(i.value());
+            messages.remove(i.key());
+            return true;
         }
     }
-    return foundSome;
+    return false;
 }
 
 void DBCMessageHandler::removeAllMessages()
@@ -263,15 +210,6 @@ void DBCMessageHandler::removeAllMessages()
 int DBCMessageHandler::getCount()
 {
     return messages.count();
-}
-
-void DBCMessageHandler::sort()
-{
-    std::sort(messages.begin(), messages.end());
-    for (int i = 0; i < messages.count(); i++)
-    {
-        messages[i].sigHandler->sort();
-    }
 }
 
 bool DBCMessageHandler::filterLabeling()
@@ -306,8 +244,9 @@ DBCFile::DBCFile()
 DBCFile::DBCFile(const DBCFile& cpy) : QObject()
 {
     messageHandler = new DBCMessageHandler;
+    QList<DBC_MESSAGE *> sigs = cpy.messageHandler->getMsgsAsList();
     for (int i = 0 ; i < cpy.messageHandler->getCount() ; i++)
-        messageHandler->addMessage(*cpy.messageHandler->findMsgByIdx(i));
+        messageHandler->addMessage(sigs[i]);
 
     messageHandler->setMatchingCriteria(cpy.messageHandler->getMatchingCriteria());
     messageHandler->setFilterLabeling(cpy.messageHandler->filterLabeling());
@@ -337,10 +276,11 @@ DBCFile& DBCFile::operator=(const DBCFile& cpy)
     return *this;
 }
 
+//this makes no sense any longer. QMap is basically always sorted.
 void DBCFile::sort()
 {
-    std::sort(dbc_nodes.begin(), dbc_nodes.end()); //sort node names
-    messageHandler->sort(); //sort messages, each of which sorts its signals too
+    //std::sort(dbc_nodes.begin(), dbc_nodes.end()); //sort node names
+    //messageHandler->sort(); //sort messages, each of which sorts its signals too
 }
 
 DBC_NODE* DBCFile::findNodeByIdx(int idx)
@@ -352,14 +292,17 @@ DBC_NODE* DBCFile::findNodeByIdx(int idx)
 
 DBC_NODE* DBCFile::findNodeByName(QString name)
 {
+    qDebug() << "Trying to find a node named " << name;
     if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
         if (name.compare(dbc_nodes[i].name, Qt::CaseInsensitive) == 0)
         {
+            qDebug() << "GOT IT!";
             return &dbc_nodes[i];
         }
     }
+    qDebug() << "Couldn't find it!";
     return nullptr;
 }
 
@@ -477,16 +420,15 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
     //captured 4 = the NODE responsible for this message
     if (match.hasMatch())
     {
-        DBC_MESSAGE msg;
+        msgPtr = new DBC_MESSAGE();
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
-        msg.ID = ID & 0x1FFFFFFFul;
-        msg.extendedID = (ID & 0x80000000ul) ? true : false;
-        msg.name = match.captured(2);
-        msg.len = match.captured(3).toUInt();
-        msg.sender = findNodeByName(match.captured(4));
-        if (!msg.sender) msg.sender = findNodeByIdx(0);
-        messageHandler->addMessage(msg);
-        msgPtr = messageHandler->findMsgByID(msg.ID);
+        msgPtr->ID = ID & 0x1FFFFFFFul;
+        msgPtr->extendedID = (ID & 0x80000000ul) ? true : false;
+        msgPtr->name = match.captured(2);
+        msgPtr->len = match.captured(3).toUInt();
+        msgPtr->sender = findNodeByName(match.captured(4));
+        if (!msgPtr->sender) msgPtr->sender = findNodeByIdx(0);
+        messageHandler->addMessage(msgPtr);
     }
     else msgPtr = nullptr;
     return msgPtr;
@@ -500,12 +442,14 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     int offset = 0;
     bool isMessageMultiplexor = false;
     //bool isMultiplexed = false;
-    DBC_SIGNAL sig;
+    DBC_SIGNAL *sig;
 
-    sig.multiplexLowValue = 0;
-    sig.multiplexHighValue = 0;
-    sig.isMultiplexed = false;
-    sig.isMultiplexor = false;
+    sig = new DBC_SIGNAL();
+
+    sig->multiplexLowValue = 0;
+    sig->multiplexHighValue = 0;
+    sig->isMultiplexed = false;
+    sig->isMultiplexor = false;
 
     qDebug() << "Found a SG line";
     regex.setPattern("^SG\\_ *([-\\w]+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
@@ -515,7 +459,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     {
         qDebug() << "Multiplexor signal";
         isMessageMultiplexor = true;
-        sig.isMultiplexor = true;
+        sig->isMultiplexor = true;
     }
     else
     {
@@ -525,9 +469,9 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         {
             qDebug() << "Multiplexed signal";
             //isMultiplexed = true;
-            sig.isMultiplexed = true;
-            sig.multiplexLowValue = match.captured(2).toInt();
-            sig.multiplexHighValue = sig.multiplexLowValue;
+            sig->isMultiplexed = true;
+            sig->multiplexLowValue = match.captured(2).toInt();
+            sig->multiplexHighValue = sig->multiplexLowValue;
             offset = 1;
         }
         else
@@ -537,10 +481,10 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             if (match.hasMatch())
             {
                 qDebug() << "Extended Multiplexor Signal";
-                sig.isMultiplexor = true; //we don't set the local isMessageMultiplexor variable because this isn't the top level multiplexor
-                sig.isMultiplexed = true; //but, it is both a multiplexor and multiplexed
-                sig.multiplexLowValue = match.captured(2).toInt();
-                sig.multiplexHighValue = sig.multiplexLowValue;
+                sig->isMultiplexor = true; //we don't set the local isMessageMultiplexor variable because this isn't the top level multiplexor
+                sig->isMultiplexed = true; //but, it is both a multiplexor and multiplexed
+                sig->multiplexLowValue = match.captured(2).toInt();
+                sig->multiplexHighValue = sig->multiplexLowValue;
                 offset = 1;
             }
             else
@@ -548,8 +492,8 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
                 qDebug() << "standard signal";
                 regex.setPattern("^SG\\_ *([-\\w]+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                 match = regex.match(line);
-                sig.isMultiplexed = false;
-                sig.isMultiplexor = false;
+                sig->isMultiplexed = false;
+                sig->isMultiplexor = false;
             }
         }
     }
@@ -569,65 +513,70 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
 
     if (match.hasMatch())
     {
-        sig.name = match.captured(1);
-        sig.startBit = match.captured(2 + offset).toInt();
-        sig.signalSize = match.captured(3 + offset).toInt();
+        sig->name = match.captured(1);
+        sig->startBit = match.captured(2 + offset).toInt();
+        sig->signalSize = match.captured(3 + offset).toInt();
         int val = match.captured(4 + offset).toInt();
         if (val < 2)
         {
-            if (match.captured(5 + offset) == "+") sig.valType = UNSIGNED_INT;
-            else sig.valType = SIGNED_INT;
+            if (match.captured(5 + offset) == "+") sig->valType = UNSIGNED_INT;
+            else sig->valType = SIGNED_INT;
         }
         switch (val)
         {
         case 0: //big endian mode
-            sig.intelByteOrder = false;
+            sig->intelByteOrder = false;
             break;
         case 1: //little endian mode
-            sig.intelByteOrder = true;
+            sig->intelByteOrder = true;
             break;
         case 2:
-            sig.valType = SP_FLOAT;
+            sig->valType = SP_FLOAT;
             break;
         case 3:
-            sig.valType = DP_FLOAT;
+            sig->valType = DP_FLOAT;
             break;
         case 4:
-            sig.valType = STRING;
+            sig->valType = STRING;
             break;
         case 5: //single point float in little endian
-            sig.valType = SP_FLOAT;
-            sig.intelByteOrder = true;
+            sig->valType = SP_FLOAT;
+            sig->intelByteOrder = true;
             break;
         case 6: //double point float in little endian
-            sig.valType = DP_FLOAT;
-            sig.intelByteOrder = true;
+            sig->valType = DP_FLOAT;
+            sig->intelByteOrder = true;
             break;
         }
-        sig.factor = match.captured(6 + offset).toDouble();
-        sig.bias = match.captured(7 + offset).toDouble();
-        sig.min = match.captured(8 + offset).toDouble();
-        sig.max = match.captured(9 + offset).toDouble();
-        sig.unitName = match.captured(10 + offset);
+        sig->factor = match.captured(6 + offset).toDouble();
+        sig->bias = match.captured(7 + offset).toDouble();
+        sig->min = match.captured(8 + offset).toDouble();
+        sig->max = match.captured(9 + offset).toDouble();
+        sig->unitName = match.captured(10 + offset);
         if (match.captured(11 + offset).contains(','))
         {
             QString tmp = match.captured(11 + offset).split(',')[0];
-            sig.receiver = findNodeByName(tmp);            
+            sig->receiver = findNodeByName(tmp);
         }
-        else sig.receiver = findNodeByName(match.captured(11 + offset));
+        else sig->receiver = findNodeByName(match.captured(11 + offset));
 
-        if (!sig.receiver) sig.receiver = findNodeByIdx(0); //apply default if there was no match
+        if (!sig->receiver) sig->receiver = findNodeByIdx(0); //apply default if there was no match
 
-        sig.parentMessage = msg;
+        sig->parentMessage = msg;
         if (msg)
         {
             msg->sigHandler->addSignal(sig);
-            if (isMessageMultiplexor) msg->multiplexorSignal = msg->sigHandler->findSignalByName(sig.name);
-            return msg->sigHandler->findSignalByName(sig.name);
+            if (isMessageMultiplexor) msg->multiplexorSignal = sig;
+            return sig;
         }
-        else return nullptr;
+        else
+        {
+            delete(sig);
+            return nullptr;
+        }
     }
 
+    delete(sig);
     return nullptr;
 }
 
@@ -1133,19 +1082,24 @@ bool DBCFile::loadFile(QString fileName)
 
     DBC_ATTRIBUTE_VALUE *thisBG;
     DBC_ATTRIBUTE_VALUE *thisFG;
+    QList<DBC_MESSAGE *> msgs = messageHandler->getMsgsAsList();
 
     for (int x = 0; x < messageHandler->getCount(); x++)
     {
-        DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+        DBC_MESSAGE *msg = msgs[x];
         msg->bgColor = DefaultBG;
         msg->fgColor = DefaultFG;
         thisBG = msg->findAttrValByName("GenMsgBackgroundColor");
         thisFG = msg->findAttrValByName("GenMsgForegroundColor");
         if (thisBG) msg->bgColor = QColor(thisBG->value.toString());
         if (thisFG) msg->fgColor = QColor(thisFG->value.toString());
+
+        QList<DBC_SIGNAL *>sigs = msg->sigHandler->getSignalsAsList();
+
         for (int y = 0; y < msg->sigHandler->getCount(); y++)
         {
-            DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(y);
+            DBC_SIGNAL *sig = sigs[y];
+            if (!sig) continue; //but this should not happen.
             //if this doesn't have a multiplex parent set but is multiplexed then it must have used
             //simple multiplexing instead of any extended specification. So, fill in the multiplexor signal here
             //and also write the extended entry for it too.
@@ -1386,10 +1340,12 @@ bool DBCFile::saveFile(QString fileName)
     nodesOutput.append("\n");
     outFile->write(nodesOutput.toUtf8());
 
+    QList<DBC_MESSAGE *> msgs = messageHandler->getMsgsAsList();
+
     //Go through all messages one at at time issuing the message line then all signals in there too.
     for (int x = 0; x < messageHandler->getCount(); x++)
     {
-        DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+        DBC_MESSAGE *msg = msgs[x];
 
         if (msg->name.length() < 1) //detect an empty string and fill it out with something
         {
@@ -1427,9 +1383,11 @@ bool DBCFile::saveFile(QString fileName)
             }
         }
 
+        QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
+
         for (int s = 0; s < msg->sigHandler->getCount(); s++)
         {
-            DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+            DBC_SIGNAL *sig = sigs[s];
 
             if (sig->name.length() < 1) //detect an empty string and fill it out with something
             {
@@ -1599,9 +1557,10 @@ bool DBCFile::saveFile(QString fileName)
     //given the single value multiplex above for backward compatibility with things that don't support extended mode
     if (hasExtendedMultiplexing)
     {
+        QList<DBC_MESSAGE *> msgs = messageHandler->getMsgsAsList();
         for (int x = 0; x < messageHandler->getCount(); x++)
         {
-            DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
+            DBC_MESSAGE *msg = msgs[x];
 
             uint32_t ID = msg->ID;
             if (msg->ID > 0x7FF || msg->extendedID)
@@ -1609,9 +1568,10 @@ bool DBCFile::saveFile(QString fileName)
                 ID += 0x80000000ul; //set bit 31 if this ID is extended.
             }
 
+            QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
             {
-                DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+                DBC_SIGNAL *sig = sigs[s];
 
                 if (sig->isMultiplexed)
                 {
@@ -1820,51 +1780,51 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
             //                0                1             2                                3            4  5  6  7    8   9
             if (tokens[0].length() > 2) //start of a signal def that starts a new message
             {
-                DBC_MESSAGE msg;
-                msg.name = tokens[0];
-                msg.ID =   tokens[1].mid(1).toLong(nullptr, 16);
-                msg.comment = "";
-                msg.len = 8;
-                msg.sender = thisFile->findNodeByIdx(0);
-                msg.bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
-                msg.fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
+                DBC_MESSAGE *msg = new DBC_MESSAGE();
+                msg->name = tokens[0];
+                msg->ID =   tokens[1].mid(1).toLong(nullptr, 16);
+                msg->comment = "";
+                msg->len = 8;
+                msg->sender = thisFile->findNodeByIdx(0);
+                msg->bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
+                msg->fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
                 thisFile->messageHandler->addMessage(msg);
-                pMsg = thisFile->messageHandler->findMsgByID(msg.ID);
+                pMsg = msg;
 
-                DBC_SIGNAL sig;
-                sig.parentMessage = pMsg;
-                sig.name = tokens[3];
-                sig.comment = tokens[2];
+                DBC_SIGNAL *sig = new DBC_SIGNAL();
+                sig->parentMessage = pMsg;
+                sig->name = tokens[3];
+                sig->comment = tokens[2];
                 int startBit = (tokens[4].toInt() * 8) + tokens[5].toInt();
-                sig.startBit = startBit;
-                sig.signalSize = tokens[6].toInt();
-                sig.intelByteOrder = false; //always for global-a?
-                sig.receiver = thisFile->findNodeByIdx(0);
+                sig->startBit = startBit;
+                sig->signalSize = tokens[6].toInt();
+                sig->intelByteOrder = false; //always for global-a?
+                sig->receiver = thisFile->findNodeByIdx(0);
                 QList<QByteArray> rangeToks = tokens[8].split('-');
                 if (rangeToks.length() == 2)
                 {
-                    sig.min = rangeToks[0].simplified().toDouble();
-                    sig.max = rangeToks[1].simplified().toDouble();
+                    sig->min = rangeToks[0].simplified().toDouble();
+                    sig->max = rangeToks[1].simplified().toDouble();
                 }
                 if (tokens[9].startsWith("E = N")) //not a value table, instead do scaling and bias
                 {
                     QList<QByteArray> scalingToks = tokens[9].simplified().split(' ');
-                    sig.factor = scalingToks[4].toDouble();
+                    sig->factor = scalingToks[4].toDouble();
                     if (scalingToks.count() > 5)
                     {
                         if (scalingToks[5] == "+")
                         {
-                            sig.bias = scalingToks[6].toDouble();
+                            sig->bias = scalingToks[6].toDouble();
                         }
                         if (scalingToks[5] == "-")
                         {
-                            sig.bias = scalingToks[6].toDouble() * 1.0;
+                            sig->bias = scalingToks[6].toDouble() * 1.0;
                         }
                     }
                     else
                     {
-                        sig.factor = 1;
-                        sig.bias = 0;
+                        sig->factor = 1;
+                        sig->bias = 0;
                     }
                 }
                 else if (tokens[9].startsWith("$")) //one or more values table entries
@@ -1874,10 +1834,10 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
                     DBC_VAL_ENUM_ENTRY entry;
                     entry.value = valToks[0].toInt();
                     entry.descript = valToks[1];
-                    sig.valList.append(entry);
+                    sig->valList.append(entry);
                 }
                 pMsg->sigHandler->addSignal(sig);
-                pSig = pMsg->sigHandler->findSignalByIdx(pMsg->sigHandler->getCount()-1);
+                pSig = sig;
             }
             //      0     1    2      3            4         5       6   7    8     9
             //Message,CAN ID,Signal,Short Name,Start Byte,Start Bit,Len,Data,Range,Conversion
@@ -1885,40 +1845,40 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
             //    2                                                                3                4  5  6 7    8       9
             else if (tokens[2].length() > 2) //signal definition continuation of previous message
             {
-                DBC_SIGNAL sig;
-                sig.parentMessage = pMsg;
-                sig.name = tokens[3];
-                sig.comment = tokens[2];
+                DBC_SIGNAL *sig = new DBC_SIGNAL();
+                sig->parentMessage = pMsg;
+                sig->name = tokens[3];
+                sig->comment = tokens[2];
                 int startBit = (tokens[4].toInt() * 8) + tokens[5].toInt();
-                sig.startBit = startBit;
-                sig.signalSize = tokens[6].toInt();
-                sig.intelByteOrder = false; //always for global-a?
-                sig.receiver = thisFile->findNodeByIdx(0);
+                sig->startBit = startBit;
+                sig->signalSize = tokens[6].toInt();
+                sig->intelByteOrder = false; //always for global-a?
+                sig->receiver = thisFile->findNodeByIdx(0);
                 QList<QByteArray> rangeToks = tokens[8].split('-');
                 if (rangeToks.length() == 2)
                 {
-                    sig.min = rangeToks[0].simplified().toDouble();
-                    sig.max = rangeToks[1].simplified().toDouble();
+                    sig->min = rangeToks[0].simplified().toDouble();
+                    sig->max = rangeToks[1].simplified().toDouble();
                 }
                 if (tokens[9].startsWith("E = N")) //not a value table, instead do scaling and bias
                 {
                     QList<QByteArray> scalingToks = tokens[9].simplified().split(' ');
-                    sig.factor = scalingToks[4].toDouble();
+                    sig->factor = scalingToks[4].toDouble();
                     if (scalingToks.count() > 5)
                     {
                         if (scalingToks[5] == "+")
                         {
-                            sig.bias = scalingToks[6].toDouble();
+                            sig->bias = scalingToks[6].toDouble();
                         }
                         if (scalingToks[5] == "-")
                         {
-                            sig.bias = scalingToks[6].toDouble() * 1.0;
+                            sig->bias = scalingToks[6].toDouble() * 1.0;
                         }
                     }
                     else
                     {
-                        sig.bias = 0;
-                        sig.factor = 1;
+                        sig->bias = 0;
+                        sig->factor = 1;
                     }
                 }
                 else if (tokens[9].startsWith("$")) //one or more values table entries
@@ -1928,10 +1888,10 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
                     DBC_VAL_ENUM_ENTRY entry;
                     entry.value = valToks[0].toInt();
                     entry.descript = valToks[1];
-                    sig.valList.append(entry);
+                    sig->valList.append(entry);
                 }
                 pMsg->sigHandler->addSignal(sig);
-                pSig = pMsg->sigHandler->findSignalByIdx(pMsg->sigHandler->getCount()-1);
+                pSig = sig;
             }
             else if (tokens[9].length() > 2) //additional values
             {
@@ -1984,25 +1944,25 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
          for (iter = jsonMessages.begin(); iter != jsonMessages.end(); iter++)
          {
              qDebug() << iter.key();
-             DBC_MESSAGE msg;
-             msg.ID = static_cast<uint32_t>(iter->toObject().find("message_id").value().toInt());
-             msg.name = QString(iter.key().toUtf8());
-             msg.len = static_cast<unsigned int>(iter->toObject().find("length_bytes").value().toInt());
-             msg.sender = thisFile->findNodeByIdx(0);
+             DBC_MESSAGE *msg = new DBC_MESSAGE();
+             msg->ID = static_cast<uint32_t>(iter->toObject().find("message_id").value().toInt());
+             msg->name = QString(iter.key().toUtf8());
+             msg->len = static_cast<unsigned int>(iter->toObject().find("length_bytes").value().toInt());
+             msg->sender = thisFile->findNodeByIdx(0);
              QString nodeName = iter->toObject().find("originNode").value().toString();
-             msg.sender = thisFile->findNodeByName(nodeName);
-             msg.bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
-             msg.fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
-             if (!msg.sender && nodeName.length() > 1)
+             msg->sender = thisFile->findNodeByName(nodeName);
+             msg->bgColor = QColor(thisFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
+             msg->fgColor = QColor(thisFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
+             if (!msg->sender && nodeName.length() > 1)
              {
                  DBC_NODE node;
                  node.name = nodeName;
                  thisFile->dbc_nodes.append(node);
-                 msg.sender = thisFile->findNodeByName(nodeName);
+                 msg->sender = thisFile->findNodeByName(nodeName);
              }
-             if (nodeName.length() < 2) msg.sender = thisFile->findNodeByIdx(0);
+             if (nodeName.length() < 2) msg->sender = thisFile->findNodeByIdx(0);
              thisFile->messageHandler->addMessage(msg);
-             pMsg = thisFile->messageHandler->findMsgByID(msg.ID);
+             pMsg = thisFile->messageHandler->findMsgByID(msg->ID);
              if (!pMsg)
              {
                  qDebug() << "pMsg was null... I have no idea how that is possible. DEBUG ME";
@@ -2014,41 +1974,41 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
              for (sigIter = jsonSigs.begin(); sigIter != jsonSigs.end(); sigIter++)
              {
                 qDebug() << sigIter.key();
-                DBC_SIGNAL sig;
+                DBC_SIGNAL *sig = new DBC_SIGNAL();
                 QJsonObject sigObj = sigIter->toObject();
                 if (sigObj.isEmpty())
                 {
                     qDebug() << "EMPTY!?";
                 }
-                sig.name = QString(sigIter.key().toUtf8());
-                sig.factor = sigObj.find("scale").value().toDouble();
-                sig.bias = sigObj.find("offset").value().toDouble();
-                sig.max = sigObj.find("max").value().toDouble();
-                sig.min = sigObj.find("min").value().toDouble();
-                sig.startBit = sigObj.find("start_position").value().toInt();
-                sig.unitName = sigObj.find("units").value().toString();
-                sig.signalSize = sigObj.find("width").value().toInt();
-                sig.isMultiplexed = false;
-                sig.isMultiplexor = false;
-                sig.parentMessage = pMsg;
+                sig->name = QString(sigIter.key().toUtf8());
+                sig->factor = sigObj.find("scale").value().toDouble();
+                sig->bias = sigObj.find("offset").value().toDouble();
+                sig->max = sigObj.find("max").value().toDouble();
+                sig->min = sigObj.find("min").value().toDouble();
+                sig->startBit = sigObj.find("start_position").value().toInt();
+                sig->unitName = sigObj.find("units").value().toString();
+                sig->signalSize = sigObj.find("width").value().toInt();
+                sig->isMultiplexed = false;
+                sig->isMultiplexor = false;
+                sig->parentMessage = pMsg;
                 if (!sigObj.find("mux_id")->isUndefined())
                 {
                     QJsonValue muxVal = sigObj.find("mux_id").value();
-                    sig.multiplexLowValue = muxVal.toInt();
-                    sig.multiplexHighValue = sig.multiplexLowValue;
-                    sig.isMultiplexed = true;
+                    sig->multiplexLowValue = muxVal.toInt();
+                    sig->multiplexHighValue = sig->multiplexLowValue;
+                    sig->isMultiplexed = true;
                 }
                 else
                 {
-                    sig.multiplexLowValue = 0;
-                    sig.multiplexHighValue = 0;
+                    sig->multiplexLowValue = 0;
+                    sig->multiplexHighValue = 0;
                 }
                 QJsonValue muxerVal = sigObj.find("is_muxer").value();
                 if (!muxerVal.isNull())
                 {
                     if (muxerVal.toBool())
                     {
-                        sig.isMultiplexor = true;
+                        sig->isMultiplexor = true;
                     }
                 }
 
@@ -2061,52 +2021,55 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
                         DBC_VAL_ENUM_ENTRY valEnum;
                         valEnum.value = valIter.value().toInt();
                         valEnum.descript = valIter.key().toUtf8();
-                        sig.valList.append(valEnum);
+                        sig->valList.append(valEnum);
                     }
                 }
 
                 QJsonArray rxArray = sigObj.find("receivers")->toArray();
-                if (rxArray.size() < 1) sig.receiver = thisFile->findNodeByIdx(0);
+                if (rxArray.size() < 1) sig->receiver = thisFile->findNodeByIdx(0);
                 else
                 {
                     qDebug() << rxArray[0].toString();
-                    sig.receiver = thisFile->findNodeByName(rxArray[0].toString());
-                    if (!sig.receiver && rxArray[0].toString().length() > 1)
+                    sig->receiver = thisFile->findNodeByName(rxArray[0].toString());
+                    if (!sig->receiver && rxArray[0].toString().length() > 1)
                     {
                         DBC_NODE node;
                         node.name = rxArray[0].toString();
                         thisFile->dbc_nodes.append(node);
-                        sig.receiver = thisFile->findNodeByName(rxArray[0].toString());
+                        sig->receiver = thisFile->findNodeByName(rxArray[0].toString());
                     }
-                    if (!sig.receiver) sig.receiver = thisFile->findNodeByIdx(0);
+                    if (!sig->receiver) sig->receiver = thisFile->findNodeByIdx(0);
                 }
                 if (!sigObj.find("endianness").value().toString().compare("BIG"))
                 {
-                    sig.intelByteOrder = false;
+                    sig->intelByteOrder = false;
                 }
-                else sig.intelByteOrder = true;
+                else sig->intelByteOrder = true;
 
                 if (!sigObj.find("signedness").value().toString().compare("UNSIGNED"))
                 {
-                    sig.valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
+                    sig->valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
                 }
-                else sig.valType = DBC_SIG_VAL_TYPE::SIGNED_INT;
+                else sig->valType = DBC_SIG_VAL_TYPE::SIGNED_INT;
 
                 pMsg->sigHandler->addSignal(sig);
-                if (sig.isMultiplexor) //if this signal was the multiplexor then store that info
+                if (sig->isMultiplexor) //if this signal was the multiplexor then store that info
                 {
-                    DBC_SIGNAL *pSig = pMsg->sigHandler->findSignalByName(sig.name);
+                    DBC_SIGNAL *pSig = pMsg->sigHandler->findSignalByName(sig->name);
                     if (pSig) pMsg->multiplexorSignal = pSig;
                 }
              }
          }
 
+         QList<DBC_MESSAGE *> msgs = thisFile->messageHandler->getMsgsAsList();
+
          for (int x = 0; x < thisFile->messageHandler->getCount(); x++)
          {
-             DBC_MESSAGE *msg = thisFile->messageHandler->findMsgByIdx(x);
+             DBC_MESSAGE *msg = msgs[x];
+             QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
              for (int y = 0; y < msg->sigHandler->getCount(); y++)
              {
-                 DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(y);
+                 DBC_SIGNAL *sig = sigs[y];
                  //if this doesn't have a multiplex parent set but is multiplexed then it must have used
                  //simple multiplexing instead of any extended specification. So, fill in the multiplexor signal here
                  //and also write the extended entry for it too.

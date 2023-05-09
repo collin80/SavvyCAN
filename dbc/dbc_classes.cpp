@@ -25,17 +25,21 @@ DBC_SIGNAL::DBC_SIGNAL()
     intelByteOrder = false;
     parentMessage = nullptr;
     multiplexParent = nullptr;
-    receiver = nullptr;
     signalSize = 1;
     startBit = 1;
     valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
+    receiver = nullptr;
 }
 
 bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
 {
+    DBC_MESSAGE *msg = nullptr;
+
     if (isMultiplexor && !isMultiplexed) return true; //the root multiplexor is always in the message.
     if (isMultiplexed)
     {
+        DBC_SIGNAL *sig = nullptr;
+
         if (parentMessage->multiplexorSignal != nullptr)
         {
             if (multiplexParent->isSignalInMessage(frame)) //parent is in message so check if value is correct

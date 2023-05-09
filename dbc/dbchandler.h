@@ -21,32 +21,27 @@ class DBCSignalHandler: public QObject
 {
     Q_OBJECT
 public:
-    DBC_SIGNAL *findSignalByName(QString name);
-    DBC_SIGNAL *findSignalByIdx(int idx);
-    bool addSignal(DBC_SIGNAL &sig);
-    bool removeSignal(DBC_SIGNAL *sig);
-    bool removeSignal(int idx);
+    DBC_SIGNAL* findSignalByName(QString name);
+    QList<DBC_SIGNAL*> getSignalsAsList();
+    bool addSignal(DBC_SIGNAL *sig);
     bool removeSignal(QString name);
     void removeAllSignals();
     int getCount();
-    void sort();
 
 private:
-    QList<DBC_SIGNAL> sigs; //signals is a reserved word or I'd have used that
+    QMap<QString, DBC_SIGNAL *> sigs; //signals is a reserved word or I'd have used that
 };
 
 class DBCMessageHandler: public QObject
 {
     Q_OBJECT
 public:
-    DBC_MESSAGE *findMsgByID(uint32_t id);
-    DBC_MESSAGE *findMsgByIdx(int idx);
+    DBC_MESSAGE *findMsgByID(quint32 id);
     DBC_MESSAGE *findMsgByName(QString name);
     DBC_MESSAGE *findMsgByPartialName(QString name);
     QList<DBC_MESSAGE*> findMsgsByNode(DBC_NODE *node);
-    bool addMessage(DBC_MESSAGE &msg);
-    bool removeMessage(DBC_MESSAGE *msg);
-    bool removeMessageByIndex(int idx);
+    QList<DBC_MESSAGE*> getMsgsAsList();
+    bool addMessage(DBC_MESSAGE *msg);
     bool removeMessage(uint32_t ID);
     bool removeMessage(QString name);
     void removeAllMessages();
@@ -55,10 +50,9 @@ public:
     void setMatchingCriteria(MatchingCriteria_t mc);
     void setFilterLabeling( bool labelFiltering );
     bool filterLabeling();
-    void sort();
 
 private:
-    QList<DBC_MESSAGE> messages;
+    QMap<quint32, DBC_MESSAGE*> messages;
     MatchingCriteria_t matchingCriteria;
     bool filterLabelingEnabled;
 };

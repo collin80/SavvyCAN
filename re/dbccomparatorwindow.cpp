@@ -225,9 +225,11 @@ void DBCComparatorWindow::calculateDetails()
     QTreeWidgetItem *msgItem;
     QTreeWidgetItem *sigTemp;
 
+    QList<DBC_MESSAGE *> msgs = firstDBC->messageHandler->getMsgsAsList();
+
     for (int i = 0; i < firstDBC->messageHandler->getCount(); i++)
     {
-        DBC_MESSAGE *thisMsg = firstDBC->messageHandler->findMsgByIdx(i);
+        DBC_MESSAGE *thisMsg = msgs[i];
         QString msgName = thisMsg->name;
         DBC_MESSAGE *otherMsg = secondDBC->messageHandler->findMsgByName(msgName);
         if (!otherMsg)
@@ -241,9 +243,11 @@ void DBCComparatorWindow::calculateDetails()
             bool thisMsgHasMissing = false;
             bool thisMsgHasMods = false;
 
-            for (int i = 0; i < thisMsg->sigHandler->getCount(); i++)
+            QList<DBC_SIGNAL *> sigs = thisMsg->sigHandler->getSignalsAsList();
+
+            for (int j = 0; j < thisMsg->sigHandler->getCount(); j++)
             {
-                DBC_SIGNAL *thisSig = thisMsg->sigHandler->findSignalByIdx(i);
+                DBC_SIGNAL *thisSig = sigs[j];
                 QString sigName = thisSig->name;
                 DBC_SIGNAL *otherSig = otherMsg->sigHandler->findSignalByName(sigName);
                 if (!otherSig)
@@ -306,9 +310,12 @@ void DBCComparatorWindow::calculateDetails()
                 }
             }
             thisMsgHasMissing = false;
-            for (int i = 0; i < otherMsg->sigHandler->getCount(); i++)
+
+            QList<DBC_SIGNAL *> other_sigs = otherMsg->sigHandler->getSignalsAsList();
+
+            for (int j = 0; i < otherMsg->sigHandler->getCount(); i++)
             {
-                DBC_SIGNAL *thisSig = otherMsg->sigHandler->findSignalByIdx(i);
+                DBC_SIGNAL *thisSig = other_sigs[j];
                 QString sigName = thisSig->name;
                 DBC_SIGNAL *otherSig = thisMsg->sigHandler->findSignalByName(sigName);
                 if (!otherSig)
@@ -328,9 +335,11 @@ void DBCComparatorWindow::calculateDetails()
         }
     }
 
+    QList<DBC_MESSAGE *> second_msgs = secondDBC->messageHandler->getMsgsAsList();
+
     for (int i = 0; i < secondDBC->messageHandler->getCount(); i++)
     {
-        DBC_MESSAGE *origMsg = secondDBC->messageHandler->findMsgByIdx(i);
+        DBC_MESSAGE *origMsg = second_msgs[i];
         QString msgName = origMsg->name;
         DBC_MESSAGE *msg = firstDBC->messageHandler->findMsgByName(msgName);
         if (!msg)

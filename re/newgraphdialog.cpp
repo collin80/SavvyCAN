@@ -256,9 +256,10 @@ void NewGraphDialog::loadMessages()
     if (dbcHandler->getFileCount() == 0) return;
     for (int y = 0; y < dbcHandler->getFileCount(); y++)
     {
+        QList<DBC_MESSAGE *> msgs = dbcHandler->getFileByIdx(y)->messageHandler->getMsgsAsList();
         for (int x = 0; x < dbcHandler->getFileByIdx(y)->messageHandler->getCount(); x++)
         {
-            msg = dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x);
+            msg = msgs[x];
             if (msg)
             {
                 ui->cbMessages->addItem(msg->name);
@@ -283,9 +284,10 @@ void NewGraphDialog::loadSignals(int idx)
     if (msg == nullptr) return;
 
     ui->cbSignals->clear();
+    QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
     for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
-        sig = msg->sigHandler->findSignalByIdx(x);
+        sig = sigs[x];
         if (sig)
         {
             ui->cbSignals->addItem(sig->name);

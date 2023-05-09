@@ -411,9 +411,12 @@ void DBCMainEditor::refreshTree()
         nodeItem->setData(0, Qt::UserRole, DBCItemTypes::NODE);
         nodeToItem.insert(node, nodeItem);
         itemToNode.insert(nodeItem, node);
+        QList<DBC_MESSAGE *>  msgs = dbcFile->messageHandler->getMsgsAsList();
+        qDebug() << msgs;
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {
-            DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByIdx(x);
+            DBC_MESSAGE *msg = msgs[x];
+            qDebug() << msg->sender->name << " | " << node->name;
             if (msg->sender->name == node->name)
             {
                 QTreeWidgetItem *msgItem = new QTreeWidgetItem(nodeItem);
@@ -424,9 +427,10 @@ void DBCMainEditor::refreshTree()
                 msgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
                 messageToItem.insert(msg, msgItem);
                 itemToMessage.insert(msgItem, msg);
+                QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
                 for (int i = 0; i < msg->sigHandler->getCount(); i++)
                 {
-                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(i);
+                    DBC_SIGNAL *sig = sigs[i];
                     //only process signals here which are "top" level
                     if (sig->multiplexParent == nullptr) processSignalToTree(msgItem, sig);
                 }
@@ -595,58 +599,55 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
     DBC_NODE *node = parentNode;
     if (!node) node = dbcFile->findNodeByIdx(0);
     QTreeWidgetItem *nodeItem = nullptr;
-    DBC_MESSAGE msg;
-    DBC_MESSAGE *msgPtr;
+    DBC_MESSAGE *msgPtr = new DBC_MESSAGE();
 
     nodeItem = ui->treeDBC->currentItem();
 
-    msg.name = source->name;
-    msg.ID = newMsgId;
-    msg.len = source->len;
-    msg.bgColor = source->bgColor;
-    msg.fgColor = source->fgColor;
-    msg.comment = source->comment;
-    msg.sender = node;
+    msgPtr->name = source->name;
+    msgPtr->ID = newMsgId;
+    msgPtr->len = source->len;
+    msgPtr->bgColor = source->bgColor;
+    msgPtr->fgColor = source->fgColor;
+    msgPtr->comment = source->comment;
+    msgPtr->sender = node;
 
     DBC_SIGNAL *sigSource;
     int sigCount = source->sigHandler->getCount();
+    QList<DBC_SIGNAL *> sigs = source->sigHandler->getSignalsAsList();
 
     for(int i=0; i<sigCount; i++)
     {
-        sigSource = source->sigHandler->findSignalByIdx(i);
+        sigSource = sigs[i];
 
-        DBC_SIGNAL sig;
+        DBC_SIGNAL* sig = new DBC_SIGNAL;
 
         //Does not properly handle multiplexed signals, for now
-        sig.name = sigSource->name;
-        sig.bias = sigSource->bias;
-        sig.isMultiplexed = false; //sigSource->isMultiplexed;
-        sig.isMultiplexor = false; //sigSource->isMultiplexor;
-        sig.max = sigSource->max;
-        sig.min = sigSource->min;
-        sig.multiplexLowValue = sigSource->multiplexLowValue;
-        sig.multiplexHighValue = sigSource->multiplexHighValue;
-        sig.factor = sigSource->factor;
-        sig.intelByteOrder = sigSource->intelByteOrder;
-        sig.parentMessage = &msg;
-        sig.multiplexParent = nullptr;  //need to learn about multiplexed signals and track them when copying
-        sig.receiver = node;
-        sig.signalSize = sigSource->signalSize;
-        sig.startBit = sigSource->startBit;
-        sig.valType = sigSource->valType;
+        sig->name = sigSource->name;
+        sig->bias = sigSource->bias;
+        sig->isMultiplexed = false; //sigSource->isMultiplexed;
+        sig->isMultiplexor = false; //sigSource->isMultiplexor;
+        sig->max = sigSource->max;
+        sig->min = sigSource->min;
+        sig->multiplexLowValue = sigSource->multiplexLowValue;
+        sig->multiplexHighValue = sigSource->multiplexHighValue;
+        sig->factor = sigSource->factor;
+        sig->intelByteOrder = sigSource->intelByteOrder;
+        sig->parentMessage = msgPtr;
+        sig->multiplexParent = nullptr;  //need to learn about multiplexed signals and track them when copying
+        sig->receiver = node;
+        sig->signalSize = sigSource->signalSize;
+        sig->startBit = sigSource->startBit;
+        sig->valType = sigSource->valType;
 
-
-        sig.parentMessage = &msg;
-        msg.sigHandler->addSignal(sig);
+        msgPtr->sigHandler->addSignal(sig);
     }
 
-    msg.sigHandler->sort();
+    //msgPtr->sigHandler->sort();
 
-    dbcFile->messageHandler->addMessage(msg);
-    msgPtr = dbcFile->messageHandler->findMsgByIdx(dbcFile->messageHandler->getCount() - 1);
+    dbcFile->messageHandler->addMessage(msgPtr);
     QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
-    QString msgInfo = Utility::formatCANID(msg.ID) + " " + msg.name;
-    if (msg.comment.length() > 0) msgInfo.append(" - ").append(msg.comment);
+    QString msgInfo = Utility::formatCANID(msgPtr->ID) + " " + msgPtr->name;
+    if (msgPtr->comment.length() > 0) msgInfo.append(" - ").append(msgPtr->comment);
     newMsgItem->setText(0, msgInfo);
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
@@ -684,8 +685,7 @@ void DBCMainEditor::newMessage()
 
     DBC_NODE *node = dbcFile->findNodeByName(nodeName);
     if (!node) node = dbcFile->findNodeByIdx(0);
-    DBC_MESSAGE msg;
-    DBC_MESSAGE *msgPtr;
+    DBC_MESSAGE *msgPtr = new DBC_MESSAGE;
     if (msgItem)
     {
         QString idString = msgItem->text(0).split(" ")[0];
@@ -693,34 +693,33 @@ void DBCMainEditor::newMessage()
         DBC_MESSAGE *oldMsg = dbcFile->messageHandler->findMsgByID(msgID);
         if (oldMsg)
         {
-            msg.name = oldMsg->name + QString::number(randGen.bounded(1000));
-            msg.ID = oldMsg->ID + 1;
-            msg.len = oldMsg->len;
-            msg.bgColor = oldMsg->bgColor;
-            msg.fgColor = oldMsg->fgColor;
-            msg.comment = oldMsg->comment;
+            msgPtr->name = oldMsg->name + QString::number(randGen.bounded(1000));
+            msgPtr->ID = oldMsg->ID + 1;
+            msgPtr->len = oldMsg->len;
+            msgPtr->bgColor = oldMsg->bgColor;
+            msgPtr->fgColor = oldMsg->fgColor;
+            msgPtr->comment = oldMsg->comment;
         }
         else
         {
-            msg.name = nodeName + "Msg" + QString::number(randGen.bounded(500));
-            msg.ID = 0;
-            msg.len = 8;
-            msg.bgColor = QApplication::palette().color(QPalette::Base);
+            msgPtr->name = nodeName + "Msg" + QString::number(randGen.bounded(500));
+            msgPtr->ID = 0;
+            msgPtr->len = 8;
+            msgPtr->bgColor = QApplication::palette().color(QPalette::Base);
         }
     }
     else
     {
-        msg.name = nodeName + "Msg" + QString::number(randGen.bounded(500));
-        msg.ID = 0;
-        msg.len = 8;
+        msgPtr->name = nodeName + "Msg" + QString::number(randGen.bounded(500));
+        msgPtr->ID = 0;
+        msgPtr->len = 8;
     }    
-    msg.sender = node;
+    msgPtr->sender = node;
 
-    dbcFile->messageHandler->addMessage(msg);
-    msgPtr = dbcFile->messageHandler->findMsgByIdx(dbcFile->messageHandler->getCount() - 1);
+    dbcFile->messageHandler->addMessage(msgPtr);
     QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
-    QString msgInfo = Utility::formatCANID(msg.ID) + " " + msg.name;
-    if (msg.comment.length() > 0) msgInfo.append(" - ").append(msg.comment);
+    QString msgInfo = Utility::formatCANID(msgPtr->ID) + " " + msgPtr->name;
+    if (msgPtr->comment.length() > 0) msgInfo.append(" - ").append(msgPtr->comment);
     newMsgItem->setText(0, msgInfo);
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
@@ -755,8 +754,7 @@ void DBCMainEditor::newSignal()
     int msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
     DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByID(msgID);
     if (!msg) return; //null pointers are a bummer. Do not follow them.
-    DBC_SIGNAL sig;
-    DBC_SIGNAL *sigPtr;
+    DBC_SIGNAL *sigPtr = new DBC_SIGNAL;
     if (sigItem)
     {
         QString txt = sigItem->text(0);
@@ -765,29 +763,28 @@ void DBCMainEditor::newSignal()
         DBC_SIGNAL *oldSig = msg->sigHandler->findSignalByName(txt);
         if (oldSig)
         {
-            sig = *oldSig;
-            sig.name = sig.name + QString::number(randGen.bounded(100));
+            *sigPtr = *oldSig;
+            sigPtr->name = sigPtr->name + QString::number(randGen.bounded(100));
         }
         else
         {
-            sig.name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
+            sigPtr->name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
         }
     }
     else
     {
-        sig.name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
+        sigPtr->name = msgItem->text(0).split(" ")[1] + "Sig" + QString::number(randGen.bounded(500));
     }
 
-    sig.parentMessage = msg;
-    if (!sig.receiver) sig.receiver = &dbcFile->dbc_nodes[0]; //if receiver not set then set it to... something.
-    msg->sigHandler->addSignal(sig);
-    sigPtr = msg->sigHandler->findSignalByIdx(msg->sigHandler->getCount() - 1);
+    sigPtr->parentMessage = msg;
+    if (!sigPtr->receiver) sigPtr->receiver = &dbcFile->dbc_nodes[0]; //if receiver not set then set it to... something.
+    msg->sigHandler->addSignal(sigPtr);
     QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
-    QString sigInfo = sig.name;
-    if (sig.comment.length() > 0) sigInfo.append(" - ").append(sig.comment);
+    QString sigInfo = sigPtr->name;
+    if (sigPtr->comment.length() > 0) sigInfo.append(" - ").append(sigPtr->comment);
     newSigItem->setText(0, sigInfo);
-    if (sig.isMultiplexed) newSigItem->setIcon(0, multiplexedSignalIcon);
-    else if (sig.isMultiplexor) newSigItem->setIcon(0, multiplexorSignalIcon);
+    if (sigPtr->isMultiplexed) newSigItem->setIcon(0, multiplexedSignalIcon);
+    else if (sigPtr->isMultiplexor) newSigItem->setIcon(0, multiplexorSignalIcon);
     else newSigItem->setIcon(0, signalIcon);
     newSigItem->setData(0, Qt::UserRole, DBCItemTypes::SIG);
     signalToItem.insert(sigPtr, newSigItem);
@@ -805,6 +802,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
     QString idString, columnText;
     int msgID;
     DBC_MESSAGE *msg;
+    QList<DBC_MESSAGE *> msgs = dbcFile->messageHandler->getMsgsAsList();
     DBC_NODE *node;
     int numMsg = 0, numSig = 0;
 
@@ -818,10 +816,10 @@ void DBCMainEditor::deleteCurrentTreeItem()
         if (!node) return;
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {
-            if (dbcFile->messageHandler->findMsgByIdx(x)->sender == node)
+            if (msgs[x]->sender == node)
             {
                 numMsg++;
-                numSig += dbcFile->messageHandler->findMsgByIdx(x)->sigHandler->getCount();
+                numSig += msgs[x]->sigHandler->getCount();
             }
         }
         confirmDialog = QMessageBox::question(this, "Really?", "Are you sure you want to delete this node, its\n"
@@ -890,9 +888,10 @@ void DBCMainEditor::deleteNode(DBC_NODE *node)
     //don't actually store which messages are associated to which nodes so just iterate through the messages list and whack the ones
     //that claim to be associated to this node.
     int numItems = dbcFile->messageHandler->getCount();
+    QList<DBC_MESSAGE *> msgs = dbcFile->messageHandler->getMsgsAsList();
     for (int i = numItems - 1; i > -1; i--)
     {
-        if (dbcFile->messageHandler->findMsgByIdx(i)->sender == node) deleteMessage(dbcFile->messageHandler->findMsgByIdx(i));
+        if (msgs[i]->sender == node) deleteMessage(msgs[i]);
     }
 
     nodeToItem.remove(node);
@@ -919,12 +918,13 @@ void DBCMainEditor::deleteMessage(DBC_MESSAGE *msg)
     QTreeWidgetItem *currItem = messageToItem[msg];
 
     int numItems = msg->sigHandler->getCount();
+    QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
     for (int i = numItems - 1; i > -1; i--)
     {
-        deleteSignal(msg->sigHandler->findSignalByIdx(i));
+        deleteSignal(sigs[i]);
     }
 
-    dbcFile->messageHandler->removeMessage(msg);
+    dbcFile->messageHandler->removeMessage(msg->ID);
 
     itemToMessage.remove(currItem);
     messageToItem.remove(msg);
@@ -938,7 +938,7 @@ void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
     qDebug() << "Signal about to vanish.";
     if (!signalToItem.contains(sig)) return;
     QTreeWidgetItem *currItem = signalToItem[sig];
-    sig->parentMessage->sigHandler->removeSignal(sig);
+    sig->parentMessage->sigHandler->removeSignal(sig->name);
 
     itemToSignal.remove(currItem);
     signalToItem.remove(sig);

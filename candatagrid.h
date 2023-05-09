@@ -57,10 +57,8 @@ public:
     void saveImage(QString filename, int width, int height);
     void setCellTextState(int bitPos, GridTextState state);
     GridTextState getCellTextState(int bitPos);
-    void setUsedSignalNum(int bit, int signal);
-    void setSignalNames(int sigIdx, const QString sigName);
-    void clearSignalNames();
-    int getUsedSignalNum(int bit);
+    void setUsedSignalName(int bit, QString signal);
+    QString getUsedSignalName(int bit);
     GridMode getMode();
     void setMode(GridMode mode);
     void setBytesToDraw(int num);
@@ -79,8 +77,7 @@ private:
     unsigned char data[64];
     unsigned char usedData[64];
     unsigned char heatData[512];
-    int usedSignalNum[512]; //so we can specify which signal claims this bit
-    QVector<QString> signalNames;
+    QString usedSignalName[512]; //so we can specify which signal claims this bit
     GridTextState textStates[64][8]; //first dimension is bytes, second is bits
     QPoint upperLeft, gridSize;
     GridMode gridMode;
@@ -111,7 +108,7 @@ private:
     void paintCommonEnding();    
     int gridToBitPosition(int x, int y);
     QPoint getGridPointFromBitPosition(int bitPos);
-    int getSignalRowRun(int sigNum, int startBit);
+    int getSignalRowRun(QString sigName, int startBit);
 };
 
 #endif // CANDATAGRID_H

@@ -85,6 +85,17 @@ public:
 class DBC_MESSAGE; //forward reference so that DBC_SIGNAL can compile before we get to real definition of DBC_MESSAGE
 class DBC_SIGNAL;
 
+/*
+ * Both DBC_SIGNAL and DBC_MESSAGE used to use a lot of pointers. This worked in QT5 because QList was
+ * sort of a linked list. It was a QVector that stores pointers to objects on the heap. Since those
+ * objects would not move this allowed for taking pointers to them. However, QT6 causes a problem here
+ * as now QVector and QList are the exact same and both store items actually in the list, not as pointers.
+ * This causes invalidation any time a size modifying call is done on the QVector/QList.
+ * So, the easiest solution to keep the code mostly the same and things working like they did
+ * is to re-introduce pointers with smart pointers.
+ *
+*/
+
 class DBC_SIGNAL
 {
 public: //TODO: this is sloppy. It shouldn't all be public!
@@ -101,6 +112,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     double bias;
     double min;
     double max;
+    QString receiverNode;
     DBC_NODE *receiver; //it is fast to have a pointer but dangerous... Make sure to walk the whole tree and delete everything so nobody has stale references.
     DBC_MESSAGE *parentMessage;
     QString unitName;

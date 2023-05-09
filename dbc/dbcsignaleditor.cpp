@@ -629,9 +629,10 @@ void DBCSignalEditor::fillSignalForm(DBC_SIGNAL *sig)
     ui->cbMultiplexParent->clear();
 
     int numSigs = dbcMessage->sigHandler->getCount();
+    QList<DBC_SIGNAL *> sigs = dbcMessage->sigHandler->getSignalsAsList();
     for (int i = 0; i < numSigs; i++)
     {
-        DBC_SIGNAL *sig_iter = dbcMessage->sigHandler->findSignalByIdx(i);
+        DBC_SIGNAL *sig_iter = sigs[i];
         if (sig_iter && sig_iter->isMultiplexor && (sig_iter != sig))
         {
             //only add this entry if there are no other entries with that name yet
@@ -688,17 +689,18 @@ void DBCSignalEditor::refreshBitGrid()
     ui->bitfield->setReference(bitpattern, false);
     ui->bitfield->updateData(bitpattern, true);
 
-    ui->bitfield->clearSignalNames();
+    /*ui->bitfield->clearSignalNames();
+    QList<DBC_SIGNAL *> sigs = dbcMessage->sigHandler->getSignalsAsList();
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
-        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
+        DBC_SIGNAL *sig = sigs[x];
         //only set a signal name for signals which match multiplexparent with our currentsignal
         if (!sig->multiplexParent || ((sig->multiplexParent == currentSignal->multiplexParent) && (sig->multiplexHighValue == currentSignal->multiplexHighValue)) )
         {
             ui->bitfield->setSignalNames(x, sig->name);
             //qDebug() << sig->name << sig->multiplexParent;
         }
-    }
+    }*/
 
     generateUsedBits();
     memset(bitpattern, 0, 64); //clear it out first.
@@ -812,12 +814,12 @@ void DBCSignalEditor::bitfieldRightClicked(int bit)
 {
     //will return -1 if there is no signal there. Otherwise, returns signal number
     //which is quite luckily also the index into the signal handler table
-    int sigNum = ui->bitfield->getUsedSignalNum(bit);
-    if (sigNum < 0) return;
+    QString sigName = ui->bitfield->getUsedSignalName(bit);
+    if (sigName.length() < 1) return;
 
     pushToUndoBuffer(); // undo to resume editing the previous signal
 
-    currentSignal = dbcMessage->sigHandler->findSignalByIdx(sigNum);
+    currentSignal = dbcMessage->sigHandler->findSignalByName(sigName);
 
     if (currentSignal)
     {
@@ -836,9 +838,11 @@ void DBCSignalEditor::generateUsedBits()
 
     if (!dbcMessage || !dbcMessage->sigHandler) return;
 
+    QList<DBC_SIGNAL *> sigs = dbcMessage->sigHandler->getSignalsAsList();
+
     for (int x = 0; x < dbcMessage->sigHandler->getCount(); x++)
     {
-        DBC_SIGNAL *sig = dbcMessage->sigHandler->findSignalByIdx(x);
+        DBC_SIGNAL *sig = sigs[x];
 
         //only pay attention to this signal if it's multiplexParent matches currentSignal or is null
 
@@ -860,7 +864,7 @@ void DBCSignalEditor::generateUsedBits()
             {
                 int byt = y / 8;
                 usedBits[byt] |= 1 << (y % 8);
-                ui->bitfield->setUsedSignalNum(y, x);
+                ui->bitfield->setUsedSignalName(y, sig->name);
             }
         }
         else //big endian / motorola format
@@ -871,7 +875,7 @@ void DBCSignalEditor::generateUsedBits()
             {
                 int byt = startBit / 8;
                 usedBits[byt] |= 1 << (startBit % 8);
-                ui->bitfield->setUsedSignalNum(startBit, x);
+                ui->bitfield->setUsedSignalName(startBit, sig->name);
                 size--;
                 if ((startBit % 8) == 0) startBit += 15;
                 else startBit--;

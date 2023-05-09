@@ -458,7 +458,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return msg->fgColor;
             }
         }
-        return QApplication::palette().color(QPalette::WindowText);
+        return QApplication::palette().color(QPalette::Text);
     }
 
     if (role == Qt::DisplayRole) {
@@ -551,10 +551,13 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 {
                     tempString.append("   <" + msg->name + ">\n");
                     if (msg->comment.length() > 1) tempString.append(msg->comment + "\n");
+
+                    QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
+
                     for (int j = 0; j < msg->sigHandler->getCount(); j++)
                     {                        
                         QString sigString;
-                        DBC_SIGNAL* sig = msg->sigHandler->findSignalByIdx(j);
+                        DBC_SIGNAL* sig = sigs[j];
 
                         if ( (sig->multiplexParent == nullptr) && sig->processAsText(thisFrame, sigString))
                         {

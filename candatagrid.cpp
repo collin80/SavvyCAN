@@ -68,7 +68,7 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
     memset(data, 0, 64);
     memset(refData, 0, 64);
     memset(usedData, 0, 64);
-    for (int j = 0; j < 512; j++) usedSignalNum[j] = -1;
+    for (int j = 0; j < 512; j++) usedSignalName[j] = QString();
     bytesToDraw = 8; //default to the old behavior
     for (int x = 0; x < 8; x++)
         for (int y = 0; y < 64; y++)
@@ -193,34 +193,18 @@ GridTextState CANDataGrid::getCellTextState(int bitPos)
     return textStates[byte][bit];
 }
 
-void CANDataGrid::setSignalNames(int sigIdx, const QString sigName)
-{
-    if (sigIdx < 0) return;
-    if (sigIdx >= signalNames.size())
-    {
-        signalNames.resize(sigIdx * 2);
-    }
-    signalNames[sigIdx] = sigName;
-}
-
-void CANDataGrid::clearSignalNames()
-{
-    signalNames.clear();
-    signalNames.resize(40);
-}
-
-void CANDataGrid::setUsedSignalNum(int bit, int signal)
+void CANDataGrid::setUsedSignalName(int bit, QString signal)
 {
     if (bit < 0) return;
     if (bit > 511) return;
-    usedSignalNum[bit] = signal;
+    usedSignalName[bit] = signal;
 }
 
-int CANDataGrid::getUsedSignalNum(int bit)
+QString CANDataGrid::getUsedSignalName(int bit)
 {
     if (bit < 0) return 0;
     if (bit > 511) return 0;
-    return usedSignalNum[bit];
+    return usedSignalName[bit];
 }
 
 void CANDataGrid::paintEvent(QPaintEvent *event)
@@ -344,7 +328,7 @@ void CANDataGrid::paintGridCells()
     int x, y, bit;
     unsigned char prevByte, thisByte;
     bool thisBit, prevBit;
-    int usedSigNum;
+    QString usedSigName;
     QString prevSigName;
 
     //now, color the bitfield by seeing if a given bit is freshly set/unset in the new data
@@ -393,18 +377,23 @@ void CANDataGrid::paintGridCells()
                     }
                     else
                     {
-                        usedSigNum = -1;
+                        usedSigName = QString();
                         if ((usedData[byteIdx] & (1 << bitIdx)) == (1 << bitIdx))
                         {
-                            if (gridMode == GridMode::SIGNAL_VIEW) usedSigNum = getUsedSignalNum(bit);
-                            if (usedSigNum == -1)
+                            if (gridMode == GridMode::SIGNAL_VIEW) usedSigName = getUsedSignalName(bit);
+                            if (usedSigName == QString())
                             {
                                 grayBrush = QBrush(QColor(0xB6, 0xB6, 0xB6), Qt::BDiagPattern);
                                 painter->setBrush(grayBrush);
                             }
                             else
                             {
-                                int idx = usedSigNum % signalColors.length(); //can only use as many colors as have been defined
+                                int idx = 0;
+                                foreach (char c, usedSigName.toUtf8())
+                                {
+                                    idx += c;
+                                }
+                                idx = idx % signalColors.length(); //can only use as many colors as have been defined
                                 painter->setBrush(QBrush(signalColors[idx]));
                             }
                         }
@@ -447,11 +436,11 @@ void CANDataGrid::paintGridCells()
 
 
     /*
-     * now if signal names are loaded we'll go through all the bits again and try to label over top of the grid
+     * now  we'll go through all the bits again and try to label over top of the grid
      * We already have a big bitmap that tells us which signals occupy which bits so every time there is a new
      * signal look ahead to see if there's room in the row to just run the signal name through as long as needed.
     */
-    if ( (signalNames.count() > 0) && (gridMode == GridMode::SIGNAL_VIEW) )
+    if ( gridMode == GridMode::SIGNAL_VIEW )
     {
         painter->setFont(sigNameFont);
 
@@ -462,17 +451,17 @@ void CANDataGrid::paintGridCells()
                 int byteIdx = (y * (neededXDivisions / 8) + (x / 8));
                 int bitIdx = ((neededXDivisions - 1) - x) & 7;
                 bit = (byteIdx * 8) + bitIdx;
-                usedSigNum = -1;
+                usedSigName = QString();
                 if ((usedData[byteIdx] & (1 << bitIdx)) == (1 << bitIdx))
                 {
-                    usedSigNum = getUsedSignalNum(bit);
-                    if ((usedSigNum > -1) && (prevSigName != signalNames[usedSigNum]) )
+                    usedSigName = getUsedSignalName(bit);
+                    if ((usedSigName.length() > 0) && (prevSigName != usedSigName) )
                     {
-                        prevSigName = signalNames[usedSigNum];
+                        prevSigName = usedSigName;
 
                         int textWidth = smallMetric->horizontalAdvance(prevSigName);
 
-                        int usableWidth = getSignalRowRun(usedSigNum, bit);
+                        int usableWidth = getSignalRowRun(usedSigName, bit);
                         qDebug() << "Width this row: " << usableWidth;
                         usableWidth *= xSector;
 
@@ -515,9 +504,9 @@ void CANDataGrid::paintGridCells()
 
 //starting at the given coords, go right / increment X until either we hit the end of the signal or the end of the row, whichever is first.
 //return how many grid cells that was. The part that sucks is that bits aren't really in "bit" order so you can't just increment the bit number
-int CANDataGrid::getSignalRowRun(int sigNum, int startBit)
+int CANDataGrid::getSignalRowRun(QString sigName, int startBit)
 {
-    qDebug() << "SigNum: " << sigNum << " startBit " << startBit;
+    qDebug() << "SigName: " << sigName << " startBit " << startBit;
     int width = 0;
     QPoint gridPt = getGridPointFromBitPosition(startBit);
     int x = gridPt.x();
@@ -525,7 +514,7 @@ int CANDataGrid::getSignalRowRun(int sigNum, int startBit)
     for (int xx = x; xx < neededXDivisions; xx++)
     {
         int bit = gridToBitPosition(xx, y);
-        if (usedSignalNum[bit] == sigNum) width++;
+        if (usedSignalName[bit] == sigName) width++;
         else return width;
     }
 
