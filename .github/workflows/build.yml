@@ -3,12 +3,12 @@ name: Build
 on:
   push:
     branches:
-      - "master"
+      - "QT6WIP"
       
 jobs:
   buildlinux:
     name: Linux x64
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Prepare Environment
@@ -17,6 +17,8 @@ jobs:
 
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v3
+        with:
+           version: '6.5.0'
 
       - name: Clone
         uses: actions/checkout@v3
@@ -45,8 +47,8 @@ jobs:
     steps:
       - name: Prepare macOS Environment
         run: |
-            brew install qt5
-            brew link qt5 --force
+            brew install qt6
+            brew link qt6 --force
 
       - name: Clone
         uses: actions/checkout@v3
@@ -74,6 +76,8 @@ jobs:
     steps:      
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v3
+        with:
+           version: '6.5.0'
 
       - name: Clone
         uses: actions/checkout@v3
@@ -96,22 +100,22 @@ jobs:
           copy help/images/*.* package/help/images/
           mkdir package/examples
           copy examples/*.* package/examples/          
-          copy "${Env:Qt5_Dir}/bin/Qt5Core.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5Gui.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5Network.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5PrintSupport.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5Qml.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5SerialBus.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5SerialPort.dll" package/
-          copy "${Env:Qt5_Dir}/bin/Qt5Widgets.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6Core.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6Gui.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6Network.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6PrintSupport.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6Qml.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6SerialBus.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6SerialPort.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6Widgets.dll" package/
           mkdir package/imageformats
-          copy "${Env:Qt5_Dir}/plugins/imageformats/*.*" package/imageformats/
+          copy "${Env:Qt6_Dir}/plugins/imageformats/*.*" package/imageformats/
           mkdir package/platforms
-          copy "${Env:Qt5_Dir}/plugins/platforms/*.*" package/platforms/
+          copy "${Env:Qt6_Dir}/plugins/platforms/*.*" package/platforms/
           mkdir package/styles
-          copy "${Env:Qt5_Dir}/plugins/styles/*.*" package/styles/
+          copy "${Env:Qt6_Dir}/plugins/styles/*.*" package/styles/
           mkdir package/canbus
-          copy "${Env:Qt5_Dir}/plugins/canbus/*.*" package/canbus/
+          copy "${Env:Qt6_Dir}/plugins/canbus/*.*" package/canbus/
 
       - uses: actions/upload-artifact@v3
         with:
@@ -133,9 +137,9 @@ jobs:
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "continuous"
+          automatic_release_tag: "continuous-QT6"
           prerelease: true
-          title: "Development Build"
+          title: "QT6 Development Build"
           files: |
             SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
             SavvyCAN-Windows_x64_CIBuild.zip
@@ -165,5 +169,5 @@ jobs:
           curl -i -H "Accept: application/json" \
           -H "Content-Type:application/json" \
           -X POST \
-          --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} Build Complete\",      \"description\": \"${{ steps.msg_var.outputs.msg }} \\nCommit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
+          --data "{\"content\": null,\"embeds\": [{\"title\": \"${{ github.repository }} QT6 Build Complete\",      \"description\": \"${{ steps.msg_var.outputs.msg }} \\nCommit: ${{ github.sha }}\\n[Build Artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\",      \"color\": 5131997,      \"author\": {        \"name\": \"Github Builds\"      }    }  ]}" \
           https://discord.com/api/webhooks/${{ secrets.WEBHOOK_ID }}/${{ secrets.WEBHOOK_TOKEN }}
