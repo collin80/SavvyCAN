@@ -110,6 +110,7 @@ jobs:
           copy "${Env:Qt6_Dir}/bin/Qt6SerialBus.dll" package/
           copy "${Env:Qt6_Dir}/bin/Qt6SerialPort.dll" package/
           copy "${Env:Qt6_Dir}/bin/Qt6Widgets.dll" package/
+          copy "${Env:Qt6_Dir}/bin/Qt6OpenGL.dll" package/
           mkdir package/imageformats
           copy "${Env:Qt6_Dir}/plugins/imageformats/*.*" package/imageformats/
           mkdir package/platforms
