@@ -1391,7 +1391,7 @@ bool DBCFile::saveFile(QString fileName)
         uint32_t ID = msg->ID;
         if (msg->ID > 0x7FF || msg->extendedID)
         {
-            msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            ID += 0x80000000ul; //set bit 31 if this ID is extended.
         }
 
         msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
@@ -2256,7 +2256,7 @@ DBCHandler::DBCHandler()
             file->dbc_attributes.append(attr);
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
-            bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
+            int filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toInt();
             attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = filterLabeling;
             attr.enumVals.clear();
