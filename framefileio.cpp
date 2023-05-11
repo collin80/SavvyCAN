@@ -1402,10 +1402,13 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
-        if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 20;
-        if (line.startsWith(";$FILEVERSION=1.3")) fileVersion = 13;
-        if (line.startsWith(";$FILEVERSION=1.1")) fileVersion = 11;
-        if (line.startsWith(';')) continue;
+        if (line.startsWith(';'))
+        {
+            if (line.contains("$FILEVERSION=2.0")) fileVersion = 20;
+            if (line.contains("$FILEVERSION=1.3")) fileVersion = 13;
+            if (line.contains("$FILEVERSION=1.1")) fileVersion = 11;
+            continue;
+        }
         if (line.length() > 41)
         {
             line = line.simplified();
@@ -1466,7 +1469,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 if (tokens.length() > 6)
                 {
                     thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[1].toDouble() * 1000.0)));
-                    thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
+                    thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[6].toInt();
