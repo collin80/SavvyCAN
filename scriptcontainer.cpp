@@ -263,7 +263,7 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
         if (filters[i].checkFilter(frame.frameId(), frame.bus))
         {
             QJSValueList args;
-            args << frame.bus << frame.frameId() << frame.payload().length();
+            args << frame.bus << frame.frameId() << static_cast<uint>(frame.payload().length());
             QJSValue dataBytes = scriptEngine->newArray(dataLen);
 
             for (int j = 0; j < dataLen; j++) dataBytes.setProperty(j, QJSValue(data[j]));
@@ -341,7 +341,7 @@ void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
     //qDebug() << "Got frame in script interface";
 
     QJSValueList args;
-    args << msg.bus << msg.frameId() << msg.payload().length();
+    args << msg.bus << msg.frameId() << static_cast<uint>(msg.payload().length());
     QJSValue dataBytes = scriptEngine->newArray(static_cast<uint>(msg.payload().length()));
 
     for (int j = 0; j < msg.payload().length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue((unsigned char)msg.payload()[j]));
@@ -420,7 +420,7 @@ void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
     qDebug() << "Got frame in script interface";
 
     QJSValueList args;
-    args << msg.bus << msg.frameId() << msg.service << msg.subFunc << msg.payload().length();
+    args << msg.bus << msg.frameId() << msg.service << msg.subFunc << static_cast<uint>(msg.payload().length());
     QJSValue dataBytes = scriptEngine->newArray(static_cast<unsigned int>(msg.payload().length()));
 
     for (int j = 0; j < msg.payload().length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue((unsigned char)msg.payload()[j]));

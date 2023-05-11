@@ -441,10 +441,19 @@ void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> 
     }
 }
 
-//there's no external way to clear the flag. It is only cleared when the file is saved by this object.
 void DBCFile::setDirtyFlag()
 {
     isDirty = true;
+}
+
+//BE CAREFUL HERE. Do not clear the dirty flag unless you're absolutely sure nothing has changed.
+//Currently the signal editor clears this flag if the entire undo buffer is emptied but still
+//it's possible that signals or messages were deleted or added so this is potentially not that safe
+//It would be better if every node, message, and signal had a dirty flag. Then the DBCFile getDirtyFlag
+//function could traverse the tree and see if anything is dirty.
+void DBCFile::clearDirtyFlag()
+{
+    isDirty = false;
 }
 
 bool DBCFile::getDirtyFlag()
@@ -1294,7 +1303,7 @@ bool DBCFile::saveFile(QString fileName)
     int msgNumber = 1;
     int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
-    QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
+    QString nodesOutput, msgOutput, commentsOutput, valuesOutput, extMultiplexOutput;
     QString defaultsOutput, attrValOutput;
     bool hasExtendedMultiplexing = false;
 
@@ -1512,6 +1521,9 @@ bool DBCFile::saveFile(QString fileName)
         msgOutput.clear(); //got to reset it after writing
     }
 
+    outFile->write(commentsOutput.toUtf8());
+    commentsOutput.clear();
+
     //Now dump out all of the stored attributes
     for (int x = 0; x < dbc_attributes.count(); x++)
     {
@@ -1573,6 +1585,8 @@ bool DBCFile::saveFile(QString fileName)
                 defaultsOutput.append("\"" + dbc_attributes[x].enumVals[dbc_attributes[x].defaultValue.toInt()] + "\";\n");
                 break;
             case ATTR_INT:
+                defaultsOutput.append(QString::number(dbc_attributes[x].defaultValue.toLongLong()) + ";\n");
+                break;
             case ATTR_FLOAT:
                 defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
                 break;
@@ -1592,7 +1606,7 @@ bool DBCFile::saveFile(QString fileName)
             uint32_t ID = msg->ID;
             if (msg->ID > 0x7FF || msg->extendedID)
             {
-                msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+                ID += 0x80000000ul; //set bit 31 if this ID is extended.
             }
 
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
@@ -1605,7 +1619,7 @@ bool DBCFile::saveFile(QString fileName)
                     msgOutput.append(sig->name + " " + sig->multiplexParent->name + " ");
                     msgOutput.append(QString::number(sig->multiplexLowValue) + "-" + QString::number(sig->multiplexHighValue) + ";");
                     msgOutput.append("\n");
-                    outFile->write(msgOutput.toUtf8());
+                    extMultiplexOutput.append(msgOutput);
                     msgOutput.clear(); //got to reset it after writing
                 }
             }
@@ -1613,15 +1627,15 @@ bool DBCFile::saveFile(QString fileName)
     }
 
     //now write out all of the accumulated comments and value tables from above
-    outFile->write(attrValOutput.toUtf8());
     outFile->write(defaultsOutput.toUtf8());
-    outFile->write(commentsOutput.toUtf8());
+    outFile->write(attrValOutput.toUtf8());    
     outFile->write(valuesOutput.toUtf8());
+    outFile->write(extMultiplexOutput.toUtf8());
 
     attrValOutput.clear();
     defaultsOutput.clear();
-    commentsOutput.clear();
     valuesOutput.clear();
+    extMultiplexOutput.clear();
 
     outFile->close();
     delete outFile;
@@ -2235,14 +2249,14 @@ DBCHandler::DBCHandler()
     qDebug() << "Previously loaded DBC file count: " << filecount;
     for (int i=0; i<filecount; i++)
     {
-        QString filename = settings.value("DBC/Filename_" + QString(i),"").toString();
+        QString filename = settings.value("DBC/Filename_" + QString::number(i),"").toString();
         DBCFile * file = loadDBCFile(filename);
         if (file)
         {
-            int bus = settings.value("DBC/AssocBus_" + QString(i),0).toInt();
+            int bus = settings.value("DBC/AssocBus_" + QString::number(i),0).toInt();
             file->setAssocBus(bus);
 
-            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString(i),0).toInt();
+            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString::number(i),0).toInt();
 
             DBC_ATTRIBUTE attr;
 

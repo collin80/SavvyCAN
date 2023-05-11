@@ -39,6 +39,8 @@ Once you've set both Data Len and Little Endian you can set the bits to use. The
 
 "Stride" is not often used but will cause only every "x" values to actually be graphed. This can be used to graph a very dense set of data with less points to speed things up.
 
+"Associated Bus" defaults to -1 which means any bus. If you know you want to only graph messages that arrived on a particular bus you can enter the number here. It is rare for two buses to have the same frame ID but with different actual messages but not unheard of. If you find that your graphs appear to randomly jitter back and forth between two distinct sets of values this may be the cause.
+
 "Only Points" will graph using disconnected points instead of lines.
 
 "Point Style" has a list of every style you can use for points. The default is to not show the points and instead draw a line through where the points are at. But, there are many other options.
@@ -48,3 +50,5 @@ Once you've set both Data Len and Little Endian you can set the bits to use. The
 "Line Color" changes the color of the graphed line. It is automatically randomly set for new graphs but if you don't like the random color you can click the color and select a better one.
 
 "Fill Color" If you're feeling fancy you can also specify a fill color. The default fill color has an alpha value of 0 meaning it is completely transparent / no used. If you set a fill color you will need to set the alpha channel as well. An alpha of even 40-60 is usually plenty. 
+
+DO NOTE -> all the options starting at "Point Style" will drastically affect performance. If you try to graph a million points with a special point style, large line thickness, and a fill color it WILL be slow. For maximum speed just graph colored lines with no points.

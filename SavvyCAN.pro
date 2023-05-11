@@ -20,6 +20,8 @@ QMAKE_INFO_PLIST = Info.plist.template
 ICON = icons/SavvyIcon.icns
 
 SOURCES += main.cpp\
+    canbridgewindow.cpp \
+    connections/canserver.cpp \
     connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
     dbc/dbcnodeduplicateeditor.cpp \
@@ -100,7 +102,9 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     can_structs.h \
+    canbridgewindow.h \
     canframemodel.h \
+    connections/canserver.h \
     connections/lawicel_serial.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
@@ -189,6 +193,7 @@ HEADERS  += mainwindow.h \
     pcaplite.h
 
 FORMS    += ui/candatagrid.ui \
+    ui/canbridgewindow.ui \
     ui/dbcnodeduplicateeditor.ui \
     ui/dbccomparatorwindow.ui \
     ui/dbcmessageeditor.ui \
@@ -218,7 +223,7 @@ FORMS    += ui/candatagrid.ui \
     ui/udsscanwindow.ui \
     ui/bisectwindow.ui \
     ui/signalviewerwindow.ui \
-    helpwindow.ui \
+    ui/helpwindow.ui \
     ui/newconnectiondialog.ui \
     ui/temporalgraphwindow.ui
     

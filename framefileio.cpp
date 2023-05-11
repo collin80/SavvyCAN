@@ -867,7 +867,7 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
         line = txt.readLine().simplified();
         if (line.length() > 2)
         {
-            QList<QString> tokens = line.split(QRegExp("\\s+"));
+            QList<QString> tokens = line.split(QRegularExpression("\\s+"));
             if (tokens.length() > 3)
             {
                 QString time = tokens[0].replace(",", "");
@@ -1062,6 +1062,9 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
     QByteArray line;
     int lineCounter = 0;
     bool foundErrors = false;
+    int addendumTime = 0;
+    double previousTime = 0;
+
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -1097,7 +1100,11 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
                     multiplier = 1; //special case. Assume no decimal means microseconds
                 }
                 //qDebug() << "decimal places " << decimalPlaces;
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[0].toDouble() * multiplier)));
+                if (previousTime > tokens[0].toDouble()) {
+                    addendumTime += 60;
+                }
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>((tokens[0].toDouble() + addendumTime) * multiplier)));
+                previousTime = tokens[0].toDouble();
                 thisFrame.setFrameId( static_cast<uint32_t>(tokens[1].toInt(nullptr, 16)) );
                 thisFrame.setExtendedFrameFormat((thisFrame.frameId() > 0x7FF));
                 thisFrame.isReceived = true;
@@ -1395,10 +1402,13 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
-        if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 20;
-        if (line.startsWith(";$FILEVERSION=1.3")) fileVersion = 13;
-        if (line.startsWith(";$FILEVERSION=1.1")) fileVersion = 11;
-        if (line.startsWith(';')) continue;
+        if (line.startsWith(';'))
+        {
+            if (line.contains("$FILEVERSION=2.0")) fileVersion = 20;
+            if (line.contains("$FILEVERSION=1.3")) fileVersion = 13;
+            if (line.contains("$FILEVERSION=1.1")) fileVersion = 11;
+            continue;
+        }
         if (line.length() > 41)
         {
             line = line.simplified();
@@ -1459,7 +1469,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 if (tokens.length() > 6)
                 {
                     thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[1].toDouble() * 1000.0)));
-                    thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
+                    thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[6].toInt();
@@ -2023,6 +2033,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
                 thisFrame.setFrameId(tokens[1].toUInt(nullptr, 16));
                 if (tokens[2].toUpper().contains("TRUE")) thisFrame.setExtendedFrameFormat(true);
                     else thisFrame.setExtendedFrameFormat(false);
+
+                //fix for faulty files that fail to set the extended flag when they should
+                if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
 
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
 
@@ -3497,9 +3510,9 @@ bool FrameFileIO::isCanDumpFile(QString filename)
     QFile *inFile = new QFile(filename);
     QByteArray line;
     QList<QByteArray> tokens;
-    QRegExp timeExp("^\\((\\S+)\\)$");
-    QRegExp IdValExp("^(\\S+)#(\\S+)$");
-    QRegExp valExp("(\\S{2})");
+    QRegularExpression timeExp(QRegularExpression::anchoredPattern("^\\((\\S+)\\)$")); //anchored pattern causes exact match
+    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
+    QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
     int pos = 0;
     bool isMatch = true;
@@ -3524,11 +3537,13 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                 tokens = line.simplified().split(' ');
                 if(tokens.count() < 3) isMatch = false;
 
-                /* timestamp */
-                ret = timeExp.exactMatch(tokens[0]);
-                if(!ret) isMatch = false;
+                /* timestamp */                
+                QRegularExpressionMatch timeExpMatched = timeExp.match(tokens[0]);
+                if(!timeExpMatched.hasMatch()) {
+                    isMatch = false;
+                }
 
-                /*uint64_t timestamp = (uint64_t)*/(timeExp.cap(1).toDouble(&ret) /** (double)1000000.0*/);
+                /*uint64_t timestamp = (uint64_t)*/(timeExpMatched.captured(1).toDouble(&ret) /** (double)1000000.0*/);
                 if(!ret) isMatch = false;
 
                 if (line.contains('[')) //the expanded format
@@ -3558,17 +3573,19 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                         isMatch = false;
                         continue;
                     }
-                    ret = IdValExp.exactMatch(tokens[2]);
-                    if(!ret)
+
+
+                    QRegularExpressionMatch IdValExpMatched = IdValExp.match(tokens[2]);
+                    if(!IdValExpMatched.hasMatch())
                     {
                         isMatch = false;
                         continue;
                     }
 
                     /* ID */
-                    /*int ID = */IdValExp.cap(1).toInt(&ret, 16);
+                    /*int ID = */IdValExpMatched.captured(1).toInt(&ret, 16);
 
-                    QString val= IdValExp.cap(2);
+                    QString val= IdValExpMatched.captured(2);
 
                     pos = 0;
                     int len = 0;
@@ -3582,22 +3599,23 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                     } else {
                         /* val byte per byte */
                         int lng = 0;
-                        while ((pos = valExp.indexIn(val, pos)) != -1)
-                        {
+                        QRegularExpressionMatch valExpMatch;
+                        QRegularExpressionMatchIterator i = valExp.globalMatch(val);
+                        while (i.hasNext()) {
+                            valExpMatch = i.next();
                             lng++;
                             if (lng > 8)
                             {
                                 isMatch = false;
                                 break;
                             }
-                            /*int data = */valExp.cap(1).toInt(&ret, 16);
+                            /*int data = */valExpMatch.captured(1).toInt(&ret, 16);
                             if(!ret)
                             {
                                 isMatch = false;
                                 break;
                             }
 
-                            pos += valExp.matchedLength();
                         }
                     }
                 }
@@ -3624,11 +3642,10 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
     CANFrame thisFrame;
     QByteArray line;
     QList<QByteArray> tokens;
-    QRegExp timeExp("^\\((\\S+)\\)$");
-    QRegExp IdValExp("^(\\S+)#(\\S+)$");
-    QRegExp valExp("(\\S{2})");
+    QRegularExpression timeExp(QRegularExpression::anchoredPattern("^\\((\\S+)\\)$")); //anchored pattern causes exact match
+    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
+    QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
-    int pos = 0;
     bool ret;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -3654,8 +3671,8 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             if(tokens.count()<3) continue;
 
             /* timestamp */
-            ret = timeExp.exactMatch(tokens[0]);
-            if(!ret) continue;
+            QRegularExpressionMatch timeExpMatched = timeExp.match(tokens[0]);
+            if(!timeExpMatched.hasMatch()) continue;
             
             //Sort out the bus
             std::string busString = tokens[1].toStdString();
@@ -3676,7 +3693,7 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             
             thisFrame.bus = busNum;
             
-            thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(timeExp.cap(1).toDouble(&ret) * (double)1000000.0)));
+            thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (uint64_t)(timeExpMatched.captured(1).toDouble(&ret) * (double)1000000.0)));
             if(!ret) continue;
 
             if (line.contains('[')) //the expanded format (second one from the above list)
@@ -3699,24 +3716,26 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             {
                 /* ID & value */
                 //qDebug() << tokens[2];
-                ret = IdValExp.exactMatch(tokens[2]);
-                if(!ret)
+                QRegularExpressionMatch IdValExpMatched = IdValExp.match(tokens[2]);
+                if(!IdValExpMatched.hasMatch())
                 {
                     qDebug() << "ID regex didn't match!";
                     continue;
                 }
 
                 /* ID */
-                thisFrame.setFrameId(static_cast<uint32_t>(IdValExp.cap(1).toInt(&ret, 16)));
-                if (IdValExp.cap(1).length() > 3) {
+                thisFrame.setFrameId(static_cast<uint32_t>(IdValExpMatched.captured(1).toInt(&ret, 16)));
+                if (IdValExpMatched.captured(1).length() > 3)
+                {
                     thisFrame.setExtendedFrameFormat(true);
-                } else {
+                }
+                else
+                {
                     thisFrame.setExtendedFrameFormat(false);
                 }
 
-                QString val= IdValExp.cap(2);
+                QString val = IdValExpMatched.captured(2);
 
-                pos = 0;
                 QByteArray bytes;
                 if (val.startsWith("R") && val.at(1).isDigit()) {
                     thisFrame.payload().resize( val.at(1).toLatin1() - '0' );
@@ -3724,12 +3743,13 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
                 } else {
                     thisFrame.setFrameType(QCanBusFrame::DataFrame);
                     /* val byte per byte */
-                    while ((pos = valExp.indexIn(val, pos)) != -1)
+                    QRegularExpressionMatch valExpMatch;
+                    QRegularExpressionMatchIterator i = valExp.globalMatch(val);
+                    while (i.hasNext())
                     {
-                        bytes.append((char)valExp.cap(1).toInt(&ret, 16));
+                        valExpMatch = i.next();
+                        bytes.append((char)valExpMatch.captured(1).toInt(&ret, 16));
                         if(!ret) continue;
-
-                        pos += valExp.matchedLength();
                     }
                 }
                 thisFrame.setPayload(bytes);
@@ -4402,7 +4422,7 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
         return false;
     }
 
-    QString const validSeparators(" -~");
+    QString const validSeparators(" -~;");
 
     // Decode separators and format for later decoding.
     headerLine = fileStream.readLine();
@@ -4611,17 +4631,34 @@ bool FrameFileIO::loadCLX000File(QString filename, QVector<CANFrame>* frames) {
             currentFrame.setFrameType(QCanBusFrame::DataFrame);
             currentFrame.bus = 0;
 
-            currentTime = currentTime.addYears(res.captured("year").toUInt());
-            currentTime = currentTime.addMonths(res.captured("month").toUInt());
-            currentTime = currentTime.addDays(res.captured("day").toUInt());
-            currentTime = currentTime.addSecs(
-                res.captured("hours").toUInt() * 60 * 60 +
-                res.captured("minutes").toUInt() * 60 +
-                res.captured("seconds").toUInt()
-            );
-            currentTime = currentTime.addMSecs(res.captured("ms").toUInt());
+            //currentTime is already initialized with startDate so it already has year,month,etc filled out.
+            //For each timestamp on the line we need to figure out how it differs from the already set time
+            //and move the timestamp accordingly.
+            if (res.captured("year").length() > 0)
+            {
+                //for all of these, only add the difference not the whole value!
+                currentTime = currentTime.addYears(res.captured("year").toUInt() - startDate.date().year());
+            }
 
-            currentFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, currentTime.toMSecsSinceEpoch()));
+            if (res.captured("month").length() > 0)
+            {
+                currentTime = currentTime.addMonths(res.captured("month").toUInt() - startDate.date().month());
+            }
+
+            if (res.captured("day").length() > 0)
+            {
+                currentTime = currentTime.addMonths(res.captured("day").toUInt() - startDate.date().day());
+            }
+
+            unsigned int seconds = res.captured("hours").toUInt() * 60 * 60 + res.captured("minutes").toUInt() * 60 +
+                    res.captured("seconds").toUInt() - (startDate.time().msecsSinceStartOfDay() / 1000);
+
+            currentTime = currentTime.addSecs(seconds);
+            currentTime = currentTime.addMSecs(res.captured("ms").toUInt() - (startDate.time().msecsSinceStartOfDay() % 1000));
+
+            //time is stored in microseconds so we need to get the timestamp as milliseconds since the epoch
+            //then multiplyby 1000 to get microseconds since the epoch.
+            currentFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, currentTime.toMSecsSinceEpoch() * 1000));
 
             if(res.captured("type").length() != 0) {
                 auto frameType = res.captured("type").toUInt();

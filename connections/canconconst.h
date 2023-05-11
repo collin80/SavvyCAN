@@ -21,6 +21,7 @@ namespace CANCon {
         KAYAK,
         MQTT,
         LAWICEL,
+        CANSERVER,
         NONE
     };
 }

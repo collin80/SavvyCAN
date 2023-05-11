@@ -26,7 +26,8 @@ signals:
     void updatedTreeInfo(DBC_SIGNAL *sig);
 
 private slots:
-    void bitfieldClicked(int bit);
+    void bitfieldLeftClicked(int bit);
+    void bitfieldRightClicked(int bit);
     void onValuesCellChanged(int row,int col);
     void onCustomMenuValues(QPoint);
     void deleteCurrentValue();
@@ -36,6 +37,7 @@ private:
     DBCHandler *dbcHandler;
     DBC_MESSAGE *dbcMessage;
     DBC_SIGNAL *currentSignal;
+    QList<DBC_SIGNAL> undoBuffer;
     DBCFile *dbcFile;
     bool inhibitCellChanged;
     bool inhibitMsgProc;
@@ -43,11 +45,14 @@ private:
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);
     void generateUsedBits();
+    void refreshBitGrid();
 
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
     void readSettings();
     void writeSettings();
+    void pushToUndoBuffer();
+    void popFromUndoBuffer();
 };
 
 #endif // DBCSIGNALEDITOR_H

@@ -6,7 +6,7 @@ DBC File Manager
 Working with DBC Files
 =======================
 
-This screen allows you to load and save DBC files. SavvyCAN supports loading more than one DBC file at a time. It can even use more than one DBC file per bus. But, "Associated Bus" can be used to associate a given DBC file to only one bus. If you don't need to associate to any specific bus then set this value to -1 which means "any bus." The J1939 button causes SavvyCAN to mask out J1939 message IDs to conform to J1939 signaling. You can create a brand new DBC file by clicking "Create new DBC" button. It will be automatically named a unique name for you. You probably don't want that name though. Any time you save a DBC file its name will automatically update in the list. The "Load", "Save", "Remove", "Edit" buttons are all straight forward. You can also edit a DBC file by double clicking it in the list. 
+This screen allows you to load and save DBC files. SavvyCAN supports loading more than one DBC file at a time. It can even use more than one DBC file per bus. But, "Associated Bus" can be used to associate a given DBC file to only one bus. If you don't need to associate to any specific bus then set this value to -1 which means "any bus." Matching criteria is used to select J1939 or GMLAN if necessary. These two systems have special ways of interpreting the frame ID. You can create a brand new DBC file by clicking "Create new DBC" button. It will be automatically named a unique name for you. You probably don't want that name though. Any time you save a DBC file its name will automatically update in the list. The "Load", "Save", "Remove", "Edit" buttons are all straight forward. You can edit a DBC file by double clicking it in the list. 
 
 
 DBC File Ordering

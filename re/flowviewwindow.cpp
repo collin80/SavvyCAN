@@ -6,7 +6,7 @@
 #include "qcpaxistickerhex.h"
 
 const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Qt::red, //0 1 2 3
-                                               Qt::gray, Qt::yellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
+                                               Qt::gray, Qt::darkYellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
 
 
 FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent) :
@@ -85,6 +85,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
         ui->graphView->setOpenGl(false);
         ui->graphView->setAntialiasedElements(QCP::aeNone);
     }
+
+    ui->graphView->setBufferDevicePixelRatio(1);
 
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));

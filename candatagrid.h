@@ -36,8 +36,11 @@ enum GridTextState
 enum GridMode
 {
     CHANGED_BITS, //traditional view, bunch of bits we color to show what's set and how the bits have changed over time
-    SIGNAL_VIEW //special view for DBC window where we draw the signals in the bits they take up
+    SIGNAL_VIEW, //special view for DBC window where we draw the signals in the bits they take up
+    HEAT_VIEW    //another special mode where each bit is given a heat level and we color each bit based on that. Use refData for storage of those values
 };
+
+extern QVector<QColor> signalColors;
 
 class CANDataGrid : public QWidget
 {
@@ -50,6 +53,7 @@ public:
     void setReference(unsigned char *, bool);
     void updateData(unsigned char *, bool);
     void setUsed(unsigned char *, bool);
+    void setHeat(unsigned char *);
     void saveImage(QString filename, int width, int height);
     void setCellTextState(int bitPos, GridTextState state);
     GridTextState getCellTextState(int bitPos);
@@ -66,6 +70,7 @@ protected:
 
 signals:
     void gridClicked(int bitClicked);
+    void gridRightClicked(int bitClicked);
 
 private:
     Ui::CANDataGrid *ui;
@@ -73,9 +78,9 @@ private:
     unsigned char refData[64];
     unsigned char data[64];
     unsigned char usedData[64];
+    unsigned char heatData[512];
     int usedSignalNum[512]; //so we can specify which signal claims this bit
     QVector<QString> signalNames;
-    QVector<QColor> signalColors;
     GridTextState textStates[64][8]; //first dimension is bytes, second is bits
     QPoint upperLeft, gridSize;
     GridMode gridMode;
@@ -98,6 +103,8 @@ private:
     QFont boldFont;
     QFont sigNameFont;
     QFontMetrics *smallMetric;
+    QFontMetrics *largeMetric;
+    QColor fire[256];
 
     void paintGridCells();
     void paintCommonBeginning();

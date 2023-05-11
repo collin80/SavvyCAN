@@ -33,6 +33,7 @@
 #include "signalviewerwindow.h"
 #include "re/temporalgraphwindow.h"
 #include "re/dbccomparatorwindow.h"
+#include "canbridgewindow.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -89,6 +90,7 @@ private slots:
     void showSignalViewer();
     void showTemporalGraphWindow();
     void showDBCComparisonWindow();
+    void showCANBridgeWindow();
     void exitApp();
     void handleSaveDecoded();
     void handleSaveDecodedCsv();
@@ -145,9 +147,6 @@ private:
     bool inhibitFilterUpdate;
     bool useHex;
     bool allowCapture;
-    bool secondsMode;
-    bool millisMode;
-    bool useSystemClock;
     bool ignoreDBCColors;
     bool bDirty; //have frames been added or subtracted since the last save/load?
     bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
@@ -183,6 +182,7 @@ private:
     SignalViewerWindow *signalViewerWindow;
     TemporalGraphWindow *temporalGraphWindow;
     DBCComparatorWindow *dbcComparatorWindow;
+    CANBridgeWindow *canBridgeWindow;
 
     //various private storage
     QLabel lbStatusConnected;
@@ -209,6 +209,7 @@ private:
     void writeSettings();
     bool eventFilter(QObject *obj, QEvent *event);
     void manageRowExpansion();
+    void disableAutoRowExpansion();
 };
 
 #endif // MAINWINDOW_H

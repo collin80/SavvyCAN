@@ -42,3 +42,6 @@ Makefile
 
 # Editor files
 *.code-workspace
+SavvyCAN.pro.qtds
+.xcode
+SavvyCAN.xcodeproj
