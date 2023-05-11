@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Prepare Environment
         run: |
-            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0
+            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0
 
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v3
@@ -29,14 +29,14 @@ jobs:
       - name: Package     
         run: |
           make INSTALL_ROOT=appdir install
-          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/5/linuxdeployqt-5-x86_64.AppImage"
-          chmod a+x linuxdeployqt-5-x86_64.AppImage
-          ./linuxdeployqt-5-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
+          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+          chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+          ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
 
       - uses: actions/upload-artifact@v3
         with:
           name: SavvyCAN-Linux_x64.AppImage
-          path: SavvyCAN-x86_64.AppImage
+          path: SavvyCAN-*x86_64.AppImage
       
   buildmacos:
     name: macOS x64
@@ -129,7 +129,7 @@ jobs:
       - uses: actions/download-artifact@v3
 
       - name: Display structure of downloaded files
-        run: zip -r SavvyCAN_CIBuild.zip SavvyCAN-Windows_x64
+        run: zip -r SavvyCAN-Windows_x64_CIBuild.zip SavvyCAN-Windows_x64
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -137,8 +137,8 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            SavvyCAN-Linux_x64.AppImage/SavvyCAN-x86_64.AppImage
-            SavvyCAN_CIBuild.zip
+            SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
+            SavvyCAN-Windows_x64_CIBuild.zip
             SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
           
   notify:

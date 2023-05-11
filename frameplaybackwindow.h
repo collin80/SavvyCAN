@@ -44,6 +44,7 @@ private slots:
     void useOrigTimingClicked();
     void getStatusUpdate(int frameNum);
     void EndOfFrameCache();
+    void updatedFrames(int);
 
 private:
     Ui::FramePlaybackWindow *ui;
@@ -55,8 +56,10 @@ private:
     int currentSeqNum;
     FramePlaybackObject playbackObject;
     bool forward;
+    bool wantPlaying;
     bool isPlaying;
     int currentPosition;
+    bool haveIncomingTraffic = false;
 
     void refreshIDList();
     void updateFrameLabel();
@@ -66,6 +69,7 @@ private:
     void readSettings();
     void writeSettings();
     void calculateWhichBus();
+    bool checkNoSeqLoaded();
     bool eventFilter(QObject *obj, QEvent *event);
 };
 

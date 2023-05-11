@@ -289,9 +289,10 @@ void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
     if(frame_p)
     {
         uint32_t frameID = message.topic().split("/")[1].toInt();
-        uint64_t timeStamp = message.payload()[0] + (message.payload()[1] << 8) + (message.payload()[2] << 16) + (message.payload()[3] << 24)
-                           + ((uint64_t)message.payload()[4] << 32ull)  + ((uint64_t)message.payload()[5] << 40ull)
-                           + ((uint64_t)message.payload()[6] << 48ull) + ((uint64_t)message.payload()[7] << 56ull);
+
+        QByteArray timeStampBytes = message.payload().left(8);
+        uint64_t timeStamp = qFromLittleEndian<uint64_t>(timeStampBytes.data());
+
         int flags = message.payload()[8];
         frame_p->setPayload(message.payload().right(message.payload().count() - 9));
         frame_p->bus = 0;

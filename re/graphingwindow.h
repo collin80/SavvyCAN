@@ -102,7 +102,6 @@ private:
     QCPItemText *locationText;
     QCPItemTracer *itemTracer;
     bool needScaleSetup; //do we need to set x,y graphing extents?
-    bool secondsMode;
     bool useOpenGL;
     bool followGraphEnd;
 

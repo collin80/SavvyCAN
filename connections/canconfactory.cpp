@@ -5,6 +5,7 @@
 #include "mqtt_bus.h"
 #include "socketcand.h"
 #include "lawicel_serial.h"
+#include "canserver.h"
 
 using namespace CANCon;
 
@@ -14,7 +15,7 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
     case SERIALBUS:
         return new SerialBusConnection(pPortName, pDriverName);
     case GVRET_SERIAL:
-        if(pPortName.contains("."))
+        if(pPortName.contains(".") && !pPortName.contains("tty"))
         return new GVRetSerial(pPortName, true);
         else
         return new GVRetSerial(pPortName, false);
@@ -26,6 +27,8 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
         return new SocketCANd(pPortName);
     case MQTT:
         return new MQTT_BUS(pPortName);
+    case CANSERVER:
+        return new CANserver(pPortName);
     default: {}
     }
 

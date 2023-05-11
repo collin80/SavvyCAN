@@ -9,6 +9,7 @@
 #include "can_structs.h"
 #include "dbc/dbchandler.h"
 #include "connections/canconnection.h"
+#include "utility.h"
 
 enum class Column {
     TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
@@ -47,13 +48,11 @@ public:
     void setOverwriteMode(bool);
     void setHexMode(bool);
     void setClearMode(bool mode);
-    void setSysTimeMode(bool);
-    void setMillisMode(bool mode);
+    void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
     void setFilterState(unsigned int ID, bool state);
     void setBusFilterState(unsigned int BusID, bool state);
     void setAllFilters(bool state);
-    void setSecondsMode(bool);
     void setTimeFormat(QString);
     void setBytesPerLine(int bpl);
     void loadFilterFile(QString filename);
@@ -93,9 +92,8 @@ private:
     bool overwriteDups; //should we display all frames or only the newest for each ID?
     bool filtersPersistDuringClear;
     QString timeFormat;
+    TimeStyle timeStyle;
     bool useHexMode;
-    bool timeSeconds;
-    bool useSystemTime;
     bool needFilterRefresh;
     bool ignoreDBCColors;
     int64_t timeOffset;
