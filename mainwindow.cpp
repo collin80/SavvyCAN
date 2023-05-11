@@ -95,6 +95,7 @@ MainWindow::MainWindow(QWidget *parent) :
     signalViewerWindow = nullptr;
     temporalGraphWindow = nullptr;
     dbcComparatorWindow = nullptr;
+    canBridgeWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -136,6 +137,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
+    connect(ui->actionCAN_Bridge, &QAction::triggered, this, &MainWindow::showCANBridgeWindow);
 
     //handlers fror interactions with the main can frame view table
     connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
@@ -262,8 +264,11 @@ void MainWindow::killEmAll()
     killWindow(firmwareUploaderWindow);
     killWindow(motorctrlConfigWindow);
     killWindow(signalViewerWindow);
-    killWindow(connectionWindow);
     killWindow(temporalGraphWindow);
+    killWindow(canBridgeWindow);
+
+    //trying to kill this window can cause a fault to happen. It's closed last just in case.
+    killWindow(connectionWindow);
 }
 
 //forcefully close the window, kill it, and salt the earth
@@ -382,12 +387,17 @@ void MainWindow::readUpdateableSettings()
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
     Utility::decimalMode = !useHex;
-    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
-    model->setSecondsMode(secondsMode);
-    useSystemClock = settings.value("Main/TimeClock", false).toBool();
-    model->setSysTimeMode(useSystemClock);
-    millisMode = settings.value("Main/TimeMillis", false).toBool();
-    model->setMillisMode(millisMode);
+
+    bool tempBool;
+    TimeStyle ts = TS_MICROS;
+    tempBool = settings.value("Main/TimeSeconds", false).toBool();
+    if (tempBool) ts = TS_SECONDS;
+    tempBool = settings.value("Main/TimeClock", false).toBool();
+    if (tempBool) ts = TS_CLOCK;
+    tempBool = settings.value("Main/TimeMillis", false).toBool();
+    if (tempBool) ts = TS_MILLIS;
+    model->setTimeStyle(ts);
+
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
     ignoreDBCColors = settings.value("Main/IgnoreDBCColors", false).toBool();
@@ -473,8 +483,21 @@ void MainWindow::expandAllRows()
 
 void MainWindow::manageRowExpansion()
 {
-    if(rowExpansionActive && model->getInterpretMode())
-        ui->canFramesView->resizeRowsToContents();
+    int numRows = ui->canFramesView->model()->rowCount();
+    if(numRows < 20000)
+    {
+        if(rowExpansionActive && model->getInterpretMode())
+            ui->canFramesView->resizeRowsToContents();
+    }
+    else
+    {
+        disableAutoRowExpansion();
+    }
+}
+
+void MainWindow::disableAutoRowExpansion()
+{
+    rowExpansionActive = false;
 }
 
 void MainWindow::collapseAllRows()
@@ -575,7 +598,7 @@ void MainWindow::setupSendToLatestGraphWindow()
     GraphParams param;
     QString signalName = getSignalNameFromPosition(contextMenuPosition);
     param.ID = getMessageIDFromPosition(contextMenuPosition);
-    DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(param.ID, nullptr);
+    DBC_MESSAGE *msg = dbcHandler->findMessage(param.ID);
     if(msg)
     {
         DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(signalName);
@@ -869,6 +892,7 @@ void MainWindow::handleLoadFile()
 
     if (loadResult)
     {
+        disableAutoRowExpansion();
         ui->canFramesView->scrollToTop();
         model->clearFrames();
         model->insertFrames(tempFrames);
@@ -912,6 +936,7 @@ void MainWindow::handleDroppedFile(const QString &filename)
 
     if (loadResult)
     {
+        disableAutoRowExpansion();
         ui->canFramesView->scrollToTop();
         model->clearFrames();
         model->insertFrames(loadedFrames);
@@ -1425,6 +1450,15 @@ void MainWindow::showBisectWindow()
         bisectWindow = new BisectWindow(model->getListReference());
     }
     bisectWindow->show();
+}
+
+void MainWindow::showCANBridgeWindow()
+{
+    if (!canBridgeWindow)
+    {
+        canBridgeWindow = new CANBridgeWindow(model->getListReference());
+    }
+    canBridgeWindow->show();
 }
 
 void MainWindow::showFrameSenderWindow()

@@ -77,9 +77,16 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
 //not handling show no reply, max reply delay, reply offset, increment
     int numBuses = CANConManager::getInstance()->getNumBuses();
     for (int n = 0; n < numBuses; n++) ui->cbBuses->addItem(QString::number(n));
+
+    connect(ui->cbBuses, &QComboBox::currentTextChanged, this, &UDSScanWindow::setBusToScan);
+
     installEventFilter(this);
 
     addNewScan();
+
+    checkIDRange();
+    checkServiceRange();
+    checkSubFuncRange();
 }
 
 UDSScanWindow::~UDSScanWindow()
@@ -109,10 +116,18 @@ bool UDSScanWindow::eventFilter(QObject *obj, QEvent *event)
     return false;
 }
 
+void UDSScanWindow::setControlState(QWidget & widget, bool valid)
+{
+    QPalette pal = widget.palette();
+    pal.setColor(QPalette::ColorRole::Base , valid ? Qt::white : Qt::red);
+    widget.setPalette(pal);
+}
+
 void UDSScanWindow::displayScanEntry(int idx)
 {
     if (inhibitUpdates) return;
     if (idx == -1) return;
+    inhibitUpdates = true; //need to do this so it doesn't mess things up as we fill in the fields
     currEditEntry = &scanEntries.data()[idx];
     ui->spinStartID->setValue(currEditEntry->startID);
     ui->spinEndID->setValue(currEditEntry->endID);
@@ -129,6 +144,7 @@ void UDSScanWindow::displayScanEntry(int idx)
     ui->spinLowerSubfunc->setValue(currEditEntry->subfunctLower);
     ui->spinUpperSubfunc->setValue(currEditEntry->subfunctUpper);
     ui->spinIncrement->setValue(currEditEntry->subfunctIncrement);
+    inhibitUpdates = false;
 }
 
 void UDSScanWindow::deleteSelectedScan()
@@ -186,7 +202,7 @@ void UDSScanWindow::loadScans()
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
-    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);    
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -201,7 +217,7 @@ void UDSScanWindow::loadScans()
             QMessageBox::warning(this, "Cannot Load File", "File is not a supported version.\nCannot load it!");
             return;
         }
-        inhibitUpdates = true;;
+        inhibitUpdates = true;
         scanEntries.clear();
         ui->listScansToRun->clear();
         int numEntries;
@@ -209,12 +225,22 @@ void UDSScanWindow::loadScans()
         for (int i = 0; i < numEntries; i++)
         {
             ScanEntry entry;
-            load >> entry.startID >> entry.endID;
-            load >> entry.idOffset >> entry.bAdaptiveOffset >> entry.bShowNoReplies;
-            load >> entry.busToScan >> entry.maxWaitTime >> entry.scanType;
-            load >> entry.sessType >> entry.subfunctLen >> entry.subfunctLower;
-            load >> entry.subfunctUpper >> entry.subfunctIncrement;
-            load >> entry.serviceLower >> entry.serviceUpper;
+            load >> entry.startID;
+            load >> entry.endID;
+            load >> entry.idOffset;
+            load >> entry.bAdaptiveOffset;
+            load >> entry.bShowNoReplies;
+            load >> entry.busToScan;
+            load >> entry.maxWaitTime;
+            load >> entry.scanType;
+            load >> entry.sessType;
+            load >> entry.subfunctLen;
+            load >> entry.subfunctLower;
+            load >> entry.subfunctUpper;
+            load >> entry.subfunctIncrement;
+            load >> entry.serviceLower;
+            load >> entry.serviceUpper;
+
             scanEntries.append(entry);
             ui->listScansToRun->addItem(generateListDesc(scanEntries.length() - 1));
         }
@@ -239,6 +265,7 @@ void UDSScanWindow::saveScans()
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDefaultSuffix(".uds");
 
     if (dialog.exec() == QDialog::Accepted)
     {
@@ -332,6 +359,12 @@ void UDSScanWindow::setSessType()
 {
     if (inhibitUpdates) return;
     if (currEditEntry) currEditEntry->sessType = ui->cbSessType->currentIndex();
+}
+
+void UDSScanWindow::setBusToScan()
+{
+    if (inhibitUpdates) return;
+    if (currEditEntry) currEditEntry->busToScan = ui->cbBuses->currentIndex();
 }
 
 void UDSScanWindow::setNoReplyVal()
@@ -439,25 +472,33 @@ void UDSScanWindow::numBytesChanged()
     uint64_t upperBound =  (1ull << (8ull * ui->spinNumBytes->value())) - 1;
     if (upperBound > 0x7FFFFFFF) upperBound = 0x7FFFFFFF;
     ui->spinUpperSubfunc->setMaximum(upperBound);
+    ui->spinLowerSubfunc->setMaximum(upperBound);
     if (currEditEntry) currEditEntry->subfunctLen = ui->spinNumBytes->value();
 }
 
 void UDSScanWindow::checkIDRange()
 {
     if (inhibitUpdates) return;
-    ui->spinStartID->setMaximum(ui->spinEndID->value());
-    ui->spinEndID->setMinimum(ui->spinStartID->value());
+
+    const bool isValid = ui->spinStartID->value() <= ui->spinEndID->value();
+    setControlState(*ui->spinStartID, isValid);
+    setControlState(*ui->spinEndID, isValid);
+    
     if (currEditEntry) currEditEntry->startID = ui->spinStartID->value();
     if (currEditEntry) currEditEntry->endID = ui->spinEndID->value();
-    QListWidgetItem* item = ui->listScansToRun->currentItem();
-    item->setText(generateListDesc(ui->listScansToRun->currentRow()));
+    if (QListWidgetItem* item = ui->listScansToRun->currentItem())
+    {
+        item->setText(generateListDesc(ui->listScansToRun->currentRow()));
+    }
 }
 
 void UDSScanWindow::checkServiceRange()
 {
     if (inhibitUpdates) return;
-    ui->spinLowerService->setMaximum(ui->spinUpperService->value());
-    ui->spinUpperService->setMinimum(ui->spinLowerService->value());
+
+    const bool isValid = ui->spinLowerService->value() <= ui->spinUpperService->value();
+    setControlState(*ui->spinLowerService, isValid);
+    setControlState(*ui->spinUpperService, isValid);    
     if (currEditEntry) currEditEntry->serviceLower = ui->spinLowerService->value();
     if (currEditEntry) currEditEntry->serviceUpper = ui->spinUpperService->value();
 }
@@ -465,8 +506,9 @@ void UDSScanWindow::checkServiceRange()
 void UDSScanWindow::checkSubFuncRange()
 {
     if (inhibitUpdates) return;
-    ui->spinLowerSubfunc->setMaximum(ui->spinUpperSubfunc->value());
-    ui->spinUpperSubfunc->setMinimum(ui->spinLowerSubfunc->value());
+    const bool isValid = ui->spinLowerSubfunc->value() <= ui->spinUpperSubfunc->value();
+    setControlState(*ui->spinLowerSubfunc, isValid);
+    setControlState(*ui->spinUpperSubfunc, isValid);
     if (currEditEntry) currEditEntry->subfunctLower = ui->spinLowerSubfunc->value();
     if (currEditEntry) currEditEntry->subfunctUpper = ui->spinUpperSubfunc->value();
 }
@@ -547,6 +589,8 @@ void UDSScanWindow::scanSelected()
 
 void UDSScanWindow::startScan()
 {
+    if (sendingFrames.isEmpty()) return;
+
     udsHandler->setReception(true);
     udsHandler->setProcessAllIDs(true);
     udsHandler->setFlowCtrl(true);
@@ -643,7 +687,7 @@ void UDSScanWindow::setupScan(int idx)
         case ST_READ_DTC:
             test.service = UDS_SERVICES::READ_DTC;
             test.subFuncLen = 2;
-            test.subFunc = 0x8702; //get DTCs by mask (87 is the mask)
+            test.subFunc = 0x02FF; //get DTCs by mask (FF is the mask)
             sendOnBuses(test, scanEntries[idx].busToScan);
             break;
         case ST_SEC_ACCESS:

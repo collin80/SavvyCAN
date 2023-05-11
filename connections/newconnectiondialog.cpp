@@ -28,6 +28,7 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QSt
     connect(ui->rbKayak, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbMQTT, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbLawicel, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+    connect(ui->rbCANserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
 
     connect(ui->cbDeviceType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewConnectionDialog::handleDeviceTypeChanged);
     connect(ui->btnOK, &QPushButton::clicked, this, &NewConnectionDialog::handleCreateButton);
@@ -62,6 +63,7 @@ void NewConnectionDialog::handleConnTypeChanged()
     if (ui->rbRemote->isChecked()) selectRemote();
     if (ui->rbKayak->isChecked()) selectKayak();
     if (ui->rbMQTT->isChecked()) selectMQTT();
+    if (ui->rbCANserver->isChecked()) selectCANserver();
 }
 
 void NewConnectionDialog::handleDeviceTypeChanged()
@@ -202,6 +204,20 @@ void NewConnectionDialog::selectMQTT()
     ui->cbPort->clear();
 }
 
+void NewConnectionDialog::selectCANserver()
+{
+    ui->lPort->setText("CANserver IP Address:");
+
+    ui->lblDeviceType->setHidden(true);
+    ui->cbDeviceType->setHidden(true);
+    ui->cbCANSpeed->setHidden(true);
+    ui->cbSerialSpeed->setHidden(true);
+    ui->lblCANSpeed->setHidden(true);
+    ui->lblSerialSpeed->setHidden(true);
+
+    ui->cbPort->clear();
+}
+
 void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QString pDriver)
 {
 
@@ -224,6 +240,10 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             break;
         case CANCon::LAWICEL:
             ui->rbLawicel->setChecked(true);
+            break;
+        case CANCon::CANSERVER:
+          ui->rbCANserver->setChecked(true);
+          break;
         default: {}
     }
 
@@ -267,6 +287,11 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
         case CANCon::MQTT:
             ui->cbPort->setCurrentText(pPortName);
             break;
+        case CANCon::CANSERVER:
+        {
+            ui->cbPort->setCurrentText(pPortName);
+            break;
+        }
         default: {}
     }
 }
@@ -282,6 +307,9 @@ QString NewConnectionDialog::getPortName()
         return ui->cbPort->currentText();
     case CANCon::KAYAK:
         return ui->cbPort->currentText();
+    case CANCon::CANSERVER:
+        return ui->cbPort->currentText();
+            
     default:
         qDebug() << "getPortName: can't get port";
     }
@@ -324,6 +352,7 @@ CANCon::type NewConnectionDialog::getConnectionType()
     if (ui->rbKayak->isChecked()) return CANCon::KAYAK;
     if (ui->rbMQTT->isChecked()) return CANCon::MQTT;
     if (ui->rbLawicel->isChecked()) return CANCon::LAWICEL;
+    if (ui->rbCANserver->isChecked()) return CANCon::CANSERVER;
     qDebug() << "getConnectionType: error";
 
     return CANCon::NONE;

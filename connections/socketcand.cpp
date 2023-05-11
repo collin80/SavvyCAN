@@ -266,7 +266,7 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
     QString framePart = data.mid(firstIndex); //remove starting beginning of payload if not < frame >
     const QString frameStrConst = framePart.left(framePart.indexOf(">")+1);
     QString frameStr = frameStrConst;
-    QStringList frameParsed = (frameStr.remove(QRegExp("^<")).remove(QRegExp(">$"))).simplified().split(' ');
+    QStringList frameParsed = (frameStr.remove(QRegularExpression("^<")).remove(QRegularExpression(">$"))).simplified().split(' ');
 
     if(frameParsed.length() < 3)
     {
@@ -369,8 +369,8 @@ void SocketCANd::readTCPData(int busNum)
 {
     QString data;
 
-    if (tcpClient[busNum])
-        data = QString(tcpClient[busNum]->readAll());
+    if (QTcpSocket* socket = tcpClient.value(busNum))
+        data = QString(socket->readAll());
     //sendDebug("Got data from TCP. Len = " % QString::number(data.length()));
     //qDebug() << "Received datagramm: " << data;
     procRXData(data, busNum);

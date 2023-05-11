@@ -175,7 +175,10 @@ bool CANConnection::sendFrame(const CANFrame& pFrame)
 
     CANFrame *txFrame;
     txFrame = getQueue().get();
-    *txFrame = pFrame;
+    if (txFrame)
+    {
+        *txFrame = pFrame;        
+    }    
     getQueue().queue();
 
     return piSendFrame(pFrame);
@@ -298,7 +301,12 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData[pBusId].mTargettedFrames.append(target);
+    if (pBusId > -1)
+        mBusData[pBusId].mTargettedFrames.append(target);
+    else
+    {
+        for (int i = 0; i < mBusData.count(); i++) mBusData[i].mTargettedFrames.append(target);
+    }
 
     return true;
 }
