@@ -278,6 +278,19 @@
         </widget>
        </item>
        <item>
+        <widget class="QLabel" name="label_19">
+         <property name="text">
+          <string>Node:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbNodes"/>
+       </item>
+       <item>
         <widget class="QLabel" name="label_9">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
