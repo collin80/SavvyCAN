@@ -736,7 +736,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That message attribute does exist";
             DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFul);
             if (foundMsg)
             {
@@ -768,7 +768,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That signal attribute does exist";
             DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFUL);
             if (foundMsg)
             {
@@ -801,7 +801,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That node attribute does exist";
             DBC_NODE *foundNode = findNodeByName(match.captured(2));
             if (foundNode)
             {
@@ -2292,6 +2292,7 @@ DBCHandler::DBCHandler()
 {
     // Load previously saved DBC file settings
     QSettings settings;
+    qDebug() <<"Settings file: " << settings.fileName();
     int filecount = settings.value("DBC/FileCount", 0).toInt();
     qDebug() << "Previously loaded DBC file count: " << filecount;
     for (int i=0; i<filecount; i++)
@@ -2317,7 +2318,7 @@ DBCHandler::DBCHandler()
             file->dbc_attributes.append(attr);
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
-            int filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toInt();
+            int filterLabeling = settings.value("DBC/FilterLabeling_" + QString::number(i),0).toInt();
             attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = filterLabeling;
             attr.enumVals.clear();
