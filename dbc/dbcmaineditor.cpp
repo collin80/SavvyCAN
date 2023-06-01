@@ -699,6 +699,7 @@ void DBCMainEditor::newMessage()
             msg.bgColor = oldMsg->bgColor;
             msg.fgColor = oldMsg->fgColor;
             msg.comment = oldMsg->comment;
+            msg.extendedID = oldMsg->extendedID;
         }
         else
         {
@@ -706,6 +707,7 @@ void DBCMainEditor::newMessage()
             msg.ID = 0;
             msg.len = 8;
             msg.bgColor = QApplication::palette().color(QPalette::Base);
+            msg.extendedID = false;
         }
     }
     else
@@ -713,6 +715,7 @@ void DBCMainEditor::newMessage()
         msg.name = nodeName + "Msg" + QString::number(randGen.bounded(500));
         msg.ID = 0;
         msg.len = 8;
+        msg.extendedID = false;
     }    
     msg.sender = node;
 
