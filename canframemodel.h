@@ -12,15 +12,17 @@
 #include "utility.h"
 
 enum class Column {
-    TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
-    FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
-    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
-    Remote    = 3, ///< True if the frames is a remote frame
-    Direction = 4, ///< Whether the frame was transmitted or received
-    Bus       = 5, ///< The bus where the frame was transmitted or received
-    Length    = 6, ///< The frames payload data length
-    ASCII     = 7, ///< The payload interpreted as ASCII characters
-    Data      = 8, ///< The frames payload data
+    TimeStamp  , ///< The timestamp when the frame was transmitted or received
+    FrameId    , ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
+    Extended  , ///< True if the frames CAN identifier is 29 bit
+    DeviceId   ,
+    MessageId  ,
+    Remote     , ///< True if the frames is a remote frame
+    Direction  , ///< Whether the frame was transmitted or received
+    Bus        , ///< The bus where the frame was transmitted or received
+    Length     , ///< The frames payload data length
+    ASCII      , ///< The payload interpreted as ASCII characters
+    Data       , ///< The frames payload data
     NUM_COLUMN
 };
 

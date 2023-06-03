@@ -67,6 +67,9 @@ QListWidgetItem * FilterUtility::createFilterItem(uint32_t id, QListWidget* pare
     QListWidgetItem *thisItem = new QListWidgetItem(parent);
     QString filterItemName = Utility::formatCANID(id);
 
+    uint8_t deviceId = (id & 0x1FE00000) >> 21;
+    uint32_t messageId = id & 0x1FFFFF;
+
     //Note, there are multiple filter labeling preferences. There is one in main settings to globally
     //enable or disable them all. Then each loaded DBC file also can be selected on/off
     //Both must be enabled for you to see labeling.
@@ -74,10 +77,11 @@ QListWidgetItem * FilterUtility::createFilterItem(uint32_t id, QListWidget* pare
     {
         // Filter labeling (show interpreted frame names next to the CAN addr ID)
         MatchingCriteria_t matchingCriteria;
-        DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(id,&matchingCriteria);
+        DBC_MESSAGE *msg = dbcHandler->findMessageForFilter(messageId,&matchingCriteria);
         if (msg != nullptr)
         {
             filterItemName.append(" ");
+            filterItemName.append(QString::number(deviceId).append(":").leftJustified(5, ' '));
             filterItemName.append(msg->name);
 
             // Create tooltip to show the whole name just in case it's too long to fit in the filter window.

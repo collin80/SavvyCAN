@@ -33,6 +33,14 @@ public:
         timedelta = 0;
         frameCount = 1;
     }
+
+    uint8_t getDeviceId() const {
+        return (frameId() & 0x1FE00000) >> 21;
+    }
+
+    uint32_t getMessageId() const {
+        return frameId() & 0x1FFFFF;
+    }
 };
 
 class CANFltObserver

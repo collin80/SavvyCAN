@@ -436,6 +436,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         {
         case Column::TimeStamp:
             return Qt::AlignRight;
+        case Column::DeviceId:
         case Column::FrameId:
         case Column::Direction:
         case Column::Extended:
@@ -480,6 +481,10 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             return Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
         case Column::Extended:
             return QString::number(thisFrame.hasExtendedFrameFormat());
+        case Column::DeviceId:
+            return QString::number(thisFrame.getDeviceId());
+        case Column::MessageId:
+            return Utility::formatCANID(thisFrame.getMessageId(), thisFrame.hasExtendedFrameFormat());
         case Column::Remote:
             if (!overwriteDups) return QString::number(thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame);
             return QString::number(thisFrame.frameCount);
@@ -599,9 +604,13 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
             if (overwriteDups) return QString(tr("Time Delta"));
             return QString(tr("Timestamp"));
         case Column::FrameId:
-            return QString(tr("ID"));
+            return QString(tr("Frame ID"));
         case Column::Extended:
             return QString(tr("Ext"));
+        case Column::DeviceId:
+            return QString(tr("Device ID"));
+        case Column::MessageId:
+            return QString(tr("Message ID"));
         case Column::Remote:
             if (!overwriteDups) return QString(tr("RTR"));
             return QString(tr("Cnt"));
