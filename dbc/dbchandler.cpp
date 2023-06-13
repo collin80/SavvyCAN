@@ -392,6 +392,11 @@ QString DBCFile::getFilename()
     return fileName;
 }
 
+QString DBCFile::getFilenameNoExt()
+{
+    return fileName.split(".dbc")[0];
+}
+
 QString DBCFile::getPath()
 {
     return filePath;
@@ -731,7 +736,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That message attribute does exist";
             DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFul);
             if (foundMsg)
             {
@@ -763,7 +768,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That signal attribute does exist";
             DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFUL);
             if (foundMsg)
             {
@@ -796,7 +801,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That node attribute does exist";
             DBC_NODE *foundNode = findNodeByName(match.captured(2));
             if (foundNode)
             {
@@ -873,6 +878,7 @@ bool DBCFile::loadFile(QString fileName)
     DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
     int linesSinceYield = 0;
+    QString fileBaseName = QFileInfo(fileName).baseName();
 
     bool inMultilineBU = false;
 
@@ -911,6 +917,7 @@ bool DBCFile::loadFile(QString fileName)
             if (rawLine.startsWith("\t") || rawLine.startsWith("   "))
             {
                 DBC_NODE node;
+                node.sourceFileName = fileBaseName;
                 node.name = line;
                 dbc_nodes.append(node);
             }
@@ -950,6 +957,7 @@ bool DBCFile::loadFile(QString fileName)
                         if (nodeStrings[i].length() > 1)
                         {
                             DBC_NODE node;
+                            node.sourceFileName = fileBaseName;
                             node.name = nodeStrings[i];
                             dbc_nodes.append(node);
                         }
@@ -2202,6 +2210,8 @@ DBC_MESSAGE* DBCHandler::findMessageForFilter(uint32_t id, MatchingCriteria_t * 
 
 /*
  * As above, a real shortcut function that searches all files in order to try to find a message with the given name
+ * This has pitfalls because the same message name can easily exist in multiple dbc files AND nodes in a single file
+ * By DBC standards only the MSG ID is required to be unique
 */
 DBC_MESSAGE* DBCHandler::findMessage(const QString msgName)
 {
@@ -2213,6 +2223,43 @@ DBC_MESSAGE* DBCHandler::findMessage(const QString msgName)
         if (msg) return msg; //if it's not null then we have a match so return it
     }
     return nullptr; //no match, tough luck, return null
+}
+
+DBC_MESSAGE* DBCHandler::findMessage(const QString msgName, const QString nodeName, const QString fileNameNoExt)
+{
+    DBC_MESSAGE *msg = nullptr;
+    for(int i = 0; i < loadedFiles.count(); i++)
+    {
+        DBCFile * file = getFileByIdx(i);
+        if(file->getFilenameNoExt() == fileNameNoExt)
+        {
+            int msgCount = file->messageHandler->getCount();
+            for(int f = 0; f < msgCount; f++)
+            {
+                msg = file->messageHandler->findMsgByIdx(f);
+                if (msg && msg->name == msgName && msg->sender->name == nodeName)
+                    return msg; //if it's not null and the node name matches return it
+            }
+        }
+    }
+    return nullptr; //no match, tough luck, return null
+}
+
+DBC_MESSAGE* DBCHandler::findMessage(const QString msgName, const QString fullyQualifiedNodeName)
+{
+    QStringList nodeNameParts = fullyQualifiedNodeName.split(Utility::fullyQualifiedNameSeperator);
+    if(nodeNameParts.count() != 2)
+    {
+        qDebug() << "Error parsing fully qualified node name for message search";
+        return nullptr;
+    }
+
+    QString fileNameNoExt = nodeNameParts[0];
+    QString nodeName = nodeNameParts[1];
+
+    DBC_MESSAGE *msg = nullptr;
+    msg = findMessage(msgName, nodeName, fileNameNoExt);
+    return msg;
 }
 
 int DBCHandler::getFileCount()
@@ -2245,6 +2292,7 @@ DBCHandler::DBCHandler()
 {
     // Load previously saved DBC file settings
     QSettings settings;
+    qDebug() <<"Settings file: " << settings.fileName();
     int filecount = settings.value("DBC/FileCount", 0).toInt();
     qDebug() << "Previously loaded DBC file count: " << filecount;
     for (int i=0; i<filecount; i++)
@@ -2270,7 +2318,7 @@ DBCHandler::DBCHandler()
             file->dbc_attributes.append(attr);
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
-            bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString::number(i),0).toBool();
+            int filterLabeling = settings.value("DBC/FilterLabeling_" + QString::number(i),0).toInt();
             attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = filterLabeling;
             attr.enumVals.clear();

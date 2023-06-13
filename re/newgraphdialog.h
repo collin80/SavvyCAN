@@ -25,7 +25,8 @@ private slots:
     void addButtonClicked();
     void colorSwatchClick();
     void fillSwatchClick();
-    void loadMessages();
+    void loadNodes();
+    void loadMessages(int idx);
     void loadSignals(int idx);
     void bitfieldClicked(int);
     void handleDataLenUpdate();
@@ -40,6 +41,7 @@ private:
     DBCHandler *dbcHandler;
     DBC_SIGNAL *assocSignal;
     int startBit, dataLen;
+    bool shownFromPlotEdit;
 };
 
 #endif // NEWGRAPHDIALOG_H

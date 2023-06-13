@@ -71,6 +71,7 @@ class DBC_NODE
 public:
     QString name;
     QString comment;
+    QString sourceFileName;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
 
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
