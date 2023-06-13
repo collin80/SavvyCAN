@@ -36,6 +36,8 @@ private:
     Ui::SignalViewerWindow *ui;
     DBCHandler *dbcHandler;
 
+    DBC_MESSAGE *currentlySelectedMsg;
+
     QList<DBC_SIGNAL *> signalList;
     const QVector<CANFrame> *modelFrames;
 
