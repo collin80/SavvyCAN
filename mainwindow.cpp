@@ -405,6 +405,8 @@ void MainWindow::readUpdateableSettings()
     int bpl = settings.value("Main/BytesPerLine", 8).toInt();
     model->setBytesPerLine(bpl);
 
+    CSVAbsTime = settings.value("Main/CSVAbsTime", false).toBool();
+
     if (settings.value("Main/FilterLabeling", false).toBool())
         ui->listFilters->setMaximumWidth(250);
     else
@@ -1102,9 +1104,17 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     int dataStartCol = 0;
 
     QString builderString;
-    //time
-    builderString += tr("Time") + ",";
-    dataStartCol++;
+    if (CSVAbsTime)
+    {
+        builderString += tr("Year") + "," + tr("Month") + "," + tr("Day") + "," + tr("Hour") + "," + tr("Minute") + "," + tr("Second") + "," + tr("Ms") + ",";
+        dataStartCol += 7;
+    }
+    else
+    {
+        //time
+        builderString += tr("Time") + ",";
+        dataStartCol++;
+    }
     //id
     builderString += tr("ID") + ",";
     dataStartCol++;
@@ -1184,8 +1194,19 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         dataLen = frame->payload().count();
 
         QString builderString;
-        builderString += QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6) + ",";
-        dataColumnsAdded++;
+        if (CSVAbsTime)
+        {
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
+            builderString += QString::number(dt.date().year()) + "," + QString::number(dt.date().month()) + ",";
+            builderString += QString::number(dt.date().day()) + "," + QString::number(dt.time().hour()) + ",";
+            builderString += QString::number(dt.time().minute()) + "," + QString::number(dt.time().second()) + ",";
+            builderString += QString::number(dt.time().msec()) + ",";
+            dataColumnsAdded += 7;
+        }
+        else {
+            builderString += QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6) + ",";
+            dataColumnsAdded++;
+        }
         //id
         builderString += Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat()) + ",";
         dataColumnsAdded++;

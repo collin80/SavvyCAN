@@ -209,6 +209,13 @@
              </item>
             </layout>
            </item>
+           <item>
+            <widget class="QCheckBox" name="cbCSVAbsTime">
+             <property name="text">
+              <string>Use absolute time in decoded CSV output</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </widget>
         </item>

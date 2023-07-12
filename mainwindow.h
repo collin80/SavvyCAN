@@ -148,6 +148,7 @@ private:
     bool useHex;
     bool allowCapture;
     bool ignoreDBCColors;
+    bool CSVAbsTime;
     bool bDirty; //have frames been added or subtracted since the last save/load?
     bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
 
