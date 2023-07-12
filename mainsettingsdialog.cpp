@@ -85,6 +85,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
         }
     }
 
+    ui->cbCSVAbsTime->setChecked(settings.value("Main/CSVAbsTime", false).toBool());
     ui->comboSendingBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
@@ -120,6 +121,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->rbMicros, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->rbSysClock, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->rbMillis, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbCSVAbsTime, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
@@ -190,6 +192,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
     settings.setValue("Main/TimeMillis", ui->rbMillis->isChecked());
     settings.setValue("Main/TimeClock", ui->rbSysClock->isChecked());
+    settings.setValue("Main/CSVAbsTime", ui->cbCSVAbsTime->isChecked());
     settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings.setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
