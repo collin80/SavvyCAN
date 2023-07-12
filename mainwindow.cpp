@@ -681,7 +681,7 @@ void MainWindow::updateFilterList()
     if (model == nullptr) return;
     const QMap<int, bool> *filters = model->getFiltersReference();
     const QMap<int, bool> *busFilters = model->getBusFiltersReference();
-    if (filters == nullptr && busFilters == nullptr) return;
+    if (filters == nullptr || busFilters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
 
@@ -1054,7 +1054,8 @@ void MainWindow::handleSaveDecodedMethod(bool csv)
     QSettings settings;
 
     QStringList filters;
-    filters.append(QString(tr("Text File (*.txt)")));
+    if (!csv) filters.append(QString(tr("Text File (*.txt *.TXT)")));
+    else filters.append(QString(tr("CSV File (*.csv *.CSV)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -1065,7 +1066,11 @@ void MainWindow::handleSaveDecodedMethod(bool csv)
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
-        if (!filename.contains('.')) filename += ".txt";
+        if (!filename.contains('.'))
+        {
+            if (!csv) filename += ".txt";
+            else filename += ".csv";
+        }
 
         if(csv)
             saveDecodedTextFileAsColumns(filename);
@@ -1217,7 +1222,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
                     }
 
                     QString temp;
-                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp, false))
+                    if (msg->sigHandler->findSignalByIdx(j)->processAsText(*frame, temp, false, false))
                     {
                         builderString.append(temp);
                         builderString.append(",");
