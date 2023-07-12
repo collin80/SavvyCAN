@@ -369,16 +369,6 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
-    qDebug() << "Attempting lawicel";
-    if (isLawicelFile(filename))
-    {
-        if (loadLawicelFile(filename, frames))
-        {
-            qDebug() << "Loaded as lawicel successfully!";
-            return true;
-        }
-    }
-
     qDebug() << "Attempting 'CARBUS Analyzer'";
     if (isCARBUSAnalyzerFile(filename))
     {
@@ -490,6 +480,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadCLX000File(filename, frames))
         {
             qDebug() << "Loaded as CLX000 successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting lawicel";
+    if (isLawicelFile(filename))
+    {
+        if (loadLawicelFile(filename, frames))
+        {
+            qDebug() << "Loaded as lawicel successfully!";
             return true;
         }
     }
