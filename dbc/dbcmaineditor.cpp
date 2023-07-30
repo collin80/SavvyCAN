@@ -694,7 +694,7 @@ void DBCMainEditor::newMessage()
         if (oldMsg)
         {
             msg.name = oldMsg->name + QString::number(randGen.bounded(1000));
-            msg.ID = oldMsg->ID + 1;
+            msg.ID = 0;
             msg.len = oldMsg->len;
             msg.bgColor = oldMsg->bgColor;
             msg.fgColor = oldMsg->fgColor;
