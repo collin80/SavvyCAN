@@ -693,8 +693,14 @@ void DBCMainEditor::newMessage()
         DBC_MESSAGE *oldMsg = dbcFile->messageHandler->findMsgByID(msgID);
         if (oldMsg)
         {
-            msg.name = oldMsg->name + QString::number(randGen.bounded(1000));
+            msg.name = "Msg" + QString::number(randGen.bounded(500));
             msg.ID = oldMsg->ID + 1;
+            DBC_MESSAGE *overlappedMsg = dbcFile->messageHandler->findMsgByID(msg.ID);
+            while (overlappedMsg)
+            {
+                msg.ID++;
+                overlappedMsg = dbcFile->messageHandler->findMsgByID(msg.ID);
+            }
             msg.len = oldMsg->len;
             msg.bgColor = oldMsg->bgColor;
             msg.fgColor = oldMsg->fgColor;
@@ -783,8 +789,7 @@ void DBCMainEditor::newSignal()
     msg->sigHandler->addSignal(sig);
     sigPtr = msg->sigHandler->findSignalByIdx(msg->sigHandler->getCount() - 1);
     QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
-    QString sigInfo = sig.name;
-    if (sig.comment.count() > 0) sigInfo.append(" - ").append(sig.comment);
+    QString sigInfo = createSignalText(&sig);
     newSigItem->setText(0, sigInfo);
     if (sig.isMultiplexed) newSigItem->setIcon(0, multiplexedSignalIcon);
     else if (sig.isMultiplexor) newSigItem->setIcon(0, multiplexorSignalIcon);
