@@ -897,7 +897,21 @@ void DBCMainEditor::deleteNode(DBC_NODE *node)
     int numItems = dbcFile->messageHandler->getCount();
     for (int i = numItems - 1; i > -1; i--)
     {
-        if (dbcFile->messageHandler->findMsgByIdx(i)->sender == node) deleteMessage(dbcFile->messageHandler->findMsgByIdx(i));
+        DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByIdx(i);
+        if (msg->sender == node) deleteMessage(dbcFile->messageHandler->findMsgByIdx(i));
+        //also, each signal has a receiver field that references the nodes. It was probably stupid to store
+        //pointers to node structures in signals but that's how it is currently. Need to iterate over all
+        //signals in all messages and set the receiver field to Vector__XXX if the old receiver node was this one.
+        else //still check for signals with receiver set to this node
+        {
+            DBC_NODE *unset_node = dbcFile->findNodeByName("Vector__XXX");
+            int numSigs = msg->sigHandler->getCount();
+            for (int j = numSigs - 1; j > -1; j--)
+            {
+                DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(j);
+                if (sig->receiver == node) sig->receiver = unset_node;
+            }
+        }
     }
 
     nodeToItem.remove(node);
@@ -948,6 +962,6 @@ void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
     itemToSignal.remove(currItem);
     signalToItem.remove(sig);
     ui->treeDBC->removeItemWidget(currItem, 0);
-    delete currItem;
+    //delete currItem; //already removed by above remove call
     dbcFile->setDirtyFlag();
 }
