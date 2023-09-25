@@ -5,6 +5,16 @@
 
 #include <QList>
 
+enum TriggerMask
+{
+    TRG_ID = 1,
+    TRG_MS = 2,
+    TRG_COUNT = 4,
+    TRG_BUS = 8,
+    TRG_SIGNAL = 16,
+    TRG_SIGVAL = 32,
+};
+
 //Stores a single trigger.
 class Trigger
 {
@@ -16,6 +26,10 @@ public:
     int maxCount; //max # of these frames to trigger for
     int currCount; //how many we have triggered for so far.
     int bus; //which bus to monitor (-1 if we aren't picky)
+    QString sigName; //which signal to trigger on
+    int64_t sigValueInt; //value to trigger on (integer)
+    double sigValueDbl; //value to trigger on (floating point)
+    uint32_t triggerMask;
 };
 
 //referece for a source location for a single modifier.
