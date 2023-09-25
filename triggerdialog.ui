@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TriggerDialog</class>
+ <widget class="QDialog" name="TriggerDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>771</width>
+    <height>303</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Trigger Builder</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout" stretch="5,1,10">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QListWidget" name="listTriggers"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnNew">
+         <property name="text">
+          <string>Add New</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnDelete">
+         <property name="text">
+          <string>Delete</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="Line" name="line">
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <property name="lineWidth">
+        <number>7</number>
+       </property>
+       <property name="midLineWidth">
+        <number>3</number>
+       </property>
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QFormLayout" name="formLayout">
+       <property name="formAlignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+       <item row="0" column="0">
+        <widget class="QCheckBox" name="cbBus">
+         <property name="text">
+          <string>Bus</string>
+         </property>
+        </widget>
+       </item>
+       <item row="10" column="0">
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLineEdit" name="txtBus">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QCheckBox" name="cbMsgID">
+         <property name="text">
+          <string>Msg ID</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QCheckBox" name="cbSignal">
+         <property name="text">
+          <string>Signal</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QComboBox" name="cmSignal">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0">
+        <widget class="QCheckBox" name="cbMillis">
+         <property name="text">
+          <string>MS Delay</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QLineEdit" name="txtDelay">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0">
+        <widget class="QCheckBox" name="cbMaxCount">
+         <property name="text">
+          <string>Max Count</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1">
+        <widget class="QLineEdit" name="txtMaxCount">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="QComboBox" name="cmMsgID">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="editable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0">
+        <widget class="QCheckBox" name="cbSigValue">
+         <property name="text">
+          <string>Signal Value</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QLineEdit" name="txtSigValue">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QPushButton" name="btnSave">
+     <property name="text">
+      <string>Save And Update</string>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
