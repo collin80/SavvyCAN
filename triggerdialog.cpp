@@ -251,8 +251,15 @@ void TriggerDialog::FillDetails()
     if (triggers[selectedRow].triggerMask & TriggerMask::TRG_ID)
     {
         ui->cmMsgID->setEnabled(true);
-        ui->cmMsgID->setCurrentText(QString::number(triggers[selectedRow].ID, 16));
         ui->cbMsgID->setCheckState(Qt::Checked);
+        QString build = "0x" + QString::number(triggers[selectedRow].ID, 16);
+
+        DBC_MESSAGE *msg = dbcHandler->findMessage(triggers[selectedRow].ID);
+        if (msg)
+        {
+            build = build + " ("  + msg->name + ")";
+        }
+        ui->cmMsgID->setCurrentText(build);
     }
     else
     {
@@ -287,8 +294,8 @@ void TriggerDialog::FillDetails()
     if (triggers[selectedRow].triggerMask & TriggerMask::TRG_SIGNAL)
     {
         ui->cmSignal->setEnabled(true);
-        ui->cmSignal->setCurrentText(triggers[selectedRow].sigName);
         ui->cbSignal->setCheckState(Qt::Checked);
+        ui->cmSignal->setCurrentText(triggers[selectedRow].sigName);
     }
     else
     {
