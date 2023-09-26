@@ -1054,7 +1054,7 @@ bool FrameFileIO::isCANHackerFile(QString filename)
 
 // CANHacker trace format
 // Time   ID     DLC Data                    Comment
-// 00.000 00004000 8 36 47 19 43 01 00 00 80 
+// 00[.|,]000 00004000 8 36 47 19 43 01 00 00 80 
 bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -1089,6 +1089,11 @@ bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
             if (tokens.length() > 3)
             {
                 int idxOfDecimal = tokens[0].indexOf('.');
+                // If no dot is found, try comma
+                if(idxOfDecimal == -1)
+                {
+                    idxOfDecimal = tokens[0].indexOf(','); 
+                }
                 if (idxOfDecimal > -1) {
                     //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
                     //the result of the above is the # of digits after the decimal.
