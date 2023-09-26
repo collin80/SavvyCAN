@@ -187,30 +187,79 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
         if (sendingData[sd].triggers.count() == 0) continue;
+        bool passedChecks = true;
         for (int trig = 0; trig < sendingData[sd].triggers.count(); trig++)
         {
             Trigger *thisTrigger = &sendingData[sd].triggers[trig];
+            //need to ensure that this trigger is actually related to frames incoming.
+            //Otherwise ignore it here. Only frames that have BUS and/or ID set as trigger will work here.
+            if (!(thisTrigger->triggerMask & (TriggerMask::TRG_BUS | TriggerMask::TRG_ID) ) ) continue;
+
+            passedChecks = true;
             //qDebug() << "Trigger ID: " << thisTrigger->ID;
             //qDebug() << "Frame ID: " << frame->frameId();
-            if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->frameId())
+
+            //Check to see if we have a bus trigger condition and if so does it match
+            if (thisTrigger->bus != frame->bus && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
+                passedChecks = false;
+
+            //check to see if we have an ID trigger condition and if so does it match
+            if ((thisTrigger->triggerMask & TriggerMask::TRG_ID) && (uint32_t)thisTrigger->ID != frame->frameId() )
+                passedChecks = false;
+
+            //check to see if we're limiting the trigger by max count and have we reached that count?
+            if ( (thisTrigger->triggerMask & TriggerMask::TRG_COUNT) && (thisTrigger->currCount >= thisTrigger->maxCount) )
+                passedChecks = false;
+
+            //if the above passed then are we triggering not only on ID but also signal?
+            if (passedChecks && (thisTrigger->triggerMask & (TriggerMask::TRG_SIGNAL | TriggerMask::TRG_ID) ) )
             {
-                if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
+                bool sigCheckPassed = false;
+                DBC_MESSAGE *msg = dbcHandler->findMessage(thisTrigger->ID);
+                if (msg)
                 {
-                    if (thisTrigger->currCount < thisTrigger->maxCount)
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(thisTrigger->sigName);
+                    if (sig)
                     {
-                        if (thisTrigger->milliseconds == 0) //immediate reply
+                        //first of all, is this signal really in this message we got?
+                        if (sig->isSignalInMessage(*frame)) sigCheckPassed = true;
+                        //if it was and we're also filtering on value then try that next
+                        if (sigCheckPassed && (thisTrigger->triggerMask & TriggerMask::TRG_SIGVAL))
                         {
-                            thisTrigger->currCount++;
-                            sendingData[sd].count++;
-                            doModifiers(sd);
-                            updateGridRow(sd);
-                            CANConManager::getInstance()->sendFrame(sendingData[sd]);
-                        }
-                        else //delayed sending frame
-                        {
-                            thisTrigger->readyCount = true;
+                            double sigval = 0.0;
+                            if (sig->processAsDouble(*frame, sigval))
+                            {
+                                if (abs(sigval - thisTrigger->sigValueDbl) > 0.001)
+                                {
+                                    sigCheckPassed = false;
+                                }
+                            }
+                            else sigCheckPassed = false;
                         }
                     }
+                    else sigCheckPassed = false;
+                }
+                else sigCheckPassed = false;
+                passedChecks &= sigCheckPassed; //passedChecks can only be true if both are
+            }
+
+            //if all the above says it's OK then we'll go ahead and send that message.
+            //If a message that comes through here has a MS value then we use it as a delay
+            //after the check passes. This allows for delaying the sending of the frame if that
+            //is required. Otherwise, just send it immediately.
+            if (passedChecks)
+            {
+                if (thisTrigger->milliseconds == 0) //immediate reply
+                {
+                    thisTrigger->currCount++;
+                    sendingData[sd].count++;
+                    doModifiers(sd);
+                    updateGridRow(sd);
+                    CANConManager::getInstance()->sendFrame(sendingData[sd]);
+                }
+                else //delayed sending frame
+                {
+                    thisTrigger->readyCount = true;
                 }
             }
         }
@@ -444,7 +493,9 @@ void FrameSenderWindow::onCellDoubleTap(int row, int column)
                 output += td->buildEntry(trig) + ",";
             }
             output.chop(1); //don't want the trailing ,
+            inhibitChanged = true;
             ui->tableSender->item(row, ST_COLS::SENDTAB_COL_TRIGGER)->setText(output);
+            inhibitChanged = false;
         }
         delete td;
         td = nullptr;
@@ -734,10 +785,9 @@ void FrameSenderWindow::processTriggerText(int line)
     QString trigger;
 
     //Example line:
-    //id0x200 5ms 10x bus0,1000ms
+    //id0x200 5ms 10x bus0,1000ms,ID0x202 SIG[BMS_maxChargeCurrent;300]
     //trigger has two levels of syntactic parsing. First you split by comma to get each
     //actual trigger. Then you split by spaces to get the tokens within each trigger
-    //trigger = ui->tableSender->item(line, 5)->text().toUpper().trimmed().replace(" ", "");
     trigger = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_TRIGGER)->text().toUpper();
     if (trigger != "")
     {
@@ -754,6 +804,7 @@ void FrameSenderWindow::processTriggerText(int line)
             thisTrigger.milliseconds = -1;
             thisTrigger.currCount = 0;
             thisTrigger.msCounter = 0;
+            thisTrigger.triggerMask = 0;
             thisTrigger.readyCount = true;
 
             QStringList trigToks = triggers[k].split(' ');
@@ -767,22 +818,49 @@ void FrameSenderWindow::processTriggerText(int line)
 
                     if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 0; //by default don't count, just send it upon trigger
                     thisTrigger.readyCount = false; //won't try counting until trigger hits
+                    thisTrigger.triggerMask |= TriggerMask::TRG_ID;
                 }
                 else if (tok.endsWith("MS"))
                 {
                     thisTrigger.milliseconds = Utility::ParseStringToNum(tok.left(tok.length()-2));
+                    thisTrigger.triggerMask |= TriggerMask::TRG_MS;
                     //if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 0;
                     //if (thisTrigger.ID == -1) thisTrigger.ID = 0;
                 }
                 else if (tok.endsWith("X"))
                 {
                     thisTrigger.maxCount = Utility::ParseStringToNum(tok.left(tok.length() - 1));
+                    thisTrigger.triggerMask |= TriggerMask::TRG_COUNT;
                     //if (thisTrigger.ID == -1) thisTrigger.ID = 0;
-                    if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 10;
+                    if (thisTrigger.milliseconds == -1)
+                    {
+                        thisTrigger.milliseconds = 10;
+                        thisTrigger.triggerMask |= TriggerMask::TRG_ID;
+                    }
                 }
                 else if (tok.startsWith("BUS"))
                 {
                     thisTrigger.bus = Utility::ParseStringToNum(tok.right(tok.length() - 3));
+                    thisTrigger.triggerMask |= TriggerMask::TRG_BUS;
+                }
+                else if (tok.startsWith("SIG["))
+                {
+                    //remove the SIG[ header
+                    tok = tok.right(tok.size() - 4);
+                    int semi = tok.indexOf(';');
+                    if (semi == -1) semi = tok.indexOf(']');
+                    QString signame = tok.left(semi);
+                    thisTrigger.sigName = signame;
+                    thisTrigger.triggerMask |= TriggerMask::TRG_SIGNAL;
+                    semi = tok.indexOf(';');
+                    if (semi > -1) //have a signal value to match too
+                    {
+                        thisTrigger.triggerMask |= TriggerMask::TRG_SIGVAL;
+                        int end = tok.indexOf(']');
+                        thisTrigger.sigValueDbl =
+                                tok.mid(semi + 1, end - semi - 1)
+                                .toDouble();
+                    }
                 }
             }
             //now, find anything that wasn't set and set it to defaults
@@ -799,6 +877,7 @@ void FrameSenderWindow::processTriggerText(int line)
         thisTrigger.ID = 0;
         thisTrigger.maxCount = 1;
         thisTrigger.milliseconds = 10;
+        thisTrigger.triggerMask = TriggerMask::TRG_MS;
         sendingData[line].triggers.append(thisTrigger);
     }
 }
