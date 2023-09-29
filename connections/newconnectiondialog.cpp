@@ -114,6 +114,7 @@ void NewConnectionDialog::selectLawicel()
         ui->cbSerialSpeed->addItem("500000");
         ui->cbSerialSpeed->addItem("1000000");
         ui->cbSerialSpeed->addItem("2000000");
+        ui->cbSerialSpeed->addItem("3000000");
     }
 
 }
@@ -309,7 +310,7 @@ QString NewConnectionDialog::getPortName()
         return ui->cbPort->currentText();
     case CANCon::CANSERVER:
         return ui->cbPort->currentText();
-            
+
     default:
         qDebug() << "getPortName: can't get port";
     }
