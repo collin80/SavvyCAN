@@ -78,6 +78,13 @@
         </property>
        </widget>
       </item>
+      <item row="7" column="0">
+       <widget class="QRadioButton" name="rbCanlogserver">
+        <property name="text">
+         <string>CANlogserver</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
