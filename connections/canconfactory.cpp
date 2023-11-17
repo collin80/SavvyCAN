@@ -6,6 +6,7 @@
 #include "socketcand.h"
 #include "lawicel_serial.h"
 #include "canserver.h"
+#include "canlogserver.h"
 
 using namespace CANCon;
 
@@ -29,6 +30,8 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
         return new MQTT_BUS(pPortName);
     case CANSERVER:
         return new CANserver(pPortName);
+    case CANLOGSERVER:
+        return new CanLogServer(pPortName);
     default: {}
     }
 

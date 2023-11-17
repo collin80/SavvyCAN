@@ -88,6 +88,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                         case CANCon::KAYAK: return "socketcand";
                         case CANCon::LAWICEL: return "LAWICEL";
                         case CANCon::CANSERVER: return "CANserver";
+                        case CANCon::CANLOGSERVER: return "CanLogServer";
                         default: {}
                     }
                 else qDebug() << "Tried to show connection type but connection was nullptr";
