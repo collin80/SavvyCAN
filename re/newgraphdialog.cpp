@@ -227,51 +227,54 @@ void NewGraphDialog::setParams(GraphParams &params)
 
     loadNodes();
 
-    auto msg = assocSignal->parentMessage;
-    auto node = msg->sender;
-
-    bool nodeFound = false;
-    for(int i=0; i<ui->cbNodes->count(); i++)
+    if (assocSignal)
     {
-        if(ui->cbNodes->itemText(i) == node->sourceFileName + Utility::fullyQualifiedNameSeperator + node->name)
-        {
-            ui->cbNodes->setCurrentIndex(i);
-            nodeFound = true;
-            break;
-        }
-    }
+        auto msg = assocSignal->parentMessage;
+        auto node = msg->sender;
 
-    qDebug() << "Matching plot params to Node: " << nodeFound;
-
-    if(nodeFound)
-    {
-        bool msgFound = false;
-        for(int i=0; i<ui->cbMessages->count(); i++)
+        bool nodeFound = false;
+        for(int i=0; i<ui->cbNodes->count(); i++)
         {
-            if(ui->cbMessages->itemText(i) == msg->name)
+            if(ui->cbNodes->itemText(i) == node->sourceFileName + Utility::fullyQualifiedNameSeperator + node->name)
             {
-                ui->cbMessages->setCurrentIndex(i);
-                msgFound = true;
+                ui->cbNodes->setCurrentIndex(i);
+                nodeFound = true;
                 break;
             }
         }
 
-        qDebug() << "Matching plot params to Msg: " << msgFound;
+        qDebug() << "Matching plot params to Node: " << nodeFound;
 
-        if(msgFound)
+        if(nodeFound)
         {
-            bool sigFound = false;
-            for(int i=0; i<ui->cbSignals->count(); i++)
+            bool msgFound = false;
+            for(int i=0; i<ui->cbMessages->count(); i++)
             {
-                if(ui->cbSignals->itemText(i) == assocSignal->name)
+                if(ui->cbMessages->itemText(i) == msg->name)
                 {
-                    ui->cbSignals->setCurrentIndex(i);
-                    sigFound = true;
+                    ui->cbMessages->setCurrentIndex(i);
+                    msgFound = true;
                     break;
                 }
             }
 
-            qDebug() << "Matching plot params to Signal: " << sigFound;
+            qDebug() << "Matching plot params to Msg: " << msgFound;
+
+            if(msgFound)
+            {
+                bool sigFound = false;
+                for(int i=0; i<ui->cbSignals->count(); i++)
+                {
+                    if(ui->cbSignals->itemText(i) == assocSignal->name)
+                    {
+                        ui->cbSignals->setCurrentIndex(i);
+                        sigFound = true;
+                        break;
+                    }
+                }
+
+                qDebug() << "Matching plot params to Signal: " << sigFound;
+            }
         }
     }
     //ui->cbNodes->model()->
