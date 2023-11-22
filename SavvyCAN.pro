@@ -43,6 +43,7 @@ SOURCES += main.cpp\
     mainwindow.cpp \
     canframemodel.cpp \
     simplecrypt.cpp \
+    triggerdialog.cpp \
     utility.cpp \
     qcustomplot.cpp \
     frameplaybackwindow.cpp \
@@ -134,6 +135,7 @@ HEADERS  += mainwindow.h \
     qcpaxistickerhex.h \
     re/dbccomparatorwindow.h \
     simplecrypt.h \
+    triggerdialog.h \
     utility.h \
     qcustomplot.h \
     frameplaybackwindow.h \
@@ -195,6 +197,7 @@ HEADERS  += mainwindow.h \
     pcaplite.h
 
 FORMS    += ui/candatagrid.ui \
+    triggerdialog.ui \
     ui/canbridgewindow.ui \
     ui/dbcnodeduplicateeditor.ui \
     ui/dbccomparatorwindow.ui \
