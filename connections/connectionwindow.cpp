@@ -253,6 +253,8 @@ void ConnectionWindow::handleNewConn()
     QString newDriver;
     int newSerialSpeed;
     int newBusSpeed;
+    bool newCanFd;
+    int newDataRate;
     CANConnection *conn;
 
     if (thisDialog->exec() == QDialog::Accepted)
@@ -262,7 +264,9 @@ void ConnectionWindow::handleNewConn()
         newDriver = thisDialog->getDriverName();
         newSerialSpeed = thisDialog->getSerialSpeed();
         newBusSpeed = thisDialog->getBusSpeed();
-        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed);
+        newCanFd=thisDialog->isCanFd();
+        newDataRate = thisDialog->getDataRate();
+        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate);
         if (conn)
         {
             connModel->add(conn);
@@ -297,7 +301,8 @@ void ConnectionWindow::handleResetConn()
 {
     QString port, driver;
     CANCon::type type;
-    int serSpeed, busSpeed;
+    int serSpeed, busSpeed, dataRate;
+    bool canFd;
 
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     if (selIdx <0) return;
@@ -312,13 +317,16 @@ void ConnectionWindow::handleResetConn()
     driver = conn_p->getDriver();
     serSpeed = 0; //TODO: implement these
     busSpeed = 0;
+    dataRate = 0;
+    canFd = false;
+
 
     /* stop and delete connection */
     conn_p->stop();
 
     conn_p = nullptr;
 
-    conn_p = create(type, port, driver, serSpeed, busSpeed);
+    conn_p = create(type, port, driver, serSpeed, busSpeed,canFd,dataRate);
     if (conn_p) connModel->replace(selIdx, conn_p);
 }
 
@@ -366,6 +374,7 @@ void ConnectionWindow::saveBusSettings()
         bus.setActive(ui->ckEnable->isChecked());
         bus.setListenOnly(ui->ckListenOnly->isChecked());
         bus.setCanFD(ui->canFDEnable->isChecked());
+        bus.setDataRate(ui->cbDataRate->currentText().toInt());
         conn_p->setBusSettings(offset, bus);
     }
 }
@@ -384,6 +393,8 @@ void ConnectionWindow::populateBusDetails(int offset)
         //int numBuses;
         ui->canFDEnable->setVisible(false);
         ui->canFDEnable_label->setVisible(false);
+        ui->dataRate_label->setVisible(false);
+        ui->cbDataRate->setVisible(false);
         CANConnection* conn_p = connModel->getAtIdx(selIdx);
         CANBus bus;
         if(!conn_p) return;
@@ -398,11 +409,13 @@ void ConnectionWindow::populateBusDetails(int offset)
         //ui->lblBusNum->setText(QString::number(busBase + offset));
         ui->ckListenOnly->setChecked(bus.isListenOnly());
         ui->ckEnable->setChecked(bus.isActive());
-        if (conn_p->getType() == CANCon::type::SERIALBUS)
+        if (conn_p->getType() == CANCon::type::SERIALBUS || conn_p->getType() == CANCon::type::LAWICEL)
         {
             ui->canFDEnable->setVisible(true);
             ui->canFDEnable_label->setVisible(true);
             ui->canFDEnable->setChecked(bus.isCanFD());
+            ui->cbDataRate->setVisible(true);
+            ui->dataRate_label->setVisible(true);
         }
 
         bool found = false;
@@ -415,7 +428,19 @@ void ConnectionWindow::populateBusDetails(int offset)
                 break;
             }
         }
+
         if (!found) ui->cbBusSpeed->addItem(QString::number(bus.getSpeed()));
+        found = false;
+        for (int i = 0; i < ui->cbDataRate->count(); i++)
+        {
+            if (bus.getDataRate() == ui->cbDataRate->itemText(i).toInt())
+            {
+                found = true;
+                ui->cbDataRate->setCurrentIndex(i);
+                break;
+            }
+        }
+        if (!found) ui->cbDataRate->addItem(QString::number(bus.getDataRate()));
     }
 }
 
@@ -490,12 +515,12 @@ void ConnectionWindow::handleSendText() {
     emit sendDebugData(bytes);
 }
 
-CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed)
+CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
 {
     CANConnection* conn_p;
 
     /* create connection */
-    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed);
+    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate);
     if(conn_p)
     {
         /* connect signal */
@@ -533,7 +558,7 @@ void ConnectionWindow::loadConnections()
     for(int i = 0 ; i < portNames.count() ; i++)
     {
         //TODO: add serial speed and bus speed to this properly.
-        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], 0, 0);
+        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], 0, 0, false, 0);
         /* add connection to model */
         connModel->add(conn_p);
     }

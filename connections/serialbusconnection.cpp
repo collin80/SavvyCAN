@@ -12,7 +12,7 @@
 /***********************************/
 
 SerialBusConnection::SerialBusConnection(QString portName, QString driverName) :
-    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,0 ,1, 4000, true),
+    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,0, false, 0 ,1, 4000, true),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
@@ -78,8 +78,6 @@ bool SerialBusConnection::piGetBusSettings(int pBusIdx, CANBus& pBus)
 
 void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 {
-    quint32 sbusconfig = 0;
-
     //CANConStatus stats;
     /* sanity checks */
     if(0 != pBusIdx)
@@ -107,10 +105,6 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     //But, you can probabaly set the speed of many of the other serialbus devices so go ahead and try
     mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
     mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, bus.canFD);
-
-    if(bus.listenOnly)
-        sbusconfig |= EN_SILENT_MODE;
-    mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
 
     /* connect device */
     if (!mDev_p->connectDevice()) {

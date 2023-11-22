@@ -78,13 +78,6 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QRadioButton" name="rbCanlogserver">
-        <property name="text">
-         <string>CANlogserver</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
@@ -149,6 +142,23 @@
    </item>
    <item>
     <widget class="QComboBox" name="cbCANSpeed"/>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="cbCanFd">
+     <property name="text">
+      <string>CAN-FD</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lblDataRate">
+     <property name="text">
+      <string>CAN-FD data rate</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="cbDataRate"/>
    </item>
    <item>
     <spacer name="verticalSpacer">
