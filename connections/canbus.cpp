@@ -9,6 +9,7 @@ CANBus::CANBus()
     singleWire  = false;
     active      = false;
     canFD       = false;
+    dataRate    = 2000000;
 }
 
 
@@ -17,7 +18,8 @@ CANBus::CANBus(const CANBus& pBus) :
     listenOnly(pBus.listenOnly),
     singleWire(pBus.singleWire),
     active(pBus.active),
-    canFD(pBus.canFD) {}
+    canFD(pBus.canFD),
+    dataRate(pBus.dataRate){}
 
 
 bool CANBus::operator==(const CANBus& bus) const{
@@ -55,6 +57,15 @@ void CANBus::setCanFD(bool mode){
 
 int CANBus::getSpeed(){
     return speed;
+}
+
+int CANBus::getDataRate(){
+    return dataRate;
+}
+
+void CANBus::setDataRate(int newSpeed){
+    //qDebug() << "CANBUS SetSpeed = " << newSpeed;
+    dataRate = newSpeed;
 }
 
 bool CANBus::isListenOnly(){

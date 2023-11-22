@@ -22,7 +22,6 @@ namespace CANCon {
         MQTT,
         LAWICEL,
         CANSERVER,
-        CANLOGSERVER,
         NONE
     };
 }

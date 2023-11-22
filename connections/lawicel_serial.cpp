@@ -9,8 +9,8 @@
 #include "lawicel_serial.h"
 #include "utility.h"
 
-LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed) :
-    CANConnection(portName, "LAWICEL", CANCon::LAWICEL,serialSpeed, lawicelSpeed, 3, 4000, true),
+LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed, bool canFd, int dataRate) :
+    CANConnection(portName, "LAWICEL", CANCon::LAWICEL,serialSpeed, lawicelSpeed, canFd, dataRate, 3, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
     sendDebug("LAWICELSerial()");
@@ -154,13 +154,31 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
 
     int idx = 0;
     QString buildStr;
-    if (frame.hasExtendedFrameFormat())
-    {
-        buildStr = QString::asprintf("T%08X%u", ID, frame.payload().length());
+    if(frame.hasFlexibleDataRateFormat()){
+        if (frame.hasExtendedFrameFormat())
+        {
+            if (frame.hasBitrateSwitch())
+                buildStr = QString::asprintf("B%08X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+            else
+                buildStr = QString::asprintf("D%08X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+        }
+        else
+        {
+            if (frame.hasBitrateSwitch())
+                buildStr = QString::asprintf("b%03X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+            else
+                buildStr = QString::asprintf("d%03X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+        }
     }
-    else
-    {
-        buildStr = QString::asprintf("t%03X%u", ID, frame.payload().length());
+    else {
+        if (frame.hasExtendedFrameFormat())
+        {
+            buildStr = QString::asprintf("T%08X%u", ID, frame.payload().length());
+        }
+        else
+        {
+            buildStr = QString::asprintf("t%03X%u", ID, frame.payload().length());
+        }
     }
     foreach (QChar chr, buildStr)
     {
@@ -245,44 +263,71 @@ void LAWICELSerial::deviceConnected()
 
     output.clear();
     output.append('S'); //configure speed of bus
-    switch (this->mBusData[0].mBus.getSpeed())
-    {
-    case 10000:
-        output.append('0');
-        break;
-    case 20000:
-        output.append('1');
-        break;
-    case 50000:
-        output.append('2');
-        break;
-    case 100000:
-        output.append('3');
-        break;
-    case 125000:
-        output.append('4');
-        break;
-    case 250000:
-        output.append('5');
-        break;
-    case 500000:
-        output.append('6');
-        break;
-    case 800000:
-        output.append('7');
-        break;
-    case 1000000:
-        output.append('8');
-        break;
-    default:
-        output.append('6');
-        break;
-    }
+        switch (this->mBusData[0].mBus.getSpeed())
+        {
+        case 10000:
+            output.append('0');
+            break;
+        case 20000:
+            output.append('1');
+            break;
+        case 50000:
+            output.append('2');
+            break;
+        case 100000:
+            output.append('3');
+            break;
+        case 125000:
+            output.append('4');
+            break;
+        case 250000:
+            output.append('5');
+            break;
+        case 500000:
+            output.append('6');
+            break;
+        case 800000:
+            output.append('7');
+            break;
+        case 1000000:
+            output.append('8');
+            break;
+        default:
+            output.append('6');
+            break;
+        }
+
     output.append('\x0D');
 
     sendToSerial(output);
 
     output.clear();
+
+    if (this->canFd){
+        switch (this->dataRate)
+        {
+        case 1000000:
+            output.append("Y1");
+            break;
+        case 2000000:
+            output.append("Y2");
+            break;
+        case 4000000:
+            output.append("Y4");
+            break;
+        case 5000000:
+            output.append("Y5");
+            break;
+        default:
+            output.append("Y2");
+            break;
+        }
+
+        output.append('\x0D');
+        sendToSerial(output);
+        output.clear();
+    }
+
     output.append('O'); //open bus now that we set the speed
     output.append(13);
 
@@ -445,6 +490,8 @@ void LAWICELSerial::readSerialData()
         if (c == 13) //all lawicel commands end in CR
         {
             qDebug() << "Got CR!";
+
+            buildFrame.setTimeStamp(QDateTime::currentMSecsSinceEpoch() * 1000l);
             switch (mBuildLine[0].toLatin1())
             {
             case 't': //standard frame
@@ -502,6 +549,68 @@ void LAWICELSerial::readSerialData()
                         qDebug() << "can't get a frame, ERROR";
                 }
                 break;
+            case 'b':
+                buildFrame.setBitrateSwitch(true); //BRS enabled
+            case 'd': //standard fd frame, BRS disabled
+                //tIIILDD
+                buildFrame.setFlexibleDataRateFormat(true);
+                buildFrame.setFrameId(mBuildLine.mid(1, 3).toInt(nullptr, 16));
+                buildFrame.isReceived = true;
+                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
+                for (int c = 0; c < buildData.size(); c++)
+                {
+                    buildData[c] = mBuildLine.mid(5 + (c*2), 2).toInt(nullptr, 16);
+                }
+                buildFrame.setPayload(buildData);
+                if (!isCapSuspended())
+                {
+                    /* get frame from queue */
+                    CANFrame* frame_p = getQueue().get();
+                    if(frame_p) {
+                        //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
+                        /* copy frame */
+                        *frame_p = buildFrame;
+                        checkTargettedFrame(buildFrame);
+                        /* enqueue frame */
+                        getQueue().queue();
+                    }
+                    else
+                        qDebug() << "can't get a frame, ERROR";
+                }
+                break;
+            case 'B':
+                buildFrame.setBitrateSwitch(true); //BRS enabled
+            case 'D': //extended fd frame
+                //TIIIIIIIILDD.
+                buildFrame.setFlexibleDataRateFormat(true);
+                buildFrame.setBitrateSwitch(true);
+                buildFrame.setFrameId(mBuildLine.mid(1, 8).toInt(nullptr, 16));
+                buildFrame.isReceived = true;
+                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildFrame.setExtendedFrameFormat(true);
+                buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
+                for (int c = 0; c < buildData.size(); c++)
+                {
+                    buildData[c] = mBuildLine.mid(10 + (c*2), 2).toInt(nullptr, 16);
+                }
+                buildFrame.setPayload(buildData);
+                if (!isCapSuspended())
+                {
+                    /* get frame from queue */
+                    CANFrame* frame_p = getQueue().get();
+                    if(frame_p) {
+                        //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
+                        /* copy frame */
+                        *frame_p = buildFrame;
+                        checkTargettedFrame(buildFrame);
+                        /* enqueue frame */
+                        getQueue().queue();
+                    }
+                    else
+                        qDebug() << "can't get a frame, ERROR";
+                }
+                break;
             }
             mBuildLine.clear();
         }
@@ -519,4 +628,61 @@ void LAWICELSerial::handleTick()
 {
     //qDebug() << "Tick!";
 }
+
+
+// Convert a FDCAN_data_length_code to number of bytes in a message
+uint8_t LAWICELSerial::dlc_code_to_bytes(int dlc_code)
+{
+    if (dlc_code<=8)
+        return dlc_code;
+    else{
+        switch(dlc_code)
+        {
+            case 9:
+                return 12;
+            case 10:
+                return 16;
+            case 11:
+                return 20;
+            case 12:
+                return 24;
+            case 13:
+                return 32;
+            case 14:
+                return 48;
+            case 15:
+                return 64;
+            default:
+                return 0;
+        }
+    }
+}
+
+uint8_t LAWICELSerial::bytes_to_dlc_code(uint8_t bytes)
+{
+    if (bytes<=8)
+        return bytes;
+    else{
+        switch(bytes)
+        {
+            case 12:
+                return 9;
+            case 16:
+                return 10;
+            case 20:
+                return 11;
+            case 24:
+                return 12;
+            case 32:
+                return 13;
+            case 48:
+                return 14;
+            case 64:
+                return 15;
+            default:
+                return 0;
+        }
+    }
+}
+
 
