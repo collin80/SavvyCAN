@@ -40,10 +40,11 @@ TriggerDialog::TriggerDialog(QList<Trigger> trigs, QWidget *parent) :
     for (int i = 0; i < numFiles; i++)
     {
         DBCFile *file = dbcHandler->getFileByIdx(i);
+        QList<DBC_MESSAGE *> msgs = file->messageHandler->getMsgsAsList();
         int numMsgs = file->messageHandler->getCount();
         for (int j = 0; j < numMsgs; j++)
         {
-            DBC_MESSAGE *msg = file->messageHandler->findMsgByIdx(j);
+            DBC_MESSAGE *msg = msgs[j];
             entries.append(("0x" + QString::number(msg->ID, 16) + " ("  + msg->name + ")"));
         }
     }
@@ -185,9 +186,10 @@ void TriggerDialog::regenerateCurrentListItem()
             //if possible.
             DBC_MESSAGE *msg = dbcHandler->findMessage(trig.ID);
             int numSigs = msg->sigHandler->getCount();
+            QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
             for (int s = 0; s < numSigs; s++)
             {
-                DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+                DBC_SIGNAL *sig = sigs[s];
 
                 entries.append(sig->name);
             }
