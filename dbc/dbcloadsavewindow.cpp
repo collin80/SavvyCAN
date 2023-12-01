@@ -111,7 +111,7 @@ void DBCLoadSaveWindow::updateSettings()
             settings.setValue("DBC/Filename_" + QString::number(i), file->getFullFilename());
             settings.setValue("DBC/AssocBus_" + QString::number(i), file->getAssocBus());
             settings.setValue("DBC/MatchingCriteria_" + QString::number(i), file->messageHandler->getMatchingCriteria());
-            settings.setValue("DBC/FilterLabeling_" + QString::number(i), file->messageHandler->filterLabeling());
+            settings.setValue("DBC/FilterLabeling_" + QString::number(i), file->messageHandler->filterLabeling() ? 1 : 0);
         }
     }
     emit updatedDBCSettings();

@@ -369,16 +369,6 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
-    qDebug() << "Attempting lawicel";
-    if (isLawicelFile(filename))
-    {
-        if (loadLawicelFile(filename, frames))
-        {
-            qDebug() << "Loaded as lawicel successfully!";
-            return true;
-        }
-    }
-
     qDebug() << "Attempting 'CARBUS Analyzer'";
     if (isCARBUSAnalyzerFile(filename))
     {
@@ -490,6 +480,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadCLX000File(filename, frames))
         {
             qDebug() << "Loaded as CLX000 successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting lawicel";
+    if (isLawicelFile(filename))
+    {
+        if (loadLawicelFile(filename, frames))
+        {
+            qDebug() << "Loaded as lawicel successfully!";
             return true;
         }
     }
@@ -1376,8 +1376,17 @@ bool FrameFileIO::isPCANFile(QString filename)
 ;---+-- ------+------ +- --+----- +- +- +- +- -- -- -- -- -- -- --
   0-6    8-20     22-23  25-32 34-35 37-38 40-? two chars each + space
 
-  Both versions are supported now but rather lazily. Very many aspects of the file are ignored.
+    Version 2.1
+;   Message    Time    Type    ID     Rx/Tx
+;   Number     Offset  |  Bus  [hex]  |  Reserved
+;   |          [ms]    |  |    |      |  |  Data Length Code
+;   |          |       |  |    |      |  |  |    Data [hex] ...
+;   |          |       |  |    |      |  |  |    |
+;---+--- ------+------ +- +- --+----- +- +- +--- +- -- -- -- -- -- -- --
+  0            1       2  3   4       5  6  7    8 +
+
   It seems as if Version 2 files might be able to store other protocols like ISO-TP or J1939
+
 */
 bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
 {
@@ -1402,10 +1411,14 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             lineCounter = 0;
         }
         line = inFile->readLine();
-        if (line.startsWith(";$FILEVERSION=2.0")) fileVersion = 20;
-        if (line.startsWith(";$FILEVERSION=1.3")) fileVersion = 13;
-        if (line.startsWith(";$FILEVERSION=1.1")) fileVersion = 11;
-        if (line.startsWith(';')) continue;
+        if (line.startsWith(';'))
+        {
+            if (line.contains("$FILEVERSION=2.1")) fileVersion = 21;
+            if (line.contains("$FILEVERSION=2.0")) fileVersion = 20;
+            if (line.contains("$FILEVERSION=1.3")) fileVersion = 13;
+            if (line.contains("$FILEVERSION=1.1")) fileVersion = 11;
+            continue;
+        }
         if (line.length() > 41)
         {
             line = line.simplified();
@@ -1466,7 +1479,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                 if (tokens.length() > 6)
                 {
                     thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[1].toDouble() * 1000.0)));
-                    thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
+                    thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[6].toInt();
@@ -1536,6 +1549,58 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                                 if (tokens[d + 6] != "")
                                 {
                                     bytes[d] = static_cast<char>(tokens[d + 6].toInt(nullptr, 16));
+                                }
+                                else bytes[d] = 0;
+                            }
+                        }
+                        thisFrame.setPayload(bytes);
+                        frames->append(thisFrame);
+                    }
+                }
+            }
+            /*
+    Version 2.1
+;   Message    Time    Type    ID     Rx/Tx
+;   Number     Offset  |  Bus  [hex]  |  Reserved
+;   |          [ms]    |  |    |      |  |  Data Length Code
+;   |          |       |  |    |      |  |  |    Data [hex] ...
+;   |          |       |  |    |      |  |  |    |
+;---+--- ------+------ +- +- --+----- +- +- +--- +- -- -- -- -- -- -- --
+  0            1       2  3   4       5  6  7    8 +
+            */
+            else if (fileVersion == 21)
+            {
+                if (tokens.length() > 7)
+                {
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[1].toDouble() * 1000.0)));
+                    thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
+                    if (thisFrame.frameId() < 0x1FFFFFFF)
+                    {
+                        int numBytes = tokens[7].toInt();
+                        QByteArray bytes(numBytes, 0);
+                        //qDebug() << thisFrame.payload().length();
+                        thisFrame.isReceived = true;
+                        thisFrame.bus = tokens[3].toInt();
+                        if (thisFrame.frameId() > 0x10000000)
+                        {
+                            thisFrame.setExtendedFrameFormat(true);
+                        }
+                        else
+                        {
+                            thisFrame.setExtendedFrameFormat(false);
+                        }
+                        if (tokens[2] == "R")
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                        }
+                        else
+                        {
+                            thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                            for (int d = 0; d < numBytes; d++)
+                            {
+                                if (tokens[d + 8] != "")
+                                {
+                                    bytes[d] = static_cast<char>(tokens[d + 8].toInt(nullptr, 16));
                                 }
                                 else bytes[d] = 0;
                             }

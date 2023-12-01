@@ -21,6 +21,7 @@ ICON = icons/SavvyIcon.icns
 
 SOURCES += main.cpp\
     canbridgewindow.cpp \
+    connections/canlogserver.cpp \
     connections/canserver.cpp \
     connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
@@ -42,6 +43,7 @@ SOURCES += main.cpp\
     mainwindow.cpp \
     canframemodel.cpp \
     simplecrypt.cpp \
+    triggerdialog.cpp \
     utility.cpp \
     qcustomplot.cpp \
     frameplaybackwindow.cpp \
@@ -104,6 +106,7 @@ HEADERS  += mainwindow.h \
     can_structs.h \
     canbridgewindow.h \
     canframemodel.h \
+    connections/canlogserver.h \
     connections/canserver.h \
     connections/lawicel_serial.h \
     connections/socketcand.h \
@@ -132,6 +135,7 @@ HEADERS  += mainwindow.h \
     qcpaxistickerhex.h \
     re/dbccomparatorwindow.h \
     simplecrypt.h \
+    triggerdialog.h \
     utility.h \
     qcustomplot.h \
     frameplaybackwindow.h \
@@ -193,6 +197,7 @@ HEADERS  += mainwindow.h \
     pcaplite.h
 
 FORMS    += ui/candatagrid.ui \
+    triggerdialog.ui \
     ui/canbridgewindow.ui \
     ui/dbcnodeduplicateeditor.ui \
     ui/dbccomparatorwindow.ui \

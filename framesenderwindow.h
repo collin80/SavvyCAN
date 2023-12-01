@@ -8,10 +8,27 @@
 #include <QMutex>
 #include "can_structs.h"
 #include "can_trigger_structs.h"
+#include "dbc/dbchandler.h"
+#include "triggerdialog.h"
 
 namespace Ui {
 class FrameSenderWindow;
 }
+
+enum ST_COLS
+{
+    SENDTAB_COL_EN = 0,
+    SENDTAB_COL_BUS = 1,
+    SENDTAB_COL_ID = 2,
+    SENDTAB_COL_MSGNAME = 3,
+    SENDTAB_COL_LEN = 4,
+    SENDTAB_COL_EXT = 5,
+    SENDTAB_COL_REM = 6,
+    SENDTAB_COL_DATA = 7,
+    SENDTAB_COL_TRIGGER = 8,
+    SENDTAB_COL_MODS = 9,
+    SENDTAB_COL_COUNT = 10,
+};
 
 class FrameSenderWindow : public QDialog
 {
@@ -23,6 +40,7 @@ public:
 
 private slots:
     void onCellChanged(int, int);
+    void onCellDoubleTap(int, int);
     void handleTick();
     void enableAll();
     void disableAll();
@@ -40,6 +58,9 @@ private:
     QElapsedTimer elapsedTimer;
     bool inhibitChanged = false;
     QMutex mutex;
+    DBCHandler *dbcHandler;
+    TriggerDialog *td;
+    FrameSendData *sendData;
 
     void createBlankRow();
     void doModifiers(int);
@@ -57,6 +78,7 @@ private:
     void processIncomingFrame(CANFrame *frame);
     bool eventFilter(QObject *obj, QEvent *event);
     void setupGrid();
+    void finishedTriggerDialog(int result);
 };
 
 #endif // FRAMESENDERWINDOW_H

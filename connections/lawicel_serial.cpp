@@ -466,6 +466,32 @@ void LAWICELSerial::readSerialData()
                 }
                 break;
             case 'T': //extended frame
+                //TIIIIIIIILDD.
+                buildFrame.setFrameId(mBuildLine.mid(1, 8).toInt(nullptr, 16));
+                buildFrame.isReceived = true;
+                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildFrame.setExtendedFrameFormat(true);
+                buildData.resize(mBuildLine.mid(9, 1).toInt());
+                for (int c = 0; c < buildData.size(); c++)
+                {
+                    buildData[c] = mBuildLine.mid(10 + (c*2), 2).toInt(nullptr, 16);
+                }
+                buildFrame.setPayload(buildData);
+                if (!isCapSuspended())
+                {
+                    /* get frame from queue */
+                    CANFrame* frame_p = getQueue().get();
+                    if(frame_p) {
+                        //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
+                        /* copy frame */
+                        *frame_p = buildFrame;
+                        checkTargettedFrame(buildFrame);
+                        /* enqueue frame */
+                        getQueue().queue();
+                    }
+                    else
+                        qDebug() << "can't get a frame, ERROR";
+                }
                 break;
             }
             mBuildLine.clear();

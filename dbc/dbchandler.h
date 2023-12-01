@@ -76,6 +76,7 @@ public:
     bool loadFile(QString);
     QString getFullFilename();
     QString getFilename();
+    QString getFilenameNoExt();
     QString getPath();
     int getAssocBus();
     void setAssocBus(int bus);
@@ -115,6 +116,8 @@ public:
     void swapFiles(int pos1, int pos2);
     DBC_MESSAGE* findMessage(const CANFrame &frame);
     DBC_MESSAGE* findMessage(const QString msgName);
+    DBC_MESSAGE* findMessage(const QString msgName, const QString fullyQualifiedNodeName);
+    DBC_MESSAGE* findMessage(const QString msgName, const QString nodeName, const QString fileNameNoExt);
     DBC_MESSAGE* findMessage(uint32_t id);
     DBC_MESSAGE* findMessageForFilter(uint32_t id, MatchingCriteria_t * matchingCriteria);
     int getFileCount();

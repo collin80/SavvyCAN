@@ -8,6 +8,8 @@
 #include <QDebug>
 #include <QApplication>
 #include <QRect>
+#include <QComboBox>
+#include <QStandardItemModel>
 //#include <QDesktopWidget>
 
 enum TimeStyle
@@ -25,6 +27,20 @@ public:
     static bool decimalMode;
     static TimeStyle timeStyle;
     static QString timeFormat;
+
+    static QString fullyQualifiedNameSeperator;
+
+    static void SetComboBoxItemEnabled(QComboBox * comboBox, int index, bool enabled)
+    {
+        auto * model = qobject_cast<QStandardItemModel*>(comboBox->model());
+        assert(model);
+        if(!model) return;
+
+        auto * item = model->item(index);
+        assert(item);
+        if(!item) return;
+        item->setEnabled(enabled);
+    }
 
     //determines whether the window position is within any available screens. If it is not we default
     //back to 0,0 which is going to be on screen. This fixes a problem where some operating systems would

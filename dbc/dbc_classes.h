@@ -71,6 +71,7 @@ class DBC_NODE
 public:
     QString name;
     QString comment;
+    QString sourceFileName;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
 
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
@@ -125,11 +126,11 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     DBC_SIGNAL *self;
 
     DBC_SIGNAL();
-    bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true);
+    bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true, bool outputUnit = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
     bool getValueString(int64_t intVal, QString &outString);
-    QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false);
+    QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false, bool outputUnit = true);
     QString processSignalTree(const CANFrame &frame);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);

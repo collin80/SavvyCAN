@@ -405,6 +405,8 @@ void MainWindow::readUpdateableSettings()
     int bpl = settings.value("Main/BytesPerLine", 8).toInt();
     model->setBytesPerLine(bpl);
 
+    CSVAbsTime = settings.value("Main/CSVAbsTime", false).toBool();
+
     if (settings.value("Main/FilterLabeling", false).toBool())
         ui->listFilters->setMaximumWidth(250);
     else
@@ -681,7 +683,7 @@ void MainWindow::updateFilterList()
     if (model == nullptr) return;
     const QMap<int, bool> *filters = model->getFiltersReference();
     const QMap<int, bool> *busFilters = model->getBusFiltersReference();
-    if (filters == nullptr && busFilters == nullptr) return;
+    if (filters == nullptr || busFilters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
 
@@ -1054,7 +1056,8 @@ void MainWindow::handleSaveDecodedMethod(bool csv)
     QSettings settings;
 
     QStringList filters;
-    filters.append(QString(tr("Text File (*.txt)")));
+    if (!csv) filters.append(QString(tr("Text File (*.txt *.TXT)")));
+    else filters.append(QString(tr("CSV File (*.csv *.CSV)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -1065,7 +1068,11 @@ void MainWindow::handleSaveDecodedMethod(bool csv)
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
-        if (!filename.contains('.')) filename += ".txt";
+        if (!filename.contains('.'))
+        {
+            if (!csv) filename += ".txt";
+            else filename += ".csv";
+        }
 
         if(csv)
             saveDecodedTextFileAsColumns(filename);
@@ -1097,9 +1104,17 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     int dataStartCol = 0;
 
     QString builderString;
-    //time
-    builderString += tr("Time") + ",";
-    dataStartCol++;
+    if (CSVAbsTime)
+    {
+        builderString += tr("Year") + "," + tr("Month") + "," + tr("Day") + "," + tr("Hour") + "," + tr("Minute") + "," + tr("Second") + "," + tr("Ms") + ",";
+        dataStartCol += 7;
+    }
+    else
+    {
+        //time
+        builderString += tr("Time") + ",";
+        dataStartCol++;
+    }
     //id
     builderString += tr("ID") + ",";
     dataStartCol++;
@@ -1180,8 +1195,19 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         dataLen = frame->payload().length();
 
         QString builderString;
-        builderString += QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6) + ",";
-        dataColumnsAdded++;
+        if (CSVAbsTime)
+        {
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch(frame->timeStamp().microSeconds() / 1000);
+            builderString += QString::number(dt.date().year()) + "," + QString::number(dt.date().month()) + ",";
+            builderString += QString::number(dt.date().day()) + "," + QString::number(dt.time().hour()) + ",";
+            builderString += QString::number(dt.time().minute()) + "," + QString::number(dt.time().second()) + ",";
+            builderString += QString::number(dt.time().msec()) + ",";
+            dataColumnsAdded += 7;
+        }
+        else {
+            builderString += QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6) + ",";
+            dataColumnsAdded++;
+        }
         //id
         builderString += Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat()) + ",";
         dataColumnsAdded++;

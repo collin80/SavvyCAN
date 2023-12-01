@@ -691,12 +691,20 @@ void DBCMainEditor::newMessage()
         DBC_MESSAGE *oldMsg = dbcFile->messageHandler->findMsgByID(msgID);
         if (oldMsg)
         {
-            msgPtr->name = oldMsg->name + QString::number(randGen.bounded(1000));
+            msgPtr->name = "Msg" + QString::number(randGen.bounded(500));
             msgPtr->ID = oldMsg->ID + 1;
+
+            DBC_MESSAGE *overlappedMsg = dbcFile->messageHandler->findMsgByID(msgPtr->ID);
+            while (overlappedMsg)
+            {
+                msgPtr->ID++;
+                overlappedMsg = dbcFile->messageHandler->findMsgByID(msgPtr->ID);
+            }
+
             msgPtr->len = oldMsg->len;
             msgPtr->bgColor = oldMsg->bgColor;
             msgPtr->fgColor = oldMsg->fgColor;
-            msgPtr->comment = oldMsg->comment;
+            msgPtr->comment = oldMsg->comment;            
         }
         else
         {
@@ -778,8 +786,7 @@ void DBCMainEditor::newSignal()
     if (!sigPtr->receiver) sigPtr->receiver = dbcFile->dbc_nodes[0]; //if receiver not set then set it to... something.
     msg->sigHandler->addSignal(sigPtr);
     QTreeWidgetItem *newSigItem = new QTreeWidgetItem();
-    QString sigInfo = sigPtr->name;
-    if (sigPtr->comment.length() > 0) sigInfo.append(" - ").append(sigPtr->comment);
+    QString sigInfo = createSignalText(sigPtr);
     newSigItem->setText(0, sigInfo);
     if (sigPtr->isMultiplexed) newSigItem->setIcon(0, multiplexedSignalIcon);
     else if (sigPtr->isMultiplexor) newSigItem->setIcon(0, multiplexorSignalIcon);
@@ -890,6 +897,21 @@ void DBCMainEditor::deleteNode(DBC_NODE *node)
     for (int i = numItems - 1; i > -1; i--)
     {
         if (msgs[i]->sender == node) deleteMessage(msgs[i]);
+
+        //also, each signal has a receiver field that references the nodes. It was probably stupid to store
+        //pointers to node structures in signals but that's how it is currently. Need to iterate over all
+        //signals in all messages and set the receiver field to Vector__XXX if the old receiver node was this one.
+        else //still check for signals with receiver set to this node
+        {
+            DBC_NODE *unset_node = dbcFile->findNodeByName("Vector__XXX");
+            QList<DBC_SIGNAL *> sigs = msgs[i]->sigHandler->getSignalsAsList();
+            int numSigs = msgs[i]->sigHandler->getCount();
+            for (int j = numSigs - 1; j > -1; j--)
+            {
+                DBC_SIGNAL *sig = sigs[j];
+                if (sig->receiver == node) sig->receiver = unset_node;
+            }
+        }
     }
 
     nodeToItem.remove(node);
@@ -942,6 +964,6 @@ void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
     itemToSignal.remove(currItem);
     signalToItem.remove(sig);
     ui->treeDBC->removeItemWidget(currItem, 0);
-    delete currItem;
+    //delete currItem; //already removed by above remove call
     dbcFile->setDirtyFlag();
 }
