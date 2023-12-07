@@ -357,7 +357,6 @@ void CANFrameModel::sortByColumn(int column)
 
 //End of custom sorting code
 
-// TODO - update this as well?
 void CANFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
