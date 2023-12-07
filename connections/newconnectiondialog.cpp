@@ -40,6 +40,10 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QSt
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
+
     selectSerial();
 
     qDebug() << "Was passed " << remoteDeviceIPGVRET->count() << " remote GVRET IPs";
@@ -89,6 +93,9 @@ void NewConnectionDialog::selectLawicel()
     ui->cbSerialSpeed->setHidden(false);
     ui->lblCANSpeed->setHidden(false);
     ui->lblSerialSpeed->setHidden(false);
+    ui->cbCanFd->setHidden(false);
+    ui->cbDataRate->setHidden(false);
+    ui->lblDataRate->setHidden(false);
 
     ui->cbPort->clear();
     ports = QSerialPortInfo::availablePorts();
@@ -108,6 +115,13 @@ void NewConnectionDialog::selectLawicel()
         ui->cbCANSpeed->addItem("500000");
         ui->cbCANSpeed->addItem("1000000");
     }
+    if (ui->cbDataRate->count() == 0)
+    {
+        ui->cbDataRate->addItem("1000000");
+        ui->cbDataRate->addItem("2000000");
+        ui->cbDataRate->addItem("4000000");
+        ui->cbDataRate->addItem("5000000");
+    }
     if (ui->cbSerialSpeed->count() == 0)
     {
         ui->cbSerialSpeed->addItem("115200");
@@ -116,6 +130,7 @@ void NewConnectionDialog::selectLawicel()
         ui->cbSerialSpeed->addItem("500000");
         ui->cbSerialSpeed->addItem("1000000");
         ui->cbSerialSpeed->addItem("2000000");
+        ui->cbSerialSpeed->addItem("3000000");
     }
 
 }
@@ -130,6 +145,9 @@ void NewConnectionDialog::selectSerial()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbPort->clear();
     ports = QSerialPortInfo::availablePorts();
@@ -147,6 +165,9 @@ void NewConnectionDialog::selectSocketCan()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbDeviceType->clear();
     QStringList plugins;
@@ -166,6 +187,9 @@ void NewConnectionDialog::selectRemote()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbPort->clear();
     foreach(QString pName, *remoteDeviceIPGVRET)
@@ -184,6 +208,9 @@ void NewConnectionDialog::selectKayak()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbPort->clear();
     foreach(QString pName, *remoteBusKayak)
@@ -202,6 +229,9 @@ void NewConnectionDialog::selectMQTT()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbPort->clear();
 }
@@ -216,6 +246,9 @@ void NewConnectionDialog::selectCANserver()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbPort->clear();
 }
@@ -230,6 +263,9 @@ void NewConnectionDialog::selectCANlogserver()
     ui->cbSerialSpeed->setHidden(true);
     ui->lblCANSpeed->setHidden(true);
     ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
 
     ui->cbPort->clear();
 }
@@ -330,7 +366,7 @@ QString NewConnectionDialog::getPortName()
     case CANCon::CANSERVER:
     case CANCon::CANLOGSERVER:
         return ui->cbPort->currentText();
-            
+
     default:
         qDebug() << "getPortName: can't get port";
     }
@@ -385,3 +421,21 @@ bool NewConnectionDialog::isSerialBusAvailable()
     if (QCanBus::instance()->plugins().count() > 0) return true;
     return false;
 }
+
+int NewConnectionDialog::getDataRate()
+{
+    if (getConnectionType() == CANCon::LAWICEL)
+    {
+        return ui->cbDataRate->currentText().toInt();
+    }
+    else return 0;
+}
+
+bool NewConnectionDialog::isCanFd()
+ {
+     if (getConnectionType() == CANCon::LAWICEL)
+     {
+         return ui->cbCanFd;
+     }
+     else return 0;
+ }
