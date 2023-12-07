@@ -184,6 +184,7 @@ public:
             return (double)timestamp / 1000.0;
             break;
         case TS_MICROS:
+        default:
             return (unsigned long long)(timestamp);
             break;
         case TS_SECONDS:

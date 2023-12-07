@@ -46,7 +46,9 @@ public:
     void setInterpretMode(bool);
     bool getInterpretMode();
     void setOverwriteMode(bool);
+    bool getOverwriteMode();
     void setHexMode(bool);
+    bool getHexMode();
     void setClearMode(bool mode);
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
@@ -55,6 +57,7 @@ public:
     void setAllFilters(bool state);
     void setTimeFormat(QString);
     void setBytesPerLine(int bpl);
+    int getBytesPerLine();
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);
     void normalizeTiming();
