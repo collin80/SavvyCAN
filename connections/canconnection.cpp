@@ -7,6 +7,8 @@ CANConnection::CANConnection(QString pPort,
                              CANCon::type pType,
                              int pSerialSpeed,
                              int pBusSpeed,
+                             bool pCanFd,
+                             int pDataRate,
                              int pNumBuses,
                              int pQueueLen,
                              bool pUseThread) :
@@ -38,6 +40,8 @@ CANConnection::CANConnection(QString pPort,
     }
 
     if (pBusSpeed > 0) mBusData[0].mBus.setSpeed(pBusSpeed);
+    mBusData[0].mBus.setCanFD(pCanFd);
+    if (pDataRate > 0) mBusData[0].mBus.setDataRate(pDataRate);
 
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {
