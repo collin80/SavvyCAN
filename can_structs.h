@@ -18,7 +18,7 @@ public:
 
     //used in overwrite mode
     uint32_t frameCount;
-    uint8_t changedPayloadBytes;
+    uint64_t changedPayloadBytes;
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
     {
