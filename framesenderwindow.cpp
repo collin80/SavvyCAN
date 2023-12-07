@@ -525,6 +525,7 @@ void FrameSenderWindow::handleTick()
     Trigger *trigger;
     if(mutex.tryLock())
     {
+        //qDebug() << "Ahh, I see you have a machine that goes PING!";
         int elapsed = elapsedTimer.restart();
         if (elapsed == 0) elapsed = 1;
         //Modifier modifier;
@@ -542,12 +543,15 @@ void FrameSenderWindow::handleTick()
                 }
                 continue; //abort any processing on this if it is not enabled.
             }
+            qDebug() << "Line" << i << "is enabled. Processing it.";
             if (sendData->triggers.count() == 0) break;
             for (int j = 0; j < sendData->triggers.count(); j++)
             {
                 trigger = &sendData->triggers[j];
-                if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
+                if ( (trigger->currCount >= trigger->maxCount) && (trigger->maxCount > 0) ) continue; //don't process if we've sent max frames we were supposed to
+                qDebug() << "Not at max count. Good.";
                 if (!trigger->readyCount) continue; //don't tick if not ready to tick
+                qDebug() << "Primed to fire";
                 //is it time to fire?
                 trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
                 if (trigger->msCounter >= trigger->milliseconds)
@@ -611,7 +615,9 @@ void FrameSenderWindow::doModifiers(int idx)
                 shadowReg = first & second;
                 break;
             case DIVISION:
-                shadowReg = first / second;
+                shadowReg = 0;
+                if (second != 0)
+                    shadowReg = first / second;
                 break;
             case MULTIPLICATION:
                 shadowReg = first * second;
@@ -626,7 +632,8 @@ void FrameSenderWindow::doModifiers(int idx)
                 shadowReg = first ^ second;
                 break;
             case MOD:
-                shadowReg = first % second;
+                shadowReg = 0;
+                if (second != 0) shadowReg = first % second;
             }
         }
         //Finally, drop the result into the proper data byte
@@ -832,10 +839,10 @@ void FrameSenderWindow::processTriggerText(int line)
                     thisTrigger.maxCount = Utility::ParseStringToNum(tok.left(tok.length() - 1));
                     thisTrigger.triggerMask |= TriggerMask::TRG_COUNT;
                     //if (thisTrigger.ID == -1) thisTrigger.ID = 0;
-                    if (thisTrigger.milliseconds == -1)
+                    if (thisTrigger.milliseconds < 1)
                     {
                         thisTrigger.milliseconds = 10;
-                        thisTrigger.triggerMask |= TriggerMask::TRG_ID;
+                        thisTrigger.triggerMask |= TriggerMask::TRG_MS;
                     }
                 }
                 else if (tok.startsWith("BUS"))
@@ -877,6 +884,7 @@ void FrameSenderWindow::processTriggerText(int line)
         thisTrigger.ID = 0;
         thisTrigger.maxCount = 1;
         thisTrigger.milliseconds = 10;
+        thisTrigger.readyCount = true;
         thisTrigger.triggerMask = TriggerMask::TRG_MS;
         sendingData[line].triggers.append(thisTrigger);
     }
@@ -1033,21 +1041,21 @@ void FrameSenderWindow::processCellChange(int line, int col)
             qDebug() << "setting ID to " << tempVal;
             break;
         case ST_COLS::SENDTAB_COL_LEN:
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 3)->text());
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, SENDTAB_COL_LEN)->text());
             if (tempVal < 0) tempVal = 0;
             if (tempVal > 8) tempVal = 8;            
             arr.resize(tempVal);
             sendingData[line].setPayload(arr);
             break;
         case ST_COLS::SENDTAB_COL_EXT:
-            if (ui->tableSender->item(line, 4)->checkState() == Qt::Checked) {
+            if (ui->tableSender->item(line, SENDTAB_COL_EXT)->checkState() == Qt::Checked) {
                 sendingData[line].setExtendedFrameFormat(true);
             } else {
                 sendingData[line].setExtendedFrameFormat(false);
             }
-            break;
+            break;   
         case ST_COLS::SENDTAB_COL_REM:
-            if (ui->tableSender->item(line, 5)->checkState() == Qt::Checked) {
+            if (ui->tableSender->item(line, SENDTAB_COL_REM)->checkState() == Qt::Checked) {
                 sendingData[line].setFrameType(QCanBusFrame::RemoteRequestFrame);
             } else {
                 sendingData[line].setFrameType(QCanBusFrame::DataFrame);

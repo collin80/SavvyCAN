@@ -21,6 +21,7 @@ TriggerDialog::TriggerDialog(QList<Trigger> trigs, QWidget *parent) :
         trig.sigName = "";
         trig.sigValueDbl = 0.0;
         trig.sigValueInt = 0;
+        trig.readyCount = true;
         trig.triggerMask = TriggerMask::TRG_MS;
         triggers.append(trig);
     }
@@ -167,6 +168,7 @@ void TriggerDialog::regenerateCurrentListItem()
     trig.sigName = "";
     trig.sigValueDbl = 0.0;
     trig.triggerMask = 0;
+    trig.readyCount = true;
 
     if (ui->cbMsgID->isChecked() && ui->cmMsgID->currentText().length() > 0)
     {
