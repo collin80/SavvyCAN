@@ -32,6 +32,8 @@ protected:
                   CANCon::type pType,
                   int pSerialSpeed,
                   int pBusSpeed,
+                  bool pCanFd,
+                  int pDataRate,
                   int pNumBuses,
                   int pQueueLen,
                   bool pUseThread);

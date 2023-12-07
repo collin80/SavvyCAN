@@ -26,6 +26,8 @@ public:
     QString getDriverName();
     int getSerialSpeed();
     int getBusSpeed();
+    bool isCanFd();
+    int getDataRate();
 
 public slots:
     void handleConnTypeChanged();
