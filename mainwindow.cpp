@@ -408,6 +408,8 @@ void MainWindow::readUpdateableSettings()
     model->setIgnoreDBCColors(ignoreDBCColors);
     int bpl = settings.value("Main/BytesPerLine", 8).toInt();
     model->setBytesPerLine(bpl);
+    int mcb = settings.value("Main/MarkChangedBytes", true).toBool();
+    model->setMarkChangedBytes(mcb);
 
     CSVAbsTime = settings.value("Main/CSVAbsTime", false).toBool();
 

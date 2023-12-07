@@ -210,6 +210,18 @@ bool CANFrameModel::getOverwriteMode()
     return overwriteDups;
 }
 
+void CANFrameModel::setMarkChangedBytes(bool mcf)
+{
+    beginResetModel();
+    markChangedBytes = mcf;
+    endResetModel();
+}
+
+bool CANFrameModel::getMarkChangedBytes()
+{
+    return markChangedBytes;
+}
+
 void CANFrameModel::setClearMode(bool mode)
 {
     filtersPersistDuringClear = mode;

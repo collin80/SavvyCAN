@@ -20,6 +20,7 @@ void CanDataItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
     const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
 
     bool overwriteDups = model->getOverwriteMode();
+    bool markChangedBytes = model->getMarkChangedBytes();
     int bytesPerLine = model->getBytesPerLine();
     bool useHexMode = model->getHexMode();
 
@@ -50,7 +51,7 @@ void CanDataItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
         // frame when overwriteDups mode is on.
         for (int i = 0; i < dataLen; i++)
         {
-            if((frame.changedPayloadBytes & (1 << i)) && overwriteDups) {
+            if((frame.changedPayloadBytes & (1 << i)) && overwriteDups && markChangedBytes) {
                 painter->setPen(Qt::red);
             }
             else {
@@ -77,7 +78,7 @@ void CanDataItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &o
                 x += charBounds.width();
             }
         }
-        
+
         painter->setPen(defaultColor);
 
         QString tempString;
