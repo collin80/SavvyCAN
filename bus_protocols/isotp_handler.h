@@ -26,6 +26,7 @@ public:
     void addFilter(int pBusId, uint32_t ID, uint32_t mask);
     void removeFilter(int pBusId, uint32_t ID, uint32_t mask);
     void clearAllFilters();
+    void setPadByte(char newpad);
 
 public slots:
     void updatedFrames(int);
@@ -50,6 +51,7 @@ private:
     QTimer frameTimer;
     uint32_t lastSenderID;
     uint32_t lastSenderBus;
+    char padByte;
 
     void processFrame(const CANFrame &frame);
     void checkNeedFlush(uint64_t ID);

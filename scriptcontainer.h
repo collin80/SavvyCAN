@@ -45,6 +45,7 @@ public slots:
     void clearFilters();
     void sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJSValue data);
     void setRxCallback(QJSValue cb);
+    void setPaddingByte(QJSValue byt);
 private slots:
     void newISOMessage(ISOTP_MESSAGE msg);
 private:

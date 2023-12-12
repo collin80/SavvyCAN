@@ -10,6 +10,7 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     sendPartialMessages = false;
     lastSenderBus = 0;
     lastSenderID = 0;
+    padByte = (char)0xAA;
 
     modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
 
@@ -19,6 +20,11 @@ ISOTP_HANDLER::ISOTP_HANDLER()
 ISOTP_HANDLER::~ISOTP_HANDLER()
 {
     disconnect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
+}
+
+void ISOTP_HANDLER::setPadByte(char newpad)
+{
+    padByte = newpad;
 }
 
 void ISOTP_HANDLER::setExtendedAddressing(bool mode)
@@ -67,7 +73,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
 
     if (data.length() < 8)
     {
-        QByteArray bytes(8,0);
+        QByteArray bytes(8, padByte);
         bytes.resize(8);
         bytes[0] = data.length();
         for (int i = 0; i < data.length(); i++) bytes[i + 1] = data[i];
@@ -76,7 +82,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
-        QByteArray bytes(8, 0);
+        QByteArray bytes(8, padByte);
         bytes[0] = 0x10 + (data.length() / 256);
         bytes[1] = data.length() & 0xFF;
         for (int i = 0; i < 6; i++) bytes[2 + i] = data[currByte++];
@@ -89,7 +95,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
         frameTimer.start();
         while (currByte < data.length())
         {
-            for (int b = 0; b < 8; b++) bytes[b] = 0x00;
+            for (int b = 0; b < 8; b++) bytes[b] = padByte;
             bytes[0] = 0x20 + sequence; //Consecutive Frame starts from 0x20 + 1 (2: Frame type, 1: Sequence number)
             sequence = (sequence + 1) & 0xF;
             int bytesToGo = data.length() - currByte;

@@ -329,6 +329,12 @@ void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJ
     handler->sendISOTPFrame(msg.bus, msg.frameId(), msg.payload());
 }
 
+void ISOTPScriptHelper::setPaddingByte(QJSValue byt)
+{
+    char newB = byt.toInt();
+    handler->setPadByte(newB);
+}
+
 void ISOTPScriptHelper::setRxCallback(QJSValue cb)
 {
     gotFrameFunction = cb;
