@@ -37,7 +37,9 @@ private slots:
     void deleteCurrentScript();
     void refreshSourceWindow();
     void saveScript();
+    void saveAsScript();
     void revertScript();
+    void reloadScript();
     void recompileScript();
     void changeCurrentScript();
     void newFrames(const CANConnection*, const QVector<CANFrame>&);
@@ -49,6 +51,7 @@ private:
     void closeEvent(QCloseEvent *event);
     void readSettings();
     void writeSettings();
+    void saveLog();
     bool eventFilter(QObject *obj, QEvent *event);
 
     Ui::ScriptingWindow *ui;
