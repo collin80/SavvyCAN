@@ -204,12 +204,15 @@ MainWindow::MainWindow(QWidget *parent) :
     temp.isReceived = true;
     temp.setTimeStamp(QCanBusFrame::TimeStamp(0, 100000000));
     model->addFrame(temp, true);
+    ui->canFramesView->resizeRowToContents(0);      // Resize the row to fit the contents so we get a proper height value
     qApp->processEvents();
     tickGUIUpdate(); //force a GUI refresh so that the row exists to measure
     normalRowHeight = ui->canFramesView->rowHeight(0);
     if (normalRowHeight == 0) normalRowHeight = 30; //should not be necessary but provides a sane number if something stupid happened.
     qDebug() << "normal row height = " << normalRowHeight;
     model->clearFrames();
+
+    ui->canFramesView->verticalHeader()->setDefaultSectionSize(normalRowHeight);    // Set the default height for all rows to the height that was calculated
 
     //connect(CANConManager::getInstance(), CANConManager::connectionStatusUpdated, this, MainWindow::connectionStatusUpdated);
     connect(CANConManager::getInstance(), SIGNAL(connectionStatusUpdated(int)), this, SLOT(connectionStatusUpdated(int)));
