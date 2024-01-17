@@ -188,12 +188,22 @@
        <item row="10" column="0">
         <widget class="QLabel" name="label_15">
          <property name="text">
-          <string>Multiplex Low Value</string>
+          <string>Multiplex value</string>
          </property>
         </widget>
        </item>
        <item row="10" column="1">
-        <widget class="QLineEdit" name="txtMultiplexLow"/>
+        <widget class="QLineEdit" name="txtMultiplexValues"/>
+       </item>
+       <item row="12" column="0">
+        <widget class="QLabel" name="label_16">
+         <property name="text">
+          <string>Multiplex Parent</string>
+         </property>
+        </widget>
+       </item>
+       <item row="12" column="1">
+        <widget class="QComboBox" name="cbMultiplexParent"/>
        </item>
        <item row="13" column="0">
         <widget class="QLabel" name="label_13">
@@ -205,23 +215,12 @@
        <item row="13" column="1">
         <widget class="QLineEdit" name="txtComment"/>
        </item>
-       <item row="12" column="1">
-        <widget class="QComboBox" name="cbMultiplexParent"/>
-       </item>
-       <item row="12" column="0">
-        <widget class="QLabel" name="label_16">
-         <property name="text">
-          <string>Multiplex Parent</string>
-         </property>
-        </widget>
-       </item>
        <item row="11" column="1">
-        <widget class="QLineEdit" name="txtMultiplexHigh"/>
-       </item>
-       <item row="11" column="0">
-        <widget class="QLabel" name="label_17">
+        <widget class="QLabel" name="label_3">
          <property name="text">
-          <string>Multiplex High Value</string>
+          <string>Single values has to be separated by semicolons
+and the value ranges by hypens
+(e.g.: 1;2;5-7)</string>
          </property>
         </widget>
        </item>
@@ -263,8 +262,7 @@
   <tabstop>rbMultiplexed</tabstop>
   <tabstop>rbMultiplexor</tabstop>
   <tabstop>rbExtended</tabstop>
-  <tabstop>txtMultiplexLow</tabstop>
-  <tabstop>txtMultiplexHigh</tabstop>
+  <tabstop>txtMultiplexValues</tabstop>
   <tabstop>cbMultiplexParent</tabstop>
   <tabstop>txtComment</tabstop>
   <tabstop>valuesTable</tabstop>

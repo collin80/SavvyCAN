@@ -12,23 +12,12 @@ DBC_MESSAGE::DBC_MESSAGE()
     sender = nullptr;
 }
 
-DBC_SIGNAL::DBC_SIGNAL()
+void DBC_SIGNAL::addMultiplexRange(int min, int max)
 {
-    bias = 0;
-    isMultiplexed = false;
-    isMultiplexor = false;
-    max = 1;
-    min = 0;
-    multiplexLowValue = 0;
-    multiplexHighValue = 0;
-    factor = 1.0;
-    intelByteOrder = false;
-    parentMessage = nullptr;
-    multiplexParent = nullptr;
-    receiver = nullptr;
-    signalSize = 1;
-    startBit = 1;
-    valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
+    if (min != max)
+        hasExtendedMultiplexing = true;
+    isMultiplexed = true;
+    multiplexLowAndHighValues.append(QPair<int, int>(min, max));
 }
 
 bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
@@ -42,17 +31,118 @@ bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
             {
                 int val;
                 if (!multiplexParent->processAsInt(frame, val)) return false;
-                if ((val >= multiplexLowValue) && (val <= multiplexHighValue))
-                {
-                    return true;
-                }
-                else return false;
+                return isValueMatchingMultiplex(val);
             }
             else return false;
         }
         else return false;
     }
     else return true; //if signal isn't multiplexed then it's definitely in the message
+}
+
+bool DBC_SIGNAL::isValueMatchingMultiplex(int val) const
+{
+    for (auto limitPair : multiplexLowAndHighValues) {
+        if ((limitPair.first <= val) && (val <= limitPair.second))
+            return true;
+    }
+    return false;
+}
+
+QString DBC_SIGNAL::multiplexDbcString(DbcMuxStringFormat fmt) const
+{
+    QString ret;
+    for (auto limitPair : multiplexLowAndHighValues) {
+        if (fmt == MuxStringFormat_DbcFile) {
+            if (!ret.isEmpty())
+                ret.append(QStringLiteral(" "));
+            ret.append(QString("%1-%2").arg(limitPair.first).arg(limitPair.second));
+        } else {
+            if (!ret.isEmpty())
+                ret.append(QStringLiteral(";"));
+            ret.append(QString::number(limitPair.first));
+            if (limitPair.first != limitPair.second)
+                ret.append(QString("-%1").arg(limitPair.second));
+        }
+    }
+    return ret;
+}
+
+void DBC_SIGNAL::copyMultiplexValuesFromSignal(const DBC_SIGNAL &signal)
+{
+    isMultiplexed = signal.isMultiplexed;
+    for (auto multiplexSignalPair : signal.multiplexLowAndHighValues) {
+        multiplexLowAndHighValues.append(multiplexSignalPair);
+    }
+}
+
+/**
+ * @brief DBC_SIGNAL::parseDbcMultiplexUiString
+ * Method for parsing the Vector CANDB++ like multiplex definitions:
+ *
+ * Single values has to be separated by semicolons
+ * and the value ranges by hypens
+ * (e.g.: 1;2;5-7)
+ * @param multiplexes in  the format from the UI
+ * @param errorString output parameter to pass the failure text if parsing failed
+ * @return true if the multiplexes parameter could be parsed properly
+ */
+bool DBC_SIGNAL::parseDbcMultiplexUiString(const QString &multiplexes, QString &errorString)
+{
+    QList<QPair<int, int>> multiplexLowAndHighValuesTemp;
+    const auto muxes = multiplexes.split(QChar(';'), Qt::SkipEmptyParts);
+    for (const auto &mux : muxes) {
+        bool ok = false;
+        if (mux.contains(QChar('-'))) {
+            const auto minMax = mux.split(QChar('-'));
+            if (minMax.count() != 2) {
+                errorString = QObject::tr("The %1 part contains more than one '-' sign").arg(mux);
+                return false;
+            }
+
+            int min = minMax.at(0).toInt(&ok);
+            if (!ok) {
+                errorString = QObject::tr("Unable to parse the %1 part to integer").arg(minMax.at(0));
+                return false;
+            }
+
+            int max = minMax.at(1).toInt(&ok);
+            if (!ok) {
+                errorString = QObject::tr("Unable to parse the %1 part to integer").arg(minMax.at(1));
+                return false;
+            }
+
+            multiplexLowAndHighValuesTemp.append(QPair<int, int>(min, max));
+        } else {
+            int value = mux.toInt(&ok);
+            if (!ok) {
+                errorString = QObject::tr("Unable to parse the %1 part to integer").arg(mux);
+                return false;
+            }
+            multiplexLowAndHighValuesTemp.append(QPair<int, int>(value, value));
+        }
+    }
+    multiplexLowAndHighValues.clear();
+    multiplexLowAndHighValues = multiplexLowAndHighValuesTemp;
+    return true;
+}
+
+bool DBC_SIGNAL::multiplexesIdenticalToSignal(DBC_SIGNAL *other) const
+{
+    auto othersMuxes = other->multiplexLowAndHighValues;
+    for (auto myMux : multiplexLowAndHighValues) {
+        bool found = false;
+        for (auto otherMux : othersMuxes) {
+            if (myMux == otherMux) {
+                othersMuxes.removeAll(myMux);
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return false;
+    }
+    return othersMuxes.isEmpty();
 }
 
 //Take all the children of this signal and see if they exist in the message. Can be called recursively to descend the dependency tree
@@ -69,7 +159,7 @@ QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
 
     foreach (DBC_SIGNAL *sig, multiplexedChildren)
     {
-        if ( (val >= sig->multiplexLowValue) && (val <= sig->multiplexHighValue) )
+        if (sig->isValueMatchingMultiplex(val))
         {
             qDebug() << "Found match for multiplex value range - " << sig->name;
             QString sigString;

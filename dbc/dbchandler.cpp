@@ -507,11 +507,6 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     //bool isMultiplexed = false;
     DBC_SIGNAL sig;
 
-    sig.multiplexLowValue = 0;
-    sig.multiplexHighValue = 0;
-    sig.isMultiplexed = false;
-    sig.isMultiplexor = false;
-
     qDebug() << "Found a SG line";
     regex.setPattern("^SG\\_ *([-\\w]+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
@@ -529,10 +524,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         if (match.hasMatch())
         {
             qDebug() << "Multiplexed signal";
-            //isMultiplexed = true;
-            sig.isMultiplexed = true;
-            sig.multiplexLowValue = match.captured(2).toInt();
-            sig.multiplexHighValue = sig.multiplexLowValue;
+            sig.addMultiplexRange(match.captured(2).toInt(), match.captured(2).toInt());
             offset = 1;
         }
         else
@@ -543,9 +535,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             {
                 qDebug() << "Extended Multiplexor Signal";
                 sig.isMultiplexor = true; //we don't set the local isMessageMultiplexor variable because this isn't the top level multiplexor
-                sig.isMultiplexed = true; //but, it is both a multiplexor and multiplexed
-                sig.multiplexLowValue = match.captured(2).toInt();
-                sig.multiplexHighValue = sig.multiplexLowValue;
+                sig.addMultiplexRange(match.captured(2).toInt(), match.captured(2).toInt());
                 offset = 1;
             }
             else
@@ -643,7 +633,7 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     QRegularExpressionMatch match;
 
     qDebug() << "Found a multiplex definition line";
-    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) (\\d+)\\-(\\d+);");
+    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) ((?:\\d+\\-\\d+[\\s]*[\\,]?[\\s]*)*)");
     match = regex.match(line);
     //captured 1 is message ID
     //Captured 2 is signal name
@@ -661,11 +651,21 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
                 DBC_SIGNAL *parentSignal = msg->sigHandler->findSignalByName(match.captured(3));
                 if (parentSignal != nullptr)
                 {
-                    //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
+                    const QStringList ranges = match.captured(4).split(QChar(','), Qt::SkipEmptyParts);
+                    for (const QString &range : ranges) {
+                        //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
+                        const QStringList rangeSides = range.trimmed().split(QChar('-'));
+                        if (rangeSides.count() != 2) {
+                            qDebug() << QString("Malformed range definition: '%2' found in the multiplexed signal: %1")
+                                            .arg(match.captured(1).arg(range.trimmed()));
+                            return false;
+                        }
+                        int rangeMin = rangeSides.at(0).toInt();
+                        int rangeMax = rangeSides.at(1).toInt();
+                        thisSignal->multiplexParent = parentSignal;
+                        thisSignal->addMultiplexRange(rangeMin, rangeMax);
+                    }
                     parentSignal->multiplexedChildren.append(thisSignal);
-                    thisSignal->multiplexParent = parentSignal;
-                    thisSignal->multiplexLowValue = match.captured(4).toInt();
-                    thisSignal->multiplexHighValue = match.captured(5).toInt();
                     return true;
                 }
             }
@@ -1458,7 +1458,7 @@ bool DBCFile::saveFile(QString fileName)
             }
             //check for the two telltale signs that we've got extended multiplexing going on.
             if (sig->isMultiplexed && sig->isMultiplexor) hasExtendedMultiplexing = true;
-            if (sig->multiplexLowValue != sig->multiplexHighValue) hasExtendedMultiplexing = true;
+            if (sig->hasExtendedMultiplexing) hasExtendedMultiplexing = true;
 
             msgOutput.append(" : " + QString::number(sig->startBit) + "|" + QString::number(sig->signalSize) + "@");
 
@@ -1625,7 +1625,7 @@ bool DBCFile::saveFile(QString fileName)
                 {
                     msgOutput.append("SG_MUL_VAL_ " + QString::number(ID) + " ");
                     msgOutput.append(sig->name + " " + sig->multiplexParent->name + " ");
-                    msgOutput.append(QString::number(sig->multiplexLowValue) + "-" + QString::number(sig->multiplexHighValue) + ";");
+                    msgOutput.append(sig->multiplexDbcString() + ";");
                     msgOutput.append("\n");
                     extMultiplexOutput.append(msgOutput);
                     msgOutput.clear(); //got to reset it after writing
@@ -2042,14 +2042,7 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
                 if (!sigObj.find("mux_id")->isUndefined())
                 {
                     QJsonValue muxVal = sigObj.find("mux_id").value();
-                    sig.multiplexLowValue = muxVal.toInt();
-                    sig.multiplexHighValue = sig.multiplexLowValue;
-                    sig.isMultiplexed = true;
-                }
-                else
-                {
-                    sig.multiplexLowValue = 0;
-                    sig.multiplexHighValue = 0;
+                    sig.addMultiplexRange(muxVal.toInt(), muxVal.toInt());
                 }
                 QJsonValue muxerVal = sigObj.find("is_muxer").value();
                 if (!muxerVal.isNull())
