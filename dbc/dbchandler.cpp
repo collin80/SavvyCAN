@@ -643,7 +643,7 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     QRegularExpressionMatch match;
 
     qDebug() << "Found a multiplex definition line";
-    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) (\\d+)\\-(\\d+);");
+    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) ((?:\\d+\\-\\d+[\\s]*[\\,]?[\\s]*)*)");
     match = regex.match(line);
     //captured 1 is message ID
     //Captured 2 is signal name
@@ -661,11 +661,22 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
                 DBC_SIGNAL *parentSignal = msg->sigHandler->findSignalByName(match.captured(3));
                 if (parentSignal != nullptr)
                 {
-                    //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
-                    parentSignal->multiplexedChildren.append(thisSignal);
-                    thisSignal->multiplexParent = parentSignal;
-                    thisSignal->multiplexLowValue = match.captured(4).toInt();
-                    thisSignal->multiplexHighValue = match.captured(5).toInt();
+                    const QStringList ranges = match.captured(4).split(QChar(','), Qt::SkipEmptyParts);
+                    for (const QString &range : ranges) {
+                        //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
+                        const QStringList rangeSides = range.trimmed().split(QChar('-'));
+                        if (rangeSides.count() != 2) {
+                            qDebug() << QString("Malformed range definition: '%2' found in the multiplexed signal: %1")
+                                            .arg(match.captured(1).arg(range.trimmed()));
+                            return false;
+                        }
+                        int rangeMin = rangeSides.at(0).toInt();
+                        int rangeMax = rangeSides.at(1).toInt();
+                        parentSignal->multiplexedChildren.append(thisSignal);
+                        thisSignal->multiplexParent = parentSignal;
+                        thisSignal->multiplexLowValue = rangeMin;
+                        thisSignal->multiplexHighValue = rangeMax;
+                    }
                     return true;
                 }
             }
