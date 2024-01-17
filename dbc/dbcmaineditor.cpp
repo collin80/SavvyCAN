@@ -442,9 +442,7 @@ QString DBCMainEditor::createSignalText(DBC_SIGNAL *sig)
     QString sigInfo;
     if (sig->isMultiplexed)
     {
-        sigInfo = "(" + QString::number(sig->multiplexLowValue);
-        if (sig->multiplexHighValue != sig->multiplexLowValue) sigInfo += "-" + QString::number(sig->multiplexHighValue);
-        sigInfo += ") ";
+        sigInfo = "(" + sig->multiplexDbcString() + ") ";
     }
     sigInfo.append(sig->name);
 
@@ -624,8 +622,7 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
         sig.isMultiplexor = false; //sigSource->isMultiplexor;
         sig.max = sigSource->max;
         sig.min = sigSource->min;
-        sig.multiplexLowValue = sigSource->multiplexLowValue;
-        sig.multiplexHighValue = sigSource->multiplexHighValue;
+        sig.copyMultiplexValuesFromSignal(*sigSource);
         sig.factor = sigSource->factor;
         sig.intelByteOrder = sigSource->intelByteOrder;
         sig.parentMessage = &msg;
