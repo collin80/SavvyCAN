@@ -1054,8 +1054,6 @@ void FrameSenderWindow::processCellChange(int line, int col)
             }
             break;
         case ST_COLS::SENDTAB_COL_DATA: //Data bytes
-            for (int i = 0; i < 8; i++) sendingData[line].payload().data()[i] = 0;
-
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
             tokens = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
 #else
