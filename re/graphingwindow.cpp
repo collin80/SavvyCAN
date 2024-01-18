@@ -39,7 +39,7 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     if (Utility::timeStyle == TS_CLOCK)
     {
-        QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+        QSharedPointer timeTicker = QSharedPointer<QCPAxisTickerTime>::create();
         timeTicker->setTimeFormat("%h:%m:%s.%z");
         ui->graphingView->xAxis->setTicker(timeTicker);
     }
@@ -571,7 +571,7 @@ void GraphingWindow::removeSelectedGraph()
         int idx = -1;
         for (int i = 0; i < graphParams.count(); i++)
         {
-            if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+            if (graphParams[i].ref == ui->graphingView->selectedGraphs().constFirst())
             {
                 idx = i;
                 break;
@@ -590,7 +590,7 @@ void GraphingWindow::removeSelectedGraph()
 
         graphParams.removeAt(idx);
 
-        ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().first());
+        ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().constFirst());
 
         if (graphParams.count() == 0) needScaleSetup = true;
 
@@ -605,7 +605,7 @@ void GraphingWindow::editSelectedGraph()
         int idx = -1;
         for (int i = 0; i < graphParams.count(); i++)
         {
-            if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+            if (graphParams[i].ref == ui->graphingView->selectedGraphs().constFirst())
             {
                 idx = i;
                 break;
@@ -701,7 +701,6 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
 
 void GraphingWindow::saveGraphs()
 {
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -718,7 +717,7 @@ void GraphingWindow::saveGraphs()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (dialog.selectedNameFilter() == filters[0])
@@ -741,7 +740,6 @@ void GraphingWindow::saveGraphs()
 
 void GraphingWindow::saveSpreadsheet()
 {
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -756,14 +754,14 @@ void GraphingWindow::saveSpreadsheet()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (!filename.contains('.')) filename += ".csv";
 
-        QFile *outFile = new QFile(filename);
+        QFile outFile(filename);
 
-        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
             return;
 
         /*
@@ -798,19 +796,19 @@ void GraphingWindow::saveSpreadsheet()
         QList<int> indices;
         indices.reserve(numGraphs);
 
-        outFile->write("TimeStamp");
+        outFile.write("TimeStamp");
         for (auto && graph : graphParams) {
             indices.append(0);
-            outFile->putChar(',');
-            outFile->write(graph.graphName.toUtf8());
+            outFile.putChar(',');
+            outFile.write(graph.graphName.toUtf8());
         }
-        outFile->write("\n");
+        outFile.write("\n");
 
         for (int j = 1; j < (maxCount - 1); j++)
         {
             double currentX = xMin + (j * sliceSize);
             qDebug() << "X: " << currentX;
-            outFile->write(QString::number(currentX, 'f').toUtf8());
+            outFile.write(QString::number(currentX, 'f').toUtf8());
             for (int k = 0; k < numGraphs; k++)
             {
                 double value = 0.0;
@@ -854,20 +852,19 @@ void GraphingWindow::saveSpreadsheet()
                     value = Utility::Lerp(graphParams[k].y[cursor], graphParams[k].y[cursor+1], progress);
                     qDebug() << "Span: " << span << " Prog: " << progress << " Value: " << value;
                 }
-                outFile->putChar(',');
-                outFile->write(QString::number(value).toUtf8());
+                outFile.putChar(',');
+                outFile.write(QString::number(value).toUtf8());
             }
-            outFile->write("\n");
+            outFile.write("\n");
         }
 
-        outFile->close();
+        outFile.close();
     }
 
 }
 
 void GraphingWindow::saveDefinitions()
 {
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -882,79 +879,78 @@ void GraphingWindow::saveDefinitions()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (!filename.contains('.')) filename += ".gdf";
 
-        QFile *outFile = new QFile(filename);
+        QFile outFile(filename);
 
-        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
             return;
 
         QList<GraphParams>::iterator iter;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
         {
-            outFile->write("Z,");
-            outFile->write(QString::number(iter->ID, 16).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->mask, 16).toUtf8());
-            outFile->putChar(',');
-            if (iter->intelFormat) outFile->write(QString::number(iter->startBit).toUtf8());
-                else outFile->write(QString::number(iter->startBit * -1).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->numBits).toUtf8());
-            outFile->putChar(',');
-            if (iter->isSigned) outFile->putChar('Y');
-                else outFile->putChar('N');
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->bias).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->scale).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->stride).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->bus).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineColor.red()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineColor.green()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineColor.blue()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(iter->graphName.toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.red()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.green()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.blue()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.alpha()).toUtf8());
-            outFile->putChar(',');
-            if (iter->drawOnlyPoints) outFile->putChar('Y');
-                else outFile->putChar('N');
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->pointType).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineWidth).toUtf8());
+            outFile.write("Z,");
+            outFile.write(QString::number(iter->ID, 16).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->mask, 16).toUtf8());
+            outFile.putChar(',');
+            if (iter->intelFormat) outFile.write(QString::number(iter->startBit).toUtf8());
+                else outFile.write(QString::number(iter->startBit * -1).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->numBits).toUtf8());
+            outFile.putChar(',');
+            if (iter->isSigned) outFile.putChar('Y');
+                else outFile.putChar('N');
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->bias).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->scale).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->stride).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->bus).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineColor.red()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineColor.green()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineColor.blue()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(iter->graphName.toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.red()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.green()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.blue()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.alpha()).toUtf8());
+            outFile.putChar(',');
+            if (iter->drawOnlyPoints) outFile.putChar('Y');
+                else outFile.putChar('N');
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->pointType).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineWidth).toUtf8());
             if (iter->associatedSignal)
             {
-                outFile->putChar(',');
-                outFile->write(iter->associatedSignal->parentMessage->name.toUtf8());
-                outFile->putChar(',');
-                outFile->write(iter->associatedSignal->name.toUtf8());
+                outFile.putChar(',');
+                outFile.write(iter->associatedSignal->parentMessage->name.toUtf8());
+                outFile.putChar(',');
+                outFile.write(iter->associatedSignal->name.toUtf8());
             }
 
-            outFile->write("\n");
+            outFile.write("\n");
         }
-        outFile->close();
+        outFile.close();
     }
 }
 
 void GraphingWindow::loadDefinitions()
 {
-    QString filename;
     QFileDialog dialog;
     QSettings settings;
 
@@ -971,17 +967,17 @@ void GraphingWindow::loadDefinitions()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
-        QFile *inFile = new QFile(filename);
+        QFile inFile(filename);
         QByteArray line;
 
-        if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+        if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
             return;
 
-        while (!inFile->atEnd()) {
-            line = inFile->readLine().simplified();
+        while (!inFile.atEnd()) {
+            line = inFile.readLine().simplified();
             if (line.length() > 2)
             {
                 GraphParams gp;
@@ -1203,7 +1199,7 @@ void GraphingWindow::loadDefinitions()
                 }
             }
         }
-        inFile->close();
+        inFile.close();
     }
 }
 
