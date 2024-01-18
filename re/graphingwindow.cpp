@@ -779,12 +779,12 @@ void GraphingWindow::saveSpreadsheet()
         QList<GraphParams>::iterator iter;
         double xMin = std::numeric_limits<double>::max(),
                xMax = std::numeric_limits<double>::min();
-        size_t maxCount = 0;
-        size_t numGraphs = graphParams.length();
+        int maxCount = 0;
+        int numGraphs = graphParams.length();
         for (auto && graph : graphParams) {
             xMin = std::min(xMin, graph.x[0]);
             xMax = std::max(xMax, graph.x[graph.x.count() - 1]);
-            maxCount = std::max(maxCount, static_cast<size_t>(graph.x.count()));
+            maxCount = std::max(maxCount, graph.x.count());
         }
         qDebug() << "xMin: " << xMin;
         qDebug() << "xMax: " << xMax;
@@ -795,8 +795,6 @@ void GraphingWindow::saveSpreadsheet()
         double xSize = xMax - xMin;
         double sliceSize = xSize / ((double)maxCount);
         double equivValue = sliceSize / 100.0;
-        double currentX;
-        double value;
         QList<int> indices;
         indices.reserve(numGraphs);
 
@@ -808,14 +806,14 @@ void GraphingWindow::saveSpreadsheet()
         }
         outFile->write("\n");
 
-        for (size_t j = 1; j < (maxCount - 1); j++)
+        for (int j = 1; j < (maxCount - 1); j++)
         {
-            currentX = xMin + (j * sliceSize);
+            double currentX = xMin + (j * sliceSize);
             qDebug() << "X: " << currentX;
             outFile->write(QString::number(currentX, 'f').toUtf8());
-            for (size_t k = 0; k < numGraphs; k++)
+            for (int k = 0; k < numGraphs; k++)
             {
-                value = 0.0;
+                double value = 0.0;
 
                 // move cursor to last sample before currentX
                 while (graphParams[k].x[indices[k]+1] < currentX)
@@ -849,7 +847,7 @@ void GraphingWindow::saveSpreadsheet()
                 else
                 {
                     // find index, where x >= currentX
-                    size_t cursor = indices[k];
+                    int cursor = indices[k];
                     double span = graphParams[k].x[cursor+1] - graphParams[k].x[cursor];
                     double progress = (currentX - graphParams[k].x[cursor]) / span;
                     Q_ASSERT(progress >= 0.0 && progress <= 1.0);
@@ -1325,10 +1323,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     double yminval=10000000.0, ymaxval = -1000000.0;
     double xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
-    int sBit, bits;
-    bool intelFormat, isSigned;
     QString tempStr;
-    double x,y;
+    double x{}, y{};
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start bit: " << params.startBit;
@@ -1365,10 +1361,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     //params.x.fill(0, numEntries);
     //params.y.fill(0, numEntries);
 
-    sBit = params.startBit;
-    bits = params.numBits;
-    intelFormat = params.intelFormat;
-    isSigned = params.isSigned;
+    int sBit = params.startBit;
+    int bits = params.numBits;
+    bool intelFormat = params.intelFormat;
+    bool isSigned = params.isSigned;
 
     for (int j = 0; j < numEntries; j++)
     {
@@ -1558,16 +1554,16 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 void GraphingWindow::moveLegend()
 {
     qDebug() << "moveLegend";
-  if (QAction* contextAction = qobject_cast<QAction*>(sender())) // make sure this slot is really called by a context menu action, so it carries the data we need
-  {
-    bool ok;
-    int dataInt = contextAction->data().toInt(&ok);
-    if (ok)
+    if (QAction* contextAction = qobject_cast<QAction*>(sender())) // make sure this slot is really called by a context menu action, so it carries the data we need
     {
-      ui->graphingView->axisRect()->insetLayout()->setInsetAlignment(0, (Qt::Alignment)dataInt);
-      ui->graphingView->replot();
+        bool ok;
+        int dataInt = contextAction->data().toInt(&ok);
+        if (ok)
+        {
+            ui->graphingView->axisRect()->insetLayout()->setInsetAlignment(0, (Qt::Alignment)dataInt);
+            ui->graphingView->replot();
+        }
     }
-  }
 }
 
 GraphParams::GraphParams()
