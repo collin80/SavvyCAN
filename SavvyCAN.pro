@@ -8,7 +8,7 @@ QT = core gui printsupport qml serialbus serialport widgets help network opengl
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
-CONFIG += c++11
+CONFIG += c++17
 CONFIG += NO_UNIT_TESTS
 
 DEFINES += QCUSTOMPLOT_USE_OPENGL
