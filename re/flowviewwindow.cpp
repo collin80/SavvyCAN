@@ -851,7 +851,7 @@ void FlowViewWindow::updatePosition(bool forward)
         int maxVal = qMin(chunk * 8 + 8, frameCache.at(currentPosition).payload().length());
         for (int i = chunk * 8; i < maxVal; i++)
         {
-            unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload().data()[i]);
+            unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload()[i]);
             cngByte = currBytes[i] ^ thisByte;
             changedBits |= (uint64_t)cngByte << (8ull * (i & 7));
         }
