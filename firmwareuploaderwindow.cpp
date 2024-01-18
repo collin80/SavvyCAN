@@ -133,38 +133,38 @@ void FirmwareUploaderWindow::timerElapsed()
 
 void FirmwareUploaderWindow::sendFirmwareChunk()
 {
-    CANFrame *output = new CANFrame;
+    CANFrame output;
     int firmwareLocation = currentSendingPosition * 4;
     int xorByte = 0;
-    output->setExtendedFrameFormat(false);
+    output.setExtendedFrameFormat(false);
     QByteArray bytes(7,0);
-    output->bus = bus;
-    output->setFrameId(baseAddress + 0x16);
-    output->payload()[0] = currentSendingPosition & 0xFF;
-    output->payload()[1] = (currentSendingPosition >> 8) & 0xFF;
-    output->payload()[2] = firmwareData[firmwareLocation++];
-    output->payload()[3] = firmwareData[firmwareLocation++];
-    output->payload()[4] = firmwareData[firmwareLocation++];
-    output->payload()[5] = firmwareData[firmwareLocation++];
-    for (int i = 0; i < 6; i++) xorByte = xorByte ^ static_cast<unsigned char>(output->payload()[i]);
-    output->payload()[6] = xorByte;
-    output->setPayload(bytes);
-    CANConManager::getInstance()->sendFrame(*output);
+    output.bus = bus;
+    output.setFrameId(baseAddress + 0x16);
+    output.payload()[0] = currentSendingPosition & 0xFF;
+    output.payload()[1] = (currentSendingPosition >> 8) & 0xFF;
+    output.payload()[2] = firmwareData[firmwareLocation++];
+    output.payload()[3] = firmwareData[firmwareLocation++];
+    output.payload()[4] = firmwareData[firmwareLocation++];
+    output.payload()[5] = firmwareData[firmwareLocation++];
+    for (int i = 0; i < 6; i++) xorByte ^= static_cast<unsigned char>(output.payload()[i]);
+    output.payload()[6] = xorByte;
+    output.setPayload(bytes);
+    CANConManager::getInstance()->sendFrame(output);
     timer->start();
 }
 
 void FirmwareUploaderWindow::sendFirmwareEnding()
 {
-    CANFrame *output = new CANFrame;
-    output->setExtendedFrameFormat(false);
-    output->bus = bus;
+    CANFrame output;
+    output.setExtendedFrameFormat(false);
+    output.bus = bus;
     QByteArray bytes(4,0);
-    output->setFrameId(baseAddress + 0x30);
-    output->payload()[3] = 0xC0;
-    output->payload()[2] = 0xDE;
-    output->payload()[1] = 0xFA;
-    output->payload()[0] = 0xDE;
-    output->setPayload(bytes);
+    output.setFrameId(baseAddress + 0x30);
+    output.payload()[3] = 0xC0;
+    output.payload()[2] = 0xDE;
+    output.payload()[1] = 0xFA;
+    output.payload()[0] = 0xDE;
+    output.setPayload(bytes);
     //sendCANFrame(output, bus);
 }
 
@@ -182,12 +182,12 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         qDebug() << "Base address: " + QString::number(baseAddress);
         CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x10, 0x7FF, this);
         CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x20, 0x7FF, this);
-        CANFrame *output = new CANFrame;
-        output->setExtendedFrameFormat(false);
+        CANFrame output;
+        output.setExtendedFrameFormat(false);
         QByteArray bytes(8,0);
-        output->bus = bus;
-        output->setFrameId(baseAddress);
-        output->setFrameType(QCanBusFrame::DataFrame);
+        output.bus = bus;
+        output.setFrameId(baseAddress);
+        output.setFrameType(QCanBusFrame::DataFrame);
 
         bytes[0] = 0xEF;
         bytes[1] = 0xBE;
@@ -197,8 +197,8 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         bytes[5] = (token >> 8) & 0xFF;
         bytes[6] = (token >> 16) & 0xFF;
         bytes[7] = (token >> 24) & 0xFF;
-        output->setPayload(bytes);
-        CANConManager::getInstance()->sendFrame(*output);
+        output.setPayload(bytes);
+        CANConManager::getInstance()->sendFrame(output);
     }
     else //stop anything in process
     {
@@ -209,7 +209,6 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
 
 void FirmwareUploaderWindow::handleLoadFile()
 {
-    QString filename;
     QFileDialog dialog;
 
     QStringList filters;
@@ -221,7 +220,7 @@ void FirmwareUploaderWindow::handleLoadFile()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
 
         loadBinaryFile(filename);
     }
@@ -232,22 +231,20 @@ void FirmwareUploaderWindow::loadBinaryFile(QString filename)
 
     if (transferInProgress) handleStartStopTransfer();
 
-    QFile *inFile = new QFile(filename);
+    QFile inFile(filename);
 
-    if (!inFile->open(QIODevice::ReadOnly))
+    if (!inFile.open(QIODevice::ReadOnly))
     {
-        delete inFile;
         return;
     }
 
-    firmwareData = inFile->readAll();
+    firmwareData = inFile.readAll();
 
     currentSendingPosition = 0;
     firmwareSize = firmwareData.length();
 
     updateProgress();
 
-    inFile->close();
-    delete inFile;
+    inFile.close();
 }
 
