@@ -140,14 +140,14 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
     QByteArray bytes(7,0);
     output.bus = bus;
     output.setFrameId(baseAddress + 0x16);
-    output.payload()[0] = currentSendingPosition & 0xFF;
-    output.payload()[1] = (currentSendingPosition >> 8) & 0xFF;
-    output.payload()[2] = firmwareData[firmwareLocation++];
-    output.payload()[3] = firmwareData[firmwareLocation++];
-    output.payload()[4] = firmwareData[firmwareLocation++];
-    output.payload()[5] = firmwareData[firmwareLocation++];
-    for (int i = 0; i < 6; i++) xorByte ^= static_cast<unsigned char>(output.payload()[i]);
-    output.payload()[6] = xorByte;
+    bytes[0] = currentSendingPosition & 0xFF;
+    bytes[1] = (currentSendingPosition >> 8) & 0xFF;
+    bytes[2] = firmwareData[firmwareLocation++];
+    bytes[3] = firmwareData[firmwareLocation++];
+    bytes[4] = firmwareData[firmwareLocation++];
+    bytes[5] = firmwareData[firmwareLocation++];
+    for (int i = 0; i < 6; i++) xorByte ^= static_cast<unsigned char>(bytes[i]);
+    bytes[6] = xorByte;
     output.setPayload(bytes);
     CANConManager::getInstance()->sendFrame(output);
     timer->start();
@@ -160,10 +160,10 @@ void FirmwareUploaderWindow::sendFirmwareEnding()
     output.bus = bus;
     QByteArray bytes(4,0);
     output.setFrameId(baseAddress + 0x30);
-    output.payload()[3] = 0xC0;
-    output.payload()[2] = 0xDE;
-    output.payload()[1] = 0xFA;
-    output.payload()[0] = 0xDE;
+    bytes[3] = (char)0xC0;
+    bytes[2] = (char)0xDE;
+    bytes[1] = (char)0xFA;
+    bytes[0] = (char)0xDE;
     output.setPayload(bytes);
     //sendCANFrame(output, bus);
 }
@@ -189,10 +189,10 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         output.setFrameId(baseAddress);
         output.setFrameType(QCanBusFrame::DataFrame);
 
-        bytes[0] = 0xEF;
-        bytes[1] = 0xBE;
-        bytes[2] = 0xAD;
-        bytes[3] = 0xDE;
+        bytes[0] = (char)0xEF;
+        bytes[1] = (char)0xBE;
+        bytes[2] = (char)0xAD;
+        bytes[3] = (char)0xDE;
         bytes[4] = token & 0xFF;
         bytes[5] = (token >> 8) & 0xFF;
         bytes[6] = (token >> 16) & 0xFF;
