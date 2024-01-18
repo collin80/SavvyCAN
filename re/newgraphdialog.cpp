@@ -361,7 +361,6 @@ void NewGraphDialog::loadNodes()
 void NewGraphDialog::loadMessages(int idx)
 {
     int numFiles = 0;
-    DBC_MESSAGE *msg;
     ui->cbMessages->clear();
     if (dbcHandler == nullptr) return;
     if ((numFiles = dbcHandler->getFileCount()) == 0) return;
