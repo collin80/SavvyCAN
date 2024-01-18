@@ -219,8 +219,8 @@ void SocketCANd::connectDevice()
 void SocketCANd::deviceConnected(int busNum)
 {
     sendDebug("Opening CAN on Kayak Device!");
-    const char* openCanCmd = ("< open " + hostCanIDs[busNum] + " >").toStdString().c_str();
-    sendStringToTCP(openCanCmd, busNum);
+    QString openCanCmd("< open " % hostCanIDs[busNum] % " >");
+    sendStringToTCP(openCanCmd.toUtf8().data(), busNum);
 
     QCoreApplication::processEvents();
 }
@@ -383,8 +383,6 @@ void SocketCANd::procRXData(QString data, int busNum)
         mTimer.stop();
         mTimer.start();
     }
-    QByteArray output;
-
     switch (rx_state.at(busNum))
     {
     case IDLE:
