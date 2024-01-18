@@ -120,7 +120,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="layoutWidget">
+     <widget class="QWidget" name="layoutWidget_2">
       <layout class="QVBoxLayout" name="verticalLayout_4" stretch="2,0,2">
        <item>
         <layout class="QGridLayout" name="gridUpper"/>
