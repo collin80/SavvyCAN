@@ -190,6 +190,7 @@ public:
             return (double)timestamp / 1000000.0;
             break;
         }
+        return QVariant();  // should never happen
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric
