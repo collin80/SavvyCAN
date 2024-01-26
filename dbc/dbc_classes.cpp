@@ -76,12 +76,16 @@ QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
             if (sig->processAsText(frame, sigString))
             {
                 qDebug() << "Returned value: " << sigString;
+                if (!build.isEmpty() && !sigString.isEmpty())
+                    build.append("\n");
                 build.append(sigString);
-                build.append("\n");
                 if (sig->isMultiplexor)
                 {
                     qDebug() << "Spelunkin!";
-                    build.append(sig->processSignalTree(frame));
+                    auto subTreeString = sig->processSignalTree(frame);
+                    if (!build.isEmpty() && !subTreeString.isEmpty())
+                        build.append("\n");
+                    build.append(subTreeString);
                 }
             }
         }
