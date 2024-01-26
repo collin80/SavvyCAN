@@ -94,7 +94,7 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     setBusConfig(0, bus);
 
     /* if bus is not active we are done */
-    if(!bus.active)
+    if(!bus.isActive())
         return;
 
     /* set configuration */
@@ -105,10 +105,10 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 
     //You cannot set the speed of a socketcan interface, it has to be set with console commands.
     //But, you can probabaly set the speed of many of the other serialbus devices so go ahead and try
-    mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
-    mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, bus.canFD);
+    mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.getSpeed());
+    mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, bus.isCanFD());
 
-    if(bus.listenOnly)
+    if(bus.isListenOnly())
         sbusconfig |= EN_SILENT_MODE;
     mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
 
@@ -188,6 +188,7 @@ void SerialBusConnection::framesReceived()
 
         /* check frame */
         //if (recFrame.payload().length() <= 8) {
+        if (true) {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
@@ -206,7 +207,7 @@ void SerialBusConnection::framesReceived()
                 frame_p->setTimeStamp(recFrame.timeStamp());
                 frame_p->setFrameType(recFrame.frameType());
                 frame_p->setError(recFrame.error());
-	        /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
+                /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
                 frame_p->isReceived = !recFrame.hasLocalEcho();
 
                 if (useSystemTime) {
@@ -218,11 +219,9 @@ void SerialBusConnection::framesReceived()
 
                 /* enqueue frame */
                 getQueue().queue();
-            //}
-#if 0
+            }
             else
                 qDebug() << "can't get a frame, ERROR";
-#endif
         }
     }
 }

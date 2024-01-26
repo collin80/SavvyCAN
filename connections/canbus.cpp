@@ -13,21 +13,13 @@ CANBus::CANBus()
 }
 
 
-CANBus::CANBus(const CANBus& pBus) :
-    speed(pBus.speed),
-    listenOnly(pBus.listenOnly),
-    singleWire(pBus.singleWire),
-    active(pBus.active),
-    canFD(pBus.canFD),
-    dataRate(pBus.dataRate){}
-
-
 bool CANBus::operator==(const CANBus& bus) const{
     return  speed == bus.speed &&
             listenOnly == bus.listenOnly &&
             singleWire == bus.singleWire &&
             active == bus.active &&
-            canFD == bus.canFD;
+            canFD == bus.canFD &&
+            dataRate == bus.dataRate;
 }
 
 void CANBus::setSpeed(int newSpeed){
@@ -55,11 +47,11 @@ void CANBus::setCanFD(bool mode){
     canFD = mode;
 }
 
-int CANBus::getSpeed(){
+int CANBus::getSpeed() const {
     return speed;
 }
 
-int CANBus::getDataRate(){
+int CANBus::getDataRate() const {
     return dataRate;
 }
 
@@ -68,29 +60,30 @@ void CANBus::setDataRate(int newSpeed){
     dataRate = newSpeed;
 }
 
-bool CANBus::isListenOnly(){
+bool CANBus::isListenOnly() const {
     return listenOnly;
 }
 
-bool CANBus::isSingleWire(){
+bool CANBus::isSingleWire() const {
     return singleWire;
 }
 
-bool CANBus::isActive(){
+bool CANBus::isActive() const {
     return active;
 }
 
-bool CANBus::isCanFD(){
+bool CANBus::isCanFD() const {
     return canFD;
 }
 
 
-QDataStream& operator<<( QDataStream & pStream, const CANBus& pCanBus )
+QDataStream& operator<<(QDataStream & pStream, const CANBus& pCanBus)
 {
     pStream << pCanBus.speed;
     pStream << pCanBus.listenOnly;
     pStream << pCanBus.singleWire;
     pStream << pCanBus.active;
+    // FIXME CANFD settings missing
     return pStream;
 }
 
