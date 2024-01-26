@@ -45,3 +45,4 @@ Makefile
 SavvyCAN.pro.qtds
 .xcode
 SavvyCAN.xcodeproj
+.vscode
