@@ -1680,12 +1680,16 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
 //0.001371 CANFD 1 Rx 171 A0066_Unknown 0 0 8 8 00 00 07 76 23 00 00 00 230199 119 220000 62e7 46500250 460a0250 20011736 20010205
 //Version 16.0.0
 //0.008600 1 358 Rx d 8 04 03 50 01 F0 40 54 2C Length = 233910 BitCount = 121 ID = 856
-//Time   bus id dir ? len databytes (Ver 8.0)
-//Time   type bus dir ID ? ? length length bytes then many values of unknown type (ver 8.1)
-//Time   type bus dir ID SignalName ? ? length length bytes then many values of unknown type (ver 9.0)
-//Time bus id dir ? len databytes additional crap (ver 16.0)
-//So it seems the file format is not entirely different based on version but rather on some other
-//settings... Fun!
+//Version 17.3.0
+//0.001684 CANFD 1 Rx 65b 1 0 d 32 f1 01 00 00 50 00 00 00 00 00 00 00 00 00 00 40 00 88 f5 77 17 78 00 00 c0 03 00 00 00 00 00 00 213797 356 303000 11729 46500250 4b140250 20011736 2001040d
+
+//Time bus  id  dir ?  len        databytes                                                                           (Ver 8.0)
+//Time bus  id  dir ?  len        databytes (addl info)                                                               (ver 16.0)
+//Time type bus dir ID ?          ?         length      length        (bytes) (many values of unknown type)           (ver 8.1)
+//Time type bus dir ID SignalName ?         ?           length        length  bytes (then many values of unknown type)(ver 9.0)
+//Time Type Bus Dir ID ?          ?         (length)    (Real Length) (bytes) (many values of unknown type)           (Ver 17.3)
+//0    1    2   3   4  5          6         7           8             9       10
+//This seems like a rather eclectic mix. It's almost arbitrary!
 bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -1736,7 +1740,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             }
         }
         if (inHeader) continue;
-        if (line.length() > 2)
+        if (line.length() > 2 && !line.startsWith("//"))
         {            
             tokens = line.simplified().split(' ');
 
@@ -1766,7 +1770,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                         int payloadLen = tokens[8].toInt();
                         qDebug() << "PayloadLen: " << payloadLen << " Tokens: " << tokens;
                         QByteArray bytes(payloadLen, 0);
-                        if (payloadLen > 8)
+                        if (payloadLen > 64)
                         {
                             qDebug() << "Payload length too long. Original line: " << line;
                             return false;
