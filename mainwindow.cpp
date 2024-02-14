@@ -230,13 +230,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionSingle_Multi_State_2->setVisible(false);
 
     QStringList headers;
-    headers << "En" << "Bus" << "ID" << "Len" << "Ext" << "Rem" << "Data"
+    headers << "En" << "Bus" << "ID" << "Ext" << "Rem" << "Data"
             << "Interval" << "Count";
-    ui->tableSimpleSender->setColumnCount(9);
+    ui->tableSimpleSender->setColumnCount(8);
     ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_EN, 70);
     ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_BUS, 70);
     ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_ID, 70);
-    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_LEN, 70);
     ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_EXT, 70);
     ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_REM, 70);
     ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_DATA, 300);
@@ -489,7 +488,12 @@ void MainWindow::processSenderCellChange(int line, int col)
 
     if (!tempData)
     {
+        qDebug() << "Need to set up a new entry in senders";
         FrameSendData dat;
+        dat.enabled = false;
+        dat.count = 0;
+        dat.frameCount = 0;
+        dat.bus = 0;
         frameSender->addSendRecord(dat);
         tempData = frameSender->getSendRecordRef(line);
     }
@@ -530,13 +534,6 @@ void MainWindow::processSenderCellChange(int line, int col)
         }
         qDebug() << "setting ID to " << tempVal;
         break;
-    case SIMP_COL::SC_COL_LEN:
-        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_LEN)->text());
-        if (tempVal < 0) tempVal = 0;
-        if (tempVal > 8) tempVal = 8;
-        arr.resize(tempVal);
-        tempData->setPayload(arr);
-        break;
     case SIMP_COL::SC_COL_EXT:
         if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT)->checkState() == Qt::Checked) {
             tempData->setExtendedFrameFormat(true);
@@ -555,9 +552,9 @@ void MainWindow::processSenderCellChange(int line, int col)
         for (int i = 0; i < 8; i++) tempData->payload().data()[i] = 0;
 
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
-        tokens = ui->tableSimpleSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
+        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
 #else
-        tokens = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().split(" ", QString::SkipEmptyParts);
+        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", QString::SkipEmptyParts);
 #endif
         arr.clear();
         arr.reserve(tokens.count());
@@ -569,7 +566,7 @@ void MainWindow::processSenderCellChange(int line, int col)
         break;
     case SIMP_COL::SC_COL_INTERVAL: //interval in ms
 
-        QString trigger = ui->tableSimpleSender->item(line, ST_COLS::SENDTAB_COL_TRIGGER)->text().toUpper();
+        QString trigger = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_INTERVAL)->text().toUpper();
 
         Trigger thisTrigger;
         thisTrigger.bus = -1; //-1 means we don't care which
@@ -597,7 +594,6 @@ void MainWindow::processSenderCellChange(int line, int col)
         break;
     }
 }
-
 
 void MainWindow::createSenderRow()
 {
@@ -1015,6 +1011,18 @@ void MainWindow::tickGUIUpdate()
             {
                 continuousLogFlushCounter = 0;
                 FrameFileIO::flushContinuousNative();
+            }
+        }
+
+        //refresh the count for all the frame senders
+        FrameSendData *tempData;
+        int numRows = ui->tableSimpleSender->rowCount();
+        for (int i = 0; i < numRows; i++)
+        {
+            tempData = frameSender->getSendRecordRef(i);
+            if (tempData)
+            {
+                ui->tableSimpleSender->item(i, SIMP_COL::SC_COL_COUNT)->setText(QString::number( tempData->count ));
             }
         }
 

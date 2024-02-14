@@ -45,12 +45,11 @@ enum SIMP_COL
     SC_COL_EN = 0,
     SC_COL_BUS = 1,
     SC_COL_ID = 2,
-    SC_COL_LEN = 3,
-    SC_COL_EXT = 4,
-    SC_COL_REM = 5,
-    SC_COL_DATA = 6,
-    SC_COL_INTERVAL = 7,
-    SC_COL_COUNT = 8,
+    SC_COL_EXT = 3,
+    SC_COL_REM = 4,
+    SC_COL_DATA = 5,
+    SC_COL_INTERVAL = 6,
+    SC_COL_COUNT = 7,
 };
 
 namespace Ui {
