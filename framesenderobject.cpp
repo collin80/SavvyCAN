@@ -154,12 +154,15 @@ void FrameSenderObject::timerTriggered()
     sendingList.clear();
     if(mutex.tryLock())
     {
-        //get elapsed microseconds since last tick (in case timer skips or is otherwise inaccurate, though there are no guarantees about elapsed timer either)
-        quint64 elapsed = sendingElapsed.nsecsElapsed() / 1000;
+        /*
+         * Requested tick interval was 1ms but the actual interval could be wildly different. So, we track
+         * by counting microseconds and accumulating. This creates decent stability even for long intervals
+         */
+        quint64 elapsed = sendingElapsed.nsecsElapsed() / 1000ul;
         if (elapsed == 0) elapsed = 1;
         sendingElapsed.start();
         sendingLastTimeStamp += elapsed;
-        //qDebug() << playbackLastTimeStamp;
+        //qDebug() << sendingLastTimeStamp;
         //qDebug() << "El: " << elapsed;
         statusCounter++;
         for (int i = 0; i < sendingData.count(); i++)
@@ -178,19 +181,20 @@ void FrameSenderObject::timerTriggered()
             }
             if (sendData->triggers.count() == 0)
             {
-                qDebug() << "No triggers to process";
+                //qDebug() << "No triggers to process";
                 break;
             }
             for (int j = 0; j < sendData->triggers.count(); j++)
             {
                 trigger = &sendData->triggers[j];
-                if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
+                //if ( (trigger->currCount >= trigger->maxCount) || (trigger->maxCount == -1) ) continue; //don't process if we've sent max frames we were supposed to
                 if (!trigger->readyCount) continue; //don't tick if not ready to tick
                 //is it time to fire?
                 trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
-                if (trigger->msCounter >= trigger->milliseconds)
+                //qDebug() << trigger->msCounter;
+                if (trigger->msCounter >= (trigger->milliseconds * 1000))
                 {
-                    trigger->msCounter -= trigger->milliseconds;
+                    trigger->msCounter -= (trigger->milliseconds * 1000);
                     sendData->count++;
                     trigger->currCount++;
                     doModifiers(i);
