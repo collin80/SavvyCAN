@@ -1333,7 +1333,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        if (thisFrame.frameId() == params.ID && thisFrame.frameType() == QCanBusFrame::DataFrame &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.bus) ) ) frameCache.append(thisFrame);
+        if ( (thisFrame.frameId() == params.ID) && (thisFrame.frameType() == QCanBusFrame::DataFrame)
+       &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.bus) ) ) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1352,6 +1353,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     int numEntries = frameCache.count() / params.stride;
     if (numEntries < 1) numEntries = 1; //could happen if stride is larger than frame count
 
+    params.x.clear();
+    params.y.clear();
     params.x.reserve(numEntries);
     params.y.reserve(numEntries);
     //params.x.fill(0, numEntries);
