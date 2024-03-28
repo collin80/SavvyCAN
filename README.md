@@ -1,6 +1,6 @@
 # SavvyCAN
 Qt based cross platform canbus tool
-(C) 2015-2021 EVTV and Collin Kidder
+(C) 2015-2024 Collin Kidder
 
 A Qt5 based cross platform tool which can be used to load, save, and capture canbus frames.
 This tool is designed to help with visualization, reverse engineering, debugging, and
@@ -17,9 +17,6 @@ The CANDue board must be running the GVRET firmware which can also be found
 within the collin80 repos.
 
 It is now possible to use any Qt SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
-There may, however, be some loss of some functionality as
-some functions of SavvyCAN are designed for use directly with the
-EVTVDue and CANDue 2.0 boards.
 
 It should, however, be noted that use of a capture device is not required to make use
 of this program. It can load and save in several formats:
@@ -50,8 +47,9 @@ to download it separately.
 
 This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt.
 
-NOTE: Qt6 currently lacks support for QtSerialBus and many other Qt sub-features. At this time you cannot
-use Qt6 to compile SavvyCAN. Support for Qt6 should be possible around Qt6.2.
+NOTE: As the code in this master branch sits, it will not properly compile with QT6. 
+However, there is a QT6WIP branch that should successfully compile. The QT6WIP branch may not
+function entirely properly yet.
 
 ## Instructions for compiling:
 
