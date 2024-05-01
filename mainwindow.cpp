@@ -549,7 +549,7 @@ void MainWindow::processSenderCellChange(int line, int col)
         }
         break;
     case SIMP_COL::SC_COL_DATA: //Data bytes
-        for (int i = 0; i < 8; i++) tempData->payload().data()[i] = 0;
+        //for (int i = 0; i < 8; i++) tempData->payload().data()[i] = 0;
 
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
         tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
