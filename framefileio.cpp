@@ -1680,12 +1680,16 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
 //0.001371 CANFD 1 Rx 171 A0066_Unknown 0 0 8 8 00 00 07 76 23 00 00 00 230199 119 220000 62e7 46500250 460a0250 20011736 20010205
 //Version 16.0.0
 //0.008600 1 358 Rx d 8 04 03 50 01 F0 40 54 2C Length = 233910 BitCount = 121 ID = 856
-//Time   bus id dir ? len databytes (Ver 8.0)
-//Time   type bus dir ID ? ? length length bytes then many values of unknown type (ver 8.1)
-//Time   type bus dir ID SignalName ? ? length length bytes then many values of unknown type (ver 9.0)
-//Time bus id dir ? len databytes additional crap (ver 16.0)
-//So it seems the file format is not entirely different based on version but rather on some other
-//settings... Fun!
+//Version 17.3.0
+//0.001684 CANFD 1 Rx 65b 1 0 d 32 f1 01 00 00 50 00 00 00 00 00 00 00 00 00 00 40 00 88 f5 77 17 78 00 00 c0 03 00 00 00 00 00 00 213797 356 303000 11729 46500250 4b140250 20011736 2001040d
+
+//Time bus  id  dir ?  len        databytes                                                                           (Ver 8.0)
+//Time bus  id  dir ?  len        databytes (addl info)                                                               (ver 16.0)
+//Time type bus dir ID ?          ?         length      length        (bytes) (many values of unknown type)           (ver 8.1)
+//Time type bus dir ID SignalName ?         ?           length        length  bytes (then many values of unknown type)(ver 9.0)
+//Time Type Bus Dir ID ?          ?         (length)    (Real Length) (bytes) (many values of unknown type)           (Ver 17.3)
+//0    1    2   3   4  5          6         7           8             9       10
+//This seems like a rather eclectic mix. It's almost arbitrary!
 bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -1736,7 +1740,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             }
         }
         if (inHeader) continue;
-        if (line.length() > 2)
+        if (line.length() > 2 && !line.startsWith("//"))
         {            
             tokens = line.simplified().split(' ');
 
@@ -1766,7 +1770,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                         int payloadLen = tokens[8].toInt();
                         qDebug() << "PayloadLen: " << payloadLen << " Tokens: " << tokens;
                         QByteArray bytes(payloadLen, 0);
-                        if (payloadLen > 8)
+                        if (payloadLen > 64)
                         {
                             qDebug() << "Payload length too long. Original line: " << line;
                             return false;
@@ -4789,7 +4793,7 @@ bool FrameFileIO::isCANServerFile(QString filename)
         {
             //qDebug() << "header: " << headerData;
             //We have enough bytes to make up our header.  Lets check if it matches
-            if (headerData == "CANSERVER_v2_CANSERVER")
+            if (headerData == "CANSERVER_v2_CANSERVER" || headerData == "CANSERVER_v3_CANSERVER")
             {
                 isMatch = true;
             }
@@ -4831,6 +4835,7 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
     //Skip the header
 
     bool fileIsGood = false;
+    uint8_t logVersion = 1;
     QByteArray headerData = inFile->read(22);
     if (headerData.length() == 22)
     {
@@ -4838,6 +4843,12 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
         //We have enough bytes to make up our header.  Lets check if it matches
         if (headerData == "CANSERVER_v2_CANSERVER")
         {
+            logVersion = 1;
+            fileIsGood = true;
+        }
+        else if (headerData == "CANSERVER_v3_CANSERVER")
+        {
+            logVersion = 2;
             fileIsGood = true;
         }
     }
@@ -4862,7 +4873,13 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
                 {
                     if (possibleHeaderData == "ANSERVER_v2_CANSERVER" )
                     {
-                        //We found another header.  Lets just ignore things and move on
+                        //We found another header (in this case a version 1 format).  Lets just ignore things and move on
+                        logVersion = 1;
+                    }
+                    else if (possibleHeaderData == "ANSERVER_v3_CANSERVER" )
+                    {
+                        //We found another header (in this case a version 2 format).  Lets just ignore things and move on
+                        logVersion = 2;
                     }
                     else
                     {
@@ -4871,10 +4888,10 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
                     }
                 }
             }
-            else if (data[0] == 0xCD)
+            else if ((logVersion == 1 && data[0] == 0xCD) || (logVersion == 2 && data[0] == 0xD0))
             {
-                //Log mark message
-                
+                //Log mark message (the same format in v1 or v2.  Just a different identifier byte)
+
                 //Read in the size of the mark
                 uint8_t markSize[1];
                 inFile->read((char*)&markSize, 1);
@@ -4895,9 +4912,9 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
                 frames->append(markFrame);
                  */
             }
-            else if (data[0] == 0xCE)
+            else if ((logVersion == 1 && data[0] == 0xCE) || (logVersion == 2 && data[0] == 0xA0))
             {
-                //Timesync message
+                //Timesync message (v1 log format)
                 framedata_U timesyncvalue;
                 ::memset(timesyncvalue.data, 0, sizeof(timesyncvalue.data));
                 inFile->read(timesyncvalue.data, 8);
@@ -4906,39 +4923,54 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
                 //qDebug() << "Found a time sync message: " << timesyncvalue.u64;
                 timeStampBase = timesyncvalue.u64;
             }
-            else if (data[0] == 0xCF)
+            else if ((logVersion == 1 && data[0] == 0xCF) || (logVersion == 2 && (data[0] & 0xF0) == 0xB0))
             {
-                if (frameCounter++ > 100)
+                // Can frame format (either a v1 or a v2)
+                if (frameCounter++ > 10000)
                 {
                     qApp->processEvents();
                     frameCounter = 0;
                 }
-                
-                //CAN Frame
+
                 uint8_t frameheaderdata[5];
                 inFile->read((char*)frameheaderdata, 5);
                 
-                //The frame time offset is how long since the last time sync message (now in ms) this frame is
-                uint8_t byte1 = frameheaderdata[0];
-                uint8_t byte2 = frameheaderdata[1];
-                uint16_t frametimeoffset = ((uint16_t)byte2 << 8) | byte1;
+                uint32_t frametimeoffset = 0;
+                if (logVersion == 1)
+                {
+                    //The frame time offset is how long since the last time sync message (now in ms) this frame is
+                    frametimeoffset = ((uint16_t)frameheaderdata[1] << 8) | frameheaderdata[0];
+                    frametimeoffset *= 1000;
+                }
+                else if (logVersion == 2)
+                {
+                    frametimeoffset = (data[0] & 0x0F) + (frameheaderdata[0] << 4) + (frameheaderdata[1] << 12) + (((frameheaderdata[2] & 0xF8) >> 3) << 20);
+                }
 
-                byte1 = frameheaderdata[2];
-                byte2 = frameheaderdata[3];
-                uint16_t messageId = ((uint16_t)byte2 << 8) | byte1;
-                
-                uint8_t framelength = frameheaderdata[4] & 0x0F;
-                uint8_t busid = frameheaderdata[4] >> 4;
+                uint16_t messageId = 0;
+                if (logVersion == 1)
+                {
+                    messageId = ((uint16_t)frameheaderdata[3] << 8) | frameheaderdata[2];
+                }
+                else if (logVersion == 2)
+                {
+                    messageId = ((frameheaderdata[2] & 0x07) << 8) + (frameheaderdata[3] & 0xFF);
+                }
+
+                uint8_t framelength = (frameheaderdata[4] & 0x0F);
+                uint8_t busid = (frameheaderdata[4] & 0xF0) >> 4;
 
                 framelength = framelength > 8 ? 8 : framelength;
-                
 
                 //Now that we have a length lets read those bytes
                 ::memset(framedata.data, 0, sizeof(framedata.data));
-                inFile->read(framedata.data, framelength);
+
+                if (framelength > 0)
+                {
+                    inFile->read(framedata.data, framelength);
+                }
 
                 //Setup the frame object and populate it
-                
                 CANFrame thisFrame;
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
 
@@ -4948,11 +4980,8 @@ bool FrameFileIO::loadCANServerFile(QString filename, QVector<CANFrame>* frames)
 
                 uint64_t frameTime = timeStampBase;
                 uint64_t frameoffset = frametimeoffset;
-                frameoffset *= 1000;
 
                 frameTime += frameoffset;
-                //lastFrameTime = frameTime;
-
                 thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameTime));
 
                 QByteArray bytes(framelength,0);

@@ -222,8 +222,8 @@ void DBCComparatorWindow::calculateDetails()
 
     ui->treeDetails->addTopLevelItem(msgDiffRoot);
 
-    QTreeWidgetItem *msgItem;
-    QTreeWidgetItem *sigTemp;
+    QTreeWidgetItem *msgItem {};
+    QTreeWidgetItem *sigTemp {};
 
     QList<DBC_MESSAGE *> msgs = firstDBC->messageHandler->getMsgsAsList();
 
@@ -261,7 +261,8 @@ void DBCComparatorWindow::calculateDetails()
                         msgItem->setText(0, msgName + " (" + Utility::formatCANID(thisMsg->ID) + ")");
                         sigDiffTwo->addChild(msgItem);
                     }
-                    msgItem->addChild(missingSigItem);
+                    if (msgItem)
+                        msgItem->addChild(missingSigItem);
                 }
                 else //signal exists on both sides. See if it as changed position or length
                 {
@@ -305,7 +306,8 @@ void DBCComparatorWindow::calculateDetails()
                             sigTemp->setText(0, msgName + " (" + Utility::formatCANID(thisMsg->ID) + ")");
                             sigModifiedRoot->addChild(sigTemp);
                         }
-                        sigTemp->addChild(sigItem);
+                        if (sigTemp)
+                            sigTemp->addChild(sigItem);
                     }
                 }
             }

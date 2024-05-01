@@ -98,15 +98,18 @@ void SignalViewerWindow::processFrame(CANFrame &frame)
         if (!sig) return;
         if (sig->parentMessage->ID == frame.frameId())
         {
-            if (sig->processAsText(frame, sigString, false)) //if true we could interpret the signal so update it in the list
+            if (sig->isSignalInMessage(frame)) //filter out multiplexed signals that aren't in this message.
             {
-                QTableWidgetItem *item = ui->tableViewer->item(i, VALUE_COL);
-                if (!item)
+                if (sig->processAsText(frame, sigString, false)) //if true we could interpret the signal so update it in the list
                 {
-                    item = new QTableWidgetItem(sigString);
-                    ui->tableViewer->setItem(i, VALUE_COL, item);
+                    QTableWidgetItem *item = ui->tableViewer->item(i, VALUE_COL);
+                    if (!item)
+                    {
+                        item = new QTableWidgetItem(sigString);
+                        ui->tableViewer->setItem(i, VALUE_COL, item);
+                    }
+                    else item->setText(sigString);
                 }
-                else item->setText(sigString);
             }
         }
     }
