@@ -106,6 +106,7 @@ private:
     bool parseSignalMultiplexValueLine(QString line);
     DBC_MESSAGE* parseMessageLine(QString line);
     bool parseValueLine(QString line);
+    bool parseSignalValueTypeLine(QString line);
     bool parseAttributeLine(QString line);
     bool parseDefaultAttrLine(QString line);
 };
