@@ -62,6 +62,7 @@ jobs:
       - name: Package     
         run: |
           mkdir -p SavvyCAN.app/Contents/MacOS/help
+          mkdir -p SavvyCAN.app/Frameworks
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           cp /usr/local/share/qt/plugins/canbus/* SavvyCAN.app/Frameworks
           macdeployqt SavvyCAN.app -dmg
