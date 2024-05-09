@@ -8,7 +8,9 @@
 #include <winsock.h>
 #endif
 
-#define PCAP_ERRBUF_SIZE 256
+#define PCAP_ERRBUF_SIZE        (256)
+#define PCAP_LINKTYPE_SOCKETCAN (227)
+#define PCAP_LINKTYPE_ANY       (-1)
 
 struct pcap_pkthdr {
 	struct timeval ts;	/* time stamp */
@@ -23,7 +25,7 @@ struct pcap {
 
 typedef struct pcap pcap_t;
 
-pcap *pcap_open_offline(const char *, char *);
+pcap *pcap_open_offline(const char *, char *, int);
 
 const unsigned char *pcap_next(pcap_t *, struct pcap_pkthdr *);
 

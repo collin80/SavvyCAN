@@ -19,7 +19,7 @@
 static unsigned char pcap_buffer[MAX_CAN_PACKET_SIZE];
 static pcap_t p;
 
-pcap *pcap_open_offline(const char *filename, char *error_text) {
+pcap *pcap_open_offline(const char *filename, char *error_text, int expected_link_type) {
 	FILE *file;
 
     snprintf(error_text, PCAP_ERRBUF_SIZE, "OK");
@@ -48,6 +48,23 @@ pcap *pcap_open_offline(const char *filename, char *error_text) {
 		return (NULL);
     }
 
+    unsigned int link_type;
+    fseek(file, PCAP_FILE_HEADER_LENGTH - 4, SEEK_SET);
+    bytes_read = fread(&link_type, 1, sizeof(link_type), file);
+    if (bytes_read != sizeof(link_type)) {
+        snprintf(error_text, PCAP_ERRBUF_SIZE, "Cannot read linktype word");
+        fclose(file);
+        return (NULL);
+    }
+    if (expected_link_type >= 0) {
+        // Check the link type
+        if ((int) link_type != expected_link_type) {
+            snprintf(error_text, PCAP_ERRBUF_SIZE, "This link type is not supported by this decoder");
+            fclose(file);
+            return (NULL);
+        }
+    }
+
     // set the format
     // and seek past file header
     if (MAGIC_NG == magic) {
@@ -61,14 +78,12 @@ pcap *pcap_open_offline(const char *filename, char *error_text) {
 		    return (NULL);
 	    }
         fseek(file, section_length, SEEK_SET);
-        
     } else {
         p.is_ng = 0;
         fseek(file, PCAP_FILE_HEADER_LENGTH, SEEK_SET);
     }
 
     p.file = file;
-	
 	return(&p);
 }
 
