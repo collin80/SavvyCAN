@@ -39,6 +39,9 @@ of this program. It can load and save in several formats:
 Now this code does not depend on anything other than what is in the source tree or available
 from the Qt installer.
 
+For connecting to gs_usb based devices on Windows, this application dynamically links to
+candle_api.dll which is licensed under the LGPL-3.0. The source for this DLL is available [here](https://github.com/BennyEvans/candle_dll)
+
 Uses QCustomPlot available at:
 
 http://www.qcustomplot.com/
