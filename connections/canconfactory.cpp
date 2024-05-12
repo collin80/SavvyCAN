@@ -10,7 +10,7 @@
 
 using namespace CANCon;
 
-CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, int pSamplePoint)
 {
     switch(pType) {
     case SERIALBUS:

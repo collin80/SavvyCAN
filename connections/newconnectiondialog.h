@@ -26,6 +26,7 @@ public:
     QString getDriverName();
     int getSerialSpeed();
     int getBusSpeed();
+    int getSamplePoint();
     bool isCanFd();
     int getDataRate();
 

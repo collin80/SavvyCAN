@@ -9,7 +9,7 @@
 #include "canlogserver.h"
 
 CanLogServer::CanLogServer(QString serverAddressString) :
-    CANConnection(serverAddressString, "CanLogserver", CANCon::CANLOGSERVER, 0, 0, false, 0, 1, 4000, true),
+    CANConnection(serverAddressString, "CanLogserver", CANCon::CANLOGSERVER, 0, 0, 0, false, 0, 1, 4000, true),
     m_ptcpSocket(new QTcpSocket(this))
 {
 

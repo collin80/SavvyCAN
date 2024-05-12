@@ -23,6 +23,7 @@ protected:
      * @param pType: the type of connection @ref CANCon::type
      * @param pSerialSpeed: for devices with variable serial speed this is that speed.
      * @param pBusSpeed: set an initial speed when opening this connection
+     * @param pSamplePoint: set if the device supports sample point configuration
      * @param pNumBuses: the number of buses the device has
      * @param pQueueLen: the length of the lock free queue to use
      * @param pUseThread: if set to true, object will be execute in a dedicated thread
@@ -32,6 +33,7 @@ protected:
                   CANCon::type pType,
                   int pSerialSpeed,
                   int pBusSpeed,
+                  int pSamplePoint,
                   bool pCanFd,
                   int pDataRate,
                   int pNumBuses,

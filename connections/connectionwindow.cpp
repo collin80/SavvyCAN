@@ -253,6 +253,7 @@ void ConnectionWindow::handleNewConn()
     QString newDriver;
     int newSerialSpeed;
     int newBusSpeed;
+    int newSamplePoint;
     bool newCanFd;
     int newDataRate;
     CANConnection *conn;
@@ -264,9 +265,10 @@ void ConnectionWindow::handleNewConn()
         newDriver = thisDialog->getDriverName();
         newSerialSpeed = thisDialog->getSerialSpeed();
         newBusSpeed = thisDialog->getBusSpeed();
+        newSamplePoint = thisDialog->getSamplePoint();
         newCanFd=thisDialog->isCanFd();
         newDataRate = thisDialog->getDataRate();
-        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate);
+        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate, newSamplePoint);
         if (conn)
         {
             connModel->add(conn);
@@ -337,7 +339,7 @@ void ConnectionWindow::handleResetConn()
 
     conn_p = nullptr;
 
-    conn_p = create(type, port, driver, serSpeed, busSpeed,canFd,dataRate);
+    conn_p = create(type, port, driver, serSpeed, busSpeed, canFd, dataRate, samplePoint);
     if (conn_p) connModel->replace(selIdx, conn_p);
 }
 
@@ -528,12 +530,12 @@ void ConnectionWindow::handleSendText() {
     emit sendDebugData(bytes);
 }
 
-CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, int pSamplePoint)
 {
     CANConnection* conn_p;
 
     /* create connection */
-    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate);
+    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate, pSamplePoint);
     if(conn_p)
     {
         /* connect signal */
@@ -568,13 +570,15 @@ void ConnectionWindow::loadConnections()
     QVector<int> DataRates = settings.value("connections/DataRates_0").value<QVector<int>>();
     QVector<int> isCanFds = settings.value("connections/isCanFds_0").value<QVector<int>>();
     QVector<int> serialSpeeds = settings.value("connections/serialSpeeds").value<QVector<int>>();
+    QVector<int> samplePoints = settings.value("connections/samplePoints").value<QVector<int>>();
+
     //don't load the connections if the three setting arrays above aren't all the same size.
     if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count() ||  busSpeeds.count() != driverNames.count() || isCanFds.count() != driverNames.count() ||
-	DataRates.count() != driverNames.count() || serialSpeeds.count() != driverNames.count() ) return;
+	DataRates.count() != driverNames.count() || serialSpeeds.count() != driverNames.count() || samplePoints.count() != driverNames.count() ) return;
 
     for(int i = 0 ; i < portNames.count() ; i++)
     {
-      CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i]);
+        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i], samplePoints[i]);
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -596,17 +600,19 @@ void ConnectionWindow::saveConnections()
     QVector<int> busSpeeds;
     QVector<int> DataRates;
     QVector<int> CanFds;
- 
+    QVector<int> samplePoints;
+
     /* save connections */
     foreach(CANConnection* conn_p, conns)
       { CANBus bus;
 
         if (conn_p->getBusSettings(0, bus)) {
-          busSpeeds.append(bus.getSpeed());
-	  CanFds.append(bus.isCanFD() ? 1 : 0);
-	  DataRates.append(bus.getDataRate());
+            busSpeeds.append(bus.getSpeed());
+            CanFds.append(bus.isCanFD() ? 1 : 0);
+            DataRates.append(bus.getDataRate());
+            samplePoints.append(bus.getSamplePoint());
         }
-	serialSpeeds.append(conn_p->getSerialSpeed());
+        serialSpeeds.append(conn_p->getSerialSpeed());
         portNames.append(conn_p->getPort());
         devTypes.append(conn_p->getType());
         driverNames.append(conn_p->getDriver());
@@ -616,9 +622,11 @@ void ConnectionWindow::saveConnections()
     settings.setValue("connections/types", QVariant::fromValue(devTypes));
     settings.setValue("connections/driverNames", QVariant::fromValue(driverNames));
     settings.setValue("connections/busSpeeds_0", QVariant::fromValue(busSpeeds));
-    settings.setValue("connections/isCanFds_0", QVariant::fromValue(CanFds)); 
-    settings.setValue("connections/DataRates_0", QVariant::fromValue(DataRates)); 
-    settings.setValue("connections/serialSpeeds", QVariant::fromValue(serialSpeeds)); 
+    settings.setValue("connections/isCanFds_0", QVariant::fromValue(CanFds));
+    settings.setValue("connections/DataRates_0", QVariant::fromValue(DataRates));
+    settings.setValue("connections/serialSpeeds", QVariant::fromValue(serialSpeeds));
+    settings.setValue("connections/samplePoints", QVariant::fromValue(samplePoints));
+
 }
 
 void ConnectionWindow::moveConnUp()
