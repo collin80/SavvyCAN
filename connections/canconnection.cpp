@@ -260,6 +260,10 @@ QString CANConnection::getDriver()
     return mDriver;
 }
 
+int CANConnection::getSerialSpeed(){
+    return mSerialSpeed;
+}
+
 LFQueue<CANFrame>& CANConnection::getQueue() {
     return mQueue;
 }

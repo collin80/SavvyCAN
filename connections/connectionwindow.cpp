@@ -301,8 +301,9 @@ void ConnectionWindow::handleResetConn()
 {
     QString port, driver;
     CANCon::type type;
-    int serSpeed, busSpeed, dataRate;
+    int serSpeed, busSpeed, samplePoint, dataRate;
     bool canFd;
+    int offset = ui->tabBuses->currentIndex();
 
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     if (selIdx <0) return;
@@ -315,11 +316,21 @@ void ConnectionWindow::handleResetConn()
     type = conn_p->getType();
     port = conn_p->getPort();
     driver = conn_p->getDriver();
-    serSpeed = 0; //TODO: implement these
-    busSpeed = 0;
-    dataRate = 0;
-    canFd = false;
+    serSpeed = conn_p->getSerialSpeed();
 
+    CANBus bus;
+    if (conn_p->getBusSettings(offset, bus)) {
+        busSpeed = bus.getSpeed();
+        samplePoint = bus.getSamplePoint();
+        dataRate = bus.getDataRate();
+        canFd = bus.isCanFD();
+    } else {
+        qDebug() << "Could not retrieve bus settings!";
+        busSpeed = 0;
+        samplePoint = 0;
+        dataRate = 0;
+        canFd = false;
+    }
 
     /* stop and delete connection */
     conn_p->stop();
