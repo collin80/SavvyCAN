@@ -18,6 +18,10 @@ within the collin80 repos.
 
 It is now possible to use any Qt SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
 
+It's now also possible to connect to CANable, CAN Bus Debugger, or any other device using a variant
+of the gs_usb protocol natively in Windows. These devices can be connected using socketcan on other
+operating systems.
+
 It should, however, be noted that use of a capture device is not required to make use
 of this program. It can load and save in several formats:
 

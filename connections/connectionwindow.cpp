@@ -2,6 +2,7 @@
 #include <QNetworkDatagram>
 #include <QThread>
 
+#include "gs_usb_driver/gs_usb.h"
 #include "connectionwindow.h"
 #include "mainwindow.h"
 #include "helpwindow.h"
@@ -247,7 +248,6 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
 
 void ConnectionWindow::handleNewConn()
 {
-    NewConnectionDialog *thisDialog = new NewConnectionDialog(&remoteDeviceIPGVRET, &remoteDeviceKayak);
     CANCon::type newType;
     QString newPort;
     QString newDriver;
@@ -258,6 +258,12 @@ void ConnectionWindow::handleNewConn()
     int newDataRate;
     CANConnection *conn;
 
+#ifdef GS_USB_DRIVER_ENABLED
+    // Get GS USB devices before opening new connection window
+    GSUSBDevice::getConnectedDevices(remoteDeviceGSUSB);
+#endif
+
+    NewConnectionDialog *thisDialog = new NewConnectionDialog(&remoteDeviceIPGVRET, &remoteDeviceKayak, &remoteDeviceGSUSB);
     if (thisDialog->exec() == QDialog::Accepted)
     {
         newType = thisDialog->getConnectionType();
@@ -385,7 +391,25 @@ void ConnectionWindow::saveBusSettings()
             return;
         }
 
-        bus.setSpeed(ui->cbBusSpeed->currentText().toInt());
+        if (conn_p->getType() == CANCon::type::GSUSB) {
+#ifdef GS_USB_DRIVER_ENABLED
+            QList<GSUSB_timing_t> supportedTiming;
+            GSUSBDevice* device = (GSUSBDevice*) conn_p;
+            int currentSpeedIndex = ui->cbBusSpeed->currentIndex();
+            if ((currentSpeedIndex >= 0) && device->isDeviceConnected()){
+                candle_handle handle = device->getDeviceHandle();
+                GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+                if (supportedTiming.length() > currentSpeedIndex) {
+                    GSUSB_timing_t timing = supportedTiming.at(currentSpeedIndex);
+                    bus.setSpeed((int) timing.bitrate);
+                    bus.setSamplePoint((int) timing.samplePoint);
+                }
+            }
+#endif
+        } else {
+            bus.setSpeed(ui->cbBusSpeed->currentText().toInt());
+        }
+
         bus.setActive(ui->ckEnable->isChecked());
         bus.setListenOnly(ui->ckListenOnly->isChecked());
         bus.setCanFD(ui->canFDEnable->isChecked());
@@ -397,6 +421,7 @@ void ConnectionWindow::saveBusSettings()
 void ConnectionWindow::populateBusDetails(int offset)
 {
     int selIdx = ui->tableConnections->currentIndex().row();
+    bool found = false;
 
     /* set parameters */
     if (selIdx == -1) {
@@ -433,18 +458,54 @@ void ConnectionWindow::populateBusDetails(int offset)
             ui->dataRate_label->setVisible(true);
         }
 
-        bool found = false;
-        for (int i = 0; i < ui->cbBusSpeed->count(); i++)
-        {
-            if (bus.getSpeed() == ui->cbBusSpeed->itemText(i).toInt())
-            {
-                found = true;
-                ui->cbBusSpeed->setCurrentIndex(i);
-                break;
+        if (conn_p->getType() == CANCon::type::GSUSB) {
+            ui->ckEnable->setEnabled(false);
+            ui->cbBusSpeed->clear();
+#ifdef GS_USB_DRIVER_ENABLED
+            GSUSBDevice* device = (GSUSBDevice*) conn_p;
+            int selectionIndex = 0;
+            if (device->isDeviceConnected()) {
+                candle_handle handle = device->getDeviceHandle();
+                QList<GSUSB_timing_t> supportedTiming;
+                GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+                foreach (const GSUSB_timing_t timing, supportedTiming) {
+                    ui->cbBusSpeed->addItem(GSUSBDevice::timingToString(timing));
+                    if ((bus.getSpeed() == (int) timing.bitrate) && (bus.getSamplePoint() == (int) timing.samplePoint)) {
+                        found = true;
+                    } else if (found == false) {
+                        selectionIndex++;
+                    }
+                }
+            }
+            if (found) {
+                ui->cbBusSpeed->setCurrentIndex(selectionIndex);
+            }
+#endif
+        } else {
+            ui->ckEnable->setEnabled(true);
+            ui->cbBusSpeed->clear();
+
+            ui->cbBusSpeed->addItem("33333");
+            ui->cbBusSpeed->addItem("50000");
+            ui->cbBusSpeed->addItem("83333");
+            ui->cbBusSpeed->addItem("100000");
+            ui->cbBusSpeed->addItem("125000");
+            ui->cbBusSpeed->addItem("250000");
+            ui->cbBusSpeed->addItem("500000");
+            ui->cbBusSpeed->addItem("1000000");
+
+            for (int i = 0; i < ui->cbBusSpeed->count(); i++) {
+                if (bus.getSpeed() == ui->cbBusSpeed->itemText(i).toInt()) {
+                    found = true;
+                    ui->cbBusSpeed->setCurrentIndex(i);
+                    break;
+                }
+            }
+            if (!found) {
+                ui->cbBusSpeed->addItem(QString::number(bus.getSpeed()));
             }
         }
 
-        if (!found) ui->cbBusSpeed->addItem(QString::number(bus.getSpeed()));
         found = false;
         for (int i = 0; i < ui->cbDataRate->count(); i++)
         {

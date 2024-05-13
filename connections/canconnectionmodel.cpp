@@ -89,6 +89,7 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                         case CANCon::LAWICEL: return "LAWICEL";
                         case CANCon::CANSERVER: return "CANserver";
                         case CANCon::CANLOGSERVER: return "CanLogServer";
+                        case CANCon::GSUSB: return "gs_usb";
                         default: {}
                     }
                 else qDebug() << "Tried to show connection type but connection was nullptr";
