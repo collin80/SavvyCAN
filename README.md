@@ -47,9 +47,9 @@ to download it separately.
 
 This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt.
 
-NOTE: As the code in this master branch sits, it will not properly compile with QT6. 
-However, there is a QT6WIP branch that should successfully compile. The QT6WIP branch may not
-function entirely properly yet.
+NOTE: As the code in this master branch sits, it does compile with QT6. Support for QT6 is approximately "beta" quality. Most all functions should work, please send issues if found.
+
+It appears that the current binary build for MacOS requires at least MacOS 10.15
 
 ## Instructions for compiling:
 
