@@ -1241,9 +1241,18 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
     if (params.strideSoFar >= params.stride)
     {
         params.strideSoFar = 0;
-        int64_t tempVal; //64 bit temp value.
-        tempVal = Utility::processIntegerSignal(frame.payload(), params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
+        DBC_SIGNAL * sig = params.associatedSignal;
         double xVal, yVal;
+
+        if (sig == NULL) {
+            return;
+        }
+        if (!sig->processAsDouble(frame, yVal)) {
+            return;
+        }
+        params.y.append(yVal);
+        y.append(yVal);
+
         if (Utility::timeStyle == TS_SECONDS)
         {
             xVal = ((double)(frame.timeStamp().microSeconds()) / 1000000.0 - params.xbias);
@@ -1257,18 +1266,15 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         {
             xVal = (frame.timeStamp().microSeconds() - params.xbias);
         }
-        yVal = (tempVal * params.scale) + params.bias;
         params.x.append(xVal);
-        params.y.append(yVal);
         x.append(xVal);
-        y.append(yVal);
 
         //now see if we've got to do anything with the brackets and labels for value table stuff
         QString tempStr;
         if (params.associatedSignal)
         {
 
-            bool isValid = params.associatedSignal->getValueString(tempVal, tempStr);
+            bool isValid = params.associatedSignal->getValueString(yVal, tempStr);
             if (isValid)
             {
                 //we have a graph with associated signal and we could interpret it. So, see what we need to do
@@ -1287,7 +1293,7 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
                     }
                     else //wasn't the same so complete the previous span and start a new one.
                     {
-                        params.prevValTable = tempVal;
+                        params.prevValTable = yVal;
                         params.prevValLocation = QPointF(xVal, yVal);
                         params.prevValStr = tempStr;
 
