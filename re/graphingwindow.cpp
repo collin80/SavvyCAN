@@ -1260,7 +1260,7 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         else if (Utility::timeStyle == TS_CLOCK)
         {
             QDateTime dt = QDateTime::fromMSecsSinceEpoch((frame.timeStamp().microSeconds() / 1000) - params.xbias);
-            xVal = (dt.time().second() + dt.time().minute() * 60 + dt.time().hour() * 3600);
+            xVal = (dt.time().msec()/1000.0 + dt.time().second() + dt.time().minute() * 60 + dt.time().hour() * 3600);
         }
         else
         {
