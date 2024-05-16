@@ -1321,7 +1321,6 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
-    int64_t tempVal; //64 bit temp value.
     double yminval=10000000.0, ymaxval = -1000000.0;
     double xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
@@ -1374,20 +1373,19 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int j = 0; j < numEntries; j++)
     {
         int k = j * params.stride;
-        if (params.associatedSignal)
-        {
-            //skip all the rest of the stuff in this loop and don't add this to the graph if this signal isn't in this frame
-            if (!params.associatedSignal->isSignalInMessage(frameCache[k]))
-            {
-                qDebug() << "Signal was not in this frame";
-                continue;
-            }
-            else qDebug() << "Signal in the frame!";
+        if (!params.associatedSignal) {
+            continue;
         }
-        tempVal = Utility::processIntegerSignal(frameCache[k].payload(), sBit, bits, intelFormat, isSigned); //& params.mask;
-        //qDebug() << tempVal;
-        y = (tempVal * params.scale) + params.bias;
-        params.y.append( y );
+        //skip all the rest of the stuff in this loop and don't add this to the graph if this signal isn't in this frame
+        if (!params.associatedSignal->isSignalInMessage(frameCache[k]))
+        {
+            qDebug() << "Signal was not in this frame";
+            continue;
+        }
+        if (!params.associatedSignal->processAsDouble(frameCache[k], y)) {
+            continue;
+        }
+        params.y.append(y);
 
         if (Utility::timeStyle == TS_SECONDS)
         {
@@ -1405,10 +1403,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
         params.x.append( x );
 
-        if (params.associatedSignal && numEntries > 1)
+        if (numEntries > 1)
         {
 
-            bool isValid = params.associatedSignal->getValueString(tempVal, tempStr);
+            bool isValid = params.associatedSignal->getValueString(y, tempStr);
             if (isValid)
             {
                 if (params.prevValLocation == QPointF(0,0)) {
@@ -1416,7 +1414,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
                     params.prevValStr = tempStr;
                     params.prevValTable = 0;
                 }
-                if (tempVal != params.prevValTable)
+                if (y != params.prevValTable)
                 {
                     qDebug() << "New Value: " << tempStr;
 
@@ -1444,7 +1442,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
                     params.prevValStr = tempStr;
                     params.lastBracket = bracket;
                 }
-                params.prevValTable = tempVal;
+                params.prevValTable = y;
             }
         }
 
@@ -1470,7 +1468,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         valueText->setFont(QFont(font().family(), 10));
         params.prevValLocation = QPointF(x, y);
         params.prevValStr = tempStr;
-        params.prevValTable = tempVal;
+        params.prevValTable = y;
         params.lastBracket = bracket;
     }
 
