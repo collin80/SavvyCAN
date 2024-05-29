@@ -5113,15 +5113,15 @@ bool FrameFileIO::loadWiresharkSocketCANFile(QString filename, QVector<CANFrame>
     int lineCounter = 0;
     bool foundErrors = false;
     pcap_pkthdr packetHeader;
-	const char *packetData = NULL;
-	char errbuf[PCAP_ERRBUF_SIZE];
+    const char *packetData = NULL;
+    char errbuf[PCAP_ERRBUF_SIZE];
 
     QByteArray ba = filename.toLocal8Bit();
 
     pcap_data_file = pcap_open_offline(ba.data(), errbuf, PCAP_LINKTYPE_SOCKETCAN);
-	if (!pcap_data_file) {
-		return false;
-	}
+    if (!pcap_data_file) {
+        return false;
+    }
 
     packetData = (const char*)pcap_next(pcap_data_file, &packetHeader);
     while (packetData) {
@@ -5143,8 +5143,8 @@ bool FrameFileIO::loadWiresharkSocketCANFile(QString filename, QVector<CANFrame>
         // ID and extended frame format
         const quint32 can_id = qFromBigEndian<quint32>(packetData);
         if (can_id & 0x80000000) {
-           thisFrame.setExtendedFrameFormat(true);
-             thisFrame.setFrameId(0x1fffffff & can_id);
+            thisFrame.setExtendedFrameFormat(true);
+                thisFrame.setFrameId(0x1fffffff & can_id);
         } else {
             thisFrame.setExtendedFrameFormat(false);
             thisFrame.setFrameId(0x7ff & can_id);
@@ -5178,7 +5178,7 @@ bool FrameFileIO::loadWiresharkSocketCANFile(QString filename, QVector<CANFrame>
         packetData = (const char*) pcap_next(pcap_data_file, &packetHeader);
     }
     pcap_close(pcap_data_file);
-	pcap_data_file = NULL;
+    pcap_data_file = NULL;
     return !foundErrors;
 }
 
@@ -5189,10 +5189,10 @@ bool FrameFileIO::isWiresharkSocketCANFile(QString filename)
     QByteArray ba = filename.toLocal8Bit();
 
     pcap_data_file = pcap_open_offline(ba.data(), errbuf, PCAP_LINKTYPE_SOCKETCAN);
-	if (!pcap_data_file) {
-		return false;
-	}
+    if (!pcap_data_file) {
+        return false;
+    }
     pcap_close(pcap_data_file);
-	pcap_data_file = NULL;
+    pcap_data_file = NULL;
     return true;
 }
