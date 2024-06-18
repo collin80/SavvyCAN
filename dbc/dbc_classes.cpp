@@ -214,12 +214,12 @@ QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outpu
             }
         }
         if (!foundVal) outputString += QString::number(intVal);
-        if (outputUnit) outputString += unitName;
+        if (outputUnit) outputString += " " + unitName;
     }
     else //otherwise display the actual number and unit (if it exists)
     {
        outputString += (isInteger ? QString::number(intVal) : QString::number(floatVal));
-       if (outputUnit) outputString += unitName;
+       if (outputUnit) outputString += " " + unitName;
     }
     return outputString;
 }
