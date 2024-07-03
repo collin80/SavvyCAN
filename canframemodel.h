@@ -9,6 +9,7 @@
 #include "can_structs.h"
 #include "dbc/dbchandler.h"
 #include "connections/canconnection.h"
+#include "utility.h"
 
 enum class Column {
     TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
@@ -46,14 +47,14 @@ public:
     bool getInterpretMode();
     void setOverwriteMode(bool);
     void setHexMode(bool);
-    void setSysTimeMode(bool);
-    void setMillisMode(bool mode);
+    void setClearMode(bool mode);
+    void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
     void setFilterState(unsigned int ID, bool state);
     void setBusFilterState(unsigned int BusID, bool state);
     void setAllFilters(bool state);
-    void setSecondsMode(bool);
     void setTimeFormat(QString);
+    void setBytesPerLine(int bpl);
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);
     void normalizeTiming();
@@ -77,7 +78,7 @@ signals:
 private:
     void qSortCANFrameAsc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
     void qSortCANFrameDesc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
-    uint64_t getCANFrameVal(int row, Column col);
+    uint64_t getCANFrameVal(QVector<CANFrame> *frames, int row, Column col);
     bool any_filters_are_configured(void);
     bool any_busfilters_are_configured(void);
 
@@ -89,16 +90,17 @@ private:
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
+    bool filtersPersistDuringClear;
     QString timeFormat;
+    TimeStyle timeStyle;
     bool useHexMode;
-    bool timeSeconds;
-    bool useSystemTime;
     bool needFilterRefresh;
     bool ignoreDBCColors;
     int64_t timeOffset;
     int lastUpdateNumFrames;
     uint32_t preallocSize;
     bool sortDirAsc;
+    int bytesPerLine;
 };
 
 

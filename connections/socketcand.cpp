@@ -10,7 +10,7 @@
 #include "socketcand.h"
 
 SocketCANd::SocketCANd(QString portName) :
-    CANConnection(portName, "kayak", CANCon::KAYAK, 1, 4000, true),
+    CANConnection(portName, "kayak", CANCon::KAYAK, 0, 0, false, 0, 1, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
 
@@ -32,6 +32,7 @@ SocketCANd::SocketCANd(QString portName) :
     for (int i = 0; i < mNumBuses; i++)
     {
         rx_state.append(IDLE);
+        unprocessedData.append("");
     }
 
 }
@@ -63,7 +64,7 @@ void SocketCANd::sendBytesToTCP(const QByteArray &bytes, int busNum)
         byt = (unsigned char)byt;
         buildDebug = buildDebug % QString::number(byt, 16) % " ";
     }
-    sendDebug(buildDebug);
+    //sendDebug(buildDebug);
 
     if (tcpClient[busNum]) tcpClient[busNum]->write(bytes);
 }
@@ -76,9 +77,9 @@ void SocketCANd::sendStringToTCP(const char* data, int busNum)
         return;
     }
 
-    QString buildDebug;
-    buildDebug = "Send data to " + hostIP.toString() + ":" + QString::number(hostPort) + " -> " + data;
-    sendDebug(buildDebug);
+    //QString buildDebug;
+    //buildDebug = "Send data to " + hostIP.toString() + ":" + QString::number(hostPort) + " -> " + data;
+    //sendDebug(buildDebug);
     //qInfo() << buildDebug;
 
     if (tcpClient[busNum]) tcpClient[busNum]->write(data);
@@ -218,8 +219,8 @@ void SocketCANd::connectDevice()
 void SocketCANd::deviceConnected(int busNum)
 {
     sendDebug("Opening CAN on Kayak Device!");
-    const char* openCanCmd = ("< open " + hostCanIDs[busNum] + " >").toStdString().c_str();
-    sendStringToTCP(openCanCmd, busNum);
+    QString openCanCmd("< open " % hostCanIDs[busNum] % " >");
+    sendStringToTCP(openCanCmd.toUtf8().data(), busNum);
 
     QCoreApplication::processEvents();
 }
@@ -249,62 +250,89 @@ void SocketCANd::switchToRawMode(int busNum)
     QCoreApplication::processEvents();
 }
 
-void SocketCANd::decodeFrames(QString data, int busNum)
+QString SocketCANd::decodeFrames(QString data, int busNum)
 {
-    if (data.indexOf("< frame ") == -1)
+    if (data.indexOf("<") == -1)
+        return "";
+    else if(data.length() >= 8 && data.indexOf("< frame ") == -1)
+        return "";
+
+    int firstIndex = data.indexOf("< frame ");
+    if(firstIndex > 0)
     {
-        qDebug() << "Received datagramm doesn't contain any frame: " << data;
-        return;
+        QString framePartial = data.left(firstIndex);
+        qDebug() << "Received datagramm that starts with fragment (missing '< frame'), this should only occur on startup, removing...: " << framePartial;
     }
-    else
+    QString framePart = data.mid(firstIndex); //remove starting beginning of payload if not < frame >
+    const QString frameStrConst = framePart.left(framePart.indexOf(">")+1);
+    QString frameStr = frameStrConst;
+    QStringList frameParsed = (frameStr.remove(QRegularExpression("^<")).remove(QRegularExpression(">$"))).simplified().split(' ');
+
+    if(frameParsed.length() < 3)
     {
-        QString framePart = data.mid(data.indexOf("< frame "), data.length()); //remove starting beginning of payload if not < frame >
-        const QString frameStrConst = framePart.left(framePart.indexOf(">")+1);
-        QString frameStr = frameStrConst;
-        QStringList frameParsed = (frameStr.remove(QRegExp("^<")).remove(QRegExp(">$"))).simplified().split(' ');
+        //qDebug() << "Received datagramm is an incomplete frame: " << data;
 
-        buildFrame.setFrameId(frameParsed[1].toUInt(nullptr, 16));
-        buildFrame.bus = busNum;
+        //ok great, need to leave it in the buffer in case it can be combined with what comes next
+        //but if there was a fragment that did not have a starting token then we don't want it so only return
+        //known good data...again this should only happen on startup, but just in case we need to remove it
+        //so the data buffer doesn't grow uncontrolled.
+        return framePart;
+    }
 
-        if (buildFrame.frameId() > 0x7FF) buildFrame.setExtendedFrameFormat(true);
-        else buildFrame.setExtendedFrameFormat(false);
+    buildFrame.setFrameId(frameParsed[1].toUInt(nullptr, 16));
+    buildFrame.bus = busNum;
 
-        buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
-        //buildFrame.len =  frameParsed[3].length() * 0.5;
-        int framelength = frameParsed[3].length() * 0.5;
+    if (buildFrame.frameId() > 0x7FF) buildFrame.setExtendedFrameFormat(true);
+    else buildFrame.setExtendedFrameFormat(false);
 
-        buildData.resize(framelength);
+    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
+    //buildFrame.len =  frameParsed[3].length() * 0.5;
 
-        int c;
-        for (c = 0; c < framelength; c++)
-        {
-            bool ok;
-            unsigned char byteVal = frameParsed[3].mid(c*2, 2).toUInt(&ok, 16);
-            buildData[c] = byteVal;
-        }
-        buildFrame.setPayload(buildData);
+    int framelength = 0;
+
+    if(frameParsed.length() == 4)
+    {
+        framelength = frameParsed[3].length() * 0.5;
+    }
+
+    QByteArray buildData;
+    buildData.resize(framelength);
+
+    int c;
+    for (c = 0; c < framelength; c++)
+    {
+        bool ok;
+        unsigned char byteVal = frameParsed[3].mid(c*2, 2).toUInt(&ok, 16);
+        buildData[c] = byteVal;
+    }
+    buildFrame.setPayload(buildData);
 //        buildFrame.isReceived = true;
 
-        if (!isCapSuspended())
-        {
-            /* get frame from queue */
-            CANFrame* frame_p = getQueue().get();
-            if(frame_p) {
-                /* copy frame */
-                *frame_p = buildFrame;
-                //frame_p->remote = false;
-                frame_p->setFrameType(QCanBusFrame::DataFrame);
-                checkTargettedFrame(buildFrame);
-                /* enqueue frame */
-                getQueue().queue();
-            }
+    if (!isCapSuspended())
+    {
+        /* get frame from queue */
+        CANFrame* frame_p = getQueue().get();
+        if(frame_p) {
+            /* copy frame */
+            *frame_p = buildFrame;
+            //frame_p->remote = false;
+            frame_p->setFrameType(QCanBusFrame::DataFrame);
+            checkTargettedFrame(buildFrame);
+            /* enqueue frame */
+            getQueue().queue();
         }
-        else
-            qDebug() << "can't get a frame, capture suspended";
-
-        if (framePart.length() > frameStrConst.length())
-            decodeFrames(framePart.right(framePart.length() - frameStrConst.length()), busNum);
     }
+    //else
+    //    qDebug() << "can't get a frame, capture suspended";
+
+    //take out the data that we just processed and anything that is in front of it
+    //this should keep broken frames from accumulating at in the data buffer
+    if (framePart.length() > frameStrConst.length())
+    {
+        return decodeFrames(framePart.right(framePart.length() - frameStrConst.length()), busNum);
+    }
+
+    return "";
 }
 
 void SocketCANd::disconnectDevice() {
@@ -339,14 +367,14 @@ void SocketCANd::invokeReadTCPData()
 
 void SocketCANd::readTCPData(int busNum)
 {
-    QByteArray data;
+    QString data;
 
-    if (tcpClient[busNum]) data = tcpClient[busNum]->readAll();
+    if (QTcpSocket* socket = tcpClient.value(busNum))
+        data = QString(socket->readAll());
     //sendDebug("Got data from TCP. Len = " % QString::number(data.length()));
     //qDebug() << "Received datagramm: " << data;
     procRXData(data, busNum);
 }
-
 
 void SocketCANd::procRXData(QString data, int busNum)
 {
@@ -355,8 +383,6 @@ void SocketCANd::procRXData(QString data, int busNum)
         mTimer.stop();
         mTimer.start();
     }
-    QByteArray output;
-
     switch (rx_state.at(busNum))
     {
     case IDLE:
@@ -374,6 +400,7 @@ void SocketCANd::procRXData(QString data, int busNum)
         {
             switchToRawMode(busNum);
             rx_state[busNum] = SWITCHING2RAW;
+            unprocessedData[busNum].clear();
         }
         else qInfo() << hostCanIDs[busNum] << ": Could not open bus. Host did not respond with ""< ok >"": " << data;
         break;
@@ -383,9 +410,30 @@ void SocketCANd::procRXData(QString data, int busNum)
         {
             rx_state[busNum] = RAWMODE;
         }
+        else if(data.indexOf("< ok >", 0, Qt::CaseSensitivity::CaseInsensitive) == 0)
+        {
+            qDebug() << "Ok found at start of compound message, switching to RAW and decoding immediately";
+            rx_state[busNum] = RAWMODE;
+            unprocessedData[busNum] = decodeFrames(data, busNum);
+        }
+        else if(data.indexOf("< ok >", 0, Qt::CaseSensitivity::CaseInsensitive) > 0)
+        {
+            qDebug() << "Ok found at in middle of compound message, switching to RAW and decoding immediately";
+            rx_state[busNum] = RAWMODE;
+            unprocessedData[busNum] = decodeFrames(data, busNum);
+        }
         break;
     case RAWMODE:
-        decodeFrames(data, busNum);
+        unprocessedData[busNum] = decodeFrames(unprocessedData[busNum] + data, busNum);
+
+        if(unprocessedData[busNum].length() > 128)
+        {
+            //the buffer has grown too much we need to clear it out, but what is good logic for that?
+            //the decodeFrames function strips out datat that doesn't have a '< frame' starting token, and in its
+            //recursive calling of itself it strips out data that preceedes valid frames, so this should never happen
+            qDebug() << "busNum: " << busNum << "- " << unprocessedData[busNum].length() << " bytes in unprocessedData, something is wrong, clearing...";
+            unprocessedData[busNum].clear();
+        }
         break;
     case ISOTP:
         break;

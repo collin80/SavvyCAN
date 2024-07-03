@@ -25,6 +25,7 @@ public:
     double scale;
     int stride;
     int strideSoFar;
+    int bus;
     QColor lineColor;
     QColor fillColor;
     int lineWidth;
@@ -33,6 +34,7 @@ public:
     QCPGraph *ref;
     QString graphName;
     DBC_SIGNAL *associatedSignal;
+
     //the below stuff is used for internal purposes only - code should be refactored so these can be private
     QVector<double> x, y;
     double xbias;
@@ -81,7 +83,7 @@ private slots:
     void appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y);
     void editSelectedGraph();
     void updatedFrames(int);
-    void gotCenterTimeID(int32_t ID, double timestamp);
+    void gotCenterTimeID(uint32_t ID, double timestamp);
     void resetView();
     void zoomIn();
     void zoomOut();
@@ -100,7 +102,6 @@ private:
     QCPItemText *locationText;
     QCPItemTracer *itemTracer;
     bool needScaleSetup; //do we need to set x,y graphing extents?
-    bool secondsMode;
     bool useOpenGL;
     bool followGraphEnd;
 

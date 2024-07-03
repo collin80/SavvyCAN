@@ -1,7 +1,7 @@
 Playback Window
 ===============
 
-![Playback Window](./images/PlayBack.png)
+![Playback Window](./images/Playback.png)
 
 
 Preparing Frames for Playback
@@ -18,7 +18,9 @@ The playback window can send frames on a specific bus, all buses (be careful wit
 
 The next order of business is frame timing. There are two approaches possible here. If you click "Use original frame timing from captured frames" then frames will be sent out in approximately the same timing as they came in with. The word approximately is used because it is difficult to get 1ms timing precision on a desktop OS. Frames that come in rapidly might have a 2-3ms jitter. In practice this is almost always irrelevant. This setting is suitable for nearly all uses.
 
-Alternatively, it is also possible to send on a set schedule. With the "Use original" checkbox not checked you can set a playback speed in milliseconds and a burst rate. Burst means that it'll send that many frames every tick. So, if you have a burst of 5 and a timing of 10ms then every 10ms 5 frames will be sent. This mode can provide for a predictable number of frames per second and could be useful to test how quickly a device really requires traffic without faulting. But, it will potentially drastically alter the timing of frames compared to their timing when they were captured.
+Alternatively, it is also possible to send on a set schedule. With the "Use original" checkbox not checked you can set a playback speed in milliseconds and a burst rate. Burst means that it'll send that many frames every tick. So, if you have a burst of 5 and a timing of 10ms then every 10ms 5 frames will be sent. This mode can provide for a predictable number of frames per second and could be useful to test how quickly a device really requires traffic without faulting. But, it will potentially drastically alter the timing of frames compared to their timing when they were captured. You can set a burst rate as well. Burst Rate is the number of frames sent every "tick." This can speed up how fast you can send traffic.
+
+There is also now a checkbox that allows for waiting for traffic before sending CAN frames when you click play forward or backward. If this checkbox is checked you will see (WAITING) to the left of the number of frames below "Current frame." Once any CAN traffic starts to come in your frames will begin to playback automatically. Why would you want to do this? Well, the most likely reason is that you want to play back a CAN capture but you only want to do so once the vehicle has been powered on. And, you want to wait until the CAN buses are active so that you don't fault by sending traffic into nowhere. Lastly, this allows your playback to happen very rapidly after start up which might otherwise be tougher to pull off accurately.
 
 The top of the window has a series of 6 icons all in a row:
 

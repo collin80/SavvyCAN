@@ -7,6 +7,7 @@
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
+#include "triggerdialog.h"
 
 /*
  * notes: need to ensure that you grab pointers when modifying data structures and dont
@@ -24,6 +25,8 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
 
     modelFrames = frames;
 
+    dbcHandler = DBCHandler::getReference();
+
     intervalTimer = new QTimer();
     intervalTimer->setTimerType(Qt::PreciseTimer);
     intervalTimer->setInterval(1);
@@ -32,6 +35,7 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     createBlankRow();
 
     connect(ui->tableSender, SIGNAL(cellChanged(int,int)), this, SLOT(onCellChanged(int,int)));
+    connect(ui->tableSender, SIGNAL(cellDoubleClicked(int, int)), SLOT(onCellDoubleTap(int, int)));
     connect(intervalTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
     connect(ui->btnClearGrid, SIGNAL(clicked(bool)), this, SLOT(clearGrid()));
     connect(ui->btnDisableAll, SIGNAL(clicked(bool)), this, SLOT(disableAll()));
@@ -48,19 +52,20 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
 void FrameSenderWindow::setupGrid()
 {
     QStringList headers;
-    headers << "En" << "Bus" << "ID" << "Len" << "Ext" << "Rem" << "Data"
+    headers << "En" << "Bus" << "ID" << "MsgName" << "Len" << "Ext" << "Rem" << "Data"
             << "Trigger" << "Modifications" << "Count";
-    ui->tableSender->setColumnCount(10);
-    ui->tableSender->setColumnWidth(0, 50);
-    ui->tableSender->setColumnWidth(1, 50);
-    ui->tableSender->setColumnWidth(2, 50);
-    ui->tableSender->setColumnWidth(3, 50);
-    ui->tableSender->setColumnWidth(4, 50);
-    ui->tableSender->setColumnWidth(5, 50);
-    ui->tableSender->setColumnWidth(6, 220);
-    ui->tableSender->setColumnWidth(7, 220);
-    ui->tableSender->setColumnWidth(8, 220);
-    ui->tableSender->setColumnWidth(9, 80);
+    ui->tableSender->setColumnCount(11);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_EN, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_BUS, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_ID, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_MSGNAME, 150);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_LEN, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_EXT, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_REM, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_DATA, 220);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_TRIGGER, 270);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_MODS, 270);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_COUNT, 80);
     ui->tableSender->setHorizontalHeaderLabels(headers);
 }
 
@@ -100,22 +105,26 @@ void FrameSenderWindow::createBlankRow()
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
     inhibitChanged = true;
-    ui->tableSender->setItem(row, 0, item);
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EN, item);
 
     item = new QTableWidgetItem();
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
-    ui->tableSender->setItem(row, 4, item);
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EXT, item);
 
     item = new QTableWidgetItem();
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
-    ui->tableSender->setItem(row, 5, item);
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_REM, item);
 
-    for (int i = 1; i < 10; i++)
+    for (int i = 1; i <= ST_COLS::SENDTAB_COL_COUNT; i++)
     {
-        if (i != 4 && i != 5) {
+        if (i != ST_COLS::SENDTAB_COL_EXT && i != ST_COLS::SENDTAB_COL_REM) {
             item = new QTableWidgetItem("");
+            //msgname is looked up via DBC interface and not able to be edited.
+            //Though, it might be perhaps interesting to allow renaming it to
+            //a shorter name in some cases? Jury is still out on this one...
+            if (i == ST_COLS::SENDTAB_COL_MSGNAME) item->setFlags(item->flags() & ~Qt::ItemIsEditable);
             ui->tableSender->setItem(row, i, item);
          }
     }
@@ -178,30 +187,79 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
         if (sendingData[sd].triggers.count() == 0) continue;
+        bool passedChecks = true;
         for (int trig = 0; trig < sendingData[sd].triggers.count(); trig++)
         {
             Trigger *thisTrigger = &sendingData[sd].triggers[trig];
-            qDebug() << "Trigger ID: " << thisTrigger->ID;
-            qDebug() << "Frame ID: " << frame->frameId();
-            if (thisTrigger->ID > 0 && (uint32_t)thisTrigger->ID == frame->frameId())
+            //need to ensure that this trigger is actually related to frames incoming.
+            //Otherwise ignore it here. Only frames that have BUS and/or ID set as trigger will work here.
+            if (!(thisTrigger->triggerMask & (TriggerMask::TRG_BUS | TriggerMask::TRG_ID) ) ) continue;
+
+            passedChecks = true;
+            //qDebug() << "Trigger ID: " << thisTrigger->ID;
+            //qDebug() << "Frame ID: " << frame->frameId();
+
+            //Check to see if we have a bus trigger condition and if so does it match
+            if (thisTrigger->bus != frame->bus && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
+                passedChecks = false;
+
+            //check to see if we have an ID trigger condition and if so does it match
+            if ((thisTrigger->triggerMask & TriggerMask::TRG_ID) && (uint32_t)thisTrigger->ID != frame->frameId() )
+                passedChecks = false;
+
+            //check to see if we're limiting the trigger by max count and have we reached that count?
+            if ( (thisTrigger->triggerMask & TriggerMask::TRG_COUNT) && (thisTrigger->currCount >= thisTrigger->maxCount) )
+                passedChecks = false;
+
+            //if the above passed then are we triggering not only on ID but also signal?
+            if (passedChecks && (thisTrigger->triggerMask & (TriggerMask::TRG_SIGNAL | TriggerMask::TRG_ID) ) )
             {
-                if (thisTrigger->bus == frame->bus || thisTrigger->bus == -1)
+                bool sigCheckPassed = false;
+                DBC_MESSAGE *msg = dbcHandler->findMessage(thisTrigger->ID);
+                if (msg)
                 {
-                    if (thisTrigger->currCount < thisTrigger->maxCount)
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(thisTrigger->sigName);
+                    if (sig)
                     {
-                        if (thisTrigger->milliseconds == 0) //immediate reply
+                        //first of all, is this signal really in this message we got?
+                        if (sig->isSignalInMessage(*frame)) sigCheckPassed = true;
+                        //if it was and we're also filtering on value then try that next
+                        if (sigCheckPassed && (thisTrigger->triggerMask & TriggerMask::TRG_SIGVAL))
                         {
-                            thisTrigger->currCount++;
-                            sendingData[sd].count++;
-                            doModifiers(sd);
-                            updateGridRow(sd);
-                            CANConManager::getInstance()->sendFrame(sendingData[sd]);
-                        }
-                        else //delayed sending frame
-                        {
-                            thisTrigger->readyCount = true;
+                            double sigval = 0.0;
+                            if (sig->processAsDouble(*frame, sigval))
+                            {
+                                if (abs(sigval - thisTrigger->sigValueDbl) > 0.001)
+                                {
+                                    sigCheckPassed = false;
+                                }
+                            }
+                            else sigCheckPassed = false;
                         }
                     }
+                    else sigCheckPassed = false;
+                }
+                else sigCheckPassed = false;
+                passedChecks &= sigCheckPassed; //passedChecks can only be true if both are
+            }
+
+            //if all the above says it's OK then we'll go ahead and send that message.
+            //If a message that comes through here has a MS value then we use it as a delay
+            //after the check passes. This allows for delaying the sending of the frame if that
+            //is required. Otherwise, just send it immediately.
+            if (passedChecks)
+            {
+                if (thisTrigger->milliseconds == 0) //immediate reply
+                {
+                    thisTrigger->currCount++;
+                    sendingData[sd].count++;
+                    doModifiers(sd);
+                    updateGridRow(sd);
+                    CANConManager::getInstance()->sendFrame(sendingData[sd]);
+                }
+                else //delayed sending frame
+                {
+                    thisTrigger->readyCount = true;
                 }
             }
         }
@@ -212,7 +270,7 @@ void FrameSenderWindow::enableAll()
 {
     for (int i = 0; i < ui->tableSender->rowCount() - 1; i++)
     {
-        ui->tableSender->item(i, 0)->setCheckState(Qt::Checked);
+        ui->tableSender->item(i, ST_COLS::SENDTAB_COL_EN)->setCheckState(Qt::Checked);
         sendingData[i].enabled = true;
     }
 }
@@ -221,7 +279,7 @@ void FrameSenderWindow::disableAll()
 {
     for (int i = 0; i < ui->tableSender->rowCount() - 1; i++)
     {
-        ui->tableSender->item(i, 0)->setCheckState(Qt::Unchecked);
+        ui->tableSender->item(i, ST_COLS::SENDTAB_COL_EN)->setCheckState(Qt::Unchecked);
         sendingData[i].enabled = false;
     }
 }
@@ -290,6 +348,8 @@ void FrameSenderWindow::loadGrid()
         }
     }
 
+    createBlankRow();
+
     setupGrid();
 }
 
@@ -307,14 +367,14 @@ void FrameSenderWindow::saveSenderFile(QString filename)
     for (int c = 0; c < sendingData.count(); c++)
     {
         outString.clear();
-        if (ui->tableSender->item(c, 0)->checkState() == Qt::Checked)
+        if (ui->tableSender->item(c, ST_COLS::SENDTAB_COL_EN)->checkState() == Qt::Checked)
         {
             outString = "T#";
         }
         else outString = "F#";
-        for (int i = 1; i < 9; i++)
+        for (int i = 1; i < ST_COLS::SENDTAB_COL_COUNT; i++)
         {
-            if (i == 4 || i == 5) {
+            if (i == ST_COLS::SENDTAB_COL_EXT || i == ST_COLS::SENDTAB_COL_REM) {
                 if (ui->tableSender->item(c, i)->checkState() == Qt::Checked) {
                     outString.append("T");
                 } else {
@@ -357,28 +417,28 @@ void FrameSenderWindow::loadSenderFile(QString filename)
             int row = ui->tableSender->rowCount();
             ui->tableSender->insertRow(row);
             QTableWidgetItem *item = new QTableWidgetItem();
-            ui->tableSender->setItem(row, 0, item);
-            ui->tableSender->item(row, 0)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EN, item);
+            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
 
             item = new QTableWidgetItem();
-            ui->tableSender->setItem(row, 4, item);
-            ui->tableSender->item(row, 4)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EXT, item);
+            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(Qt::Unchecked);
 
             item = new QTableWidgetItem();
-            ui->tableSender->setItem(row, 5, item);
-            ui->tableSender->item(row, 5)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_REM, item);
+            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_REM)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(Qt::Unchecked);
 
             if (tokens[0] == "T")
             {
-                ui->tableSender->item(row, 0)->setCheckState(Qt::Checked);
+                ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setCheckState(Qt::Checked);
             }
-            else ui->tableSender->item(row, 0)->setCheckState(Qt::Unchecked);
+            else ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setCheckState(Qt::Unchecked);
             if (tokens.length() >= 9) {
-                for (int i = 1; i < 9; i++)
+                for (int i = 1; i < ST_COLS::SENDTAB_COL_COUNT; i++)
                 {
-                    if (i != 4 && i != 5) {
+                    if (i != ST_COLS::SENDTAB_COL_EXT && i != ST_COLS::SENDTAB_COL_REM) {
                         ui->tableSender->setItem(row, i, new QTableWidgetItem(QString(tokens[i])));
                     } else {
                         if (tokens[i] == "T") {
@@ -387,20 +447,59 @@ void FrameSenderWindow::loadSenderFile(QString filename)
                     }
                 }
             } else {
-                ui->tableSender->setItem(row, 1, new QTableWidgetItem(QString(tokens[1])));
-                ui->tableSender->setItem(row, 2, new QTableWidgetItem(QString(tokens[2])));
-                ui->tableSender->setItem(row, 3, new QTableWidgetItem(QString(tokens[3])));
-                ui->tableSender->setItem(row, 6, new QTableWidgetItem(QString(tokens[4])));
-                ui->tableSender->setItem(row, 7, new QTableWidgetItem(QString(tokens[5])));
-                ui->tableSender->setItem(row, 8, new QTableWidgetItem(QString(tokens[6])));
+                ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_BUS, new QTableWidgetItem(QString(tokens[1])));
+                ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_ID, new QTableWidgetItem(QString(tokens[2])));
+                ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_LEN, new QTableWidgetItem(QString(tokens[3])));
+                ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_DATA, new QTableWidgetItem(QString(tokens[4])));
+                ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_TRIGGER, new QTableWidgetItem(QString(tokens[5])));
+                ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_MODS, new QTableWidgetItem(QString(tokens[6])));
             }
             inhibitChanged = false;
-            for (int k = 0; k < 9; k++) processCellChange(row, k);
+            for (int k = 0; k < ST_COLS::SENDTAB_COL_COUNT; k++) processCellChange(row, k);
 
         }
     }
     inFile->close();
     delete inFile;
+}
+
+void FrameSenderWindow::onCellDoubleTap(int row, int column)
+{
+    if (column == ST_COLS::SENDTAB_COL_TRIGGER)
+    {
+        if (row == ui->tableSender->rowCount() - 1)
+        {
+            createBlankRow();
+        }
+        if (row >= sendingData.count())
+        {
+            FrameSendData tempData;
+            tempData.enabled = false;
+            tempData.setFrameType(QCanBusFrame::DataFrame);
+            tempData.setExtendedFrameFormat(false);
+            sendingData.append(tempData);
+        }
+        sendData = nullptr;
+        sendData = &sendingData[row];
+        td = new TriggerDialog(sendData->triggers);
+        if (td->exec() == QDialog::Accepted)
+        {
+            sendData->triggers.clear();
+            sendData->triggers.append(td->getUpdatedTriggers());
+            //now have to generate the actual trigger text
+            QString output;
+            foreach (Trigger trig, sendData->triggers)
+            {
+                output += td->buildEntry(trig) + ",";
+            }
+            output.chop(1); //don't want the trailing ,
+            inhibitChanged = true;
+            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_TRIGGER)->setText(output);
+            inhibitChanged = false;
+        }
+        delete td;
+        td = nullptr;
+    }
 }
 
 void FrameSenderWindow::onCellChanged(int row, int col)
@@ -424,44 +523,54 @@ void FrameSenderWindow::handleTick()
 {
     FrameSendData *sendData;
     Trigger *trigger;
-    int elapsed = elapsedTimer.restart();
-    if (elapsed == 0) elapsed = 1;
-    //Modifier modifier;
-    for (int i = 0; i < sendingData.count(); i++)
+    if(mutex.tryLock())
     {
-        sendData = &sendingData[i];
-        if (!sendData->enabled)
+        int elapsed = elapsedTimer.restart();
+        if (elapsed == 0) elapsed = 1;
+        //Modifier modifier;
+        for (int i = 0; i < sendingData.count(); i++)
         {
-            if (sendData->triggers.count() > 0)
+            sendData = &sendingData[i];
+            if (!sendData->enabled)
             {
-                for (int j = 0; j < sendData->triggers.count(); j++)    //resetting currCount when line is disabled
+                if (sendData->triggers.count() > 0)
                 {
-                  sendData->triggers[j].currCount = 0;
+                    for (int j = 0; j < sendData->triggers.count(); j++)    //resetting currCount when line is disabled
+                    {
+                      sendData->triggers[j].currCount = 0;
+                    }
+                }
+                continue; //abort any processing on this if it is not enabled.
+            }
+            if (sendData->triggers.count() == 0) break;
+            for (int j = 0; j < sendData->triggers.count(); j++)
+            {
+                trigger = &sendData->triggers[j];
+                if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
+                if (!trigger->readyCount) continue; //don't tick if not ready to tick
+                //is it time to fire?
+                trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
+                if (trigger->msCounter >= trigger->milliseconds)
+                {
+                    trigger->msCounter = 0;
+                    sendData->count++;
+                    trigger->currCount++;
+                    doModifiers(i);
+                    updateGridRow(i);
+                    //qDebug() << "About to try to send a frame";
+                    CANConManager::getInstance()->sendFrame(sendingData[i]);
+                    if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
                 }
             }
-            continue; //abort any processing on this if it is not enabled.
         }
-        if (sendData->triggers.count() == 0) return;
-        for (int j = 0; j < sendData->triggers.count(); j++)
-        {
-            trigger = &sendData->triggers[j];
-            if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
-            if (!trigger->readyCount) continue; //don't tick if not ready to tick
-            //is it time to fire?
-            trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
-            if (trigger->msCounter >= trigger->milliseconds)
-            {
-                trigger->msCounter = 0;
-                sendData->count++;
-                trigger->currCount++;
-                doModifiers(i);
-                updateGridRow(i);
-                qDebug() << "About to try to send a frame";
-                CANConManager::getInstance()->sendFrame(sendingData[i]);
-                if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
-            }
-        }
+
+        mutex.unlock();
     }
+    else
+    {
+        qDebug() << "framesenderwindow::handleTick() couldn't get mutex, elapsed is: " << elapsedTimer.elapsed();
+    }
+
 }
 
 /// <summary>
@@ -479,7 +588,7 @@ void FrameSenderWindow::doModifiers(int idx)
 
     if (sendData->modifiers.count() == 0) return; //if no modifiers just leave right now
 
-    qDebug() << "Executing mods";
+    //qDebug() << "Executing mods";
 
     for (int i = 0; i < sendData->modifiers.count(); i++)
     {
@@ -584,6 +693,12 @@ void FrameSenderWindow::processModifierText(int line)
     //Example line:
     //d0 = D0 + 1,d1 = id:0x200:d3 + id:0x200:d4 AND 0xF0 - Original version
     //D0=D0+1,D1=ID:0x200:D3+ID:0x200:D4&0xF0
+
+    //[BMS_TargetVoltage]=45 would set the value of signal BMS_TargetVoltage to 45
+
+    //[BMS_TargetVoltage]=[0x234:BMS_CurrentVoltage] + 4 would instead grab the value
+    //of BMS_CurrentVoltage from ID 0x234, add 4 to it, and set BMS_TargetVoltage to that value.
+
     //This is certainly much harder to parse than the trigger definitions.
     //the left side of the = has to be D0 to D7. After that there is a string of
     //data. Spaces used to be required but no longer are. This makes parsing harder but data entry easier
@@ -601,22 +716,33 @@ void FrameSenderWindow::processModifierText(int line)
             Modifier thisMod;
             thisMod.destByte = 0;
 
-            QString leftSide = Utility::grabAlphaNumeric(mods[i]);
-            if (leftSide.startsWith("D") && leftSide.length() == 2)
+            QRegularExpression regex;
+            QRegularExpressionMatch match;
+
+            regex.setPattern("^\\[(\\w+)]=(\\w+)");
+            match = regex.match(mods[i]);
+            if (match.hasMatch())
             {
-                thisMod.destByte = leftSide.right(1).toInt();
+                thisMod.destByte = -1;
+                thisMod.signalName = match.captured(1);
+                mods[i] = match.captured(2);
                 thisMod.operations.clear();
             }
             else
             {
-                qDebug() << "Something wrong with lefthand val";
-                continue;
+                QString leftSide = Utility::grabAlphaNumeric(mods[i]);
+                if (leftSide.startsWith("D") && leftSide.length() == 2)
+                {
+                    thisMod.destByte = leftSide.right(1).toInt();
+                    thisMod.operations.clear();
+                    if (!(Utility::grabOperation(mods[i]) == "="))
+                    {
+                        qDebug() << "Err: No = after lefthand val";
+                        continue;
+                    }
+                }
             }
-            if (!(Utility::grabOperation(mods[i]) == "="))
-            {
-                qDebug() << "Err: No = after lefthand val";
-                continue;
-            }
+
             abort = false;
 
             token = Utility::grabAlphaNumeric(mods[i]);
@@ -648,10 +774,10 @@ void FrameSenderWindow::processModifierText(int line)
                 {
                     thisOp.operation = parseOperation(operation);
                     QString secondOp = Utility::grabAlphaNumeric(mods[i]);
-                    if (mods[i][0] == '~')
+                    if (secondOp.length() > 0 && secondOp[0] == '~')
                     {
                         thisOp.second.notOper = true;
-                        mods[i] = mods[i].remove(0, 1); //remove the ~ character
+                        secondOp = secondOp.remove(0, 1); //remove the ~ character
                     }
                     else thisOp.second.notOper = false;
                     thisOp.second.bus = sendingData[line].bus;
@@ -676,11 +802,10 @@ void FrameSenderWindow::processTriggerText(int line)
     QString trigger;
 
     //Example line:
-    //id0x200 5ms 10x bus0,1000ms
+    //id0x200 5ms 10x bus0,1000ms,ID0x202 SIG[BMS_maxChargeCurrent;300]
     //trigger has two levels of syntactic parsing. First you split by comma to get each
     //actual trigger. Then you split by spaces to get the tokens within each trigger
-    //trigger = ui->tableSender->item(line, 5)->text().toUpper().trimmed().replace(" ", "");
-    trigger = ui->tableSender->item(line, 7)->text().toUpper();
+    trigger = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_TRIGGER)->text().toUpper();
     if (trigger != "")
     {
         QStringList triggers = trigger.split(',');
@@ -696,6 +821,7 @@ void FrameSenderWindow::processTriggerText(int line)
             thisTrigger.milliseconds = -1;
             thisTrigger.currCount = 0;
             thisTrigger.msCounter = 0;
+            thisTrigger.triggerMask = 0;
             thisTrigger.readyCount = true;
 
             QStringList trigToks = triggers[k].split(' ');
@@ -705,32 +831,59 @@ void FrameSenderWindow::processTriggerText(int line)
                 if (tok.left(2) == "ID")
                 {
                     thisTrigger.ID = Utility::ParseStringToNum(tok.right(tok.length() - 2));
-                    if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 10000000;
+                    //if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 0;
 
                     if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 0; //by default don't count, just send it upon trigger
                     thisTrigger.readyCount = false; //won't try counting until trigger hits
+                    thisTrigger.triggerMask |= TriggerMask::TRG_ID;
                 }
                 else if (tok.endsWith("MS"))
                 {
                     thisTrigger.milliseconds = Utility::ParseStringToNum(tok.left(tok.length()-2));
-                    if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 10000000;
-                    if (thisTrigger.ID == -1) thisTrigger.ID = 0;
+                    thisTrigger.triggerMask |= TriggerMask::TRG_MS;
+                    //if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 0;
+                    //if (thisTrigger.ID == -1) thisTrigger.ID = 0;
                 }
                 else if (tok.endsWith("X"))
                 {
                     thisTrigger.maxCount = Utility::ParseStringToNum(tok.left(tok.length() - 1));
-                    if (thisTrigger.ID == -1) thisTrigger.ID = 0;
-                    if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 10;
+                    thisTrigger.triggerMask |= TriggerMask::TRG_COUNT;
+                    //if (thisTrigger.ID == -1) thisTrigger.ID = 0;
+                    if (thisTrigger.milliseconds == -1)
+                    {
+                        thisTrigger.milliseconds = 10;
+                        thisTrigger.triggerMask |= TriggerMask::TRG_ID;
+                    }
                 }
                 else if (tok.startsWith("BUS"))
                 {
                     thisTrigger.bus = Utility::ParseStringToNum(tok.right(tok.length() - 3));
+                    thisTrigger.triggerMask |= TriggerMask::TRG_BUS;
+                }
+                else if (tok.startsWith("SIG["))
+                {
+                    //remove the SIG[ header
+                    tok = tok.right(tok.size() - 4);
+                    int semi = tok.indexOf(';');
+                    if (semi == -1) semi = tok.indexOf(']');
+                    QString signame = tok.left(semi);
+                    thisTrigger.sigName = signame;
+                    thisTrigger.triggerMask |= TriggerMask::TRG_SIGNAL;
+                    semi = tok.indexOf(';');
+                    if (semi > -1) //have a signal value to match too
+                    {
+                        thisTrigger.triggerMask |= TriggerMask::TRG_SIGVAL;
+                        int end = tok.indexOf(']');
+                        thisTrigger.sigValueDbl =
+                                tok.mid(semi + 1, end - semi - 1)
+                                .toDouble();
+                    }
                 }
             }
             //now, find anything that wasn't set and set it to defaults
-            if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 10000000;
-            if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 100;
-            if (thisTrigger.ID == -1) thisTrigger.ID = 0;
+            //if (thisTrigger.maxCount == -1) thisTrigger.maxCount = 0;
+            //if (thisTrigger.milliseconds == -1) thisTrigger.milliseconds = 100;
+            //if (thisTrigger.ID == -1) thisTrigger.ID = 0;
             sendingData[line].triggers.append(thisTrigger);
         }
     }
@@ -741,6 +894,7 @@ void FrameSenderWindow::processTriggerText(int line)
         thisTrigger.ID = 0;
         thisTrigger.maxCount = 1;
         thisTrigger.milliseconds = 10;
+        thisTrigger.triggerMask = TriggerMask::TRG_MS;
         sendingData[line].triggers.append(thisTrigger);
     }
 }
@@ -797,27 +951,39 @@ ModifierOperationType FrameSenderWindow::parseOperation(QString op)
 /// <param name="idx"></param>
 void FrameSenderWindow::updateGridRow(int idx)
 {
-    qDebug() << "updateGridRow";
+    //qDebug() << "updateGridRow";
 
     inhibitChanged = true;
     FrameSendData *temp = &sendingData[idx];
     int gridLine = idx;
     QString dataString;
-    QTableWidgetItem *item = ui->tableSender->item(gridLine, 9);
+    QTableWidgetItem *item = ui->tableSender->item(gridLine, ST_COLS::SENDTAB_COL_COUNT);
     const unsigned char *data = reinterpret_cast<const unsigned char *>(temp->payload().constData());
     int dataLen = temp->payload().length();
 
-    if (item == nullptr) item = new QTableWidgetItem();
-    item->setText(QString::number(temp->count));
-    if (temp->frameType() != QCanBusFrame::RemoteRequestFrame) {
+    if (item == nullptr)
+    {
+        item = new QTableWidgetItem();
+        item->setText(QString::number(temp->count));
+        ui->tableSender->setItem(gridLine, ST_COLS::SENDTAB_COL_COUNT, item);
+    }
+    else
+    {
+        item->setText(QString::number(temp->count));
+    }
+
+    if (temp->frameType() != QCanBusFrame::RemoteRequestFrame)
+    {
         for (int i = 0; i < dataLen; i++)
         {
             dataString.append(Utility::formatNumber(data[i]));
             dataString.append(" ");
         }
-        ui->tableSender->item(gridLine, 6)->setText(dataString);
-    } else {
-        ui->tableSender->item(gridLine, 6)->setText("");
+        ui->tableSender->item(gridLine, ST_COLS::SENDTAB_COL_DATA)->setText(dataString);
+    }
+    else
+    {
+        ui->tableSender->item(gridLine, ST_COLS::SENDTAB_COL_DATA)->setText("");
     }
     inhibitChanged = false;
 }
@@ -828,6 +994,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
     FrameSendData tempData;
     QStringList tokens;
     int tempVal;
+    DBC_MESSAGE *msg;
 
     //if this is a new line then create the base object for the line
     if (line >= sendingData.count())
@@ -846,7 +1013,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
 
     switch (col)
     {
-        case 0: //Enable check box
+        case ST_COLS::SENDTAB_COL_EN: //Enable check box
             if (ui->tableSender->item(line, 0)->checkState() == Qt::Checked)
             {
                 sendingData[line].enabled = true;
@@ -854,51 +1021,61 @@ void FrameSenderWindow::processCellChange(int line, int col)
             else sendingData[line].enabled = false;
             qDebug() << "Setting enabled to " << sendingData[line].enabled;
             break;
-        case 1: //Bus designation
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 1)->text());            
+        case ST_COLS::SENDTAB_COL_BUS: //Bus designation
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS)->text());
             if (tempVal < -1) tempVal = -1;
             if (tempVal >= numBuses) tempVal = numBuses - 1;
             sendingData[line].bus = tempVal;
             qDebug() << "Setting bus to " << tempVal;
             break;
-        case 2: //ID field
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 2)->text());
+        case ST_COLS::SENDTAB_COL_ID: //ID field
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, ST_COLS::SENDTAB_COL_ID)->text());
             if (tempVal < 0) tempVal = 0;
             if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
             sendingData[line].setFrameId(tempVal);
             if (sendingData[line].frameId() > 0x7FF) {
                 sendingData[line].setExtendedFrameFormat(true);
                 ui->tableSender->blockSignals(true);
-                ui->tableSender->item(line, 4)->setCheckState(Qt::Checked);
+                ui->tableSender->item(line, ST_COLS::SENDTAB_COL_EXT)->setCheckState(Qt::Checked);
+                ui->tableSender->blockSignals(false);
+            }
+            msg = dbcHandler->findMessage(sendingData[line].frameId());
+            if (msg)
+            {
+                ui->tableSender->blockSignals(true);
+                ui->tableSender->item(line, ST_COLS::SENDTAB_COL_MSGNAME)->setText(msg->name);
+                ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN)->setText(QString::number(msg->len));
                 ui->tableSender->blockSignals(false);
             }
             qDebug() << "setting ID to " << tempVal;
             break;
-        case 3: //length field
+        case ST_COLS::SENDTAB_COL_LEN:
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 3)->text());
             if (tempVal < 0) tempVal = 0;
             if (tempVal > 8) tempVal = 8;            
             arr.resize(tempVal);
             sendingData[line].setPayload(arr);
             break;
-        case 4: // Ext
+        case ST_COLS::SENDTAB_COL_EXT:
             if (ui->tableSender->item(line, 4)->checkState() == Qt::Checked) {
                 sendingData[line].setExtendedFrameFormat(true);
             } else {
                 sendingData[line].setExtendedFrameFormat(false);
             }
             break;
-        case 5: // Rem
+        case ST_COLS::SENDTAB_COL_REM:
             if (ui->tableSender->item(line, 5)->checkState() == Qt::Checked) {
                 sendingData[line].setFrameType(QCanBusFrame::RemoteRequestFrame);
             } else {
                 sendingData[line].setFrameType(QCanBusFrame::DataFrame);
             }
             break;
-        case 6: //Data bytes
-            for (int i = 0; i < 8; i++) sendingData[line].payload().data()[i] = 0;
-
-            tokens = ui->tableSender->item(line, 6)->text().split(" ");
+        case ST_COLS::SENDTAB_COL_DATA: //Data bytes
+#if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
+            tokens = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
+#else
+            tokens = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().split(" ", QString::SkipEmptyParts);
+#endif
             arr.clear();
             arr.reserve(tokens.count());
             for (int j = 0; j < tokens.count(); j++)
@@ -907,10 +1084,10 @@ void FrameSenderWindow::processCellChange(int line, int col)
             }
             sendingData[line].setPayload(arr);
             break;
-        case 7: //triggers
+        case ST_COLS::SENDTAB_COL_TRIGGER: //triggers
             processTriggerText(line);
             break;
-        case 8: //modifiers
+        case ST_COLS::SENDTAB_COL_MODS: //modifiers
             processModifierText(line);
             break;
     }

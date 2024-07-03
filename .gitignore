@@ -30,9 +30,19 @@ build/
 *.out
 *.app
 *.user
+SavvyCAN
 
 # Generated files
 **/moc_*
 **/ui_*.h
 **/qrc_*.cpp
 SavvyCAN.pro.user.*
+.qmake.stash
+Makefile
+
+# Editor files
+*.code-workspace
+SavvyCAN.pro.qtds
+.xcode
+SavvyCAN.xcodeproj
+.vscode

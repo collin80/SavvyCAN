@@ -8,7 +8,7 @@ QT = core gui printsupport qml serialbus serialport widgets help network opengl
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
-CONFIG += c++11
+CONFIG += c++17
 CONFIG += NO_UNIT_TESTS
 
 DEFINES += QCUSTOMPLOT_USE_OPENGL
@@ -20,7 +20,13 @@ QMAKE_INFO_PLIST = Info.plist.template
 ICON = icons/SavvyIcon.icns
 
 SOURCES += main.cpp\
+    canbridgewindow.cpp \
+    connections/canlogserver.cpp \
+    connections/canserver.cpp \
+    connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
+    dbc/dbcnodeduplicateeditor.cpp \
+    framesenderobject.cpp \
     mqtt/qmqtt_client.cpp \
     mqtt/qmqtt_client_p.cpp \
     mqtt/qmqtt_frame.cpp \
@@ -38,6 +44,7 @@ SOURCES += main.cpp\
     mainwindow.cpp \
     canframemodel.cpp \
     simplecrypt.cpp \
+    triggerdialog.cpp \
     utility.cpp \
     qcustomplot.cpp \
     frameplaybackwindow.cpp \
@@ -67,6 +74,7 @@ SOURCES += main.cpp\
     dbc/dbcmaineditor.cpp \
     dbc/dbcnodeeditor.cpp \
     dbc/dbcsignaleditor.cpp \
+    dbc/dbcnoderebaseeditor.cpp \
     re/discretestatewindow.cpp \
     re/filecomparatorwindow.cpp \
     re/flowviewwindow.cpp \
@@ -97,9 +105,16 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     can_structs.h \
+    canbridgewindow.h \
     canframemodel.h \
+    connections/canlogserver.h \
+    connections/canserver.h \
+    connections/lawicel_serial.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
+    dbc/dbcnodeduplicateeditor.h \
+    dbc/dbcnoderebaseeditor.h \
+    framesenderobject.h \
     mqtt/qmqtt.h \
     mqtt/qmqtt_client.h \
     mqtt/qmqtt_client_p.h \
@@ -122,6 +137,7 @@ HEADERS  += mainwindow.h \
     qcpaxistickerhex.h \
     re/dbccomparatorwindow.h \
     simplecrypt.h \
+    triggerdialog.h \
     utility.h \
     qcustomplot.h \
     frameplaybackwindow.h \
@@ -183,11 +199,15 @@ HEADERS  += mainwindow.h \
     pcaplite.h
 
 FORMS    += ui/candatagrid.ui \
+    triggerdialog.ui \
+    ui/canbridgewindow.ui \
+    ui/dbcnodeduplicateeditor.ui \
     ui/dbccomparatorwindow.ui \
     ui/dbcmessageeditor.ui \
     ui/connectionwindow.ui \
     ui/dbcloadsavewindow.ui \
     ui/dbcmaineditor.ui \
+    ui/dbcnoderebaseeditor.ui \
     ui/dbcsignaleditor.ui \
     ui/dbcnodeeditor.ui \
     ui/discretestatewindow.ui \
@@ -210,7 +230,7 @@ FORMS    += ui/candatagrid.ui \
     ui/udsscanwindow.ui \
     ui/bisectwindow.ui \
     ui/signalviewerwindow.ui \
-    helpwindow.ui \
+    ui/helpwindow.ui \
     ui/newconnectiondialog.ui \
     ui/temporalgraphwindow.ui
     

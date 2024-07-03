@@ -12,7 +12,7 @@
 /***********************************/
 
 SerialBusConnection::SerialBusConnection(QString portName, QString driverName) :
-    CANConnection(portName, driverName, CANCon::SERIALBUS, 1, 4000, true),
+    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,0, false, 0 ,1, 4000, true),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
@@ -47,6 +47,7 @@ void SerialBusConnection::piStarted()
     mTimer.setSingleShot(false); //keep ticking
     mTimer.start();
     mBusData[0].mBus.setActive(true);
+    mBusData[0].mBus.setCanFD(false);
     mBusData[0].mConfigured = true;
 }
 
@@ -77,6 +78,8 @@ bool SerialBusConnection::piGetBusSettings(int pBusIdx, CANBus& pBus)
 
 void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 {
+    quint32 sbusconfig = 0;
+
     //CANConStatus stats;
     /* sanity checks */
     if(0 != pBusIdx)
@@ -91,7 +94,7 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     setBusConfig(0, bus);
 
     /* if bus is not active we are done */
-    if(!bus.active)
+    if(!bus.isActive())
         return;
 
     /* set configuration */
@@ -102,7 +105,12 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 
     //You cannot set the speed of a socketcan interface, it has to be set with console commands.
     //But, you can probabaly set the speed of many of the other serialbus devices so go ahead and try
-    mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.speed);
+    mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.getSpeed());
+    mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, bus.isCanFD());
+
+    if(bus.isListenOnly())
+        sbusconfig |= EN_SILENT_MODE;
+    mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
 
     /* connect device */
     if (!mDev_p->connectDevice()) {
@@ -180,6 +188,7 @@ void SerialBusConnection::framesReceived()
 
         /* check frame */
         //if (recFrame.payload().length() <= 8) {
+        if (true) {
             CANFrame* frame_p = getQueue().get();
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
@@ -198,7 +207,7 @@ void SerialBusConnection::framesReceived()
                 frame_p->setTimeStamp(recFrame.timeStamp());
                 frame_p->setFrameType(recFrame.frameType());
                 frame_p->setError(recFrame.error());
-	        /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
+                /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
                 frame_p->isReceived = !recFrame.hasLocalEcho();
 
                 if (useSystemTime) {
@@ -210,11 +219,9 @@ void SerialBusConnection::framesReceived()
 
                 /* enqueue frame */
                 getQueue().queue();
-            //}
-#if 0
+            }
             else
                 qDebug() << "can't get a frame, ERROR";
-#endif
         }
     }
 }

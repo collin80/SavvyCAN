@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QListWidget>
 #include <QTreeWidget>
+#include <candatagrid.h>
 #include "can_structs.h"
 #include "bus_protocols/j1939_handler.h"
 #include "dbc/dbchandler.h"
@@ -28,10 +29,15 @@ private slots:
     void updateDetailsWindow(QString);
     void updatedFrames(int);
     void saveDetails();
-    void changeGraphVisibility(int state);
+    void mousePress();
+    void mouseWheel();
+    void mouseDoubleClick();
 
 private:
     Ui::FrameInfoWindow *ui;
+    QCustomPlot *graphByte[8];
+    QCustomPlot *graphHistogram;
+    CANDataGrid *heatmap;
 
     QList<int> foundID;
     QList<CANFrame> frameCache;
@@ -47,6 +53,7 @@ private:
     void refreshIDList();
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
+    void setupByteGraph(QCustomPlot *plot, int num);
     void readSettings();
     void writeSettings();
     void dumpNode(QTreeWidgetItem* item, QFile *file, int indent);

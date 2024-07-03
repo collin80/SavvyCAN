@@ -30,6 +30,7 @@ private slots:
     void updatePercentSlider();
     void updateFrameNumText();
     void updatePercentText();
+    void updateSectionsText();
 
 private:
     Ui::BisectWindow *ui;

@@ -43,17 +43,17 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 {
     //qDebug() << "SnifferDelegate Paint Event";
 
-    if (index.column() < 2) //allow default handling of the first two columns
+    if (index.column() < 3) //allow default handling of the first two columns
     {
         QItemDelegate::paint(painter, option, index);
         return;
     }
 
-    if (index.column() > 9) return;
+    if (index.column() > 10) return;
 
     int x;
     SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
-    int idx = index.column() - 2;
+    int idx = index.column() - 3;
     int val = item->getData(idx);
     int prevVal = item->getLastData(idx);
     int notchPattern = item->getNotchPattern(idx);
@@ -70,7 +70,7 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     //qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
 
     int xSector = xSpan / 8;
-    int v = item->getSeqInterval(index.column() - 2) * 10;
+    int v = item->getSeqInterval(index.column() - 3) * 10;
     if (v > 225) v = 225;
     if (v < 0) v = 0;
 

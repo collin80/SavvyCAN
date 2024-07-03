@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>967</width>
+    <width>995</width>
     <height>644</height>
    </rect>
   </property>
@@ -17,46 +17,38 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,1">
      <item>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>Signal Parameters</string>
-       </property>
-       <layout class="QFormLayout" name="formLayout">
-        <item row="0" column="0">
-         <widget class="QLabel" name="label">
-          <property name="text">
-           <string>Name:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="1">
-         <widget class="QLineEdit" name="txtName"/>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_3">
-          <property name="text">
-           <string>Start Bit:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="CANDataGrid" name="bitfield" native="true">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="minimumSize">
-           <size>
-            <width>300</width>
-            <height>300</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="text">
+            <string>Name:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="txtName"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="CANDataGrid" name="bitfield" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>300</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item>
       <layout class="QFormLayout" name="formLayout_2">
@@ -258,10 +250,23 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>txtName</tabstop>
+  <tabstop>txtBitLength</tabstop>
+  <tabstop>cbIntelFormat</tabstop>
+  <tabstop>comboType</tabstop>
+  <tabstop>txtScale</tabstop>
+  <tabstop>txtBias</tabstop>
+  <tabstop>txtMinVal</tabstop>
+  <tabstop>txtMaxVal</tabstop>
+  <tabstop>txtUnitName</tabstop>
+  <tabstop>comboReceiver</tabstop>
   <tabstop>rbNotMulti</tabstop>
   <tabstop>rbMultiplexed</tabstop>
   <tabstop>rbMultiplexor</tabstop>
+  <tabstop>rbExtended</tabstop>
+  <tabstop>txtMultiplexLow</tabstop>
+  <tabstop>txtMultiplexHigh</tabstop>
+  <tabstop>cbMultiplexParent</tabstop>
+  <tabstop>txtComment</tabstop>
   <tabstop>valuesTable</tabstop>
  </tabstops>
  <resources/>

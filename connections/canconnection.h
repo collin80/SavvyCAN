@@ -21,13 +21,19 @@ protected:
      * @param pPort: string containing port name
      * @param pDriver: string containing driver name - Really only used for SerialBus connections
      * @param pType: the type of connection @ref CANCon::type
+     * @param pSerialSpeed: for devices with variable serial speed this is that speed.
+     * @param pBusSpeed: set an initial speed when opening this connection
      * @param pNumBuses: the number of buses the device has
      * @param pQueueLen: the length of the lock free queue to use
      * @param pUseThread: if set to true, object will be execute in a dedicated thread
      */
     CANConnection(QString pPort,
                   QString pDriver,
-                  CANCon::type pType,                  
+                  CANCon::type pType,
+                  int pSerialSpeed,
+                  int pBusSpeed,
+                  bool pCanFd,
+                  int pDataRate,
                   int pNumBuses,
                   int pQueueLen,
                   bool pUseThread);
@@ -201,6 +207,7 @@ protected:
     int mNumBuses; //protected to allow connected device to figure out how many buses are available
     QVector<BusData> mBusData;
     bool mConsoleOutput; //send debugging info to the console?
+    int mSerialSpeed;
 
     //determine if the passed frame is part of a filter or not.
     void checkTargettedFrame(CANFrame &frame);

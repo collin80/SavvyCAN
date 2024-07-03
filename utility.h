@@ -8,17 +8,39 @@
 #include <QDebug>
 #include <QApplication>
 #include <QRect>
+#include <QComboBox>
+#include <QStandardItemModel>
 //#include <QDesktopWidget>
+
+enum TimeStyle
+{
+    TS_SECONDS,
+    TS_MICROS,
+    TS_MILLIS,
+    TS_CLOCK
+};
 
 class Utility
 {
 public:
 
     static bool decimalMode;
-    static bool secondsMode;
-    static bool millisMode;
-    static bool sysTimeMode;
+    static TimeStyle timeStyle;
     static QString timeFormat;
+
+    static QString fullyQualifiedNameSeperator;
+
+    static void SetComboBoxItemEnabled(QComboBox * comboBox, int index, bool enabled)
+    {
+        auto * model = qobject_cast<QStandardItemModel*>(comboBox->model());
+        assert(model);
+        if(!model) return;
+
+        auto * item = model->item(index);
+        assert(item);
+        if(!item) return;
+        item->setEnabled(enabled);
+    }
 
     //determines whether the window position is within any available screens. If it is not we default
     //back to 0,0 which is going to be on screen. This fixes a problem where some operating systems would
@@ -146,17 +168,29 @@ public:
         return output;
     }
 
+    static QString formatByteAsHex(uint8_t value)
+    {
+        return QString::number(value, 16).toUpper().rightJustified(2,'0');
+    }
+
     static QVariant formatTimestamp(uint64_t timestamp)
     {
-        if (!sysTimeMode) {
-            if (millisMode) return (double)timestamp / 1000.0;
-            if (!secondsMode) return (unsigned long long)(timestamp);
-            else
-            {
-                return (double)timestamp / 1000000.0;
-            }
+        switch (timeStyle)
+        {
+        case TS_CLOCK:
+            return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
+            break;
+        case TS_MILLIS:
+            return (double)timestamp / 1000.0;
+            break;
+        case TS_MICROS:
+            return (unsigned long long)(timestamp);
+            break;
+        case TS_SECONDS:
+            return (double)timestamp / 1000000.0;
+            break;
         }
-        else return QDateTime::fromMSecsSinceEpoch(timestamp / 1000);
+        return QVariant();  // should never happen
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric
@@ -194,27 +228,64 @@ public:
         return builder;
     }
 
+    static int getByteFromBitPosition(int bitPos)
+    {
+        return bitPos / 8;
+    }
+
+    static int getBitFromBitPosition(int bitPos)
+    {
+        return bitPos & 7;
+    }
+
     //simple linear interpolation between value1 and value2. sample point is 0.0 to 1.0
     static double Lerp(double value1, double value2, double samplePoint)
     {
         return (value1 * (1.0 - samplePoint)) + (value2 * samplePoint);
     }
 
+    /* A unified function that can extract a signal from the (up to) 64 bits of data bytes in a CAN frame
+     * handles both little and big endian signals (and floats too).
+    */
     static int64_t processIntegerSignal(const QByteArray data, int startBit, int sigSize, bool littleEndian, bool isSigned)
     {
 
-        int64_t result = 0;
-        int bit;
+        uint64_t result = 0;
+        int bit = 0;
 
         int maxBytes = (startBit + sigSize) / 8;
-        if (data.size() < maxBytes) return 0;
+        if (data.size() < maxBytes) return 0; //if signal extends past the end of data then abort
 
         if (littleEndian)
         {
+/*
+            int currByte = (startBit) / 8;
+            int currOffset = startBit - (currByte * 8);
+            int remainingBits = qMax(0, (sigSize - (8 - currOffset)) );
+            int prevBits = qMin((8 - currOffset), sigSize);
+            result = data[currByte] >> currOffset;
+            result &= ( (1 << sigSize) - 1); //doesn't hurt to do this even if sigSize is way larger than the # of bits we've got so far
+
+            while (remainingBits > 0)
+            {
+                currByte++;
+                if (remainingBits >= 8) //use this entire byte, its easy
+                {
+                    result += data[currByte] << prevBits;
+                    remainingBits -= 8;
+                    prevBits += 8;
+                }
+                else //use only part of this byte. We're going to need to mask it
+                {
+                    result += ((data[currByte] & ((1 << remainingBits) - 1) ) << prevBits);
+                    remainingBits = 0;
+                }
+            }*/
+
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
-                if (bit < 64) {
+                if (bit < 512) {
                     int bytePos = bit / 8;
                     if (bytePos >= data.count()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
@@ -222,13 +293,14 @@ public:
                 }
                 bit++;
             }
+
         }
         else //motorola / big endian mode
         {
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
-                if (bit < 64) {
+                if (bit < 512) {
                     int bytePos = bit / 8;
                     if (bytePos >= data.count()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
@@ -244,7 +316,7 @@ public:
 
         if (isSigned)
         {
-            int64_t mask = (1ULL << (sigSize - 1));
+            uint64_t mask = (1ULL << (sigSize - 1));
             if ((result & mask) == mask) //is the highest bit possible for this signal size set?
             {
                 /*
@@ -266,6 +338,7 @@ public:
                 */
                 uint64_t signedMask = ~((1ULL << sigSize) - 1);
                 result = (-1LL & signedMask) | result;
+                return (int64_t)(result);
             }
         }
 

@@ -5,53 +5,71 @@ Preference Window
 
 There are a variety of preferences that can be set in the program and persisted for future sessions.
 
+Main Form Settings
+===================
+* Autoscroll main frame winow by default - When capturing frames should the main window track the newest incoming messages or stay where it was? This option defaults it to follow the incoming frames by default. The main window has a toggle for auto scroll. This setting just sets the default value of that toggle.
+* Maximum data bytes per line - Really must helpful for CAN-FD traffic. Setting this to 8, 16, or 32 can help to be able to see all the bytes without the window having to be extremely wide.
+
 General Settings
 ====================
 
-"Save/Restore window positions and sizes": If this is set then the size and placement of the various windows in this application will be saved when the program is closed and loaded when each window is brought back up in the future. This can be used to create your own preferred layout. If you'd rather things come up in their default state every time then you can uncheck this box.
+* "Save/Restore window positions and sizes": If this is set then the size and placement of the various windows in this application will be saved when the program is closed and loaded when each window is brought back up in the future. This can be used to create your own preferred layout. If you'd rather things come up in their default state every time then you can uncheck this box.
 
-"Save/Restore CAN bus connections": This will cause the program to remember the devices you were connected to last time you ran the program and attempt to reconnect to them upon start up.
+* "Save/Restore CAN bus connections": This will cause the program to remember the devices you were connected to last time you ran the program and attempt to reconnect to them upon start up.
 
-"Display values as hexadecimal": A lot of the time people who are doing CAN reverse engineering like to see values in hexadecimal (base 16) instead of the more familiar decimal (base 10) system. Checking this box will cause most of the values in the application to show up in hex. This applies to CAN ids and data bytes. Unchecking this causes values to default to decimal instead. The reason for using hex is that each hex digit is 4 bits. Integers on a computer tend to be in multiples of 8 - 8, 16, 32, 64. So, hex digits have a direct mapping to the underlying binary. Decimal does not have this correspondence AT ALL. But, the choice is yours.
+* "Display values as hexadecimal": A lot of the time people who are doing CAN reverse engineering like to see values in hexadecimal (base 16) instead of the more familiar decimal (base 10) system. Checking this box will cause most of the values in the application to show up in hex. This applies to CAN ids and data bytes. Unchecking this causes values to default to decimal instead. The reason for using hex is that each hex digit is 4 bits. Integers on a computer tend to be in multiples of 8 - 8, 16, 32, 64. So, hex digits have a direct mapping to the underlying binary. Decimal does not have this correspondence AT ALL. But, the choice is yours.
 
-"Require validation of GVRET connection": GVRET style devices run over a serial connection. Serial connections can be finicky sometimes and so the connection can be validated to prove that everything is really still operating and talking. There probably isn't any reason to turn this off except while debugging to see if it changes anything. Mostly just don't touch this.
+* "Require validation of GVRET connection": GVRET style devices run over a serial connection. Serial connections can be finicky sometimes and so the connection can be validated to prove that everything is really still operating and talking. There probably isn't any reason to turn this off except while debugging to see if it changes anything. Mostly just don't touch this.
 
-"Label filters using messages from DBC files": Part of a two part system. If this is selected and a given DBC file also has its checkbox checked then the IDs list on the main screen (lower right) used for filtering will have not only the IDs but also the message name from the DBC file. This will allow for more easily determining what a given message means. Sometimes IDs can be hard to remember. Do note that this checkbox must be checked or the checkboxes for each loaded DBC file won't do anything. This is the master on/off switch.
+* "Use filtered frames in sub-windows": The main window has a filtering interface where you can uncheck IDs to hide them. Ordinarily when you bring up one of the other windows it will still use the main unfiltered list. Sometimes you really do want to deal with the filtered list of frames even in the other windows. If this is checked then the other windows will see the filtered list and not the unfiltered actual list of frames that have been captured.
 
-"Time Keeping": There are a variety of ways one could timestamp CAN frames as they come into the program. Selecting "Seconds" will cause the timestamp to be expressed as seconds since the frame list was last cleared. This tends to be an easy choice to work with. "Microseconds" will express the timestamp as millionths of a second since the last time the frame list was cleared. This is exactly like "Seconds" mode but without any decimal point. You might find this to be a bit hard to conceptualize. The last option is "System Clock" this will timestamp frames with the current system time when the frame came in. This is still very precise but now you'll get an absolute time stamp with the full date and time. The display of this mode can be changed by editing the "Time Format String" value. It defaults to an output that looks like "JAN-10 12:34:53.234" But you can set it to other values. Look here to find a reference for how you can create new format strings: http://doc.qt.io/qt-4.8/qdatetime.html#toString
+* "OpenGL Accelerated AntiAliased Graphing": Checking this will cause all of the graphs to use OpenGL 3D acceleration. Most modern machines have some form of 3D acceleration so this option should be OK to use. If you check this your graphs will look a lot better and on good hardware should also be faster. In the future other options are likely to be added to the graphing screen that will likely only be enabled if OpenGL mode is also enabled. Try enabling this and see if performance is still good. It's safe to leave it off if in doubt.
 
-"Use filtered frames in sub-windows": The main window has a filtering interface where you can uncheck IDs to hide them. Ordinarily when you bring up one of the other windows it will still use the main unfiltered list. Sometimes you really do want to deal with the filtered list of frames even in the other windows. If this is checked then the other windows will see the filtered list and not the unfiltered actual list of frames that have been captured.
+* "CAN Frame Pre-allocation Size" - This requires a bit of explanation and caution. When SavvyCAN starts it pre-allocates a giant buffer for incoming CAN traffic. Otherwise as traffic comes in the program would have a limited amount of space allocated to receive the traffic. If this reserved space runs out then the program would have to go ask the operating system for more and copy all existing frames to the newer, bigger buffer. This is a slow process. So, instead a giant buffer is allocated up front (by default 10 million frames worth!). You aren't likely to exceed this value and so it never has to ask for more memory and things run smoothly. 10M frames is about 1/2 of a gigabyte. This is a lot of memory but very doable for most modern PCs. But, if you are running on a Raspberry Pi it may be a good idea to turn this down to, say, 1M instead. You may be tempted to make this value really large so that, no matter what, it never has to reallocate. But, setting this 100x bigger would try to allocate 50GB of RAM. You probably don't have that much RAM to spare. So, be cautious if you raise this value. 10M should be enough for most anyone. Even if you did happen to exceed the value the program won't crash, it will just pause for a long time as it creates a larger buffer and moves everything over.
 
-"OpenGL Accelerated AntiAliased Graphing": Checking this will cause all of the graphs to use OpenGL 3D acceleration. Most modern machines have some form of 3D acceleration so this option should be OK to use. If you check this your graphs will look a lot better and on good hardware should also be faster. In the future other options are likely to be added to the graphing screen that will likely only be enabled if OpenGL mode is also enabled. Try enabling this and see if performance is still good. It's safe to leave it off if in doubt.
+* "Time Keeping": There are a variety of ways one could timestamp CAN frames as they come into the program. Selecting "Seconds" will cause the timestamp to be expressed as seconds since the frame list was last cleared. This tends to be an easy choice to work with. "Microseconds" will express the timestamp as millionths of a second since the last time the frame list was cleared. This is exactly like "Seconds" mode but without any decimal point. You might find this to be a bit hard to conceptualize. The last option is "System Clock" this will timestamp frames with the current system time when the frame came in. This is still very precise but now you'll get an absolute time stamp with the full date and time. The display of this mode can be changed by editing the "Time Format String" value. It defaults to an output that looks like "JAN-10 12:34:53.234" But you can set it to other values. Look here to find a reference for how you can create new format strings: http://doc.qt.io/qt-4.8/qdatetime.html#toString
 
-"Autoscroll main frame window by default": If checked it will automatically check the relevant checkbox on the main screen when the program starts. This will cause the view to automatically scroll to the bottom by default. This is merely a convenience option if you'd prefer it to be the default.
+Font Settings
+==============
+* "Use fixed-width font in tables" - The default is to use the normal system font for everything in the program. The problem is, most default fonts are not fixed width. Why would you want fixed width? This makes things line up better between lines. With fixed width fonts you know that the third byte of one line is directly over top of the third byte for the line one down. This can make it easier to scan through multiple lines.
 
+* Size - You can set the default font size used in the application. Setting this up or down a bit may help things to look better to you. Getting to absurd is likely to make the program look really bad. This setting may be required if you use a 4k monitor and your operating system doesn't want to cooperate.
 
 Flow View Settings
 ==================
-"Use timestamp mode by default": This is another convenience option. With this checked the Flow view will default to using time stamps on the graphing area instead of frame numbers.
+* "Use timestamp mode by default": This is another convenience option. With this checked the Flow view will default to using time stamps on the graphing area instead of frame numbers.
 
-"Set Auto Reference by default": The Flow view can either use static referencing or dynamic referencing (see the Flow view documentation for more info). If you'd like to use dynamic referencing and automatically set the reference by default then check this option.
+* "Set Auto Reference by default": The Flow view can either use static referencing or dynamic referencing (see the Flow view documentation for more info). If you'd like to use dynamic referencing and automatically set the reference by default then check this option.
+
+* "Hexadecimal Graph Y Axis" - Use 00-FF instead of 0-255 for the Y axis.
 
 
 Playback Window Settings
 ========================
-"Loop by default": Set the playback window to default to looping infinitely by default.
+* "Loop by default": Set the playback window to default to looping infinitely by default.
 
-"Default playback speed (ms)": Set the default timing for playback
+* "Default playback speed (ms)": Set the default timing for playback
 
-"Default Sending Bus": Set a default for which bus to send frames on.
+* "Default Sending Bus": Set a default for which bus to send frames on.
 
+
+DBC Settings
+=============
+* "Label DBC Messages by default" - Normally the filter section of the main screen just shows the frame IDs. If you label DBC signals you will actually see the name of the DBC message next to the ID.
+
+* "Ignore DBC message colors" - It's possible to make DBC messages have rainbow colors. Each message can have a different background and foreground color. Sometimes they can get set to some really silly values. To save your sanity you have the option to completely ignore all colors set in the DBC file and just use the default colors for everything.
 
 File Info And Comparator Window Settings
 ========================================
-"Auto expand all nodes": Both of the referenced windows have tree views that potentially have a large number of nodes. It's more neat not to expand them all by default but it also then requires more clicks if you have to expand them to view the information. So, you can set whether you'd like to expand them all by default or not.
+* "Auto expand all nodes": Both of the referenced windows have tree views that potentially have a large number of nodes. It's more neat not to expand them all by default but it also then requires more clicks if you have to expand them to view the information. So, you can set whether you'd like to expand them all by default or not.
+
+* "Hexadecimal Graph Y Axis" - As with the Flowview, it is possible to change the Y axis to hexadecimal instead of decimal.
 
 
 MQTT Settings
 =============
 
-MQTT allows SavvyCAN to connec to a broker for CAN transmission over the internet. You will need to set up the host, port, username, and password. These things are determined by your broker. You can run your own on Linux with Mosquitto.
+* MQTT allows SavvyCAN to connect to a broker for CAN transmission over the internet. You will need to set up the host, port, username, and password. These things are determined by your broker. You can run your own on Linux with Mosquitto. Yes, api.savvycan.com really does exist but, no, you can't actually connect as Anonymous and use it. Sorry...
 
 
 Final Word of Warning
