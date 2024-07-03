@@ -1,4 +1,5 @@
 #include "frameplaybackwindow.h"
+#include "mainwindow.h"
 #include "ui_frameplaybackwindow.h"
 #include <QDebug>
 #include <QFileDialog>
@@ -48,6 +49,8 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     currentPosition = 0;
     forward = true;
     isPlaying = false;
+    wantPlaying = false;
+    haveIncomingTraffic = false;
 
     updateFrameLabel();
 
@@ -72,6 +75,7 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidge
     connect(ui->btnLoadFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::loadFilters);
     connect(ui->btnSaveFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::saveFilters);
     connect(ui->cbOriginalTiming, &QCheckBox::toggled, this, &FramePlaybackWindow::useOrigTimingClicked);
+    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
     connect(&playbackObject, &FramePlaybackObject::EndOfFrameCache, this, &FramePlaybackWindow::EndOfFrameCache);
     connect(&playbackObject, &FramePlaybackObject::statusUpdate, this, &FramePlaybackWindow::getStatusUpdate);
@@ -101,6 +105,8 @@ void FramePlaybackWindow::showEvent(QShowEvent *)
 {
     readSettings();
     installEventFilter(this);
+
+    //any time the view is shown we'll go see how many buses are registered and redo the combobox to match
     int numBuses = CANConManager::getInstance()->getNumBuses();
     ui->comboCANBus->clear();
     for (int n = 0; n < numBuses; n++) ui->comboCANBus->addItem(QString::number(n));
@@ -279,6 +285,32 @@ void FramePlaybackWindow::loadFilters()
     }
 }
 
+void FramePlaybackWindow::updatedFrames(int numFrames)
+{
+    CANFrame thisFrame;
+
+    if (numFrames == -1) //all frames deleted. Don't care
+    {
+    }
+    else if (numFrames == -2) //all new set of frames. Don't care
+    {
+    }
+    else //just got some new frames.
+    {
+        if (numFrames > 0)
+        {
+            haveIncomingTraffic = true;
+            if (wantPlaying && !isPlaying)
+            {
+                isPlaying = true;
+                updateFrameLabel();
+                if (forward) playbackObject.startPlaybackForward();
+                else playbackObject.startPlaybackBackward();
+            }
+        }
+    }
+}
+
 void FramePlaybackWindow::refreshIDList()
 {
     if (currentSeqNum < 0 || currentSeqItem == nullptr)
@@ -338,6 +370,8 @@ void FramePlaybackWindow::EndOfFrameCache()
             else //not looping so stop playback entirely
             {
                 isPlaying = false;
+                wantPlaying = false;
+                haveIncomingTraffic = false;
                 playbackObject.stopPlayback();
             }
         }
@@ -361,6 +395,8 @@ void FramePlaybackWindow::EndOfFrameCache()
             else //not looping so stop playback entirely
             {
                 isPlaying = false;
+                wantPlaying = false;
+                haveIncomingTraffic = false;
                 playbackObject.stopPlayback();
             }
         }
@@ -395,7 +431,10 @@ void FramePlaybackWindow::updateFrameLabel()
 
     ui->lblCurrPlayback->setText(currentSeqItem->filename);
 
-    ui->lblPosition->setText(QString::number(currentPosition) + tr(" of ") + QString::number(seqItems[row].data.count()));
+    if (wantPlaying && !isPlaying)
+        ui->lblPosition->setText(QString::number(currentPosition) + tr(" of ") + QString::number(seqItems[row].data.count()) + "  (WAITING)");
+    else
+        ui->lblPosition->setText(QString::number(currentPosition) + tr(" of ") + QString::number(seqItems[row].data.count()));
 }
 
 void FramePlaybackWindow::seqTableCellClicked(int row, int col)
@@ -537,28 +576,40 @@ void FramePlaybackWindow::btnLoadLive()
 
 void FramePlaybackWindow::btnBackOneClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = false;
     isPlaying = false;
+    wantPlaying = false;
     playbackObject.stepPlaybackBackward();
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnPauseClick()
 {
     isPlaying = false;
+    wantPlaying = false;
     playbackObject.pausePlayback();
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnReverseClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = false;
-    isPlaying = true;
-    playbackObject.startPlaybackBackward();
+    wantPlaying = true;
+    if (!ui->ckWaitForTraffic->isChecked())
+    {
+        playbackObject.startPlaybackBackward();
+        isPlaying = true;
+    }
     updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnStopClick()
 {
     isPlaying = false;
+    wantPlaying = false;
+    haveIncomingTraffic = false;
     playbackObject.stopPlayback();
     if (seqItems.count() > 0)
     {
@@ -574,20 +625,40 @@ void FramePlaybackWindow::btnStopClick()
         ui->tblSequence->setCurrentCell(0, 0);
         refreshIDList();
     }
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnPlayClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = true;
-    isPlaying = true;
-    playbackObject.startPlaybackForward();
+    wantPlaying = true;
+    if (!ui->ckWaitForTraffic->isChecked())
+    {
+        playbackObject.startPlaybackForward();
+        isPlaying = true;
+    }
+    updateFrameLabel();
 }
 
 void FramePlaybackWindow::btnFwdOneClick()
 {
+    if (!checkNoSeqLoaded()) return;
     forward = true;
     isPlaying = false;
+    wantPlaying = false;
     playbackObject.stepPlaybackForward();
+    updateFrameLabel();
+}
+
+bool FramePlaybackWindow::checkNoSeqLoaded()
+{
+    if (seqItems.count() == 0)
+    {
+        QMessageBox::warning(this, "Warning", "Cannot begin playback until at\nleast one playback source is loaded.");
+        return false;
+    }
+    return true;
 }
 
 void FramePlaybackWindow::changePlaybackSpeed(int newSpeed)

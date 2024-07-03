@@ -1,7 +1,7 @@
 Bisector Window
 =================
 
-![Bisector Window](/images/Bisector.png)
+![Bisector Window](images/Bisector.png)
 
 Using the Bisector Window
 ==========================
@@ -14,8 +14,10 @@ Frame Number - You can split right at a given frame number. All frames up to tha
 
 Percentage - Pretty much just like the Frame Number option but in percentage instead in case that is more convenient.
 
+Bus Number - You can also split the capture to include or exclude a given bus number. This can be helpful to allow breaking up the file into per-bus files.
+
 In all cases, you have the option of which side of the split you want to save. Click "Calculate Split" to process the split. You will see above the buttons a reference of how many frames there were in total and how many you would be saving after the split. From here you *should* be able to do one of two things:
 
 "Save split frames to a new file" - Save the new list of frames (after the split) to a file. You can save to any file format that SavvyCAN supports elsewhere. 
 
-"Replace main list with split frames" - Were this to work it would replace the frames loaded in the rest of the application with the split list. I'm sure this would be a really nice thing to be able to do. Well, you can't right now. It's not implemented yet. So, just imagine you can do this. In the mean time you can save to a file then load that file. Sorry...
+"Replace main list with split frames" - Erases all messages on the main window and replaces them with the results of the bisection. You will lose all discarded frames if you haven't saved them elsewhere.

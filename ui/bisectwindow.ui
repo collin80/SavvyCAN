@@ -107,6 +107,20 @@
         </item>
        </layout>
       </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QRadioButton" name="rbBusNum">
+          <property name="text">
+           <string>Bus Number</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="editBusNum"/>
+        </item>
+       </layout>
+      </item>
      </layout>
     </widget>
    </item>

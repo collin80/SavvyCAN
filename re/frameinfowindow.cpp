@@ -8,7 +8,7 @@
 #include "qcpaxistickerhex.h"
 
 const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green,  Qt::black, Qt::red, //0 1 2 3
-                                                    Qt::gray, Qt::yellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
+                                                    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
 QPen FrameInfoWindow::bytePens[8];
 
 const int numIntervalHistBars = 20;
@@ -34,85 +34,78 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &FrameInfoWindow::updatedFrames);
     connect(ui->btnSave, &QAbstractButton::clicked, this, &FrameInfoWindow::saveDetails);
 
-    connect(ui->check_0, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_1, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_2, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_3, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_4, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_5, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_6, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
-    connect(ui->check_7, &QCheckBox::stateChanged, this, &FrameInfoWindow::changeGraphVisibility);
+    ui->splitter->setStretchFactor(0, 1); //idx, stretch factor
+    ui->splitter->setStretchFactor(1, 4); //goal is to make right hand side larger by default
 
-
-    ui->graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                    QCP::iSelectLegend | QCP::iSelectPlottables);
-
-    ui->graphHistogram->xAxis->setRange(0, 63);
-    ui->graphHistogram->yAxis->setRange(0, 100);
-    QSharedPointer<QCPAxisTickerLog> graphHistoLogTicker(new QCPAxisTickerLog);
-    ui->graphHistogram->yAxis->setTicker(graphHistoLogTicker);
-    ui->graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
-    ui->graphHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
-    ui->graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
-
-    ui->graphHistogram->axisRect()->setupFullAxesBox();
-
-    ui->graphHistogram->xAxis->setLabel("Bits");
-    ui->graphHistogram->yAxis->setLabel("Instances");
-
-    ui->graphHistogram->legend->setVisible(false);
-
-    ui->graphBytes->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                    QCP::iSelectLegend | QCP::iSelectPlottables);
-
-    ui->graphBytes->xAxis->setRange(0, 63);
-    ui->graphBytes->yAxis->setRange(0, 265);
-    if (useHexTicker)
+    for (int i = 0; i < 8; i++)
     {
-        QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
-        ui->graphBytes->yAxis->setTicker(hexTicker);
+        graphByte[i] = new QCustomPlot();
+        setupByteGraph(graphByte[i], i);
+        ui->gridLower->addWidget(graphByte[i], i / 4, i & 3);
     }
-    ui->graphBytes->axisRect()->setupFullAxesBox();
 
-    ui->graphBytes->xAxis->setLabel("Time");
-    if (useHexTicker) ui->graphBytes->yAxis->setLabel("Value (HEX)");
-    else ui->graphBytes->yAxis->setLabel("Value (Dec)");
+    ui->gridUpper->addWidget(new QLabel("Heatmap"), 0, 0);
+    heatmap = new CANDataGrid();
+    heatmap->setMode(GridMode::HEAT_VIEW);
+    ui->gridUpper->addWidget(heatmap, 1, 0);
 
-    ui->graphBytes->legend->setVisible(false);
+    ui->gridUpper->addWidget(new QLabel("Bit Histogram"), 0, 1);
+    graphHistogram = new QCustomPlot();
+    ui->gridUpper->addWidget(graphHistogram, 1, 1);
+
+    ui->gridUpper->setRowMinimumHeight(0, 20);
+    ui->gridUpper->setRowStretch(0, 1);
+    ui->gridUpper->setRowStretch(1, 10);
+
+    graphHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                    QCP::iSelectLegend);
+
+    graphHistogram->xAxis->setRange(0, 63);
+    graphHistogram->yAxis->setRange(0, 100);
+    QSharedPointer<QCPAxisTickerLog> graphHistoLogTicker(new QCPAxisTickerLog);
+    graphHistogram->yAxis->setTicker(graphHistoLogTicker);
+    //graphHistogram->yAxis2->setTicker(graphHistoLogTicker);
+    graphHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
+    graphHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
+
+    //graphHistogram->axisRect()->setupFullAxesBox();
+    graphHistogram->setBufferDevicePixelRatio(1);
+
+    graphHistogram->xAxis->setLabel("Bits");
+    graphHistogram->yAxis->setLabel("Instances");
+
+    graphHistogram->legend->setVisible(false);
 
     ui->timeHistogram->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
-                                        QCP::iSelectLegend | QCP::iSelectPlottables);
+                                        QCP::iSelectLegend);
 
     ui->timeHistogram->xAxis->setRange(0, numIntervalHistBars);
     ui->timeHistogram->yAxis->setRange(0, 100);
     QSharedPointer<QCPAxisTickerLog> logTicker(new QCPAxisTickerLog);
     ui->timeHistogram->yAxis->setTicker(logTicker);
-    ui->timeHistogram->yAxis2->setTicker(logTicker);
+    //ui->timeHistogram->yAxis2->setTicker(logTicker);
     ui->timeHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
     ui->timeHistogram->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
     ui->timeHistogram->yAxis->setNumberPrecision(0); //log ticker always picks powers of 10 so no need or use for precision
-    ui->timeHistogram->axisRect()->setupFullAxesBox();
+    //ui->timeHistogram->axisRect()->setupFullAxesBox();
 
     ui->timeHistogram->xAxis->setLabel("Interval (ms)");
     ui->timeHistogram->yAxis->setLabel("Occurrences");
 
     ui->timeHistogram->legend->setVisible(false);
+    ui->timeHistogram->setBufferDevicePixelRatio(1);
 
     if (useOpenGL)
     {
-        ui->graphHistogram->setAntialiasedElements(QCP::aeAll);
-        ui->graphHistogram->setOpenGl(true);
-        ui->graphBytes->setAntialiasedElements(QCP::aeAll);
-        ui->graphBytes->setOpenGl(true);
+        graphHistogram->setAntialiasedElements(QCP::aeAll);
+        graphHistogram->setOpenGl(true);
         ui->timeHistogram->setAntialiasedElements(QCP::aeAll);
         ui->timeHistogram->setOpenGl(true);
     }
     else
     {
-        ui->graphHistogram->setOpenGl(false);
-        ui->graphHistogram->setAntialiasedElements(QCP::aeNone);
-        ui->graphBytes->setOpenGl(false);
-        ui->graphBytes->setAntialiasedElements(QCP::aeNone);
+        graphHistogram->setOpenGl(false);
+        graphHistogram->setAntialiasedElements(QCP::aeNone);
         ui->timeHistogram->setOpenGl(false);
         ui->timeHistogram->setAntialiasedElements(QCP::aeNone);
     }
@@ -128,7 +121,111 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
         bytePens[i].setWidth(1);
     }
 
+    connect(graphHistogram, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(graphHistogram, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+    connect(ui->timeHistogram, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(ui->timeHistogram, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+
     dbcHandler = DBCHandler::getReference();
+}
+
+void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
+{
+    plot->setInteractions(QCP::iRangeDrag | QCP::iRangeZoom | QCP::iSelectAxes |
+                                    QCP::iSelectLegend);
+
+    plot->xAxis->setRange(0, 63);
+    plot->yAxis->setRange(0, 265);
+    if (useHexTicker)
+    {
+        QSharedPointer<QCPAxisTickerHex> hexTicker(new QCPAxisTickerHex);
+        plot->yAxis->setTicker(hexTicker);
+    }
+    //plot->axisRect()->setupFullAxesBox();
+
+    plot->xAxis->setLabel("Time [" + QString::number(num) + "]");
+    //if (useHexTicker) plot->yAxis->setLabel("Value (HEX)");
+    //else plot->yAxis->setLabel("Value (Dec)");
+    plot->yAxis->setLabel("");
+
+    plot->legend->setVisible(false);
+    plot->setBufferDevicePixelRatio(1);
+
+    if (useOpenGL)
+    {
+        plot->setAntialiasedElements(QCP::aeAll);
+        plot->setOpenGl(true);
+    }
+    else
+    {
+        plot->setOpenGl(false);
+        plot->setAntialiasedElements(QCP::aeNone);
+    }
+
+    connect(plot, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
+    connect(plot, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
+    connect(plot, &QCustomPlot::mouseDoubleClick, this, &FrameInfoWindow::mouseDoubleClick);
+}
+
+void FrameInfoWindow::mousePress()
+{
+    QCustomPlot *plot = qobject_cast<QCustomPlot *>(sender());
+    if (!plot) return;
+    // if an axis is selected, only allow the direction of that axis to be dragged
+    // if no axis is selected, both directions may be dragged
+
+    if (plot->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeDrag(plot->xAxis->orientation());
+    else if (plot->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeDrag(plot->yAxis->orientation());
+    else
+        plot->axisRect()->setRangeDrag(Qt::Horizontal|Qt::Vertical);
+}
+
+void FrameInfoWindow::mouseWheel()
+{
+    QCustomPlot *plot = qobject_cast<QCustomPlot *>(sender());
+    if (!plot) return;
+
+    // if an axis is selected, only allow the direction of that axis to be zoomed
+    // if no axis is selected, both directions may be zoomed
+
+    if (plot->xAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeZoom(plot->xAxis->orientation());
+    else if (plot->yAxis->selectedParts().testFlag(QCPAxis::spAxis))
+        plot->axisRect()->setRangeZoom(plot->yAxis->orientation());
+    else
+        plot->axisRect()->setRangeZoom(Qt::Horizontal|Qt::Vertical);
+}
+
+
+//two modes here. If none of the 8 sub graphs are hidden then hide all except the one the user
+//just double clicked on. Otherwise unhide the 7 hidden ones
+void FrameInfoWindow::mouseDoubleClick()
+{
+    QCustomPlot *plot = qobject_cast<QCustomPlot *>(sender());
+    bool hideMode = true;
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (ui->gridLower->itemAt(i)->widget()->isHidden()) hideMode = false;
+    }
+
+    if (hideMode)
+    {
+    for (int i = 0; i < 8; i++)
+        {
+            if (ui->gridLower->itemAt(i)->widget() == (plot)) qDebug() << "Idx " << i << " matched!";
+            else ui->gridLower->itemAt(i)->widget()->setHidden(true);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            ui->gridLower->itemAt(i)->widget()->setHidden(false);
+        }
+    }
 }
 
 void FrameInfoWindow::showEvent(QShowEvent* event)
@@ -267,7 +364,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         }
         //default is to sort in ascending order
         ui->listFrameID->sortItems();
-        ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
+        ui->lblUniqueID->setText(")" + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
     }
 }
 
@@ -290,6 +387,12 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     double maxY = -1000.0;
     uint8_t changedBits[8];
     uint8_t referenceBits[8];
+    uint8_t heatVals[512];
+
+    //these two used by bitflip heatmap functionality
+    uint8_t refByte[8];
+    double bitFlipHeat[64];
+
     QTreeWidgetItem *baseNode, *dataBase, *histBase, *tempItem;
 
     if (modelFrames->count() == 0) return;
@@ -309,6 +412,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             CANFrame thisFrame = modelFrames->at(i);
             if (thisFrame.frameId() == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
+
+        if (frameCache.count() == 0) return; //nothing to do if there are no frames!
 
         const unsigned char *data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
         int dataLen = frameCache.at(0).payload().length();
@@ -397,7 +502,11 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             maxData[i] = -1;
             for (int k = 0; k < 256; k++) dataHistogram[k][i] = 0;
         }
-        for (int j = 0; j < 64; j++) bitfieldHistogram[j] = 0;
+        for (int j = 0; j < 64; j++)
+        {
+            bitfieldHistogram[j] = 0;
+            bitFlipHeat[j] = 0;
+        }
         signalInstances.clear();
 
         data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
@@ -407,6 +516,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         {
             changedBits[c] = 0;
             referenceBits[c] = data[c];
+            refByte[c] = data[c];
             //qDebug() << referenceBits[c];
         }
 
@@ -460,6 +570,16 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                     }
                 }
                 changedBits[c] |= referenceBits[c] ^ dat;
+
+                if (refByte[c] != dat) //if this byte doesn't match the value it last had
+                {
+                    uint8_t newBits = refByte[c] ^ dat; //get changed bits since last ref
+                    for (int l = 0; l < 8; l++)
+                    {
+                        if (newBits & (1 << l)) bitFlipHeat[(c * 8) + l]++;
+                    }
+                    refByte[c] = dat; //set the reference to this current byte now that processing is done
+                }
             }
 
             //Search every signal in the selected message and give output of the range the signal took and
@@ -484,6 +604,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
                 }
             }
         }
+
+        //Divide all the bit flip heat values by the number of frames to get a ratio
+        for (int j = 0; j < 64; j++) bitFlipHeat[j] /= (double)frameCache.count();
 
         std::sort(sortedIntervals.begin(), sortedIntervals.end());
         int64_t intervalStdDiv = 0, intervalPctl5 = 0, intervalPctl95 = 0, intervalMean = 0, intervalVariance = 0;
@@ -529,6 +652,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         if (frameCache.count() > 1)
             avgInterval = avgInterval / (frameCache.count() - 1);
         else avgInterval = 0;
+
+        //now that data processing is done, create all of our output
 
         tempItem = new QTreeWidgetItem();
 
@@ -596,7 +721,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         {
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
-                            + QString::number(c % 8) + ") :" + QString::number(bitfieldHistogram[c]));
+                            + QString::number(c % 8) + ") : " + QString::number(bitfieldHistogram[c]));
 
             dataBase->addChild(tempItem);
             histGraphX.append(c);
@@ -604,6 +729,28 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
         }
         baseNode->addChild(dataBase);
+
+        //heat map output
+        dataBase = new QTreeWidgetItem();
+        dataBase->setText(0, tr("Bitchange Heatmap"));
+        memset(heatVals, 0, 512); //always clear the array before populating it.
+        for (int c = 0; c < 8 * maxLen; c++)
+        {
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
+                            + QString::number(c % 8) + ") : " + QString::number(bitFlipHeat[c] * 100.0, 'f', 2));
+
+            dataBase->addChild(tempItem);
+            histGraphX.append(c);
+            histGraphY.append(bitfieldHistogram[c]);
+            if (bitfieldHistogram[c] > maxY) maxY = bitfieldHistogram[c];
+            uint8_t heat = bitFlipHeat[c] * 255;
+            if ((heat < 1) && (bitFlipHeat[c] > 0.0001)) heat = 1; //make sure any little bit of heat causes at least some output
+            //qDebug() << "Heat for bit " << c <<  " is " << heat;
+            heatVals[c] = heat;
+        }
+        baseNode->addChild(dataBase);
+        heatmap->setHeat(heatVals);
 
         QHash<QString, QHash<QString, int>>::const_iterator it = signalInstances.constBegin();
         while (it != signalInstances.constEnd()) {
@@ -623,29 +770,29 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         ui->treeDetails->insertTopLevelItem(0, baseNode);
 
-        ui->graphHistogram->clearGraphs();
-        ui->graphHistogram->addGraph();
-        ui->graphHistogram->graph()->setData(histGraphX, histGraphY);
-        ui->graphHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
+        graphHistogram->clearGraphs();
+        graphHistogram->addGraph();
+        graphHistogram->graph()->setData(histGraphX, histGraphY);
+        graphHistogram->graph()->setLineStyle(QCPGraph::lsStepLeft); //connect points with lines
         QBrush graphBrush;
         graphBrush.setColor(Qt::red);
         graphBrush.setStyle(Qt::SolidPattern);
-        ui->graphHistogram->graph()->setPen(Qt::NoPen);
-        ui->graphHistogram->graph()->setBrush(graphBrush);
-        ui->graphHistogram->yAxis->setRange(0.8, maxY * 1.2);
-        ui->graphHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
-        ui->graphHistogram->axisRect()->setupFullAxesBox();
-        ui->graphHistogram->replot();
+        graphHistogram->graph()->setPen(Qt::NoPen);
+        graphHistogram->graph()->setBrush(graphBrush);
+        graphHistogram->yAxis->setRange(0.8, maxY * 1.2);
+        graphHistogram->yAxis->setScaleType(QCPAxis::stLogarithmic);
+        graphHistogram->axisRect()->setupFullAxesBox();
+        graphHistogram->replot();
 
-        ui->graphBytes->clearGraphs();
         for (int graphs = 0; graphs < 8; graphs++)
         {
-            graphRef[graphs] = ui->graphBytes->addGraph();
-            ui->graphBytes->graph()->setData(byteGraphX, byteGraphY[graphs]);
-            ui->graphBytes->graph()->setPen(bytePens[graphs]);
+            graphByte[graphs]->clearGraphs();
+            graphRef[graphs] = graphByte[graphs]->addGraph();
+            graphByte[graphs]->graph()->setData(byteGraphX, byteGraphY[graphs]);
+            graphByte[graphs]->graph()->setPen(bytePens[graphs]);
+            graphByte[graphs]->xAxis->setRange(0, byteGraphX.count());
+            graphByte[graphs]->replot();
         }
-        ui->graphBytes->xAxis->setRange(0, byteGraphX.count());
-        ui->graphBytes->replot();
 
         ui->timeHistogram->clearGraphs();
         ui->timeHistogram->addGraph();
@@ -661,15 +808,6 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         ui->timeHistogram->axisRect()->setupFullAxesBox();
         ui->timeHistogram->rescaleAxes();
         ui->timeHistogram->replot();
-
-        ui->check_0->setChecked(true);
-        ui->check_1->setChecked(true);
-        ui->check_2->setChecked(true);
-        ui->check_3->setChecked(true);
-        ui->check_4->setChecked(true);
-        ui->check_5->setChecked(true);
-        ui->check_6->setChecked(true);
-        ui->check_7->setChecked(true);
     }
     else
     {
@@ -697,7 +835,7 @@ void FrameInfoWindow::refreshIDList()
     }
     //default is to sort in ascending order
     ui->listFrameID->sortItems();
-    ui->lblFrameID->setText(tr("Frame IDs: (") + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
+    ui->lblUniqueID->setText("(" + QString::number(ui->listFrameID->count()) + tr(" unique ids)"));
 }
 
 void FrameInfoWindow::saveDetails()
@@ -741,24 +879,6 @@ void FrameInfoWindow::saveDetails()
             outFile->close();
             delete outFile;
         }
-    }
-}
-
-void FrameInfoWindow::changeGraphVisibility(int state){
-    QCheckBox *sender = qobject_cast<QCheckBox *>(QObject::sender());
-    if(sender){
-        sender->objectName();
-        int graphId = sender->objectName().right(1).toInt();
-        for (int k = 0; k < 8; k++)
-        {
-            if (k == graphId && graphRef[k] && graphRef[k]->data()){
-                graphRef[k]->setVisible(state);
-                qDebug() << graphId << state << k;
-            }
-        }
-        qDebug() << graphId << state;
-
-        ui->graphBytes->replot();
     }
 }
 

@@ -100,8 +100,15 @@ void DBCSignalHandler::sort()
 DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
 {
     if (messages.count() == 0) return nullptr;
+    DBC_MESSAGE *bestMatch = nullptr;
+
     for (int i = 0; i < messages.count(); i++)
     {
+        if ( messages[i].ID == id )
+        {
+            return &messages[i];
+        }
+
         if (matchingCriteria == J1939)
         {
             // include data page and extended data page in the pgn
@@ -112,7 +119,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
                 pgn &= 0x3FF00;
                 if ((messages[i].ID & 0x3FF0000) == (pgn << 8))
                 {
-                    return &messages[i];
+                    bestMatch = &messages[i];
                 }
             }
             else
@@ -120,7 +127,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
                 // PDU2 format
                 if ((messages[i].ID & 0x3FFFF00) == (pgn << 8))
                 {
-                    return &messages[i];
+                    bestMatch = &messages[i];
                 }
             }
         }
@@ -129,17 +136,10 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(uint32_t id)
             // Match the bits 14-26 (Arbitration Id) of GMLAN 29bit header
             uint32_t arbId = id &0x3FFE000;
             if ( (arbId != 0) && (messages[i].ID & 0x3FFE000) == arbId )
-                return &messages[i];
-        }
-        else
-        {
-            if ( messages[i].ID == id )
-            {
-                return &messages[i];
-            }
+                bestMatch = &messages[i];
         }
     }
-    return nullptr;
+    return bestMatch;
 }
 
 DBC_MESSAGE* DBCMessageHandler::findMsgByIdx(int idx)
@@ -177,6 +177,24 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByPartialName(QString name)
     return nullptr;
 }
 
+QList<DBC_MESSAGE*> DBCMessageHandler::findMsgsByNode(DBC_NODE* node)
+{
+    QList<DBC_MESSAGE*> messagesForNode;
+
+    if (messages.count() == 0)
+        return messagesForNode;
+
+    for (int i = 0; i < messages.count(); i++)
+    {
+        if (messages[i].sender == node)
+        {
+            messagesForNode.append(&messages[i]);
+        }
+    }
+
+    return messagesForNode;
+}
+
 bool DBCMessageHandler::addMessage(DBC_MESSAGE &msg)
 {
     messages.append(msg);
@@ -192,6 +210,7 @@ bool DBCMessageHandler::removeMessage(DBC_MESSAGE *msg)
         {
             messages.removeAt(i);
             qDebug() << "Removed message at idx " << i;
+            break;
         }
     }
     return true;
@@ -336,7 +355,26 @@ DBC_NODE* DBCFile::findNodeByName(QString name)
     if (dbc_nodes.length() == 0) return nullptr;
     for (int i = 0; i < dbc_nodes.length(); i++)
     {
-        if (dbc_nodes[i].name.compare(name, Qt::CaseInsensitive) == 0)
+        if (name.compare(dbc_nodes[i].name, Qt::CaseInsensitive) == 0)
+        {
+            return &dbc_nodes[i];
+        }
+    }
+    return nullptr;
+}
+
+DBC_NODE* DBCFile::findNodeByNameAndComment(QString fullname)
+{
+    QString nameAndComment;
+    if (dbc_nodes.length() == 0) return nullptr;
+    for (int i = 0; i < dbc_nodes.length(); i++)
+    {
+        if(dbc_nodes[i].comment.isEmpty())
+            nameAndComment = dbc_nodes[i].name;
+        else
+            nameAndComment = dbc_nodes[i].name + " - " + dbc_nodes[i].comment;
+
+        if (fullname.compare(nameAndComment, Qt::CaseInsensitive) == 0)
         {
             return &dbc_nodes[i];
         }
@@ -352,6 +390,11 @@ QString DBCFile::getFullFilename()
 QString DBCFile::getFilename()
 {
     return fileName;
+}
+
+QString DBCFile::getFilenameNoExt()
+{
+    return fileName.split(".dbc")[0];
 }
 
 QString DBCFile::getPath()
@@ -403,10 +446,19 @@ void DBCFile::findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> 
     }
 }
 
-//there's no external way to clear the flag. It is only cleared when the file is saved by this object.
 void DBCFile::setDirtyFlag()
 {
     isDirty = true;
+}
+
+//BE CAREFUL HERE. Do not clear the dirty flag unless you're absolutely sure nothing has changed.
+//Currently the signal editor clears this flag if the entire undo buffer is emptied but still
+//it's possible that signals or messages were deleted or added so this is potentially not that safe
+//It would be better if every node, message, and signal had a dirty flag. Then the DBCFile getDirtyFlag
+//function could traverse the tree and see if anything is dirty.
+void DBCFile::clearDirtyFlag()
+{
+    isDirty = false;
 }
 
 bool DBCFile::getDirtyFlag()
@@ -422,7 +474,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
     DBC_MESSAGE *msgPtr;
 
     qDebug() << "Found a BO line";
-    regex.setPattern("^BO\\_ (\\w+) (\\w+) *: (\\w+) (\\w+)");
+    regex.setPattern("^BO\\_ (\\w+) ([-\\w]+) *: (\\w+) ([-\\w]+)");
     match = regex.match(line);
     //captured 1 = the ID in decimal
     //captured 2 = The message name
@@ -433,7 +485,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         DBC_MESSAGE msg;
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
         msg.ID = ID & 0x1FFFFFFFul;
-        msg.extendedID = (ID & 80000000ul) ? true : false;
+        msg.extendedID = (ID & 0x80000000ul) ? true : false;
         msg.name = match.captured(2);
         msg.len = match.captured(3).toUInt();
         msg.sender = findNodeByName(match.captured(4));
@@ -461,7 +513,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     sig.isMultiplexor = false;
 
     qDebug() << "Found a SG line";
-    regex.setPattern("^SG\\_ *(\\w+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+    regex.setPattern("^SG\\_ *([-\\w]+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
 
     match = regex.match(line);
     if (match.hasMatch())
@@ -472,7 +524,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     }
     else
     {
-        regex.setPattern("^SG\\_ *(\\w+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+        regex.setPattern("^SG\\_ *([-\\w]+) +m(\\d+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
         match = regex.match(line);
         if (match.hasMatch())
         {
@@ -485,7 +537,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
         }
         else
         {
-            regex.setPattern("^SG\\_ *(\\w+) +m(\\d+)M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+            regex.setPattern("^SG\\_ *([-\\w]+) +m(\\d+)M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
             match = regex.match(line);
             if (match.hasMatch())
             {
@@ -499,7 +551,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
             else
             {
                 qDebug() << "standard signal";
-                regex.setPattern("^SG\\_ *(\\w+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
+                regex.setPattern("^SG\\_ *([-\\w]+) *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
                 match = regex.match(line);
                 sig.isMultiplexed = false;
                 sig.isMultiplexor = false;
@@ -591,7 +643,7 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     QRegularExpressionMatch match;
 
     qDebug() << "Found a multiplex definition line";
-    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) (\\w+) (\\w+) (\\d+)\\-(\\d+);");
+    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) (\\d+)\\-(\\d+);");
     match = regex.match(line);
     //captured 1 is message ID
     //Captured 2 is signal name
@@ -612,6 +664,8 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
                     //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
                     parentSignal->multiplexedChildren.append(thisSignal);
                     thisSignal->multiplexParent = parentSignal;
+                    thisSignal->multiplexLowValue = match.captured(4).toInt();
+                    thisSignal->multiplexHighValue = match.captured(5).toInt();
                     return true;
                 }
             }
@@ -620,13 +674,51 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     return false;
 }
 
+bool DBCFile::parseSignalValueTypeLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+    qDebug() << "Found a signal valtype line";
+    regex.setPattern("^SIG\\_VALTYPE\\_ *(\\d+) *([-\\w]+) *: *(\\d+);");
+    match = regex.match(line);
+
+    // captured 1 is the message id
+    // captured 2 is the signal name
+    // captured 3 is the valtype
+    if (!match.hasMatch()) { return false; }
+    uint32_t id = match.captured(1).toULong() & 0x1FFFFFFFUL;
+
+    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFUL);
+    if (msg == nullptr) { return false; }
+
+    DBC_SIGNAL *thisSignal = msg->sigHandler->findSignalByName(match.captured(2));
+    if (thisSignal == nullptr) { return false; }
+    int valType = match.captured(3).toInt();
+
+    switch (valType) {
+        case 1: {
+            thisSignal->valType = SP_FLOAT;
+            break;
+        }
+        case 2: {
+            thisSignal->valType = DP_FLOAT;
+            break;
+        }
+        default: {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 bool DBCFile::parseValueLine(QString line)
 {
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
     qDebug() << "Found a value definition line";
-    regex.setPattern("^VAL\\_ (\\w+) (\\w+) (.*);");
+    regex.setPattern("^VAL\\_ (\\w+) ([-\\w]+) (.*);");
     match = regex.match(line);
     //captured 1 is the ID to match against
     //captured 2 is the signal name to match against
@@ -671,7 +763,7 @@ bool DBCFile::parseAttributeLine(QString line)
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
-    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
+    regex.setPattern("^BA\\_ \\\"*([-\\w]+)\\\"* BO\\_ (\\d+) \\\"*([#\\w]+)\\\"*");
     match = regex.match(line);
     //captured 1 is the attribute name
     //captured 2 is the message ID number (frame ID)
@@ -682,7 +774,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That message attribute does exist";
             DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFul);
             if (foundMsg)
             {
@@ -702,7 +794,7 @@ bool DBCFile::parseAttributeLine(QString line)
         }
     }
 
-    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* SG\\_ (\\d+) \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
+    regex.setPattern("^BA\\_ \\\"*([-\\w]+)\\\"* SG\\_ (\\d+) \\\"*([-\\w]+)\\\"* \\\"*([#\\w]+)\\\"*");
     match = regex.match(line);
     //captured 1 is the attribute name
     //captured 2 is the message ID number (frame ID)
@@ -714,7 +806,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That signal attribute does exist";
             DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFUL);
             if (foundMsg)
             {
@@ -736,7 +828,7 @@ bool DBCFile::parseAttributeLine(QString line)
         }
     }
 
-    regex.setPattern("^BA\\_ \\\"*(\\w+)\\\"* BU\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]+)\\\"*");
+    regex.setPattern("^BA\\_ \\\"*([-\\w]+)\\\"* BU\\_ \\\"*([-\\w]+)\\\"* \\\"*([#\\w]+)\\\"*");
     match = regex.match(line);
     //captured 1 is the attribute name
     //captured 2 is the name of the node
@@ -747,7 +839,7 @@ bool DBCFile::parseAttributeLine(QString line)
         DBC_ATTRIBUTE *foundAttr = findAttributeByName(match.captured(1));
         if (foundAttr)
         {
-            qDebug() << "That attribute does exist";
+            qDebug() << "That node attribute does exist";
             DBC_NODE *foundNode = findNodeByName(match.captured(2));
             if (foundNode)
             {
@@ -774,7 +866,7 @@ bool DBCFile::parseDefaultAttrLine(QString line)
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
-    regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*(\\w+)\\\"* \\\"*([#\\w]*)\\\"*");
+    regex.setPattern("^BA\\_DEF\\_DEF\\_ \\\"*([-\\w]+)\\\"* \\\"*([#\\w]*)\\\"*");
     match = regex.match(line);
     //captured 1 is the name of the attribute
     //captured 2 is the default value for that attribute
@@ -824,6 +916,7 @@ bool DBCFile::loadFile(QString fileName)
     DBC_ATTRIBUTE attr;
     int numSigFaults = 0, numMsgFaults = 0;
     int linesSinceYield = 0;
+    QString fileBaseName = QFileInfo(fileName).baseName();
 
     bool inMultilineBU = false;
 
@@ -862,6 +955,7 @@ bool DBCFile::loadFile(QString fileName)
             if (rawLine.startsWith("\t") || rawLine.startsWith("   "))
             {
                 DBC_NODE node;
+                node.sourceFileName = fileBaseName;
                 node.name = line;
                 dbc_nodes.append(node);
             }
@@ -885,6 +979,11 @@ bool DBCFile::loadFile(QString fileName)
                 if (!parseSignalMultiplexValueLine(line)) numSigFaults++;
             }
 
+            if (line.startsWith("SIG_VALTYPE_ ")) //defines a signal value type
+            {
+                if (!parseSignalValueTypeLine(line)) numSigFaults++;
+            }
+
             if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
             {
                 qDebug() << "Found a BU line";
@@ -901,6 +1000,7 @@ bool DBCFile::loadFile(QString fileName)
                         if (nodeStrings[i].length() > 1)
                         {
                             DBC_NODE node;
+                            node.sourceFileName = fileBaseName;
                             node.name = nodeStrings[i];
                             dbc_nodes.append(node);
                         }
@@ -911,7 +1011,7 @@ bool DBCFile::loadFile(QString fileName)
             if (line.startsWith("CM_ SG_ "))
             {
                 qDebug() << "Found an SG comment line";
-                regex.setPattern("^CM\\_ SG\\_ *(\\w+) *(\\w+) *\\\"(.*)\\\";");
+                regex.setPattern("^CM\\_ SG\\_ *(\\w+) *([-\\w]+) *\\\"(.*)\\\";");
                 match = regex.match(line);
                 //captured 1 is the ID to match against to get to the message
                 //captured 2 is the signal name from that message
@@ -950,7 +1050,7 @@ bool DBCFile::loadFile(QString fileName)
             if (line.startsWith("CM_ BU_ "))
             {
                 qDebug() << "Found a BU comment line";
-                regex.setPattern("^CM\\_ BU\\_ *(\\w+) *\\\"(.*)\\\";");
+                regex.setPattern("^CM\\_ BU\\_ *([-\\w]+) *\\\"(.*)\\\";");
                 match = regex.match(line);
                 //captured 1 is the Node name
                 //captured 2 is the comment itself
@@ -1254,7 +1354,7 @@ bool DBCFile::saveFile(QString fileName)
     int msgNumber = 1;
     int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
-    QString nodesOutput, msgOutput, commentsOutput, valuesOutput;
+    QString nodesOutput, msgOutput, commentsOutput, valuesOutput, extMultiplexOutput;
     QString defaultsOutput, attrValOutput;
     bool hasExtendedMultiplexing = false;
 
@@ -1323,7 +1423,7 @@ bool DBCFile::saveFile(QString fileName)
                     attrValOutput.append("BA_ \"" + val.attrName + "\" BU_ ");
                     switch (val.value.type())
                     {
-                    case QMetaType::QString:
+                    case QVariant::Type::String:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
                     default:
@@ -1349,7 +1449,10 @@ bool DBCFile::saveFile(QString fileName)
         }
 
         uint32_t ID = msg->ID;
-        if (msg->ID > 0x7FF || msg->extendedID) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+        if (msg->ID > 0x7FF || msg->extendedID)
+        {
+            ID += 0x80000000ul; //set bit 31 if this ID is extended.
+        }
 
         msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
@@ -1365,7 +1468,7 @@ bool DBCFile::saveFile(QString fileName)
                 attrValOutput.append("BA_ \"" + val.attrName + "\" BO_ " + QString::number(ID) + " ");
                 switch (val.value.type())
                 {
-                case QMetaType::QString:
+                case QVariant::Type::String:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
                     break;
                 default:
@@ -1442,7 +1545,7 @@ bool DBCFile::saveFile(QString fileName)
                     attrValOutput.append("BA_ \"" + val.attrName + "\" SG_ " + QString::number(ID) + " " + sig->name + " ");
                     switch (val.value.type())
                     {
-                    case QMetaType::QString:
+                    case QVariant::Type::String:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
                     default:
@@ -1469,6 +1572,9 @@ bool DBCFile::saveFile(QString fileName)
         msgOutput.clear(); //got to reset it after writing
     }
 
+    outFile->write(commentsOutput.toUtf8());
+    commentsOutput.clear();
+
     //Now dump out all of the stored attributes
     for (int x = 0; x < dbc_attributes.count(); x++)
     {
@@ -1485,6 +1591,8 @@ bool DBCFile::saveFile(QString fileName)
             break;
         case ATTR_TYPE_SIG:
             msgOutput.append("SG_ ");
+            break;
+        case ATTR_TYPE_ANY:
             break;
         }
 
@@ -1528,6 +1636,8 @@ bool DBCFile::saveFile(QString fileName)
                 defaultsOutput.append("\"" + dbc_attributes[x].enumVals[dbc_attributes[x].defaultValue.toInt()] + "\";\n");
                 break;
             case ATTR_INT:
+                defaultsOutput.append(QString::number(dbc_attributes[x].defaultValue.toLongLong()) + ";\n");
+                break;
             case ATTR_FLOAT:
                 defaultsOutput.append(dbc_attributes[x].defaultValue.toString() + ";\n");
                 break;
@@ -1545,7 +1655,10 @@ bool DBCFile::saveFile(QString fileName)
             DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
 
             uint32_t ID = msg->ID;
-            if (msg->ID > 0x7FF || msg->extendedID) msg->ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            if (msg->ID > 0x7FF || msg->extendedID)
+            {
+                ID += 0x80000000ul; //set bit 31 if this ID is extended.
+            }
 
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
             {
@@ -1554,10 +1667,10 @@ bool DBCFile::saveFile(QString fileName)
                 if (sig->isMultiplexed)
                 {
                     msgOutput.append("SG_MUL_VAL_ " + QString::number(ID) + " ");
-                    msgOutput.append(sig->name + " " + sig->parentMessage->name + " ");
+                    msgOutput.append(sig->name + " " + sig->multiplexParent->name + " ");
                     msgOutput.append(QString::number(sig->multiplexLowValue) + "-" + QString::number(sig->multiplexHighValue) + ";");
                     msgOutput.append("\n");
-                    outFile->write(msgOutput.toUtf8());
+                    extMultiplexOutput.append(msgOutput);
                     msgOutput.clear(); //got to reset it after writing
                 }
             }
@@ -1565,15 +1678,15 @@ bool DBCFile::saveFile(QString fileName)
     }
 
     //now write out all of the accumulated comments and value tables from above
-    outFile->write(attrValOutput.toUtf8());
     outFile->write(defaultsOutput.toUtf8());
-    outFile->write(commentsOutput.toUtf8());
+    outFile->write(attrValOutput.toUtf8());    
     outFile->write(valuesOutput.toUtf8());
+    outFile->write(extMultiplexOutput.toUtf8());
 
     attrValOutput.clear();
     defaultsOutput.clear();
-    commentsOutput.clear();
     valuesOutput.clear();
+    extMultiplexOutput.clear();
 
     outFile->close();
     delete outFile;
@@ -2140,6 +2253,8 @@ DBC_MESSAGE* DBCHandler::findMessageForFilter(uint32_t id, MatchingCriteria_t * 
 
 /*
  * As above, a real shortcut function that searches all files in order to try to find a message with the given name
+ * This has pitfalls because the same message name can easily exist in multiple dbc files AND nodes in a single file
+ * By DBC standards only the MSG ID is required to be unique
 */
 DBC_MESSAGE* DBCHandler::findMessage(const QString msgName)
 {
@@ -2151,6 +2266,43 @@ DBC_MESSAGE* DBCHandler::findMessage(const QString msgName)
         if (msg) return msg; //if it's not null then we have a match so return it
     }
     return nullptr; //no match, tough luck, return null
+}
+
+DBC_MESSAGE* DBCHandler::findMessage(const QString msgName, const QString nodeName, const QString fileNameNoExt)
+{
+    DBC_MESSAGE *msg = nullptr;
+    for(int i = 0; i < loadedFiles.count(); i++)
+    {
+        DBCFile * file = getFileByIdx(i);
+        if(file->getFilenameNoExt() == fileNameNoExt)
+        {
+            int msgCount = file->messageHandler->getCount();
+            for(int f = 0; f < msgCount; f++)
+            {
+                msg = file->messageHandler->findMsgByIdx(f);
+                if (msg && msg->name == msgName && msg->sender->name == nodeName)
+                    return msg; //if it's not null and the node name matches return it
+            }
+        }
+    }
+    return nullptr; //no match, tough luck, return null
+}
+
+DBC_MESSAGE* DBCHandler::findMessage(const QString msgName, const QString fullyQualifiedNodeName)
+{
+    QStringList nodeNameParts = fullyQualifiedNodeName.split(Utility::fullyQualifiedNameSeperator);
+    if(nodeNameParts.count() != 2)
+    {
+        qDebug() << "Error parsing fully qualified node name for message search";
+        return nullptr;
+    }
+
+    QString fileNameNoExt = nodeNameParts[0];
+    QString nodeName = nodeNameParts[1];
+
+    DBC_MESSAGE *msg = nullptr;
+    msg = findMessage(msgName, nodeName, fileNameNoExt);
+    return msg;
 }
 
 int DBCHandler::getFileCount()
@@ -2183,18 +2335,19 @@ DBCHandler::DBCHandler()
 {
     // Load previously saved DBC file settings
     QSettings settings;
+    qDebug() <<"Settings file: " << settings.fileName();
     int filecount = settings.value("DBC/FileCount", 0).toInt();
     qDebug() << "Previously loaded DBC file count: " << filecount;
     for (int i=0; i<filecount; i++)
     {
-        QString filename = settings.value("DBC/Filename_" + QString(i),"").toString();
+        QString filename = settings.value("DBC/Filename_" + QString::number(i),"").toString();
         DBCFile * file = loadDBCFile(filename);
         if (file)
         {
-            int bus = settings.value("DBC/AssocBus_" + QString(i),0).toInt();
+            int bus = settings.value("DBC/AssocBus_" + QString::number(i),0).toInt();
             file->setAssocBus(bus);
 
-            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString(i),0).toInt();
+            MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString::number(i),0).toInt();
 
             DBC_ATTRIBUTE attr;
 
@@ -2208,7 +2361,7 @@ DBCHandler::DBCHandler()
             file->dbc_attributes.append(attr);
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
-            bool filterLabeling = settings.value("DBC/FilterLabeling_" + QString(i),0).toBool();
+            int filterLabeling = settings.value("DBC/FilterLabeling_" + QString::number(i),0).toInt();
             attr.attrType = ATTR_TYPE_MESSAGE;
             attr.defaultValue = filterLabeling;
             attr.enumVals.clear();

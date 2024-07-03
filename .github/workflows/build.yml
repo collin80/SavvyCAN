@@ -8,18 +8,18 @@ on:
 jobs:
   buildlinux:
     name: Linux x64
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Prepare Environment
         run: |
-            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0
+            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0
 
       - name: Prepare Qt Libraries
-        uses: jurplel/install-qt-action@v2
+        uses: jurplel/install-qt-action@v3
 
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Compile
         run: |
@@ -29,18 +29,18 @@ jobs:
       - name: Package     
         run: |
           make INSTALL_ROOT=appdir install
-          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/5/linuxdeployqt-5-x86_64.AppImage"
-          chmod a+x linuxdeployqt-5-x86_64.AppImage
-          ./linuxdeployqt-5-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
+          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+          chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+          ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: SavvyCAN-Linux_x64.AppImage
-          path: SavvyCAN-x86_64.AppImage
+          path: SavvyCAN-*x86_64.AppImage
       
   buildmacos:
     name: macOS x64
-    runs-on: macos-10.15
+    runs-on: macos-12
 
     steps:
       - name: Prepare macOS Environment
@@ -49,7 +49,7 @@ jobs:
             brew link qt5 --force
 
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Compile     
         run: |
@@ -62,7 +62,7 @@ jobs:
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
       
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: SavvyCAN-macOS_x64.dmg
           path: SavvyCAN.dmg
@@ -73,10 +73,10 @@ jobs:
 
     steps:      
       - name: Prepare Qt Libraries
-        uses: jurplel/install-qt-action@v2
+        uses: jurplel/install-qt-action@v3
 
       - name: Clone
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       
       - name: Compile
         shell: cmd
@@ -113,7 +113,7 @@ jobs:
           mkdir package/canbus
           copy "${Env:Qt5_Dir}/plugins/canbus/*.*" package/canbus/
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: SavvyCAN-Windows_x64
           path: package
@@ -124,12 +124,12 @@ jobs:
     needs: [buildwindows, buildmacos, buildlinux]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - name: Display structure of downloaded files
-        run: zip -r SavvyCAN_CIBuild.zip SavvyCAN-Windows_x64
+        run: zip -r SavvyCAN-Windows_x64_CIBuild.zip SavvyCAN-Windows_x64
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -137,8 +137,8 @@ jobs:
           prerelease: true
           title: "Development Build"
           files: |
-            SavvyCAN-Linux_x64.AppImage/SavvyCAN-x86_64.AppImage
-            SavvyCAN_CIBuild.zip
+            SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
+            SavvyCAN-Windows_x64_CIBuild.zip
             SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
           
   notify:
@@ -155,6 +155,8 @@ jobs:
           )
           release_msg="${release_msg//$'\n'/'-'}"
           release_msg="${release_msg//$'\r'/'-'}"
+          release_msg="${release_msg//$'('/'-'}"
+          release_msg="${release_msg//$')'/'-'}"
           echo $release_msg
           echo "::set-output name=msg::$release_msg"
                                                                   

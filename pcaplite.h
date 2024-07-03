@@ -2,7 +2,7 @@
 #define PCAPLITE_H
 
 #include <stdio.h>
-#if defined(unix)
+#if defined(unix) || defined __APPLE__
 #include <sys/time.h>
 #else
 #include <winsock.h>

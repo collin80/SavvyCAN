@@ -18,8 +18,11 @@
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <item>
       <widget class="QTableWidget" name="tableViewer">
+       <property name="sortingEnabled">
+        <bool>true</bool>
+       </property>
        <property name="columnCount">
-        <number>2</number>
+        <number>3</number>
        </property>
        <attribute name="horizontalHeaderDefaultSectionSize">
         <number>300</number>
@@ -30,6 +33,7 @@
        <attribute name="verticalHeaderStretchLastSection">
         <bool>false</bool>
        </attribute>
+       <column/>
        <column/>
        <column/>
       </widget>
@@ -45,6 +49,16 @@
    </item>
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QLabel" name="label_3">
+       <property name="text">
+        <string>Node</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="cbNodes"/>
+     </item>
      <item>
       <widget class="QLabel" name="label">
        <property name="text">
@@ -84,6 +98,34 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnSave">
+       <property name="text">
+        <string>Save View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnLoad">
+       <property name="text">
+        <string>Load View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnAppend">
+       <property name="text">
+        <string>Append to View</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnClear">
+       <property name="text">
+        <string>Clear View</string>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>

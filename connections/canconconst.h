@@ -20,6 +20,9 @@ namespace CANCon {
         REMOTE,
         KAYAK,
         MQTT,
+        LAWICEL,
+        CANSERVER,
+        CANLOGSERVER,
         NONE
     };
 }

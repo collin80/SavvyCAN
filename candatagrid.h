@@ -22,6 +22,8 @@ class CANDataGrid;
  *
  * Now the control also tracks which signal is using which bit. The graphical representation does exist now but some tweaking is probably
  * still needed. Also, it seems like it is necessary to allow for a variety of modes.
+ *
+ * And now, CAN-FD added as the cherry on top! It's a mess but really, all this functionality is handy to have.
  */
 
 enum GridTextState
@@ -33,9 +35,12 @@ enum GridTextState
 
 enum GridMode
 {
-    CHANGED_BITS,
-    SIGNAL_VIEW
+    CHANGED_BITS, //traditional view, bunch of bits we color to show what's set and how the bits have changed over time
+    SIGNAL_VIEW, //special view for DBC window where we draw the signals in the bits they take up
+    HEAT_VIEW    //another special mode where each bit is given a heat level and we color each bit based on that. Use refData for storage of those values
 };
+
+extern QVector<QColor> signalColors;
 
 class CANDataGrid : public QWidget
 {
@@ -44,35 +49,39 @@ class CANDataGrid : public QWidget
 public:
     explicit CANDataGrid(QWidget *parent = 0);
     ~CANDataGrid();
-    void paintEvent(QPaintEvent *event);
+    void paintEvent(QPaintEvent *event) override;
     void setReference(unsigned char *, bool);
     void updateData(unsigned char *, bool);
     void setUsed(unsigned char *, bool);
+    void setHeat(unsigned char *);
     void saveImage(QString filename, int width, int height);
-    void setCellTextState(int x, int y, GridTextState state);
-    GridTextState getCellTextState(int x, int y);
+    void setCellTextState(int bitPos, GridTextState state);
+    GridTextState getCellTextState(int bitPos);
     void setUsedSignalNum(int bit, int signal);
     void setSignalNames(int sigIdx, const QString sigName);
     void clearSignalNames();
     int getUsedSignalNum(int bit);
     GridMode getMode();
     void setMode(GridMode mode);
+    void setBytesToDraw(int num);
 
 protected:
     void mousePressEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 
 signals:
-    void gridClicked(int x,int y);
+    void gridClicked(int bitClicked);
+    void gridRightClicked(int bitClicked);
 
 private:
     Ui::CANDataGrid *ui;
-    unsigned char refData[8];
-    unsigned char data[8];
-    unsigned char usedData[8];
-    int usedSignalNum[64]; //so we can specify which signal claims this bit
+    int bytesToDraw;
+    unsigned char refData[64];
+    unsigned char data[64];
+    unsigned char usedData[64];
+    unsigned char heatData[512];
+    int usedSignalNum[512]; //so we can specify which signal claims this bit
     QVector<QString> signalNames;
-    QVector<QColor> signalColors;
-    GridTextState textStates[8][8];
+    GridTextState textStates[64][8]; //first dimension is bytes, second is bits
     QPoint upperLeft, gridSize;
     GridMode gridMode;
     QBrush blackBrush, whiteBrush, redBrush, greenBrush, grayBrush;
@@ -84,16 +93,25 @@ private:
     int xSector;
     int ySector;
     double bigTextSize, smallTextSize, sigNameTextSize;
+    int xOffset;
+    int yOffset;
+    int farX, farY, nearX, nearY;
+    int neededXDivisions;
+    int neededYDivisions;
     QFont mainFont;
     QFont smallFont;
     QFont boldFont;
     QFont sigNameFont;
     QFontMetrics *smallMetric;
+    QFontMetrics *largeMetric;
+    QColor fire[256];
 
-    void paintChangedBits();
-    void paintSignalView();
+    void paintGridCells();
     void paintCommonBeginning();
-    void paintCommonEnding();
+    void paintCommonEnding();    
+    int gridToBitPosition(int x, int y);
+    QPoint getGridPointFromBitPosition(int bitPos);
+    int getSignalRowRun(int sigNum, int startBit);
 };
 
 #endif // CANDATAGRID_H

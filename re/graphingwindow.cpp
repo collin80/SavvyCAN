@@ -3,6 +3,7 @@
 #include "newgraphdialog.h"
 #include "mainwindow.h"
 #include "helpwindow.h"
+#include "utility.h"
 #include <QDebug>
 
 #include <algorithm>
@@ -33,8 +34,15 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->graphingView->xAxis->setLabel("Time Axis");
     ui->graphingView->yAxis->setLabel("Value Axis");
     ui->graphingView->xAxis->setNumberFormat("f");
-    if (secondsMode) ui->graphingView->xAxis->setNumberPrecision(6);
+    if (Utility::timeStyle == TS_SECONDS) ui->graphingView->xAxis->setNumberPrecision(6);
         else ui->graphingView->xAxis->setNumberPrecision(0);
+
+    if (Utility::timeStyle == TS_CLOCK)
+    {
+        QSharedPointer timeTicker = QSharedPointer<QCPAxisTickerTime>::create();
+        timeTicker->setTimeFormat("%h:%m:%s.%z");
+        ui->graphingView->xAxis->setTicker(timeTicker);
+    }
 
     ui->graphingView->legend->setVisible(true);
     QFont legendFont = font();
@@ -61,9 +69,9 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
     // connect slot that ties some axis selections together (especially opposite axes):
     connect(ui->graphingView, SIGNAL(selectionChangedByUser()), this, SLOT(selectionChanged()));
     //connect up the mouse controls
-    connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
     connect(ui->graphingView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,int,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,int,QMouseEvent*)));
     connect(ui->graphingView, SIGNAL(plottableClick(QCPAbstractPlottable*,int,QMouseEvent*)), this, SLOT(plottableClick(QCPAbstractPlottable*,int,QMouseEvent*)));
+    connect(ui->graphingView, SIGNAL(mousePress(QMouseEvent*)), this, SLOT(mousePress()));
     connect(ui->graphingView, SIGNAL(mouseWheel(QWheelEvent*)), this, SLOT(mouseWheel()));
 
     // make bottom and left axes transfer their ranges to top and right axes:
@@ -89,6 +97,9 @@ GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     if (useOpenGL)
     {
+        //Fix the device pixel ratio for openGL so the graph doesn't render double sized
+        ui->graphingView->setBufferDevicePixelRatio(1);
+        
         ui->graphingView->setAntialiasedElements(QCP::aeAll);
         //ui->graphingView->setNoAntialiasingOnDrag(true);
         ui->graphingView->setOpenGl(true);
@@ -136,7 +147,7 @@ void GraphingWindow::changeEvent(QEvent *event)
         }
         else
         {
-            setWindowOpacity(0.25);
+            //setWindowOpacity(0.25);
             // widget is now inactive
             qDebug() << "Hide";
         }
@@ -151,7 +162,7 @@ void GraphingWindow::readSettings()
         resize(settings.value("Graphing/WindowSize", QSize(800, 600)).toSize());
         move(Utility::constrainedWindowPos(settings.value("Graphing/WindowPos", QPoint(50, 50)).toPoint()));
     }
-    secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
 }
 
@@ -199,7 +210,7 @@ void GraphingWindow::updatedFrames(int numFrames)
         ui->graphingView->replot(); //now, redisplay them all
     }
     else //just got some new frames. See if they are relevant.
-    {
+    {  
         if (numFrames > modelFrames->count()) return;
 
         for (int j = 0; j < graphParams.count(); j++)
@@ -210,7 +221,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
                 thisFrame = modelFrames->at(i);
-                if (graphParams[j].ID == thisFrame.frameId())
+                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.bus) ) )
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
@@ -264,7 +275,7 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     //apply transforms to get the X axis value where we double clicked
     double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
     id = plottable->property("id").toInt();
-    if (secondsMode) emit sendCenterTimeID(id, coord);
+    if (Utility::timeStyle == TS_SECONDS) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
 
     double x, y;
@@ -281,7 +292,7 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     locationText->setText("X: " + QString::number(x) + " Y: " + QString::number(itemTracer->position->value()));
 }
 
-void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
+void GraphingWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 {
     Q_UNUSED(ID)
     //its problematic to try to highlight a graph since we get the ID
@@ -295,7 +306,7 @@ void GraphingWindow::gotCenterTimeID(int32_t ID, double timestamp)
 
     QCPRange range = ui->graphingView->xAxis->range();
     double offset = range.size() / 2.0;
-    if (!secondsMode) timestamp *= 1000000.0; //timestamp is always in seconds when being passed so convert if necessary
+    if (Utility::timeStyle != TS_SECONDS) timestamp *= 1000000.0; //timestamp is always in seconds when being passed so convert if necessary
     ui->graphingView->xAxis->setRange(timestamp - offset, timestamp + offset);
     ui->graphingView->replot();
 }
@@ -560,7 +571,7 @@ void GraphingWindow::removeSelectedGraph()
         int idx = -1;
         for (int i = 0; i < graphParams.count(); i++)
         {
-            if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+            if (graphParams[i].ref == ui->graphingView->selectedGraphs().constFirst())
             {
                 idx = i;
                 break;
@@ -579,7 +590,7 @@ void GraphingWindow::removeSelectedGraph()
 
         graphParams.removeAt(idx);
 
-        ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().first());
+        ui->graphingView->removeGraph(ui->graphingView->selectedGraphs().constFirst());
 
         if (graphParams.count() == 0) needScaleSetup = true;
 
@@ -594,7 +605,7 @@ void GraphingWindow::editSelectedGraph()
         int idx = -1;
         for (int i = 0; i < graphParams.count(); i++)
         {
-            if (graphParams[i].ref == ui->graphingView->selectedGraphs().first())
+            if (graphParams[i].ref == ui->graphingView->selectedGraphs().constFirst())
             {
                 idx = i;
                 break;
@@ -614,7 +625,8 @@ void GraphingWindow::removeAllGraphs()
     QMessageBox::StandardButton confirmDialog;
     confirmDialog = QMessageBox::question(this, "Really?", "Remove all graphs?",
                                   QMessageBox::Yes|QMessageBox::No);
-    if (confirmDialog == QMessageBox::Yes) {
+    if (confirmDialog == QMessageBox::Yes)
+    {
         ui->graphingView->clearGraphs();
         ui->graphingView->clearItems();
         graphParams.clear();
@@ -689,7 +701,6 @@ void GraphingWindow::contextMenuRequest(QPoint pos)
 
 void GraphingWindow::saveGraphs()
 {
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -706,7 +717,7 @@ void GraphingWindow::saveGraphs()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (dialog.selectedNameFilter() == filters[0])
@@ -729,7 +740,6 @@ void GraphingWindow::saveGraphs()
 
 void GraphingWindow::saveSpreadsheet()
 {
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -744,14 +754,14 @@ void GraphingWindow::saveSpreadsheet()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (!filename.contains('.')) filename += ".csv";
 
-        QFile *outFile = new QFile(filename);
+        QFile outFile(filename);
 
-        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
             return;
 
         /*
@@ -767,12 +777,12 @@ void GraphingWindow::saveSpreadsheet()
         QList<GraphParams>::iterator iter;
         double xMin = std::numeric_limits<double>::max(),
                xMax = std::numeric_limits<double>::min();
-        size_t maxCount = 0;
-        size_t numGraphs = graphParams.length();
+        int maxCount = 0;
+        int numGraphs = graphParams.length();
         for (auto && graph : graphParams) {
             xMin = std::min(xMin, graph.x[0]);
             xMax = std::max(xMax, graph.x[graph.x.count() - 1]);
-            maxCount = std::max(maxCount, static_cast<size_t>(graph.x.count()));
+            maxCount = std::max(maxCount, graph.x.count());
         }
         qDebug() << "xMin: " << xMin;
         qDebug() << "xMax: " << xMax;
@@ -783,27 +793,25 @@ void GraphingWindow::saveSpreadsheet()
         double xSize = xMax - xMin;
         double sliceSize = xSize / ((double)maxCount);
         double equivValue = sliceSize / 100.0;
-        double currentX;
-        double value;
         QList<int> indices;
         indices.reserve(numGraphs);
 
-        outFile->write("TimeStamp");
+        outFile.write("TimeStamp");
         for (auto && graph : graphParams) {
             indices.append(0);
-            outFile->putChar(',');
-            outFile->write(graph.graphName.toUtf8());
+            outFile.putChar(',');
+            outFile.write(graph.graphName.toUtf8());
         }
-        outFile->write("\n");
+        outFile.write("\n");
 
-        for (size_t j = 1; j < (maxCount - 1); j++)
+        for (int j = 1; j < (maxCount - 1); j++)
         {
-            currentX = xMin + (j * sliceSize);
+            double currentX = xMin + (j * sliceSize);
             qDebug() << "X: " << currentX;
-            outFile->write(QString::number(currentX, 'f').toUtf8());
-            for (size_t k = 0; k < numGraphs; k++)
+            outFile.write(QString::number(currentX, 'f').toUtf8());
+            for (int k = 0; k < numGraphs; k++)
             {
-                value = 0.0;
+                double value = 0.0;
 
                 // move cursor to last sample before currentX
                 while (graphParams[k].x[indices[k]+1] < currentX)
@@ -837,27 +845,26 @@ void GraphingWindow::saveSpreadsheet()
                 else
                 {
                     // find index, where x >= currentX
-                    size_t cursor = indices[k];
+                    int cursor = indices[k];
                     double span = graphParams[k].x[cursor+1] - graphParams[k].x[cursor];
                     double progress = (currentX - graphParams[k].x[cursor]) / span;
                     Q_ASSERT(progress >= 0.0 && progress <= 1.0);
                     value = Utility::Lerp(graphParams[k].y[cursor], graphParams[k].y[cursor+1], progress);
                     qDebug() << "Span: " << span << " Prog: " << progress << " Value: " << value;
                 }
-                outFile->putChar(',');
-                outFile->write(QString::number(value).toUtf8());
+                outFile.putChar(',');
+                outFile.write(QString::number(value).toUtf8());
             }
-            outFile->write("\n");
+            outFile.write("\n");
         }
 
-        outFile->close();
+        outFile.close();
     }
 
 }
 
 void GraphingWindow::saveDefinitions()
 {
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -872,77 +879,78 @@ void GraphingWindow::saveDefinitions()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
         if (!filename.contains('.')) filename += ".gdf";
 
-        QFile *outFile = new QFile(filename);
+        QFile outFile(filename);
 
-        if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+        if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
             return;
 
         QList<GraphParams>::iterator iter;
         for (iter = graphParams.begin(); iter != graphParams.end(); ++iter)
         {
-            outFile->write("X,");
-            outFile->write(QString::number(iter->ID, 16).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->mask, 16).toUtf8());
-            outFile->putChar(',');
-            if (iter->intelFormat) outFile->write(QString::number(iter->startBit).toUtf8());
-                else outFile->write(QString::number(iter->startBit * -1).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->numBits).toUtf8());
-            outFile->putChar(',');
-            if (iter->isSigned) outFile->putChar('Y');
-                else outFile->putChar('N');
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->bias).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->scale).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->stride).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineColor.red()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineColor.green()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineColor.blue()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(iter->graphName.toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.red()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.green()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.blue()).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->fillColor.alpha()).toUtf8());
-            outFile->putChar(',');
-            if (iter->drawOnlyPoints) outFile->putChar('Y');
-                else outFile->putChar('N');
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->pointType).toUtf8());
-            outFile->putChar(',');
-            outFile->write(QString::number(iter->lineWidth).toUtf8());
+            outFile.write("Z,");
+            outFile.write(QString::number(iter->ID, 16).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->mask, 16).toUtf8());
+            outFile.putChar(',');
+            if (iter->intelFormat) outFile.write(QString::number(iter->startBit).toUtf8());
+                else outFile.write(QString::number(iter->startBit * -1).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->numBits).toUtf8());
+            outFile.putChar(',');
+            if (iter->isSigned) outFile.putChar('Y');
+                else outFile.putChar('N');
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->bias).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->scale).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->stride).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->bus).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineColor.red()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineColor.green()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineColor.blue()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(iter->graphName.toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.red()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.green()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.blue()).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->fillColor.alpha()).toUtf8());
+            outFile.putChar(',');
+            if (iter->drawOnlyPoints) outFile.putChar('Y');
+                else outFile.putChar('N');
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->pointType).toUtf8());
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->lineWidth).toUtf8());
             if (iter->associatedSignal)
             {
-                outFile->putChar(',');
-                outFile->write(iter->associatedSignal->parentMessage->name.toUtf8());
-                outFile->putChar(',');
-                outFile->write(iter->associatedSignal->name.toUtf8());
+                outFile.putChar(',');
+                outFile.write(iter->associatedSignal->parentMessage->name.toUtf8());
+                outFile.putChar(',');
+                outFile.write(iter->associatedSignal->name.toUtf8());
             }
 
-            outFile->write("\n");
+            outFile.write("\n");
         }
-        outFile->close();
+        outFile.close();
     }
 }
 
 void GraphingWindow::loadDefinitions()
 {
-    QString filename;
     QFileDialog dialog;
     QSettings settings;
 
@@ -959,17 +967,17 @@ void GraphingWindow::loadDefinitions()
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         settings.setValue("Graphing/LoadSaveDirectory", dialog.directory().path());
 
-        QFile *inFile = new QFile(filename);
+        QFile inFile(filename);
         QByteArray line;
 
-        if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+        if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
             return;
 
-        while (!inFile->atEnd()) {
-            line = inFile->readLine().simplified();
+        while (!inFile.atEnd()) {
+            line = inFile.readLine().simplified();
             if (line.length() > 2)
             {
                 GraphParams gp;
@@ -978,7 +986,8 @@ void GraphingWindow::loadDefinitions()
 
                 gp.associatedSignal = nullptr; //might not be saved in the graph definition so default it to nothing
 
-                if (tokens[0] == "X") //newest format based around signals
+                //should probably do better at merging all the code that is the same between all these formats instead of duplication...
+                if (tokens[0] == "Z") //very newest format, adds ability to set bus number
                 {
                     gp.ID = tokens[1].toUInt(nullptr, 16);
                     gp.mask = tokens[2].toULongLong(nullptr, 16);
@@ -994,6 +1003,55 @@ void GraphingWindow::loadDefinitions()
                     gp.bias = tokens[6].toFloat();
                     gp.scale = tokens[7].toFloat();
                     gp.stride = tokens[8].toInt();
+                    gp.bus = tokens[9].toInt();
+
+                    gp.lineColor.setRed( tokens[10].toInt() );
+                    gp.lineColor.setGreen( tokens[11].toInt() );
+                    gp.lineColor.setBlue( tokens[12].toInt() );
+                    if (tokens.length() > 13)
+                        gp.graphName = tokens[13];
+                    else
+                        gp.graphName = QString();
+                   if (tokens.length() > 20) //even newer format with extra graph formatting options
+                   {
+                       gp.fillColor.setRed( tokens[14].toInt() );
+                       gp.fillColor.setGreen( tokens[15].toInt() );
+                       gp.fillColor.setBlue( tokens[16].toInt() );
+                       gp.fillColor.setAlpha( tokens[17].toInt() );
+                       if (tokens[18] == "Y") gp.drawOnlyPoints = true;
+                       else gp.drawOnlyPoints = false;
+                       gp.pointType = tokens[19].toInt();
+                       gp.lineWidth = tokens[20].toInt();
+                   }
+                   if (tokens.length() > 22)
+                   {
+                       DBC_MESSAGE *msg = dbcHandler->findMessage(gp.ID);
+                       if (msg)
+                       {
+                            gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[22]);
+                       }
+                       else qDebug() << "Couldn't find the message by name! " << tokens[21] << "  " << tokens[22];
+                   }
+
+                   createGraph(gp, true);
+                }
+                else if (tokens[0] == "X") //second newest format based around signals
+                {
+                    gp.ID = tokens[1].toUInt(nullptr, 16);
+                    gp.mask = tokens[2].toULongLong(nullptr, 16);
+                    gp.startBit = tokens[3].toInt();
+                    if (gp.startBit < 0) {
+                        gp.intelFormat = false;
+                        gp.startBit *= -1;
+                    }
+                    else gp.intelFormat = true;
+                    gp.numBits = tokens[4].toInt();
+                    if (tokens[5] == "Y") gp.isSigned = true;
+                        else gp.isSigned = false;
+                    gp.bias = tokens[6].toFloat();
+                    gp.scale = tokens[7].toFloat();
+                    gp.stride = tokens[8].toInt();
+                    gp.bus = -1;
 
                     gp.lineColor.setRed( tokens[9].toInt() );
                     gp.lineColor.setGreen( tokens[10].toInt() );
@@ -1015,7 +1073,7 @@ void GraphingWindow::loadDefinitions()
                    }
                    if (tokens.length() > 21)
                    {
-                       DBC_MESSAGE *msg = dbcHandler->findMessage(QString(tokens[20]));
+                       DBC_MESSAGE *msg = dbcHandler->findMessage(gp.ID);
                        if (msg)
                        {
                             gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[21]);
@@ -1028,6 +1086,7 @@ void GraphingWindow::loadDefinitions()
                 else //one of the two older formats then
                 {
                     gp.ID = tokens[0].toUInt(nullptr, 16);
+                    gp.bus = -1;
                     if (tokens[1] == "S") //old signal based graph definition
                     {
                         //tokens[2] is the signal name. Need to use the message ID and this name to look it up
@@ -1140,7 +1199,7 @@ void GraphingWindow::loadDefinitions()
                 }
             }
         }
-        inFile->close();
+        inFile.close();
     }
 }
 
@@ -1185,9 +1244,14 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         int64_t tempVal; //64 bit temp value.
         tempVal = Utility::processIntegerSignal(frame.payload(), params.startBit, params.numBits, params.intelFormat, params.isSigned); //& params.mask;
         double xVal, yVal;
-        if (secondsMode)
+        if (Utility::timeStyle == TS_SECONDS)
         {
             xVal = ((double)(frame.timeStamp().microSeconds()) / 1000000.0 - params.xbias);
+        }
+        else if (Utility::timeStyle == TS_CLOCK)
+        {
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch((frame.timeStamp().microSeconds() / 1000) - params.xbias);
+            xVal = (dt.time().second() + dt.time().minute() * 60 + dt.time().hour() * 3600);
         }
         else
         {
@@ -1255,10 +1319,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     double yminval=10000000.0, ymaxval = -1000000.0;
     double xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;
-    int sBit, bits;
-    bool intelFormat, isSigned;
     QString tempStr;
-    double x,y;
+    double x{}, y{};
 
     qDebug() << "New Graph ID: " << params.ID;
     qDebug() << "Start bit: " << params.startBit;
@@ -1271,7 +1333,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
-        if (thisFrame.frameId() == params.ID && thisFrame.frameType() == QCanBusFrame::DataFrame) frameCache.append(thisFrame);
+        if ( (thisFrame.frameId() == params.ID) && (thisFrame.frameType() == QCanBusFrame::DataFrame)
+       &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.bus) ) ) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1290,15 +1353,17 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     int numEntries = frameCache.count() / params.stride;
     if (numEntries < 1) numEntries = 1; //could happen if stride is larger than frame count
 
+    params.x.clear();
+    params.y.clear();
     params.x.reserve(numEntries);
     params.y.reserve(numEntries);
     //params.x.fill(0, numEntries);
     //params.y.fill(0, numEntries);
 
-    sBit = params.startBit;
-    bits = params.numBits;
-    intelFormat = params.intelFormat;
-    isSigned = params.isSigned;
+    int sBit = params.startBit;
+    int bits = params.numBits;
+    bool intelFormat = params.intelFormat;
+    bool isSigned = params.isSigned;
 
     for (int j = 0; j < numEntries; j++)
     {
@@ -1318,9 +1383,14 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         y = (tempVal * params.scale) + params.bias;
         params.y.append( y );
 
-        if (secondsMode)
+        if (Utility::timeStyle == TS_SECONDS)
         {
             x = (frameCache[k].timeStamp().microSeconds()) / 1000000.0;
+        }
+        else if (Utility::timeStyle == TS_CLOCK)
+        {
+            QDateTime dt = QDateTime::fromMSecsSinceEpoch((frameCache[k].timeStamp().microSeconds() / 1000) - params.xbias);
+            x = (dt.time().msecsSinceStartOfDay() / 1000.0);
         }
         else
         {
@@ -1380,7 +1450,6 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 
     if (params.prevValLocation != QPointF(0,0))
     {
-        int j = numEntries - 1;
         QCPItemBracket *bracket = new QCPItemBracket(ui->graphingView);
         bracket->left->setCoords(params.prevValLocation);
         bracket->right->setCoords(x, params.prevValLocation.y());
@@ -1484,16 +1553,16 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 void GraphingWindow::moveLegend()
 {
     qDebug() << "moveLegend";
-  if (QAction* contextAction = qobject_cast<QAction*>(sender())) // make sure this slot is really called by a context menu action, so it carries the data we need
-  {
-    bool ok;
-    int dataInt = contextAction->data().toInt(&ok);
-    if (ok)
+    if (QAction* contextAction = qobject_cast<QAction*>(sender())) // make sure this slot is really called by a context menu action, so it carries the data we need
     {
-      ui->graphingView->axisRect()->insetLayout()->setInsetAlignment(0, (Qt::Alignment)dataInt);
-      ui->graphingView->replot();
+        bool ok;
+        int dataInt = contextAction->data().toInt(&ok);
+        if (ok)
+        {
+            ui->graphingView->axisRect()->insetLayout()->setInsetAlignment(0, (Qt::Alignment)dataInt);
+            ui->graphingView->replot();
+        }
     }
-  }
 }
 
 GraphParams::GraphParams()
@@ -1508,6 +1577,7 @@ GraphParams::GraphParams()
     scale = 1;
     stride = 1;
     strideSoFar = 1;
+    bus = -1;
     lineColor = QColor(0,0,0);
     fillColor = QColor(255,255,255,0);
     lineWidth = 1;

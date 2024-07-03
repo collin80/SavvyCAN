@@ -69,7 +69,9 @@ void CANConManager::remove(CANConnection* pConn_p)
 
 void CANConManager::replace(int idx, CANConnection* pConn_p)
 {
+    CANConnection *original = mConns[idx];
     mConns.replace(idx, pConn_p);
+    delete original; original = NULL;
 }
 
 //Get total number of buses currently registered with the program
@@ -204,7 +206,6 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 {
     int busBase = 0;
     CANFrame workingFrame = pFrame;
-    CANFrame *txFrame;
 
     if (mConns.count() == 0)
     {
@@ -228,10 +229,7 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
                 workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
-            txFrame = conn->getQueue().get();
-            QCoreApplication::processEvents();
-            *txFrame = workingFrame;
-            conn->getQueue().queue();
+
             return conn->sendFrame(workingFrame);
         }
         busBase += conn->getNumBuses();

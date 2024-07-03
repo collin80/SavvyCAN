@@ -129,7 +129,7 @@ class Q_MQTT_EXPORT Client : public QObject
     Q_PROPERTY(quint8 _willQos READ willQos WRITE setWillQos)
     Q_PROPERTY(bool _willRetain READ willRetain WRITE setWillRetain)
     Q_PROPERTY(QByteArray _willMessage READ willMessage WRITE setWillMessage)
-    Q_PROPERTY(QString _connectionState READ connectionState)
+    Q_PROPERTY(ConnectionState _connectionState READ connectionState)
 #ifndef QT_NO_SSL
     Q_PROPERTY(QSslConfiguration _sslConfiguration READ sslConfiguration WRITE setSslConfiguration)
 #endif // QT_NO_SSL

@@ -26,7 +26,7 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     connect(ui->spinTiming, SIGNAL(valueChanged(int)), this, SLOT(changePlaybackSpeed(int)));
     connect(ui->listID, &QListWidget::itemChanged, this, &FuzzingWindow::idListChanged);
     connect(ui->spinBytes, SIGNAL(valueChanged(int)), this, SLOT(changedNumDataBytes(int)));
-    connect(ui->bitfield, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->bitfield, SIGNAL(gridClicked(int)), this, SLOT(bitfieldClicked(int)));
     connect(ui->txtByte0, &QLineEdit::returnPressed, this, [=](){changedDataByteText(0, ui->txtByte0->text());});
     connect(ui->txtByte1, &QLineEdit::returnPressed, this, [=](){changedDataByteText(1, ui->txtByte1->text());});
     connect(ui->txtByte2, &QLineEdit::returnPressed, this, [=](){changedDataByteText(2, ui->txtByte2->text());});
@@ -43,7 +43,7 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
 
     currentlyFuzzing = false;
 
-    for (int j = 0; j < 64; j++) bitGrid[j] = 1;
+    for (int j = 0; j < 512; j++) bitGrid[j] = 1;
     numBits = 64;
     bitAccum = 0;
     redrawGrid();
@@ -146,8 +146,10 @@ void FuzzingWindow::changedNumDataBytes(int newVal)
     ui->txtByte6->setEnabled((newVal > 6) ? true : false);
     ui->txtByte7->setEnabled((newVal > 7) ? true : false);
 
+    ui->bitfield->setBytesToDraw(newVal);
+
     int byt;
-    for (int i = 0; i < 64; i++)
+    for (int i = 0; i < 511; i++)
     {
         byt = i / 8;
         if (byt >= newVal)
@@ -448,20 +450,18 @@ void FuzzingWindow::idListChanged(QListWidgetItem *item)
 }
 
 /*
-bitGrid stores the state of all 64 bits.
+bitGrid stores the state of all bits.
 The grid is capable of showing the following colors:
 White = not used (left as 0)
 Gray = past the end of the valid bits (because of # of data bytes requested)
 Green = fuzz it
 black = always keep it set to 1
 */
-void FuzzingWindow::bitfieldClicked(int x, int y)
+void FuzzingWindow::bitfieldClicked(int bitPos)
 {
-    qDebug() << "X: " << x << " Y: " << y;
-    int bit = (7 - x) + (y * 8);
-    if (bitGrid[bit] == 3) return; //naughty!
-    bitGrid[bit]++;
-    if (bitGrid[bit] > 2) bitGrid[bit] = 0;
+    if (bitGrid[bitPos] == 3) return; //naughty!
+    bitGrid[bitPos]++;
+    if (bitGrid[bitPos] > 2) bitGrid[bitPos] = 0;
 
     redrawGrid();
 }
@@ -469,11 +469,11 @@ void FuzzingWindow::bitfieldClicked(int x, int y)
 void FuzzingWindow::redrawGrid()
 {
     //now update the bits in the bitfield control
-    uint8_t refBytes[8];
-    uint8_t dataBytes[8];
-    uint8_t usedBytes[8];
+    uint8_t refBytes[64];
+    uint8_t dataBytes[64];
+    uint8_t usedBytes[64];
 
-    for (int j = 0; j < 8; j++)
+    for (int j = 0; j < 64; j++)
     {
         refBytes[j] = 0;
         dataBytes[j] = 0;
@@ -482,7 +482,7 @@ void FuzzingWindow::redrawGrid()
 
     numBits = 0;
 
-    for (int i = 0; i < 64; i++)
+    for (int i = 0; i < 512; i++)
     {
         int byt = i / 8;
         int bit = i % 8;

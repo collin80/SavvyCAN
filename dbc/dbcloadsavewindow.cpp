@@ -108,10 +108,10 @@ void DBCLoadSaveWindow::updateSettings()
             qDebug() << "Save DBC settings #" << i << " File: " << file->getFullFilename() 
                 << "Bus: " << file->getAssocBus() << "MC: " << file->messageHandler->getMatchingCriteria()
                 << "Filter Labeling: " << (file->messageHandler->filterLabeling() ? "enabled" : "disabled");
-            settings.setValue("DBC/Filename_" + QString(i), file->getFullFilename());
-            settings.setValue("DBC/AssocBus_" + QString(i), file->getAssocBus());
-            settings.setValue("DBC/MatchingCriteria_" + QString(i), file->messageHandler->getMatchingCriteria());            
-            settings.setValue("DBC/FilterLabeling_" + QString(i), file->messageHandler->filterLabeling());   
+            settings.setValue("DBC/Filename_" + QString::number(i), file->getFullFilename());
+            settings.setValue("DBC/AssocBus_" + QString::number(i), file->getAssocBus());
+            settings.setValue("DBC/MatchingCriteria_" + QString::number(i), file->messageHandler->getMatchingCriteria());
+            settings.setValue("DBC/FilterLabeling_" + QString::number(i), file->messageHandler->filterLabeling() ? 1 : 0);
         }
     }
     emit updatedDBCSettings();
@@ -200,7 +200,7 @@ void DBCLoadSaveWindow::loadFile()
 
         DBC_ATTRIBUTE *attr = file->findAttributeByName("matchingcriteria");
         QComboBox * mc_item = addMatchingCriteriaCombobox(idx);
-        if (attr && attr->defaultValue > 0)
+        if (attr && attr->defaultValue.toInt() > 0)
         {
             mc_item->setCurrentIndex(attr->defaultValue.toInt());
         }
@@ -208,7 +208,7 @@ void DBCLoadSaveWindow::loadFile()
         attr = file->findAttributeByName("filterlabeling");
         QTableWidgetItem *item = new QTableWidgetItem("");
         ui->tableFiles->setItem(idx, 3, item);
-        if (attr && attr->defaultValue > 0)
+        if (attr && attr->defaultValue.toInt() > 0)
         {
             item->setCheckState(Qt::Checked);
         }

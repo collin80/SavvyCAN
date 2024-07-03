@@ -17,15 +17,26 @@ public:
     ~SignalViewerWindow();
 
 private slots:
-    void loadMessages();
+    void loadNodes();
+    void loadMessages(int idx);
     void loadSignals(int idx);
     void addSignal();
+    void addSignal(DBC_SIGNAL *sig);
     void removeSelectedSignal();
     void updatedFrames(int);
+    void saveSignalsFile();
+    void loadSignalsFile();
+    void appendSignalsFile();
+    void clearSignalsTable();
+    void clearSignalsTable(bool);
+    void saveDefinitions();
+    void loadDefinitions(bool);
 
 private:
     Ui::SignalViewerWindow *ui;
     DBCHandler *dbcHandler;
+
+    DBC_MESSAGE *currentlySelectedMsg;
 
     QList<DBC_SIGNAL *> signalList;
     const QVector<CANFrame> *modelFrames;

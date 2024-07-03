@@ -5,10 +5,15 @@
 CANConnection::CANConnection(QString pPort,
                              QString pDriver,
                              CANCon::type pType,
+                             int pSerialSpeed,
+                             int pBusSpeed,
+                             bool pCanFd,
+                             int pDataRate,
                              int pNumBuses,
                              int pQueueLen,
                              bool pUseThread) :
     mNumBuses(pNumBuses),
+    mSerialSpeed(pSerialSpeed),
     mQueue(),
     mPort(pPort),
     mDriver(pDriver),
@@ -33,6 +38,10 @@ CANConnection::CANConnection(QString pPort,
     for(int i=0 ; i<mNumBuses ; i++) {
         mBusData[i].mConfigured  = false;
     }
+
+    if (pBusSpeed > 0) mBusData[0].mBus.setSpeed(pBusSpeed);
+    mBusData[0].mBus.setCanFD(pCanFd);
+    if (pDataRate > 0) mBusData[0].mBus.setDataRate(pDataRate);
 
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {
@@ -168,6 +177,14 @@ bool CANConnection::sendFrame(const CANFrame& pFrame)
         return ret;
     }
 
+    CANFrame *txFrame;
+    txFrame = getQueue().get();
+    if (txFrame)
+    {
+        *txFrame = pFrame;        
+    }    
+    getQueue().queue();
+
     return piSendFrame(pFrame);
 }
 
@@ -245,11 +262,11 @@ CANCon::type CANConnection::getType() {
 
 
 CANCon::status CANConnection::getStatus() {
-    return (CANCon::status) mStatus.load();
+    return (CANCon::status) mStatus.loadRelaxed();
 }
 
 void CANConnection::setStatus(CANCon::status pStatus) {
-    mStatus.store(pStatus);
+    mStatus.storeRelaxed(pStatus);
 }
 
 bool CANConnection::isCapSuspended() {
@@ -288,7 +305,12 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData[pBusId].mTargettedFrames.append(target);
+    if (pBusId > -1)
+        mBusData[pBusId].mTargettedFrames.append(target);
+    else
+    {
+        for (int i = 0; i < mBusData.count(); i++) mBusData[i].mTargettedFrames.append(target);
+    }
 
     return true;
 }
@@ -339,7 +361,10 @@ void CANConnection::checkTargettedFrame(CANFrame &frame)
     //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
     if (mBusData.count() == 0) return;
 
-    if (mBusData[frame.bus].mTargettedFrames.length() == 0) return;
+    int bus = frame.bus;
+    if (bus > (mBusData.length() - 1)) bus = mBusData.length() - 1;
+
+    if (mBusData[bus].mTargettedFrames.length() == 0) return;
     foreach (const CANFltObserver filt, mBusData[frame.bus].mTargettedFrames)
     {
         //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;

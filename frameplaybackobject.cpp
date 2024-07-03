@@ -32,6 +32,33 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
         currentPosition = 0;
         return 0;
     }
+
+    //only send frame out if its ID is checked in the list. Otherwise discard it.
+    CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
+    uint32_t originalBus = thisFrame->bus;
+    if (currentSeqItem->idFilters.find(thisFrame->frameId()).value())
+    {
+        if (whichBusSend > -1)
+        {
+            thisFrame->bus = whichBusSend;
+            sendingBuffer.append(*thisFrame);
+        }
+        else if (whichBusSend == -1)
+        {
+            for (int c = 0; c < numBuses; c++)
+            {
+                thisFrame->bus = c;
+                sendingBuffer.append(*thisFrame);
+            }
+        }
+        else //from file so retain original bus and send as-is
+        {
+            sendingBuffer.append(*thisFrame);
+        }
+
+        thisFrame->bus = originalBus;
+    }
+
     if (forward)
     {
         if (currentPosition < (currentSeqItem->data.count() - 1)) currentPosition++; //still in same file so keep going
@@ -65,31 +92,6 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
         }
     }
 
-    //only send frame out if its ID is checked in the list. Otherwise discard it.
-    CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
-    uint32_t originalBus = thisFrame->bus;
-    if (currentSeqItem->idFilters.find(thisFrame->frameId()).value())
-    {
-        if (whichBusSend > -1)
-        {
-            thisFrame->bus = whichBusSend;
-            sendingBuffer.append(*thisFrame);
-        }
-        else if (whichBusSend == -1)
-        {
-            for (int c = 0; c < numBuses; c++)
-            {
-                thisFrame->bus = c;
-                sendingBuffer.append(*thisFrame);
-            }
-        }
-        else //from file so retain original bus and send as-is
-        {
-            sendingBuffer.append(*thisFrame);
-        }
-
-        thisFrame->bus = originalBus;
-    }
     return thisFrame->timeStamp().microSeconds();
 }
 

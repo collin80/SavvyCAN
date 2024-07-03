@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>681</width>
-    <height>806</height>
+    <height>828</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -142,38 +142,38 @@
        <item row="9" column="1">
         <widget class="QLineEdit" name="txtStride"/>
        </item>
-       <item row="11" column="0">
+       <item row="12" column="0">
         <widget class="QLabel" name="label_16">
          <property name="text">
           <string>Only Points</string>
          </property>
         </widget>
        </item>
-       <item row="11" column="1">
+       <item row="12" column="1">
         <widget class="QCheckBox" name="cbOnlyPoints">
          <property name="text">
           <string/>
          </property>
         </widget>
        </item>
-       <item row="12" column="0">
+       <item row="13" column="0">
         <widget class="QLabel" name="label_17">
          <property name="text">
           <string>Point Style</string>
          </property>
         </widget>
        </item>
-       <item row="12" column="1">
+       <item row="13" column="1">
         <widget class="QComboBox" name="coPointStyle"/>
        </item>
-       <item row="13" column="0">
+       <item row="14" column="0">
         <widget class="QLabel" name="label_15">
          <property name="text">
           <string>Line Thickness</string>
          </property>
         </widget>
        </item>
-       <item row="13" column="1">
+       <item row="14" column="1">
         <widget class="QSpinBox" name="spinLineWidth">
          <property name="maximum">
           <number>15</number>
@@ -183,14 +183,14 @@
          </property>
         </widget>
        </item>
-       <item row="14" column="0">
+       <item row="15" column="0">
         <widget class="QLabel" name="label_8">
          <property name="text">
           <string>Line Color</string>
          </property>
         </widget>
        </item>
-       <item row="14" column="1">
+       <item row="15" column="1">
         <widget class="QPushButton" name="colorSwatch">
          <property name="autoFillBackground">
           <bool>true</bool>
@@ -203,14 +203,14 @@
          </property>
         </widget>
        </item>
-       <item row="15" column="0">
+       <item row="16" column="0">
         <widget class="QLabel" name="label55">
          <property name="text">
           <string>Fill Color</string>
          </property>
         </widget>
        </item>
-       <item row="15" column="1">
+       <item row="16" column="1">
         <widget class="QPushButton" name="fillSwatch">
          <property name="autoFillBackground">
           <bool>true</bool>
@@ -223,7 +223,7 @@
          </property>
         </widget>
        </item>
-       <item row="16" column="1">
+       <item row="17" column="1">
         <widget class="QPushButton" name="btnAddGraph">
          <property name="text">
           <string>Add this graph</string>
@@ -242,6 +242,20 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item row="11" column="0">
+        <widget class="QLabel" name="label_18">
+         <property name="text">
+          <string>Associated Bus</string>
+         </property>
+        </widget>
+       </item>
+       <item row="11" column="1">
+        <widget class="QLineEdit" name="editBus">
+         <property name="text">
+          <string>-1</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </item>
@@ -262,6 +276,19 @@
           <set>Qt::AlignCenter</set>
          </property>
         </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_19">
+         <property name="text">
+          <string>Node:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbNodes"/>
        </item>
        <item>
         <widget class="QLabel" name="label_9">
@@ -313,7 +340,6 @@
          <property name="font">
           <font>
            <pointsize>12</pointsize>
-           <weight>75</weight>
            <bold>true</bold>
           </font>
          </property>

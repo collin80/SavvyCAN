@@ -12,17 +12,18 @@ The Main Frame List
 
 The main frame list takes up the majority of the main screen. This list consists of the following sections:
 
-- Timestamp: The timestamp is either in microseconds or seconds. This is a setting in preferences. Either way, the timestamp can have microsecond resolution. The difference is just whether there is a decimal point or not. GVRET has the ability to maintain full microsecond resolution for timestamping purposes. There is a third timing mode where the timestamp can be customized and is based upon the actual "clock" time.
+- Timestamp: The timestamp is either in microseconds or seconds. This is a setting in preferences. Either way, the timestamp can have microsecond resolution. The difference is just whether there is a decimal point or not. Many of the CAN capture devices have the ability to maintain full microsecond resolution for timestamping purposes. There is a third timing mode where the timestamp can be customized and is based upon the actual "clock" time.
 - ID: The ID is specified either in hexadecimal or decimal (a preference you can set). This is the message identifier sent over the CAN bus.
 - RTR: 0 = Standard Message 1 = Remote transmit request. An RTR frame merely asks a node to send a message, it has no payload of its own.
 - Ext: 0 = Standard message (11 bit ID). 1 = Extended message (29 bit ID)
 - Dir: Either "Rx" or "Tx" to show whether SavvyCAN has received or sent this message.
 - Bus: SavvyCAN supports a variety of capture hardware. GVRET compatible devices can support more than one bus. The bus a frame came in on
   is specified here. Many file formats do not specify bus and thus all frames will be loaded as bus 0.
-- Len: The number of data bytes that were sent with this frame. It can range from 0 to 8.
+- Len: The number of data bytes that were sent with this frame. It can range from 0 to 8 for standard CAN and 0 to 64 for CAN-FD.
 - ASCII: A character based view of the CAN bytes in ASCII characters. Many systems that send serial numbers or VIN numbers will send them in ASCII and these will thus be visible here.
 - Data: All of the data bytes separated by spaces. Can be in either hexadecimal or decimal (preference). If "Interpret Frames" is checked you will
   also see extra data at the end of any frames that have DBC data. To see the rest of this data click upon the frame in the list. It will automatically expand to show all signals attached to that frame.
+  There is also a setting to limit the number of displayed bytes per line. This is especially useful for CAN-FD traffic.
 
 
 The Bottom Statusbar
@@ -38,31 +39,33 @@ At the very bottom of the main screen is a status bar with three sections.
 The Rest of the Main Window
 ===========================
 
-To the right of the main frames list is an area that shows the total number of captured frames and the frames per second. Total frames might not match the number of shown frames. If you've deselected any IDs in the filter list then fewer frames will be shown. Frames per second is calculated as an average and so will wind up or down when there is a sudden change.
+*To the right of the main frames list is an area that shows the total number of captured frames and the frames per second. Total frames might not match the number of shown frames. If you've deselected any IDs in the filter list then fewer frames will be shown. Frames per second is calculated as an average and so will wind up or down when there is a sudden change.
 
-Suspend Capturing / Resume Capturing is a button that will temporarily disable frame capture or re-enable it. This can be used to keep everything connected without capturing traffic for a short time. This can help to not capture traffic in between tests.
+*Suspend Capturing / Resume Capturing is a button that will temporarily disable frame capture or re-enable it. This can be used to keep everything connected without capturing traffic for a short time. This can help to not capture traffic in between tests.
 
-The "Normalize Frame Timing" button is used to reset the lowest timestamp to "0" and offset all other timestamps accordingly. This is useful to remove the starting offset when you start up a device long before actual traffic starts. SavvyCAN is designed such that this doesn't really matter most of the time but normalizing the timing might be useful to help correlate the timing between two different captures.
+*The "Normalize Frame Timing" button is used to reset the lowest timestamp to "0" and offset all other timestamps accordingly. This is useful to remove the starting offset when you start up a device long before actual traffic starts. SavvyCAN is designed such that this doesn't really matter most of the time but normalizing the timing might be useful to help correlate the timing between two different captures.
 
-The "Clear Frames" button will erase all captured messages. They will be irreversibly erased and all memory will be freed.
+*The "Clear Frames" button will erase all captured messages. They will be irreversibly erased and all memory will be freed.
 
-The "Auto Scroll Window" checkbox will cause the main frame list to hunt toward the bottom of the list as frames come in. It will normally not be quite
+*"Keep Filters While Clearing" will keep all the filters intact if you push the "Clear Frames" button. Otherwise all filters will also be cleared.
+
+*The "Auto Scroll Window" checkbox will cause the main frame list to hunt toward the bottom of the list as frames come in. It will normally not be quite
 at the very bottom as, for performance reasons, the program runs at quarter second updates to things like the auto scroll. Thus, the main list will be
 scrolled to the bottom four times per second.
 
-The "Interpret Frames" checkbox is used to specify whether the loaded DBC file should be used to interpret all available messages and signals. One might want
+*The "Interpret Frames" checkbox is used to specify whether the loaded DBC file should be used to interpret all available messages and signals. One might want
 this off for performance reasons (interpreting takes some extra processor power and RAM) or to declutter the main frame list.
 
-The "Overwrite Mode" checkbox is used to ensure that only the newest frame for each message ID is shown. That is, if 100 messages with ID 0x105 come in you
+*The "Overwrite Mode" checkbox is used to ensure that only the newest frame for each message ID is shown. That is, if 100 messages with ID 0x105 come in you
 will see only the newest one. This is generally used alongside "Interpret Frames" to interpret frames and always see the up-to-date information.
 
-"Expand All Rows" will expand all the rows to show every signal in every message. This will take a **VERY** long time if there are many messages loaded. Because of this, you may receive a warning if the program determines that this will take an excessive amount of time to complete. You can make it work faster by filtering away any unneeded messages.
+*"Expand All Rows" will expand all the rows to show every signal in every message. This will take a **VERY** long time if there are many messages loaded. Because of this, you may receive a warning if the program determines that this will take an excessive amount of time to complete. You can make it work faster by filtering away any unneeded messages.
 
-"Collapse All Rows" will drop all rows back to taking up only one line. This can also take a while to run and will also warn if the operation seems like it will take a very long time to complete.
+*"Collapse All Rows" will drop all rows back to taking up only one line. This can also take a while to run and will also warn if the operation seems like it will take a very long time to complete.
 
-"Bus Filtering" allows for messages to be shown or hidden based on which bus they came in on.
+*"Bus Filtering" allows for messages to be shown or hidden based on which bus they came in on.
 
-"Frame Filtering" provides a list of all the frame IDs seen so far. Any ID which is checked will be shown in the main list. Any ID which is unchecked will not.
+*"Frame Filtering" provides a list of all the frame IDs seen so far. Any ID which is checked will be shown in the main list. Any ID which is unchecked will not.
 This can be used to hone in on frames of importance while hiding frames that are currently of no interest. The filtered list can be saved as well.
 
 

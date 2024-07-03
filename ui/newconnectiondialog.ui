@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>356</width>
-    <height>282</height>
+    <width>426</width>
+    <height>540</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,6 +23,30 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
      <layout class="QGridLayout" name="gridLayout">
+      <item row="4" column="0">
+       <widget class="QRadioButton" name="rbKayak">
+        <property name="text">
+         <string>socketcand (SocketCAN over Ethernet)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QRadioButton" name="rbSocketCAN">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>QT SerialBus Devices (SocketCAN, PeakCAN, etc)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QRadioButton" name="rbMQTT">
+        <property name="text">
+         <string>MQTT Connection</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <widget class="QRadioButton" name="rbGVRET">
         <property name="text">
@@ -40,27 +64,24 @@
         </property>
        </widget>
       </item>
-	  <item row="2" column="0">
-       <widget class="QRadioButton" name="rbSocketCAN">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
+      <item row="2" column="0">
+       <widget class="QRadioButton" name="rbLawicel">
         <property name="text">
-         <string>QT SerialBus Devices (SocketCAN, PeakCAN, etc)</string>
+         <string>LAWICEL / SLCAN Serial</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QRadioButton" name="rbKayak">
+      <item row="6" column="0">
+       <widget class="QRadioButton" name="rbCANserver">
         <property name="text">
-         <string>socketcand (SocketCAN over Ethernet)</string>
+         <string>CANserver</string>
         </property>
        </widget>
       </item>
-	  <item row="4" column="0">
-       <widget class="QRadioButton" name="rbMQTT">
+      <item row="7" column="0">
+       <widget class="QRadioButton" name="rbCanlogserver">
         <property name="text">
-         <string>MQTT Connection</string>
+         <string>CANlogserver</string>
         </property>
        </widget>
       </item>
@@ -108,6 +129,56 @@
       <bool>true</bool>
      </property>
     </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lblSerialSpeed">
+     <property name="text">
+      <string>Serial Port Speed:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="cbSerialSpeed"/>
+   </item>
+   <item>
+    <widget class="QLabel" name="lblCANSpeed">
+     <property name="text">
+      <string>CAN Bus Speed:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="cbCANSpeed"/>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="cbCanFd">
+     <property name="text">
+      <string>CAN-FD</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLabel" name="lblDataRate">
+     <property name="text">
+      <string>CAN-FD data rate</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QComboBox" name="cbDataRate"/>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
    <item>
     <widget class="QPushButton" name="btnOK">

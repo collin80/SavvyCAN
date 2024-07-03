@@ -43,6 +43,7 @@ public:
     DBC_MESSAGE *findMsgByIdx(int idx);
     DBC_MESSAGE *findMsgByName(QString name);
     DBC_MESSAGE *findMsgByPartialName(QString name);
+    QList<DBC_MESSAGE*> findMsgsByNode(DBC_NODE *node);
     bool addMessage(DBC_MESSAGE &msg);
     bool removeMessage(DBC_MESSAGE *msg);
     bool removeMessageByIndex(int idx);
@@ -72,6 +73,7 @@ public:
     DBCFile(const DBCFile& cpy);
     DBCFile& operator=(const DBCFile& cpy);
     DBC_NODE *findNodeByName(QString name);
+    DBC_NODE *findNodeByNameAndComment(QString fullname);
     DBC_NODE *findNodeByIdx(int idx);
     DBC_ATTRIBUTE *findAttributeByName(QString name, DBC_ATTRIBUTE_TYPE type = ATTR_TYPE_ANY);
     DBC_ATTRIBUTE *findAttributeByIdx(int idx);
@@ -80,11 +82,13 @@ public:
     bool loadFile(QString);
     QString getFullFilename();
     QString getFilename();
+    QString getFilenameNoExt();
     QString getPath();
     int getAssocBus();
     void setAssocBus(int bus);
     void setDirtyFlag();
     bool getDirtyFlag();
+    void clearDirtyFlag();
     void sort();
 
     DBCMessageHandler *messageHandler;
@@ -102,6 +106,7 @@ private:
     bool parseSignalMultiplexValueLine(QString line);
     DBC_MESSAGE* parseMessageLine(QString line);
     bool parseValueLine(QString line);
+    bool parseSignalValueTypeLine(QString line);
     bool parseAttributeLine(QString line);
     bool parseDefaultAttrLine(QString line);
 };
@@ -118,6 +123,8 @@ public:
     void swapFiles(int pos1, int pos2);
     DBC_MESSAGE* findMessage(const CANFrame &frame);
     DBC_MESSAGE* findMessage(const QString msgName);
+    DBC_MESSAGE* findMessage(const QString msgName, const QString fullyQualifiedNodeName);
+    DBC_MESSAGE* findMessage(const QString msgName, const QString nodeName, const QString fileNameNoExt);
     DBC_MESSAGE* findMessage(uint32_t id);
     DBC_MESSAGE* findMessageForFilter(uint32_t id, MatchingCriteria_t * matchingCriteria);
     int getFileCount();
