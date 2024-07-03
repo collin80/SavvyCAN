@@ -4882,9 +4882,13 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CANFrame>* frames)
         thisFrame.isReceived = true; // TODO: check if tx detection is possible
             
         thisFrame.setFrameType(QCanBusFrame::DataFrame);
-        thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
-        if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
-            else thisFrame.setExtendedFrameFormat(true);
+        if ((0x80 & *(packetData+19)))  {
+            thisFrame.setExtendedFrameFormat(true);
+            thisFrame.setFrameId((0x3f & *(packetData+19))<<24 | (0xff & *(packetData+18)) << 16 | (0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
+        } else {
+            thisFrame.setExtendedFrameFormat(false);
+            thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
+        }
         thisFrame.bus = 0;
         int numBytes = *(packetData+20);
         QByteArray bytes(numBytes, 0);
