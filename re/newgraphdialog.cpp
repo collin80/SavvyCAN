@@ -43,8 +43,9 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     ui->coPointStyle->addItem("Plus Inside Circle");
     ui->coPointStyle->addItem("Peace Sign");
 
+    connect(ui->cbNodes, SIGNAL(currentIndexChanged(int)), this, SLOT(loadMessages(int)));
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
-    connect(ui->gridData, SIGNAL(gridClicked(int,int)), this, SLOT(bitfieldClicked(int,int)));
+    connect(ui->gridData, SIGNAL(gridClicked(int)), this, SLOT(bitfieldClicked(int)));
     connect(ui->txtDataLen, SIGNAL(textChanged(QString)), this, SLOT(handleDataLenUpdate()));
     connect(ui->cbIntel, SIGNAL(toggled(bool)), this, SLOT(drawBitfield()));
     connect(ui->btnCopySignal, SIGNAL(clicked(bool)), this, SLOT(copySignalToParamsUI()));
@@ -54,7 +55,7 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     dataLen = 1;
     assocSignal = nullptr;
 
-    loadMessages();
+    loadNodes();
 
     installEventFilter(this);
 }
@@ -68,7 +69,8 @@ NewGraphDialog::~NewGraphDialog()
 void NewGraphDialog::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
-    loadMessages();
+    if(shownFromPlotEdit == false)
+        loadNodes();
     drawBitfield();
     qDebug() << "S" << ui->gridData->geometry();
 }
@@ -124,9 +126,11 @@ void NewGraphDialog::checkSignalAgreement()
     DBC_MESSAGE *msg = nullptr;
 
     if (dbcHandler == nullptr) return;
-    if (dbcHandler->getFileCount() == 0) return;
+    if (dbcHandler->getFileCount() == 0) return;    
 
-    msg = dbcHandler->findMessage(ui->cbMessages->currentText());
+    QString fullyQualifiedNodeName = ui->cbNodes->itemText(ui->cbNodes->currentIndex());
+    QString msgName = ui->cbMessages->currentText();
+    msg = dbcHandler->findMessage(msgName, fullyQualifiedNodeName);
     if (msg)
     {
         sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());
@@ -149,13 +153,20 @@ void NewGraphDialog::checkSignalAgreement()
         testingParams.startBit = startBit;
         testingParams.numBits = dataLen;
 
-        if (testingParams.ID != msg->ID) bAgree = false;
-        if (fabs(testingParams.bias - sig->bias) > 0.01) bAgree = false;
-        if (testingParams.isSigned != sigSigned) bAgree = false;
-        if (testingParams.intelFormat != sig->intelByteOrder) bAgree = false;
-        if (fabs(testingParams.scale - sig->factor) > 0.01) bAgree = false;
-        if (testingParams.startBit != sig->startBit) bAgree = false;
-        if (testingParams.numBits != sig->signalSize) bAgree = false;
+        if (testingParams.ID != msg->ID)
+            bAgree = false;
+        if (fabs(testingParams.bias - sig->bias) > 0.01)
+            bAgree = false;
+        if (testingParams.isSigned != sigSigned)
+            bAgree = false;
+        if (testingParams.intelFormat != sig->intelByteOrder)
+            bAgree = false;
+        if (fabs(testingParams.scale - sig->factor) > 0.01)
+            bAgree = false;
+        if (testingParams.startBit != sig->startBit)
+            bAgree = false;
+        if (testingParams.numBits != sig->signalSize)
+            bAgree = false;
     }
     else
     {
@@ -187,6 +198,8 @@ void NewGraphDialog::clearParams()
 
 void NewGraphDialog::setParams(GraphParams &params)
 {
+    shownFromPlotEdit = true;
+
     ui->txtBias->setText(QString::number(params.bias));
     ui->txtMask->setText(Utility::formatNumber(params.mask));
     ui->txtScale->setText(QString::number(params.scale));
@@ -199,6 +212,7 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->txtDataLen->setText(QString::number(dataLen));
     ui->txtID->setText(Utility::formatCANID(params.ID));
     ui->txtName->setText(params.graphName);
+    ui->editBus->setText(QString::number(params.bus));
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.lineColor);
     ui->colorSwatch->setPalette(p);
@@ -211,8 +225,62 @@ void NewGraphDialog::setParams(GraphParams &params)
 
     assocSignal = params.associatedSignal;
 
-    loadMessages();
-    loadSignals(0);
+    loadNodes();
+
+    if (assocSignal)
+    {
+        auto msg = assocSignal->parentMessage;
+        auto node = msg->sender;
+
+        bool nodeFound = false;
+        for(int i=0; i<ui->cbNodes->count(); i++)
+        {
+            if(ui->cbNodes->itemText(i) == node->sourceFileName + Utility::fullyQualifiedNameSeperator + node->name)
+            {
+                ui->cbNodes->setCurrentIndex(i);
+                nodeFound = true;
+                break;
+            }
+        }
+
+        qDebug() << "Matching plot params to Node: " << nodeFound;
+
+        if(nodeFound)
+        {
+            bool msgFound = false;
+            for(int i=0; i<ui->cbMessages->count(); i++)
+            {
+                if(ui->cbMessages->itemText(i) == msg->name)
+                {
+                    ui->cbMessages->setCurrentIndex(i);
+                    msgFound = true;
+                    break;
+                }
+            }
+
+            qDebug() << "Matching plot params to Msg: " << msgFound;
+
+            if(msgFound)
+            {
+                bool sigFound = false;
+                for(int i=0; i<ui->cbSignals->count(); i++)
+                {
+                    if(ui->cbSignals->itemText(i) == assocSignal->name)
+                    {
+                        ui->cbSignals->setCurrentIndex(i);
+                        sigFound = true;
+                        break;
+                    }
+                }
+
+                qDebug() << "Matching plot params to Signal: " << sigFound;
+            }
+        }
+    }
+    //ui->cbNodes->model()->
+
+
+    //loadSignals(0);
     drawBitfield();
     checkSignalAgreement();
 }
@@ -234,6 +302,7 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.mask = Utility::ParseStringToNum(ui->txtMask->text());
     params.scale = ui->txtScale->text().toFloat();
     params.stride = Utility::ParseStringToNum(ui->txtStride->text());
+    params.bus = Utility::ParseStringToNum(ui->editBus->text());
 
     params.startBit = startBit;
     params.numBits = dataLen;
@@ -246,41 +315,84 @@ void NewGraphDialog::getParams(GraphParams &params)
     if (params.stride < 1) params.stride = 1;
 }
 
-void NewGraphDialog::loadMessages()
+void NewGraphDialog::loadNodes()
 {
-    DBC_MESSAGE *msg;
-    ui->cbMessages->clear();
+    int numFiles;
+    ui->cbNodes->clear();
     if (dbcHandler == nullptr) return;
-    if (dbcHandler->getFileCount() == 0) return;
-    for (int y = 0; y < dbcHandler->getFileCount(); y++)
+    if ((numFiles = dbcHandler->getFileCount()) == 0) return;
+    qDebug() << numFiles;
+    for (int f = 0; f < numFiles; f++)
     {
-        for (int x = 0; x < dbcHandler->getFileByIdx(y)->messageHandler->getCount(); x++)
+        DBCFile* thisFile = dbcHandler->getFileByIdx(f);
+        qDebug() << thisFile->messageHandler->getCount();
+
+        QList<QString> names;
+
+        for (int x = 0; x < thisFile->dbc_nodes.count(); x++)
         {
-            msg = dbcHandler->getFileByIdx(y)->messageHandler->findMsgByIdx(x);
-            if (msg)
+            bool messagesInNode = false;
+            for (int m = 0; m < thisFile->messageHandler->getCount(); m++)
             {
-                ui->cbMessages->addItem(msg->name);
-                if (assocSignal && msg->name == assocSignal->parentMessage->name)
+                if(thisFile->messageHandler->findMsgByIdx(m)->sender->name == thisFile->dbc_nodes[x].name)
                 {
-                    ui->cbMessages->setCurrentIndex(ui->cbMessages->count() -1);
-                    //qDebug() << "Found my parent";
+                    messagesInNode = true;
+                    break;
                 }
             }
+            if(messagesInNode)
+            {
+                QString fullyQualifiedNodeName = thisFile->getFilenameNoExt() + Utility::fullyQualifiedNameSeperator + thisFile->dbc_nodes[x].name;
+                names.append(fullyQualifiedNodeName);
+            }
+        }
+
+        if(names.count() > 0)
+        {
+            names.sort();
+            ui->cbNodes->addItem("----" + thisFile->getFilename());
+            Utility::SetComboBoxItemEnabled(ui->cbNodes, ui->cbNodes->count() -1, false);
+            for(int i=0; i<names.count(); i++)
+                ui->cbNodes->addItem(names[i]);
         }
     }
-    ui->cbMessages->model()->sort(0);
+}
+
+void NewGraphDialog::loadMessages(int idx)
+{
+    int numFiles = 0;
+    ui->cbMessages->clear();
+    if (dbcHandler == nullptr) return;
+    if ((numFiles = dbcHandler->getFileCount()) == 0) return;
+    qDebug() << numFiles;
+
+    QString displayedNodeName = ui->cbNodes->itemText(idx);
+
+    for (int f = 0; f < numFiles; f++)
+    {
+        qDebug() << dbcHandler->getFileByIdx(f)->messageHandler->getCount();
+
+        for (int x = 0; x < dbcHandler->getFileByIdx(f)->messageHandler->getCount(); x++)
+        {
+            QString fullyQualifiedNodeName = dbcHandler->getFileByIdx(f)->getFilenameNoExt() + Utility::fullyQualifiedNameSeperator + dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->sender->name;
+            if(fullyQualifiedNodeName == displayedNodeName)
+                ui->cbMessages->addItem(dbcHandler->getFileByIdx(f)->messageHandler->findMsgByIdx(x)->name);
+        }
+    }
 }
 
 void NewGraphDialog::loadSignals(int idx)
 {
     Q_UNUSED(idx);
-    //search through all DBC files in order to try to find a message with the given name
-    DBC_MESSAGE *msg = dbcHandler->findMessage(ui->cbMessages->currentText());
-    DBC_SIGNAL *sig;
-
-    if (msg == nullptr) return;
 
     ui->cbSignals->clear();
+
+    //search through all DBC files in order to try to find a message with the given name
+    QString fullyQualifiedNodeName = ui->cbNodes->itemText(ui->cbNodes->currentIndex());
+    DBC_MESSAGE *msg = dbcHandler->findMessage(ui->cbMessages->currentText(), fullyQualifiedNodeName);
+    if (msg == nullptr) return;
+
+    DBC_SIGNAL *sig;    
     for (int x = 0; x < msg->sigHandler->getCount(); x++)
     {
         sig = msg->sigHandler->findSignalByIdx(x);
@@ -298,10 +410,8 @@ void NewGraphDialog::loadSignals(int idx)
     checkSignalAgreement();
 }
 
-void NewGraphDialog::bitfieldClicked(int x,int y)
+void NewGraphDialog::bitfieldClicked(int bit)
 {
-    int bit = (y * 8 + (7-x));
-
     qDebug() << "Clicked bit: " << bit;
     startBit = bit;
     drawBitfield();    
@@ -310,20 +420,25 @@ void NewGraphDialog::bitfieldClicked(int x,int y)
 void NewGraphDialog::drawBitfield()
 {
     qDebug() << "Draw Bitfield";
-    int64_t bitField = 0;
+    uint8_t bitField[64];
     int endBit, sBit;
 
-    bitField |= 1ull << (startBit); //make the start bit a different color to set it apart
+    memset(bitField, 0, 64);
+
+    //make the start bit a different color to set it apart
+    bitField[Utility::getByteFromBitPosition(startBit)] |= 1 << Utility::getBitFromBitPosition(startBit);
+
     ui->gridData->setReference((unsigned char *)&bitField, false);
 
     if (ui->cbIntel->isChecked())
     {
         endBit = startBit + dataLen - 1;
         if (startBit < 0) startBit = 0;
-        if (endBit > 63) endBit = 63;
+        if (endBit > 511) endBit = 511;
         for (int y = startBit; y <= endBit; y++)
         {
-            bitField |= 1ull << y;
+            //bitField |= 1ull << y;
+            bitField[Utility::getByteFromBitPosition(y)] |= 1 << Utility::getBitFromBitPosition(y);
         }
     }
     else //big endian / motorola format
@@ -333,11 +448,12 @@ void NewGraphDialog::drawBitfield()
         sBit = startBit;
         while (size > 0)
         {
-            bitField |= 1ull << sBit;
+            //bitField |= 1ull << sBit;
+            bitField[Utility::getByteFromBitPosition(sBit)] |= 1 << Utility::getBitFromBitPosition(sBit);
             size--;
             if ((sBit % 8) == 0) sBit += 15;
             else sBit--;
-            if (sBit > 63) sBit = 63;
+            if (sBit > 511) sBit = 511;
         }
     }
 
@@ -350,7 +466,7 @@ void NewGraphDialog::handleDataLenUpdate()
 {
     dataLen = ui->txtDataLen->text().toInt();
     if (dataLen < 1) dataLen = 1;
-    if (dataLen > 63) dataLen = 63;
+    if (dataLen > 64) dataLen = 64;
     drawBitfield();
     checkSignalAgreement();
 }
@@ -360,11 +476,10 @@ void NewGraphDialog::copySignalToParamsUI()
     assocSignal = nullptr;
     DBC_MESSAGE *msg = nullptr;
 
-    for(int i = 0; i < dbcHandler->getFileCount(); i++)
-    {
-        msg = dbcHandler->getFileByIdx(i)->messageHandler->findMsgByName(ui->cbMessages->currentText());
-        if (msg) break;
-    }
+    QString fullyQualifiedNodeName = ui->cbNodes->itemText(ui->cbNodes->currentIndex());
+    QString msgName = ui->cbMessages->itemText(ui->cbMessages->currentIndex());
+
+    msg = dbcHandler->findMessage(msgName, fullyQualifiedNodeName);
 
     if (!msg) return;
     DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(ui->cbSignals->currentText());

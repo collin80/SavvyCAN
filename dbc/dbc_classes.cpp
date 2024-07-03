@@ -76,12 +76,16 @@ QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
             if (sig->processAsText(frame, sigString))
             {
                 qDebug() << "Returned value: " << sigString;
+                if (!build.isEmpty() && !sigString.isEmpty())
+                    build.append("\n");
                 build.append(sigString);
-                build.append("\n");
                 if (sig->isMultiplexor)
                 {
                     qDebug() << "Spelunkin!";
-                    build.append(sig->processSignalTree(frame));
+                    auto subTreeString = sig->processSignalTree(frame);
+                    if (!build.isEmpty() && !subTreeString.isEmpty())
+                        build.append("\n");
+                    build.append(subTreeString);
                 }
             }
         }
@@ -118,7 +122,7 @@ s 5   47 46 45 44 43 42 41 40
   So, the bits are 12, 11, 10, 9, 8, 23, 22, 21. Yes, that's confusing. They now go in reverse value order too.
   Bit 12 is worth 128, 11 is worth 64, etc until bit 21 is worth 1.
 */
-bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool outputName)
+bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool outputName, bool outputUnit)
 {
     int64_t result = 0;
     bool isSigned = false;
@@ -155,7 +159,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
         result = Utility::processIntegerSignal(frame.payload(), startBit, 32, intelByteOrder, false);
-        endResult = (*((float *)(&result)) * factor) + bias;
+        endResult = (*((float *)(&result)) * factor) + bias; //look away! This is awful. I don't even know for sure if it works. Should test that.
     }
     else //double precision float
     {
@@ -166,11 +170,11 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.payload(), 0, 64, intelByteOrder, false);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, 64, intelByteOrder, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
 
-    outString = makePrettyOutput(endResult, result, outputName, isInteger);
+    outString = makePrettyOutput(endResult, result, outputName, isInteger, outputUnit);
     cachedValue = endResult;
     return true;
 }
@@ -191,7 +195,7 @@ bool DBC_SIGNAL::getValueString(int64_t intVal, QString &outString)
     return false;
 }
 
-QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outputName, bool isInteger)
+QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outputName, bool isInteger, bool outputUnit)
 {
     QString outputString;
 
@@ -209,11 +213,13 @@ QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outpu
                 break;
             }
         }
-        if (!foundVal) outputString += QString::number(intVal) + unitName;
+        if (!foundVal) outputString += QString::number(intVal);
+        if (outputUnit) outputString += unitName;
     }
     else //otherwise display the actual number and unit (if it exists)
     {
-       outputString += (isInteger ? QString::number(intVal) : QString::number(floatVal)) + unitName;
+       outputString += (isInteger ? QString::number(intVal) : QString::number(floatVal));
+       if (outputUnit) outputString += unitName;
     }
     return outputString;
 }
@@ -306,7 +312,7 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         }
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
-        result = Utility::processIntegerSignal(frame.payload(), 0, 64, false, false);
+        result = Utility::processIntegerSignal(frame.payload(), startBit, 64, false, false);
         endResult = (*((double *)(&result)) * factor) + bias;
     }
     cachedValue = endResult;

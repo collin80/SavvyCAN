@@ -9,7 +9,7 @@
 #include "mqtt_bus.h"
 
 MQTT_BUS::MQTT_BUS(QString topicName) :
-    CANConnection(topicName, "mqtt_client", CANCon::MQTT, 1, 4000, true),
+    CANConnection(topicName, "mqtt_client", CANCon::MQTT, 0, 0, false, 0, 1, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
 
@@ -228,8 +228,8 @@ void MQTT_BUS::piSetBusSettings(int pBusIdx, CANBus bus)
 bool MQTT_BUS::piSendFrame(const CANFrame& frame)
 {
     QByteArray buffer;
-    int c;
-    quint32 ID;
+    //int c;
+    //quint32 ID;
 
     //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
@@ -278,7 +278,7 @@ void MQTT_BUS::readSettings()
 
 void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
 {
-    uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
+    //uint64_t timeBasis = CANConManager::getInstance()->getTimeBasis();
 
 
     /* drop frame if capture is suspended */
@@ -289,9 +289,10 @@ void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
     if(frame_p)
     {
         uint32_t frameID = message.topic().split("/")[1].toInt();
-        uint64_t timeStamp = message.payload()[0] + (message.payload()[1] << 8) + (message.payload()[2] << 16) + (message.payload()[3] << 24)
-                           + ((uint64_t)message.payload()[4] << 32ull)  + ((uint64_t)message.payload()[5] << 40ull)
-                           + ((uint64_t)message.payload()[6] << 48ull) + ((uint64_t)message.payload()[7] << 56ull);
+
+        QByteArray timeStampBytes = message.payload().left(8);
+        uint64_t timeStamp = qFromLittleEndian<uint64_t>(timeStampBytes.data());
+
         int flags = message.payload()[8];
         frame_p->setPayload(message.payload().right(message.payload().count() - 9));
         frame_p->bus = 0;

@@ -481,12 +481,12 @@ void JSHighlighter::mark(const QString &str, Qt::CaseSensitivity caseSensitivity
 
 QStringList JSHighlighter::keywords() const
 {
-    return m_keywords.toList();
+    return m_keywords.values();
 }
 
 void JSHighlighter::setKeywords(const QStringList &keywords)
 {
-    m_keywords = QSet<QString>::fromList(keywords);
+    m_keywords = QSet<QString>(keywords.begin(), keywords.end());
     rehighlight();
 }
 
@@ -931,7 +931,8 @@ void JSEdit::resizeEvent(QResizeEvent *e)
 void JSEdit::wheelEvent(QWheelEvent *e)
 {
     if (e->modifiers() == Qt::ControlModifier) {
-        int steps = e->delta() / 20;
+        QPoint numDegrees = e->angleDelta();
+        int steps = numDegrees.y() / 20;
         steps = qBound(-3, steps, 3);
         QFont textFont = font();
         int pointSize = textFont.pointSize() + steps;

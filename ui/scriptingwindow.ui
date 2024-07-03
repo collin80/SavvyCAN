@@ -109,9 +109,23 @@
         </widget>
        </item>
        <item>
+        <widget class="QPushButton" name="btnSaveAsScript">
+         <property name="text">
+          <string>Sa&amp;ve As</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="btnRevertScript">
          <property name="text">
           <string>&amp;Revert</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnReloadScript">
+         <property name="text">
+          <string>R&amp;eload</string>
          </property>
         </widget>
        </item>
@@ -151,11 +165,26 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="btnClearLog">
-       <property name="text">
-        <string>Clear Log &amp;Window</string>
-       </property>
-      </widget>
+        <layout class="QHBoxLayout" name="horizontalLayout_log">
+            <property name="alignment">
+                <set>Qt::AlignCenter</set>
+            </property>
+            <property name="contentsMargins">10, 0, 10, 0</property>
+            <item>
+                <widget class="QPushButton" name="btnClearLog">
+                    <property name="text">
+                        <string>Clear Log &amp;Window</string>
+                    </property>
+                </widget>
+            </item>
+            <item>
+                <widget class="QPushButton" name="btnSaveLog">
+                    <property name="text">
+                        <string>Save L&amp;og</string>
+                    </property>
+                </widget>
+            </item>
+        </layout>
      </item>
     </layout>
    </item>
@@ -169,10 +198,13 @@
   <tabstop>listLoadedScripts</tabstop>
   <tabstop>tableVariables</tabstop>
   <tabstop>btnSaveScript</tabstop>
+  <tabstop>btnSaveAsScript</tabstop>
   <tabstop>btnRevertScript</tabstop>
+  <tabstop>btnReloadScript</tabstop>
   <tabstop>btnRecompile</tabstop>
   <tabstop>cbAutoScroll</tabstop>
   <tabstop>btnClearLog</tabstop>
+  <tabstop>btnSaveLog</tabstop>
  </tabstops>
  <resources/>
  <connections/>

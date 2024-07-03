@@ -21,7 +21,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->comboSendingBus->addItem(tr("None"));
     ui->comboSendingBus->addItem(tr("0"));
     ui->comboSendingBus->addItem(tr("1"));
-    ui->comboSendingBus->addItem(tr("Both"));
+    ui->comboSendingBus->addItem(tr("All"));
     ui->comboSendingBus->addItem(tr("From File"));
 
     //update the GUI with all the settings we have stored giving things
@@ -48,6 +48,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbLoadConnections->setChecked(settings.value("Main/SaveRestoreConnections", false).toBool());
 
     ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
+    ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", false).toBool());
 
     bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings.value("Main/TimeClock", false).toBool();
@@ -84,11 +85,27 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
         }
     }
 
+    ui->cbCSVAbsTime->setChecked(settings.value("Main/CSVAbsTime", false).toBool());
     ui->comboSendingBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
+
+    int maxFramesDefault;
+    if (QSysInfo::WordSize > 32)
+    {
+        qDebug() << "64 bit OS detected. Requesting a large preallocation";
+        maxFramesDefault = 10000000;
+    }
+    else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
+    {
+        qDebug() << "32 bit OS detected. Requesting a much restricted prealloc";
+        maxFramesDefault = 2000000;
+    }
+
+    ui->spinMaximumFrames->setValue(settings.value("Main/MaximumFrames", maxFramesDefault).toInt());
+    ui->spinBytesPerLine->setValue(settings.value("Main/BytesPerLine", 8).toInt());
 
     //just for simplicity they all call the same function and that function updates all settings at once
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -104,6 +121,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->rbMicros, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->rbSysClock, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->rbMillis, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbCSVAbsTime, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
@@ -117,6 +135,9 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbHexGraphFlow, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbHexGraphInfo, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbIgnoreDBCColors, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->spinMaximumFrames, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
+    connect(ui->cbFontFixedWidth, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->spinBytesPerLine, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -171,6 +192,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
     settings.setValue("Main/TimeMillis", ui->rbMillis->isChecked());
     settings.setValue("Main/TimeClock", ui->rbSysClock->isChecked());
+    settings.setValue("Main/CSVAbsTime", ui->cbCSVAbsTime->isChecked());
     settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings.setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
@@ -183,6 +205,9 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Remote/Pass", encPass);
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
     settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
+    settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
+    settings.setValue("Main/BytesPerLine", ui->spinBytesPerLine->value());
+    settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
 
     settings.sync();
     emit updatedSettings();

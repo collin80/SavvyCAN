@@ -1,6 +1,6 @@
 # SavvyCAN
-Qt based cross platform canbus tool 
-(C) 2015-2021 EVTV and Collin Kidder
+Qt based cross platform canbus tool
+(C) 2015-2024 Collin Kidder
 
 A Qt5 based cross platform tool which can be used to load, save, and capture canbus frames.
 This tool is designed to help with visualization, reverse engineering, debugging, and
@@ -10,16 +10,13 @@ Please use the "Discussions" tab here on GitHub to ask questions and interact wi
 
 Requires a resolution of at least 1024x768. Fully multi-monitor capable. Works on 4K monitors as well.
 
-You are highly recommended to use the 
+You are highly recommended to use the
 [CANDue board from EVTV](http://store.evtv.me/proddetail.php?prod=ArduinoDueCANBUS&cat=23).
 
 The CANDue board must be running the GVRET firmware which can also be found
 within the collin80 repos.
 
 It is now possible to use any Qt SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
-There may, however, be some loss of some functionality as
-some functions of SavvyCAN are designed for use directly with the
-EVTVDue and CANDue 2.0 boards.
 
 It should, however, be noted that use of a capture device is not required to make use
 of this program. It can load and save in several formats:
@@ -43,15 +40,16 @@ from the Qt installer.
 
 Uses QCustomPlot available at:
 
-http://www.qcustomplot.com/ 
+http://www.qcustomplot.com/
 
-However, this source code is integrated into the source for SavvyCAN and one isn't required 
+However, this source code is integrated into the source for SavvyCAN and one isn't required
 to download it separately.
 
-This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt. 
+This project requires 5.14.0 or higher because of a dependency on QtSerialBus and other new additions to Qt.
 
-NOTE: Qt6 currently lacks support for QtSerialBus and many other Qt sub-features. At this time you cannot
-use Qt6 to compile SavvyCAN. Support for Qt6 should be possible around Qt6.2.
+NOTE: As the code in this master branch sits, it does compile with QT6. Support for QT6 is approximately "beta" quality. Most all functions should work, please send issues if found.
+
+It appears that the current binary build for MacOS requires at least MacOS 10.15
 
 ## Instructions for compiling:
 
@@ -74,6 +72,8 @@ Now run SavvyCAN
 ```
 ./SavvyCAN
 ```
+
+On linux systems you can run `./install.sh` to create a desktop shortcut.
 
 ### Compiling in debug mode for additional information
 
@@ -100,7 +100,7 @@ when you installed Qt.
 
 ### What to do if `qmake` fails with error `Project ERROR: Unknown module(s) in QT: qml serialbus help` on Ubuntu? :
 
-`sudo apt install libqt5serialbus5-dev qtdeclarative5-dev qttools5-dev`
+`sudo apt install libqt5serialbus5-dev libqt5serialport5-dev qtdeclarative5-dev qttools5-dev`
 
 ### Used Items Requiring Attribution
 
@@ -115,4 +115,3 @@ signal by juli from the Noun Project
 signal by yudi from the Noun Project
 
 Death by Adrien Coquet from the Noun Project
-
