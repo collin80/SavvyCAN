@@ -1,0 +1,22 @@
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+Language: Cpp
+BasedOnStyle: LLVM
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+AllowShortFunctionsOnASingleLine: None
+AlwaysBreakTemplateDeclarations: 'Yes'
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+ColumnLimit: 120
+IndentWidth: 2
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: false
+SpacesBeforeTrailingComments: 2
+FixNamespaceComments: true
+UseTab: Never
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+

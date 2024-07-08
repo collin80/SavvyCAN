@@ -1,0 +1,21 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>NavBack.png</file>
+        <file>NavForward.png</file>
+        <file>PauseHS.png</file>
+        <file>PlayHS.png</file>
+        <file>ReverseHS.png</file>
+        <file>StopHS.png</file>
+        <file>signal.png</file>
+        <file>node.png</file>
+        <file>message.png</file>
+        <file>multiplexed-signal.png</file>
+        <file>multiplexor-signal.png</file>
+        <file>skull.png</file>
+        <file>signal_new.png</file>
+        <file>node_new.png</file>
+        <file>message_new.png</file>
+        <file>move_up.png</file>
+        <file>move_down.png</file>
+    </qresource>
+</RCC>

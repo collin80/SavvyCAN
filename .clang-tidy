@@ -1,0 +1,106 @@
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+Checks: >
+  -*,
+  bugprone-*,                    # General bug-prone patterns
+  cert-*,                        # CERT coding standards
+  clang-analyzer-*,              # Clang static analyzer checks
+  cppcoreguidelines-*,           # C++ Core Guidelines
+  modernize-*,                   # Modern C++ practices
+  performance-*,                 # Performance-related checks
+  readability-*,                 # Readability improvements
+  hicpp-*,                       # High Integrity C++ Coding Standard
+  misc-*,                        # Miscellaneous checks
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.MethodCase
+    value: camelBack
+  - key: readability-identifier-naming.FunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.VariableCase
+    value: camelBack
+  - key: readability-identifier-naming.ConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.ParameterCase
+    value: camelBack
+  - key: readability-identifier-naming.ClassMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: m_
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.UnionCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.GlobalFunctionCase
+    value: camelBack
+  - key: readability-identifier-naming.LocalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.LocalVariableCase
+    value: camelBack
+  - key: readability-identifier-naming.NamespaceCase
+    value: CamelCase
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionIgnoredRegexp
+    value: "^DEBUG_"
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.TypeAliasCase
+    value: CamelCase
+  - key: readability-identifier-naming.VariableSuffix
+    value: _
+  - key: readability-identifier-naming.FunctionPrefix
+    value: ""
+  - key: readability-identifier-naming.ClassPrefix
+    value: ""
+  - key: readability-identifier-naming.EnumPrefix
+    value: ""
+  - key: readability-identifier-naming.StructPrefix
+    value: ""
+  - key: readability-identifier-naming.FunctionSuffix
+    value: ""
+  - key: readability-identifier-naming.ParameterSuffix
+    value: ""
+  - key: readability-identifier-naming.MemberSuffix
+    value: ""
+  - key: readability-identifier-naming.NamespacePrefix
+    value: ""
+  - key: readability-identifier-naming.MacroDefinitionSuffix
+    value: ""
+  - key: readability-identifier-naming.UnionPrefix
+    value: ""
+  - key: readability-identifier-naming.UnionSuffix
+    value: ""
+
+  # Specific options for other checks
+  - key: modernize-use-auto.MinTypeNameLength
+    value: 5
+  - key: modernize-use-auto.RemoveStars
+    value: true
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoreEnums
+    value: true
+  - key: cppcoreguidelines-avoid-magic-numbers.IgnoredValues
+    value: '0,1,-1,2'
+  - key: readability-redundant-member-init.IgnoreBaseInCopyConstructors
+    value: 1
+  - key: modernize-use-default-member-init.UseAssignment
+    value: 1
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+
+WarningsAsErrors: '*'
+
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#
+

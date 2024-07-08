@@ -1,0 +1,340 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="CMakeSettings">
+    <configurations>
+      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
+    </configurations>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="988104d3-d850-4b15-900b-d959c4e91824" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/common.pri" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/compilers/gcc.pri" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/compilers/msvc.pri" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SavvyCAN.desktop" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SavvyCAN.pro" beforeDir="false" afterPath="$PROJECT_DIR$/SavvyCAN.pro" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/bisectwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bisectwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/blfhandler.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/blfhandler.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/isotp_handler.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/isotp_handler.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/isotp_message.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/j1939_handler.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/j1939_handler.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/uds_handler.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/bus_protocols/uds_handler.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/can_structs.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/can_structs.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/can_trigger_structs.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/canbridgewindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/canbridgewindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/candatagrid.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/candatagrid.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/canfilter.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/canfilter.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/canframemodel.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/canframemodel.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/config.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canbus.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canbus.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconconst.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconfactory.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconfactory.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconmanager.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconmanager.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconnection.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconnection.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconnectionmodel.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canconnectionmodel.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canlogserver.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canlogserver.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canserver.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/canserver.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/connectionwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/connectionwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/gvretserial.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/gvretserial.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/lawicel_serial.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/lawicel_serial.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/mqtt_bus.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/mqtt_bus.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/newconnectiondialog.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/newconnectiondialog.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/serialbusconnection.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/serialbusconnection.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/socketcand.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/connections/socketcand.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbc_classes.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbc_classes.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbchandler.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbchandler.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcloadsavewindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcloadsavewindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcmaineditor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcmaineditor.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcmessageeditor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcmessageeditor.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcnodeduplicateeditor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcnodeduplicateeditor.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcnodeeditor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcnodeeditor.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcnoderebaseeditor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcnoderebaseeditor.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcsignaleditor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/dbc/dbcsignaleditor.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/filterutility.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/filterutility.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/firmwareuploaderwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/firmwareuploaderwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/framefileio.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/framefileio.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frameplaybackobject.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frameplaybackobject.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frameplaybackwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frameplaybackwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/framesenderobject.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/framesenderobject.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/framesenderwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/framesenderwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/helpwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/helpwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/icons.qrc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/icons/SavvyIcon.icns" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/icons/SavvyIcon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/icons/hicolor/256x256/apps/SavvyCAN.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/icons/hicolor/scalable/apps/SavvyCAN.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images.qrc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/LaunchScreen.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/NavBack.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/NavForward.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/PauseHS.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/PlayHS.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/ReverseHS.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/StopHS.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/message.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/message_new.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/move_down.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/move_up.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/multiplexed-signal.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/multiplexor-signal.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/node.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/node_new.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/signal.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/signal_new.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/skull.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_Death_3194193.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_Death_3194193.xcf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_message_1977390.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_message_1977390.xcf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_nodes_2397529.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_nodes_2397529.xcf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_signal_1402315.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_signal_1402315.xcf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_signal_1716563.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_signal_1716563.xcf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_signal_1771815.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/images/sourceImages/noun_signal_1771815.xcf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/jsedit.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/jsedit.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mainsettingsdialog.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mainsettingsdialog.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mainwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mainwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/motorcontrollerconfigwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/motorcontrollerconfigwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/LICENSE" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/edl-v10" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/epl-v10" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt.pri" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt.pro" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt.qbs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_client.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_client.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_client_p.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_client_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_frame.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_frame.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_global.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_message.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_message.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_message_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_network.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_network_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_networkinterface.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_routedmessage.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_router.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_router.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_routesubscription.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_routesubscription.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_socket.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_socket_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_socketinterface.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_ssl_socket.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_ssl_socket_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_timer.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_timer_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_timerinterface.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_websocket.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_websocket_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_websocketiodevice.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mqtt/qmqtt_websocketiodevice_p.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pcaplite.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pcaplite.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcpaxistickerhex.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcpaxistickerhex.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcustomplot.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcustomplot.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/dbccomparatorwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/dbccomparatorwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/discretestatewindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/discretestatewindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/filecomparatorwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/filecomparatorwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/flowviewwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/flowviewwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/frameinfowindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/frameinfowindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/fuzzingwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/fuzzingwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/graphingwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/graphingwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/isotp_interpreterwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/isotp_interpreterwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/newgraphdialog.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/newgraphdialog.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/rangestatewindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/rangestatewindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/SnifferDelegate.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/SnifferDelegate.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/snifferitem.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/snifferitem.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/sniffermodel.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/sniffermodel.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/snifferwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/sniffer/snifferwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/temporalgraphwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/temporalgraphwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/udsscanwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/re/udsscanwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scriptcontainer.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scriptcontainer.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scriptingwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scriptingwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/signalviewerwindow.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/signalviewerwindow.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simplecrypt.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/simplecrypt.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/main.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test.pro" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/tst_cancon.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/tst_cancon.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/tst_lfqueue.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/tst_lfqueue.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/triggerdialog.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/triggerdialog.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/triggerdialog.ui" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/bisectwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/bisectwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/canbridgewindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/canbridgewindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/candatagrid.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/candatagrid.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/connectionwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/connectionwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbccomparatorwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbccomparatorwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcloadsavewindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcloadsavewindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcmaineditor.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcmaineditor.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcmessageeditor.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcmessageeditor.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcnodeduplicateeditor.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcnodeduplicateeditor.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcnodeeditor.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcnodeeditor.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcnoderebaseeditor.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcnoderebaseeditor.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/dbcsignaleditor.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/dbcsignaleditor.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/discretestatewindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/discretestatewindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/filecomparatorwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/filecomparatorwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/firmwareuploaderwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/firmwareuploaderwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/flowviewwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/flowviewwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/frameinfowindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frameinfowindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/frameplaybackwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/frameplaybackwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/framesenderwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/framesenderwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/fuzzingwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/fuzzingwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/graphingwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/graphingwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/helpwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/helpwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/isotp_interpreterwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/isotp_interpreterwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/mainsettingsdialog.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/mainsettingsdialog.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/mainwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/mainwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/motorcontrollerconfigwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/motorcontrollerconfigwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/newconnectiondialog.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/newconnectiondialog.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/newgraphdialog.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/newgraphdialog.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/rangestatewindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/rangestatewindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/scriptingwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/scriptingwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/signalviewerwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/signalviewerwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/snifferwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/snifferwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/temporalgraphwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/temporalgraphwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/udsscanwindow.ui" beforeDir="false" afterPath="$PROJECT_DIR$/src/ui/udsscanwindow.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utility.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utility.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/lfqueue.h" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="2iyEFsWLyawUqv9o1AqQaPBNISI" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.RadMigrateCodeStyle": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.advertisement.text.overridden": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "/home/rk/workspace/hypercan/cmake/Toolchains/msvc-flags.cmake",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "CPPToolchains",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/desktop/media/icons" />
+      <recent name="$PROJECT_DIR$/desktop/media/images" />
+      <recent name="$PROJECT_DIR$/desktop" />
+      <recent name="$PROJECT_DIR$/src" />
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="988104d3-d850-4b15-900b-d959c4e91824" name="Changes" comment="" />
+      <created>1720454317733</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1720454317733</updated>
+      <workItem from="1720454319243" duration="14479000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>
