@@ -4,6 +4,10 @@
 #
 #-------------------------------------------------
 
+!versionAtLeast(QT_VERSION, 5.14.0) {
+    error("Current version of Qt ($${QT_VERSION}) is too old, this project requires Qt 5.14 or newer")
+}
+
 QT = core gui printsupport qml serialbus serialport widgets help network opengl
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
