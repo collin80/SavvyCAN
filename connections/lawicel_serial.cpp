@@ -491,7 +491,26 @@ void LAWICELSerial::readSerialData()
         {
             qDebug() << "Got CR!";
 
-            buildFrame.setTimeStamp(QDateTime::currentMSecsSinceEpoch() * 1000l);
+            if (useSystemTime)
+            {
+                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+            }
+            else
+            {
+                //If total length is greater than command, header and data, timestamps must be enabled.
+                if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
+                {
+                    //Four bytes after the end of the data bytes.
+                    buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
+                }
+                else
+                {
+                    //Default to system time if timestamps are disabled.
+                    buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+                }
+            }
+            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+
             switch (mBuildLine[0].toLatin1())
             {
             case 't': //standard frame

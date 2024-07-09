@@ -61,6 +61,7 @@ protected:
     QSerialPort *serial;
     int framesRapid;
     CANFrame buildFrame;
+    qint64 buildTimestamp;
     bool can0Enabled;
     bool can0ListenOnly;
     bool canFd;
