@@ -54,6 +54,7 @@ public:
     static bool loadCLX000File(QString filename, QVector<CANFrame>* frames);
     static bool loadCANServerFile(QString filename, QVector<CANFrame>* frames);
     static bool loadWiresharkFile(QString filename, QVector<CANFrame>* frames);
+    static bool loadWiresharkSocketCANFile(QString filename, QVector<CANFrame>* frames);
 
     //functions that pre-scan a file to try to figure out if they could read it. Used to automatically determine
     //file type and load it.
@@ -80,6 +81,7 @@ public:
     static bool isCLX000File(QString filename);
     static bool isCANServerFile(QString filename);
     static bool isWiresharkFile(QString filename);
+    static bool isWiresharkSocketCANFile(QString filename);
 
     static bool saveCRTDFile(QString, const QVector<CANFrame>*);
     static bool saveNativeCSVFile(QString, const QVector<CANFrame>*);

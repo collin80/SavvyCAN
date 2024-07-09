@@ -32,6 +32,7 @@ of this program. It can load and save in several formats:
 9. Vehicle Spy log files
 10. CANDump / Kayak (Read only)
 11. PCAN Viewer (Read Only)
+12. Wireshark socketcan PCAP file (Read only)
 
 ## Dependencies
 
