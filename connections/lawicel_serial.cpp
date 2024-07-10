@@ -491,7 +491,7 @@ void LAWICELSerial::readSerialData()
         {
             qDebug() << "Got CR!";
 
-            buildFrame.setTimeStamp(QDateTime::currentMSecsSinceEpoch() * 1000l);
+            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000l));
             switch (mBuildLine[0].toLatin1())
             {
             case 't': //standard frame
