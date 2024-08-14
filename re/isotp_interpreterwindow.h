@@ -26,6 +26,7 @@ private slots:
     void showDetailView();
     void updatedFrames(int);
     void clearList();
+    void saveList();
     void listFilterItemChanged(QListWidgetItem *item);
     void filterAll();
     void filterNone();
