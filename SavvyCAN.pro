@@ -261,6 +261,10 @@ unix {
    DISTFILES += SavvyCAN.desktop
 }
 
+windows {
+RC_ICONS=icons/SavvyIcon.ico
+}
+
 examplefiles.files=examples
 examplefiles.path = $$PREFIX/share/savvycan/examples
 INSTALLS += examplefiles
