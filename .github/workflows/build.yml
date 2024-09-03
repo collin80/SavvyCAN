@@ -126,7 +126,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4.1.7
 
       - name: Display structure of downloaded files
         run: zip -r SavvyCAN-Windows_x64_CIBuild.zip SavvyCAN-Windows_x64
