@@ -252,19 +252,19 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     ID = frame.frameId();
     if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
 
-    buffer[0] = (char)0xF1; //start of a command over serial
-    buffer[1] = 0; //command ID for sending a CANBUS frame
-    buffer[2] = (char)(ID & 0xFF); //four bytes of ID LSB first
-    buffer[3] = (char)(ID >> 8);
-    buffer[4] = (char)(ID >> 16);
-    buffer[5] = (char)(ID >> 24);
-    buffer[6] = (char)((frame.bus) & 3);
-    buffer[7] = (char)frame.payload().length();
+    buffer.append((char)0xF1); //start of a command over serial
+    buffer.append((char)0); //command ID for sending a CANBUS frame
+    buffer.append((char)(ID & 0xFF)); //four bytes of ID LSB first
+    buffer.append((char)(ID >> 8));
+    buffer.append((char)(ID >> 16));
+    buffer.append((char)(ID >> 24));
+    buffer.append( (char)((frame.bus) & 3) );
+    buffer.append( (char)frame.payload().length() );
     for (c = 0; c < frame.payload().length(); c++)
     {
-        buffer[8 + c] = frame.payload()[c];
+        buffer.append(frame.payload()[c]);
     }
-    buffer[8 + frame.payload().length()] = 0;
+    buffer.append((char)0);
 
     sendToSerial(buffer);
 
