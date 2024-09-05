@@ -33,7 +33,7 @@ jobs:
           chmod a+x linuxdeployqt-continuous-x86_64.AppImage
           ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-Linux_x64.AppImage
           path: SavvyCAN-*x86_64.AppImage
@@ -62,7 +62,7 @@ jobs:
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
       
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_x64.dmg
           path: SavvyCAN.dmg
@@ -113,7 +113,7 @@ jobs:
           mkdir package/canbus
           copy "${Env:Qt5_Dir}/plugins/canbus/*.*" package/canbus/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-Windows_x64
           path: package
