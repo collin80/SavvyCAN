@@ -4,6 +4,10 @@
 #
 #-------------------------------------------------
 
+!versionAtLeast(QT_VERSION, 6.5.0) {
+    error("Current version of Qt ($${QT_VERSION}) is too old, this project requires Qt 6.5 or newer")
+}
+
 QT = core gui printsupport qml serialbus serialport widgets help network opengl dbus
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
@@ -257,6 +261,10 @@ unix {
    DISTFILES += SavvyCAN.desktop
 }
 
+windows {
+RC_ICONS=icons/SavvyIcon.ico
+}
+
 examplefiles.files=examples
 examplefiles.path = $$PREFIX/share/savvycan/examples
 INSTALLS += examplefiles
@@ -270,4 +278,3 @@ helpfiles.path = $$PREFIX/bin/help
 INSTALLS += helpfiles
 
 INSTALLS += target
-

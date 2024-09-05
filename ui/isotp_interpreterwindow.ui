@@ -40,6 +40,13 @@
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="btnSaveList">
+       <property name="text">
+        <string>Save List</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item alignment="Qt::AlignLeft">

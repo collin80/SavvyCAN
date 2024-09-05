@@ -181,11 +181,11 @@ UDS_HANDLER::~UDS_HANDLER()
     delete isoHandler;
 }
 
-void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
+UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(ISOTP_MESSAGE msg, bool *result)
 {
-    qDebug() << "UDS handler got ISOTP frame";
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().length();
+    *result = true;
     UDS_MESSAGE udsMsg;
     udsMsg.bus = msg.bus;
     udsMsg.setExtendedFrameFormat(msg.hasExtendedFrameFormat());
@@ -207,9 +207,17 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
             {
                 udsMsg.service = data[1];
                 if (dataLen > 2) udsMsg.subFunc = data[2];
-                else return;
+                else
+                {
+                    *result = false;
+                    return udsMsg;
+                };
             }
-            else return;
+            else
+            {
+                *result = false;
+                return udsMsg;
+            };
             udsMsg.payload().remove(0, 2);
         }
         else
@@ -218,8 +226,23 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
             if (dataLen > 1) udsMsg.subFunc = data[1];
             udsMsg.payload().remove(0, 1);
         }
-        emit newUDSMessage(udsMsg);
     }
+    else
+    {
+        *result = false;
+    };
+    return udsMsg;
+}
+
+void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
+{
+    qDebug() << "UDS handler got ISOTP frame";
+    UDS_MESSAGE udsMsg;
+
+    bool result;
+    udsMsg = tryISOtoUDS(msg, &result);
+
+    if (result) emit newUDSMessage(udsMsg);
 }
 
 void UDS_HANDLER::setFlowCtrl(bool state)
@@ -486,7 +509,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
                 buildString.append(Utility::formatHexNum(data[i]) + " ");
             }
             break;
-        case UDS_SERVICES::WRITE_BY_ID:            
+        case UDS_SERVICES::WRITE_BY_ID:
             if (dataLen > 3)
             {
                 int writeID = (data[1] * 256 + data[2]);

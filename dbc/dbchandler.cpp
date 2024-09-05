@@ -624,6 +624,44 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     return false;
 }
 
+bool DBCFile::parseSignalValueTypeLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+    qDebug() << "Found a signal valtype line";
+    regex.setPattern("^SIG\\_VALTYPE\\_ *(\\d+) *([-\\w]+) *: *(\\d+);");
+    match = regex.match(line);
+
+    // captured 1 is the message id
+    // captured 2 is the signal name
+    // captured 3 is the valtype
+    if (!match.hasMatch()) { return false; }
+    uint32_t id = match.captured(1).toULong() & 0x1FFFFFFFUL;
+
+    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFUL);
+    if (msg == nullptr) { return false; }
+
+    DBC_SIGNAL *thisSignal = msg->sigHandler->findSignalByName(match.captured(2));
+    if (thisSignal == nullptr) { return false; }
+    int valType = match.captured(3).toInt();
+
+    switch (valType) {
+        case 1: {
+            thisSignal->valType = SP_FLOAT;
+            break;
+        }
+        case 2: {
+            thisSignal->valType = DP_FLOAT;
+            break;
+        }
+        default: {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 bool DBCFile::parseValueLine(QString line)
 {
     QRegularExpression regex;
@@ -889,6 +927,11 @@ bool DBCFile::loadFile(QString fileName)
             if (line.startsWith("SG_MUL_VAL_ ")) //defines a signal multiplexing value definition
             {
                 if (!parseSignalMultiplexValueLine(line)) numSigFaults++;
+            }
+
+            if (line.startsWith("SIG_VALTYPE_ ")) //defines a signal value type
+            {
+                if (!parseSignalValueTypeLine(line)) numSigFaults++;
             }
 
             if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
