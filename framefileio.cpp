@@ -2107,7 +2107,12 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
             {
                 if (tokens[0].length() > 3)
                 {
-                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tokens[0].toULongLong()));
+                    qint64 ts = tokens[0].toLongLong();
+                    //this next line somewhat hamfistedly fixes a bug where older versions of savvycan would save captures
+                    //with negative timestamps if you use system clock mode. With this line you'll at least get timestamps
+                    //though they won't be correlated to the system clock any longer.
+                    //if (ts < 0) ts = (ts & 0xFFFFFFFFFFFFFF); //mask off top byte
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, ts));
                 }
                 else
                 {
