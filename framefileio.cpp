@@ -1454,7 +1454,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         QByteArray bytes(numBytes, 0);
                         thisFrame.isReceived = true;
                         thisFrame.bus = 0;
-                        if (thisFrame.frameId() > 0x10000000)
+                        if (thisFrame.frameId() > 0x7FF)
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1506,7 +1506,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = tokens[2].toInt();
-                        if (thisFrame.frameId() > 0x10000000)
+                        if (thisFrame.frameId() > 0x7FF)
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1548,7 +1548,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = 0;
-                        if (thisFrame.frameId() > 0x10000000)
+                        if (thisFrame.frameId() > 0x7FF)
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1600,7 +1600,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = tokens[3].toInt();
-                        if (thisFrame.frameId() > 0x10000000)
+                        if (thisFrame.frameId() > 0x7FF)
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
