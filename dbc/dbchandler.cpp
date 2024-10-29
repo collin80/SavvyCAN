@@ -725,7 +725,7 @@ bool DBCFile::parseAttributeLine(QString line)
         if (foundAttr)
         {
             qDebug() << "That message attribute does exist";
-            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFul);
+            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toULong() & 0x1FFFFFFFul);
             if (foundMsg)
             {
                 qDebug() << "It references a valid, registered message";
@@ -757,7 +757,7 @@ bool DBCFile::parseAttributeLine(QString line)
         if (foundAttr)
         {
             qDebug() << "That signal attribute does exist";
-            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toUInt() & 0x1FFFFFFFUL);
+            DBC_MESSAGE *foundMsg = messageHandler->findMsgByID(match.captured(2).toULong() & 0x1FFFFFFFUL);
             if (foundMsg)
             {
                 qDebug() << "It references a valid, registered message";
@@ -969,7 +969,7 @@ bool DBCFile::loadFile(QString fileName)
                 if (match.hasMatch())
                 {
                     //qDebug() << "Comment was: " << match.captured(3);
-                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toUInt());
+                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFul);
                     if (msg != nullptr)
                     {
                         DBC_SIGNAL *sig = msg->sigHandler->findSignalByName(match.captured(2));
@@ -990,7 +990,7 @@ bool DBCFile::loadFile(QString fileName)
                 if (match.hasMatch())
                 {
                     //qDebug() << "Comment was: " << match.captured(2);
-                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toUInt());
+                    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFul);
                     if (msg != nullptr)
                     {
                         msg->comment = match.captured(2);
