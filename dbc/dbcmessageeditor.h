@@ -22,7 +22,7 @@ public:
     void refreshView();
 
 signals:
-    void updatedTreeInfo(DBC_MESSAGE *msg);
+    void updatedTreeInfo(DBC_MESSAGE *msg, quint32 orig_id);
 
 private:
     Ui::DBCMessageEditor *ui;
@@ -31,6 +31,7 @@ private:
     DBC_MESSAGE *dbcMessage;
     DBCFile *dbcFile;
     bool suppressEditCallbacks;
+    quint32 origID;
 
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);

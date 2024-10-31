@@ -22,7 +22,7 @@ public:
     bool refreshView();
 
 signals:
-    void updatedTreeInfo(DBC_MESSAGE *msg);
+    void updatedTreeInfo(DBC_MESSAGE *msg, quint32 origID);
     void createNode(QString nodeName);
     void cloneMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source, uint newMsgId);
     void nodeAdded();

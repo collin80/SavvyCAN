@@ -26,7 +26,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if (suppressEditCallbacks) return;
             if (dbcMessage->comment != ui->lineComment->text()) dbcFile->setDirtyFlag();
             dbcMessage->comment = ui->lineComment->text();
-            emit updatedTreeInfo(dbcMessage);
+            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->lineFrameID, &QLineEdit::editingFinished,
@@ -36,7 +36,11 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if (suppressEditCallbacks) return;
             if ((dbcMessage->ID & 0x1FFFFFFFul) != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
             dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
-            emit updatedTreeInfo(dbcMessage);
+
+            if (dbcMessage->ID > 0x7FF) dbcMessage->extendedID = true;
+            else dbcMessage->extendedID = false;
+
+            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->lineMsgName, &QLineEdit::editingFinished,
@@ -46,7 +50,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if (suppressEditCallbacks) return;
             if (dbcMessage->name != ui->lineMsgName->text().simplified().replace(' ', '_')) dbcFile->setDirtyFlag();
             dbcMessage->name = ui->lineMsgName->text().simplified().replace(' ', '_');
-            emit updatedTreeInfo(dbcMessage);
+            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->lineFrameLen, &QLineEdit::editingFinished,
@@ -67,7 +71,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
                 if (!node) return;
                 if (node != dbcMessage->sender) dbcFile->setDirtyFlag();
                 dbcMessage->sender = node;
-                emit updatedTreeInfo(dbcMessage);
+                emit updatedTreeInfo(dbcMessage, origID);
             });
 
     connect(ui->comboSender->lineEdit(), &QLineEdit::editingFinished,
@@ -87,7 +91,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
                 }
                 if (node != dbcMessage->sender) dbcFile->setDirtyFlag();
                 dbcMessage->sender = node;
-                emit updatedTreeInfo(dbcMessage);
+                emit updatedTreeInfo(dbcMessage, origID);
             });
 
     connect(ui->btnTextColor, &QAbstractButton::clicked,
@@ -206,6 +210,7 @@ void DBCMessageEditor::writeSettings()
 void DBCMessageEditor::setMessageRef(DBC_MESSAGE *msg)
 {
     dbcMessage = msg;
+    origID = msg->ID;
 }
 
 void DBCMessageEditor::showEvent(QShowEvent* event)

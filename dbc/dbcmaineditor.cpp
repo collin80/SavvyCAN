@@ -283,6 +283,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         idString = firstCol->text(0).split(" ")[0];
         msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
         msg = dbcFile->messageHandler->findMsgByID(msgID);
+        //msg = itemToMessage[firstCol];
         msgEditor->setMessageRef(msg);
         msgEditor->setFileIdx(fileIdx);
         //msgEditor->setWindowModality(Qt::WindowModal);
@@ -296,6 +297,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         if (nameString.contains("(")) nameString = nameString.split(" ")[1];
         else nameString = nameString.split(" ")[0];
         sig = msg->sigHandler->findSignalByName(nameString);
+        //sig = itemToSignal[firstCol];
         if (sig)
         {
             sigEditor->setSignalRef(sig);
@@ -494,8 +496,14 @@ void DBCMainEditor::updatedNode(DBC_NODE *node)
     else qDebug() << "That node doesn't exist. That's a bug dude.";
 }
 
-void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg)
+void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg, quint32 orig_ID)
 {
+    //if ID was changed then the messagehandler must be told to update its QMap as well.
+    if (msg->ID != orig_ID)
+    {
+        dbcFile->messageHandler->changeMessageID(msg, orig_ID);
+    }
+
     if (messageToItem.contains(msg))
     {
         QTreeWidgetItem *item = messageToItem.value(msg);
@@ -675,7 +683,7 @@ void DBCMainEditor::newMessage()
         nodeItem = msgItem->parent();
     }
     if (typ == DBCItemTypes::NODE){
-        msgItem = nodeItem;
+        msgItem = nullptr; //we have no message, just a node selected
     }
 
     //if there was a comment this will find the location of the comment and snip it out.
@@ -709,7 +717,7 @@ void DBCMainEditor::newMessage()
         else
         {
             msgPtr->name = nodeName + "Msg" + QString::number(randGen.bounded(500));
-            msgPtr->ID = 0;
+            msgPtr->ID = 0x003;
             msgPtr->len = 8;
             msgPtr->bgColor = QApplication::palette().color(QPalette::Base);
         }
@@ -717,7 +725,7 @@ void DBCMainEditor::newMessage()
     else
     {
         msgPtr->name = nodeName + "Msg" + QString::number(randGen.bounded(500));
-        msgPtr->ID = 0;
+        msgPtr->ID = 0x004;
         msgPtr->len = 8;
     }    
     msgPtr->sender = node;
@@ -743,9 +751,17 @@ void DBCMainEditor::newSignal()
     QTreeWidgetItem *parentItem = nullptr;
     msgItem = ui->treeDBC->currentItem();
     parentItem = msgItem;
-    if (!msgItem) return; //nothing selected!
+    if (!msgItem)
+    {
+        qDebug() << "Nothing selected!";
+        return; //nothing selected!
+    }
     int typ = msgItem->data(0, Qt::UserRole).toInt();
-    if (typ == DBCItemTypes::NODE) return; //can't add signals to a node!
+    if (typ == DBCItemTypes::NODE)
+    {
+        qDebug() << "Can't add signals to a node!";
+        return; //can't add signals to a node!
+    }
     if (typ == DBCItemTypes::SIG)
     {
         sigItem = msgItem;
@@ -753,13 +769,23 @@ void DBCMainEditor::newSignal()
         parentItem = msgItem;
         //walk up the tree to find the parent msg
         while (msgItem && msgItem->data(0, Qt::UserRole).toInt() != DBCItemTypes::MESG) msgItem = msgItem->parent();
-        if (!msgItem) return; //something bad happened. abort.
+        if (!msgItem)
+        {
+            qDebug() << "Could not find parent message to attach signal to!";
+            return; //something bad happened. abort.
+        }
     }
 
     QString idString = msgItem->text(0).split(" ")[0];
     int msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
-    DBC_MESSAGE *msg = dbcFile->messageHandler->findMsgByID(msgID);
-    if (!msg) return; //null pointers are a bummer. Do not follow them.
+    DBCMessageHandler *msgHandler = dbcFile->messageHandler;
+
+    DBC_MESSAGE *msg = msgHandler->findMsgByID(msgID);
+    if (!msg)
+    {
+        qDebug() << "Could not find data structure for message 0x" << QString::number(msgID, 16) << ". Aborting!";
+        return; //null pointers are a bummer. Do not follow them.
+    }
     DBC_SIGNAL *sigPtr = new DBC_SIGNAL;
     if (sigItem)
     {
@@ -841,8 +867,8 @@ void DBCMainEditor::deleteCurrentTreeItem()
                 qDebug() << "Could not find the node in the map. That should not happen.";
             }
         }
-
         break;
+
     case DBCItemTypes::MESG: //cascades to removing all signals too.
         idString = currItem->text(0).split(" ")[0];
         msgID = static_cast<uint32_t>(Utility::ParseStringToNum(idString));
@@ -864,6 +890,7 @@ void DBCMainEditor::deleteCurrentTreeItem()
             }
         }
         break;
+
     case DBCItemTypes::SIG: //no cascade, just this one signal.
         confirmDialog = QMessageBox::question(this, "Really?", "Are you sure you want to delete this signal?",
                                   QMessageBox::Yes|QMessageBox::No);
@@ -957,13 +984,22 @@ void DBCMainEditor::deleteMessage(DBC_MESSAGE *msg)
 void DBCMainEditor::deleteSignal(DBC_SIGNAL *sig)
 {
     qDebug() << "Signal about to vanish.";
-    if (!signalToItem.contains(sig)) return;
+    if (!signalToItem.contains(sig))
+    {
+        qDebug() << "Could not find signal in signalToItem collection! Aborting!";
+        return;
+    }
     QTreeWidgetItem *currItem = signalToItem[sig];
+    if (!currItem)
+    {
+        qDebug() << "currItem was null in deleteSignal. Aborting!";
+        return;
+    }
     sig->parentMessage->sigHandler->removeSignal(sig->name);
 
     itemToSignal.remove(currItem);
     signalToItem.remove(sig);
     ui->treeDBC->removeItemWidget(currItem, 0);
-    //delete currItem; //already removed by above remove call
+    delete currItem; //should have been removed above but do we need to call this anyway?!
     dbcFile->setDirtyFlag();
 }

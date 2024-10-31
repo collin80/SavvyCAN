@@ -173,6 +173,18 @@ bool DBCMessageHandler::addMessage(DBC_MESSAGE *msg)
     return true;
 }
 
+bool DBCMessageHandler::changeMessageID(DBC_MESSAGE *msg, quint32 oldID)
+{
+    //remove existing entry, add new entry with proper ID mapping
+    if (messages.contains(oldID))
+    {
+        messages.insert(msg->ID, msg);
+        messages.remove(oldID);
+        return true;
+    }
+    return false;
+}
+
 bool DBCMessageHandler::removeMessage(uint32_t ID)
 {
     if (messages.count() == 0) return false;

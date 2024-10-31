@@ -22,7 +22,7 @@ public:
     bool refreshView();
 
 signals:
-    void updatedTreeInfo(DBC_MESSAGE *msg);
+    void updatedTreeInfo(DBC_MESSAGE *msg, quint32 origID);
 
 private:
     Ui::DBCNodeRebaseEditor *ui;

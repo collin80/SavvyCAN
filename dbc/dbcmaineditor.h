@@ -36,7 +36,7 @@ public:
 
 public slots:
     void updatedNode(DBC_NODE *node);
-    void updatedMessage(DBC_MESSAGE *msg);
+    void updatedMessage(DBC_MESSAGE *msg, quint32 orig_id);
     void updatedSignal(DBC_SIGNAL *sig);
 
 private slots:

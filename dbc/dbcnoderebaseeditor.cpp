@@ -77,7 +77,7 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
             for (int i = 0; i < messagesForNode.count(); i++)
             {
                 messagesForNode[i]->ID += rebaseDiff;
-                emit updatedTreeInfo(messagesForNode[i]);
+                emit updatedTreeInfo(messagesForNode[i], messagesForNode[i]->ID);
             }
 
             dbcFile->setDirtyFlag();

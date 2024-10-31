@@ -42,6 +42,7 @@ public:
     QList<DBC_MESSAGE*> findMsgsByNode(DBC_NODE *node);
     QList<DBC_MESSAGE*> getMsgsAsList();
     bool addMessage(DBC_MESSAGE *msg);
+    bool changeMessageID(DBC_MESSAGE *msg, quint32 oldID);
     bool removeMessage(uint32_t ID);
     bool removeMessage(QString name);
     void removeAllMessages();
