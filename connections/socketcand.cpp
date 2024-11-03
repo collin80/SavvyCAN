@@ -14,33 +14,46 @@ SocketCANd::SocketCANd(QString portName) :
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
 
-    mTimer.setInterval(10000); //tick every 10 seconds
+    mTimer.setInterval(2000); //tick every 2 seconds
     mTimer.setSingleShot(false); //keep ticking
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(checkConnection()));
 
     sendDebug("SocketCANd()");
-    //tcpClient = nullptr;
     hostCanIDs = portName.left(portName.indexOf("@")).split(',');
-    QString hostIPandPort = portName.mid(portName.indexOf("can://")+6, portName.length() - portName.indexOf("can://") - 7); //7 is lenght of 'can://' and ')'
+    QString hostIPandPort = portName.mid(portName.indexOf("can://")+6, portName.length() - portName.indexOf("can://") - 6); //6 is lenght of 'can://'
     hostIP = QHostAddress(hostIPandPort.left(hostIPandPort.indexOf(":")));
     hostPort = (hostIPandPort.right(hostIPandPort.length() - hostIPandPort.lastIndexOf(":") -1)).toInt();
-    QVarLengthArray<QTcpSocket*> tcpClient(0);
     mNumBuses = hostCanIDs.length();
     mBusData.resize(mNumBuses);
+
+    // initial nullptr clients
+    tcpClient = QVarLengthArray<QTcpSocket*>(mNumBuses, nullptr);
+
     reconnecting = false;
+    setStatus(CANCon::NOT_CONNECTED);
+    CANConStatus stats;
+    stats.conStatus = getStatus();
+    stats.numHardwareBuses = mNumBuses;
+    emit status(stats);
 
     for (int i = 0; i < mNumBuses; i++)
     {
         rx_state.append(IDLE);
         unprocessedData.append("");
-    }
+        CANBus bus_info;
 
+        bus_info.setActive(true);
+        bus_info.setListenOnly(false);
+        bus_info.setSpeed(500000);
+        setBusConfig(i, bus_info);
+    }
 }
 
 
 SocketCANd::~SocketCANd()
 {
     stop();
+    tcpClient.clear();
     sendDebug("~SocketCANd()");
 }
 
@@ -88,6 +101,8 @@ void SocketCANd::sendStringToTCP(const char* data, int busNum)
 void SocketCANd::piStarted()
 {
     connectDevice();
+    checkConnection();
+    mTimer.start();
 }
 
 
@@ -144,7 +159,8 @@ bool SocketCANd::piSendFrame(const CANFrame& frame)
     framesRapid++;
 
     if (tcpClient[busNum] && !tcpClient[busNum]->isOpen()) return false;
-    //if (!isConnected) return false;
+    // rx not ready
+    if(rx_state[busNum] != RAWMODE) return false;
 
     // Doesn't make sense to send an error frame
     // to an adapter
@@ -173,18 +189,13 @@ bool SocketCANd::piSendFrame(const CANFrame& frame)
 
 void SocketCANd::connectDevice()
 {
-    QSettings settings;
-
-    /* disconnect device */
-    /* avoiding this solution since it removes connection selection in case of connection check */
-    //if(tcpClient)
-    //    disconnectDevice();
-
-    // only resetting tcpClient
     for (int i = 0; i < tcpClient.length(); i++)
     {
         if (tcpClient[i])
         {
+            if(tcpClient[i]->state() == QAbstractSocket::ConnectedState || tcpClient[i]->state() == QAbstractSocket::ConnectingState)
+                continue;
+
             if (tcpClient[i]->isOpen())
             {
                 tcpClient[i]->close();
@@ -193,27 +204,12 @@ void SocketCANd::connectDevice()
             delete tcpClient[i];
             tcpClient[i] = nullptr;
         }
-    }
-    tcpClient.clear();
-
-    mTimer.start();
-
-    //sendDebug("TCP Connection to a Kayak device");
-    for (int i = 0; i < mNumBuses; i++)
-    {
         rx_state[i] = IDLE;
-        tcpClient.append(new QTcpSocket());
+        tcpClient[i] = new QTcpSocket();
         tcpClient[i]->connectToHost(hostIP, hostPort);
-        //connect(tcpClient[i], SIGNAL(readyRead()), this, SLOT(readTCPData()));
         connect(tcpClient[i], SIGNAL(readyRead()), this, SLOT(invokeReadTCPData()));
-        sendDebug("Created TCP Socket to Kayak device " + hostCanIDs.at(i));
+        sendDebug("Created TCP Socket to Kayak device " + hostCanIDs.at(i) + ", host: " + hostIP.toString() + ":" + QString::number(hostPort));
     }
-    setStatus(CANCon::CONNECTED);
-    CANConStatus stats;
-    stats.conStatus = getStatus();
-    stats.numHardwareBuses = mNumBuses;
-    //signalSender = qobject_cast<QTcpSocket*>(QObject::sender());
-    if (!reconnecting) emit status(stats);
 }
 
 void SocketCANd::deviceConnected(int busNum)
@@ -227,18 +223,27 @@ void SocketCANd::deviceConnected(int busNum)
 
 void SocketCANd::checkConnection()
 {
-    int bufSize = 0;
+    bool connected = tcpClient.length() > 0;
     for (int i = 0; i < tcpClient.length(); i++)
     {
-        bufSize += tcpClient[i]->readBufferSize();
-        //sendDebug("Buffer size: " + QString::number(bufSize));
+        connected &= tcpClient[i] && tcpClient[i]->state() == QAbstractSocket::ConnectedState;
     }
 
-    if (bufSize == 0)
+    if (!connected)
     {
         reconnecting = true;
+        setStatus(CANCon::NOT_CONNECTED);
         connectDevice();
-        sendDebug("Reconnecting to TCP Host " + hostIP.toString());
+        sendDebug("Reconnecting to TCP Host " + hostIP.toString() + ":" + QString::number(hostPort));
+    } else {
+        setStatus(CANCon::CONNECTED);
+        if (reconnecting) {
+            CANConStatus stats;
+            stats.conStatus = getStatus();
+            stats.numHardwareBuses = mNumBuses;
+            emit status(stats);
+        }
+        reconnecting = false;
     }
 }
 
@@ -349,7 +354,7 @@ void SocketCANd::disconnectDevice() {
             tcpClient[i] = nullptr;
         }
     }
-    tcpClient.clear();
+
 
     setStatus(CANCon::NOT_CONNECTED);
     CANConStatus stats;
@@ -378,11 +383,6 @@ void SocketCANd::readTCPData(int busNum)
 
 void SocketCANd::procRXData(QString data, int busNum)
 {
-    if (data != "")
-    {
-        mTimer.stop();
-        mTimer.start();
-    }
     switch (rx_state.at(busNum))
     {
     case IDLE:
