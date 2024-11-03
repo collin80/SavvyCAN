@@ -53,6 +53,19 @@ SocketCANd::SocketCANd(QString portName) :
 SocketCANd::~SocketCANd()
 {
     stop();
+    for (int i = 0; i < tcpClient.length(); i++)
+    {
+        if (tcpClient[i])
+        {
+            if (tcpClient[i]->isOpen())
+            {
+                tcpClient[i]->close();
+            }
+            tcpClient[i]->disconnect();
+            delete tcpClient[i];
+            tcpClient[i] = nullptr;
+        }
+    }
     tcpClient.clear();
     sendDebug("~SocketCANd()");
 }
@@ -354,7 +367,6 @@ void SocketCANd::disconnectDevice() {
             tcpClient[i] = nullptr;
         }
     }
-
 
     setStatus(CANCon::NOT_CONNECTED);
     CANConStatus stats;
