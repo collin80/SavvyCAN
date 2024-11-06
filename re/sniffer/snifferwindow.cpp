@@ -15,6 +15,9 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     mGUITimer(this),
     mFilter(false)
 {
+
+    inhibitSectionResizeEvent = false;
+
     ui->setupUi(this);
     setWindowFlags(Qt::Window);
     ui->treeView->setModel(&mModel);
@@ -30,6 +33,9 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     ui->treeView->setUniformRowHeights(true);
     ui->treeView->header()->setDefaultAlignment(Qt::AlignCenter);
     //ui->treeView->setItemDelegate(new SnifferDelegate());
+
+    QHeaderView *header = ui->treeView->header();
+    connect(header, &QHeaderView::sectionResized, this, &SnifferWindow::sectionResized);
 
     /* activate sorting */
     ui->listWidget->setSortingEnabled(true);
@@ -84,14 +90,22 @@ void SnifferWindow::readSettings()
         ui->treeView->setColumnWidth(0, settings.value("Sniffer/DeltaColumn", 110).toUInt());
         ui->treeView->setColumnWidth(1, settings.value("Sniffer/FrequencyColumn", 110).toUInt());
         ui->treeView->setColumnWidth(2, settings.value("Sniffer/IDColumn", 70).toUInt());
-        ui->treeView->setColumnWidth(3, settings.value("Sniffer/Data0Column", 92).toUInt());
-        ui->treeView->setColumnWidth(4, settings.value("Sniffer/Data1Column", 92).toUInt());
-        ui->treeView->setColumnWidth(5, settings.value("Sniffer/Data2Column", 92).toUInt());
-        ui->treeView->setColumnWidth(6, settings.value("Sniffer/Data3Column", 92).toUInt());
-        ui->treeView->setColumnWidth(7, settings.value("Sniffer/Data4Column", 92).toUInt());
-        ui->treeView->setColumnWidth(8, settings.value("Sniffer/Data5Column", 92).toUInt());
-        ui->treeView->setColumnWidth(9, settings.value("Sniffer/Data6Column", 92).toUInt());
-        ui->treeView->setColumnWidth(10, settings.value("Sniffer/Data7Column", 92).toUInt());
+        if (!settings.value("Main/EqualDataSniff", false).toBool())
+        {
+            for (int i = 0; i < MAX_BYTES; i++)
+            {
+                QString key = "Sniffer/Data" + QString::number(i).trimmed() + "Column";
+                ui->treeView->setColumnWidth(3+i, settings.value(key, 50).toUInt());
+            }
+        }
+        else //set all columns equal to column Data0 size
+        {
+            int colSize = settings.value("Sniffer/Data0Column", 50).toUInt();
+            for (int i = 0; i < MAX_BYTES; i++)
+            {
+                ui->treeView->setColumnWidth(3+i, colSize);
+            }
+        }
     }
 }
 
@@ -106,14 +120,12 @@ void SnifferWindow::writeSettings()
         settings.setValue("Sniffer/DeltaColumn", ui->treeView->columnWidth(0));
         settings.setValue("Sniffer/FrequencyColumn", ui->treeView->columnWidth(1));
         settings.setValue("Sniffer/IDColumn", ui->treeView->columnWidth(2));
-        settings.setValue("Sniffer/Data0Column", ui->treeView->columnWidth(3));
-        settings.setValue("Sniffer/Data1Column", ui->treeView->columnWidth(4));
-        settings.setValue("Sniffer/Data2Column", ui->treeView->columnWidth(5));
-        settings.setValue("Sniffer/Data3Column", ui->treeView->columnWidth(6));
-        settings.setValue("Sniffer/Data4Column", ui->treeView->columnWidth(7));
-        settings.setValue("Sniffer/Data5Column", ui->treeView->columnWidth(8));
-        settings.setValue("Sniffer/Data6Column", ui->treeView->columnWidth(9));
-        settings.setValue("Sniffer/Data7Column", ui->treeView->columnWidth(10));
+
+        for (int i = 0; i < MAX_BYTES; i++)
+        {
+            QString key = "Sniffer/Data" + QString::number(i).trimmed() + "Column";
+            settings.setValue(key, ui->treeView->columnWidth(i+3));
+        }
     }
 }
 
@@ -168,6 +180,23 @@ bool SnifferWindow::eventFilter(QObject *obj, QEvent *event)
 void SnifferWindow::update()
 {
     mModel.refresh();
+}
+
+void SnifferWindow::sectionResized(int idx, int oldSize, int newSize)
+{
+    QSettings settings;
+
+    //nothing to do if we're not enforcing equal column sizes
+    if (!settings.value("Main/EqualDataSniff", false).toBool()) return;
+    if (inhibitSectionResizeEvent) return;
+
+    //we're enforcing equal sizes so change the size of all columns to match.
+    inhibitSectionResizeEvent = true;
+    for (int i = 0; i < MAX_BYTES; i++)
+    {
+        ui->treeView->setColumnWidth(3+i, newSize);
+    }
+    inhibitSectionResizeEvent = false;
 }
 
 void SnifferWindow::notchTick()

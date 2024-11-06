@@ -92,6 +92,8 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
 
+    ui->cbEqualSniffer->setChecked(settings.value("Main/EqualDataSniff", false).toBool());
+
     int maxFramesDefault;
     if (QSysInfo::WordSize > 32)
     {
@@ -132,6 +134,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->lineRemotePassword, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbLoadConnections, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFilterLabeling, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbEqualSniffer, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbHexGraphFlow, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbHexGraphInfo, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbIgnoreDBCColors, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -196,6 +199,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings.setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
+    settings.setValue("Main/EqualDataSniff", ui->cbEqualSniffer->isChecked());
     settings.setValue("Main/TimeFormat", ui->lineClockFormat->text());
     settings.setValue("Main/FontSize", ui->spinFontSize->value());
     settings.setValue("Remote/Host", ui->lineRemoteHost->text());

@@ -102,6 +102,9 @@ public slots:
     void fltNone();
     void itemChanged(QListWidgetItem*);
 
+private slots:
+    void sectionResized(int idx, int oldSize, int newSize);
+
 private:
     void filter(bool pFilter);
     bool eventFilter(QObject *obj, QEvent *event);
@@ -117,6 +120,7 @@ private:
     SnifferDelegate             *sniffDel;
     QAbstractItemDelegate       *defaultDel;
     bool                        notchPingPong;
+    bool                        inhibitSectionResizeEvent;
 };
 
 #endif // SNIFFER_H
