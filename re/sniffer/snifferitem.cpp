@@ -9,6 +9,8 @@ SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
     const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
     int dataLen = pFrame.payload().length();
 
+    if (dataLen > MAX_BYTES) dataLen = MAX_BYTES;
+
     for (int i = 0; i < dataLen; i++) {
         mNotch[i] = 0;
         mMarker.data[i] = 0;
@@ -41,7 +43,7 @@ float SnifferItem::getDelta() const
     return ((float)(mCurrentTime-mLastTime))/1000000;
 }
 
-//Get a data byte by index 0-7 (but not more than the length of the actual frame)
+//Get a data byte by index 0-63 (but not more than the length of the actual frame)
 int SnifferItem::getData(uchar i) const
 {
     return (i >= mCurrent.len) ? -1 : mCurrent.data[i];
@@ -67,7 +69,7 @@ quint32 SnifferItem::getSeqInterval(uchar i) const
     return mCurrSeqVal - getDataTimestamp(i);
 }
 
-//Return whether a given data byte (by index 0-7) has incremented, deincremented, or stayed the same
+//Return whether a given data byte (by index 0-63) has incremented, deincremented, or stayed the same
 //since the last message
 //The If checks first that we aren't past the actual data length
 // then checks whether lastMarker shows that some bits have changed in the previous 200ms cycle
@@ -120,6 +122,8 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
     const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
     int dataLen = pFrame.payload().length();
 
+    if (dataLen > MAX_BYTES) dataLen = MAX_BYTES;
+
     /* copy new value */
     for (int i = 0; i < dataLen; i++)
     {
@@ -139,7 +143,7 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
     /* update marker */
     //We "OR" our stored marker with the changed bits.
     //this accumulates changed bits into the marker
-    for (int i = 0 ; i < 8; i++) mMarker.data[i] |= mLast.data[i] ^ mCurrent.data[i]; //XOR causes only changed bits to be 1's
+    for (int i = 0 ; i < MAX_BYTES; i++) mMarker.data[i] |= mLast.data[i] ^ mCurrent.data[i]; //XOR causes only changed bits to be 1's
     mMarker.len  |= mLast.len ^ mCurrent.len;
 
     /* restart timeout */
@@ -151,7 +155,7 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
 void SnifferItem::updateMarker()
 {
     mLastMarker = mMarker;
-    for (int i = 0; i < 8; i++) mMarker.data[i] = 0;
+    for (int i = 0; i < MAX_BYTES; i++) mMarker.data[i] = 0;
 }
 
 //Notch or un-notch this snifferitem / frame
@@ -159,9 +163,9 @@ void SnifferItem::notch(bool pNotch)
 {
     if(pNotch)
     {
-        for (int i = 0; i < 8; i++) mNotch[i] |= mLastMarker.data[i]; //add changed bits to notch value
+        for (int i = 0; i < MAX_BYTES; i++) mNotch[i] |= mLastMarker.data[i]; //add changed bits to notch value
     }
 
     else
-        for (int i = 0; i < 8; i++) mNotch[i] = 0;
+        for (int i = 0; i < MAX_BYTES; i++) mNotch[i] = 0;
 }

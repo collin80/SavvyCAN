@@ -73,7 +73,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                 default:
                     break;
             }
-            if(tc::DATA_0<=col && col <=tc::DATA_7)
+            if(tc::DATA_0<=col && col < tc::LAST)
             {
                 int data = item->getData(col-tc::DATA_0);
                 if(data >= 0)
@@ -111,7 +111,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
                     return QBrush(QColor(128,0,0));
                 }
             }
-            else if(tc::DATA_0<=col && col<=tc::DATA_7)
+            else if(tc::DATA_0 <= col && col < tc::LAST)
             {
                 dc change = item->dataChange(col-tc::DATA_0);
                 switch(change)
@@ -152,13 +152,13 @@ QVariant SnifferModel::headerData(int section, Qt::Orientation orientation, int 
             case tc::DELTA:
                 return QString("Delta");
             case tc::FREQUENCY:
-                return QString("Frequency");
+                return QString("Freq");
             case tc::ID:
                 return QString("ID");
             default:
                 break;
         }
-        if(tc::DATA_0<=section && section <=tc::DATA_7)
+        if(tc::DATA_0<=section && section < tc::LAST)
             return QString::number(section-tc::DATA_0);
     }
 
