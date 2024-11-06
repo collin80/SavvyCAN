@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QMutex>
 
 #include "canconnection.h"
 
@@ -82,6 +83,7 @@ private:
     bool                   useSystemTime;
     QVector<CANFrame>      buslessFrames;
     QVector<CANFrame>      tempFrames;
+    QMutex                 mutex;
 };
 
 #endif // CANCONNECTIONMODEL_H
