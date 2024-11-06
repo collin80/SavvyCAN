@@ -103,12 +103,15 @@ void CANConManager::refreshCanList()
     if (mConns.count() == 0)
     {
         tempFrames.clear();
-        //TODO: Seems to crash under heavy load. Find out why.
+        //before use of mutex the below would crash under heavy load. Presumably was trying to append in other routine at the same time this was doing a copy and erase.
+        //keep an eye on this spot, make sure it has actually been solved by mutex lock.
+        mutex.lock();
         if(buslessFrames.size()) {            
             tempFrames = buslessFrames; //make a copy and pass that copy
             buslessFrames.clear(); //delete all frames from the original
             emit framesReceived(nullptr, tempFrames);
         }
+        mutex.unlock();
         return;
     }
 
@@ -209,7 +212,9 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
 
     if (mConns.count() == 0)
     {
+        mutex.lock();
         buslessFrames.append(pFrame);
+        mutex.unlock();
         return true;
     }
 
