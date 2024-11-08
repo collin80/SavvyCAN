@@ -247,7 +247,7 @@ void FlowViewWindow::handleTableCellChange(int row, int col)
     if (inhibitChangeCallback) return;
     switch (col)
     {
-    case TABLE_BYTE::BYTE:
+    case TABLE_BYTE::BKEY:
     case TABLE_BYTE::CURR:
         break;
     case TABLE_BYTE::REF:

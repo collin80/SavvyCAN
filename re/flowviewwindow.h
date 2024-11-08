@@ -13,7 +13,7 @@ class FlowViewWindow;
 
 enum TABLE_BYTE
 {
-    BYTE,
+    BKEY,
     CURR,
     REF,
     TRIGGER,
