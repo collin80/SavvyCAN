@@ -11,6 +11,16 @@ namespace Ui {
 class FlowViewWindow;
 }
 
+enum TABLE_BYTE
+{
+    BYTE,
+    CURR,
+    REF,
+    TRIGGER,
+    GRAPH_EN,
+    GRAPH_COLOR,
+};
+
 class FlowViewWindow : public QDialog
 {
     Q_OBJECT
@@ -38,10 +48,10 @@ private slots:
     void saveFileGraph();
     void plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event);
     void gotCenterTimeID(uint32_t ID, double timestamp);
-    void updateTriggerValues();
     void gotCellClick(int bitPosition);
     void graphRangeChanged(int range);
     void changeGraphVisibility(int state);
+    void handleTableCellChange(int row, int col);
 
 signals:
     void sendCenterTimeID(uint32_t ID, double timestamp);
@@ -53,8 +63,8 @@ private:
     const QVector<CANFrame> *modelFrames;
     unsigned char refBytes[64];
     unsigned char currBytes[64];
-    int triggerValues[8];
-    uint64_t triggerBits[8];
+    int triggerValues[64];
+    uint64_t triggerBits[64];
     int currentPosition;
     QTimer *playbackTimer;
     bool playbackActive;
@@ -63,8 +73,9 @@ private:
     bool secondsMode;
     bool openGLMode;
     bool useHexTicker;
-    QVector<double> x[8], y[8];
-    QCPGraph *graphRef[8];
+    QVector<double> x[64], y[64];
+    QCPGraph *graphRef[64];
+    bool inhibitChangeCallback;
 
     void refreshIDList();
     void updateFrameLabel();
@@ -78,6 +89,7 @@ private:
     void readSettings();
     void writeSettings();
     bool eventFilter(QObject *obj, QEvent *event);
+    void setupByteTable(int bytes);
 };
 
 #endif // FLOWVIEWWINDOW_H

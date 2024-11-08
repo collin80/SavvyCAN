@@ -25,11 +25,13 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     currentPosition = 0;
     playbackActive = false;
     playbackForward = true;
+    inhibitChangeCallback = false;
 
     memset(refBytes, 0, 64);
     memset(currBytes, 0, 64);
-    memset(triggerValues, -1, sizeof(int) * 8);
+    memset(triggerValues, -1, sizeof(int) * 64);
     for (int i = 0; i < 8; i++) triggerBits[i] = 0;
+    for (int i = 0; i < 64; i++) graphRef[i] = nullptr;
 
     //ui->graphView->setInteractions();
 
@@ -88,6 +90,13 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
 
     ui->graphView->setBufferDevicePixelRatio(1);
 
+    ui->tableBytes->setColumnWidth(0, 60);
+    ui->tableBytes->setColumnWidth(1, 60);
+    ui->tableBytes->setColumnWidth(2, 60);
+    ui->tableBytes->setColumnWidth(3, 60);
+    ui->tableBytes->setColumnWidth(4, 70);
+    ui->tableBytes->setColumnWidth(5, 80);
+
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
     connect(ui->btnReverse, SIGNAL(clicked(bool)), this, SLOT(btnReverseClick()));
@@ -98,24 +107,8 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->cbLoopPlayback, SIGNAL(clicked(bool)), this, SLOT(changeLooping(bool)));
     connect(playbackTimer, SIGNAL(timeout()), this, SLOT(timerTriggered()));
     connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
-    connect(ui->txtTrigger0, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger1, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger2, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger3, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger4, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger5, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger6, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
-    connect(ui->txtTrigger7, SIGNAL(textEdited(QString)), this, SLOT(updateTriggerValues()));
+    connect(ui->tableBytes, SIGNAL(cellChanged(int,int)), this, SLOT(handleTableCellChange(int,int)));
     connect(ui->graphRangeSlider, &QSlider::valueChanged, this, &FlowViewWindow::graphRangeChanged);
-    connect(ui->check_0, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_1, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_2, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_3, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_4, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_5, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_6, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-    connect(ui->check_7, &QCheckBox::stateChanged, this, &FlowViewWindow::changeGraphVisibility);
-
 //    ui->timelineSlider->setTracking(true);
     connect(ui->timelineSlider, &QSlider::sliderPressed, this, &FlowViewWindow::btnPauseClick);
     connect(ui->timelineSlider, &QSlider::valueChanged, this, &FlowViewWindow::gotoFrame);
@@ -249,6 +242,54 @@ bool FlowViewWindow::eventFilter(QObject *obj, QEvent *event)
     }
 }
 
+void FlowViewWindow::handleTableCellChange(int row, int col)
+{
+    if (inhibitChangeCallback) return;
+    switch (col)
+    {
+    case TABLE_BYTE::BYTE:
+    case TABLE_BYTE::CURR:
+        break;
+    case TABLE_BYTE::REF:
+    case TABLE_BYTE::TRIGGER:
+        triggerValues[row] = ui->tableBytes->item(row, col)->text().toInt(nullptr, 16); //always interpreted as hex
+        break;
+    case TABLE_BYTE::GRAPH_EN:
+        if (!graphRef[row]) return;
+        graphRef[row]->setVisible( (ui->tableBytes->item(row, col)->checkState()==Qt::Checked)?true:false );
+        ui->graphView->replot();
+        break;
+    case TABLE_BYTE::GRAPH_COLOR:
+        break;
+    }
+}
+
+void FlowViewWindow::setupByteTable(int bytes)
+{
+    inhibitChangeCallback = true;
+    ui->tableBytes->setRowCount(bytes);
+    for (int i = 0; i < bytes; i++)
+    {
+        QTableWidgetItem *ni = new QTableWidgetItem(QString::number(i));
+        ni->setFlags(Qt::ItemIsEnabled); //none, allow nothing.
+        ui->tableBytes->setItem(i, 0, ni);
+        ni = new QTableWidgetItem(QString::number(0));
+        ni->setFlags(Qt::ItemIsEnabled);
+        ui->tableBytes->setItem(i, 1, ni);
+        ni = new QTableWidgetItem(QString::number(0));
+        ui->tableBytes->setItem(i, 2, ni);
+        ni = new QTableWidgetItem(QString::number(-1));
+        ui->tableBytes->setItem(i, 3, ni);
+        ni = new QTableWidgetItem("");
+        ni->setCheckState(Qt::Checked);
+        ui->tableBytes->setItem(i, 4, ni);
+        ni = new QTableWidgetItem("");
+        ni->setBackground(QBrush(graphColors[i % 8]));
+        ui->tableBytes->setItem(i, 5, ni);
+    }
+    inhibitChangeCallback = false;
+}
+
 void FlowViewWindow::changeGraphVisibility(int state){
     QCheckBox *sender = qobject_cast<QCheckBox *>(QObject::sender());
     if(sender){
@@ -277,18 +318,6 @@ void FlowViewWindow::gotCellClick(int bitPosition)
 void FlowViewWindow::graphRangeChanged(int range) {
     ui->rangeValue->setText(QString::number(range));
     updateGraphLocation();
-}
-
-void FlowViewWindow::updateTriggerValues()
-{
-    triggerValues[0] = Utility::ParseStringToNum(ui->txtTrigger0->text());
-    triggerValues[1] = Utility::ParseStringToNum(ui->txtTrigger1->text());
-    triggerValues[2] = Utility::ParseStringToNum(ui->txtTrigger2->text());
-    triggerValues[3] = Utility::ParseStringToNum(ui->txtTrigger3->text());
-    triggerValues[4] = Utility::ParseStringToNum(ui->txtTrigger4->text());
-    triggerValues[5] = Utility::ParseStringToNum(ui->txtTrigger5->text());
-    triggerValues[6] = Utility::ParseStringToNum(ui->txtTrigger6->text());
-    triggerValues[7] = Utility::ParseStringToNum(ui->txtTrigger7->text());
 }
 
 void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMouseEvent* event)
@@ -336,10 +365,10 @@ void FlowViewWindow::gotCenterTimeID(uint32_t ID, double timestamp)
         currentPosition = bestIdx;
         if (ui->cbAutoRef->isChecked())
         {
-            memcpy(refBytes, currBytes, 8);
+            memcpy(refBytes, currBytes, 64);
         }
 
-        memset(currBytes, 0, 8); //first zero out all 8 bytes
+        memset(currBytes, 0, 64); //first zero out all 8 bytes
 
         memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
 
@@ -443,8 +472,8 @@ void FlowViewWindow::saveFileFlow()
 
 void FlowViewWindow::updatedFrames(int numFrames)
 {
-    QVector<double>newX[8];
-    QVector<double>newY[8];
+    QVector<double>newX[64];
+    QVector<double>newY[64];
     const unsigned char *data;
     int dataLen = 0;
 
@@ -624,7 +653,9 @@ void FlowViewWindow::refreshIDList()
 
 void FlowViewWindow::updateFrameLabel()
 {
-    ui->lblNumFrames->setText(QString::number(currentPosition) + tr(" of ") + QString::number(frameCache.count()));
+    if (frameCache.count() > 0)
+        ui->lblNumFrames->setText(QString::number(currentPosition + 1) + tr(" of ") + QString::number(frameCache.count()));
+    else ui->lblNumFrames->setText("0 of 0");
 }
 
 void FlowViewWindow::changeID(QString newID)
@@ -650,13 +681,15 @@ void FlowViewWindow::changeID(QString newID)
         }
     }
     ui->flowView->setBytesToDraw(maxBytes);
+    setupByteTable(maxBytes);
+
     currentPosition = 0;
 
     if (frameCache.count() == 0) return;
 
     removeAllGraphs();
     //for (uint32_t c = 0; c < frameCache.at(0).len; c++)
-    for (uint32_t c = 0; c < 8; c++)
+    for (uint32_t c = 0; c < maxBytes; c++)
     {
         createGraph(c);
     }
@@ -668,14 +701,6 @@ void FlowViewWindow::changeID(QString newID)
     memcpy(refBytes, currBytes, 64);
 
     updateDataView();
-    ui->check_0->setChecked(true);
-    ui->check_1->setChecked(true);
-    ui->check_2->setChecked(true);
-    ui->check_3->setChecked(true);
-    ui->check_4->setChecked(true);
-    ui->check_5->setChecked(true);
-    ui->check_6->setChecked(true);
-    ui->check_7->setChecked(true);
 }
 
 void FlowViewWindow::btnBackOneClick()
@@ -773,24 +798,14 @@ void FlowViewWindow::timerTriggered()
 
 void FlowViewWindow::updateDataView()
 {
+    inhibitChangeCallback = true;
+    int maxbyte = ui->tableBytes->rowCount();
 
-    ui->txtCurr1->setText(Utility::formatNumber((unsigned char)currBytes[0]));
-    ui->txtCurr2->setText(Utility::formatNumber((unsigned char)currBytes[1]));
-    ui->txtCurr3->setText(Utility::formatNumber((unsigned char)currBytes[2]));
-    ui->txtCurr4->setText(Utility::formatNumber((unsigned char)currBytes[3]));
-    ui->txtCurr5->setText(Utility::formatNumber((unsigned char)currBytes[4]));
-    ui->txtCurr6->setText(Utility::formatNumber((unsigned char)currBytes[5]));
-    ui->txtCurr7->setText(Utility::formatNumber((unsigned char)currBytes[6]));
-    ui->txtCurr8->setText(Utility::formatNumber((unsigned char)currBytes[7]));
-
-    ui->txtRef1->setText(Utility::formatNumber((unsigned char)refBytes[0]));
-    ui->txtRef2->setText(Utility::formatNumber((unsigned char)refBytes[1]));
-    ui->txtRef3->setText(Utility::formatNumber((unsigned char)refBytes[2]));
-    ui->txtRef4->setText(Utility::formatNumber((unsigned char)refBytes[3]));
-    ui->txtRef5->setText(Utility::formatNumber((unsigned char)refBytes[4]));
-    ui->txtRef6->setText(Utility::formatNumber((unsigned char)refBytes[5]));
-    ui->txtRef7->setText(Utility::formatNumber((unsigned char)refBytes[6]));
-    ui->txtRef8->setText(Utility::formatNumber((unsigned char)refBytes[7]));
+    for (int i = 0; i < maxbyte; i++)
+    {
+        ui->tableBytes->item(i, 1)->setText(Utility::formatByteAsHex(currBytes[i]));
+        ui->tableBytes->item(i, 2)->setText(Utility::formatByteAsHex(refBytes[i]));
+    }
 
     ui->flowView->setReference(refBytes, false);
     ui->flowView->updateData(currBytes, true);
@@ -798,7 +813,7 @@ void FlowViewWindow::updateDataView()
     ui->timelineSlider->setMaximum(frameCache.count() - 1);
     ui->timelineSlider->setValue(currentPosition);
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < maxbyte; i++)
     {
         if (currBytes[i] == triggerValues[i])
         {
@@ -811,7 +826,7 @@ void FlowViewWindow::updateDataView()
     updateGraphLocation();
 
     updateFrameLabel();
-
+    inhibitChangeCallback = false;
 }
 
 void FlowViewWindow::gotoFrame(int frame) {
