@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - "master"
-      
+  workflow_dispatch:
 jobs:
   buildlinux:
     name: Linux x64
