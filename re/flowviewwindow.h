@@ -52,6 +52,8 @@ private slots:
     void graphRangeChanged(int range);
     void changeGraphVisibility(int state);
     void handleTableCellChange(int row, int col);
+    void selectAllGraphs();
+    void selectNoGraphs();
 
 signals:
     void sendCenterTimeID(uint32_t ID, double timestamp);
@@ -80,6 +82,7 @@ private:
     void refreshIDList();
     void updateFrameLabel();
     void updatePosition(bool forward);
+    void processNewPosition();
     void gotoFrame(int frame);
     void updateDataView();
     void removeAllGraphs();

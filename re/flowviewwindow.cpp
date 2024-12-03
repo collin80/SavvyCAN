@@ -97,6 +97,9 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     ui->tableBytes->setColumnWidth(4, 70);
     ui->tableBytes->setColumnWidth(5, 80);
 
+    //make slider output constant updates while dragging the value around
+    ui->timelineSlider->setTracking(true);
+
     connect(ui->btnBackOne, SIGNAL(clicked(bool)), this, SLOT(btnBackOneClick()));
     connect(ui->btnPause, SIGNAL(clicked(bool)), this, SLOT(btnPauseClick()));
     connect(ui->btnReverse, SIGNAL(clicked(bool)), this, SLOT(btnReverseClick()));
@@ -109,9 +112,10 @@ FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent)
     connect(ui->graphView, SIGNAL(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)), this, SLOT(plottableDoubleClick(QCPAbstractPlottable*,QMouseEvent*)));
     connect(ui->tableBytes, SIGNAL(cellChanged(int,int)), this, SLOT(handleTableCellChange(int,int)));
     connect(ui->graphRangeSlider, &QSlider::valueChanged, this, &FlowViewWindow::graphRangeChanged);
-//    ui->timelineSlider->setTracking(true);
     connect(ui->timelineSlider, &QSlider::sliderPressed, this, &FlowViewWindow::btnPauseClick);
     connect(ui->timelineSlider, &QSlider::valueChanged, this, &FlowViewWindow::gotoFrame);
+    connect(ui->btnAllGraphs, SIGNAL(clicked(bool)), this, SLOT(selectAllGraphs()));
+    connect(ui->btnNoGraphs, SIGNAL(clicked(bool)), this, SLOT(selectNoGraphs()));
 
     // Using lambda expression to strip away the possible filter label before passing the ID to updateDetailsWindow
     connect(ui->listFrameID, &QListWidget::currentTextChanged, 
@@ -262,6 +266,32 @@ void FlowViewWindow::handleTableCellChange(int row, int col)
     case TABLE_BYTE::GRAPH_COLOR:
         break;
     }
+}
+
+void FlowViewWindow::selectAllGraphs()
+{
+    for (int i = 0; i < 64; i++)
+    {
+        if (graphRef[i])
+        {
+            graphRef[i]->setVisible(true);
+            ui->tableBytes->item(i, TABLE_BYTE::GRAPH_EN)->setCheckState(Qt::Checked);
+        }
+    }
+    ui->graphView->replot();
+}
+
+void FlowViewWindow::selectNoGraphs()
+{
+    for (int i = 0; i < 64; i++)
+    {
+        if (graphRef[i])
+        {
+            graphRef[i]->setVisible(false);
+            ui->tableBytes->item(i, TABLE_BYTE::GRAPH_EN)->setCheckState(Qt::Unchecked);
+        }
+    }
+    ui->graphView->replot();
 }
 
 void FlowViewWindow::setupByteTable(int bytes)
@@ -833,7 +863,10 @@ void FlowViewWindow::gotoFrame(int frame) {
     if (frameCache.count() >= frame) currentPosition = frame;
     else currentPosition = 0;
 
-    if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
+    processNewPosition();
+
+    updateDataView();
+    updateGraphLocation();
 }
 
 void FlowViewWindow::updatePosition(bool forward)
@@ -850,6 +883,13 @@ void FlowViewWindow::updatePosition(bool forward)
         else if (ui->cbLoopPlayback->isChecked()) currentPosition = frameCache.count() - 1;
     }
 
+    processNewPosition();
+
+    ui->timelineSlider->setValue(currentPosition);
+}
+
+void FlowViewWindow::processNewPosition()
+{
     if (ui->cbAutoRef->isChecked())
     {
         memcpy(refBytes, currBytes, 64);
@@ -885,7 +925,6 @@ void FlowViewWindow::updatePosition(bool forward)
     memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
-    ui->timelineSlider->setValue(currentPosition);
 }
 
 void FlowViewWindow::updateGraphLocation()
