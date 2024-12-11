@@ -50,7 +50,6 @@ private slots:
     void gotCenterTimeID(uint32_t ID, double timestamp);
     void gotCellClick(int bitPosition);
     void graphRangeChanged(int range);
-    void changeGraphVisibility(int state);
     void handleTableCellChange(int row, int col);
     void selectAllGraphs();
     void selectNoGraphs();

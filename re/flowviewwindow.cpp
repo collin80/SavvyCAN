@@ -259,8 +259,17 @@ void FlowViewWindow::handleTableCellChange(int row, int col)
         triggerValues[row] = ui->tableBytes->item(row, col)->text().toInt(nullptr, 16); //always interpreted as hex
         break;
     case TABLE_BYTE::GRAPH_EN:
-        if (!graphRef[row]) return;
-        graphRef[row]->setVisible( (ui->tableBytes->item(row, col)->checkState()==Qt::Checked)?true:false );
+        if (ui->tableBytes->item(row, col)->checkState() == Qt::Checked)
+        {
+            if (!graphRef[row]) createGraph(row);
+        }
+        else
+        {
+            if (graphRef[row]) ui->graphView->removeGraph(graphRef[row]);
+            graphRef[row] = nullptr;
+        }
+        //if (!graphRef[row]) return;
+        //graphRef[row]->setVisible( (ui->tableBytes->item(row, col)->checkState()==Qt::Checked)?true:false );
         ui->graphView->replot();
         break;
     case TABLE_BYTE::GRAPH_COLOR:
@@ -270,13 +279,19 @@ void FlowViewWindow::handleTableCellChange(int row, int col)
 
 void FlowViewWindow::selectAllGraphs()
 {
-    for (int i = 0; i < 64; i++)
+    int rows = ui->tableBytes->rowCount();
+    for (int i = 0; i < rows; i++)
     {
-        if (graphRef[i])
+        if (!graphRef[i])
         {
-            graphRef[i]->setVisible(true);
-            ui->tableBytes->item(i, TABLE_BYTE::GRAPH_EN)->setCheckState(Qt::Checked);
+            if (i < ui->tableBytes->rowCount())
+            {
+                createGraph(i);
+
+            }
         }
+        graphRef[i]->setVisible(true);
+        ui->tableBytes->item(i, TABLE_BYTE::GRAPH_EN)->setCheckState(Qt::Checked);
     }
     ui->graphView->replot();
 }
@@ -287,7 +302,9 @@ void FlowViewWindow::selectNoGraphs()
     {
         if (graphRef[i])
         {
-            graphRef[i]->setVisible(false);
+            ui->graphView->removeGraph(graphRef[i]);
+            graphRef[i] = nullptr;
+            //graphRef[i]->setVisible(false);
             ui->tableBytes->item(i, TABLE_BYTE::GRAPH_EN)->setCheckState(Qt::Unchecked);
         }
     }
@@ -320,21 +337,6 @@ void FlowViewWindow::setupByteTable(int bytes)
     inhibitChangeCallback = false;
 }
 
-void FlowViewWindow::changeGraphVisibility(int state){
-    QCheckBox *sender = qobject_cast<QCheckBox *>(QObject::sender());
-    if(sender){
-        sender->objectName();
-        int graphId = sender->objectName().right(1).toInt();
-        for (int k = 0; k < 8; k++)
-        {
-            if (k == graphId && graphRef[k] && graphRef[k]->data()){
-                graphRef[k]->setVisible(state);
-            }
-        }
-
-        ui->graphView->replot();
-    }
-}
 void FlowViewWindow::gotCellClick(int bitPosition)
 {
     int chunk = bitPosition / 64;
@@ -602,8 +604,9 @@ void FlowViewWindow::updatedFrames(int numFrames)
 
 void FlowViewWindow::removeAllGraphs()
 {
-  ui->graphView->clearGraphs();
-  ui->graphView->replot();
+    ui->graphView->clearGraphs();
+    ui->graphView->replot();
+    for (int i = 0; i < 64; i++) graphRef[i] = nullptr;
 }
 
 void FlowViewWindow::createGraph(int byteNum)
