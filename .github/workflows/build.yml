@@ -18,7 +18,7 @@ jobs:
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v4
         with:
-           version: '6.8'
+           version: '6.8.1'
            modules: 'qtserialbus qtserialport'
 
       - name: Clone
