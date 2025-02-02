@@ -488,6 +488,27 @@
     </widget>
    </item>
    <item>
+    <widget class="QPushButton" name="btnMarkAllHigh">
+     <property name="text">
+      <string>All High</string>
+     </property>
+    </widget>
+    </item>
+    <item>
+    <widget class="QPushButton" name="btnMarkAllLow">
+     <property name="text">
+      <string>All Low</string>
+     </property>
+    </widget>
+    </item>
+    <item>
+    <widget class="QPushButton" name="btnMarkAllAuto">
+     <property name="text">
+      <string>All Auto</string>
+     </property>
+    </widget>
+   </item>
+   <item>
     <widget class="QPushButton" name="btnStartStop">
      <property name="text">
       <string>Start Fuzzing</string>
@@ -534,6 +555,9 @@
   <tabstop>listID</tabstop>
   <tabstop>btnAllFilters</tabstop>
   <tabstop>btnNoFilters</tabstop>
+  <tabstop>btnMarkAllHigh</tabstop>
+  <tabstop>btnMarkAllLow</tabstop>
+  <tabstop>btnMarkAllAuto</tabstop>
   <tabstop>btnStartStop</tabstop>
  </tabstops>
  <resources/>
