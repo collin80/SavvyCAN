@@ -685,9 +685,11 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildTimestamp += timeBasis;
             if (useSystemTime)
             {
-                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+                buildTimestamp = QDateTime::currentMSecsSinceEpoch();
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(buildTimestamp / 1000, (buildTimestamp % 1000) * 1000));
+            } else {
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             }
-            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             break;
         case 4:
             buildId = c;
