@@ -493,7 +493,8 @@ void LAWICELSerial::readSerialData()
 
             if (useSystemTime)
             {
-                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+                buildTimestamp = QDateTime::currentMSecsSinceEpoch();
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(buildTimestamp / 1000, (buildTimestamp % 1000) * 1000));
             }
             else
             {
@@ -508,8 +509,8 @@ void LAWICELSerial::readSerialData()
                     //Default to system time if timestamps are disabled.
                     buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
                 }
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             }
-            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
 
             switch (mBuildLine[0].toLatin1())
             {
