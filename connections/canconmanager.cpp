@@ -222,7 +222,8 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
             workingFrame.isReceived = false;
             if (useSystemTime)
             {
-                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0,QDateTime::currentMSecsSinceEpoch() * 1000));
+                qint64 currentTimeMs = QDateTime::currentMSecsSinceEpoch();
+                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(currentTimeMs / 1000, (currentTimeMs % 1000) * 1000));
             }
             else
             {
