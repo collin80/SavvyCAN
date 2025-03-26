@@ -493,8 +493,7 @@ void LAWICELSerial::readSerialData()
 
             if (useSystemTime)
             {
-                buildTimestamp = QDateTime::currentMSecsSinceEpoch();
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(buildTimestamp / 1000, (buildTimestamp % 1000) * 1000));
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch()));
             }
             else
             {

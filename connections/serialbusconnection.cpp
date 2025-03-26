@@ -211,8 +211,7 @@ void SerialBusConnection::framesReceived()
                 frame_p->isReceived = !recFrame.hasLocalEcho();
 
                 if (useSystemTime) {
-                    qint64 currentTimeMs = QDateTime::currentMSecsSinceEpoch();
-                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp(currentTimeMs / 1000, (currentTimeMs % 1000) * 1000));
+                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch()));
                 }
                 else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis));
 
