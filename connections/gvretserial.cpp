@@ -685,7 +685,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildTimestamp += timeBasis;
             if (useSystemTime)
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch()));
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
             } else {
                 buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             }
@@ -771,7 +771,7 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildTimestamp += timeBasis;
             if (useSystemTime)
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch()));
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
             } else {
                 buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             }
