@@ -2,6 +2,7 @@
 #include <QNetworkDatagram>
 #include <QThread>
 
+#include "gs_usb_driver/gs_usb.h"
 #include "connectionwindow.h"
 #include "mainwindow.h"
 #include "helpwindow.h"
@@ -247,16 +248,22 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
 
 void ConnectionWindow::handleNewConn()
 {
-    NewConnectionDialog *thisDialog = new NewConnectionDialog(&remoteDeviceIPGVRET, &remoteDeviceKayak);
     CANCon::type newType;
     QString newPort;
     QString newDriver;
     int newSerialSpeed;
     int newBusSpeed;
+    int newSamplePoint;
     bool newCanFd;
     int newDataRate;
     CANConnection *conn;
 
+#ifdef GS_USB_DRIVER_ENABLED
+    // Get GS USB devices before opening new connection window
+    GSUSBDevice::getConnectedDevices(remoteDeviceGSUSB);
+#endif
+
+    NewConnectionDialog *thisDialog = new NewConnectionDialog(&remoteDeviceIPGVRET, &remoteDeviceKayak, &remoteDeviceGSUSB);
     if (thisDialog->exec() == QDialog::Accepted)
     {
         newType = thisDialog->getConnectionType();
@@ -264,9 +271,10 @@ void ConnectionWindow::handleNewConn()
         newDriver = thisDialog->getDriverName();
         newSerialSpeed = thisDialog->getSerialSpeed();
         newBusSpeed = thisDialog->getBusSpeed();
+        newSamplePoint = thisDialog->getSamplePoint();
         newCanFd=thisDialog->isCanFd();
         newDataRate = thisDialog->getDataRate();
-        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate);
+        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate, newSamplePoint);
         if (conn)
         {
             connModel->add(conn);
@@ -301,8 +309,9 @@ void ConnectionWindow::handleResetConn()
 {
     QString port, driver;
     CANCon::type type;
-    int serSpeed, busSpeed, dataRate;
+    int serSpeed, busSpeed, samplePoint, dataRate;
     bool canFd;
+    int offset = ui->tabBuses->currentIndex();
 
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     if (selIdx <0) return;
@@ -315,18 +324,28 @@ void ConnectionWindow::handleResetConn()
     type = conn_p->getType();
     port = conn_p->getPort();
     driver = conn_p->getDriver();
-    serSpeed = 0; //TODO: implement these
-    busSpeed = 0;
-    dataRate = 0;
-    canFd = false;
+    serSpeed = conn_p->getSerialSpeed();
 
+    CANBus bus;
+    if (conn_p->getBusSettings(offset, bus)) {
+        busSpeed = bus.getSpeed();
+        samplePoint = bus.getSamplePoint();
+        dataRate = bus.getDataRate();
+        canFd = bus.isCanFD();
+    } else {
+        qDebug() << "Could not retrieve bus settings!";
+        busSpeed = 0;
+        samplePoint = 0;
+        dataRate = 0;
+        canFd = false;
+    }
 
     /* stop and delete connection */
     conn_p->stop();
 
     conn_p = nullptr;
 
-    conn_p = create(type, port, driver, serSpeed, busSpeed,canFd,dataRate);
+    conn_p = create(type, port, driver, serSpeed, busSpeed, canFd, dataRate, samplePoint);
     if (conn_p) connModel->replace(selIdx, conn_p);
 }
 
@@ -372,7 +391,25 @@ void ConnectionWindow::saveBusSettings()
             return;
         }
 
-        bus.setSpeed(ui->cbBusSpeed->currentText().toInt());
+        if (conn_p->getType() == CANCon::type::GSUSB) {
+#ifdef GS_USB_DRIVER_ENABLED
+            QList<GSUSB_timing_t> supportedTiming;
+            GSUSBDevice* device = (GSUSBDevice*) conn_p;
+            int currentSpeedIndex = ui->cbBusSpeed->currentIndex();
+            if ((currentSpeedIndex >= 0) && device->isDeviceConnected()){
+                candle_handle handle = device->getDeviceHandle();
+                GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+                if (supportedTiming.length() > currentSpeedIndex) {
+                    GSUSB_timing_t timing = supportedTiming.at(currentSpeedIndex);
+                    bus.setSpeed((int) timing.bitrate);
+                    bus.setSamplePoint((int) timing.samplePoint);
+                }
+            }
+#endif
+        } else {
+            bus.setSpeed(ui->cbBusSpeed->currentText().toInt());
+        }
+
         bus.setActive(ui->ckEnable->isChecked());
         bus.setListenOnly(ui->ckListenOnly->isChecked());
         bus.setCanFD(ui->canFDEnable->isChecked());
@@ -384,6 +421,7 @@ void ConnectionWindow::saveBusSettings()
 void ConnectionWindow::populateBusDetails(int offset)
 {
     int selIdx = ui->tableConnections->currentIndex().row();
+    bool found = false;
 
     /* set parameters */
     if (selIdx == -1) {
@@ -420,18 +458,54 @@ void ConnectionWindow::populateBusDetails(int offset)
             ui->dataRate_label->setVisible(true);
         }
 
-        bool found = false;
-        for (int i = 0; i < ui->cbBusSpeed->count(); i++)
-        {
-            if (bus.getSpeed() == ui->cbBusSpeed->itemText(i).toInt())
-            {
-                found = true;
-                ui->cbBusSpeed->setCurrentIndex(i);
-                break;
+        if (conn_p->getType() == CANCon::type::GSUSB) {
+            ui->ckEnable->setEnabled(false);
+            ui->cbBusSpeed->clear();
+#ifdef GS_USB_DRIVER_ENABLED
+            GSUSBDevice* device = (GSUSBDevice*) conn_p;
+            int selectionIndex = 0;
+            if (device->isDeviceConnected()) {
+                candle_handle handle = device->getDeviceHandle();
+                QList<GSUSB_timing_t> supportedTiming;
+                GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+                foreach (const GSUSB_timing_t timing, supportedTiming) {
+                    ui->cbBusSpeed->addItem(GSUSBDevice::timingToString(timing));
+                    if ((bus.getSpeed() == (int) timing.bitrate) && (bus.getSamplePoint() == (int) timing.samplePoint)) {
+                        found = true;
+                    } else if (found == false) {
+                        selectionIndex++;
+                    }
+                }
+            }
+            if (found) {
+                ui->cbBusSpeed->setCurrentIndex(selectionIndex);
+            }
+#endif
+        } else {
+            ui->ckEnable->setEnabled(true);
+            ui->cbBusSpeed->clear();
+
+            ui->cbBusSpeed->addItem("33333");
+            ui->cbBusSpeed->addItem("50000");
+            ui->cbBusSpeed->addItem("83333");
+            ui->cbBusSpeed->addItem("100000");
+            ui->cbBusSpeed->addItem("125000");
+            ui->cbBusSpeed->addItem("250000");
+            ui->cbBusSpeed->addItem("500000");
+            ui->cbBusSpeed->addItem("1000000");
+
+            for (int i = 0; i < ui->cbBusSpeed->count(); i++) {
+                if (bus.getSpeed() == ui->cbBusSpeed->itemText(i).toInt()) {
+                    found = true;
+                    ui->cbBusSpeed->setCurrentIndex(i);
+                    break;
+                }
+            }
+            if (!found) {
+                ui->cbBusSpeed->addItem(QString::number(bus.getSpeed()));
             }
         }
 
-        if (!found) ui->cbBusSpeed->addItem(QString::number(bus.getSpeed()));
         found = false;
         for (int i = 0; i < ui->cbDataRate->count(); i++)
         {
@@ -517,12 +591,12 @@ void ConnectionWindow::handleSendText() {
     emit sendDebugData(bytes);
 }
 
-CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, int pSamplePoint)
 {
     CANConnection* conn_p;
 
     /* create connection */
-    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate);
+    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate, pSamplePoint);
     if(conn_p)
     {
         /* connect signal */
@@ -559,7 +633,7 @@ void ConnectionWindow::loadConnections()
     for(int i = 0 ; i < portNames.count() ; i++)
     {
         //TODO: add serial speed and bus speed to this properly.
-        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], 0, 0, false, 0);
+        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], 0, 0, false, 0, 875);
         /* add connection to model */
         connModel->add(conn_p);
     }
