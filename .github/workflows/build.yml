@@ -60,11 +60,12 @@ jobs:
           mkdir -p SavvyCAN.app/Contents/MacOS/help
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
+          mv SavvyCAN.dmg SavvyCAN_x64.dmg
       
       - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_x64.dmg
-          path: SavvyCAN.dmg
+          path: SavvyCAN_x64.dmg
 
   buildmacos-arm64:
     name: macOS ARM64
@@ -89,11 +90,12 @@ jobs:
           mkdir -p SavvyCAN.app/Contents/MacOS/help
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
+          mv SavvyCAN.dmg SavvyCAN_arm64.dmg
       
       - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_ARM64.dmg
-          path: SavvyCAN.dmg
+          path: SavvyCAN_arm64.dmg
           
   buildwindows:
     name: Windows x64
@@ -167,8 +169,8 @@ jobs:
           files: |
             SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
             SavvyCAN-Windows_x64_CIBuild.zip
-            SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
-            SavvyCAN-macOS_ARM64.dmg/SavvyCAN.dmg
+            SavvyCAN-macOS_x64.dmg/SavvyCAN_x64.dmg
+            SavvyCAN-macOS_ARM64.dmg/SavvyCAN_arm64.dmg
           
   notify:
     name: Notify Discord
