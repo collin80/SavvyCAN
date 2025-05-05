@@ -336,7 +336,9 @@ void ConnectionWindow::connectionStatus(CANConStatus pStatus)
     Q_UNUSED(pStatus);
 
     qDebug() << "Connectionstatus changed";
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     connModel->refresh();
+    ui->tableConnections->selectRow(selIdx);
 }
 
 void ConnectionWindow::setSuspendAll(bool pSuspend)
