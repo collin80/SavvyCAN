@@ -41,8 +41,13 @@ CANConnection::CANConnection(QString pPort,
 
     if (pBusSpeed > 0) mBusData[0].mBus.setSpeed(pBusSpeed);
     mBusData[0].mBus.setCanFD(pCanFd);
-    if (pDataRate > 0) mBusData[0].mBus.setDataRate(pDataRate);
-
+    if (pDataRate > 0) {
+      mBusData[0].mBus.setDataRate(pDataRate);
+      if (pCanFd) {
+	mBusData[0].mBus.setCanFD(pCanFd);
+      }
+    }
+ 
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {
         mThread_p = new QThread();
@@ -208,6 +213,10 @@ bool CANConnection::sendFrames(const QList<CANFrame>& pFrames)
 
 int CANConnection::getNumBuses() const{
     return mNumBuses;
+}
+
+int CANConnection::getSerialSpeed() const{
+  return mSerialSpeed;
 }
 
 
