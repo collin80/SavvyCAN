@@ -3784,12 +3784,17 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             if (line.contains('[')) //the expanded format (second one from the above list)
             {
                 //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+                //(1551774790.942758) can1 7A8 [08] F4 DC D1 83 0E 02 00 00
                 //     0               1     2   3  4 5  6  7  8  9  10 11
                 thisFrame.setFrameId(tokens[2].toLong(nullptr, 16));
                 if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                int numBytes = tokens[3].at(1) - '0';
+                int numBytes;
+		if (tokens[3].at(2) == ']')
+		    numBytes = tokens[3].at(1) - '0';
+		else
+		    numBytes = (tokens[3].at(1) - '0')*10 + (tokens[3].at(2) - '0');
                 QByteArray bytes(numBytes, 0);
                 for (int c = 0; c < numBytes; c++)
                 {
