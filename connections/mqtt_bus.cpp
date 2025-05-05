@@ -302,7 +302,7 @@ void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
         frame_p->isReceived = true;
         if (useSystemTime)
         {
-            frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
         }
         else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
 
