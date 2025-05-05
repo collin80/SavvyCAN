@@ -214,7 +214,7 @@ void CANserver::readNetworkData()
             frame_p->setFrameType(QCanBusFrame::DataFrame);
             frame_p->isReceived = true;
         
-            frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
 
             frame_p->setPayload(datagram.mid(dataByteLocation, length));
         
