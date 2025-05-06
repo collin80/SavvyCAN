@@ -7,9 +7,25 @@
 #include "filterutility.h"
 #include "qcpaxistickerhex.h"
 
-const QColor FrameInfoWindow::byteGraphColors[8] = {Qt::blue, Qt::green,  Qt::black, Qt::red, //0 1 2 3
-                                                    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta}; //4 5 6 7
-QPen FrameInfoWindow::bytePens[8];
+const QColor FrameInfoWindow::byteGraphColors[64] = {
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //0 1 2 3
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //4 5 6 7
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //8 9 10 11
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //12 13 14 15
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //16 17 18 19
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //20 21 22 23
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //24 25 26 27
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //28 29 30 31
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //32 33 34 35
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //36 37 38 39
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //40 41 42 43
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //44 45 46 47
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //48 49 50 51
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //52 53 54 55
+    Qt::blue, Qt::green,  Qt::black, Qt::red, //56 57 58 59
+    Qt::gray, Qt::darkYellow, Qt::cyan,  Qt::darkMagenta, //60 61 62 63
+};
+QPen FrameInfoWindow::bytePens[64];
 
 const int numIntervalHistBars = 20;
 
@@ -37,7 +53,7 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     ui->splitter->setStretchFactor(0, 1); //idx, stretch factor
     ui->splitter->setStretchFactor(1, 4); //goal is to make right hand side larger by default
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 64; i++)
     {
         graphByte[i] = new QCustomPlot();
         setupByteGraph(graphByte[i], i);
