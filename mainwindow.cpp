@@ -164,6 +164,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->btnExpandAll, &QAbstractButton::clicked, this, &MainWindow::expandAllRows);
     connect(ui->btnCollapseAll, &QAbstractButton::clicked, this, &MainWindow::collapseAllRows);
 
+    connect(ui->tableSimpleSender, SIGNAL(cellChanged(int,int)), this, SLOT(onSenderCellChanged(int,int)));
+
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     lbHelp.setText(tr("Press F1 on any screen for help"));
     lbHelp.setAlignment(Qt::AlignCenter);
@@ -227,12 +229,34 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionMotorControlConfig->setVisible(false);
     ui->actionSingle_Multi_State_2->setVisible(false);
 
+    QStringList headers;
+    headers << "En" << "Bus" << "ID" << "Ext" << "Rem" << "Data"
+            << "Interval" << "Count";
+    ui->tableSimpleSender->setColumnCount(8);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_EN, 70);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_BUS, 70);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_ID, 70);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_EXT, 70);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_REM, 70);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_DATA, 300);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_INTERVAL, 100);
+    ui->tableSimpleSender->setColumnWidth(SIMP_COL::SC_COL_COUNT, 100);
+    ui->tableSimpleSender->setHorizontalHeaderLabels(headers);
+
+    createSenderRow();
+
+    frameSender = new FrameSenderObject(model->getListReference());
+
+    frameSender->initialize(); //creates the thread and sets things up
+    frameSender->startSending(); //start the timer in the object so enabled things can send
+
     installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
 {
     updateTimer.stop();
+    frameSender->stopSending();
     killEmAll(); //Ride the lightning
     delete ui;
     delete model;
@@ -436,6 +460,171 @@ void MainWindow::writeSettings()
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
         //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
     }
+}
+
+void MainWindow::onSenderCellChanged(int row, int col)
+{
+    if (inhibitSenderChanged) return;
+    qDebug() << "onCellChanged";
+    if (row == ui->tableSimpleSender->rowCount() - 1)
+    {
+        createSenderRow();
+    }
+
+    processSenderCellChange(row, col);
+}
+
+void MainWindow::processSenderCellChange(int line, int col)
+{
+    qDebug() << "processSenderCellChange";
+    FrameSendData *tempData;
+    QStringList tokens;
+    int tempVal;
+
+    int numBuses = CANConManager::getInstance()->getNumBuses();
+    QByteArray arr;
+
+    tempData = frameSender->getSendRecordRef(line);
+
+    if (!tempData)
+    {
+        qDebug() << "Need to set up a new entry in senders";
+        FrameSendData dat;
+        dat.enabled = false;
+        dat.count = 0;
+        dat.frameCount = 0;
+        dat.bus = 0;
+        frameSender->addSendRecord(dat);
+        tempData = frameSender->getSendRecordRef(line);
+    }
+
+    if (!tempData)
+    {
+        qDebug() << "No data to modify in processSenderCellChange. This is a bug!";
+        return;
+    }
+
+    switch (col)
+    {
+    case SIMP_COL::SC_COL_EN: //Enable check box
+        if (ui->tableSimpleSender->item(line, 0)->checkState() == Qt::Checked)
+        {
+            tempData->enabled = true;
+        }
+        else tempData->enabled = false;
+        qDebug() << "Setting enabled to " << tempData->enabled;
+        break;
+    case SIMP_COL::SC_COL_BUS: //Bus designation
+        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_BUS)->text());
+        if (tempVal < -1) tempVal = -1;
+        if (tempVal >= numBuses) tempVal = numBuses - 1;
+        tempData->bus = tempVal;
+        qDebug() << "Setting bus to " << tempVal;
+        break;
+    case SIMP_COL::SC_COL_ID: //ID field
+        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_ID)->text());
+        if (tempVal < 0) tempVal = 0;
+        if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
+        tempData->setFrameId(tempVal);
+        if (tempData->frameId() > 0x7FF) {
+            tempData->setExtendedFrameFormat(true);
+            ui->tableSimpleSender->blockSignals(true);
+            ui->tableSimpleSender->item(line, ST_COLS::SENDTAB_COL_EXT)->setCheckState(Qt::Checked);
+            ui->tableSimpleSender->blockSignals(false);
+        }
+        qDebug() << "setting ID to " << tempVal;
+        break;
+    case SIMP_COL::SC_COL_EXT:
+        if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT)->checkState() == Qt::Checked) {
+            tempData->setExtendedFrameFormat(true);
+        } else {
+            tempData->setExtendedFrameFormat(false);
+        }
+        break;
+    case SIMP_COL::SC_COL_REM:
+        if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_REM)->checkState() == Qt::Checked) {
+            tempData->setFrameType(QCanBusFrame::RemoteRequestFrame);
+        } else {
+            tempData->setFrameType(QCanBusFrame::DataFrame);
+        }
+        break;
+    case SIMP_COL::SC_COL_DATA: //Data bytes
+        for (int i = 0; i < 8; i++) tempData->payload().data()[i] = 0;
+
+#if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
+        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
+#else
+        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", QString::SkipEmptyParts);
+#endif
+        arr.clear();
+        arr.reserve(tokens.count());
+        for (int j = 0; j < tokens.count(); j++)
+        {
+            arr.append((uint8_t)Utility::ParseStringToNum(tokens[j]));
+        }
+        tempData->setPayload(arr);
+        break;
+    case SIMP_COL::SC_COL_INTERVAL: //interval in ms
+
+        QString trigger = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_INTERVAL)->text().toUpper();
+
+        Trigger thisTrigger;
+        thisTrigger.bus = -1; //-1 means we don't care which
+        thisTrigger.ID = -1; //the rest of these being -1 means nothing has changed it
+        thisTrigger.maxCount = -1;
+        thisTrigger.milliseconds = -1;
+        thisTrigger.currCount = 0;
+        thisTrigger.msCounter = 0;
+        thisTrigger.triggerMask = 0;
+        thisTrigger.readyCount = true;
+
+        tempData->triggers.clear();
+        tempData->triggers.reserve(1);
+
+        if (trigger != "")
+        {
+            thisTrigger.milliseconds = Utility::ParseStringToNum(trigger);
+            thisTrigger.triggerMask |= TriggerMask::TRG_MS;
+        }
+
+        if (thisTrigger.milliseconds < 1) thisTrigger.milliseconds = 1;
+
+        tempData->triggers.append(thisTrigger);
+
+        break;
+    }
+}
+
+void MainWindow::createSenderRow()
+{
+    int row = ui->tableSimpleSender->rowCount();
+    ui->tableSimpleSender->insertRow(row);
+
+    QTableWidgetItem *item = new QTableWidgetItem();
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    inhibitSenderChanged = true;
+    ui->tableSimpleSender->setItem(row, SIMP_COL::SC_COL_EN, item);
+
+    item = new QTableWidgetItem();
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    ui->tableSimpleSender->setItem(row, SIMP_COL::SC_COL_EXT, item);
+
+    item = new QTableWidgetItem();
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(Qt::Unchecked);
+    ui->tableSimpleSender->setItem(row, SIMP_COL::SC_COL_REM, item);
+
+    for (int i = 1; i <= SIMP_COL::SC_COL_COUNT; i++)
+    {
+        if (i != SIMP_COL::SC_COL_EXT && i != SIMP_COL::SC_COL_REM) {
+            item = new QTableWidgetItem("");
+            ui->tableSimpleSender->setItem(row, i, item);
+        }
+    }
+
+    inhibitSenderChanged = false;
 }
 
 void MainWindow::updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1)
@@ -822,6 +1011,18 @@ void MainWindow::tickGUIUpdate()
             {
                 continuousLogFlushCounter = 0;
                 FrameFileIO::flushContinuousNative();
+            }
+        }
+
+        //refresh the count for all the frame senders
+        FrameSendData *tempData;
+        int numRows = ui->tableSimpleSender->rowCount();
+        for (int i = 0; i < numRows; i++)
+        {
+            tempData = frameSender->getSendRecordRef(i);
+            if (tempData)
+            {
+                ui->tableSimpleSender->item(i, SIMP_COL::SC_COL_COUNT)->setText(QString::number( tempData->count ));
             }
         }
 
@@ -1370,6 +1571,11 @@ CANFrameModel* MainWindow::getCANFrameModel()
 {
     return model;
 }
+
+
+/*
+ * All functions past this point set up the various other windows that can be opened
+*/
 
 void MainWindow::showSettingsDialog()
 {

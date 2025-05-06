@@ -191,6 +191,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CLX000 (*.txt *.TXT)")));
     filters.append(QString(tr("CANServer Binary Log (*.log *.LOG)")));
     filters.append(QString(tr("Wireshark (*.pcap *.PCAP *.pcapng *.PCAPNG)")));
+    filters.append(QString(tr("Wireshark SocketCAN (*.pcap *.PCAP")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -237,6 +238,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
         if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
         if (selectedNameFilter == filters[24]) result = loadWiresharkFile(filename, frameCache);
+        if (selectedNameFilter == filters[25]) result = loadWiresharkSocketCANFile(filename, frameCache);
 
 
         progress.cancel();
@@ -288,6 +290,28 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         }
     }
 
+    // Attempt to load socket CAN first to avoid generic wireshark logic catching it
+    qDebug() << "Attempting Wireshark Socket CAN Log";
+    if (isWiresharkSocketCANFile(filename))
+    {
+        if (loadWiresharkSocketCANFile(filename, frames))
+        {
+            qDebug() << "Loaded as Wireshark SocketCAN Log successfully!";
+            return true;
+        }
+    }
+
+    // This and the decoder above were both moved above TeslaAPFile as they match based on magic numbers and sometimes these files were falling into the TeslaAP decoder
+    qDebug() << "Attempting Wireshark Log";
+    if (isWiresharkFile(filename))
+    {
+        if (loadWiresharkFile(filename, frames))
+        {
+            qDebug() << "Loaded as Wireshark Log successfully!";
+            return true;
+        }
+    }
+
     qDebug() << "Attempting Tesla AP Snapshot";
     if (isTeslaAPFile(filename))
     {
@@ -304,16 +328,6 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadCANServerFile(filename, frames))
         {
             qDebug() << "Loaded as CANServer Binary Log successfully!";
-            return true;
-        }
-    }
-
-    qDebug() << "Attempting Wireshark Log";
-    if (isWiresharkFile(filename))
-    {
-        if (loadWiresharkFile(filename, frames))
-        {
-            qDebug() << "Loaded as Wireshark Log successfully!";
             return true;
         }
     }
@@ -1440,7 +1454,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         QByteArray bytes(numBytes, 0);
                         thisFrame.isReceived = true;
                         thisFrame.bus = 0;
-                        if (thisFrame.frameId() > 0x10000000)
+                        if ((thisFrame.frameId() > 0x10000000) ||
+			    (tokens[3].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1492,7 +1507,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = tokens[2].toInt();
-                        if (thisFrame.frameId() > 0x10000000)
+                        if ((thisFrame.frameId() > 0x10000000) ||
+			    (tokens[4].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1534,7 +1550,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = 0;
-                        if (thisFrame.frameId() > 0x10000000)
+                        if ((thisFrame.frameId() > 0x10000000) ||
+			    (tokens[3].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1586,7 +1603,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = tokens[3].toInt();
-                        if (thisFrame.frameId() > 0x10000000)
+                        if ((thisFrame.frameId() > 0x10000000) ||
+			    (tokens[4].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1680,12 +1698,16 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
 //0.001371 CANFD 1 Rx 171 A0066_Unknown 0 0 8 8 00 00 07 76 23 00 00 00 230199 119 220000 62e7 46500250 460a0250 20011736 20010205
 //Version 16.0.0
 //0.008600 1 358 Rx d 8 04 03 50 01 F0 40 54 2C Length = 233910 BitCount = 121 ID = 856
-//Time   bus id dir ? len databytes (Ver 8.0)
-//Time   type bus dir ID ? ? length length bytes then many values of unknown type (ver 8.1)
-//Time   type bus dir ID SignalName ? ? length length bytes then many values of unknown type (ver 9.0)
-//Time bus id dir ? len databytes additional crap (ver 16.0)
-//So it seems the file format is not entirely different based on version but rather on some other
-//settings... Fun!
+//Version 17.3.0
+//0.001684 CANFD 1 Rx 65b 1 0 d 32 f1 01 00 00 50 00 00 00 00 00 00 00 00 00 00 40 00 88 f5 77 17 78 00 00 c0 03 00 00 00 00 00 00 213797 356 303000 11729 46500250 4b140250 20011736 2001040d
+
+//Time bus  id  dir ?  len        databytes                                                                           (Ver 8.0)
+//Time bus  id  dir ?  len        databytes (addl info)                                                               (ver 16.0)
+//Time type bus dir ID ?          ?         length      length        (bytes) (many values of unknown type)           (ver 8.1)
+//Time type bus dir ID SignalName ?         ?           length        length  bytes (then many values of unknown type)(ver 9.0)
+//Time Type Bus Dir ID ?          ?         (length)    (Real Length) (bytes) (many values of unknown type)           (Ver 17.3)
+//0    1    2   3   4  5          6         7           8             9       10
+//This seems like a rather eclectic mix. It's almost arbitrary!
 bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
 {
     QFile *inFile = new QFile(filename);
@@ -1736,7 +1758,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
             }
         }
         if (inHeader) continue;
-        if (line.length() > 2)
+        if (line.length() > 2 && !line.startsWith("//"))
         {            
             tokens = line.simplified().split(' ');
 
@@ -1766,7 +1788,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                         int payloadLen = tokens[8].toInt();
                         qDebug() << "PayloadLen: " << payloadLen << " Tokens: " << tokens;
                         QByteArray bytes(payloadLen, 0);
-                        if (payloadLen > 8)
+                        if (payloadLen > 64)
                         {
                             qDebug() << "Payload length too long. Original line: " << line;
                             return false;
@@ -3766,12 +3788,17 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             if (line.contains('[')) //the expanded format (second one from the above list)
             {
                 //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+                //(1551774790.942758) can1 7A8 [08] F4 DC D1 83 0E 02 00 00
                 //     0               1     2   3  4 5  6  7  8  9  10 11
                 thisFrame.setFrameId(tokens[2].toLong(nullptr, 16));
                 if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                int numBytes = tokens[3].at(1) - '0';
+                int numBytes;
+		if (tokens[3].at(2) == ']')
+		    numBytes = tokens[3].at(1) - '0';
+		else
+		    numBytes = (tokens[3].at(1) - '0')*10 + (tokens[3].at(2) - '0');
                 QByteArray bytes(numBytes, 0);
                 for (int c = 0; c < numBytes; c++)
                 {
@@ -5019,7 +5046,7 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CANFrame>* frames)
     
     QByteArray ba = filename.toLocal8Bit();
 
-    pcap_data_file = pcap_open_offline(ba.data(), errbuf);
+    pcap_data_file = pcap_open_offline(ba.data(), errbuf, PCAP_LINKTYPE_ANY);
 	if (!pcap_data_file) {
 		return false;
 	}
@@ -5046,9 +5073,13 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CANFrame>* frames)
         thisFrame.isReceived = true; // TODO: check if tx detection is possible
             
         thisFrame.setFrameType(QCanBusFrame::DataFrame);
-        thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
-        if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
-            else thisFrame.setExtendedFrameFormat(true);
+        if ((0x80 & *(packetData+19)))  {
+            thisFrame.setExtendedFrameFormat(true);
+            thisFrame.setFrameId((0x3f & *(packetData+19))<<24 | (0xff & *(packetData+18)) << 16 | (0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
+        } else {
+            thisFrame.setExtendedFrameFormat(false);
+            thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
+        }
         thisFrame.bus = 0;
         int numBytes = *(packetData+20);
         QByteArray bytes(numBytes, 0);
@@ -5075,7 +5106,7 @@ bool FrameFileIO::isWiresharkFile(QString filename)
     char errbuf[PCAP_ERRBUF_SIZE];
     QByteArray ba = filename.toLocal8Bit();
 
-    pcap_data_file = pcap_open_offline(ba.data(), errbuf);
+    pcap_data_file = pcap_open_offline(ba.data(), errbuf, PCAP_LINKTYPE_ANY);
 	if (!pcap_data_file) {
 		return false;
 	}
@@ -5083,5 +5114,98 @@ bool FrameFileIO::isWiresharkFile(QString filename)
     pcap_close(pcap_data_file);
 	pcap_data_file = NULL;
 
+    return true;
+}
+
+bool FrameFileIO::loadWiresharkSocketCANFile(QString filename, QVector<CANFrame>* frames)
+{
+    pcap_t *pcap_data_file;
+    CANFrame thisFrame;
+    long long startTimestamp = 0;
+    long long timeStamp;
+    int lineCounter = 0;
+    bool foundErrors = false;
+    pcap_pkthdr packetHeader;
+    const char *packetData = NULL;
+    char errbuf[PCAP_ERRBUF_SIZE];
+
+    QByteArray ba = filename.toLocal8Bit();
+
+    pcap_data_file = pcap_open_offline(ba.data(), errbuf, PCAP_LINKTYPE_SOCKETCAN);
+    if (!pcap_data_file) {
+        return false;
+    }
+
+    packetData = (const char*)pcap_next(pcap_data_file, &packetHeader);
+    while (packetData) {
+        lineCounter++;
+        if (lineCounter > 100) {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+        thisFrame.bus = 0;
+
+        // Timestamp
+        timeStamp = packetHeader.ts.tv_sec * 1000000 + packetHeader.ts.tv_usec;
+        if (0 == startTimestamp) {
+            startTimestamp = timeStamp;
+        }
+        timeStamp -= startTimestamp;
+        thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
+
+        // ID and extended frame format
+        const quint32 can_id = qFromBigEndian<quint32>(packetData);
+        if (can_id & 0x80000000) {
+            thisFrame.setExtendedFrameFormat(true);
+                thisFrame.setFrameId(0x1fffffff & can_id);
+        } else {
+            thisFrame.setExtendedFrameFormat(false);
+            thisFrame.setFrameId(0x7ff & can_id);
+        }
+
+        // Frame type
+        if (can_id & 0x20000000U) {
+            thisFrame.setFrameType(QCanBusFrame::ErrorFrame);
+        } else if (can_id & 0x40000000U) {
+            thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+        } else {
+            thisFrame.setFrameType(QCanBusFrame::DataFrame);
+        }
+
+        // Direction - This isn't actually officially supported, but CAN Bus Debugger device logs set this byte to 1 to indicate a TX frame and 0 for RX
+        quint8 direction = (quint8) *(packetData + 6);
+        thisFrame.isReceived = (direction != 1);
+
+        // Data
+        quint8 numBytes = (quint8) *(packetData + 4);
+        if (numBytes > 8) {
+            numBytes = 8;
+        }
+        QByteArray bytes(numBytes, 0);
+        for (int d = 0; d < numBytes; d++) {
+            bytes[d] = *(packetData + 8 + d);
+        }
+        thisFrame.setPayload(bytes);
+        frames->append(thisFrame);
+
+        packetData = (const char*) pcap_next(pcap_data_file, &packetHeader);
+    }
+    pcap_close(pcap_data_file);
+    pcap_data_file = NULL;
+    return !foundErrors;
+}
+
+bool FrameFileIO::isWiresharkSocketCANFile(QString filename)
+{
+    pcap_t *pcap_data_file;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    QByteArray ba = filename.toLocal8Bit();
+
+    pcap_data_file = pcap_open_offline(ba.data(), errbuf, PCAP_LINKTYPE_SOCKETCAN);
+    if (!pcap_data_file) {
+        return false;
+    }
+    pcap_close(pcap_data_file);
+    pcap_data_file = NULL;
     return true;
 }
