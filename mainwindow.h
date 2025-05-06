@@ -10,7 +10,7 @@
 #include "framefileio.h"
 #include "dbc/dbchandler.h"
 #include "bus_protocols/isotp_handler.h"
-
+#include "framesenderobject.h"
 #include "re/graphingwindow.h"
 #include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"
@@ -39,6 +39,18 @@ class CANConnection;
 class ConnectionWindow;
 class ISOTP_InterpreterWindow;
 class ScriptingWindow;
+
+enum SIMP_COL
+{
+    SC_COL_EN = 0,
+    SC_COL_BUS = 1,
+    SC_COL_ID = 2,
+    SC_COL_EXT = 3,
+    SC_COL_REM = 4,
+    SC_COL_DATA = 5,
+    SC_COL_INTERVAL = 6,
+    SC_COL_COUNT = 7,
+};
 
 namespace Ui {
 class MainWindow;
@@ -114,6 +126,7 @@ private slots:
     void filterClearAll();
     void headerClicked (int logicalIndex);
     void DBCSettingsUpdated();
+    void onSenderCellChanged(int, int);
 
 public slots:
     void gotFrames(int);
@@ -142,6 +155,7 @@ private:
     QByteArray inputBuffer;
     QTimer updateTimer;
     QElapsedTimer *elapsedTime;
+    FrameSenderObject *frameSender;
     int framesPerSec;
     int rxFrames;
     bool inhibitFilterUpdate;
@@ -151,6 +165,7 @@ private:
     bool CSVAbsTime;
     bool bDirty; //have frames been added or subtracted since the last save/load?
     bool useFiltered; //should sub-windows use the unfiltered or filtered frames list?
+    bool inhibitSenderChanged;
 
     bool continuousLogging;
     int continuousLogFlushCounter;
@@ -211,6 +226,8 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void manageRowExpansion();
     void disableAutoRowExpansion();
+    void createSenderRow();
+    void processSenderCellChange(int line, int col);
 };
 
 #endif // MAINWINDOW_H

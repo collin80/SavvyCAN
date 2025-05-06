@@ -491,7 +491,26 @@ void LAWICELSerial::readSerialData()
         {
             qDebug() << "Got CR!";
 
-            buildFrame.setTimeStamp(QDateTime::currentMSecsSinceEpoch() * 1000l);
+            if (useSystemTime)
+            {
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            }
+            else
+            {
+                //If total length is greater than command, header and data, timestamps must be enabled.
+                if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
+                {
+                    //Four bytes after the end of the data bytes.
+                    buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+                }
+                else
+                {
+                    //Default to system time if timestamps are disabled.
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                }
+            }
+
             switch (mBuildLine[0].toLatin1())
             {
             case 't': //standard frame
@@ -551,6 +570,7 @@ void LAWICELSerial::readSerialData()
                 break;
             case 'b':
                 buildFrame.setBitrateSwitch(true); //BRS enabled
+                [[fallthrough]];
             case 'd': //standard fd frame, BRS disabled
                 //tIIILDD
                 buildFrame.setFlexibleDataRateFormat(true);
@@ -581,6 +601,7 @@ void LAWICELSerial::readSerialData()
                 break;
             case 'B':
                 buildFrame.setBitrateSwitch(true); //BRS enabled
+                [[fallthrough]];
             case 'D': //extended fd frame
                 //TIIIIIIIILDD.
                 buildFrame.setFlexibleDataRateFormat(true);

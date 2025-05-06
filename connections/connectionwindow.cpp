@@ -79,12 +79,12 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     //Need to make sure it tries to share the address in case there are
     //multiple instances of SavvyCAN running.
     rxBroadcastGVRET->bind(QHostAddress::AnyIPv4, 17222, QAbstractSocket::ShareAddress);
-    connect(rxBroadcastGVRET, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+    connect(rxBroadcastGVRET, &QUdpSocket::readyRead, this, &ConnectionWindow::readPendingDatagrams);
 
     //Doing the same for socketcand/kayak hosts:
     rxBroadcastKayak = new QUdpSocket(this);
     rxBroadcastKayak->bind(QHostAddress::AnyIPv4, 42000, QAbstractSocket::ShareAddress);
-    connect(rxBroadcastKayak, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+    connect(rxBroadcastKayak, &QUdpSocket::readyRead, this, &ConnectionWindow::readPendingDatagrams);
 
 }
 
@@ -236,12 +236,12 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
     CANConnection* conn_p = connModel->getAtIdx(selIdx);
 
     if (checked) { //enable console
-        connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
-        connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        connect(conn_p, &CANConnection::debugOutput, this, &ConnectionWindow::getDebugText, Qt::UniqueConnection);
+        connect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput, Qt::UniqueConnection);
     }
     else { //turn it off
-        disconnect(conn_p, SIGNAL(debugOutput(QString)), nullptr, nullptr);
-        disconnect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+        disconnect(conn_p, &CANConnection::debugOutput, nullptr, nullptr);
+        disconnect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput);
     }
 }
 
@@ -336,7 +336,9 @@ void ConnectionWindow::connectionStatus(CANConStatus pStatus)
     Q_UNUSED(pStatus);
 
     qDebug() << "Connectionstatus changed";
+    int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     connModel->refresh();
+    ui->tableConnections->selectRow(selIdx);
 }
 
 void ConnectionWindow::setSuspendAll(bool pSuspend)
@@ -454,8 +456,8 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
     int selIdx = current.row();
     CANConnection* prevConn = connModel->getAtIdx(previous.row());
     if(prevConn != nullptr)
-        disconnect(prevConn, SIGNAL(debugOutput(QString)), nullptr, nullptr);
-    disconnect(this, SIGNAL(sendDebugData(QByteArray)), nullptr, nullptr);
+        disconnect(prevConn, &CANConnection::debugOutput, nullptr, nullptr);
+    disconnect(this, &ConnectionWindow::sendDebugData, nullptr, nullptr);
 
     /* set parameters */
     if (selIdx == -1) {
@@ -472,7 +474,7 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         if(!conn_p) return;
 
         //because this might have already been setup during the initial setup so tear that one down and then create the normal one.
-        //disconnect(conn_p, SIGNAL(debugOutput(QString)), 0, 0);
+        //disconnect(conn_p, &CANConnection::debugOutput, 0, 0);
 
         numBuses = conn_p->getNumBuses();
         int numB = ui->tabBuses->count();
@@ -485,8 +487,8 @@ void ConnectionWindow::currentRowChanged(const QModelIndex &current, const QMode
         populateBusDetails(0);
         if (ui->ckEnableConsole->isChecked())
         {
-            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
-            connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)));
+            connect(conn_p, &CANConnection::debugOutput, this, &ConnectionWindow::getDebugText, Qt::UniqueConnection);
+            connect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput, Qt::UniqueConnection);
         }
     }
 }
@@ -524,12 +526,11 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
     if(conn_p)
     {
         /* connect signal */
-        connect(conn_p, SIGNAL(status(CANConStatus)),
-                this, SLOT(connectionStatus(CANConStatus)));
+        connect(conn_p, &CANConnection::status, this, &ConnectionWindow::connectionStatus);
         if (ui->ckEnableConsole->isChecked())
         {            
             //set up the debug console to operate if we've selected it. Doing so here allows debugging right away during set up
-            connect(conn_p, SIGNAL(debugOutput(QString)), this, SLOT(getDebugText(QString)));
+            connect(conn_p, &CANConnection::debugOutput, this, &ConnectionWindow::getDebugText, Qt::UniqueConnection);
         }
         /*TODO add return value and checks */
         conn_p->start();
@@ -552,13 +553,17 @@ void ConnectionWindow::loadConnections()
     QVector<QString> driverNames = settings.value("connections/driverNames").value<QVector<QString>>();
     QVector<int>    devTypes = settings.value("connections/types").value<QVector<int>>();
 
+    QVector<int> busSpeeds = settings.value("connections/busSpeeds_0").value<QVector<int>>();
+    QVector<int> DataRates = settings.value("connections/DataRates_0").value<QVector<int>>();
+    QVector<int> isCanFds = settings.value("connections/isCanFds_0").value<QVector<int>>();
+    QVector<int> serialSpeeds = settings.value("connections/serialSpeeds").value<QVector<int>>();
     //don't load the connections if the three setting arrays above aren't all the same size.
-    if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count()) return;
+    if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count() ||  busSpeeds.count() != driverNames.count() || isCanFds.count() != driverNames.count() ||
+	DataRates.count() != driverNames.count() || serialSpeeds.count() != driverNames.count() ) return;
 
     for(int i = 0 ; i < portNames.count() ; i++)
     {
-        //TODO: add serial speed and bus speed to this properly.
-        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], 0, 0, false, 0);
+      CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i]);
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -578,10 +583,19 @@ void ConnectionWindow::saveConnections()
     QVector<QString> driverNames;
     QVector<int> serialSpeeds;
     QVector<int> busSpeeds;
-
+    QVector<int> DataRates;
+    QVector<int> CanFds;
+ 
     /* save connections */
     foreach(CANConnection* conn_p, conns)
-    {
+      { CANBus bus;
+
+        if (conn_p->getBusSettings(0, bus)) {
+          busSpeeds.append(bus.getSpeed());
+	  CanFds.append(bus.isCanFD() ? 1 : 0);
+	  DataRates.append(bus.getDataRate());
+        }
+	serialSpeeds.append(conn_p->getSerialSpeed());
         portNames.append(conn_p->getPort());
         devTypes.append(conn_p->getType());
         driverNames.append(conn_p->getDriver());
@@ -590,6 +604,10 @@ void ConnectionWindow::saveConnections()
     settings.setValue("connections/portNames", QVariant::fromValue(portNames));
     settings.setValue("connections/types", QVariant::fromValue(devTypes));
     settings.setValue("connections/driverNames", QVariant::fromValue(driverNames));
+    settings.setValue("connections/busSpeeds_0", QVariant::fromValue(busSpeeds));
+    settings.setValue("connections/isCanFds_0", QVariant::fromValue(CanFds)); 
+    settings.setValue("connections/DataRates_0", QVariant::fromValue(DataRates)); 
+    settings.setValue("connections/serialSpeeds", QVariant::fromValue(serialSpeeds)); 
 }
 
 void ConnectionWindow::moveConnUp()

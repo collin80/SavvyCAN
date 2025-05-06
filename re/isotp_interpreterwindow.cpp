@@ -31,6 +31,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
 
     connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
     connect(ui->btnClearList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::clearList);
+    connect(ui->btnSaveList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::saveList);
     connect(ui->cbUseExtendedAddressing, SIGNAL(toggled(bool)), this, SLOT(useExtendedAddressing(bool)));
 
     QStringList headers;
@@ -171,6 +172,80 @@ void ISOTP_InterpreterWindow::clearList()
     messages.clear();
     //idFilters.clear();
 }
+
+/*
+ * A bit complicated as the list doesn't have the detailed analysis in it. Have to take each list entry
+ * and process it to get the details then save those details to the file as well.
+ */
+void ISOTP_InterpreterWindow::saveList()
+{
+    QString buildString;
+    QString filename;
+    QFileDialog dialog(this);
+    QSettings settings;
+
+    QStringList filters;
+    filters.append(QString(tr("Text File (*.txt)")));
+
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    dialog.setDirectory(settings.value("FrameInfo/LoadSaveDirectory", dialog.directory().path()).toString());
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        settings.setValue("FrameInfo/LoadSaveDirectory", dialog.directory().path());
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".txt";
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            QFile *outFile = new QFile(filename);
+
+            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                delete outFile;
+                return;
+            }
+
+            int rows = messages.count();
+            for (int r = 0 ; r < rows; r++)
+            {
+                ISOTP_MESSAGE msg = messages.at(r);
+                const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
+                int dataLen = msg.payload().length();
+
+                if (msg.reportedLength != dataLen)
+                {
+                    continue;
+                }
+
+                buildString.append(QString::number(msg.timeStamp().microSeconds()) + " " + QString::number(msg.frameId(), 16) + " ");
+
+                //buildString.append(tr("Raw Payload: "));
+
+                for (int i = 0; i < dataLen; i++)
+                {
+                    buildString.append(Utility::formatNumber(data[i]));
+                    buildString.append(" ");
+                }
+                buildString.append("\n\n");
+
+                UDS_MESSAGE udsMsg;
+                bool result;
+                udsMsg = udsDecoder->tryISOtoUDS(msg, &result);
+                if (result)
+                    buildString.append(udsDecoder->getDetailedMessageAnalysis(udsMsg));
+                buildString.append("\n*********************************************************\n");
+                outFile->write(buildString.toUtf8());
+            }
+
+            outFile->close();
+            delete outFile;
+        }
+    }
+}
+
 
 void ISOTP_InterpreterWindow::useExtendedAddressing(bool checked)
 {

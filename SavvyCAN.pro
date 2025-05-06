@@ -4,11 +4,15 @@
 #
 #-------------------------------------------------
 
+!versionAtLeast(QT_VERSION, 5.14.0) {
+    error("Current version of Qt ($${QT_VERSION}) is too old, this project requires Qt 5.14 or newer")
+}
+
 QT = core gui printsupport qml serialbus serialport widgets help network opengl
 
 CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
-CONFIG += c++11
+CONFIG += c++17
 CONFIG += NO_UNIT_TESTS
 
 DEFINES += QCUSTOMPLOT_USE_OPENGL
@@ -26,6 +30,7 @@ SOURCES += main.cpp\
     connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
     dbc/dbcnodeduplicateeditor.cpp \
+    framesenderobject.cpp \
     mqtt/qmqtt_client.cpp \
     mqtt/qmqtt_client_p.cpp \
     mqtt/qmqtt_frame.cpp \
@@ -113,6 +118,7 @@ HEADERS  += mainwindow.h \
     connections/mqtt_bus.h \
     dbc/dbcnodeduplicateeditor.h \
     dbc/dbcnoderebaseeditor.h \
+    framesenderobject.h \
     mqtt/qmqtt.h \
     mqtt/qmqtt_client.h \
     mqtt/qmqtt_client_p.h \
@@ -255,12 +261,16 @@ unix {
    DISTFILES += SavvyCAN.desktop
 }
 
+windows {
+RC_ICONS=icons/SavvyIcon.ico
+}
+
 examplefiles.files=examples
 examplefiles.path = $$PREFIX/share/savvycan/examples
 INSTALLS += examplefiles
 
 iconfiles.files=icons
-iconfiles.path = $$PREFIX/share/icons
+iconfiles.path = $$PREFIX/share
 INSTALLS += iconfiles
 
 helpfiles.files=help/*

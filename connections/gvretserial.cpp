@@ -685,9 +685,10 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildTimestamp += timeBasis;
             if (useSystemTime)
             {
-                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            } else {
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             }
-            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             break;
         case 4:
             buildId = c;
@@ -770,9 +771,10 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildTimestamp += timeBasis;
             if (useSystemTime)
             {
-                buildTimestamp = QDateTime::currentMSecsSinceEpoch() * 1000l;
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            } else {
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             }
-            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
             break;
         case 4:
             buildId = c;

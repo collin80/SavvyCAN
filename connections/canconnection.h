@@ -53,6 +53,12 @@ public:
     int getNumBuses() const;
 
     /**
+     * @brief getserialSpeed
+     * @return returns the serial speed of the device
+     */
+    int getSerialSpeed() const;
+
+    /**
      * @brief getPort
      * @return returns the port name of the device
      */

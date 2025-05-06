@@ -105,6 +105,7 @@ public:
     QString getShortDesc(QVector<CODE_STRUCT> &codeVector, int code);
     QString getLongDesc(QVector<CODE_STRUCT> &codeVector, int code);
     QString getDetailedMessageAnalysis(const UDS_MESSAGE &msg);
+    UDS_MESSAGE tryISOtoUDS(ISOTP_MESSAGE msg, bool *result);
 
 public slots:
     void gotISOTPFrame(ISOTP_MESSAGE msg);
