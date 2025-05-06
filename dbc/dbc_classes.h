@@ -89,31 +89,44 @@ class DBC_SIGNAL;
 class DBC_SIGNAL
 {
 public: //TODO: this is sloppy. It shouldn't all be public!
+    DBC_SIGNAL() = default;
+
+    enum DbcMuxStringFormat {
+        MuxStringFormat_DbcFile,
+        MuxStringFormat_UI
+    };
     QString name;
-    int startBit;
-    int signalSize;
-    bool intelByteOrder; //true is obviously little endian. False is big endian
-    bool isMultiplexor;
-    bool isMultiplexed;
-    int multiplexHighValue;
-    int multiplexLowValue;
-    DBC_SIG_VAL_TYPE valType;
-    double factor;
-    double bias;
-    double min;
-    double max;
-    DBC_NODE *receiver; //it is fast to have a pointer but dangerous... Make sure to walk the whole tree and delete everything so nobody has stale references.
-    DBC_MESSAGE *parentMessage;
+    int startBit = 1;
+    int signalSize = 1;
+    bool intelByteOrder = false; //true is obviously little endian. False is big endian
+
+    bool isMultiplexor = false;
+    bool isMultiplexed = false;
+    void addMultiplexRange(int min, int max);
+    int multiplexHighValue = 0;
+    int multiplexLowValue = 0;
+    bool hasExtendedMultiplexing = false;
+    QList<DBC_SIGNAL *> multiplexedChildren;
+    DBC_SIGNAL *multiplexParent = nullptr;
+    QString multiplexDbcString(DbcMuxStringFormat fmt = MuxStringFormat_DbcFile) const;
+    void copyMultiplexValuesFromSignal(const DBC_SIGNAL &signal);
+    bool parseDbcMultiplexUiString(const QString &multiplexes, QString &errorString);
+    bool multiplexesIdenticalToSignal(DBC_SIGNAL *other) const;
+
+    DBC_SIG_VAL_TYPE valType = DBC_SIG_VAL_TYPE::UNSIGNED_INT;
+    double factor = 1.0;
+    double bias = 0;
+    double min = 0;
+    double max = 1;
+    DBC_NODE *receiver = nullptr; //it is fast to have a pointer but dangerous... Make sure to walk the whole tree and delete everything so nobody has stale references.
+    DBC_MESSAGE *parentMessage = nullptr;
     QString unitName;
     QString comment;
     QVariant cachedValue;
     QList<DBC_ATTRIBUTE_VALUE> attributes;
     QList<DBC_VAL_ENUM_ENTRY> valList;
-    QList<DBC_SIGNAL *> multiplexedChildren;
-    DBC_SIGNAL *multiplexParent;
     DBC_SIGNAL *self;
 
-    DBC_SIGNAL();
     bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true, bool outputUnit = true);
     bool processAsInt(const CANFrame &frame, int32_t &outValue);
     bool processAsDouble(const CANFrame &frame, double &outValue);
@@ -123,11 +136,15 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
     bool isSignalInMessage(const CANFrame &frame);
+    bool isValueMatchingMultiplex(int val) const;
+
 
     friend bool operator<(const DBC_SIGNAL& l, const DBC_SIGNAL& r)
     {
         return (l.name.toLower() < r.name.toLower());
     }
+private:
+    QList<QPair<int, int>> multiplexLowAndHighValues;
 };
 
 class DBCSignalHandler; //forward declaration to keep from having to include dbchandler.h in this file and thus create a loop
