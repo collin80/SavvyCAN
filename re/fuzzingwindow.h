@@ -42,6 +42,9 @@ private slots:
     void bitfieldClicked(int);
     void changedNumDataBytes(int newVal);
     void updatedFrames(int numFrames);
+    void markAllHigh();
+    void markAllLow();
+    void markAllAuto();
 
 private:
     Ui::FuzzingWindow *ui;
