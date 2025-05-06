@@ -19,6 +19,9 @@ FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
 
     fuzzTimer = new QTimer();
 
+    connect(ui->btnMarkAllHigh, &QPushButton::clicked, this, &FuzzingWindow::markAllHigh);
+    connect(ui->btnMarkAllLow, &QPushButton::clicked, this, &FuzzingWindow::markAllLow);
+    connect(ui->btnMarkAllAuto, &QPushButton::clicked, this, &FuzzingWindow::markAllAuto);
     connect(ui->btnStartStop, &QPushButton::clicked, this, &FuzzingWindow::toggleFuzzing);
     connect(ui->btnAllFilters, &QPushButton::clicked, this, &FuzzingWindow::setAllFilters);
     connect(ui->btnNoFilters, &QPushButton::clicked, this, &FuzzingWindow::clearAllFilters);
@@ -507,4 +510,31 @@ void FuzzingWindow::redrawGrid()
     ui->bitfield->setUsed(usedBytes, false);
     ui->bitfield->setReference(refBytes, false);
     ui->bitfield->updateData(dataBytes, true);
+}
+
+void FuzzingWindow::markAllHigh()
+{
+    for (int i = 0; i < 512; i++)
+    {
+        bitGrid[i] = 2;
+    }
+    redrawGrid();
+}
+
+void FuzzingWindow::markAllLow()
+{
+    for (int i = 0; i < 512; i++)
+    {
+        bitGrid[i] = 0;
+    }
+    redrawGrid();
+}
+
+void FuzzingWindow::markAllAuto()
+{
+    for (int i = 0; i < 512; i++)
+    {
+        bitGrid[i] = 1;
+    }
+    redrawGrid();
 }
