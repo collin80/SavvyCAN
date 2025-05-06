@@ -182,11 +182,11 @@ UDS_HANDLER::~UDS_HANDLER()
     delete isoHandler;
 }
 
-void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
+UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(ISOTP_MESSAGE msg, bool *result)
 {
-    qDebug() << "UDS handler got ISOTP frame";
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().count();
+    *result = true;
     UDS_MESSAGE udsMsg;
     udsMsg.bus = msg.bus;
     udsMsg.setExtendedFrameFormat(msg.hasExtendedFrameFormat());
@@ -208,9 +208,17 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
             {
                 udsMsg.service = data[1];
                 if (dataLen > 2) udsMsg.subFunc = data[2];
-                else return;
+                else
+                {
+                    *result = false;
+                    return udsMsg;
+                };
             }
-            else return;
+            else
+            {
+                *result = false;
+                return udsMsg;
+            };
             udsMsg.payload().remove(0, 2);
         }
         else
@@ -220,9 +228,22 @@ void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
             udsMsg.payload().remove(0, 1);
         }
     }
-    else return;
+    else
+    {
+        *result = false;
+    };
+    return udsMsg;
+}
 
-    emit newUDSMessage(udsMsg);
+void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
+{
+    qDebug() << "UDS handler got ISOTP frame";
+    UDS_MESSAGE udsMsg;
+
+    bool result;
+    udsMsg = tryISOtoUDS(msg, &result);
+
+    if (result) emit newUDSMessage(udsMsg);
 }
 
 void UDS_HANDLER::setFlowCtrl(bool state)

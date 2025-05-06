@@ -4,16 +4,15 @@ on:
   push:
     branches:
       - "master"
-      
 jobs:
   buildlinux:
     name: Linux x64
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Prepare Environment
         run: |
-            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0
+            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0 libfuse2
 
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v3
@@ -33,14 +32,14 @@ jobs:
           chmod a+x linuxdeployqt-continuous-x86_64.AppImage
           ./linuxdeployqt-continuous-x86_64.AppImage appdir/usr/share/applications/SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-Linux_x64.AppImage
           path: SavvyCAN-*x86_64.AppImage
       
-  buildmacos:
+  buildmacos86:
     name: macOS x64
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
       - name: Prepare macOS Environment
@@ -61,11 +60,42 @@ jobs:
           mkdir -p SavvyCAN.app/Contents/MacOS/help
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
+          mv SavvyCAN.dmg SavvyCAN_x64.dmg
       
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_x64.dmg
-          path: SavvyCAN.dmg
+          path: SavvyCAN_x64.dmg
+
+  buildmacos-arm64:
+    name: macOS ARM64
+    runs-on: macos-14
+
+    steps:
+      - name: Prepare macOS Environment
+        run: |
+            brew install qt5
+            brew link qt5 --force
+
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: Compile     
+        run: |
+          qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
+          make -j`sysctl kern.aioprocmax | awk '{print $2}'`
+
+      - name: Package     
+        run: |
+          mkdir -p SavvyCAN.app/Contents/MacOS/help
+          cp -R help/* SavvyCAN.app/Contents/MacOS/help
+          macdeployqt SavvyCAN.app -dmg
+          mv SavvyCAN.dmg SavvyCAN_arm64.dmg
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SavvyCAN-macOS_ARM64.dmg
+          path: SavvyCAN_arm64.dmg
           
   buildwindows:
     name: Windows x64
@@ -113,7 +143,7 @@ jobs:
           mkdir package/canbus
           copy "${Env:Qt5_Dir}/plugins/canbus/*.*" package/canbus/
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-Windows_x64
           path: package
@@ -121,12 +151,12 @@ jobs:
   pre-release:
     name: "pre-release"
     runs-on: "ubuntu-latest"
-    needs: [buildwindows, buildmacos, buildlinux]
+    needs: [buildwindows, buildmacos86, buildmacos-arm64, buildlinux]
 
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4.1.7
 
       - name: Display structure of downloaded files
         run: zip -r SavvyCAN-Windows_x64_CIBuild.zip SavvyCAN-Windows_x64
@@ -139,12 +169,13 @@ jobs:
           files: |
             SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
             SavvyCAN-Windows_x64_CIBuild.zip
-            SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
+            SavvyCAN-macOS_x64.dmg/SavvyCAN_x64.dmg
+            SavvyCAN-macOS_ARM64.dmg/SavvyCAN_arm64.dmg
           
   notify:
     name: Notify Discord
     runs-on: ubuntu-latest
-    needs: [buildwindows, buildmacos, buildlinux]
+    needs: [buildwindows, buildmacos86, buildmacos-arm64, buildlinux]
     steps:
       - id: msg_var
         name: remove newlines

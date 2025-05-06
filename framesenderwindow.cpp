@@ -63,8 +63,8 @@ void FrameSenderWindow::setupGrid()
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_EXT, 50);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_REM, 50);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_DATA, 220);
-    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_TRIGGER, 220);
-    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_MODS, 220);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_TRIGGER, 270);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_MODS, 270);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_COUNT, 80);
     ui->tableSender->setHorizontalHeaderLabels(headers);
 }
@@ -693,6 +693,12 @@ void FrameSenderWindow::processModifierText(int line)
     //Example line:
     //d0 = D0 + 1,d1 = id:0x200:d3 + id:0x200:d4 AND 0xF0 - Original version
     //D0=D0+1,D1=ID:0x200:D3+ID:0x200:D4&0xF0
+
+    //[BMS_TargetVoltage]=45 would set the value of signal BMS_TargetVoltage to 45
+
+    //[BMS_TargetVoltage]=[0x234:BMS_CurrentVoltage] + 4 would instead grab the value
+    //of BMS_CurrentVoltage from ID 0x234, add 4 to it, and set BMS_TargetVoltage to that value.
+
     //This is certainly much harder to parse than the trigger definitions.
     //the left side of the = has to be D0 to D7. After that there is a string of
     //data. Spaces used to be required but no longer are. This makes parsing harder but data entry easier
@@ -710,22 +716,33 @@ void FrameSenderWindow::processModifierText(int line)
             Modifier thisMod;
             thisMod.destByte = 0;
 
-            QString leftSide = Utility::grabAlphaNumeric(mods[i]);
-            if (leftSide.startsWith("D") && leftSide.length() == 2)
+            QRegularExpression regex;
+            QRegularExpressionMatch match;
+
+            regex.setPattern("^\\[(\\w+)]=(\\w+)");
+            match = regex.match(mods[i]);
+            if (match.hasMatch())
             {
-                thisMod.destByte = leftSide.right(1).toInt();
+                thisMod.destByte = -1;
+                thisMod.signalName = match.captured(1);
+                mods[i] = match.captured(2);
                 thisMod.operations.clear();
             }
             else
             {
-                qDebug() << "Something wrong with lefthand val";
-                continue;
+                QString leftSide = Utility::grabAlphaNumeric(mods[i]);
+                if (leftSide.startsWith("D") && leftSide.length() == 2)
+                {
+                    thisMod.destByte = leftSide.right(1).toInt();
+                    thisMod.operations.clear();
+                    if (!(Utility::grabOperation(mods[i]) == "="))
+                    {
+                        qDebug() << "Err: No = after lefthand val";
+                        continue;
+                    }
+                }
             }
-            if (!(Utility::grabOperation(mods[i]) == "="))
-            {
-                qDebug() << "Err: No = after lefthand val";
-                continue;
-            }
+
             abort = false;
 
             token = Utility::grabAlphaNumeric(mods[i]);
@@ -1054,8 +1071,6 @@ void FrameSenderWindow::processCellChange(int line, int col)
             }
             break;
         case ST_COLS::SENDTAB_COL_DATA: //Data bytes
-            for (int i = 0; i < 8; i++) sendingData[line].payload().data()[i] = 0;
-
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
             tokens = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
 #else

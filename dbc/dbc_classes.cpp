@@ -166,12 +166,16 @@ QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
             if (sig->processAsText(frame, sigString))
             {
                 qDebug() << "Returned value: " << sigString;
+                if (!build.isEmpty() && !sigString.isEmpty())
+                    build.append("\n");
                 build.append(sigString);
-                build.append("\n");
                 if (sig->isMultiplexor)
                 {
                     qDebug() << "Spelunkin!";
-                    build.append(sig->processSignalTree(frame));
+                    auto subTreeString = sig->processSignalTree(frame);
+                    if (!build.isEmpty() && !subTreeString.isEmpty())
+                        build.append("\n");
+                    build.append(subTreeString);
                 }
             }
         }
@@ -300,12 +304,12 @@ QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outpu
             }
         }
         if (!foundVal) outputString += QString::number(intVal);
-        if (outputUnit) outputString += unitName;
+        if (outputUnit) outputString += " " + unitName;
     }
     else //otherwise display the actual number and unit (if it exists)
     {
        outputString += (isInteger ? QString::number(intVal) : QString::number(floatVal));
-       if (outputUnit) outputString += unitName;
+       if (outputUnit) outputString += " " + unitName;
     }
     return outputString;
 }

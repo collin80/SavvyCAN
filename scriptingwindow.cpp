@@ -41,8 +41,11 @@ ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *paren
     connect(ui->btnRecompile, &QAbstractButton::pressed, this, &ScriptingWindow::recompileScript);
     connect(ui->btnRemoveScript, &QAbstractButton::pressed, this, &ScriptingWindow::deleteCurrentScript);
     connect(ui->btnRevertScript, &QAbstractButton::pressed, this, &ScriptingWindow::revertScript);
+    connect(ui->btnReloadScript, &QAbstractButton::pressed, this, &ScriptingWindow::reloadScript);
     connect(ui->btnSaveScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveScript);
+    connect(ui->btnSaveAsScript, &QAbstractButton::pressed, this, &ScriptingWindow::saveAsScript);
     connect(ui->btnClearLog, &QAbstractButton::pressed, this, &ScriptingWindow::clickedLogClear);
+    connect(ui->btnSaveLog, &QAbstractButton::pressed, this, &ScriptingWindow::saveLog);
     connect(ui->listLoadedScripts, &QListWidget::currentRowChanged, this, &ScriptingWindow::changeCurrentScript);
     connect(ui->tableVariables, SIGNAL(cellChanged(int,int)), this, SLOT(updatedValue(int, int)));
 
@@ -302,6 +305,21 @@ void ScriptingWindow::refreshSourceWindow()
 
 void ScriptingWindow::saveScript()
 {
+    QFile *outFile = new QFile(currentScript->filePath);
+
+    if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        delete outFile;
+        return;
+    }
+    outFile->write(editor->toPlainText().toUtf8());
+    currentScript->scriptText = editor->toPlainText();
+    outFile->close();
+    delete outFile;
+}
+
+void ScriptingWindow::saveAsScript()
+{
     QString filename;
     QFileDialog dialog(this);
     QSettings settings;
@@ -358,6 +376,38 @@ void ScriptingWindow::revertScript()
     }
 }
 
+void ScriptingWindow::reloadScript()
+{
+    QMessageBox msgBox;
+    msgBox.setText("Are you sure you'd like to reload from disk?");
+    msgBox.setInformativeText("Really do it?");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::Cancel);
+    int ret = msgBox.exec();
+    switch (ret)
+    {
+        case QMessageBox::Yes: 
+        {
+            // get the latest version from disk and set in the editor/state
+            QFile scriptFile(currentScript->filePath);
+            if (scriptFile.open(QIODevice::ReadOnly | QIODevice::Text))
+            {
+                QString contents = scriptFile.readAll();
+                scriptFile.close();
+                editor->setPlainText(contents);
+                currentScript->scriptText = contents;
+                currentScript->compileScript();
+            }
+            break;
+        }
+        case QMessageBox::No:
+            break;
+        default:
+            // should never be reached
+            break;
+    }
+}
+
 void ScriptingWindow::recompileScript()
 {
     if (currentScript)
@@ -371,6 +421,45 @@ void ScriptingWindow::clickedLogClear()
 {
     ui->listLog->clear();
     elapsedTime.start();
+}
+
+void ScriptingWindow::saveLog()
+{
+    QString filename;
+    QFileDialog dialog(this);
+    QSettings settings;
+
+    QStringList filters;
+    filters.append(QString(tr("Log File (*.log)")));
+
+    dialog.setDirectory(settings.value("ScriptingWindow/LoadSaveDirectory", dialog.directory().path()).toString());
+    dialog.setFileMode(QFileDialog::AnyFile);
+    dialog.setNameFilters(filters);
+    dialog.setViewMode(QFileDialog::Detail);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        filename = dialog.selectedFiles()[0];
+        if (!filename.contains('.')) filename += ".log";
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            QFile *outFile = new QFile(filename);
+
+            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                delete outFile;
+                return;
+            }
+            int c = ui->listLog ->count();
+            for (int row = 0; row < c; row++) {
+                outFile->write(ui->listLog->item(row)->data(Qt::DisplayRole).toString().toUtf8() + "\n");
+            }
+            outFile->close();
+            delete outFile;
+            settings.setValue("ScriptingWindow/LoadSaveDirectory", dialog.directory().path());
+        }
+    }
 }
 
 void ScriptingWindow::log(QString text)
