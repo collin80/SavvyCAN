@@ -2,6 +2,7 @@
 #define DISCRETESTATEWINDOW_H
 
 #include <QDialog>
+#include <QHash>
 #include <QTimer>
 #include "can_structs.h"
 

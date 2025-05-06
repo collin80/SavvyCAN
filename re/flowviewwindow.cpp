@@ -267,6 +267,7 @@ void FlowViewWindow::handleTableCellChange(int row, int col)
         {
             if (graphRef[row]) ui->graphView->removeGraph(graphRef[row]);
             graphRef[row] = nullptr;
+            qDebug() << "Removed graph #" << row;
         }
         //if (!graphRef[row]) return;
         //graphRef[row]->setVisible( (ui->tableBytes->item(row, col)->checkState()==Qt::Checked)?true:false );
@@ -621,6 +622,7 @@ void FlowViewWindow::createGraph(int byteNum)
     bool graphByTime = ui->cbTimeGraph->isChecked();
 
     int numEntries = frameCache.count();
+    qDebug() << "Number of entries:" << numEntries;
 
     x[byteNum].clear();
     y[byteNum].clear();
@@ -661,7 +663,7 @@ void FlowViewWindow::createGraph(int byteNum)
     ui->graphView->graph()->setData(x[byteNum],y[byteNum]);
     ui->graphView->graph()->setLineStyle(QCPGraph::lsLine); //connect points with lines
     QPen graphPen;
-    graphPen.setColor(graphColors[byteNum]);
+    graphPen.setColor(graphColors[byteNum % 8]);
     graphPen.setWidth(1);
     ui->graphView->graph()->setPen(graphPen);
     ui->graphView->axisRect()->setupFullAxesBox();

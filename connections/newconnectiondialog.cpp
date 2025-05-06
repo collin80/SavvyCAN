@@ -200,7 +200,7 @@ void NewConnectionDialog::selectRemote()
 
 void NewConnectionDialog::selectKayak()
 {
-    ui->lPort->setText("Available Bus(ses):");
+    ui->lPort->setText("Available Bus(<bus,...>@can://<ip>:<port>):");
 
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
