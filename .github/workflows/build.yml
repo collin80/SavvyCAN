@@ -3,12 +3,11 @@ name: Build
 on:
   push:
     branches:
-      - "QT6WIP"
-      
+      - "QT6WIP"      
 jobs:
   buildlinux:
     name: Linux x64
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Prepare Environment
@@ -41,7 +40,7 @@ jobs:
           name: SavvyCAN-Linux_x64.AppImage
           path: SavvyCAN-*x86_64.AppImage
       
-  buildmacos:
+  buildmacos86:
     name: macOS x64
     runs-on: macos-13
 
@@ -66,11 +65,42 @@ jobs:
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           cp /usr/local/share/qt/plugins/canbus/* SavvyCAN.app/Frameworks
           macdeployqt SavvyCAN.app -dmg
+          mv SavvyCAN.dmg SavvyCAN_x64.dmg
       
       - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_x64.dmg
-          path: SavvyCAN.dmg
+          path: SavvyCAN_x64.dmg
+
+  buildmacos-arm64:
+    name: macOS ARM64
+    runs-on: macos-14
+
+    steps:
+      - name: Prepare macOS Environment
+        run: |
+            brew install qt6
+            brew link qt6 --force
+
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: Compile     
+        run: |
+          qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
+          make -j`sysctl kern.aioprocmax | awk '{print $2}'`
+
+      - name: Package     
+        run: |
+          mkdir -p SavvyCAN.app/Contents/MacOS/help
+          cp -R help/* SavvyCAN.app/Contents/MacOS/help
+          macdeployqt SavvyCAN.app -dmg
+          mv SavvyCAN.dmg SavvyCAN_arm64.dmg
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SavvyCAN-macOS_ARM64.dmg
+          path: SavvyCAN_arm64.dmg
           
   buildwindows:
     name: Windows x64
@@ -130,7 +160,7 @@ jobs:
   pre-release:
     name: "pre-release"
     runs-on: "ubuntu-latest"
-    needs: [buildwindows, buildmacos, buildlinux]
+    needs: [buildwindows, buildmacos86, buildmacos-arm64, buildlinux]
 
     steps:
       - uses: actions/checkout@v3
@@ -148,12 +178,13 @@ jobs:
           files: |
             SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
             SavvyCAN-Windows_x64_CIBuild.zip
-            SavvyCAN-macOS_x64.dmg/SavvyCAN.dmg
+            SavvyCAN-macOS_x64.dmg/SavvyCAN_x64.dmg
+            SavvyCAN-macOS_ARM64.dmg/SavvyCAN_arm64.dmg
           
   notify:
     name: Notify Discord
     runs-on: ubuntu-latest
-    needs: [buildwindows, buildmacos, buildlinux]
+    needs: [buildwindows, buildmacos86, buildmacos-arm64, buildlinux]
     steps:
       - id: msg_var
         name: remove newlines

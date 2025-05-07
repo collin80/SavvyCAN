@@ -14,7 +14,7 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
 {
     switch(pType) {
     case SERIALBUS:
-        return new SerialBusConnection(pPortName, pDriverName);
+      return new SerialBusConnection(pPortName, pDriverName, pBusSpeed, pDataRate, pCanFd);
     case GVRET_SERIAL:
         if(pPortName.contains(".") && !pPortName.contains("tty") && !pPortName.contains("serial"))
         return new GVRetSerial(pPortName, true);

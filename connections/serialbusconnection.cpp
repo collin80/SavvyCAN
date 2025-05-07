@@ -11,8 +11,8 @@
 /****    class definition       ****/
 /***********************************/
 
-SerialBusConnection::SerialBusConnection(QString portName, QString driverName) :
-    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,0, false, 0 ,1, 4000, true),
+SerialBusConnection::SerialBusConnection(QString portName, QString driverName, int pBusSpeed, int pDataRate, bool pCanFd) :
+    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,pBusSpeed, pCanFd, pDataRate ,1, 4000, true),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
@@ -211,7 +211,7 @@ void SerialBusConnection::framesReceived()
                 frame_p->isReceived = !recFrame.hasLocalEcho();
 
                 if (useSystemTime) {
-                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
                 else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis));
 

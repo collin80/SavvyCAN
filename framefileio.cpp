@@ -1454,7 +1454,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         QByteArray bytes(numBytes, 0);
                         thisFrame.isReceived = true;
                         thisFrame.bus = 0;
-                        if (thisFrame.frameId() > 0x7FF)
+                        if ((thisFrame.frameId() > 0x10000000) || (tokens[3].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1506,7 +1506,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = tokens[2].toInt();
-                        if (thisFrame.frameId() > 0x7FF)
+                        if ((thisFrame.frameId() > 0x10000000) || (tokens[4].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1548,7 +1548,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = 0;
-                        if (thisFrame.frameId() > 0x7FF)
+                        if ((thisFrame.frameId() > 0x10000000) || (tokens[3].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -1600,7 +1600,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.isReceived = true;
                         thisFrame.bus = tokens[3].toInt();
-                        if (thisFrame.frameId() > 0x7FF)
+                        if ((thisFrame.frameId() > 0x10000000) || (tokens[4].length() >= 8))
                         {
                             thisFrame.setExtendedFrameFormat(true);
                         }
@@ -3787,12 +3787,17 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CANFrame>* frames)
             if (line.contains('[')) //the expanded format (second one from the above list)
             {
                 //(1551774790.942758) can1 7A8 [8] F4 DC D1 83 0E 02 00 00
+                //(1551774790.942758) can1 7A8 [08] F4 DC D1 83 0E 02 00 00
                 //     0               1     2   3  4 5  6  7  8  9  10 11
                 thisFrame.setFrameId(tokens[2].toLong(nullptr, 16));
                 if (thisFrame.frameId() > 0x7FF) thisFrame.setExtendedFrameFormat(true);
                 else thisFrame.setExtendedFrameFormat(false);
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                int numBytes = tokens[3].at(1) - '0';
+                int numBytes;
+		if (tokens[3].at(2) == ']')
+		    numBytes = tokens[3].at(1) - '0';
+		else
+		    numBytes = (tokens[3].at(1) - '0')*10 + (tokens[3].at(2) - '0');
                 QByteArray bytes(numBytes, 0);
                 for (int c = 0; c < numBytes; c++)
                 {

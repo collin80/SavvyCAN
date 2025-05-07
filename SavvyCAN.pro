@@ -270,7 +270,7 @@ examplefiles.path = $$PREFIX/share/savvycan/examples
 INSTALLS += examplefiles
 
 iconfiles.files=icons
-iconfiles.path = $$PREFIX/share/icons
+iconfiles.path = $$PREFIX/share
 INSTALLS += iconfiles
 
 helpfiles.files=help/*
