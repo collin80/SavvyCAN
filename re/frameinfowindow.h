@@ -35,7 +35,7 @@ private slots:
 
 private:
     Ui::FrameInfoWindow *ui;
-    QCustomPlot *graphByte[8];
+    QCustomPlot *graphByte[64];
     QCustomPlot *graphHistogram;
     CANDataGrid *heatmap;
 
@@ -44,11 +44,11 @@ private:
     const QVector<CANFrame> *modelFrames;
     bool useOpenGL;
     bool useHexTicker;
-    static const QColor byteGraphColors[8];
-    static QPen bytePens[8];
+    static const QColor byteGraphColors[64];
+    static QPen bytePens[64];
     DBCHandler *dbcHandler;
 
-    QCPGraph *graphRef[8];
+    QCPGraph *graphRef[64];
 
     void refreshIDList();
     void closeEvent(QCloseEvent *event);
