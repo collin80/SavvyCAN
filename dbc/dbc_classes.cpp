@@ -17,7 +17,10 @@ void DBC_SIGNAL::addMultiplexRange(int min, int max)
     if (min != max)
         hasExtendedMultiplexing = true;
     isMultiplexed = true;
-    multiplexLowAndHighValues.append(QPair<int, int>(min, max));
+    //it is very likely that things that include extended multiplexing will have at least two definitions
+    //which are identical. So, detect this and don't store on subsequent calls
+    if (!multiplexLowAndHighValues.contains(QPair<int, int>(min, max)))
+        multiplexLowAndHighValues.append(QPair<int, int>(min, max));
 }
 
 bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
@@ -74,6 +77,15 @@ void DBC_SIGNAL::copyMultiplexValuesFromSignal(const DBC_SIGNAL &signal)
     for (auto multiplexSignalPair : signal.multiplexLowAndHighValues) {
         multiplexLowAndHighValues.append(multiplexSignalPair);
     }
+}
+
+/*
+ * multiplexLowAndHighValues is private but the DBC saving code needs to be able to save a reasonable value for the multiplex value
+ * for non-extended multiplex values. So, we grab the first element of the first item which should be the non-extended value
+ */
+int DBC_SIGNAL::getSimpleMultiplexValue()
+{
+    return multiplexLowAndHighValues.at(0).first;
 }
 
 /**

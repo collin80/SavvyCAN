@@ -1492,7 +1492,8 @@ bool DBCFile::saveFile(QString fileName)
 
             if (sig->isMultiplexed)
             {
-                msgOutput.append(" m" + QString::number(sig->multiplexLowValue));
+                msgOutput.append(" m" + QString::number(sig->getSimpleMultiplexValue()));
+
             }
             if (sig->isMultiplexor)
             {

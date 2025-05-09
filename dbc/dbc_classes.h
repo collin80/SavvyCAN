@@ -88,7 +88,7 @@ class DBC_SIGNAL;
 
 class DBC_SIGNAL
 {
-public: //TODO: this is sloppy. It shouldn't all be public!
+public: //TODO: Clean up this class so that not everything is public. There is one private member which is a start...
     DBC_SIGNAL() = default;
 
     enum DbcMuxStringFormat {
@@ -103,8 +103,6 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     bool isMultiplexor = false;
     bool isMultiplexed = false;
     void addMultiplexRange(int min, int max);
-    int multiplexHighValue = 0;
-    int multiplexLowValue = 0;
     bool hasExtendedMultiplexing = false;
     QList<DBC_SIGNAL *> multiplexedChildren;
     DBC_SIGNAL *multiplexParent = nullptr;
@@ -137,6 +135,7 @@ public: //TODO: this is sloppy. It shouldn't all be public!
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
     bool isSignalInMessage(const CANFrame &frame);
     bool isValueMatchingMultiplex(int val) const;
+    int getSimpleMultiplexValue();
 
 
     friend bool operator<(const DBC_SIGNAL& l, const DBC_SIGNAL& r)
