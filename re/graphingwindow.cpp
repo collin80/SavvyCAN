@@ -1251,13 +1251,23 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         else if (Utility::timeStyle == TS_CLOCK)
         {
             QDateTime dt = QDateTime::fromMSecsSinceEpoch((frame.timeStamp().microSeconds() / 1000) - params.xbias);
-            xVal = (dt.time().second() + dt.time().minute() * 60 + dt.time().hour() * 3600);
+            xVal = (dt.time().msec()/1000.0 + dt.time().second() + dt.time().minute() * 60 + dt.time().hour() * 3600);
         }
         else
         {
             xVal = (frame.timeStamp().microSeconds() - params.xbias);
         }
-        yVal = (tempVal * params.scale) + params.bias;
+
+        //there really is no way to set a graphable item as being stored as a float unless it was an actual DBC signal
+        //So, if we have a DBC signal associated then use that, otherwise try to turn the above integer calculation into
+        //a final output by using the scale and bias.
+        if (params.associatedSignal)
+        {
+            //if for some reason the processAsDouble fails we'll fall back on manual approach
+            if (!params.associatedSignal->processAsDouble(frame, yVal)) yVal = (tempVal * params.scale) + params.bias;
+        }
+        else yVal = (tempVal * params.scale) + params.bias;
+
         params.x.append(xVal);
         params.y.append(yVal);
         x.append(xVal);
@@ -1267,7 +1277,6 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
         QString tempStr;
         if (params.associatedSignal)
         {
-
             bool isValid = params.associatedSignal->getValueString(tempVal, tempStr);
             if (isValid)
             {
@@ -1380,7 +1389,15 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
         }
         tempVal = Utility::processIntegerSignal(frameCache[k].payload(), sBit, bits, intelFormat, isSigned); //& params.mask;
         //qDebug() << tempVal;
-        y = (tempVal * params.scale) + params.bias;
+
+        if (params.associatedSignal)
+        {
+            //if for some reason the processAsDouble fails we'll fall back on manual approach
+            if (!params.associatedSignal->processAsDouble(frameCache[k], y))
+                y = (tempVal * params.scale) + params.bias;
+        }
+        else y = (tempVal * params.scale) + params.bias;
+
         params.y.append( y );
 
         if (Utility::timeStyle == TS_SECONDS)
