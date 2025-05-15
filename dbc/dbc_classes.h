@@ -131,6 +131,7 @@ public: //TODO: Clean up this class so that not everything is public. There is o
     bool getValueString(int64_t intVal, QString &outString);
     QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false, bool outputUnit = true);
     QString processSignalTree(const CANFrame &frame);
+    void processAvailableSignals(const CANFrame &frame, std::map<DBC_SIGNAL, QString> &displayValues);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
     bool isSignalInMessage(const CANFrame &frame);
