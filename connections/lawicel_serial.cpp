@@ -122,7 +122,7 @@ void LAWICELSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         /* update baud rates */
         QByteArray buffer;
         //sendDebug("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)));
-        buffer[0] = (char)0xF1; //start of a command over serial
+        buffer.append((char)0xF1); //start of a command over serial
         //sendToSerial(buffer);
     }
 
@@ -135,7 +135,7 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
     int c;
     quint32 ID;
 
-    //qDebug() << "Sending out lawicel frame with id " << frame.ID << " on bus " << frame.bus;
+    qDebug() << "Sending out lawicel frame on bus " << frame.bus;
 
     framesRapid++;
 
@@ -180,6 +180,8 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
             buildStr = QString::asprintf("t%03X%u", ID, static_cast<unsigned int>(frame.payload().length()));
         }
     }
+    int sizeneed = buildStr.length() + (frame.payload().length()*2) +1;
+    buffer.resize(sizeneed);
     foreach (QChar chr, buildStr)
     {
         buffer[idx] = chr.toLatin1();
