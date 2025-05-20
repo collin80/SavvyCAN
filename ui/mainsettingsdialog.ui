@@ -53,6 +53,13 @@
           </item>
          </layout>
         </item>
+        <item>
+         <widget class="QCheckBox" name="cbMarkChangedBytes">
+          <property name="text">
+           <string>Highlight changed bytes in Overwrite mode</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -484,6 +491,7 @@
  </widget>
  <tabstops>
   <tabstop>cbMainAutoScroll</tabstop>
+  <tabstop>cbMarkChangedBytes</tabstop>
   <tabstop>cbRestorePositions</tabstop>
   <tabstop>cbLoadConnections</tabstop>
   <tabstop>cbDisplayHex</tabstop>
