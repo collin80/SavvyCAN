@@ -180,6 +180,10 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
             buildStr = QString::asprintf("t%03X%u", ID, static_cast<unsigned int>(frame.payload().length()));
         }
     }
+
+    int neededSize = buildStr.length() + (frame.payload().length() * 2) + 1;  // +1 for CR
+    buffer.resize(neededSize);
+
     foreach (QChar chr, buildStr)
     {
         buffer[idx] = chr.toLatin1();
