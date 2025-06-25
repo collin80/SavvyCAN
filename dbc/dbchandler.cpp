@@ -1131,8 +1131,7 @@ bool DBCFile::loadFile(QString fileName)
     }
 
     //upon loading the file add our custom foreground and background color attributes if they don't exist already
-    DBC_ATTRIBUTE *bgAttr = findAttributeByName("GenMsgBackgroundColor");
-    if (!bgAttr)
+    if (!findAttributeByName("GenMsgBackgroundColor"))
     {
         attr.attrType = ATTR_TYPE_MESSAGE;
         attr.defaultValue = QApplication::palette().color(QPalette::Base).name();
@@ -1142,11 +1141,9 @@ bool DBCFile::loadFile(QString fileName)
         attr.name = "GenMsgBackgroundColor";
         attr.valType = ATTR_STRING;
         dbc_attributes.append(attr);
-        bgAttr = findAttributeByName("GenMsgBackgroundColor");
     }
 
-    DBC_ATTRIBUTE *fgAttr = findAttributeByName("GenMsgForegroundColor");
-    if (!fgAttr)
+    if (!findAttributeByName("GenMsgForegroundColor"))
     {
         attr.attrType = ATTR_TYPE_MESSAGE;
         attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
@@ -1156,7 +1153,6 @@ bool DBCFile::loadFile(QString fileName)
         attr.name = "GenMsgForegroundColor";
         attr.valType = ATTR_STRING;
         dbc_attributes.append(attr);
-        fgAttr = findAttributeByName("GenMsgForegroundColor");
     }
 
     DBC_ATTRIBUTE *mc_attr = findAttributeByName("matchingcriteria");
@@ -1179,19 +1175,16 @@ bool DBCFile::loadFile(QString fileName)
         messageHandler->setFilterLabeling(false);
     }
 
-    QColor DefaultBG = QColor(bgAttr->defaultValue.toString());
-    QColor DefaultFG = QColor(fgAttr->defaultValue.toString());
-
-    DBC_ATTRIBUTE_VALUE *thisBG;
-    DBC_ATTRIBUTE_VALUE *thisFG;
+    QColor DefaultBG = QColor(findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
+    QColor DefaultFG = QColor(findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
 
     for (int x = 0; x < messageHandler->getCount(); x++)
     {
         DBC_MESSAGE *msg = messageHandler->findMsgByIdx(x);
         msg->bgColor = DefaultBG;
         msg->fgColor = DefaultFG;
-        thisBG = msg->findAttrValByName("GenMsgBackgroundColor");
-        thisFG = msg->findAttrValByName("GenMsgForegroundColor");
+        DBC_ATTRIBUTE_VALUE *thisBG = msg->findAttrValByName("GenMsgBackgroundColor");
+        DBC_ATTRIBUTE_VALUE *thisFG = msg->findAttrValByName("GenMsgForegroundColor");
         if (thisBG) msg->bgColor = QColor(thisBG->value.toString());
         if (thisFG) msg->fgColor = QColor(thisFG->value.toString());
         for (int y = 0; y < msg->sigHandler->getCount(); y++)
