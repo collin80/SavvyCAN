@@ -191,18 +191,21 @@
         </widget>
        </item>
        <item>
-        <widget class="QSpinBox" name="spinReplyOffset">
+        <widget class="HexSpinBox" name="spinReplyOffset">
          <property name="enabled">
           <bool>false</bool>
          </property>
          <property name="minimum">
-          <number>-128</number>
+          <number>-1024</number>
          </property>
          <property name="maximum">
-          <number>128</number>
+          <number>1024</number>
          </property>
          <property name="value">
           <number>8</number>
+         </property>
+         <property name="displayIntegerBase">
+          <number>16</number>
          </property>
         </widget>
        </item>
@@ -493,6 +496,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>HexSpinBox</class>
+   <extends>QSpinBox</extends>
+   <header>utils/HexSpinBox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>spinStartID</tabstop>
   <tabstop>spinEndID</tabstop>
