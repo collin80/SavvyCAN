@@ -1426,6 +1426,9 @@ bool DBCFile::saveFile(QString fileName)
                     case QVariant::Type::String:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
+                    case QVariant::Type::Bool:
+                        attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
+                        break;
                     default:
                         attrValOutput.append(val.value.toString() + ";\n");
                         break;
@@ -1470,6 +1473,9 @@ bool DBCFile::saveFile(QString fileName)
                 {
                 case QVariant::Type::String:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
+                    break;
+                case QVariant::Type::Bool:
+                    attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                     break;
                 default:
                     attrValOutput.append(val.value.toString() + ";\n");
@@ -1548,6 +1554,9 @@ bool DBCFile::saveFile(QString fileName)
                     {
                     case QVariant::Type::String:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
+                        break;
+                    case QVariant::Type::Bool:
+                        attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:
                         attrValOutput.append(val.value.toString() + ";\n");
