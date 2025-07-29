@@ -102,7 +102,7 @@ DBC_MESSAGE* DBCMessageHandler::findMsgByID(quint32 id)
         {
             // Match the bits 14-26 (Arbitration Id) of GMLAN 29bit header
             if ( (arbId != 0) && (i.key() & 0x3FFE000) == arbId )
-                i.value();
+                return i.value();
         }
     }
     return nullptr;

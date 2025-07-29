@@ -132,6 +132,7 @@ void UDSScanWindow::displayScanEntry(int idx)
     ui->spinStartID->setValue(currEditEntry->startID);
     ui->spinEndID->setValue(currEditEntry->endID);
     ui->spinReplyOffset->setValue(currEditEntry->idOffset);
+    ui->spinReplyOffset->setEnabled(!currEditEntry->bAdaptiveOffset);
     ui->cbAllowAdaptiveOffset->setChecked(currEditEntry->bAdaptiveOffset);
     ui->ckShowNoReply->setChecked(currEditEntry->bShowNoReplies);
     ui->cbBuses->setCurrentIndex(currEditEntry->busToScan);

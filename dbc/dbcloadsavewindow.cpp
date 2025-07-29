@@ -362,7 +362,7 @@ void DBCLoadSaveWindow::cellChanged(int row, int col)
                 attr.enumVals.clear();
                 attr.lower = 0;
                 attr.upper = 0;
-                attr.name = "labelfilters";
+                attr.name = "filterlabeling";
                 attr.valType = ATTR_INT;
                 file->dbc_attributes.append(attr);
                 file->messageHandler->setFilterLabeling(labelFilters);

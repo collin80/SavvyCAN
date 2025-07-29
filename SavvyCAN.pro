@@ -155,6 +155,7 @@ HEADERS  += mainwindow.h \
     scriptingwindow.h \
     scriptcontainer.h \
     canfilter.h \
+    utils/HexSpinBox.h \
     utils/lfqueue.h \
     motorcontrollerconfigwindow.h \
     connections/canconnection.h \
