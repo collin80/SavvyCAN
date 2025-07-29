@@ -460,12 +460,8 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     int offset = 0;
     bool isMessageMultiplexor = false;
     //bool isMultiplexed = false;
-    DBC_SIGNAL *sig;
 
-    sig = new DBC_SIGNAL();
-    sig->addMultiplexRange(0, 0);
-    sig->isMultiplexed = false;
-    sig->isMultiplexor = false;
+    DBC_SIGNAL *sig = new DBC_SIGNAL();
 
     qDebug() << "Found a SG line";
     regex.setPattern("^SG\\_ *([-\\w]+) +M *: *(\\d+)\\|(\\d+)@(\\d+)([\\+|\\-]) \\(([0-9.+\\-eE]+),([0-9.+\\-eE]+)\\) \\[([0-9.+\\-eE]+)\\|([0-9.+\\-eE]+)\\] \\\"(.*)\\\" (.*)");
