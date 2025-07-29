@@ -463,9 +463,7 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
     DBC_SIGNAL *sig;
 
     sig = new DBC_SIGNAL();
-
-    sig->multiplexLowValue = 0;
-    sig->multiplexHighValue = 0;
+    sig->addMultiplexRange(0, 0);
     sig->isMultiplexed = false;
     sig->isMultiplexor = false;
 
