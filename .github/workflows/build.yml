@@ -44,8 +44,8 @@ jobs:
     steps:
       - name: Prepare macOS Environment
         run: |
-            brew install qt5
-            brew link qt5 --force
+            brew install qt@5
+            brew link qt@5 --force
 
       - name: Clone
         uses: actions/checkout@v3
@@ -74,8 +74,8 @@ jobs:
     steps:
       - name: Prepare macOS Environment
         run: |
-            brew install qt5
-            brew link qt5 --force
+            brew install qt@5
+            brew link qt@5 --force
 
       - name: Clone
         uses: actions/checkout@v3
@@ -99,7 +99,7 @@ jobs:
           
   buildwindows:
     name: Windows x64
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:      
       - name: Prepare Qt Libraries
@@ -111,8 +111,7 @@ jobs:
       - name: Compile
         shell: cmd
         run: | 
-          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           qmake CONFIG+=release SavvyCAN.pro
           nmake /C
 
@@ -189,7 +188,7 @@ jobs:
           release_msg="${release_msg//$'('/'-'}"
           release_msg="${release_msg//$')'/'-'}"
           echo $release_msg
-          echo "::set-output name=msg::$release_msg"
+          echo "{msg}={$release_msg}" >> $GITHUB_OUTPUT
                                                                   
       - name: Notify Discord
         run: |
