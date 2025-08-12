@@ -184,15 +184,20 @@ void TriggerDialog::regenerateCurrentListItem()
             //the right message. Should at least search by message name instead
             //if possible.
             DBC_MESSAGE *msg = dbcHandler->findMessage(trig.ID);
-            int numSigs = msg->sigHandler->getCount();
-            for (int s = 0; s < numSigs; s++)
+            if (msg)
             {
-                DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
-
-                entries.append(sig->name);
+                int numSigs = msg->sigHandler->getCount();
+                for (int s = 0; s < numSigs; s++)
+                {
+                    DBC_SIGNAL *sig = msg->sigHandler->findSignalByIdx(s);
+                    if (sig)
+                    {
+                        entries.append(sig->name);
+                    }
+                }
+                entries.sort();
+                ui->cmSignal->addItems(entries);
             }
-            entries.sort();
-            ui->cmSignal->addItems(entries);
         }
     }
 
