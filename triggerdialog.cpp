@@ -9,6 +9,9 @@ TriggerDialog::TriggerDialog(QList<Trigger> trigs, QWidget *parent) :
     ui->setupUi(this);
     triggers.clear();
     triggers.append(trigs); //make sure it's just a clone of the existing triggers
+    
+    // Set wider minimum width for Msg ID combo box to accommodate extended IDs
+    ui->cmMsgID->setMinimumWidth(250);
 
     //if there are no triggers then create a default one
     if (triggers.count() == 0)
