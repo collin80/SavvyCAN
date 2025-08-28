@@ -6,6 +6,7 @@
 class CANBus
 {
     int speed;
+    int samplePoint;
     bool listenOnly;
     bool singleWire;
     bool active; //is this bus turned on?
@@ -20,6 +21,7 @@ public:
     bool operator==(const CANBus&) const;
 
     void setSpeed(int); // new speed
+    void setSamplePoint(int);
     void setListenOnly(bool); //bool for whether to only listen
     void setSingleWire(bool); //bool for whether to use single wire mode
     void setActive(bool); //whether this bus should be enabled or not.
@@ -27,6 +29,7 @@ public:
     void setDataRate(int newSpeed);
 
     int getSpeed() const;
+    int getSamplePoint() const;
     int getDataRate() const;
     bool isListenOnly() const;
     bool isSingleWire() const;
