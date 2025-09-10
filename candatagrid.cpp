@@ -532,6 +532,7 @@ void CANDataGrid::paintCommonEnding()
     //and we don't need these anymore after we're done drawing
     delete painter;
     delete smallMetric;
+    delete largeMetric;
 }
 
 //given a grid cell we return which bit position that is within the CAN frame.

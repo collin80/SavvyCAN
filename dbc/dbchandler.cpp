@@ -266,11 +266,31 @@ DBCFile::DBCFile(const DBCFile& cpy) : QObject()
     fileName = cpy.fileName;
     filePath = cpy.filePath;
     assocBuses = cpy.assocBuses;
-    dbc_nodes.clear();
-    dbc_nodes.append(cpy.dbc_nodes);
+
+    clearAndDelete(dbc_nodes);
+
+    for (DBC_NODE* srcNode : cpy.dbc_nodes) {
+        if (srcNode) {
+            dbc_nodes.append(new DBC_NODE(*srcNode)); // deep copy not just pointers
+        }
+    }
+
     dbc_attributes.clear();
     dbc_attributes.append(cpy.dbc_attributes);
     isDirty = cpy.isDirty;
+}
+
+void DBCFile::clearAndDelete(QList<DBC_NODE *>& list)
+{
+    if (!list.empty()) {
+        qDeleteAll(list);
+        list.clear();
+    }
+}
+
+DBCFile::~DBCFile()
+{
+    clearAndDelete(dbc_nodes);
 }
 
 DBCFile& DBCFile::operator=(const DBCFile& cpy)
