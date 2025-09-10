@@ -59,23 +59,23 @@ class Network : public NetworkInterface
     Q_OBJECT
 
 public:
-    Network(QObject* parent = NULL);
+    Network(QObject* parent = nullptr);
 #ifndef QT_NO_SSL
-    Network(const QSslConfiguration& config, QObject* parent = NULL);
+    Network(const QSslConfiguration& config, QObject* parent = nullptr);
 #endif // QT_NO_SSL
 #ifdef QT_WEBSOCKETS_LIB
 #ifndef QT_NO_SSL
     Network(const QString& origin,
             QWebSocketProtocol::Version version,
             const QSslConfiguration* sslConfig,
-            QObject* parent = NULL);
+            QObject* parent = nullptr);
 #endif // QT_NO_SSL
     Network(const QString& origin,
             QWebSocketProtocol::Version version,
-            QObject* parent = NULL);
+            QObject* parent = nullptr);
 #endif // QT_WEBSOCKETS_LIB
     Network(SocketInterface* socketInterface, TimerInterface* timerInterface,
-            QObject* parent = NULL);
+            QObject* parent = nullptr);
     ~Network();
 
     void sendFrame(const Frame &frame);
@@ -91,7 +91,7 @@ public:
     void setSslConfiguration(const QSslConfiguration& config);
 #endif // QT_NO_SSL
 
-public slots:
+public Q_SLOTS:
     void connectToHost(const QHostAddress& host, const quint16 port);
     void connectToHost(const QString& hostName, const quint16 port);
     void disconnectFromHost();
@@ -99,7 +99,7 @@ public slots:
     void ignoreSslErrors();
 #endif // QT_NO_SSL
 
-protected slots:
+protected Q_SLOTS:
     void onSocketError(QAbstractSocket::SocketError socketError);
 
 protected:
@@ -125,7 +125,7 @@ protected:
     int _shift;
     QByteArray _data;
 
-protected slots:
+protected Q_SLOTS:
     void onSocketReadReady();
     void onDisconnected();
     void connectToHost();

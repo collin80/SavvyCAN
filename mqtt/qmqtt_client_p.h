@@ -60,7 +60,7 @@ public:
     ClientPrivate(Client* qq_ptr);
     ~ClientPrivate();
 
-    void init(const QHostAddress& host, const quint16 port, NetworkInterface* network = NULL);
+    void init(const QHostAddress& host, const quint16 port, NetworkInterface* network = nullptr);
 #ifndef QT_NO_SSL
     void init(const QString& hostName, const quint16 port, const QSslConfiguration& config,
               const bool ignoreSelfSigned=false);

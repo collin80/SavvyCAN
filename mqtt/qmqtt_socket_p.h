@@ -50,7 +50,7 @@ class Socket : public SocketInterface
 {
     Q_OBJECT
 public:
-    explicit Socket(QObject* parent = NULL);
+    explicit Socket(QObject* parent = nullptr);
     virtual	~Socket();
 
     virtual QIODevice *ioDevice();

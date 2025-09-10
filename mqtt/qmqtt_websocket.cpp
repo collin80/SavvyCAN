@@ -16,7 +16,7 @@ QMQTT::WebSocket::WebSocket(const QString& origin,
     , _ioDevice(new WebSocketIODevice(_socket, this))
 {
     initialize();
-    if (sslConfig != NULL)
+    if (sslConfig != nullptr)
         _socket->setSslConfiguration(*sslConfig);
     connect(_socket, &QWebSocket::sslErrors, this, &WebSocket::sslErrors);
 }

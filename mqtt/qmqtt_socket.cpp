@@ -41,9 +41,13 @@ QMQTT::Socket::Socket(QObject* parent)
     connect(_socket.data(), &QTcpSocket::connected,    this, &SocketInterface::connected);
     connect(_socket.data(), &QTcpSocket::disconnected, this, &SocketInterface::disconnected);
     connect(_socket.data(),
-            SIGNAL(error(QTcpSocket::error)),
-            this,
-            SLOT(errorHandler(SocketInterface::error)));
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+            static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QTcpSocket::errorOccurred),
+#else
+            static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QTcpSocket::error),
+#endif
+             this,
+             static_cast<void (SocketInterface::*)(QAbstractSocket::SocketError)>(&SocketInterface::error));
 }
 
 QMQTT::Socket::~Socket()

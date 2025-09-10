@@ -53,7 +53,7 @@ class Q_MQTT_EXPORT NetworkInterface : public QObject
 {
     Q_OBJECT
 public:
-    explicit NetworkInterface(QObject* parent = NULL) : QObject(parent) {}
+    explicit NetworkInterface(QObject* parent = nullptr) : QObject(parent) {}
     virtual ~NetworkInterface() {}
 
     virtual void sendFrame(const Frame& frame) = 0;
@@ -69,7 +69,7 @@ public:
     virtual void setSslConfiguration(const QSslConfiguration& config) = 0;
 #endif // QT_NO_SSL
 
-public slots:
+public Q_SLOTS:
     virtual void connectToHost(const QHostAddress& host, const quint16 port) = 0;
     virtual void connectToHost(const QString& hostName, const quint16 port) = 0;
     virtual void disconnectFromHost() = 0;
@@ -77,7 +77,7 @@ public slots:
     virtual void ignoreSslErrors() = 0;
 #endif // QT_NO_SSL
 
-signals:
+Q_SIGNALS:
     void connected();
     void disconnected();
     void received(const QMQTT::Frame& frame);
