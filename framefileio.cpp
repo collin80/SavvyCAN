@@ -1463,7 +1463,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                             thisFrame.setExtendedFrameFormat(false);
                         }
 
-                        if (tokens[5] == "R")
+                        if (tokens.value(5) == "R") // might be empty!
                         {
                             thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                         }
@@ -1514,7 +1514,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         {
                             thisFrame.setExtendedFrameFormat(false);
                         }
-                        if (tokens[7] == "R")
+                        if (tokens.value(7) == "R")
                         {
                             thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                         }
@@ -1556,7 +1556,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
                         {
                             thisFrame.setExtendedFrameFormat(false);
                         }
-                        if (tokens[6] == "R")
+                        if (tokens.value(6) == "R")
                         {
                             thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                         }
@@ -1642,10 +1642,7 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
 {
     QFile *inFile = new QFile(filename);
     QByteArray line;
-    //int lineCounter = 0;
-    //bool inHeader = true;
     bool isMatch = true;
-    QList<QByteArray> tokens;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -2577,7 +2574,6 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
     QFile *inFile = new QFile(filename);
     CANFrame thisFrame;
     QByteArray line;
-    uint64_t timeStamp = Utility::GetTimeMS();
     int lineCounter = 0;
     bool foundErrors = false;
 
@@ -2605,7 +2601,7 @@ bool FrameFileIO::loadLogFile(QString filename, QVector<CANFrame>* frames)
             if (tokens.length() >= 6)
             {
                 QList<QByteArray> timeToks = tokens[0].split(':');
-                timeStamp = (timeToks[0].toUInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toUInt() * (1000ul * 1000ul * 60ul))
+                uint64_t timeStamp = (timeToks[0].toUInt() * (1000ul * 1000ul * 60ul * 60ul)) + (timeToks[1].toUInt() * (1000ul * 1000ul * 60ul))
                       + (timeToks[2].toUInt() * (1000ul * 1000ul)) + (timeToks[3].toUInt() * 100ul);
                 thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
                 if (tokens[1].at(0) == 'R') thisFrame.isReceived = true;
