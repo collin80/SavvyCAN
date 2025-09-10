@@ -1405,7 +1405,7 @@ bool DBCFile::saveFile(QString fileName)
                     case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
-                    case QVariant::Type::Bool:
+                    case QMetaType::Bool:
                         attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:
@@ -1455,7 +1455,7 @@ bool DBCFile::saveFile(QString fileName)
                 case QMetaType::QString:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
                     break;
-                case QVariant::Type::Bool:
+                case QMetaType::Bool:
                     attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                     break;
                 default:
@@ -1538,7 +1538,7 @@ bool DBCFile::saveFile(QString fileName)
                     case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
-                    case QVariant::Type::Bool:
+                    case QMetaType::Bool:
                         attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:
