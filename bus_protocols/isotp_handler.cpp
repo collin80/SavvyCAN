@@ -1,7 +1,17 @@
 #include "isotp_handler.h"
-#include "connections/canconmanager.h"
+#include <QDebug>
 
-ISOTP_HANDLER::ISOTP_HANDLER()
+#define CAN_FRAME_SIZE  8
+#define FF_PCI_SIZE 2
+
+ISOTP_HANDLER::ISOTP_HANDLER(const QVector<CANFrame> &modelFrames,
+                             CanSendCallback sendCb,
+                             GetNoOfBusesCallback getBusesCb,
+                             PendingConnection pendingConn )
+    : modelFrames(modelFrames),
+      canSendCallback(sendCb),
+      getNoOfBusesCallback(getBusesCb),
+      pendingConnection(pendingConn)
 {
     useExtendedAddressing = false;
     isReceiving = false;
@@ -12,14 +22,12 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     lastSenderID = 0;
     padByte = (char)0xAA;
 
-    modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
-
-    connect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
+    connect(&frameTimer, &QTimer::timeout, this, &ISOTP_HANDLER::frameTimerTick);
 }
 
 ISOTP_HANDLER::~ISOTP_HANDLER()
 {
-    disconnect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
+    disconnect(&frameTimer, &QTimer::timeout, this, &ISOTP_HANDLER::frameTimerTick);
 }
 
 void ISOTP_HANDLER::setPadByte(char newpad)
@@ -42,14 +50,13 @@ void ISOTP_HANDLER::setReception(bool mode)
     if (isReceiving == mode) return;
     isReceiving = mode;
 
-    if (isReceiving)
-    {
-        connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ISOTP_HANDLER::rapidFrames);
+    if (isReceiving) {
+        if (pendingConnection)
+            connection = pendingConnection(this);
         qDebug() << "Enabling reception in ISOTP handler";
-    }
-    else
-    {
-        disconnect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ISOTP_HANDLER::rapidFrames);
+    } else {
+        if (connection)
+            QObject::disconnect(connection);
         qDebug() << "Disabling reception in ISOTP handler";
     }
 }
@@ -61,7 +68,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     int currByte = 0;
     int sequence = 1; //Initial Sequence number is 1
     if (bus < 0) return;
-    if (bus >= CANConManager::getInstance()->getNumBuses()) return;
+    if (bus >= getNoOfBusesCallback()) return;
 
     lastSenderID = ID;
     lastSenderBus = bus;
@@ -78,7 +85,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
         bytes[0] = data.length();
         for (int i = 0; i < data.length(); i++) bytes[i + 1] = data[i];
         frame.setPayload(bytes);
-        CANConManager::getInstance()->sendFrame(frame);
+        canSendCallback(frame);
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
@@ -87,7 +94,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
         bytes[1] = data.length() & 0xFF;
         for (int i = 0; i < 6; i++) bytes[2 + i] = data[currByte++];
         frame.setPayload(bytes);
-        CANConManager::getInstance()->sendFrame(frame);
+        canSendCallback(frame);
         //Queue up the rest of the frames
         waitingForFlow = true;
         frameTimer.setInterval(200); //wait a while for the flow frame to come in
@@ -103,7 +110,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
             for (int i = 0; i < bytesToGo; i++) bytes[1 + i] = data[currByte++];
             frame.setPayload(bytes);
             sendingFrames.append(frame);
-            //CANConManager::getInstance()->sendFrame(frame);
+            //canSendCallback(frame);
         }
     }
 }
@@ -118,20 +125,19 @@ void ISOTP_HANDLER::updatedFrames(int numFrames)
     else if (numFrames == -2) //all new set of frames. Reset
     {
         messageBuffer.clear();
-        for (int i = 0; i < modelFrames->length(); i++) processFrame(modelFrames->at(i));
+        for (int i = 0; i < modelFrames.length(); i++) processFrame(modelFrames.at(i));
     }
     else //just got some new frames. See if they are relevant.
     {
-        for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+        for (int i = modelFrames.count() - numFrames; i < modelFrames.count(); i++)
         {
-            //processFrame(modelFrames->at(i));  //accepting these frames in rapidFrames instead
+            //processFrame(modelFrames.at(i));  //accepting these frames in rapidFrames instead
         }
     }
 }
 
-void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames)
+void ISOTP_HANDLER::rapidFrames(const QVector<CANFrame>& pFrames)
 {
-    Q_UNUSED(conn)
     if (pFrames.length() <= 0) return;
 
     qDebug() << "received " << QString::number(pFrames.count()) << " messages in ISOTP handler";
@@ -205,7 +211,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         msg.setTimeStamp(frame.timeStamp());
         msg.isMultiframe = false;
         if (useExtendedAddressing)
-        {       
+        {
             for (int j = 0; j < frameLen; j++)
             {
                 if (frame.payload().length() > (j+2))
@@ -266,7 +272,7 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             bytes[1] = 0; //dont ask again about flow control
             bytes[2] = 3; //separation time in milliseconds between messages.
             outFrame.setPayload(bytes);
-            CANConManager::getInstance()->sendFrame(outFrame);
+            canSendCallback(outFrame);
         }
         break;
     case 2: //subsequent frames for multi-frame messages
@@ -345,7 +351,7 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
                 if (msg->reportedLength > 0) emit newISOMessage(*msg);
             }
             else qDebug() << "Have a partial message but sending of such is disabled. Throwing it away";
-        }        
+        }
         messageBuffer.remove(ID);
     }
 }
@@ -358,7 +364,7 @@ void ISOTP_HANDLER::frameTimerTick()
         if (!sendingFrames.isEmpty())
         {
             frame = sendingFrames.takeFirst();
-            CANConManager::getInstance()->sendFrame(frame);
+            canSendCallback(frame);
             if (framesUntilFlow > -1) framesUntilFlow--;
             if (framesUntilFlow == 0) //stop sending and wait for another flow control message
             {

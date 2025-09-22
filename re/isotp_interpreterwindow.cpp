@@ -3,6 +3,9 @@
 #include "mainwindow.h"
 #include "helpwindow.h"
 #include "filterutility.h"
+#include "bus_protocols/handler_factory.h"
+#include "bus_protocols/isotp_handler.h"
+#include "bus_protocols/uds_handler.h"
 
 ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -12,7 +15,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     setWindowFlags(Qt::Window);
     modelFrames = frames;
 
-    decoder = new ISOTP_HANDLER;
+    decoder = HandlerFactory::createISOTPHandler();
     udsDecoder = new UDS_HANDLER;
 
     decoder->setReception(true);

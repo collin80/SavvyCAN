@@ -1,8 +1,12 @@
 #include <QJSValueIterator>
 #include <QDebug>
+#include <QTableWidget>
 
 #include "scriptcontainer.h"
 #include "connections/canconmanager.h"
+#include "bus_protocols/isotp_handler.h"
+#include "bus_protocols/handler_factory.h"
+#include "scriptingwindow.h"
 
 ScriptContainer::ScriptContainer()
 {
@@ -281,8 +285,8 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
 ISOTPScriptHelper::ISOTPScriptHelper(QJSEngine *engine)
 {
     scriptEngine = engine;
-    handler = new ISOTP_HANDLER;
-    connect(handler, SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(newISOMessage(ISOTP_MESSAGE)));
+    handler = HandlerFactory::createISOTPHandler();
+    connect(handler, &ISOTP_HANDLER::newISOMessage, this, &ISOTPScriptHelper::newISOMessage);
     handler->setReception(true);
     handler->setFlowCtrl(true);
 }

@@ -4,12 +4,14 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QSettings>
+#include <QMessageBox>
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 10, 0 )
 #include <QtCore/QRandomGenerator>
 #endif
 
 #include "connections/canconmanager.h"
 #include "helpwindow.h"
+#include "utility.h"
 
 ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     QDialog(parent),

@@ -1,6 +1,8 @@
 #include "uds_handler.h"
 #include "connections/canconmanager.h"
 #include "isotp_handler.h"
+#include "handler_factory.h"
+#include "mainwindow.h"
 #include <QDebug>
 
 static QVector<CODE_STRUCT> UDS_DIAG_CTRL_SUB = {
@@ -173,7 +175,7 @@ UDS_HANDLER::UDS_HANDLER()
     isReceiving = false;
     useExtendedAddressing = false;
     modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
-    isoHandler = new ISOTP_HANDLER();
+    isoHandler = HandlerFactory::createISOTPHandler();
 }
 
 UDS_HANDLER::~UDS_HANDLER()
