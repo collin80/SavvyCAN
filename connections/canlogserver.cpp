@@ -69,16 +69,16 @@ void CanLogServer::readNetworkData()
                 QString qstrId = lstMsg[0];
                 // Extract payload
                 QString qstrPayload = lstMsg[1];
-                // Support only normal can message. Extended CAN not supported.
-                if(qstrId.size() <= 4){
+                // Check ID size
+                if(qstrId.size() <= 4 || qstrId.size() == 8){
                     // Prepare the frame
                     CANFrame* frame_p = getQueue().get();
                     // Check for frame existence
                     if(frame_p){
                         // Set frame ID
                         frame_p->setFrameId(qstrId.toInt(nullptr, 16));
-                        // Extended frame NOT SUPPORTED
-                        frame_p->setExtendedFrameFormat(0);
+                        // Extended frame
+                        frame_p->setExtendedFrameFormat(frame_p->frameId() > 0x7FF);
                         // Set bus id
                         frame_p->bus = qstrCanId.toInt();
                         // Set frame type
