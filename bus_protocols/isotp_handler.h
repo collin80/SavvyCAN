@@ -63,10 +63,20 @@ private:
 
     void processFrame(const CANFrame &frame);
     void checkNeedFlush(uint64_t ID);
+    void updateIsoTpCanFrameInfo();
 
     CanSendCallback canSendCallback;
     GetNoOfBusesCallback getNoOfBusesCallback;
 
     PendingConnection pendingConnection;
     QMetaObject::Connection connection;
+
+    // Info about ISO-TP frame formats
+    struct FrameInfo {
+        int cfAndSfPciOffset;
+        int sfFrameLen;
+        int ffPciOffset;
+        int ffFrameLen;
+        int cfFrameLen;
+    } frameInfo;
 };
