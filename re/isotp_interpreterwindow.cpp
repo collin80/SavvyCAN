@@ -16,7 +16,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     modelFrames = frames;
 
     decoder = HandlerFactory::createISOTPHandler();
-    udsDecoder = new UDS_HANDLER;
+    udsDecoder = HandlerFactory::createUDSHandler();
 
     decoder->setReception(true);
     decoder->setProcessAll(true);

@@ -7,7 +7,7 @@
 ISOTP_HANDLER::ISOTP_HANDLER(const QVector<CANFrame> &modelFrames,
                              CanSendCallback sendCb,
                              GetNoOfBusesCallback getBusesCb,
-                             PendingConnection pendingConn )
+                             PendingConnection<ISOTP_HANDLER> pendingConn )
     : modelFrames(modelFrames),
       canSendCallback(sendCb),
       getNoOfBusesCallback(getBusesCb),

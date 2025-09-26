@@ -14,6 +14,7 @@
 class ScriptingWindow;
 class QTableWidget;
 class ISOTP_HANDLER;
+class UDS_HANDLER;
 
 class CANScriptHelper: public QObject
 {

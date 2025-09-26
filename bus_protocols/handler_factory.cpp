@@ -18,3 +18,18 @@ ISOTP_HANDLER* HandlerFactory::createISOTPHandler()
                     });
             });
 }
+
+UDS_HANDLER* HandlerFactory::createUDSHandler() {
+        ISOTP_HANDLER *isoHandler = HandlerFactory::createISOTPHandler();
+    return new UDS_HANDLER(isoHandler,
+            /* getNoOfBusesCallback */ [](void){  return CANConManager::getInstance()->getNumBuses(); },
+            /* pendingConn */ [isoHandler](UDS_HANDLER* handler) -> QMetaObject::Connection {
+            return QObject::connect(
+                    isoHandler,
+                    &ISOTP_HANDLER::newISOMessage,
+                    handler,
+                    [handler](ISOTP_MESSAGE msg){
+                    handler->gotISOTPFrame(msg);
+                    });
+            });
+}

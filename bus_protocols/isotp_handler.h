@@ -14,14 +14,16 @@ class ISOTP_HANDLER : public QObject
     Q_OBJECT
 
     using CanSendCallback = std::function<void(const CANFrame& pFrame)>;
-    using GetNoOfBusesCallback = std::function<int(void)>;
-    using PendingConnection = std::function<QMetaObject::Connection(ISOTP_HANDLER*)>; // lambda to call connect() in setReception()
 
 public:
+    using GetNoOfBusesCallback = std::function<int(void)>;
+    template <typename handler>
+    using PendingConnection = std::function<QMetaObject::Connection(handler*)>; // lambda to call connect() in setReception()
+
     ISOTP_HANDLER(const QVector<CANFrame> &modelFrames,
                   CanSendCallback sendCb,
                   GetNoOfBusesCallback getBusesCb,
-                  PendingConnection pendingConn
+                  PendingConnection<ISOTP_HANDLER> pendingConn
                 );
     ~ISOTP_HANDLER();
 
@@ -68,7 +70,7 @@ private:
     CanSendCallback canSendCallback;
     GetNoOfBusesCallback getNoOfBusesCallback;
 
-    PendingConnection pendingConnection;
+    PendingConnection<ISOTP_HANDLER> pendingConnection;
     QMetaObject::Connection connection;
 
     // Info about ISO-TP frame formats

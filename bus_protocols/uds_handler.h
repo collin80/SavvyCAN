@@ -6,8 +6,8 @@
 #include <QDebug>
 #include "can_structs.h"
 #include "isotp_message.h"
+#include "isotp_handler.h"
 
-class ISOTP_HANDLER;
 
 namespace UDS_SERVICES
 {
@@ -86,10 +86,11 @@ class UDS_HANDLER : public QObject
     Q_OBJECT
 
 public:
-    UDS_HANDLER();
+    UDS_HANDLER(ISOTP_HANDLER *isotp_handler,
+                ISOTP_HANDLER::GetNoOfBusesCallback getBusesCb,
+                ISOTP_HANDLER::PendingConnection<UDS_HANDLER> pendingConn);
     ~UDS_HANDLER();
     void setExtendedAddressing(bool mode);
-    static UDS_HANDLER* getInstance();
     void setReception(bool mode); //set whether to accept and forward frames or not
     void sendUDSFrame(const UDS_MESSAGE &msg);
     void setProcessAllIDs(bool state);
@@ -105,23 +106,27 @@ public:
     QString getShortDesc(QVector<CODE_STRUCT> &codeVector, int code);
     QString getLongDesc(QVector<CODE_STRUCT> &codeVector, int code);
     QString getDetailedMessageAnalysis(const UDS_MESSAGE &msg);
-    UDS_MESSAGE tryISOtoUDS(ISOTP_MESSAGE msg, bool *result);
+    UDS_MESSAGE tryISOtoUDS(const ISOTP_MESSAGE& msg, bool *result);
 
 public slots:
-    void gotISOTPFrame(ISOTP_MESSAGE msg);
+    void gotISOTPFrame(const ISOTP_MESSAGE &msg);
 
 signals:
     void newUDSMessage(UDS_MESSAGE msg);
 
 private:
     QList<ISOTP_MESSAGE> messageBuffer;
-    const QVector<CANFrame> *modelFrames;
     bool isReceiving;
     bool useExtendedAddressing;
 
     void processFrame(const CANFrame &frame);
 
     ISOTP_HANDLER *isoHandler;
+
+    ISOTP_HANDLER::GetNoOfBusesCallback getNoOfBusesCallback;
+
+    ISOTP_HANDLER::PendingConnection<UDS_HANDLER> pendingConnection;
+    QMetaObject::Connection connection;
 };
 
 
