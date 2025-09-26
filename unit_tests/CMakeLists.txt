@@ -12,7 +12,7 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 # Find Qt6
-find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS Core Test SerialBus)
+find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS Core Test SerialBus Widgets)
 
 # Directories where SavvyCAN headers live
 set(SAVVYCAN_INCLUDE_DIRS
@@ -39,6 +39,29 @@ target_link_libraries(TestIsoTpHandler
     Qt6::SerialBus
 )
 
+###### uds handler test ######
+set(TEST_SOURCES_UDS_HANDLER
+    test_uds_handler.cpp
+    ../bus_protocols/uds_handler.cpp  # the class under test
+    ../bus_protocols/isotp_handler.cpp
+
+    ../canfilter.cpp
+    ../utility.cpp
+)
+
+add_executable(TestUdsHandler ${TEST_SOURCES_UDS_HANDLER})
+
+target_include_directories(TestUdsHandler PRIVATE ${SAVVYCAN_INCLUDE_DIRS})
+
+target_link_libraries(TestUdsHandler
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+    Qt6::Widgets
+)
+
+
 # Enable ctest integration
 enable_testing()
 add_test(NAME TestIsoTpHandler COMMAND TestIsoTpHandler)
+add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
