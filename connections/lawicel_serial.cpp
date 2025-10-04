@@ -5,6 +5,7 @@
 #include <QSettings>
 #include <QStringBuilder>
 #include <QtNetwork>
+#include <chrono>
 
 #include "lawicel_serial.h"
 #include "utility.h"
@@ -491,15 +492,11 @@ void LAWICELSerial::readSerialData()
         {
             qDebug() << "Got CR!";
 
-            if (useSystemTime)
-            {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
-            }
-            else
-            {
+                
                 //If total length is greater than command, header and data, timestamps must be enabled.
                 if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
                 {
+                    //! on some occasions this if seems to be true and give a "0" as a time stamp
                     //Four bytes after the end of the data bytes.
                     buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
                     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
@@ -507,9 +504,12 @@ void LAWICELSerial::readSerialData()
                 else
                 {
                     //Default to system time if timestamps are disabled.
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    // Use chrono to get microseconds directly without multiplication
+                    auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count();
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, microseconds));
                 }
-            }
+            
 
             switch (mBuildLine[0].toLatin1())
             {
