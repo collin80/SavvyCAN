@@ -494,7 +494,7 @@ void LAWICELSerial::readSerialData()
 
                 
                 //If total length is greater than command, header and data, timestamps must be enabled.
-                if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 2))
+                if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
                 {
                     //! on some occasions this if seems to be true and give a "0" as a time stamp
                     //Four bytes after the end of the data bytes.
