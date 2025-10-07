@@ -871,6 +871,7 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
         version = match.captured("version").toInt();
     }
 
+    int64_t minuteCnt = 0, prevTimestmp = 0;
     while (!txt.atEnd()) {
         lineCounter++;
         if (lineCounter > 100)
@@ -889,10 +890,20 @@ bool FrameFileIO::loadCARBUSAnalyzerFile(QString filename, QVector<CANFrame>* fr
                 if (version == 2) {
                     timeStamp *= 1000; // ms -> us
                 }
+                // timestamp wraps every minute
+                const int64_t oneMinute = 60'000'000;   // micro seconds
+                timeStamp += minuteCnt * oneMinute;
+                // workaround: sometimes packets from different channels may come not in the right order
+                const int possibleTimeDiff = 10000; // 10 ms
+                if (timeStamp + possibleTimeDiff < prevTimestmp) {
+                    minuteCnt += 1;
+                    timeStamp += oneMinute;
+                }
+                prevTimestmp = timeStamp;
 
                 thisFrame.isReceived = true;
                 thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<int64_t>(timeStamp)));
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
                 thisFrame.bus = tokens[1].toInt();
                 thisFrame.setFrameId(static_cast<uint32_t>(tokens[3].toInt(nullptr, 16)));
                 thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);
@@ -967,6 +978,7 @@ bool FrameFileIO::saveCARBUSAnalzyer(QString filename, const QVector<CANFrame>* 
         auto frame = frames->at(c);
 
         uint64_t timeStamp = frame.timeStamp().microSeconds();
+        timeStamp = timeStamp % 60'000'000;
         QString canId = QString::number(frame.frameId(), 16).toUpper().rightJustified(3, '0').toUtf8();
         QString canDlc = QString::number(frame.payload().length()).toUtf8();
 
@@ -995,8 +1007,8 @@ bool FrameFileIO::saveCARBUSAnalzyer(QString filename, const QVector<CANFrame>* 
         }
         finalCanData = finalCanData.trimmed().leftJustified(23, ' ');
         ascii = ascii.leftJustified(8, ' ');
-        auto seconds = QString::number(timeStamp / 1000000);
-        auto uSeconds = QString::number(timeStamp % 1000000);
+        auto seconds = QString::number(timeStamp / 1000000).rightJustified(2, '0');
+        auto uSeconds = QString::number(timeStamp % 1000000).rightJustified(6, '0');
         QString localArg = "";
         localArg.append(seconds).append(",").append(uSeconds).append("\t")
                 .append(QString::number(frame.bus)).append("\t") // bus channel
