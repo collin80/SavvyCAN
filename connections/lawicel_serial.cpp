@@ -610,7 +610,7 @@ void LAWICELSerial::readSerialData()
                 buildFrame.isReceived = true;
                 buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
                 buildFrame.setExtendedFrameFormat(true);
-                buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
+                buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(9, 1).toInt(nullptr, 16)));
                 for (int c = 0; c < buildData.size(); c++)
                 {
                     buildData[c] = mBuildLine.mid(10 + (c*2), 2).toInt(nullptr, 16);
