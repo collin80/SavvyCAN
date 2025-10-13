@@ -519,7 +519,7 @@ void LAWICELSerial::readSerialData()
                 if (data.length() > (offset + mBuildLine.mid(len_index, 1).toInt() * 2 + 1))
                 {
                     //Four bytes after the end of the data bytes.
-                    buildTimestamp = mBuildLine.mid(offset + mBuildLine.mid(len_index, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
+                    buildTimestamp = mBuildLine.mid(offset + mBuildLine.mid(len_index, 1).toInt() * 2, 4).toInt(nullptr, 16);
                     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
                 }
                 else
