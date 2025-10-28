@@ -46,3 +46,6 @@ SavvyCAN.pro.qtds
 .xcode
 SavvyCAN.xcodeproj
 .vscode
+
+# macos files
+.DS_Store

@@ -30,12 +30,22 @@ LAWICELSerial::~LAWICELSerial()
 
 void LAWICELSerial::sendDebug(const QString debugText)
 {
+    // debugOutput("... LAWICELSerial::sendDebug");
+
+    if (useSystemTime) {
+        debugOutput("useSystemTime 1");
+    } else {
+        debugOutput("useSystemTime 0");
+    }
+
     qDebug() << debugText;
     debugOutput(debugText);
 }
 
 void LAWICELSerial::sendToSerial(const QByteArray &bytes)
 {
+    sendDebug("... LAWICELSerial::sendToSerial ... Write to serial -> ");
+
     if (serial == nullptr)
     {
         sendDebug("Attempt to write to serial port when it has not been initialized!");
@@ -642,6 +652,8 @@ void LAWICELSerial::readSerialData()
 
 //Debugging data sent from connection window. Inject it into Comm traffic.
 void LAWICELSerial::debugInput(QByteArray bytes) {
+    sendDebug("... debugInput");
+
    sendToSerial(bytes);
 }
 

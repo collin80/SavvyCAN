@@ -207,7 +207,7 @@ public slots:
      */
     bool removeAllTargettedFrames(QObject *receiver);
 
-    void debugInput(QByteArray bytes);
+    virtual void debugInput(QByteArray bytes);
 
 protected:
     int mNumBuses; //protected to allow connected device to figure out how many buses are available

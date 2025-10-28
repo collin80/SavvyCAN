@@ -222,6 +222,8 @@ void ConnectionWindow::writeSettings()
 }
 
 void ConnectionWindow::consoleEnableChanged(bool checked) {
+    QMessageBox::warning(this, "Warning", "ConnectionWindow::consoleEnableChanged");
+    
     ui->textConsole->setEnabled(checked);
     ui->btnClearDebug->setEnabled(checked);
     ui->btnSendHex->setEnabled(checked);
@@ -236,10 +238,24 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
     CANConnection* conn_p = connModel->getAtIdx(selIdx);
 
     if (checked) { //enable console
+        // QMessageBox::warning(this, "Warning", "ConnectionWindow::consoleEnableChanged ON");
+
         connect(conn_p, &CANConnection::debugOutput, this, &ConnectionWindow::getDebugText, Qt::UniqueConnection);
+
+        // // debug: sprawdź czy connect do debugInput się udał (stare style zwracają bool)
+        // bool ok = connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)), Qt::UniqueConnection);
+        // qDebug() << "connect sendDebugData->debugInput (consoleEnable):" << ok;
+
+        // connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)), Qt::UniqueConnection);
         connect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput, Qt::UniqueConnection);
+        // connect(this, &ConnectionWindow::sendDebugData,
+        //     conn_p,
+        //     static_cast<void (CANConnection::*)(QByteArray)>(&CANConnection::debugInput),
+        //     Qt::UniqueConnection);
     }
     else { //turn it off
+        // QMessageBox::warning(this, "Warning", "ConnectionWindow::consoleEnableChanged OFF");
+
         disconnect(conn_p, &CANConnection::debugOutput, nullptr, nullptr);
         disconnect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput);
     }
@@ -507,6 +523,8 @@ void ConnectionWindow::handleSendHex() {
     foreach (QString token, tokens) {
         bytes.append(token.toInt(nullptr, 16));
     }
+    
+    // qDebug() << "Emitting sendDebugData (hex):" << bytes.toHex(' ');
     emit sendDebugData(bytes);
 }
 
@@ -514,6 +532,8 @@ void ConnectionWindow::handleSendText() {
     QByteArray bytes;
     bytes = ui->lineSend->text().toLatin1();
     bytes.append('\r'); //add carriage return for line ending
+
+    // qDebug() << "Emitting sendDebugData (text):" << bytes;
     emit sendDebugData(bytes);
 }
 
