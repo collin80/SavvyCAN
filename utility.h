@@ -11,6 +11,7 @@
 #include <QComboBox>
 #include <QStandardItemModel>
 //#include <QDesktopWidget>
+#include <QCanBusFrame>
 
 enum TimeStyle
 {
@@ -175,6 +176,10 @@ public:
 
     static QVariant formatTimestamp(uint64_t timestamp)
     {
+        // timestamp expected μs !!!!!!!!!!!!!!!
+
+        return (unsigned long long)timestamp;
+
         switch (timeStyle)
         {
         case TS_CLOCK:
@@ -191,6 +196,11 @@ public:
             break;
         }
         return QVariant();
+    }
+
+    static quint64 getFullTimeStampInMicroSeconds(QCanBusFrame frame)
+    {
+        return frame.timeStamp().seconds() * 1'000'000 + frame.timeStamp().microSeconds();
     }
 
     //parses the input string to grab as much of it as possible while staying alpha numeric

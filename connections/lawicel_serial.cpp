@@ -9,6 +9,11 @@
 #include "lawicel_serial.h"
 #include "utility.h"
 
+QElapsedTimer LAWICELSerial::_readElapsedTimer;
+uint64_t LAWICELSerial::_buildTimestamp = 0;
+uint32_t LAWICELSerial::_prevSlcanTimeStamp = 0;
+uint16_t LAWICELSerial::_loopCounter = 0;
+
 LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed, bool canFd, int dataRate) :
     CANConnection(portName, "LAWICEL", CANCon::LAWICEL,serialSpeed, lawicelSpeed, canFd, dataRate, 3, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
@@ -17,6 +22,7 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
 
     serial = nullptr;
     isAutoRestart = false;
+    _loopCounter = 0;
 
     readSettings();
 }
@@ -30,8 +36,6 @@ LAWICELSerial::~LAWICELSerial()
 
 void LAWICELSerial::sendDebug(const QString debugText)
 {
-    // debugOutput("... LAWICELSerial::sendDebug");
-
     if (useSystemTime) {
         debugOutput("useSystemTime 1");
     } else {
@@ -44,8 +48,6 @@ void LAWICELSerial::sendDebug(const QString debugText)
 
 void LAWICELSerial::sendToSerial(const QByteArray &bytes)
 {
-    sendDebug("... LAWICELSerial::sendToSerial ... Write to serial -> ");
-
     if (serial == nullptr)
     {
         sendDebug("Attempt to write to serial port when it has not been initialized!");
@@ -262,6 +264,9 @@ void LAWICELSerial::connectDevice()
 
 void LAWICELSerial::deviceConnected()
 {
+    _readElapsedTimer.start();
+    _loopCounter = 0;
+    
     sendDebug("Connecting to LAWICEL Device!");
 
     QByteArray output;
@@ -500,26 +505,78 @@ void LAWICELSerial::readSerialData()
         if (c == 13) //all lawicel commands end in CR
         {
             qDebug() << "Got CR!";
+            
+            // sendDebug("setTimeStamp = " % QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000LL)); // * 1000ul ???
 
-            if (useSystemTime)
+            // https://doc.qt.io/qt-6/qcanbusframe-timestamp.html
+            // https://doc.qt.io/archives/qt-5.15/qdatetime.html#fromMSecsSinceEpoch
+            // http://www.can232.com/docs/can232_v3.pdf
+
+
+            // buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds());
+            // buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+
+            
+            _buildTimestamp = (_readElapsedTimer.nsecsElapsed() % (60ULL * 60ULL * 1'000'000'000ULL)) / 1000ULL;
+
+            if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                //Four bytes after the end of the data bytes.
+                uint32_t slcanTimeStamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toULongLong(nullptr, 16) * 1000ULL;
+                if (_prevSlcanTimeStamp > slcanTimeStamp) _loopCounter++;
+                _buildTimestamp =  (_loopCounter * 60'000'00ULL) + slcanTimeStamp;
+                _prevSlcanTimeStamp = slcanTimeStamp;
             }
-            else
-            {
-                //If total length is greater than command, header and data, timestamps must be enabled.
-                if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
-                {
-                    //Four bytes after the end of the data bytes.
-                    buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
-                }
-                else
-                {
-                    //Default to system time if timestamps are disabled.
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
-                }
-            }
+
+
+            // else
+            // {
+            //     // ns since connection in 60s loop converted to μs
+            //     buildTimestamp = (_readElapsedTimer.nsecsElapsed() % (60ULL * 1'000'000'000ULL)) / 1000ULL;
+            // }
+            // buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(buildTimestamp));
+
+            // sendDebug(QString(" %1").arg(buildTimestamp));
+            // sendDebug(QString(" %1").arg(Utility::getFullTimeStampInMicroSeconds(buildFrame)));
+            // sendDebug(QString(" %1").arg(buildFrame.timeStamp().seconds()));
+            // sendDebug(QString(" %1").arg(buildFrame.timeStamp().microSeconds()));
+
+
+            // | Co chcesz uzyskać | Stała                    | Zakres wyniku |
+            // | ----------------- | ------------------------ | ------------- |
+            // | cykl 1 minuty     | `% 60'000'000'000ULL`    | 0 – 60 s      |
+            // | cykl 10 sekund    | `% 10'000'000'000ULL`    | 0 – 10 s      |
+            // | cykl 1 godziny    | `% 3'600'000'000'000ULL` | 0 – 3600 s    |
+
+       
+
+
+            
+            // buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(usInHourLoop));
+            // sendDebug(QString("------ %1").arg(Utility::getFullTimeStampInMicroSeconds(buildFrame)));
+
+
+            // if (useSystemTime)
+            // {
+            //     // sendDebug("QDateTime" + QDateTime::currentMSecsSinceEpoch() * 1000ul);
+                
+            //     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            // }
+            // else
+            // {
+            //     //If total length is greater than command, header and data, timestamps must be enabled.
+            //     if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
+            //     {
+            //         //Four bytes after the end of the data bytes.
+            //         buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
+            //         buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+            //     }
+            //     else
+            //     {
+            //         //Default to system time if timestamps are disabled.
+            //         buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            //     }
+            // }
 
             switch (mBuildLine[0].toLatin1())
             {
@@ -652,8 +709,6 @@ void LAWICELSerial::readSerialData()
 
 //Debugging data sent from connection window. Inject it into Comm traffic.
 void LAWICELSerial::debugInput(QByteArray bytes) {
-    sendDebug("... debugInput");
-
    sendToSerial(bytes);
 }
 

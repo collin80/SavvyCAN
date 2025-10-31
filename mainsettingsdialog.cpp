@@ -4,7 +4,6 @@
 #include <qevent.h>
 #include <QDebug>
 #include "simplecrypt.h"
-    #include <QMessageBox>
 
 //using this simple encryption library to obfuscate stored password a bit. It's not super secure but better than
 //storing a password in straight plaintext. You have the source to this application anyway, whatever algorithm used,
@@ -56,8 +55,6 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     bool milliMode = settings.value("Main/TimeMillis", false).toBool();
     if (clockMode)
     {
-        QMessageBox::warning(this, "Warning", "clockMode 1");
-
         ui->rbSeconds->setChecked(false);
         ui->rbMicros->setChecked(false);
         ui->rbSysClock->setChecked(true);

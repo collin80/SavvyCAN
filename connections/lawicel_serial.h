@@ -8,6 +8,7 @@
 
 /*************/
 #include <QDateTime>
+    #include <QElapsedTimer>
 /*************/
 
 #include "canframemodel.h"
@@ -51,6 +52,10 @@ private:
     void sendDebug(const QString debugText);
     uint8_t dlc_code_to_bytes(int dlc_code);
     uint8_t bytes_to_dlc_code(uint8_t bytes);
+    static QElapsedTimer _readElapsedTimer;
+    static uint64_t _buildTimestamp;
+    static uint32_t _prevSlcanTimeStamp;
+    static uint16_t _loopCounter;
 
 protected:
     QTimer             mTimer;
@@ -61,7 +66,6 @@ protected:
     QSerialPort *serial;
     int framesRapid;
     CANFrame buildFrame;
-    qint64 buildTimestamp;
     bool can0Enabled;
     bool can0ListenOnly;
     bool canFd;

@@ -222,8 +222,6 @@ void ConnectionWindow::writeSettings()
 }
 
 void ConnectionWindow::consoleEnableChanged(bool checked) {
-    QMessageBox::warning(this, "Warning", "ConnectionWindow::consoleEnableChanged");
-    
     ui->textConsole->setEnabled(checked);
     ui->btnClearDebug->setEnabled(checked);
     ui->btnSendHex->setEnabled(checked);
@@ -238,24 +236,10 @@ void ConnectionWindow::consoleEnableChanged(bool checked) {
     CANConnection* conn_p = connModel->getAtIdx(selIdx);
 
     if (checked) { //enable console
-        // QMessageBox::warning(this, "Warning", "ConnectionWindow::consoleEnableChanged ON");
-
         connect(conn_p, &CANConnection::debugOutput, this, &ConnectionWindow::getDebugText, Qt::UniqueConnection);
-
-        // // debug: sprawdź czy connect do debugInput się udał (stare style zwracają bool)
-        // bool ok = connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)), Qt::UniqueConnection);
-        // qDebug() << "connect sendDebugData->debugInput (consoleEnable):" << ok;
-
-        // connect(this, SIGNAL(sendDebugData(QByteArray)), conn_p, SLOT(debugInput(QByteArray)), Qt::UniqueConnection);
         connect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput, Qt::UniqueConnection);
-        // connect(this, &ConnectionWindow::sendDebugData,
-        //     conn_p,
-        //     static_cast<void (CANConnection::*)(QByteArray)>(&CANConnection::debugInput),
-        //     Qt::UniqueConnection);
     }
     else { //turn it off
-        // QMessageBox::warning(this, "Warning", "ConnectionWindow::consoleEnableChanged OFF");
-
         disconnect(conn_p, &CANConnection::debugOutput, nullptr, nullptr);
         disconnect(this, &ConnectionWindow::sendDebugData, conn_p, &CANConnection::debugInput);
     }
