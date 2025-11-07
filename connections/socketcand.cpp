@@ -20,7 +20,7 @@ SocketCANd::SocketCANd(QString portName) :
 
     sendDebug("SocketCANd()");
     hostCanIDs = portName.left(portName.indexOf("@")).split(',');
-    QString hostIPandPort = portName.mid(portName.indexOf("can://")+6, portName.length() - portName.indexOf("can://") - 6); //6 is lenght of 'can://'
+    QString hostIPandPort = portName.mid(portName.indexOf("can://")+6, portName.length() - portName.indexOf("can://") - 7); //7 is lenght of 'can://'
     hostIP = QHostAddress(hostIPandPort.left(hostIPandPort.indexOf(":")));
     hostPort = (hostIPandPort.right(hostIPandPort.length() - hostIPandPort.lastIndexOf(":") -1)).toInt();
     mNumBuses = hostCanIDs.length();
