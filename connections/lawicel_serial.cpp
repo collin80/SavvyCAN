@@ -4,7 +4,6 @@
 #include <QSerialPortInfo>
 #include <QSettings>
 #include <QStringBuilder>
-#include <QtNetwork>
 
 #include "lawicel_serial.h"
 #include "utility.h"
@@ -16,7 +15,6 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
     sendDebug("LAWICELSerial()");
 
     serial = nullptr;
-    isAutoRestart = false;
 
     readSettings();
 }
@@ -117,27 +115,20 @@ void LAWICELSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         }
         else can0ListenOnly = false;
     }
-*/
     if (pBusIdx < 2) {
-        /* update baud rates */
+        // update baud rates
         QByteArray buffer;
         //sendDebug("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)));
         buffer.append((char)0xF1); //start of a command over serial
         //sendToSerial(buffer);
     }
-
+*/
 }
 
 
 bool LAWICELSerial::piSendFrame(const CANFrame& frame)
 {
-    QByteArray buffer;
-    int c;
-    quint32 ID;
-
     qDebug() << "Sending out lawicel frame on bus " << frame.bus;
-
-    framesRapid++;
 
     if (serial == nullptr) return false;
     if (serial && !serial->isOpen()) return false;
@@ -149,37 +140,36 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
         return true;
     }
 
-    ID = frame.frameId();
+    quint32 ID = frame.frameId();
     if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
 
     int idx = 0;
     QString buildStr;
+    uint8_t dlcByte = LAWICELSerial::bytes_to_dlc_code(frame.payload().length());
     if(frame.hasFlexibleDataRateFormat()){
         if (frame.hasExtendedFrameFormat())
         {
             if (frame.hasBitrateSwitch())
-                buildStr = QString::asprintf("B%08X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+                buildStr = QString::asprintf("B%08X%u", ID, dlcByte);
             else
-                buildStr = QString::asprintf("D%08X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+                buildStr = QString::asprintf("D%08X%u", ID, dlcByte);
         }
         else
         {
             if (frame.hasBitrateSwitch())
-                buildStr = QString::asprintf("b%03X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+                buildStr = QString::asprintf("b%03X%u", ID, dlcByte);
             else
-                buildStr = QString::asprintf("d%03X%u", ID, LAWICELSerial::bytes_to_dlc_code(frame.payload().length()));
+                buildStr = QString::asprintf("d%03X%u", ID, dlcByte);
         }
     }
     else {
         if (frame.hasExtendedFrameFormat())
-        {
-            buildStr = QString::asprintf("T%08X%u", ID, static_cast<unsigned int>(frame.payload().length()));
-        }
+            buildStr = QString::asprintf("T%08X%u", ID, dlcByte);
         else
-        {
-            buildStr = QString::asprintf("t%03X%u", ID, static_cast<unsigned int>(frame.payload().length()));
-        }
+            buildStr = QString::asprintf("t%03X%u", ID, dlcByte);
     }
+
+    QByteArray buffer;
     int sizeneed = buildStr.length() + (frame.payload().length()*2) +1;
     buffer.resize(sizeneed);
     foreach (QChar chr, buildStr)
@@ -188,13 +178,13 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
         idx++;
     }
 
-    for (c = 0; c < frame.payload().length(); c++)
+    for (qsizetype c = 0; c < frame.payload().length(); c++)
     {
         QString byt = Utility::formatByteAsHex(frame.payload()[c]);
         buffer[idx + (c * 2)] = byt[0].toLatin1();
         buffer[idx + (c * 2) + 1] = byt[1].toLatin1();
     }
-    buffer[idx + (frame.payload().length() * 2)] = 13; //CR
+    buffer[idx + (frame.payload().length() * 2)] = '\x0D'; //CR
 
     sendToSerial(buffer);
 
@@ -207,7 +197,7 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
 
 void LAWICELSerial::readSettings()
 {
-    QSettings settings;
+    //QSettings settings;
 }
 
 
@@ -231,8 +221,8 @@ void LAWICELSerial::connectDevice()
     sendDebug("Created Serial Port Object");
 
     /* connect reading event */
-    connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-    connect(serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(serialError(QSerialPort::SerialPortError)));
+    connect(serial, &QSerialPort::readyRead, this, &LAWICELSerial::readSerialData);
+    connect(serial, &QSerialPort::errorOccurred, this, &LAWICELSerial::serialError);
 
     /* configure */
     serial->setBaudRate(mSerialSpeed);
@@ -260,7 +250,7 @@ void LAWICELSerial::deviceConnected()
 
     output.clear();
     output.append('C'); //close the bus in case it was already up
-    output.append(13);
+    output.append('\x0D');
     sendToSerial(output);
 
     output.clear();
@@ -331,7 +321,7 @@ void LAWICELSerial::deviceConnected()
     }
 
     output.append('O'); //open bus now that we set the speed
-    output.append(13);
+    output.append('\x0D');
 
     sendToSerial(output);
 
@@ -455,7 +445,7 @@ void LAWICELSerial::connectionTimeout()
     else
     {
         /* start timer */
-        connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
+        connect(&mTimer, &QTimer::timeout, this, &LAWICELSerial::handleTick);
         mTimer.setInterval(250); //tick four times per second
         mTimer.setSingleShot(false); //keep ticking
         mTimer.start();
@@ -465,7 +455,6 @@ void LAWICELSerial::connectionTimeout()
 void LAWICELSerial::readSerialData()
 {
     QByteArray data;
-    unsigned char c;
     QString debugBuild;
     CANFrame buildFrame;
     QByteArray buildData;
@@ -475,12 +464,12 @@ void LAWICELSerial::readSerialData()
     sendDebug("Got data from serial. Len = " % QString::number(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
-        c = data.at(i);
+        unsigned char c = data.at(i);
         //qDebug() << c << "    " << QString::number(c, 16) << "     " << QString(c);
         debugBuild = debugBuild % QString::number(c, 16).rightJustified(2,'0') % " ";
         //procRXChar(c);
         mBuildLine.append(QChar(c));
-        if (c == 13) //all lawicel commands end in CR
+        if (c == '\x0D') //all lawicel commands end in CR
         {
             qDebug() << "Got CR!";
 
@@ -494,7 +483,7 @@ void LAWICELSerial::readSerialData()
                 if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
                 {
                     //Four bytes after the end of the data bytes.
-                    buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
+                    qint64 buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
                     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
                 }
                 else

@@ -7,14 +7,8 @@
 #include <QTimer>
 #include <QTcpSocket>
 #include <QUdpSocket>
-
-/*************/
-#include <QDateTime>
-/*************/
-
-#include "canframemodel.h"
 #include "canconnection.h"
-#include "canconmanager.h"
+
 
 namespace SERIALSTATE {
 
@@ -80,18 +74,15 @@ private:
 
 protected:
     QTimer             mTimer;
-    QThread            mThread;
 
     bool doValidation;
     int validationCounter;
-    bool isAutoRestart;
     bool continuousTimeSync;
     bool useTcp;
     bool espSerialMode; //special serial mode for ESP32 based boards - no flow control and much slower serial baud speed
     QSerialPort *serial;
     QTcpSocket *tcpClient;
     QUdpSocket *udpClient;
-    int framesRapid;
     STATE rx_state;
     int rx_step;
     CANFrame buildFrame;

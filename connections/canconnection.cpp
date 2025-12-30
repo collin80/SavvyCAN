@@ -42,15 +42,21 @@ CANConnection::CANConnection(QString pPort,
     if (pBusSpeed > 0) mBusData[0].mBus.setSpeed(pBusSpeed);
     mBusData[0].mBus.setCanFD(pCanFd);
     if (pDataRate > 0) {
-      mBusData[0].mBus.setDataRate(pDataRate);
-      if (pCanFd) {
-	mBusData[0].mBus.setCanFD(pCanFd);
-      }
+        mBusData[0].mBus.setDataRate(pDataRate);
+        if (pCanFd) {
+            mBusData[0].mBus.setCanFD(pCanFd);
+        }
     }
  
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {
         mThread_p = new QThread();
+        /* move ourself to the thread */
+        if (!moveToThread(mThread_p)) {
+            qWarning() << "CANConnection::start(): cannot moveToThread()";
+        }
+        /* start the thread */
+        mThread_p->start(QThread::HighPriority);
     }
 }
 
@@ -64,8 +70,6 @@ CANConnection::~CANConnection()
         delete mThread_p;
         mThread_p = nullptr;
     }
-
-    mBusData.clear();
 }
 
 
@@ -73,12 +77,8 @@ void CANConnection::start()
 {
     if( mThread_p && (mThread_p != QThread::currentThread()) )
     {
-        /* move ourself to the thread */
-        moveToThread(mThread_p); /*TODO handle errors */
-        /* connect started() */
-        connect(mThread_p, SIGNAL(started()), this, SLOT(start()));
-        /* start the thread */
-        mThread_p->start(QThread::HighPriority);
+        QMetaObject::invokeMethod(this, "start",
+                                  Qt::BlockingQueuedConnection);
         return;
     }
 
@@ -86,12 +86,7 @@ void CANConnection::start()
     mStarted = true;
 
     QSettings settings;
-
-    if (settings.value("Main/TimeClock", false).toBool())
-    {
-        useSystemTime = true;
-    }
-    else useSystemTime = false;
+    useSystemTime = settings.value("Main/TimeClock", false).toBool();
 
     /* in multithread case, this will be called before entering thread event loop */
     return piStarted();
@@ -115,7 +110,7 @@ void CANConnection::suspend(bool pSuspend)
 void CANConnection::stop()
 {
     /* 1) execute in mThread_p context */
-    if( mThread_p && mStarted && (mThread_p != QThread::currentThread()) )
+    if( mThread_p && (mThread_p != QThread::currentThread()) )
     {
         /* if thread is finished, it means we call this function for the second time so we can leave */
         if( !mThread_p->isFinished() )
@@ -123,17 +118,16 @@ void CANConnection::stop()
             /* we need to call piStop() */
             QMetaObject::invokeMethod(this, "stop",
                                       Qt::BlockingQueuedConnection);
-            /* 3) stop thread */
-            mThread_p->quit();
-            if(!mThread_p->wait()) {
-                qDebug() << "can't stop thread";
-            }
         }
         return;
     }
 
     /* 2) call piStop in mThread context */
-    return piStop();
+    if (mStarted)
+    {
+        piStop();
+    }
+    mStarted = false;
 }
 
 

@@ -588,14 +588,15 @@ void ConnectionWindow::saveConnections()
  
     /* save connections */
     foreach(CANConnection* conn_p, conns)
-      { CANBus bus;
+    {
+        CANBus bus;
 
         if (conn_p->getBusSettings(0, bus)) {
-          busSpeeds.append(bus.getSpeed());
-	  CanFds.append(bus.isCanFD() ? 1 : 0);
-	  DataRates.append(bus.getDataRate());
+            busSpeeds.append(bus.getSpeed());
+            CanFds.append(bus.isCanFD() ? 1 : 0);
+            DataRates.append(bus.getDataRate());
         }
-	serialSpeeds.append(conn_p->getSerialSpeed());
+        serialSpeeds.append(conn_p->getSerialSpeed());
         portNames.append(conn_p->getPort());
         devTypes.append(conn_p->getType());
         driverNames.append(conn_p->getDriver());
