@@ -192,6 +192,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     filters.append(QString(tr("CANServer Binary Log (*.log *.LOG)")));
     filters.append(QString(tr("Wireshark (*.pcap *.PCAP *.pcapng *.PCAPNG)")));
     filters.append(QString(tr("Wireshark SocketCAN (*.pcap *.PCAP")));
+    filters.append(QString(tr("CANWise Log (*.log)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -239,6 +240,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
         if (selectedNameFilter == filters[24]) result = loadWiresharkFile(filename, frameCache);
         if (selectedNameFilter == filters[25]) result = loadWiresharkSocketCANFile(filename, frameCache);
+        if (selectedNameFilter == filters[26]) result = loadCanWise(filename, frameCache);
 
 
         progress.cancel();
@@ -504,6 +506,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadLawicelFile(filename, frames))
         {
             qDebug() << "Loaded as lawicel successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting CANWise";
+    if (isCanWise(filename))
+    {
+        if (loadCanWise(filename, frames))
+        {
+            qDebug() << "Loaded as CANWise successfully!";
             return true;
         }
     }
@@ -5214,5 +5226,80 @@ bool FrameFileIO::isWiresharkSocketCANFile(QString filename)
     }
     pcap_close(pcap_data_file);
     pcap_data_file = NULL;
+    return true;
+}
+
+bool FrameFileIO::isCanWise(QString filename)
+{
+/*
+EV NUM/ERR F/F ID     LEN R/D   D0  D1  D2  D3  D4  D5  D6  D7 TIMESTAMP  DD MM YYYY TIME
+RX 0103662 EFF 18FFB306 8 HEX   00  FF  03  FF  3F  FC  03  FE 0310582008 07.05.2022 17:58:05.991 0030958140 0014920560
+*/
+    QFile inFile(filename);
+    if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+
+    QByteArray headerLine = inFile.readLine();
+    if (headerLine.startsWith("EV NUM/ERR F/F ID     LEN R/D   D0  D1  D2  D3  D4  D5  D6  D7")) {
+        // header found
+        //return true;
+    }
+    QRegularExpression lineRe(R"x((?'dir'[RT]X) (?'number'\d+) (?'ext'[ES]FF) (?'id'[\dA-F]+) (?'dlc'\d) HEX +(?'data'(?:[\dA-F]{2} +)+)(?'timestamp'\d+))x");
+    if (lineRe.match(inFile.readLine()).hasMatch())
+        return true;
+
+
+    return false;
+}
+
+bool FrameFileIO::loadCanWise(QString filename, QVector<CANFrame>* frames)
+{
+    QFile inFile(filename);
+    if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
+        return false;
+
+    try
+    {
+        QRegularExpression lineRe(R"x((?'dir'[RT]X) (?'number'\d+) (?'ext'[ES]FF) (?'id'[\dA-F]+) (?'dlc'\d) HEX +(?'data'(?:[\dA-F]{2} +)+)(?'timestamp'\d+))x");
+        QRegularExpression dataRe(R"x(([\dA-F]{2}))x");
+        for (int lineCounter = 0; !inFile.atEnd(); lineCounter++)
+        {
+            if (lineCounter % 100 == 0) {
+                qApp->processEvents();
+            }
+
+            auto line = lineRe.match(inFile.readLine());
+            if (! line.hasMatch()) {
+                if (lineCounter == 0) {
+                    // skip the header
+                    continue;
+                }
+                else {
+                    qDebug("CANWise: Cannot read line %d", lineCounter);
+                    return false;
+                }
+            }
+            CANFrame frame;
+            frame.bus = 0;
+            frame.isReceived = line.captured("dir") != "TX";
+            frame.setExtendedFrameFormat(line.captured("ext") == "EFF");
+            frame.setFrameId(line.captured("id").toUInt(nullptr, 16));
+            int dlc = line.captured("dlc").toInt();
+            QByteArray frameData;
+            for (auto & match : dataRe.globalMatch(line.captured("data"))) {
+                frameData.append(match.captured().toUInt(nullptr, 16));
+            }
+            if (frameData.size() != dlc) throw std::logic_error("Wrong DLC");
+            frame.setPayload(frameData);
+            quint64 timeus = line.captured("timestamp").toULongLong();
+            frame.setTimeStamp(QCanBusFrame::TimeStamp(0, timeus));
+
+            frames->append(frame);
+        }
+    }
+    catch (...)
+    {
+        return false;
+    }
     return true;
 }
