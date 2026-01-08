@@ -76,6 +76,9 @@ void LAWICELSerial::piSuspend(bool pSuspend)
 
 void LAWICELSerial::piStop()
 {
+    // close the channel
+    sendToSerial("C\x0D");
+
     mTimer.stop();
     disconnectDevice();
 }
