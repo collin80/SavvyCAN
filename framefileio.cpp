@@ -166,33 +166,34 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
     bool result = false;
 
     QStringList filters;
-    filters.append(QString(tr("Autodetect File Type (*.*)")));
-    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
-    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
-    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
-    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)")));
-    filters.append(QString(tr("Vector trace files (*.trace *.TRACE)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
-    filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)")));
-    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
-    filters.append(QString(tr("Candump/Kayak (*.log *.LOG)")));
-    filters.append(QString(tr("CANDump Lawicel (*.txt *.TXT *.LOG *.log)")));
-    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
-    filters.append(QString(tr("Kvaser Log Decimal (*.txt *.TXT)")));
-    filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));
-    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
-    filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)")));
-    filters.append(QString(tr("CARBUS Analyzer Trace Files (*.trc *.TRC)")));
-    filters.append(QString(tr("CANHacker Trace Files (*.trc *.TRC)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
-    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
-    filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));
-    filters.append(QString(tr("Tesla Autopilot Snapshot (*.CAN *.can)")));
-    filters.append(QString(tr("CLX000 (*.txt *.TXT)")));
-    filters.append(QString(tr("CANServer Binary Log (*.log *.LOG)")));
-    filters.append(QString(tr("Wireshark (*.pcap *.PCAP *.pcapng *.PCAPNG)")));
-    filters.append(QString(tr("Wireshark SocketCAN (*.pcap *.PCAP")));
-    filters.append(QString(tr("CANWise Log (*.log)")));
+    filters.append(QString(tr("Autodetect File Type (*.*)")));              // 0
+    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));                // 1
+    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));   // 2
+    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));             // 3
+    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)"))); // 4
+    filters.append(QString(tr("Vector trace files (*.trace *.TRACE)")));    // 5
+    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));             // 6
+    filters.append(QString(tr("CAN-DO Log (*.avc *.can *.evc *.qcc *.AVC *.CAN *.EVC *.QCC)"))); // 7
+    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));               // 8
+    filters.append(QString(tr("Candump/Kayak (*.log *.LOG)")));             // 9
+    filters.append(QString(tr("CANDump Lawicel (*.txt *.TXT *.LOG *.log)"))); // 10
+    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));               // 11
+    filters.append(QString(tr("Kvaser Log Decimal (*.txt *.TXT)")));        // 12
+    filters.append(QString(tr("Kvaser Log Hex (*.txt *.TXT)")));            // 13
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));       // 14
+    filters.append(QString(tr("CANalyzer Binary Log Files (*.blf *.BLF)"))); // 15
+    filters.append(QString(tr("CARBUS Analyzer Trace Files (*.trc *.TRC)"))); // 16
+    filters.append(QString(tr("CANHacker Trace Files (*.trc *.TRC)")));     // 17
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));       // 18
+    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));                // 19
+    filters.append(QString(tr("CANOpen Magic (*.csv *.CSV)")));             // 20
+    filters.append(QString(tr("Tesla Autopilot Snapshot (*.CAN *.can)")));  // 21
+    filters.append(QString(tr("CLX000 (*.txt *.TXT)")));                    // 22
+    filters.append(QString(tr("CANServer Binary Log (*.log *.LOG)")));      // 23
+    filters.append(QString(tr("Wireshark (*.pcap *.PCAP *.pcapng *.PCAPNG)"))); // 24
+    filters.append(QString(tr("Wireshark SocketCAN (*.pcap *.PCAP")));      // 25
+    filters.append(QString(tr("IXXAT CSV export (*.csv)")));                // 26
+    filters.append(QString(tr("CANWise Log (*.log)")));                     // 27
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -240,7 +241,8 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CANFrame>* frameCache
         if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
         if (selectedNameFilter == filters[24]) result = loadWiresharkFile(filename, frameCache);
         if (selectedNameFilter == filters[25]) result = loadWiresharkSocketCANFile(filename, frameCache);
-        if (selectedNameFilter == filters[26]) result = loadCanWise(filename, frameCache);
+        if (selectedNameFilter == filters[26]) result = loadIXXATCsvFile(filename, frameCache);
+        if (selectedNameFilter == filters[27]) result = loadCanWise(filename, frameCache);
 
 
         progress.cancel();
@@ -516,6 +518,16 @@ bool FrameFileIO::autoDetectLoadFile(QString filename, QVector<CANFrame>* frames
         if (loadCanWise(filename, frames))
         {
             qDebug() << "Loaded as CANWise successfully!";
+            return true;
+        }
+    }
+
+    qDebug() << "Attempting IXXAT CSV export";
+    if (isIXXATCsvFile(filename))
+    {
+        if (loadIXXATCsvFile(filename, frames))
+        {
+            qDebug() << "Loaded as IXXAT CSV file";
             return true;
         }
     }
@@ -5227,6 +5239,190 @@ bool FrameFileIO::isWiresharkSocketCANFile(QString filename)
     pcap_close(pcap_data_file);
     pcap_data_file = NULL;
     return true;
+}
+
+bool FrameFileIO::isIXXATCsvFile(QString filename)
+{
+    QFile inFile(filename);
+    bool isMatch = true;
+
+    if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        return false;
+    }
+    try
+    {
+        bool tableHeaderFound = false;
+        // "Bus","No","Time","State","ID (hex)","DLC","Data (hex)","ASCII"
+        // "USB-to-CAN V2 compact  CAN-1","1","00:00:00.083","      ","19D","8","40 00 3F FF 00 0E BD FF","@.?....."
+        for (int lineCounter = 0; isMatch && lineCounter < 100; lineCounter++)
+        {
+            if (inFile.atEnd())
+            {
+                if (!tableHeaderFound)
+                    isMatch = false;
+                break;
+            }
+
+            QByteArray line = inFile.readLine().simplified();
+            QStringList tokens = Utility::splitQuotedString(line);
+            if (tokens.length() != 8)
+                continue;
+
+            if (!tableHeaderFound)
+            {
+                if (tokens[0] == "Bus" &&
+                    tokens[1] == "No" &&
+                    tokens[2] == "Time" &&
+                    tokens[4] == "ID (hex)" &&
+                    tokens[5] == "DLC" &&
+                    tokens[6] == "Data (hex)")
+                        tableHeaderFound = true;
+            }
+            else
+            {
+                bool isOk = false;
+
+                // pkt ID / bus error
+                tokens[4].toUInt(&isOk, 16);
+                if (!isOk && tokens[4] != "Error") isMatch = false;
+                // DLC
+                uint dlc = tokens[5].toUInt(&isOk);
+                if (!isOk) isMatch = false;
+                // data
+                QStringList data = tokens[6].split(" ");
+                if (data.size() != dlc) isMatch = false;
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile.close();
+    return isMatch;
+}
+
+bool FrameFileIO::loadIXXATCsvFile(QString filename, QVector<CANFrame>* frames)
+{
+    QFile inFile(filename);
+    bool isMatch = true;
+
+    if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        return false;
+    }
+    try
+    {
+        // read out the header
+        // Start Time  Thursday May 01 2025 10:47:15
+        // Bitrate   500 kbit/s
+        // Operating Mode  Std ErrDet TxPass
+        // Driver Version  4.1.212.0
+
+        uint64_t timeBase = 0;
+        uint prevTime = 0;
+        QByteArray timeStr = inFile.readLine().simplified();
+        if (timeStr.startsWith("Start Time "))
+        {
+            QByteArrayList timeStrPieces = timeStr.split(' ');
+            timeStrPieces.remove(0, 2);
+            // Thursday May 01 2025 10:47:15
+            QDateTime time = QDateTime::fromString(timeStrPieces.join(' '), "dddd MMMM dd yyyy HH:mm:ss");
+            if (time.isValid())
+                timeBase = time.toMSecsSinceEpoch();
+            else
+                qDebug() << "Cannot parse time: " << timeStrPieces.join(' ');
+        }
+
+        bool tableHeaderFound = false;
+        // "Bus","No","Time","State","ID (hex)","DLC","Data (hex)","ASCII"
+        // "USB-to-CAN V2 compact  CAN-1","1","00:00:00.083","      ","19D","8","40 00 3F FF 00 0E BD FF","@.?....."
+        for (int lineCounter = 0; isMatch; lineCounter++)
+        {
+            if (inFile.atEnd())
+            {
+                if (!tableHeaderFound)
+                    isMatch = false;
+                break;
+            }
+
+            QByteArray line = inFile.readLine().simplified();
+            QStringList tokens = Utility::splitQuotedString(line);
+            if (tokens.length() != 8)
+                continue;
+
+            if (!tableHeaderFound)
+            {
+                if (lineCounter > 20)
+                    isMatch = false;
+
+                if (tokens[0] == "Bus" &&
+                    tokens[1] == "No" &&
+                    tokens[2] == "Time" &&
+                    tokens[4] == "ID (hex)" &&
+                    tokens[5] == "DLC" &&
+                    tokens[6] == "Data (hex)")
+                    tableHeaderFound = true;
+            }
+            else
+            {
+                CANFrame frame;
+                bool isOk = false;
+
+                // bus no
+                uint busNo = 0;
+                if (tokens[0].endsWith('1')) busNo = 1;
+                if (tokens[0].endsWith('2')) busNo = 2;
+                // time
+                uint timeOffset = QTime::fromString(tokens[2], "HH:mm:ss.zzz").msecsSinceStartOfDay();
+                // pkt ID / bus error
+                if (tokens[4] == "Error") {
+                    // what is it?!
+                    qDebug() << line;
+                    continue;
+                }
+                uint pktId = tokens[4].toUInt(&isOk, 16);
+                if (!isOk) isMatch = false;
+                // DLC
+                uint dlc = tokens[5].toUInt(&isOk);
+                if (!isOk) isMatch = false;
+                // data
+                QStringList data = tokens[6].split(" ");
+                if (data.size() != dlc) isMatch = false;
+
+                // timestamps may wrap ?!?!
+                if (prevTime > timeOffset)
+                    timeBase += prevTime;
+                prevTime = timeOffset;
+
+                frame.setFrameType(QCanBusFrame::DataFrame);
+                frame.setFrameId(pktId);
+                frame.isReceived = true;
+                frame.bus = busNo;
+                frame.setTimeStamp(QCanBusFrame::TimeStamp(0,
+                            (timeBase + timeOffset) * 1000u));
+
+                QByteArray bytes(dlc,0);
+                for (uint i = 0; i < dlc; i++)
+                {
+                    bytes[i] = data[i].toUInt(&isOk, 16);
+                    if (!isOk) isMatch = false;
+                }
+                frame.setPayload(bytes);
+
+                frames->append(frame);
+            }
+        }
+    }
+    catch (...)
+    {
+        isMatch = false;
+    }
+
+    inFile.close();
+    return isMatch;
 }
 
 bool FrameFileIO::isCanWise(QString filename)
