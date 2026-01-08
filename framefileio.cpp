@@ -1107,82 +1107,83 @@ bool FrameFileIO::isCANHackerFile(QString filename)
 // 00[.|,]000 00004000 8 36 47 19 43 01 00 00 80 
 bool FrameFileIO::loadCANHackerFile(QString filename, QVector<CANFrame>* frames)
 {
-    QFile *inFile = new QFile(filename);
-    CANFrame thisFrame;
-    QByteArray line;
+    QFile inFile(filename);
     int lineCounter = 0;
     bool foundErrors = false;
     int addendumTime = 0;
     double previousTime = 0;
 
-
-    if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
+    if (!inFile.open(QIODevice::ReadOnly | QIODevice::Text))
     {
-        delete inFile;
         return false;
     }
 
-    line = inFile->readLine().toUpper(); //read out the header first and discard it.
+    try
+    {
+        inFile.readLine(); //read out the header first and discard it.
 
-    while (!inFile->atEnd()) {
-        lineCounter++;
-        if (lineCounter > 100)
-        {
-            qApp->processEvents();
-            lineCounter = 0;
-        }
-        line = inFile->readLine().simplified();
-        if (line.length() > 2)
-        {
-            QList<QByteArray> tokens = line.split(' ');
-            int multiplier;
-            if (tokens.length() > 3)
+        while (!inFile.atEnd()) {
+            lineCounter++;
+            if (lineCounter % 100 == 0)
             {
-                int idxOfDecimal = tokens[0].indexOf('.');
-                // If no dot is found, try comma
-                if(idxOfDecimal == -1)
-                {
-                    idxOfDecimal = tokens[0].indexOf(','); 
-                }
-                if (idxOfDecimal > -1) {
-                    //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
-                    //the result of the above is the # of digits after the decimal.
-                    //This program deals in microsecond so turn the value into microseconds
-                    multiplier = 1000000; //turn the decimal into full microseconds
-                }
-                else
-                {
-                    multiplier = 1; //special case. Assume no decimal means microseconds
-                }
-                //qDebug() << "decimal places " << decimalPlaces;
-                if (previousTime > tokens[0].toDouble()) {
-                    addendumTime += 60;
-                }
-                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>((tokens[0].toDouble() + addendumTime) * multiplier)));
-                previousTime = tokens[0].toDouble();
-                thisFrame.setFrameId( static_cast<uint32_t>(tokens[1].toInt(nullptr, 16)) );
-                thisFrame.setExtendedFrameFormat((thisFrame.frameId() > 0x7FF));
-                thisFrame.isReceived = true;
-                thisFrame.setFrameType(QCanBusFrame::DataFrame);
-                thisFrame.bus = 0;
-                int numBytes = tokens[2].toInt(nullptr, 16);
-                QByteArray bytes( numBytes, 0);
-                for (int d = 0; d < numBytes; d++)
-                {
-                    if (tokens[d + 3] != "")
-                    {
-                        bytes[d] = static_cast<char>(tokens[d + 3].toInt(nullptr, 16));
-                    }
-                    else bytes[d] = 0;
-                }
-                thisFrame.setPayload(bytes);
-                frames->append(thisFrame);
+                qApp->processEvents();
             }
-            else foundErrors = true;
+            QByteArray line = inFile.readLine().simplified();
+            if (line.length() > 2)
+            {
+                QList<QByteArray> tokens = line.split(' ');
+                if (tokens.length() > 3)
+                {
+                    int multiplier;
+                    int idxOfDecimal = tokens[0].indexOf('.');
+                    // If no dot is found, try comma
+                    if(idxOfDecimal == -1)
+                    {
+                        idxOfDecimal = tokens[0].indexOf(',');
+                    }
+                    if (idxOfDecimal > -1) {
+                        //int decimalPlaces = tokens[0].length() - tokens[0].indexOf('.') - 1;
+                        //the result of the above is the # of digits after the decimal.
+                        //This program deals in microsecond so turn the value into microseconds
+                        multiplier = 1000000; //turn the decimal into full microseconds
+                    }
+                    else
+                    {
+                        multiplier = 1; //special case. Assume no decimal means microseconds
+                    }
+                    //qDebug() << "decimal places " << decimalPlaces;
+                    if (previousTime > tokens[0].toDouble()) {
+                        addendumTime += 60;
+                    }
+                    CANFrame thisFrame;
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>((tokens[0].toDouble() + addendumTime) * multiplier)));
+                    previousTime = tokens[0].toDouble();
+                    thisFrame.setFrameId( static_cast<uint32_t>(tokens[1].toInt(nullptr, 16)) );
+                    thisFrame.setExtendedFrameFormat((thisFrame.frameId() > 0x7FF));
+                    thisFrame.isReceived = true;
+                    thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                    thisFrame.bus = 0;
+                    int numBytes = tokens[2].toInt(nullptr, 16);
+                    QByteArray bytes(numBytes, 0);
+                    for (int d = 0; d < numBytes; d++)
+                    {
+                        if (tokens[d + 3] != "")
+                        {
+                            bytes[d] = tokens[d + 3].toInt(nullptr, 16);
+                        }
+                        else bytes[d] = 0;
+                    }
+                    thisFrame.setPayload(bytes);
+                    frames->append(thisFrame);
+                }
+                else foundErrors = true;
+            }
         }
     }
-    inFile->close();
-    delete inFile;
+    catch (...)
+    {
+        qDebug("CANHackerFile: cannot read line %d", lineCounter);
+    }
     return !foundErrors;
 }
 
