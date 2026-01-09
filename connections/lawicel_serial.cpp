@@ -459,12 +459,10 @@ void LAWICELSerial::readSerialData()
 {
     QByteArray data;
     QString debugBuild;
-    CANFrame buildFrame;
-    QByteArray buildData;
 
     if (serial) data = serial->readAll();
 
-    sendDebug("Got data from serial. Len = " % QString::number(data.length()));
+    //sendDebug("Got data from serial. Len = " % QString::number(data.length()));
     for (int i = 0; i < data.length(); i++)
     {
         unsigned char c = data.at(i);
@@ -474,27 +472,25 @@ void LAWICELSerial::readSerialData()
         mBuildLine.append(QChar(c));
         if (c == '\x0D') //all lawicel commands end in CR
         {
-            qDebug() << "Got CR!";
+            //qDebug() << "Got CR!";
 
-            if (useSystemTime)
+            CANFrame buildFrame;
+            QByteArray buildData;
+            auto addTimestamp = [this, &buildFrame](int frameStringLen)
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
-            }
-            else
-            {
-                //If total length is greater than command, header and data, timestamps must be enabled.
-                if (data.length() > (5 + mBuildLine.mid(4, 1).toInt() * 2 + 1))
+                //If total length is greater than command, header and data, it's a timestamp
+                bool hasTimestamp = mBuildLine.length() > frameStringLen + 1;
+                if (useSystemTime || !hasTimestamp)
                 {
-                    //Four bytes after the end of the data bytes.
-                    qint64 buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+                    buildFrame.setTimeStamp({0, QDateTime::currentMSecsSinceEpoch() * 1000ul});
                 }
                 else
                 {
-                    //Default to system time if timestamps are disabled.
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    //Four bytes after the end of the data bytes.
+                    qint64 buildTimestamp = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16) * 1000l;
+                    buildFrame.setTimeStamp({0, buildTimestamp});
                 }
-            }
+            };
 
             switch (mBuildLine[0].toLatin1())
             {
@@ -509,6 +505,7 @@ void LAWICELSerial::readSerialData()
                     buildData[c] = mBuildLine.mid(5 + (c*2), 2).toInt(nullptr, 16);
                 }
                 buildFrame.setPayload(buildData);
+                addTimestamp(1 + 3 + 1 + buildData.size() * 2);
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
@@ -537,6 +534,7 @@ void LAWICELSerial::readSerialData()
                     buildData[c] = mBuildLine.mid(10 + (c*2), 2).toInt(nullptr, 16);
                 }
                 buildFrame.setPayload(buildData);
+                addTimestamp(1 + 8 + 1 + buildData.size() * 2);
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
