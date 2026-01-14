@@ -257,7 +257,8 @@ uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Colum
         return static_cast<uint64_t>(frame.payload().length());
     case Column::ASCII: //sort both the same for now
     case Column::Data:
-        for (int i = 0; i < std::min(static_cast<int>(frame.payload().length()), 8); i++) temp += (static_cast<uint64_t>(frame.payload()[i]) << (56 - (8 * i)));
+        for (int i = 0; i < std::min(static_cast<int>(frame.payload().length()), 8); i++)
+            temp += (static_cast<uint64_t>(frame.payload()[i]) << (56 - (8 * i)));
         //qDebug() << temp;
         return temp;
     case Column::NUM_COLUMN:
@@ -382,7 +383,7 @@ void CANFrameModel::recalcOverwrite()
     //frames.reserve(preallocSize);
 
     filteredFrames.clear();
-    filteredFrames.append(overWriteFrames.values().toVector());
+    filteredFrames.append(overWriteFrames.values());
     filteredFrames.reserve(preallocSize);
 
     /*for (int i = 0; i < frames.count(); i++)
@@ -631,7 +632,7 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
 
 bool CANFrameModel::any_filters_are_configured(void)
 {
-    for (auto const &val : filters)
+    for (auto const &val : std::as_const(filters))
     {
         if (val == true)
             continue;
@@ -643,7 +644,7 @@ bool CANFrameModel::any_filters_are_configured(void)
 
 bool CANFrameModel::any_busfilters_are_configured(void)
 {
-    for (auto const &val : busFilters)
+    for (auto const &val : std::as_const(busFilters))
     {
         if (val == true)
             continue;
@@ -884,7 +885,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     //double the number of frames.
     //beginResetModel();
     mutex.lock();
-    int insertedFiltered = 0;
+    // int insertedFiltered = 0;
     for (int i = 0; i < newFrames.count(); i++)
     {
         frames.append(newFrames[i]);
@@ -900,7 +901,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
         }
         if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].bus])
         {
-            insertedFiltered++;
+            // insertedFiltered++;
             filteredFrames.append(newFrames[i]);
         }
     }
@@ -964,7 +965,7 @@ void CANFrameModel::saveFilterFile(QString filename)
         return;
 
     QMap<int, bool>::const_iterator it;
-    for (it = filters.begin(); it != filters.end(); ++it)
+    for (it = filters.cbegin(); it != filters.cend(); ++it)
     {
         outFile->write(QString::number(it.key(), 16).toUtf8());
         outFile->putChar(',');

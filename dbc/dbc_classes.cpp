@@ -25,13 +25,9 @@ void DBC_SIGNAL::addMultiplexRange(int min, int max)
 
 bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
 {
-    DBC_MESSAGE *msg = nullptr;
-
     if (isMultiplexor && !isMultiplexed) return true; //the root multiplexor is always in the message.
     if (isMultiplexed)
     {
-        DBC_SIGNAL *sig = nullptr;
-
         if (parentMessage->multiplexorSignal != nullptr)
         {
             if (multiplexParent->isSignalInMessage(frame)) //parent is in message so check if value is correct
@@ -242,7 +238,7 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         QString buildString;
         int startByte = startBit / 8;
         int bytes = signalSize / 8;
-        for (int x = 0; x < bytes; x++) buildString.append(frame.payload().data()[startByte + x]);
+        for (int x = 0; x < bytes; x++) buildString.append(frame.payload().constData()[startByte + x]);
         outString = buildString;
         cachedValue = outString;
         return true;

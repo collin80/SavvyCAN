@@ -46,3 +46,6 @@ SavvyCAN.pro.qtds
 .xcode
 SavvyCAN.xcodeproj
 .vscode
+
+# Qt Creator analyzer
+.qtc_clangd/

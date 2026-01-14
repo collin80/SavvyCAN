@@ -286,7 +286,6 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
             [=]()
             {
                 if (currentSignal == nullptr) return;
-                int temp;
                 if (currentSignal->multiplexDbcString(DBC_SIGNAL::MuxStringFormat_UI) != ui->txtMultiplexValues->text())
                 {
                     //TODO: could look up the multiplexor and ensure that the value is within a range that the multiplexor could return
