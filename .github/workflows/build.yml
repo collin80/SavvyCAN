@@ -17,7 +17,7 @@ jobs:
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v4
         with:
-           version: '6.8.1'
+           version: '6.10'
            modules: 'qtserialbus qtserialport'
 
       - name: Clone
@@ -42,7 +42,7 @@ jobs:
       
   buildmacos86:
     name: macOS x64
-    runs-on: macos-13
+    runs-on: macos-15-intel
 
     steps:
       - name: Prepare macOS Environment
@@ -74,7 +74,7 @@ jobs:
 
   buildmacos-arm64:
     name: macOS ARM64
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
       - name: Prepare macOS Environment
@@ -110,7 +110,7 @@ jobs:
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v4
         with:
-           version: '6.8'
+           version: '6.10'
            modules: 'qtserialbus qtserialport'
 
       - name: Clone
