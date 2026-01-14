@@ -73,7 +73,7 @@ void QMQTT::ClientPrivate::init(const QHostAddress& host, const quint16 port, Ne
     Q_Q(Client);
     _host = host;
     _port = port;
-    if(network == NULL)
+    if(network == nullptr)
     {
         init(new Network(q));
     }
@@ -335,7 +335,12 @@ void QMQTT::ClientPrivate::stopKeepAlive()
 
 quint16 QMQTT::ClientPrivate::nextmid()
 {
-    return _gmid++;
+    const quint16 result = _gmid;
+    _gmid++;
+    if (_gmid == 0)
+      _gmid++;
+
+    return result;
 }
 
 quint16 QMQTT::ClientPrivate::publish(const Message& message)
@@ -376,6 +381,7 @@ void QMQTT::ClientPrivate::onNetworkDisconnected()
     stopKeepAlive();
     _midToTopic.clear();
     _midToMessage.clear();
+    _connectionState = ConnectionState::STATE_DISCONNECTED;
     emit q->disconnected();
 }
 
@@ -539,7 +545,7 @@ void QMQTT::ClientPrivate::setAutoReconnectInterval(const int autoReconnectInter
 
 bool QMQTT::ClientPrivate::isConnectedToHost() const
 {
-    return _network->isConnectedToHost();
+    return _connectionState == ConnectionState::STATE_CONNECTED;
 }
 
 QMQTT::ConnectionState QMQTT::ClientPrivate::connectionState() const

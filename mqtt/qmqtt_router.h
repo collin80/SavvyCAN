@@ -46,7 +46,7 @@ class Q_MQTT_EXPORT Router : public QObject
 {
     Q_OBJECT
 public:
-    explicit Router(Client *parent = 0);
+    explicit Router(Client *parent = nullptr);
 
     RouteSubscription *subscribe(const QString &route);
     Client *client() const;

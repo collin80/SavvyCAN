@@ -79,7 +79,7 @@ QMQTT::Client::Client(const QString& url,
 {
     Q_D(Client);
 #ifndef QT_NO_SSL
-    d->init(url, origin, version, NULL, ignoreSelfSigned);
+    d->init(url, origin, version, nullptr, ignoreSelfSigned);
 #else
     Q_UNUSED(ignoreSelfSigned)
     d->init(url, origin, version);

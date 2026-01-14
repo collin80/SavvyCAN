@@ -8,7 +8,7 @@ Product {
     property bool webSocketSupport: false
     property string libraryType: "dynamiclibrary"
     targetName: "qmqtt"
-    version: "1.0.0"
+    version: "1.0.3"
 
     cpp.defines: [
         "QT_BUILD_QMQTT_LIB",

@@ -266,11 +266,31 @@ DBCFile::DBCFile(const DBCFile& cpy) : QObject()
     fileName = cpy.fileName;
     filePath = cpy.filePath;
     assocBuses = cpy.assocBuses;
-    dbc_nodes.clear();
-    dbc_nodes.append(cpy.dbc_nodes);
+
+    clearAndDelete(dbc_nodes);
+
+    for (DBC_NODE* srcNode : cpy.dbc_nodes) {
+        if (srcNode) {
+            dbc_nodes.append(new DBC_NODE(*srcNode)); // deep copy not just pointers
+        }
+    }
+
     dbc_attributes.clear();
     dbc_attributes.append(cpy.dbc_attributes);
     isDirty = cpy.isDirty;
+}
+
+void DBCFile::clearAndDelete(QList<DBC_NODE *>& list)
+{
+    if (!list.empty()) {
+        qDeleteAll(list);
+        list.clear();
+    }
+}
+
+DBCFile::~DBCFile()
+{
+    clearAndDelete(dbc_nodes);
 }
 
 DBCFile& DBCFile::operator=(const DBCFile& cpy)
@@ -1385,7 +1405,7 @@ bool DBCFile::saveFile(QString fileName)
                     case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
-                    case QVariant::Type::Bool:
+                    case QMetaType::Bool:
                         attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:
@@ -1435,7 +1455,7 @@ bool DBCFile::saveFile(QString fileName)
                 case QMetaType::QString:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
                     break;
-                case QVariant::Type::Bool:
+                case QMetaType::Bool:
                     attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                     break;
                 default:
@@ -1518,7 +1538,7 @@ bool DBCFile::saveFile(QString fileName)
                     case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
-                    case QVariant::Type::Bool:
+                    case QMetaType::Bool:
                         attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:

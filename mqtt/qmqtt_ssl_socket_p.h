@@ -54,7 +54,7 @@ class SslSocket : public SocketInterface
 {
     Q_OBJECT
 public:
-    explicit SslSocket(const QSslConfiguration& config, QObject* parent = NULL);
+    explicit SslSocket(const QSslConfiguration& config, QObject* parent = nullptr);
     virtual ~SslSocket();
 
     virtual QIODevice *ioDevice();

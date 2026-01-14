@@ -56,16 +56,16 @@ public:
 
     QString route() const;
 
-signals:
+Q_SIGNALS:
     void received(const RoutedMessage &message);
 
-private slots:
+private Q_SLOTS:
     void routeMessage(const Message &message);
 
 private:
     friend class Router;
 
-    explicit RouteSubscription(Router *parent = 0);
+    explicit RouteSubscription(Router *parent = nullptr);
     void setRoute(const QString &route);
 
     QPointer<Client> _client;

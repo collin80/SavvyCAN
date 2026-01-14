@@ -66,6 +66,7 @@ class DBCFile: public QObject
 public:
     DBCFile();
     DBCFile(const DBCFile& cpy);
+    ~DBCFile();
     DBCFile& operator=(const DBCFile& cpy);
     DBC_NODE *findNodeByName(QString name);
     DBC_NODE *findNodeByNameAndComment(QString fullname);
@@ -104,6 +105,7 @@ private:
     bool parseSignalValueTypeLine(QString line);
     bool parseAttributeLine(QString line);
     bool parseDefaultAttrLine(QString line);
+    void clearAndDelete(QList<DBC_NODE *>& list);
 };
 
 class DBCHandler: public QObject

@@ -62,12 +62,12 @@ public:
     WebSocket(const QString& origin,
               QWebSocketProtocol::Version version,
               const QSslConfiguration* sslConfig,
-              QObject* parent = NULL);
+              QObject* parent = nullptr);
 #endif // QT_NO_SSL
 
     WebSocket(const QString& origin,
               QWebSocketProtocol::Version version,
-              QObject* parent = NULL);
+              QObject* parent = nullptr);
 
     virtual ~WebSocket();
 
