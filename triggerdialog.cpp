@@ -56,12 +56,12 @@ TriggerDialog::TriggerDialog(QList<Trigger> trigs, QWidget *parent) :
     connect(ui->btnDelete, &QPushButton::clicked, this, &TriggerDialog::deleteSelectedTrigger);
     connect(ui->btnNew, &QPushButton::clicked, this, &TriggerDialog::addNewTrigger);
     connect(ui->btnSave, &QPushButton::clicked, this, &TriggerDialog::saveAndExit);
-    connect(ui->cbBus, &QCheckBox::stateChanged, this, &TriggerDialog::handleCheckboxes);
-    connect(ui->cbMillis, &QCheckBox::stateChanged, this, &TriggerDialog::handleCheckboxes);
-    connect(ui->cbMaxCount, &QCheckBox::stateChanged, this, &TriggerDialog::handleCheckboxes);
-    connect(ui->cbMsgID, &QCheckBox::stateChanged, this, &TriggerDialog::handleCheckboxes);
-    connect(ui->cbSigValue, &QCheckBox::stateChanged, this, &TriggerDialog::handleCheckboxes);
-    connect(ui->cbSignal, &QCheckBox::stateChanged, this, &TriggerDialog::handleCheckboxes);
+    connect(ui->cbBus, &QCheckBox::checkStateChanged, this, &TriggerDialog::handleCheckboxes);
+    connect(ui->cbMillis, &QCheckBox::checkStateChanged, this, &TriggerDialog::handleCheckboxes);
+    connect(ui->cbMaxCount, &QCheckBox::checkStateChanged, this, &TriggerDialog::handleCheckboxes);
+    connect(ui->cbMsgID, &QCheckBox::checkStateChanged, this, &TriggerDialog::handleCheckboxes);
+    connect(ui->cbSigValue, &QCheckBox::checkStateChanged, this, &TriggerDialog::handleCheckboxes);
+    connect(ui->cbSignal, &QCheckBox::checkStateChanged, this, &TriggerDialog::handleCheckboxes);
     connect(ui->txtMaxCount, &QLineEdit::textEdited, this, &TriggerDialog::regenerateCurrentListItem);
     connect(ui->cmMsgID, &QComboBox::currentTextChanged, this, &TriggerDialog::regenerateCurrentListItem);
     connect(ui->cmSignal, &QComboBox::currentTextChanged, this, &TriggerDialog::regenerateCurrentListItem);
