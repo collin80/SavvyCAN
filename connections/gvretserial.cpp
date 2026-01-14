@@ -7,6 +7,7 @@
 #include <QtNetwork>
 
 #include "gvretserial.h"
+#include "canconmanager.h"
 
 GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     CANConnection(portName, "gvret", CANCon::GVRET_SERIAL, 0, 0, false, 0, 3, 4000, true),
@@ -21,7 +22,6 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     rx_state = IDLE;
     rx_step = 0;
     validationCounter = 10; //how many times we can miss validation before we die
-    isAutoRestart = false;
     espSerialMode = true;
 
     timeBasis = 0;
@@ -236,8 +236,6 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
 
     //qDebug() << "Sending out GVRET frame with id " << frame.ID << " on bus " << frame.bus;
 
-    framesRapid++;
-
     if (serial == nullptr && tcpClient == nullptr && udpClient == nullptr) return false;
     if (serial && !serial->isOpen()) return false;
     if (tcpClient && !tcpClient->isOpen()) return false;
@@ -307,16 +305,16 @@ void GVRetSerial::connectDevice()
         sendDebug("TCP Connection to a GVRET device");
         tcpClient = new QTcpSocket();
         tcpClient->connectToHost(getPort(), 23);
-        connect(tcpClient, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-        connect(tcpClient, SIGNAL(connected()), this, SLOT(deviceConnected()));
+        connect(tcpClient, &QTcpSocket::readyRead, this, &GVRetSerial::readSerialData);
+        connect(tcpClient, &QTcpSocket::connected, this, &GVRetSerial::deviceConnected);
         sendDebug("Created TCP Socket");
         // */
         /*
         qDebug() << "UDP Connection to a GVRET device";
         udpClient = new QUdpSocket();
         udpClient->connectToHost(getPort(), 17222);
-        connect(udpClient, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-        //connect(udpClient, SIGNAL(connected()), this, SLOT(tcpConnected()));
+        connect(udpClient, &QUdpSocket::readyRead, this, &GVRetSerial::readSerialData);
+        //connect(udpClient, &QUdpSocket::connected, this, &GVRetSerial::tcpConnected);
         debugOutput("Created UDP Socket");
         tcpConnected();
         */
@@ -331,8 +329,8 @@ void GVRetSerial::connectDevice()
         sendDebug("Created Serial Port Object");
 
         /* connect reading event */
-        connect(serial, SIGNAL(readyRead()), this, SLOT(readSerialData()));
-        connect(serial, SIGNAL(error(QSerialPort::SerialPortError)), this, SLOT(serialError(QSerialPort::SerialPortError)));
+        connect(serial, &QSerialPort::readyRead, this, &GVRetSerial::readSerialData);
+        connect(serial, &QSerialPort::errorOccurred, this, &GVRetSerial::serialError);
 
         /* configure */
         serial->setBaudRate(1000000); //most GVRET devices ignore baud, ESP32 needs it set explicitly to the proper value
@@ -350,7 +348,7 @@ void GVRetSerial::connectDevice()
             {
                 serial->setDataTerminalReady(false); //ESP32 uses these for bootloader selection and reset so turn them off
                 serial->setRequestToSend(false);                
-                QTimer::singleShot(3000, this, SLOT(deviceConnected())); //give ESP32 some time as it could have rebooted
+                QTimer::singleShot(3000, this, &GVRetSerial::deviceConnected); //give ESP32 some time as it could have rebooted
             }
         }
         else
@@ -410,7 +408,7 @@ void GVRetSerial::deviceConnected()
     sendToSerial(output);
 
     if(doValidation) {
-        QTimer::singleShot(5000, this, SLOT(connectionTimeout()));
+        QTimer::singleShot(5000, this, &GVRetSerial::connectionTimeout);
     }
     else {
         setStatus(CANCon::CONNECTED);
@@ -563,7 +561,7 @@ void GVRetSerial::connectionTimeout()
     else
     {
         /* start timer */
-        connect(&mTimer, SIGNAL(timeout()), this, SLOT(handleTick()));
+        connect(&mTimer, &QTimer::timeout, this, &GVRetSerial::handleTick);
         mTimer.setInterval(250); //tick four times per second
         mTimer.setSingleShot(false); //keep ticking
         mTimer.start();
@@ -943,13 +941,13 @@ void GVRetSerial::procRXChar(unsigned char c)
             stats.numHardwareBuses = mNumBuses;
             emit status(stats);
 
-            int can0Status = 0x78; //updating everything we can update
-            int can1Status = 0x78;
-            if (can0Enabled) can0Status +=1;
-            if (can0ListenOnly) can0Status += 4;
-            if (can1Enabled) can1Status += 1;
-            if (deviceSingleWireMode > 0) can1Status += 2;
-            if (can1ListenOnly) can1Status += 4;
+            // int can0Status = 0x78; //updating everything we can update
+            // int can1Status = 0x78;
+            // if (can0Enabled) can0Status +=1;
+            // if (can0ListenOnly) can0Status += 4;
+            // if (can1Enabled) can1Status += 1;
+            // if (deviceSingleWireMode > 0) can1Status += 2;
+            // if (can1ListenOnly) can1Status += 4;
             //emit busStatus(busBase, can0Baud & 0xFFFFF, can0Status);
             //emit busStatus(busBase + 1, can1Baud & 0xFFFFF, can1Status);
             break;
@@ -1122,7 +1120,7 @@ void GVRetSerial::handleTick()
 
                 disconnectDevice(); //start by stopping everything.
                 //Then wait 500ms and restart the connection automatically
-                //QTimer::singleShot(500, this, SLOT(connectDevice()));
+                //QTimer::singleShot(500, this, &GVRetSerial::connectDevice);
                 return;
             }
         }
