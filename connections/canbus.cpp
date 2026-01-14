@@ -5,6 +5,7 @@
 CANBus::CANBus()
 {
     speed       = 500000;
+    samplePoint = 875;
     listenOnly  = false;
     singleWire  = false;
     active      = false;
@@ -15,6 +16,7 @@ CANBus::CANBus()
 
 bool CANBus::operator==(const CANBus& bus) const{
     return  speed == bus.speed &&
+            samplePoint == bus.samplePoint &&
             listenOnly == bus.listenOnly &&
             singleWire == bus.singleWire &&
             active == bus.active &&
@@ -25,6 +27,10 @@ bool CANBus::operator==(const CANBus& bus) const{
 void CANBus::setSpeed(int newSpeed){
     //qDebug() << "CANBUS SetSpeed = " << newSpeed;
     speed = newSpeed;
+}
+
+void CANBus::setSamplePoint(int newSamplePoint){
+    samplePoint = newSamplePoint;
 }
 
 void CANBus::setListenOnly(bool mode){
@@ -49,6 +55,10 @@ void CANBus::setCanFD(bool mode){
 
 int CANBus::getSpeed() const {
     return speed;
+}
+
+int CANBus::getSamplePoint() const {
+    return samplePoint;
 }
 
 int CANBus::getDataRate() const {
@@ -80,6 +90,7 @@ bool CANBus::isCanFD() const {
 QDataStream& operator<<(QDataStream & pStream, const CANBus& pCanBus)
 {
     pStream << pCanBus.speed;
+    pStream << pCanBus.samplePoint;
     pStream << pCanBus.listenOnly;
     pStream << pCanBus.singleWire;
     pStream << pCanBus.active;
@@ -90,6 +101,7 @@ QDataStream& operator<<(QDataStream & pStream, const CANBus& pCanBus)
 QDataStream & operator>>(QDataStream & pStream, CANBus& pCanBus)
 {
     pStream >> pCanBus.speed;
+    pStream >> pCanBus.samplePoint;
     pStream >> pCanBus.listenOnly;
     pStream >> pCanBus.singleWire;
     pStream >> pCanBus.active;

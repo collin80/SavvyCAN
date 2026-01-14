@@ -7,10 +7,11 @@
 #include "lawicel_serial.h"
 #include "canserver.h"
 #include "canlogserver.h"
+#include "gs_usb_driver/gs_usb.h"
 
 using namespace CANCon;
 
-CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, int pSamplePoint)
 {
     switch(pType) {
     case SERIALBUS:
@@ -32,6 +33,18 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
         return new CANserver(pPortName);
     case CANLOGSERVER:
         return new CanLogServer(pPortName);
+#ifdef GS_USB_DRIVER_ENABLED
+    case GSUSB:
+        {
+            GSUSBDevice* device = new GSUSBDevice(pPortName, pBusSpeed, pSamplePoint);
+            if (!device->isDeviceConnected()) {
+                delete device;
+                return nullptr;
+            } else {
+                return device;
+            }
+        }
+#endif
     default: {}
     }
 
