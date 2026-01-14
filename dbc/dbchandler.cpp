@@ -479,8 +479,6 @@ DBC_SIGNAL* DBCFile::parseSignalLine(QString line, DBC_MESSAGE *msg)
 
     int offset = 0;
     bool isMessageMultiplexor = false;
-    //bool isMultiplexed = false;
-
     DBC_SIGNAL *sig = new DBC_SIGNAL();
 
     qDebug() << "Found a SG line";
@@ -895,7 +893,7 @@ bool DBCFile::loadFile(QString fileName)
     QRegularExpressionMatch match;
     DBC_MESSAGE *currentMessage = nullptr;
     DBC_ATTRIBUTE attr;
-    int numSigFaults = 0, numMsgFaults = 0;
+    QStringList sigFaults, msgFaults;
     int linesSinceYield = 0;
     QString fileBaseName = QFileInfo(fileName).baseName();
 
@@ -948,21 +946,21 @@ bool DBCFile::loadFile(QString fileName)
             if (line.startsWith("BO_ ")) //defines a message
             {
                 currentMessage = parseMessageLine(line);
-                if (currentMessage == nullptr) numMsgFaults++;
+                if (currentMessage == nullptr) msgFaults.append(line);
             }
             if (line.startsWith("SG_ ")) //defines a signal
             {
-                if (!parseSignalLine(line, currentMessage)) numSigFaults++;
+                if (!parseSignalLine(line, currentMessage)) sigFaults.append(line);
             }
 
             if (line.startsWith("SG_MUL_VAL_ ")) //defines a signal multiplexing value definition
             {
-                if (!parseSignalMultiplexValueLine(line)) numSigFaults++;
+                if (!parseSignalMultiplexValueLine(line)) sigFaults.append(line);
             }
 
             if (line.startsWith("SIG_VALTYPE_ ")) //defines a signal value type
             {
-                if (!parseSignalValueTypeLine(line)) numSigFaults++;
+                if (!parseSignalValueTypeLine(line)) sigFaults.append(line);
             }
 
             if (line.startsWith("BU_:")) //line specifies the nodes on this canbus
@@ -1191,12 +1189,14 @@ bool DBCFile::loadFile(QString fileName)
         }
     }
 
-    if (numSigFaults > 0 || numMsgFaults > 0)
+    if (sigFaults.size() > 0 || msgFaults.size() > 0)
     {
         QMessageBox msgBox;
         QString msg = "DBC file loaded with errors!\n";
-        msg += "Number of faulty message entries: " + QString::number(numMsgFaults) + "\n";
-        msg += "Number of faulty signal entries: " + QString::number(numSigFaults) + "\n\n";
+        if (msgFaults.size() > 0)
+            msg += "Faulty message entries:\n" + msgFaults.join("\n") + "\n";
+        if (sigFaults.size() > 0)
+            msg += "Faulty signal entries:\n" + sigFaults.join("\n") + "\n\n";
         msg += "Faulty entries have not been loaded.\n\n";
         msg += "All other entries are, however, loaded.";
         msgBox.setText(msg);
@@ -1702,11 +1702,9 @@ void DBCHandler::saveDBCFile(int idx)
     if (idx < 0) return;
     if (idx >= loadedFiles.count()) return;
 
-    QString filename;
     QFileDialog dialog;
 
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
+    QStringList filters { tr("DBC File (*.dbc)") };
 
     dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -1717,7 +1715,7 @@ void DBCHandler::saveDBCFile(int idx)
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         if (!filename.contains('.')) filename += ".dbc";
         loadedFiles[idx].saveFile(filename);
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
@@ -1802,12 +1800,10 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
 {
    if (idx > -1 && idx < loadedFiles.count()) removeDBCFile(idx);
 
-    QString filename;
     QFileDialog dialog;
     QSettings settings;
 
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
+    QStringList filters{ tr("DBC File (*.dbc)") };
 
     dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -1816,7 +1812,7 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
 
     if (dialog.exec() == QDialog::Accepted)
     {
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         //right now there is only one file type that can be loaded here so just do it.
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
         return loadDBCFile(filename);
@@ -1827,13 +1823,11 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
 
 DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
 {
-    DBCFile *thisFile;
-    DBC_MESSAGE *pMsg;
-    DBC_SIGNAL *pSig;
-    QByteArray line;
+    DBC_MESSAGE *pMsg {};
+    DBC_SIGNAL *pSig {};
     int lineCounter = 0;
     createBlankFile();
-    thisFile = &loadedFiles.last();
+    DBCFile *thisFile = &loadedFiles.last();
 
     QFile *inFile = new QFile(filename);
 
@@ -1844,6 +1838,7 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
     }
 
     //burn first two lines. contains header
+    QByteArray line;
     line = inFile->readLine().simplified().toUpper();
     line = inFile->readLine().simplified().toUpper();
 
