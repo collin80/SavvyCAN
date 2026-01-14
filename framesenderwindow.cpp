@@ -42,8 +42,12 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *p
     connect(ui->btnEnableAll, SIGNAL(clicked(bool)), this, SLOT(enableAll()));
     connect(ui->btnLoadGrid, SIGNAL(clicked(bool)), this, SLOT(loadGrid()));
     connect(ui->btnSaveGrid, SIGNAL(clicked(bool)), this, SLOT(saveGrid()));
-    connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+    bool connected = connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
+    fprintf(stderr, "DEBUG: FrameSenderWindow signal connection: %s\n", connected ? "SUCCESS" : "FAILED");
+    fflush(stderr);
 
+    buildFrameCache(); // Initialize frame cache with existing frames
+    
     intervalTimer->start();
     elapsedTimer.start();
     installEventFilter(this);
@@ -154,6 +158,7 @@ void FrameSenderWindow::buildFrameCache()
 void FrameSenderWindow::updatedFrames(int numFrames)
 {
     CANFrame thisFrame;
+    
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -164,11 +169,11 @@ void FrameSenderWindow::updatedFrames(int numFrames)
     else //just got some new frames. See if they are relevant.
     {
         if (numFrames > modelFrames->count()) return;
-        qDebug() << "New frames in sender window";
         //run through the supposedly new frames in order
         for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
         {
             thisFrame = modelFrames->at(i);
+            // No debug here to reduce noise
             if (!frameCache.contains(thisFrame.frameId()))
             {
                 frameCache.insert(thisFrame.frameId(), thisFrame);
@@ -187,6 +192,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
         if (sendingData[sd].triggers.count() == 0) continue;
+        if (!sendingData[sd].enabled) continue; // Skip if not enabled
         bool passedChecks = true;
         for (int trig = 0; trig < sendingData[sd].triggers.count(); trig++)
         {
@@ -196,23 +202,26 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
             if (!(thisTrigger->triggerMask & (TriggerMask::TRG_BUS | TriggerMask::TRG_ID) ) ) continue;
 
             passedChecks = true;
-            //qDebug() << "Trigger ID: " << thisTrigger->ID;
-            //qDebug() << "Frame ID: " << frame->frameId();
 
             //Check to see if we have a bus trigger condition and if so does it match
             if (thisTrigger->bus != frame->bus && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
                 passedChecks = false;
 
             //check to see if we have an ID trigger condition and if so does it match
-            if ((thisTrigger->triggerMask & TriggerMask::TRG_ID) && (uint32_t)thisTrigger->ID != frame->frameId() )
-                passedChecks = false;
+            if (thisTrigger->triggerMask & TriggerMask::TRG_ID)
+            {
+                if ((uint32_t)thisTrigger->ID != frame->frameId())
+                {
+                    passedChecks = false;
+                }
+            }
 
             //check to see if we're limiting the trigger by max count and have we reached that count?
             if ( (thisTrigger->triggerMask & TriggerMask::TRG_COUNT) && (thisTrigger->currCount >= thisTrigger->maxCount) )
                 passedChecks = false;
 
             //if the above passed then are we triggering not only on ID but also signal?
-            if (passedChecks && (thisTrigger->triggerMask & (TriggerMask::TRG_SIGNAL | TriggerMask::TRG_ID) ) )
+            if (passedChecks && (thisTrigger->triggerMask & TriggerMask::TRG_SIGNAL) )
             {
                 bool sigCheckPassed = false;
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisTrigger->ID);
@@ -259,8 +268,10 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
                 }
                 else //delayed sending frame
                 {
+                    fprintf(stderr, "DEBUG: DELAYED SEND - Setting readyCount = true\n");
                     thisTrigger->readyCount = true;
                 }
+                fflush(stderr);
             }
         }
     }
@@ -523,6 +534,8 @@ void FrameSenderWindow::handleTick()
 {
     FrameSendData *sendData;
     Trigger *trigger;
+    QList<CANFrame> sendingList;
+    
     if(mutex.tryLock())
     {
         int elapsed = elapsedTimer.restart();
@@ -542,11 +555,11 @@ void FrameSenderWindow::handleTick()
                 }
                 continue; //abort any processing on this if it is not enabled.
             }
-            if (sendData->triggers.count() == 0) break;
+            if (sendData->triggers.count() == 0) continue;
             for (int j = 0; j < sendData->triggers.count(); j++)
             {
                 trigger = &sendData->triggers[j];
-                if (trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
+                if (trigger->maxCount > 0 && trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
                 if (!trigger->readyCount) continue; //don't tick if not ready to tick
                 //is it time to fire?
                 trigger->msCounter += elapsed; //gives proper tracking even if timer doesn't fire as fast as it should
@@ -557,13 +570,18 @@ void FrameSenderWindow::handleTick()
                     trigger->currCount++;
                     doModifiers(i);
                     updateGridRow(i);
-                    //qDebug() << "About to try to send a frame";
-                    CANConManager::getInstance()->sendFrame(sendingData[i]);
+                    sendingList.append(sendingData[i]);
                     if (trigger->ID > 0) trigger->readyCount = false; //reset flag if this is a timed ID trigger
                 }
             }
         }
 
+        //if we have any frames to send after the above then send as a batch
+        if (sendingList.count() > 0) 
+        {
+            CANConManager::getInstance()->sendFrames(sendingList);
+        }
+        
         mutex.unlock();
     }
     else
@@ -1001,8 +1019,10 @@ void FrameSenderWindow::processCellChange(int line, int col)
     {
         FrameSendData tempData;
         tempData.enabled = false;
+        tempData.bus = 0;  // Initialize bus to 0
         tempData.setFrameType(QCanBusFrame::DataFrame);
         tempData.setExtendedFrameFormat(false);
+        tempData.setFrameId(0);  // Initialize ID
         sendingData.append(tempData);
     }
 
@@ -1017,9 +1037,36 @@ void FrameSenderWindow::processCellChange(int line, int col)
             if (ui->tableSender->item(line, 0)->checkState() == Qt::Checked)
             {
                 sendingData[line].enabled = true;
+                // Process all fields to ensure frame is properly configured
+                // Do this in a specific order: Bus, ID, Ext, Len, Data, Triggers
+                inhibitChanged = true;
+                
+                // Only process fields that have values
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS) && 
+                    !ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS)->text().isEmpty())
+                    processCellChange(line, ST_COLS::SENDTAB_COL_BUS);
+                    
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_ID) && 
+                    !ui->tableSender->item(line, ST_COLS::SENDTAB_COL_ID)->text().isEmpty())
+                    processCellChange(line, ST_COLS::SENDTAB_COL_ID);
+                    
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_EXT))
+                    processCellChange(line, ST_COLS::SENDTAB_COL_EXT);
+                    
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN) && 
+                    !ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN)->text().isEmpty())
+                    processCellChange(line, ST_COLS::SENDTAB_COL_LEN);
+                    
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA) && 
+                    !ui->tableSender->item(line, ST_COLS::SENDTAB_COL_DATA)->text().isEmpty())
+                    processCellChange(line, ST_COLS::SENDTAB_COL_DATA);
+                    
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_TRIGGER))
+                    processCellChange(line, ST_COLS::SENDTAB_COL_TRIGGER);
+                    
+                inhibitChanged = false;
             }
             else sendingData[line].enabled = false;
-            qDebug() << "Setting enabled to " << sendingData[line].enabled;
             break;
         case ST_COLS::SENDTAB_COL_BUS: //Bus designation
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS)->text());
@@ -1047,24 +1094,29 @@ void FrameSenderWindow::processCellChange(int line, int col)
                 ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN)->setText(QString::number(msg->len));
                 ui->tableSender->blockSignals(false);
             }
-            qDebug() << "setting ID to " << tempVal;
+            qDebug() << "setting ID to " << tempVal << "hex:" << QString::number(tempVal, 16);
             break;
         case ST_COLS::SENDTAB_COL_LEN:
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, 3)->text());
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN)->text());
             if (tempVal < 0) tempVal = 0;
-            if (tempVal > 8) tempVal = 8;            
-            arr.resize(tempVal);
-            sendingData[line].setPayload(arr);
+            if (tempVal > 8) tempVal = 8;
+            // Only resize if the current payload is different size
+            if (sendingData[line].payload().size() != tempVal)
+            {
+                arr = sendingData[line].payload();
+                arr.resize(tempVal);
+                sendingData[line].setPayload(arr);
+            }
             break;
         case ST_COLS::SENDTAB_COL_EXT:
-            if (ui->tableSender->item(line, 4)->checkState() == Qt::Checked) {
+            if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_EXT)->checkState() == Qt::Checked) {
                 sendingData[line].setExtendedFrameFormat(true);
             } else {
                 sendingData[line].setExtendedFrameFormat(false);
             }
             break;
         case ST_COLS::SENDTAB_COL_REM:
-            if (ui->tableSender->item(line, 5)->checkState() == Qt::Checked) {
+            if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_REM)->checkState() == Qt::Checked) {
                 sendingData[line].setFrameType(QCanBusFrame::RemoteRequestFrame);
             } else {
                 sendingData[line].setFrameType(QCanBusFrame::DataFrame);
