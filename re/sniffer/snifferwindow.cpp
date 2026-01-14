@@ -184,6 +184,7 @@ void SnifferWindow::update()
 
 void SnifferWindow::sectionResized(int idx, int oldSize, int newSize)
 {
+    Q_UNUSED(idx); Q_UNUSED(oldSize);
     QSettings settings;
 
     //nothing to do if we're not enforcing equal column sizes
