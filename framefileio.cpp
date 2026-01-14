@@ -1661,16 +1661,6 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
             line = inFile->readLine();
             if (!line.startsWith("base")) isMatch = false;
         }
-        if (!inFile->atEnd() && isMatch)
-        {
-            line = inFile->readLine();
-            if (!line.contains("logged")) isMatch = false;
-        }
-        if (!inFile->atEnd() && isMatch)
-        {
-            line = inFile->readLine();
-            if (!line.contains("version")) isMatch = false;
-        }
     }
     catch (...)
     {
