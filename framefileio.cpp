@@ -2111,7 +2111,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
             {
                 if (tokens[0].length() > 3)
                 {
-                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tokens[0].toULongLong()));
+                    quint64 tstamp = tokens[0].toULongLong();
+                    if (tstamp == 0) tstamp = (quint64)(tokens[0].toLongLong());
+                    thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tstamp));
                 }
                 else
                 {
