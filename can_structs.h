@@ -5,6 +5,7 @@
 #include <QVector>
 #include <stdint.h>
 #include <QCanBusFrame>
+#include <QMetaType>
 
 //Now inherits from the built-in CAN frame class from Qt. This should be more future proof and easier to integrate with other code
 
@@ -14,7 +15,10 @@ public:
     int bus;
     bool isReceived; //did we receive this or send it?
     uint64_t timedelta;
-    uint32_t frameCount; //used in overwrite mode
+
+    //used in overwrite mode
+    uint32_t frameCount;
+    uint64_t changedPayloadBytes;
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
     {
@@ -34,6 +38,8 @@ public:
         frameCount = 1;
     }
 };
+
+Q_DECLARE_METATYPE(CANFrame);
 
 class CANFltObserver
 {

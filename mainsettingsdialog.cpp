@@ -48,6 +48,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbLoadConnections->setChecked(settings.value("Main/SaveRestoreConnections", false).toBool());
 
     ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
+    ui->cbMarkChangedBytes->setChecked(settings.value("Main/MarkChangedBytes", true).toBool());
     ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", false).toBool());
 
     bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
@@ -138,6 +139,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->spinMaximumFrames, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbFontFixedWidth, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinBytesPerLine, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
+    connect(ui->cbMarkChangedBytes, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -207,6 +209,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
     settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
     settings.setValue("Main/BytesPerLine", ui->spinBytesPerLine->value());
+    settings.setValue("Main/MarkChangedBytes", ui->cbMarkChangedBytes->isChecked());
     settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
 
     settings.sync();

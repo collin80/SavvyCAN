@@ -46,7 +46,11 @@ public:
     void setInterpretMode(bool);
     bool getInterpretMode();
     void setOverwriteMode(bool);
+    bool getOverwriteMode();
+    void setMarkChangedBytes(bool);
+    bool getMarkChangedBytes();
     void setHexMode(bool);
+    bool getHexMode();
     void setClearMode(bool mode);
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
@@ -55,6 +59,7 @@ public:
     void setAllFilters(bool state);
     void setTimeFormat(QString);
     void setBytesPerLine(int bpl);
+    int getBytesPerLine();
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);
     void normalizeTiming();
@@ -90,6 +95,7 @@ private:
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
     bool overwriteDups; //should we display all frames or only the newest for each ID?
+    bool markChangedBytes; //should we highlight bytes that have been changed from the baseline?
     bool filtersPersistDuringClear;
     QString timeFormat;
     TimeStyle timeStyle;

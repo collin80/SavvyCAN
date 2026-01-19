@@ -90,6 +90,11 @@ void CANFrameModel::setBytesPerLine(int bpl)
     bytesPerLine = bpl;
 }
 
+int CANFrameModel::getBytesPerLine()
+{
+    return bytesPerLine;
+}
+
 void CANFrameModel::setHexMode(bool mode)
 {
     if (useHexMode != mode)
@@ -99,6 +104,11 @@ void CANFrameModel::setHexMode(bool mode)
         Utility::decimalMode = !useHexMode;
         this->endResetModel();
     }
+}
+
+bool CANFrameModel::getHexMode()
+{
+    return useHexMode;
 }
 
 void CANFrameModel::setTimeStyle(TimeStyle newStyle)
@@ -193,6 +203,23 @@ void CANFrameModel::setOverwriteMode(bool mode)
     overwriteDups = mode;
     recalcOverwrite();
     endResetModel();
+}
+
+bool CANFrameModel::getOverwriteMode()
+{
+    return overwriteDups;
+}
+
+void CANFrameModel::setMarkChangedBytes(bool mcf)
+{
+    beginResetModel();
+    markChangedBytes = mcf;
+    endResetModel();
+}
+
+bool CANFrameModel::getMarkChangedBytes()
+{
+    return markChangedBytes;
 }
 
 void CANFrameModel::setClearMode(bool mode)
@@ -412,7 +439,6 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 
     thisFrame = filteredFrames.at(index.row());
 
-    const unsigned char *data = reinterpret_cast<const unsigned char *>(thisFrame.payload().constData());
     int dataLen = thisFrame.payload().count();
 
     if (role == Qt::BackgroundRole)
@@ -516,67 +542,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             }
             return tempString;
         case Column::Data:
-            if (dataLen < 0) dataLen = 0;
-            //if (useHexMode) tempString.append("0x ");
-            if (thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame) {
-                return tempString;
-            }
-            for (int i = 0; i < dataLen; i++)
-            {
-                if (useHexMode) tempString.append( QString::number(data[i], 16).toUpper().rightJustified(2, '0'));
-                else tempString.append(QString::number(data[i], 10));
-                if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
-                else tempString.append(" ");
-            }
-            if (thisFrame.frameType() == thisFrame.ErrorFrame)
-            {
-                if (thisFrame.error() & thisFrame.TransmissionTimeoutError) tempString.append("\nTX Timeout");
-                if (thisFrame.error() & thisFrame.LostArbitrationError) tempString.append("\nLost Arbitration");
-                if (thisFrame.error() & thisFrame.ControllerError) tempString.append("\nController Error");
-                if (thisFrame.error() & thisFrame.ProtocolViolationError) tempString.append("\nProtocol Violation");
-                if (thisFrame.error() & thisFrame.TransceiverError) tempString.append("\nTransceiver Error");
-                if (thisFrame.error() & thisFrame.MissingAcknowledgmentError) tempString.append("\nMissing ACK");
-                if (thisFrame.error() & thisFrame.BusOffError) tempString.append("\nBus OFF");
-                if (thisFrame.error() & thisFrame.BusError) tempString.append("\nBus ERR");
-                if (thisFrame.error() & thisFrame.ControllerRestartError) tempString.append("\nController restart err");
-                if (thisFrame.error() & thisFrame.UnknownError) tempString.append("\nUnknown error type");
-            }
-            //TODO: technically the actual returned bytes for an error frame encode some more info. Not interpreting it yet.
-
-            //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
-            if ( (dbcHandler != nullptr) && interpretFrames && (thisFrame.frameType() == thisFrame.DataFrame) )
-            {
-                DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-                if (msg != nullptr)
-                {
-                    tempString.append("   <" + msg->name + ">\n");
-                    if (msg->comment.length() > 1) tempString.append(msg->comment + "\n");
-                    for (int j = 0; j < msg->sigHandler->getCount(); j++)
-                    {                        
-                        QString sigString;
-                        DBC_SIGNAL* sig = msg->sigHandler->findSignalByIdx(j);
-
-                        if ( (sig->multiplexParent == nullptr) && sig->processAsText(thisFrame, sigString))
-                        {
-                            tempString.append(sigString);
-                            tempString.append("\n");
-                            if (sig->isMultiplexor)
-                            {
-                                qDebug() << "Multiplexor. Diving into the tree";
-                                tempString.append(sig->processSignalTree(thisFrame));
-                            }
-                        }
-                        else if (sig->isMultiplexed && overwriteDups) //wasn't in this exact frame but is in the message. Use cached value
-                        {
-                            bool isInteger = false;
-                            if (sig->valType == UNSIGNED_INT || sig->valType == SIGNED_INT) isInteger = true;
-                            tempString.append(sig->makePrettyOutput(sig->cachedValue.toDouble(), sig->cachedValue.toLongLong(), true, isInteger));
-                            tempString.append("\n");
-                        }
-                    }
-                }
-            }
-            return tempString;
+            return QVariant::fromValue(thisFrame);
         default:
             return tempString;
         }
@@ -719,10 +685,20 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 //        }
         for (int i = 0; i < filteredFrames.count(); i++)
         {
-            if ( (filteredFrames[i].frameId() == tempFrame.frameId()) && (filteredFrames[i].bus == tempFrame.bus) )
+            CANFrame currentFrame = filteredFrames[i];
+            if ( (currentFrame.frameId() == tempFrame.frameId()) && (currentFrame.bus == tempFrame.bus) )
             {
-                tempFrame.frameCount = filteredFrames[i].frameCount + 1;
-                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - filteredFrames[i].timeStamp().microSeconds();
+                tempFrame.frameCount = currentFrame.frameCount + 1;
+                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - currentFrame.timeStamp().microSeconds();
+                
+                // Keep track of changed bytes so we can draw them in a different color in CanDataItemDelegate
+                QByteArray curPayload = currentFrame.payload();
+                QByteArray tempPayload = tempFrame.payload();
+
+                for (int i = 0; i < curPayload.size() && i < tempPayload.size(); i++) {
+                    tempFrame.changedPayloadBytes |= (curPayload[i] != tempPayload[i]) << i;
+                }
+
                 filteredFrames.replace(i, tempFrame);
                 found = true;
                 break;
