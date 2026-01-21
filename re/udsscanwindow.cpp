@@ -118,8 +118,9 @@ bool UDSScanWindow::eventFilter(QObject *obj, QEvent *event)
 
 void UDSScanWindow::setControlState(QWidget & widget, bool valid)
 {
-    QPalette pal = widget.palette();
-    pal.setColor(QPalette::ColorRole::Base , valid ? Qt::white : Qt::red);
+    QPalette pal = QApplication::palette(&widget);    // default palette for widget's class
+    if (!valid)
+        pal.setColor(QPalette::ColorRole::Base, Qt::red);
     widget.setPalette(pal);
 }
 
