@@ -53,7 +53,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
-    if(!item) QVariant();
+    if(!item) return QVariant();
 
     int col = index.column();
 
