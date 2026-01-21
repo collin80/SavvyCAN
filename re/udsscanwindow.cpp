@@ -2,6 +2,7 @@
 #include "ui_udsscanwindow.h"
 #include "mainwindow.h"
 #include "connections/canconmanager.h"
+#include "bus_protocols/handler_factory.h"
 #include "bus_protocols/uds_handler.h"
 #include "utility.h"
 #include "helpwindow.h"
@@ -37,7 +38,7 @@ UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
     waitTimer = new QTimer;
     waitTimer->setInterval(100);
 
-    udsHandler = new UDS_HANDLER;
+    udsHandler = HandlerFactory::createUDSHandler();
     inhibitUpdates = false;
 
     for (int i = 0; i < 13; i++) ui->cbScanType->addItem(SCANTYPE_NAMES[i]);

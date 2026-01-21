@@ -1,8 +1,13 @@
 #include <QJSValueIterator>
 #include <QDebug>
+#include <QTableWidget>
 
 #include "scriptcontainer.h"
 #include "connections/canconmanager.h"
+#include "bus_protocols/isotp_handler.h"
+#include "bus_protocols/uds_handler.h"
+#include "bus_protocols/handler_factory.h"
+#include "scriptingwindow.h"
 
 ScriptContainer::ScriptContainer()
 {
@@ -281,8 +286,8 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
 ISOTPScriptHelper::ISOTPScriptHelper(QJSEngine *engine)
 {
     scriptEngine = engine;
-    handler = new ISOTP_HANDLER;
-    connect(handler, SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(newISOMessage(ISOTP_MESSAGE)));
+    handler = HandlerFactory::createISOTPHandler();
+    connect(handler, &ISOTP_HANDLER::newISOMessage, this, &ISOTPScriptHelper::newISOMessage);
     handler->setReception(true);
     handler->setFlowCtrl(true);
 }
@@ -362,7 +367,7 @@ void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
 UDSScriptHelper::UDSScriptHelper(QJSEngine *engine)
 {
     scriptEngine = engine;
-    handler = new UDS_HANDLER;
+    handler = HandlerFactory::createUDSHandler();
     connect(handler, SIGNAL(newUDSMessage(UDS_MESSAGE)), this, SLOT(newUDSMessage(UDS_MESSAGE)));
     handler->setReception(true);
     handler->setFlowCtrl(true); //uds potentially requires flow control so turn it on

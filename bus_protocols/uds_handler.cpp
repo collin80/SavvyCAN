@@ -2,6 +2,7 @@
 #include "connections/canconmanager.h"
 #include "isotp_handler.h"
 #include <QDebug>
+#include "utility.h"
 
 static QVector<CODE_STRUCT> UDS_DIAG_CTRL_SUB = {
     {1,"DFLT_SESS", "Default session"},
@@ -168,12 +169,15 @@ UDS_MESSAGE::UDS_MESSAGE()
     isErrorReply = false;
 }
 
-UDS_HANDLER::UDS_HANDLER()
+UDS_HANDLER::UDS_HANDLER(ISOTP_HANDLER *isotp_handler,
+                         ISOTP_HANDLER::GetNoOfBusesCallback getBusesCb,
+                         ISOTP_HANDLER::PendingConnection<UDS_HANDLER> pendingConn)
+    : isoHandler(isotp_handler),
+      getNoOfBusesCallback(getBusesCb),
+      pendingConnection(pendingConn)
 {
     isReceiving = false;
     useExtendedAddressing = false;
-    modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
-    isoHandler = new ISOTP_HANDLER();
 }
 
 UDS_HANDLER::~UDS_HANDLER()
@@ -181,7 +185,7 @@ UDS_HANDLER::~UDS_HANDLER()
     delete isoHandler;
 }
 
-UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(ISOTP_MESSAGE msg, bool *result)
+UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(const ISOTP_MESSAGE& msg, bool *result)
 {
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().length();
@@ -234,7 +238,7 @@ UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(ISOTP_MESSAGE msg, bool *result)
     return udsMsg;
 }
 
-void UDS_HANDLER::gotISOTPFrame(ISOTP_MESSAGE msg)
+void UDS_HANDLER::gotISOTPFrame(const ISOTP_MESSAGE &msg)
 {
     qDebug() << "UDS handler got ISOTP frame";
     UDS_MESSAGE udsMsg;
@@ -253,18 +257,19 @@ void UDS_HANDLER::setFlowCtrl(bool state)
 void UDS_HANDLER::setReception(bool mode)
 {
     if (isReceiving == mode) return;
-
     isReceiving = mode;
 
     if (isReceiving)
     {
-        connect(isoHandler, SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(gotISOTPFrame(ISOTP_MESSAGE)));
+        if (pendingConnection)
+            connection = pendingConnection(this);
         isoHandler->setReception(true); //must enable ISOTP reception too.
         qDebug() << "Enabling reception of ISO-TP frames in UDS handler";
     }
     else
     {
-        disconnect(isoHandler, SIGNAL(newISOMessage(ISOTP_MESSAGE)), this, SLOT(gotISOTPFrame(ISOTP_MESSAGE)));
+        if (connection)
+            QObject::disconnect(connection);
         isoHandler->setReception(false);
         qDebug() << "Disabling reception of ISOTP frames in UDS handler";
     }
@@ -274,7 +279,7 @@ void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
 {
     QByteArray data;
     if (msg.bus < 0) return;
-    if (msg.bus >= CANConManager::getInstance()->getNumBuses()) return;
+    if (msg.bus >= getNoOfBusesCallback()) return;
     if (msg.service > 0xFF) return;
 
     data.append(msg.service);

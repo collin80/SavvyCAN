@@ -1,7 +1,17 @@
 #include "isotp_handler.h"
-#include "connections/canconmanager.h"
+#include <QDebug>
 
-ISOTP_HANDLER::ISOTP_HANDLER()
+#define CAN_FRAME_SIZE  8
+#define FF_PCI_SIZE 2
+
+ISOTP_HANDLER::ISOTP_HANDLER(const QVector<CANFrame> &modelFrames,
+                             CanSendCallback sendCb,
+                             GetNoOfBusesCallback getBusesCb,
+                             PendingConnection<ISOTP_HANDLER> pendingConn )
+    : modelFrames(modelFrames),
+      canSendCallback(sendCb),
+      getNoOfBusesCallback(getBusesCb),
+      pendingConnection(pendingConn)
 {
     useExtendedAddressing = false;
     isReceiving = false;
@@ -12,14 +22,13 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     lastSenderID = 0;
     padByte = (char)0xAA;
 
-    modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
-
-    connect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
+    connect(&frameTimer, &QTimer::timeout, this, &ISOTP_HANDLER::frameTimerTick);
+    updateIsoTpCanFrameInfo();
 }
 
 ISOTP_HANDLER::~ISOTP_HANDLER()
 {
-    disconnect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
+    disconnect(&frameTimer, &QTimer::timeout, this, &ISOTP_HANDLER::frameTimerTick);
 }
 
 void ISOTP_HANDLER::setPadByte(char newpad)
@@ -30,6 +39,7 @@ void ISOTP_HANDLER::setPadByte(char newpad)
 void ISOTP_HANDLER::setExtendedAddressing(bool mode)
 {
     useExtendedAddressing = mode;
+    updateIsoTpCanFrameInfo();
 }
 
 void ISOTP_HANDLER::setFlowCtrl(bool state)
@@ -42,14 +52,13 @@ void ISOTP_HANDLER::setReception(bool mode)
     if (isReceiving == mode) return;
     isReceiving = mode;
 
-    if (isReceiving)
-    {
-        connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ISOTP_HANDLER::rapidFrames);
+    if (isReceiving) {
+        if (pendingConnection)
+            connection = pendingConnection(this);
         qDebug() << "Enabling reception in ISOTP handler";
-    }
-    else
-    {
-        disconnect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &ISOTP_HANDLER::rapidFrames);
+    } else {
+        if (connection)
+            QObject::disconnect(connection);
         qDebug() << "Disabling reception in ISOTP handler";
     }
 }
@@ -61,7 +70,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     int currByte = 0;
     int sequence = 1; //Initial Sequence number is 1
     if (bus < 0) return;
-    if (bus >= CANConManager::getInstance()->getNumBuses()) return;
+    if (bus >= getNoOfBusesCallback()) return;
 
     lastSenderID = ID;
     lastSenderBus = bus;
@@ -78,7 +87,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
         bytes[0] = data.length();
         for (int i = 0; i < data.length(); i++) bytes[i + 1] = data[i];
         frame.setPayload(bytes);
-        CANConManager::getInstance()->sendFrame(frame);
+        canSendCallback(frame);
     }
     else //need to send a multi-part ISO_TP message - Respects timing and frame number based flow control
     {
@@ -87,7 +96,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
         bytes[1] = data.length() & 0xFF;
         for (int i = 0; i < 6; i++) bytes[2 + i] = data[currByte++];
         frame.setPayload(bytes);
-        CANConManager::getInstance()->sendFrame(frame);
+        canSendCallback(frame);
         //Queue up the rest of the frames
         waitingForFlow = true;
         frameTimer.setInterval(200); //wait a while for the flow frame to come in
@@ -103,7 +112,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
             for (int i = 0; i < bytesToGo; i++) bytes[1 + i] = data[currByte++];
             frame.setPayload(bytes);
             sendingFrames.append(frame);
-            //CANConManager::getInstance()->sendFrame(frame);
+            //canSendCallback(frame);
         }
     }
 }
@@ -118,20 +127,19 @@ void ISOTP_HANDLER::updatedFrames(int numFrames)
     else if (numFrames == -2) //all new set of frames. Reset
     {
         messageBuffer.clear();
-        for (int i = 0; i < modelFrames->length(); i++) processFrame(modelFrames->at(i));
+        for (int i = 0; i < modelFrames.length(); i++) processFrame(modelFrames.at(i));
     }
     else //just got some new frames. See if they are relevant.
     {
-        for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
+        for (int i = modelFrames.count() - numFrames; i < modelFrames.count(); i++)
         {
-            //processFrame(modelFrames->at(i));  //accepting these frames in rapidFrames instead
+            //processFrame(modelFrames.at(i));  //accepting these frames in rapidFrames instead
         }
     }
 }
 
-void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames)
+void ISOTP_HANDLER::rapidFrames(const QVector<CANFrame>& pFrames)
 {
-    Q_UNUSED(conn)
     if (pFrames.length() <= 0) return;
 
     qDebug() << "received " << QString::number(pFrames.count()) << " messages in ISOTP handler";
@@ -162,28 +170,30 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
     int frameType;
     int frameLen;
     int ln;
-    //int offset;
     ISOTP_MESSAGE msg;
     ISOTP_MESSAGE *pMsg;
-    QByteArray dataBytes;
-    const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
-    //qDebug() << frame.payload().count();
-    //int dataLen = frame.payload().count();
+    QByteArray dataBytes; // collects data bytes to form the ISOTP message
+
+    // Cache the CAN frame payload once
+    QByteArray frameDataBytes = frame.payload();
+    // Get the raw CAN data bytes
+    const unsigned char *canData = reinterpret_cast<const unsigned char *>(frameDataBytes.constData());
 
     frameType = 0;
     frameLen = 0;
 
+    // Extract frame type and length from PCI bytes
     if (useExtendedAddressing)
     {
         ID = ID << 8;
-        ID += data[0];
-        frameType = data[1] >> 4;
-        frameLen = data[1] & 0xF;
+        ID += canData[0];             // extended address byte
+        frameType = canData[1] >> 4;  // PCI first byte upper nibble = frame type
+        frameLen = canData[1] & 0xF;  // PCI first byte lower nibble = length high nibble
     }
     else
     {
-        frameType = data[0] >> 4;
-        frameLen = data[0] & 0xF;
+        frameType = canData[0] >> 4;
+        frameLen = canData[0] & 0xF;
     }
 
     switch(frameType)
@@ -192,67 +202,56 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         checkNeedFlush(ID);
 
         if (frameLen == 0) return; //length of zero isn't valid.
-        if (frameLen > 6 && useExtendedAddressing) return; //impossible
-        if (frameLen > 7) return;
+        if (frameLen > frameInfo.sfFrameLen) return;
 
         msg.bus = frame.bus;
         msg.setFrameType(QCanBusFrame::FrameType::DataFrame);
-        msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
+        msg.setExtendedFrameFormat(frame.hasExtendedFrameFormat());
         msg.setFrameId(ID);
         msg.isReceived = frame.isReceived;
         dataBytes.reserve(frameLen);
         msg.reportedLength = frameLen;
         msg.setTimeStamp(frame.timeStamp());
         msg.isMultiframe = false;
-        if (useExtendedAddressing)
-        {       
-            for (int j = 0; j < frameLen; j++)
-            {
-                if (frame.payload().length() > (j+2))
-                    dataBytes.append(data[j+2]);
-            }
-        }
-        else
+
+        qDebug() << "the framelen " << frameLen << " the payloadlen " << frame.payload().length();
+        for (int j = 0; j < frameLen; j++)
         {
-            for (int j = 0; j < frameLen; j++)
-            {
-                if (frame.payload().length() > (j+1))
-                    dataBytes.append(data[j+1]);
-            }
+            if (frameDataBytes.length() > (j + frameInfo.cfAndSfPciOffset))
+                dataBytes.append(canData[j + frameInfo.cfAndSfPciOffset]);
         }
+
         qDebug() << "Emitting single frame ISOTP message";
         msg.setPayload(dataBytes);
         emit newISOMessage(msg);
         break;
+
     case 1: //first frame of a multi-frame message
         checkNeedFlush(ID);
         msg.bus = frame.bus;
-        if (frame.payload().length() < 8) return; //MUST have all 8 data bytes in this first frame.
-        msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
+        if (frameDataBytes.length() < CAN_FRAME_SIZE) return; // MUST have all 8 data bytes
+        msg.setExtendedFrameFormat(frame.hasExtendedFrameFormat());
         msg.setFrameId(ID);
         msg.setTimeStamp(frame.timeStamp());
         msg.isReceived = frame.isReceived;
         msg.isMultiframe = true;
-        frameLen = frameLen << 8;
-        if (useExtendedAddressing)
+
+        // Compute total message length
+        frameLen = frameLen << 8; // upper nibble already in frameLen
+        frameLen += useExtendedAddressing ? canData[2] : canData[1]; // add lower length byte
+        frameLen &= 0xFFF; // mask to 12 bits
+        dataBytes.reserve(frameLen);
+        msg.reportedLength = frameLen;
+
+        for (int j = 0; j < frameInfo.ffFrameLen; j++)
         {
-            frameLen += data[2];
-            frameLen = frameLen & 0xFFF;
-            dataBytes.reserve(frameLen);
-            msg.reportedLength = frameLen;
-            for (int j = 0; j < 5; j++) dataBytes.append(frame.payload()[3 + j]);
+            dataBytes.append(canData[frameInfo.ffPciOffset + j]);
         }
-        else
-        {
-            frameLen += data[1];
-            frameLen = frameLen & 0xFFF;
-            msg.payload().reserve(frameLen);
-            msg.reportedLength = frameLen;
-            for (int j = 0; j < 6; j++) dataBytes.append(frame.payload()[2 + j]);
-        }
+
         msg.lastSequence = -1;
         msg.setPayload(dataBytes);
         messageBuffer.insert(msg.frameId(), msg);
+
         //The sending ID is set to the last ID we used to send from this class which is
         //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
         if (issueFlowMsgs && lastSenderID > 0 && lastSenderBus==static_cast<uint32_t>(frame.bus))
@@ -266,9 +265,10 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             bytes[1] = 0; //dont ask again about flow control
             bytes[2] = 3; //separation time in milliseconds between messages.
             outFrame.setPayload(bytes);
-            CANConManager::getInstance()->sendFrame(outFrame);
+            canSendCallback(outFrame);
         }
         break;
+
     case 2: //subsequent frames for multi-frame messages
         pMsg = nullptr;
         if (messageBuffer.contains(ID))
@@ -277,20 +277,17 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         }
         if (!pMsg) return;
         if (!pMsg->isMultiframe) return; //if we didn't get a frame type 1 (start of multiframe) first then ignore this frame.
+
         dataBytes.clear();
         dataBytes.append(pMsg->payload());
         ln = pMsg->reportedLength - pMsg->payload().length();
-        //offset = pMsg->data.length();
-        if (useExtendedAddressing)
+
         {
-            if (ln > 6) ln = 6;
-            for (int j = 0; j < ln; j++) dataBytes.append(frame.payload()[j+2]);
+            int bytesToCopy = qMin(ln, frameInfo.cfFrameLen);
+            for (int j = 0; j < bytesToCopy; j++)
+                dataBytes.append(canData[frameInfo.cfAndSfPciOffset + j]);
         }
-        else
-        {
-            if (ln > 7) ln = 7;
-            for (int j = 0; j < ln; j++) dataBytes.append(frame.payload()[j+1]);
-        }
+
         pMsg->setPayload(dataBytes);
         if (pMsg->reportedLength <= pMsg->payload().length())
         {
@@ -298,16 +295,17 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
             checkNeedFlush(pMsg->frameId());
         }
         break;
+
     case 3: //flow control messages
         switch (frameLen) //actually flow control type in this case
         {
         case 0: //continue to send frames but maybe change inter-frame delay
             waitingForFlow = false;
-            //data[1] contains number of frames to send before waiting for next flow control
-            framesUntilFlow = data[1];
+            //canData[1] contains number of frames to send before waiting for next flow control
+            framesUntilFlow = canData[1];
             if (framesUntilFlow == 0) framesUntilFlow = -1; //-1 means don't count frames and just keep going
-            //data[2] contains the interframe delay to use (0xF1 through 0xF9 are special through - 100 to 900us)
-            if (data[2] < 0xF1) frameTimer.start(data[2]); //set proper delay between frames
+            //canData[2] contains the interframe delay to use (0xF1 through 0xF9 are special through - 100 to 900us)
+            if (canData[2] < 0xF1) frameTimer.start(canData[2]); //set proper delay between frames
             else frameTimer.start(1); //can't do sub-millisecond sending with this code so just use 1ms timing
             break;
         case 1: //wait - do not send any more frames until other side says so
@@ -345,7 +343,7 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
                 if (msg->reportedLength > 0) emit newISOMessage(*msg);
             }
             else qDebug() << "Have a partial message but sending of such is disabled. Throwing it away";
-        }        
+        }
         messageBuffer.remove(ID);
     }
 }
@@ -358,7 +356,7 @@ void ISOTP_HANDLER::frameTimerTick()
         if (!sendingFrames.isEmpty())
         {
             frame = sendingFrames.takeFirst();
-            CANConManager::getInstance()->sendFrame(frame);
+            canSendCallback(frame);
             if (framesUntilFlow > -1) framesUntilFlow--;
             if (framesUntilFlow == 0) //stop sending and wait for another flow control message
             {
@@ -405,6 +403,17 @@ void ISOTP_HANDLER::removeFilter(int pBusId, uint32_t ID, uint32_t mask)
 void ISOTP_HANDLER::clearAllFilters()
 {
     filters.clear();
+}
+
+void ISOTP_HANDLER::updateIsoTpCanFrameInfo()
+{
+    frameInfo.cfAndSfPciOffset = useExtendedAddressing ? 2 : 1;
+    frameInfo.sfFrameLen = CAN_FRAME_SIZE - frameInfo.cfAndSfPciOffset;
+
+    frameInfo.ffPciOffset = useExtendedAddressing ? (1 + FF_PCI_SIZE) : FF_PCI_SIZE;
+    frameInfo.ffFrameLen = CAN_FRAME_SIZE - frameInfo.ffPciOffset;
+
+    frameInfo.cfFrameLen = CAN_FRAME_SIZE - frameInfo.cfAndSfPciOffset;
 }
 
 void setEmitPartials(bool mode);
