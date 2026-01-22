@@ -10,7 +10,7 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Window);
-    modelFrames = frames;
+    rawFrames = frames;
 
     decoder = new ISOTP_HANDLER;
     udsDecoder = new UDS_HANDLER;
@@ -19,6 +19,8 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     decoder->setProcessAll(true);
 
     udsDecoder->setReception(false);
+
+    ui->tableIsoFrames->setModel(&msgModel);
 
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, this, &ISOTP_InterpreterWindow::updatedFrames);
     connect(MainWindow::getReference(), &MainWindow::framesUpdated, decoder, &ISOTP_HANDLER::updatedFrames);
@@ -29,24 +31,22 @@ ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames
     connect(ui->btnNone, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::filterNone);
     connect(ui->btnCaptured, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::interpretCapturedFrames);
 
-    connect(ui->tableIsoFrames, &QTableWidget::itemSelectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
+    connect(ui->tableIsoFrames->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ISOTP_InterpreterWindow::showDetailView);
     connect(ui->btnClearList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::clearList);
     connect(ui->btnSaveList, &QPushButton::clicked, this, &ISOTP_InterpreterWindow::saveList);
-    connect(ui->cbUseExtendedAddressing, SIGNAL(toggled(bool)), this, SLOT(useExtendedAddressing(bool)));
+    connect(ui->cbUseExtendedAddressing, &QCheckBox::toggled, this, &ISOTP_InterpreterWindow::useExtendedAddressing);
 
-    QStringList headers;
-    headers << "Timestamp" << "ID" << "Bus" << "Dir" << "Length" << "Data";
-    ui->tableIsoFrames->setColumnCount(6);
     ui->tableIsoFrames->setColumnWidth(0, 100);
     ui->tableIsoFrames->setColumnWidth(1, 50);
     ui->tableIsoFrames->setColumnWidth(2, 50);
     ui->tableIsoFrames->setColumnWidth(3, 50);
     ui->tableIsoFrames->setColumnWidth(4, 75);
     ui->tableIsoFrames->setColumnWidth(5, 200);
-    ui->tableIsoFrames->setHorizontalHeaderLabels(headers);
+
+    ui->tableIsoFrames->setSelectionBehavior(QAbstractItemView::SelectRows);
+
     QHeaderView *HorzHdr = ui->tableIsoFrames->horizontalHeader();
     HorzHdr->setStretchLastSection(true);
-    connect(HorzHdr, SIGNAL(sectionClicked(int)), this, SLOT(headerClicked(int)));
 
     decoder->setReception(true);
     decoder->setFlowCtrl(false);
@@ -75,7 +75,7 @@ void ISOTP_InterpreterWindow::showEvent(QShowEvent* event)
     qApp->processEvents();
 
     decoder->updatedFrames(-2);
-    //decoder->rapidFrames(nullptr, *modelFrames);
+    //decoder->rapidFrames(nullptr, *rawFrames);
 
     progress.cancel();
 
@@ -141,7 +141,6 @@ void ISOTP_InterpreterWindow::listFilterItemChanged(QListWidgetItem *item)
     {
         int id = FilterUtility::getIdAsInt(item);
         bool state = item->checkState();
-        //qDebug() << id << "*" << state;
         idFilters[id] = state;
     }
 }
@@ -151,7 +150,6 @@ void ISOTP_InterpreterWindow::filterAll()
     for (int i = 0 ; i < ui->listFilter->count(); i++)
     {
         ui->listFilter->item(i)->setCheckState(Qt::Checked);
-        //idFilters[ui->listFilter->item(i)->text().toInt(nullptr, 16)] = true;
     }
 }
 
@@ -160,16 +158,13 @@ void ISOTP_InterpreterWindow::filterNone()
     for (int i = 0 ; i < ui->listFilter->count(); i++)
     {
         ui->listFilter->item(i)->setCheckState(Qt::Unchecked);
-        //idFilters[ui->listFilter->item(i)->text().toInt(nullptr, 16)] = false;
     }
 }
 
 void ISOTP_InterpreterWindow::clearList()
 {
     qDebug() << "Clearing the table";
-    ui->tableIsoFrames->clearContents();
-    ui->tableIsoFrames->model()->removeRows(0, ui->tableIsoFrames->rowCount());
-    messages.clear();
+    msgModel.clear();
     //idFilters.clear();
 }
 
@@ -179,8 +174,6 @@ void ISOTP_InterpreterWindow::clearList()
  */
 void ISOTP_InterpreterWindow::saveList()
 {
-    QString buildString;
-    QString filename;
     QFileDialog dialog(this);
     QSettings settings;
 
@@ -196,52 +189,32 @@ void ISOTP_InterpreterWindow::saveList()
     if (dialog.exec() == QDialog::Accepted)
     {
         settings.setValue("FrameInfo/LoadSaveDirectory", dialog.directory().path());
-        filename = dialog.selectedFiles()[0];
+        QString filename = dialog.selectedFiles().constFirst();
         if (!filename.contains('.')) filename += ".txt";
         if (dialog.selectedNameFilter() == filters[0])
         {
-            QFile *outFile = new QFile(filename);
+            QFile outFile(filename);
 
-            if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
+            if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
             {
-                delete outFile;
                 return;
             }
 
-            int rows = messages.count();
+            int rows = msgModel.rowCount();
             for (int r = 0 ; r < rows; r++)
             {
-                ISOTP_MESSAGE msg = messages.at(r);
-                const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
-                int dataLen = msg.payload().length();
-
-                if (msg.reportedLength != dataLen)
-                {
-                    continue;
-                }
-
+                ISOTP_MESSAGE msg = msgModel.getMessage(r);
+                QString buildString;
                 buildString.append(QString::number(msg.timeStamp().microSeconds()) + " " + QString::number(msg.frameId(), 16) + " ");
+                buildString.append(msgModel.getMessageVerbose(r));
 
-                //buildString.append(tr("Raw Payload: "));
-
-                for (int i = 0; i < dataLen; i++)
-                {
-                    buildString.append(Utility::formatNumber(data[i]));
-                    buildString.append(" ");
-                }
-                buildString.append("\n\n");
-
-                UDS_MESSAGE udsMsg;
                 bool result;
-                udsMsg = udsDecoder->tryISOtoUDS(msg, &result);
+                UDS_MESSAGE udsMsg = udsDecoder->tryISOtoUDS(msg, &result);
                 if (result)
                     buildString.append(udsDecoder->getDetailedMessageAnalysis(udsMsg));
                 buildString.append("\n*********************************************************\n");
-                outFile->write(buildString.toUtf8());
+                outFile.write(buildString.toUtf8());
             }
-
-            outFile->close();
-            delete outFile;
         }
     }
 }
@@ -268,46 +241,19 @@ void ISOTP_InterpreterWindow::updatedFrames(int numFrames)
     }
 }
 
-void ISOTP_InterpreterWindow::headerClicked(int logicalIndex)
-{
-    ui->tableIsoFrames->setSortingEnabled(false);
-    ui->tableIsoFrames->sortByColumn(logicalIndex, Qt::SortOrder::AscendingOrder);
-}
 
 void ISOTP_InterpreterWindow::showDetailView()
 {
-    QString buildString;
-    ISOTP_MESSAGE *msg;
-    int rowNum = ui->tableIsoFrames->currentRow();
+    QModelIndexList selection = ui->tableIsoFrames->selectionModel()->selectedRows();
+    if (selection.empty()) return;
 
+    int idx = selection[0].row();
     ui->txtFrameDetails->clear();
-    if (rowNum == -1) return;
 
-    msg = &messages[rowNum];
-
-    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg->payload().constData());
-    int dataLen = msg->payload().length();
-
-    if (msg->reportedLength != dataLen)
-    {
-        buildString.append("Message didn't have the correct number of bytes.\rExpected "
-                           + QString::number(msg->reportedLength) + " got "
-                           + QString::number(dataLen) + "\r\r");
-    }
-
-    buildString.append(tr("Raw Payload: "));
-
-    for (int i = 0; i < dataLen; i++)
-    {
-        buildString.append(Utility::formatNumber(data[i]));
-        buildString.append(" ");
-    }
-    buildString.append("\r\r");
-
-    ui->txtFrameDetails->setPlainText(buildString);
+    ui->txtFrameDetails->setPlainText(msgModel.getMessageVerbose(idx));
 
     //pass this frame to the UDS decoder to see if it feels it could be a UDS related message
-    udsDecoder->gotISOTPFrame(messages[rowNum]);
+    udsDecoder->gotISOTPFrame(msgModel.getMessage(idx));
 }
 
 void ISOTP_InterpreterWindow::newUDSMessage(UDS_MESSAGE msg)
@@ -324,13 +270,7 @@ void ISOTP_InterpreterWindow::newUDSMessage(UDS_MESSAGE msg)
 
 void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
 {
-    int rowNum;
-    QString tempString;
-
-    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
-    int dataLen = msg.payload().length();
-
-    if ((msg.reportedLength != dataLen) && !ui->cbShowIncomplete->isChecked()) return;
+    if ((msg.reportedLength != msg.payload().length()) && !ui->cbShowIncomplete->isChecked()) return;
 
     if (idFilters.find(msg.frameId()) == idFilters.end())
     {
@@ -339,26 +279,113 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
         FilterUtility::createCheckableFilterItem(msg.frameId(), true, ui->listFilter);
     }
     if (!idFilters[msg.frameId()]) return;
-    messages.append(msg);
 
-    rowNum = ui->tableIsoFrames->rowCount();
+    msgModel.addMessage(msg);
+}
 
-    ui->tableIsoFrames->insertRow(rowNum);
 
-    QTableWidgetItem *item = new QTableWidgetItem;
-    item->setData(Qt::EditRole, Utility::formatTimestamp(msg.timeStamp().microSeconds()));
-    //ui->tableIsoFrames->setItem(rowNum, 0, (double)msg.timestamp, Utility::formatTimestamp(msg.timestamp)));
-    ui->tableIsoFrames->setItem(rowNum, 0, item);
-    ui->tableIsoFrames->setItem(rowNum, 1, new QTableWidgetItem(QString::number(msg.frameId(), 16)));
-    ui->tableIsoFrames->setItem(rowNum, 2, new QTableWidgetItem(QString::number(msg.bus)));
-    if (msg.isReceived) ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Rx"));
-    else ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Tx"));
-    ui->tableIsoFrames->setItem(rowNum, 4, new QTableWidgetItem(QString::number(msg.payload().length())));
 
+int ISOTP_InterpreterModel::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return messages.count();
+}
+int ISOTP_InterpreterModel::columnCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent);
+    return 6;
+}
+QVariant ISOTP_InterpreterModel::data(const QModelIndex &index, int role) const
+{
+    if (role != Qt::DisplayRole) return {};
+
+    const ISOTP_MESSAGE & msg = messages[index.row()];
+
+    switch (index.column())
+    {
+    case Column::Time:
+        return Utility::formatTimestamp(msg.timeStamp().microSeconds());
+    case Column::ID:
+        return QString::number(msg.frameId(), 16);
+    case Column::Bus:
+        return msg.bus;
+    case Column::Dir:
+        return msg.isReceived ? "Rx" : "Tx";
+    case Column::Len:
+        return msg.payload().length();
+    case Column::Data:
+        return getDataString(msg);
+    }
+    return {};
+}
+
+ISOTP_MESSAGE ISOTP_InterpreterModel::getMessage(int idx) const
+{
+    return messages[idx];
+}
+QString ISOTP_InterpreterModel::getMessageVerbose(int idx) const
+{
+    const ISOTP_MESSAGE msg = messages[idx];
+    int dataLen = msg.payload().length();
+
+    QString buildString;
+    if (msg.reportedLength != dataLen)
+    {
+        buildString.append("Message didn't have the correct number of bytes.\rExpected "
+                           + QString::number(msg.reportedLength) + " got "
+                           + QString::number(dataLen) + "\r\r");
+    }
+
+    buildString.append(tr("Raw Payload: "));
+    buildString.append(getDataString(msg));
+    buildString.append("\r\r");
+
+    return buildString;
+}
+
+
+QString ISOTP_InterpreterModel::getDataString(const ISOTP_MESSAGE & msg)
+{
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
+    int dataLen = msg.payload().length();
+
+    QString tempString;
     for (int i = 0; i < dataLen; i++)
     {
         tempString.append(Utility::formatNumber(data[i]));
         tempString.append(" ");
     }
-    ui->tableIsoFrames->setItem(rowNum, 5, new QTableWidgetItem(tempString));
+    return tempString;
+}
+
+void ISOTP_InterpreterModel::clear()
+{
+    emit beginResetModel();
+    messages.clear();
+    emit endResetModel();
+}
+
+void ISOTP_InterpreterModel::addMessage(ISOTP_MESSAGE msg)
+{
+    int newIdx = messages.size();
+    emit beginInsertRows(QModelIndex(), newIdx, newIdx);
+    messages.append(msg);
+    emit endInsertRows();
+}
+
+QVariant ISOTP_InterpreterModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role == Qt::DisplayRole && orientation == Qt::Horizontal)
+    {
+        switch (section)
+        {
+        case Column::Time: return tr("Timestamp");
+        case Column::ID: return tr("ID");
+        case Column::Bus: return tr("Bus");
+        case Column::Dir: return tr("Dir");
+        case Column::Len: return tr("Length");
+        case Column::Data: return tr("Data");
+        }
+    }
+    return {};
 }
