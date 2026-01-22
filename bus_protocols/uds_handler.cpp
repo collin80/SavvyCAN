@@ -391,16 +391,16 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
         case UDS_SERVICES::DIAG_CONTROL + 0x40: //positive response
             buildString.append("Session Request: " + getLongDesc(UDS_DIAG_CTRL_SUB, msg.subFunc));
             //there should be four extra bytes now
-            if (dataLen < 5) //5 because subfunc codes are left in data so it starts with one subfunc byte
+            if (dataLen < 6)
             {
                 //buildString.append("\nReturned data payload wasn't at least \n4 bytes like it should have been");
             }
             else
             {
-                int p2 = data[1] * 256 + data[2];
+                int p2 = data[2] * 256 + data[3];
                 buildString.append("\nP2MAX (Max Wait / Resp Time): " + QString::number(p2) + "ms");
-                p2 = (data[3] * 256 + data[4]) * 10;
-                buildString.append("\nP2 Ext MAX: " + QString::number(p2) + "ms");
+                int p2ext = (data[4] * 256 + data[5]) * 10;
+                buildString.append("\nP2 Ext MAX: " + QString::number(p2ext) + "ms");
             }
             break;
         case UDS_SERVICES::ECU_RESET:
@@ -435,7 +435,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if ((msg.subFunc % 2) == 1)
             {
                 buildString.append("Seed request for security level: " + QString::number(msg.subFunc) + "\n");
-                if (dataLen > 1)
+                if (dataLen > 2)
                 {
                     buildString.append("Data payload: ");
                     for (int j = 2; j < dataLen; j++) buildString.append(Utility::formatHexNum(data[j]) + " ");
@@ -455,7 +455,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if ((msg.subFunc % 2) == 1)
             {
                 buildString.append("Seed response for security level: " + QString::number(msg.subFunc) + "\n");
-                if (dataLen > 1) //be kinda pointless if it weren't
+                if (dataLen > 2) //be kinda pointless if it weren't
                 {
                     buildString.append("SEED: ");
                     for (int j = 2; j < dataLen; j++) buildString.append(Utility::formatHexNum(data[j]) + " ");
@@ -493,9 +493,9 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if (dataLen > (dataSize + addrSize))
             {
                 buildString.append("Address: 0x");
-                for (int i = 0; i < addrSize; i++) buildString.append(QString::number(data[1+i], 16).toUpper().rightJustified(2,'0'));
+                for (int i = 0; i < addrSize; i++) buildString.append(Utility::formatHexNum(data[1+i]));
                 buildString.append("\nSize: 0x");
-                for (int i = 0; i < dataSize; i++) buildString.append(QString::number(data[1+i+addrSize], 16).toUpper().rightJustified(2,'0'));
+                for (int i = 0; i < dataSize; i++) buildString.append(Utility::formatHexNum(data[1+i+addrSize]));
             }
             else
             {
@@ -531,8 +531,7 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             buildString.append("Routine Control: " + getLongDesc(UDS_ROUTINE_SUB, msg.subFunc));
             if (dataLen > 3)
             {
-                int routineID;
-                routineID = (data[2] * 256 + data[3]);
+                int routineID = (data[2] * 256 + data[3]);
                 buildString.append("\nRoutine ID: " + Utility::formatHexNum(routineID));
             }
             if (dataLen > 4)
@@ -577,9 +576,9 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
             if (dataLen > (dataSize + addrSize))
             {
                 buildString.append("Address: 0x");
-                for (int i = 0; i < addrSize; i++) buildString.append(QString::number(data[3 + i], 16).toUpper().rightJustified(2,'0'));
+                for (int i = 0; i < addrSize; i++) buildString.append(Utility::formatHexNum(data[3 + i]));
                 buildString.append("\nSize: 0x");
-                for (int i = 0; i < dataSize; i++) buildString.append(QString::number(data[3 + i + addrSize], 16).toUpper().rightJustified(2,'0'));
+                for (int i = 0; i < dataSize; i++) buildString.append(Utility::formatHexNum(data[3 + i + addrSize]));
             }
             else
             {
@@ -590,11 +589,11 @@ QString UDS_HANDLER::getDetailedMessageAnalysis(const UDS_MESSAGE &msg)
         case UDS_SERVICES::REQUEST_UPLOAD + 0x40:
             dataSize = data[1] >> 4;
             buildString.append("\nMax Size of data block: 0x");
-            for (int i = 0; i < dataSize; i++) buildString.append(QString::number(data[2 + i], 16).toUpper().rightJustified(2,'0'));
+            for (int i = 0; i < dataSize; i++) buildString.append(Utility::formatHexNum(data[2 + i]));
             break;
         case UDS_SERVICES::TRANSFER_DATA:
         case UDS_SERVICES::TRANSFER_DATA + 0x40:
-            buildString.append("\nBlock Sequence: " + QString::number(data[1], 16) + "\nPayload: ");
+            buildString.append("\nBlock Sequence: " + Utility::formatHexNum(data[1]) + "\nPayload: ");
             for (int i = 2; i < dataLen; i++)
             {
                 buildString.append(Utility::formatHexNum(data[i]) + " ");
