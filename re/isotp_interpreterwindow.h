@@ -2,7 +2,9 @@
 #define ISOTP_INTERPRETERWINDOW_H
 
 #include <QDialog>
+#include <QListWidgetItem>
 #include "bus_protocols/isotp_handler.h"
+#include "bus_protocols/uds_handler.h"
 
 class ISOTP_MESSAGE;
 class ISOTP_HANDLER;
@@ -10,6 +12,44 @@ class ISOTP_HANDLER;
 namespace Ui {
 class ISOTP_InterpreterWindow;
 }
+
+
+class ISOTP_InterpreterModel : public QAbstractTableModel
+{
+    Q_OBJECT
+public:
+    enum Column {
+        Time,
+        ID,
+        Bus,
+        Dir,
+        Len,
+        Data,
+    };
+
+    explicit ISOTP_InterpreterModel(QObject * parent = nullptr)
+        : QAbstractTableModel(parent)
+    {}
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    QVariant headerData(int section, Qt::Orientation orientation,
+                        int role = Qt::DisplayRole) const override;
+
+    ISOTP_MESSAGE getMessage(int idx) const;
+    QString getMessageVerbose(int idx) const;
+
+public slots:
+    void clear();
+    void addMessage(ISOTP_MESSAGE msg);
+
+private:
+    QVector<ISOTP_MESSAGE> messages;
+
+    static QString getDataString(const ISOTP_MESSAGE & msg);
+};
+
 
 class ISOTP_InterpreterWindow : public QDialog
 {
@@ -32,15 +72,14 @@ private slots:
     void filterNone();
     void interpretCapturedFrames();
     void useExtendedAddressing(bool checked);
-    void headerClicked(int logicalIndex);
 
 private:
     Ui::ISOTP_InterpreterWindow *ui;
     ISOTP_HANDLER *decoder;
     UDS_HANDLER *udsDecoder;
 
-    const QVector<CANFrame> *modelFrames;
-    QVector<ISOTP_MESSAGE> messages;
+    ISOTP_InterpreterModel msgModel;
+    const QVector<CANFrame> *rawFrames;
     QHash<int, bool> idFilters;
 
     void closeEvent(QCloseEvent *event);
