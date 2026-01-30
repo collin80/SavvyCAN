@@ -189,10 +189,8 @@ void CANFrameModel::normalizeTiming()
 
 void CANFrameModel::setOverwriteMode(bool mode)
 {
-    beginResetModel();
     overwriteDups = mode;
     recalcOverwrite();
-    endResetModel();
 }
 
 void CANFrameModel::setClearMode(bool mode)
