@@ -431,6 +431,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             J1939ID jid;
             jid.src = targettedID & 0xFF;
             jid.priority = targettedID >> 26;
+            jid.edp = (targettedID >> 25) & 1;
+            jid.dp = (targettedID >> 24) & 1;
             jid.pgn = (targettedID >> 8) & 0x3FFFF; //18 bits
             jid.pf = (targettedID >> 16) & 0xFF;
             jid.ps = (targettedID >> 8) & 0xFF;
@@ -450,12 +452,29 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             else
             {
                 jid.dest = jid.ps;
+                jid.pgn &= 0xFFFF00; //targetted messages use PGN with 00 in low nibbles
                 tempItem = new QTreeWidgetItem();
-                tempItem->setText(0, tr("   Destination ID: ") + Utility::formatNumber(static_cast<uint64_t>(jid.dest)));
+                if (jid.dest < 0xFF)
+                    tempItem->setText(0, tr("   Destination ID: ") + Utility::formatNumber(static_cast<uint64_t>(jid.dest)));
+                else
+                    tempItem->setText(0, tr("   Destination ID: Global (ALL)"));
                 baseNode->addChild(tempItem);
             }
+
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   Priority: ") + QString::number(jid.priority) + " (0-7)") ;
+            baseNode->addChild(tempItem);
+
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, tr("   SRC: ") + Utility::formatNumber(static_cast<uint64_t>(jid.src)));
+            baseNode->addChild(tempItem);
+
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   EDP: ") + QString::number(jid.edp));
+            baseNode->addChild(tempItem);
+
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   DP: ") + QString::number(jid.dp));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
