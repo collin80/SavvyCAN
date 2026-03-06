@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QTranslator>
 #include <QLocale>
+#include <QDebug>
 
 class SavvyCANApplication : public QApplication
 {
@@ -34,17 +35,6 @@ int main(int argc, char *argv[])
 
     SavvyCANApplication a(argc, argv);
 
-    QTranslator translator;
-    QLocale locale = QLocale::system();
-    QString lang = locale.name();
-    QString shortLang = locale.name().left(2);  // pt
-
-    if (!translator.load("savvycan_" + lang, "translations"))
-    {
-      translator.load("savvycan_" + lang, "translations");
-    }
-    a.installTranslator(&translator);
-
     //Add a local path for Qt extensions, to allow for per-application extensions.
     a.addLibraryPath("plugins");
 
@@ -52,11 +42,20 @@ int main(int argc, char *argv[])
     a.setOrganizationName("EVTV");
     a.setApplicationName("SavvyCAN");
     a.setOrganizationDomain("evtv.me");
+
     QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings settings;
+
+    QString localeString = settings.value("Main/Language").toString();
+    if (localeString.isEmpty()) {
+        QLocale sysLocale = QLocale::system();
+        localeString = sysLocale.name();
+        settings.setValue("Main/Language", localeString);
+    }
+
 
     a.mainWindow = new MainWindow();
 
-    QSettings settings;
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
     QFont sysFont = QFont(); //get default font
     sysFont.setPointSize(fontSize);
@@ -65,8 +64,8 @@ int main(int argc, char *argv[])
     a.mainWindow->show();
 
     int retCode = a.exec();
-    
+
     delete a.mainWindow; a.mainWindow = NULL;
-    
+
     return retCode;
 }
