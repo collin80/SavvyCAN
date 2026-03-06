@@ -187,7 +187,7 @@
         <location filename="../ui/candatagrid.ui" line="14"/>
         <location filename="../ui_candatagrid.h" line="35"/>
         <source>Form</source>
-        <translation>Forma</translation>
+        <translation>Formulário</translation>
     </message>
 </context>
 <context>
@@ -1370,7 +1370,7 @@ e os intervalos de valores por hífens
     <message>
         <location filename="../re/flowviewwindow.cpp" line="627"/>
         <source> of </source>
-        <translation>de</translation>
+        <translation> de </translation>
     </message>
 </context>
 <context>
@@ -2674,7 +2674,7 @@ e os intervalos de valores por hífens
         <location filename="../ui/mainsettingsdialog.ui" line="444"/>
         <location filename="../ui_mainsettingsdialog.h" line="528"/>
         <source>Password</source>
-        <translation>Senha:</translation>
+        <translation>Senha</translation>
     </message>
     <message>
         <location filename="../ui/mainsettingsdialog.ui" line="461"/>
