@@ -7,6 +7,9 @@ build/
 *.o
 *.obj
 
+# Compiled translations
+*.qm
+
 # Precompiled Headers
 *.gch
 *.pch
