@@ -57,7 +57,9 @@ jobs:
 
       - name: Package     
         run: |
+          mkdir -p SavvyCAN.app/Contents/MacOS/translations
           mkdir -p SavvyCAN.app/Contents/MacOS/help
+          cp -R translations/*.qm SavvyCAN.app/Contents/MacOS/translations
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
           mv SavvyCAN.dmg SavvyCAN_x64.dmg
@@ -87,7 +89,9 @@ jobs:
 
       - name: Package     
         run: |
+          mkdir -p SavvyCAN.app/Contents/MacOS/translations
           mkdir -p SavvyCAN.app/Contents/MacOS/help
+          cp -R translations/*.qm SavvyCAN.app/Contents/MacOS/translations
           cp -R help/* SavvyCAN.app/Contents/MacOS/help
           macdeployqt SavvyCAN.app -dmg
           mv SavvyCAN.dmg SavvyCAN_arm64.dmg
@@ -120,6 +124,7 @@ jobs:
           mkdir package
           copy "release/SavvyCAN.exe" package/
           mkdir package/help
+          copy  translations/*.qm package/translations/
           copy  help/*.md package/help/
           mkdir package/help/images
           copy help/images/*.* package/help/images/
