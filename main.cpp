@@ -53,6 +53,17 @@ int main(int argc, char *argv[])
         settings.setValue("Main/Language", localeString);
     }
 
+    QTranslator translator;
+    QLocale locale(localeString);
+    QString lang = locale.name();
+    QString shortLang = locale.name().left(2);
+
+    if (QString translationDir = QCoreApplication::applicationDirPath() + "/translations"; !translator.load("SavvyCAN_" + lang, translationDir)) {
+        translator.load("SavvyCAN_" + shortLang, translationDir);
+    }
+    a.installTranslator(&translator);
+
+    qInfo() << "Locale Value is:" << locale.name();
 
     a.mainWindow = new MainWindow();
 
