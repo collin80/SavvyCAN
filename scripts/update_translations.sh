@@ -1,11 +1,16 @@
 #!/bin/bash
 
-PROJECT_ROOT="$(dirname "$(dirname "$(realpath "$0")")")"
-TRANSLATIONS_DIR="$PROJECT_ROOT/translations"
+PROJECT_ROOT="$(pwd)"
 
-echo "Atualizando arquivos de tradução..."
+# To add this tool in Qt Creator:
+# Category: Linguist
+# Name: Update Translations (lupdate)
+# Executable: lupdate
+# Arguments: -project SavvyCAN.pro
+# Working Directory: %{ActiveProject:Path}
 
-lupdate "$PROJECT_ROOT" \
--ts "$TRANSLATIONS_DIR"/SavvyCAN_*.ts
+echo "Updating translation files..."
 
-echo "Traduções atualizadas."
+lupdate -project "$PROJECT_ROOT"/SavvyCAN.pro
+
+echo "Translation files updated."
