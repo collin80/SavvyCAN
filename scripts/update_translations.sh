@@ -11,6 +11,6 @@ PROJECT_ROOT="$(pwd)"
 
 echo "Updating translation files..."
 
-lupdate -project "$PROJECT_ROOT"/SavvyCAN.pro
+lupdate -verbose "$PROJECT_ROOT"/SavvyCAN.pro
 
 echo "Translation files updated."
