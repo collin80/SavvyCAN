@@ -2149,218 +2149,223 @@ and the value ranges by hypens
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="62"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="61"/>
+        <source>Language</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/mainsettingsdialog.ui" line="76"/>
         <source>General Settings:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="68"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="82"/>
         <source>Save/Restore window positions and sizes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="75"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="89"/>
         <source>Save/Restore CAN bus connections</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="82"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="96"/>
         <source>Display values as hexadecimal</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="89"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="103"/>
         <source>Require validation of GVRET connection</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="96"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="110"/>
         <source>Use filtered frames in sub-windows</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="103"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="117"/>
         <source>OpenGL Accelerated AntiAliased Graphing</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="118"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="132"/>
         <source>CAN Frame Pre-allocation Size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="143"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="157"/>
         <source>Time Keeping</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="149"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="163"/>
         <source>Seconds/Milli/Micro are dongle based</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="158"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="172"/>
         <source>Seconds</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="165"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="179"/>
         <source>Microseconds</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="172"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="186"/>
         <source>Milliseconds</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="192"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="206"/>
         <source>System Clock</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="203"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="217"/>
         <source>Time Format String:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="215"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="229"/>
         <source>Use absolute time in decoded CSV output</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="225"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="239"/>
         <source>Font</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="231"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="245"/>
         <source>Use fixed-width font in tables</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="238"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="252"/>
         <source>Size</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="261"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="275"/>
         <source>Flowview Settings:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="267"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="281"/>
         <source>Use timestamp mode by default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="274"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="288"/>
         <source>Set Auto Reference by default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="281"/>
-        <location filename="../ui/mainsettingsdialog.ui" line="395"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="295"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="409"/>
         <source>Hexadecimal Graph Y Axis</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="311"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="325"/>
         <source>Playback Window Settings:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="317"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="331"/>
         <source>Loop by default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="326"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="340"/>
         <source>Default playback speed (ms)</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="344"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="358"/>
         <source>Default Sending Bus</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="359"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="373"/>
         <source>DBC Settings</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="365"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="379"/>
         <source>Label DBC messages by default</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="372"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="386"/>
         <source>Ignore DBC message colors</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="382"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="396"/>
         <source>File Info and Comparator Settings:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="388"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="402"/>
         <source>Auto expand all nodes</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="408"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="422"/>
         <source>MQTT Remote CAN Settings:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="414"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="428"/>
         <source>Host:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="424"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="438"/>
         <source>Port:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="434"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="448"/>
         <source>User Name:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="444"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="458"/>
         <source>Password</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/mainsettingsdialog.ui" line="461"/>
+        <location filename="../ui/mainsettingsdialog.ui" line="475"/>
         <source>Some settings will not take effect until the application is restarted</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../mainsettingsdialog.cpp" line="21"/>
+        <location filename="../mainsettingsdialog.cpp" line="63"/>
         <source>None</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../mainsettingsdialog.cpp" line="22"/>
+        <location filename="../mainsettingsdialog.cpp" line="64"/>
         <source>0</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../mainsettingsdialog.cpp" line="23"/>
+        <location filename="../mainsettingsdialog.cpp" line="65"/>
         <source>1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../mainsettingsdialog.cpp" line="24"/>
+        <location filename="../mainsettingsdialog.cpp" line="66"/>
         <source>All</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../mainsettingsdialog.cpp" line="25"/>
+        <location filename="../mainsettingsdialog.cpp" line="67"/>
         <source>From File</source>
         <translation type="unfinished"></translation>
     </message>
