@@ -1,0 +1,47 @@
+<!DOCTYPE QPH>
+<QPH sourcelanguage="en" language="pt_BR">
+<phrase>
+    <source>New</source>
+    <target>Novo</target>
+</phrase>
+<phrase>
+    <source>Save</source>
+    <target>Salvar</target>
+</phrase>
+<phrase>
+    <source>Cancel</source>
+    <target>Cancelar</target>
+</phrase>
+<phrase>
+    <source>Connect</source>
+    <target>Conectar</target>
+</phrase>
+<phrase>
+    <source>Disconnect</source>
+    <target>Desconectar</target>
+</phrase>
+<phrase>
+    <source>Yes</source>
+    <target>Sim</target>
+</phrase>
+<phrase>
+    <source>No</source>
+    <target>Não</target>
+</phrase>
+<phrase>
+    <source>Bus</source>
+    <target>Barramento</target>
+</phrase>
+<phrase>
+    <source>Frame</source>
+    <target>Frame</target>
+</phrase>
+<phrase>
+    <source>Frames</source>
+    <target>Frames</target>
+</phrase>
+<phrase>
+    <source>Scan</source>
+    <target>Varredura</target>
+</phrase>
+</QPH>
