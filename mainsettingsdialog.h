@@ -25,6 +25,7 @@ public slots:
 private:
     Ui::MainSettingsDialog *ui;
 
+    void populateLanguageCombo();
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
 };
