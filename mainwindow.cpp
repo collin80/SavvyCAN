@@ -10,6 +10,7 @@
 #include "utility.h"
 #include "filterutility.h"
 
+#include <QClipboard>
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
 
@@ -143,6 +144,11 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
     connect(ui->canFramesView, &QAbstractItemView::doubleClicked, this, &MainWindow::gridDoubleClicked);
     ui->canFramesView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+    copyAct = new QAction(tr("Copy"), this);
+    copyAct->setShortcut(QKeySequence::Copy);
+    connect(copyAct, &QAction::triggered, this, &MainWindow::copyFromTable);
+    ui->canFramesView->addAction(copyAct);
     connect(ui->canFramesView, &QAbstractItemView::customContextMenuRequested, this, &MainWindow::gridContextMenuRequest);
 
     connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
@@ -741,20 +747,75 @@ void MainWindow::gridContextMenuRequest(QPoint pos)
 {
     QModelIndex idx = ui->canFramesView->indexAt(pos); //figure out where in the view we clicked (row, column)
     qDebug() << "Pos: " << pos << " Row :" << idx.row() << " Col: " << idx.column();
-    qDebug() << "Data: " << idx.data();
+
+    if (!idx.isValid()) return;
+
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    menu->addAction(copyAct);
+
     if (idx.column() == 8) //we're over the DATA column
     {
         contextMenuPosition = pos;
-
-        QMenu *menu = new QMenu(this);
-        menu->setAttribute(Qt::WA_DeleteOnClose);
-
-        menu->addAction(tr("Add to a new graphing window"), this, SLOT(setupAddToNewGraph()));
         menu->addSeparator();
+        menu->addAction(tr("Add to a new graphing window"), this, SLOT(setupAddToNewGraph()));
         menu->addAction(tr("Add to latest graphing window"), this, SLOT(setupSendToLatestGraphWindow()));
-
-        menu->popup(ui->canFramesView->mapToGlobal(pos));
     }
+
+    menu->popup(ui->canFramesView->viewport()->mapToGlobal(pos));
+}
+
+void MainWindow::copyFromTable()
+{
+    copySelection();
+}
+
+void MainWindow::copySelection()
+{
+    QItemSelectionModel *selectionModel = ui->canFramesView->selectionModel();
+    QModelIndexList selectedIndexes = selectionModel->selectedIndexes();
+
+    if(selectedIndexes.isEmpty())
+        return;
+
+    // QModelIndex::operator< sorts by row and then by column.
+    std::sort(selectedIndexes.begin(), selectedIndexes.end());
+
+    QString selectedText;
+    int currentRow = -1;
+    int lastRow = selectedIndexes.last().row();
+
+    for(const QModelIndex &current : selectedIndexes)
+    {
+        if (currentRow != -1 && current.row() != currentRow)
+        {
+            // remove last tab
+            if (selectedText.endsWith(QLatin1Char('\t')))
+                selectedText.chop(1);
+            selectedText.append(QLatin1Char('\n'));
+        }
+        currentRow = current.row();
+
+        QString cellText = current.data(Qt::DisplayRole).toString();
+
+        // Replace newlines within a cell to avoid breaking the table structure in Excel
+        cellText.replace(QLatin1Char('\n'), QLatin1String("  "));
+
+        selectedText.append(cellText);
+
+        if (current.row() != lastRow || current != selectedIndexes.last())
+        {
+            selectedText.append(QLatin1Char('\t'));
+        }
+    }
+
+    // remove last tab if it exists
+    if (selectedText.endsWith(QLatin1Char('\t')))
+        selectedText.chop(1);
+
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(selectedText);
 }
 
 QString MainWindow::getSignalNameFromPosition(QPoint pos)
