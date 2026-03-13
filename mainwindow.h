@@ -110,6 +110,7 @@ private slots:
     void gridClicked(QModelIndex);
     void gridDoubleClicked(QModelIndex);
     void gridContextMenuRequest(QPoint pos);
+    void copyFromTable();
     void setupAddToNewGraph();
     void setupSendToLatestGraphWindow();
     void interpretToggled(bool);
@@ -147,6 +148,7 @@ signals:
 
 private:
     Ui::MainWindow *ui;
+    QAction *copyAct;
     static MainWindow *selfRef;
 
     //canbus related data
@@ -213,6 +215,7 @@ private:
     //private methods
     QString getSignalNameFromPosition(QPoint pos);
     uint32_t getMessageIDFromPosition(QPoint pos);
+    void copySelection();
     void handleSaveDecodedMethod(bool csv);
     void saveDecodedTextFile(QString);
     void saveDecodedTextFileAsColumns(QString);
