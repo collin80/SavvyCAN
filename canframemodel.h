@@ -46,7 +46,7 @@ public:
     void setInterpretMode(bool);
     bool getInterpretMode();
     void setOverwriteMode(bool);
-    void setHexMode(bool);
+    void setUseAsciiDec(bool);
     void setClearMode(bool mode);
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
@@ -93,7 +93,7 @@ private:
     bool filtersPersistDuringClear;
     QString timeFormat;
     TimeStyle timeStyle;
-    bool useHexMode;
+    bool useAsciiDec;
     bool needFilterRefresh;
     bool ignoreDBCColors;
     int64_t timeOffset;
@@ -105,4 +105,3 @@ private:
 
 
 #endif // CANFRAMEMODEL_H
-

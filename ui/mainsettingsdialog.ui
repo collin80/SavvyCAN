@@ -77,9 +77,9 @@
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="cbDisplayHex">
+         <widget class="QCheckBox" name="cbDisplayAsciiDec">
           <property name="text">
-           <string>Display values as hexadecimal</string>
+           <string>ASCII column: display as decimal</string>
           </property>
          </widget>
         </item>
@@ -486,7 +486,7 @@
   <tabstop>cbMainAutoScroll</tabstop>
   <tabstop>cbRestorePositions</tabstop>
   <tabstop>cbLoadConnections</tabstop>
-  <tabstop>cbDisplayHex</tabstop>
+  <tabstop>cbDisplayAsciiDec</tabstop>
   <tabstop>cbValidate</tabstop>
   <tabstop>cbUseFiltered</tabstop>
   <tabstop>cbUseOpenGL</tabstop>
