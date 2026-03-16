@@ -35,8 +35,7 @@ MainWindow::MainWindow(QWidget *parent) :
     qRegisterMetaTypeStreamOperators<QVector<int>>();
 #endif
 
-    useHex = true;
-
+    UseAsciiDec = false;
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION) + " [Built " + QString(__DATE__) +"]");
@@ -389,7 +388,7 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(5, settings.value("Main/BusColumn", 40).toUInt()); //bus
         ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
-        //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
+        ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
     if (settings.value("Main/AutoScroll", false).toBool())
     {
@@ -411,9 +410,10 @@ void MainWindow::readSettings()
 void MainWindow::readUpdateableSettings()
 {
     QSettings settings;
-    useHex = settings.value("Main/UseHex", true).toBool();
-    model->setHexMode(useHex);
-    Utility::decimalMode = !useHex;
+
+    UseAsciiDec = settings.value("Main/UseAsciiDec", true).toBool();
+    model->setUseAsciiDec(UseAsciiDec);
+    Utility::decimalMode = UseAsciiDec;
 
     bool tempBool;
     TimeStyle ts = TS_MICROS;
@@ -450,6 +450,7 @@ void MainWindow::writeSettings()
     {
         settings.setValue("Main/WindowSize", size());
         settings.setValue("Main/WindowPos", pos());
+        settings.setValue("Main/UseAsciiDec", UseAsciiDec);
         settings.setValue("Main/TimeColumn", ui->canFramesView->columnWidth(0));
         settings.setValue("Main/IDColumn", ui->canFramesView->columnWidth(1));
         settings.setValue("Main/ExtColumn", ui->canFramesView->columnWidth(2));
@@ -457,8 +458,8 @@ void MainWindow::writeSettings()
         settings.setValue("Main/DirColumn", ui->canFramesView->columnWidth(4));
         settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(5));
         settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
-        settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
-        //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
+        settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7)); //ascii
+        settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8)); //data
     }
 }
 
@@ -1083,6 +1084,8 @@ void MainWindow::handleLoadFile()
     QMessageBox::StandardButton confirmDialog;
 
     bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames);
+
+    qInfo() << "Load result: " << loadResult << " Frames loaded: " << tempFrames.count();
 
     if (!loadResult)
     {

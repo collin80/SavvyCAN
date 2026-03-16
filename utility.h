@@ -138,7 +138,7 @@ public:
 
     static QString formatCANID(uint64_t id, bool extended)
     {
-        if (decimalMode) return QString::number(id, 10);
+        //if (decimalMode) return QString::number(id, 10);
 
         if (extended)
         {
