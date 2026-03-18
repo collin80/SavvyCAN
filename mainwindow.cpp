@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent) :
 #endif
 
     useHex = true;
-
+    useColorsByCanId = false;
     selfRef = this;
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION) + " [Built " + QString(__DATE__) +"]");
@@ -414,6 +414,9 @@ void MainWindow::readUpdateableSettings()
     useHex = settings.value("Main/UseHex", true).toBool();
     model->setHexMode(useHex);
     Utility::decimalMode = !useHex;
+
+    useColorsByCanId = settings.value("Main/ColorsByCanId", false).toBool();
+    model->setUseColorsByCanId(useColorsByCanId);
 
     bool tempBool;
     TimeStyle ts = TS_MICROS;

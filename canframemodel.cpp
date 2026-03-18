@@ -3,6 +3,8 @@
 #include <QFile>
 #include <QApplication>
 #include <QPalette>
+#include <QColor>
+#include <QBrush>
 #include <QDateTime>
 #include <QSettings>
 #include "utility.h"
@@ -76,6 +78,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     overwriteDups = false;
     filtersPersistDuringClear = false;
     useHexMode = true;
+    useColorsByCanId = false;
     timeStyle = TS_MICROS;
     timeOffset = 0;
     needFilterRefresh = false;
@@ -97,6 +100,16 @@ void CANFrameModel::setHexMode(bool mode)
         this->beginResetModel();
         useHexMode = mode;
         Utility::decimalMode = !useHexMode;
+        this->endResetModel();
+    }
+}
+
+void CANFrameModel::setUseColorsByCanId(bool mode)
+{
+    if (useColorsByCanId != mode)
+    {
+        this->beginResetModel();
+        useColorsByCanId = mode;
         this->endResetModel();
     }
 }
@@ -401,7 +414,6 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
 {
     QString tempString;
     CANFrame thisFrame;
-    static bool rowFlip = false;
     QVariant ts;
 
     if (!index.isValid())
@@ -425,9 +437,31 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return msg->bgColor;
             }
         }
-        rowFlip = (index.row() % 2);
-        if (rowFlip) return QApplication::palette().color(QPalette::Base);
-        else return QApplication::palette().color(QPalette::AlternateBase);
+
+        if (useColorsByCanId)
+        {
+            QString frameStr = Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
+            // Color rows by the value in the "category" column
+            return QBrush(Utility::colorForString(frameStr));
+        }
+
+        return (index.row() % 2) ?
+            QApplication::palette().color(QPalette::Base) :
+            QApplication::palette().color(QPalette::AlternateBase);
+    }
+
+    if (role == Qt::ForegroundRole)
+    {
+        if (dbcHandler != nullptr && interpretFrames && !ignoreDBCColors)
+        {
+            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
+            if (msg != nullptr)
+            {
+                return msg->fgColor;
+            }
+        }
+
+        return QApplication::palette().color(QPalette::WindowText);
     }
 
     if (role == Qt::TextAlignmentRole)
@@ -446,19 +480,6 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         default:
             return Qt::AlignLeft;
         }
-    }
-
-    if (role == Qt::ForegroundRole)
-    {
-        if (dbcHandler != nullptr && interpretFrames && !ignoreDBCColors)
-        {
-            DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
-            if (msg != nullptr)
-            {
-                return msg->fgColor;
-            }
-        }
-        return QApplication::palette().color(QPalette::WindowText);
     }
 
     if (role == Qt::DisplayRole) {
