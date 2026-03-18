@@ -503,11 +503,8 @@ void LAWICELSerial::readSerialData()
             CANFrame buildFrame;
             QByteArray buildData;
 
-            if (useSystemTime)
-            {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
-            }
-            else
+            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
+            if (!useSystemTime)
             {
                 bool isFD = false;
                 char offset;
@@ -537,8 +534,7 @@ void LAWICELSerial::readSerialData()
                 int dlc = mBuildLine.mid(len_index, 1).toInt();
                 int byteCount = isFD ? (int)dlc_code_to_bytes(dlc) : dlc;
                 int frameStringLen = offset + byteCount * 2;
-                bool hasTimestamp = mBuildLine.length() > frameStringLen + 1;
-                if (hasTimestamp)
+                if (mBuildLine.length() > frameStringLen + 1)
                 {
                     qint64 hwTs = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16);
                     qint64 sysMs = QDateTime::currentMSecsSinceEpoch();
@@ -552,10 +548,6 @@ void LAWICELSerial::readSerialData()
                     if (timeBasis == 0)
                         timeBasis = sysMs - unwrappedMs;
                     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (timeBasis + unwrappedMs) * 1000ll));
-                }
-                else
-                {
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
                 }
             }
 
