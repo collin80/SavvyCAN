@@ -160,6 +160,7 @@ private:
     int rxFrames;
     bool inhibitFilterUpdate;
     bool useHex;
+    bool useColorsByCanId;
     bool allowCapture;
     bool ignoreDBCColors;
     bool CSVAbsTime;
