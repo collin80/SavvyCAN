@@ -17,6 +17,7 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
 
     serial = nullptr;
     isAutoRestart = false;
+    rebuildLocalTimeBasis();
 
     readSettings();
 }
@@ -203,6 +204,14 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
 
 /****************************************************************/
 
+void LAWICELSerial::rebuildLocalTimeBasis()
+{
+    timeBasis = 0;
+    lastHWTimestamp = -1;
+    wrapAdder = 0;
+    lastSysMs = 0;
+}
+
 void LAWICELSerial::readSettings()
 {
     QSettings settings;
@@ -253,6 +262,8 @@ void LAWICELSerial::connectDevice()
 void LAWICELSerial::deviceConnected()
 {
     sendDebug("Connecting to LAWICEL Device!");
+
+    rebuildLocalTimeBasis();
 
     QByteArray output;
 
@@ -529,7 +540,18 @@ void LAWICELSerial::readSerialData()
                 bool hasTimestamp = mBuildLine.length() > frameStringLen + 1;
                 if (hasTimestamp)
                 {
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16) * 1000l));
+                    qint64 hwTs = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16);
+                    qint64 sysMs = QDateTime::currentMSecsSinceEpoch();
+                    if (lastHWTimestamp >= 0 && hwTs < lastHWTimestamp) {
+                        qint64 sysDelta = sysMs - lastSysMs;
+                        wrapAdder += lastHWTimestamp + sysDelta - hwTs;
+                    }
+                    lastHWTimestamp = hwTs;
+                    lastSysMs = sysMs;
+                    qint64 unwrappedMs = wrapAdder + hwTs;
+                    if (timeBasis == 0)
+                        timeBasis = sysMs - unwrappedMs;
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds((timeBasis + unwrappedMs) * 1000));
                 }
                 else
                 {
