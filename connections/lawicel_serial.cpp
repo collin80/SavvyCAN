@@ -505,7 +505,7 @@ void LAWICELSerial::readSerialData()
 
             if (useSystemTime)
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
             }
             else
             {
@@ -551,11 +551,11 @@ void LAWICELSerial::readSerialData()
                     qint64 unwrappedMs = wrapAdder + hwTs;
                     if (timeBasis == 0)
                         timeBasis = sysMs - unwrappedMs;
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds((timeBasis + unwrappedMs) * 1000));
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (timeBasis + unwrappedMs) * 1000ll));
                 }
                 else
                 {
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
                 }
             }
 
