@@ -474,8 +474,6 @@ void LAWICELSerial::readSerialData()
     QByteArray data;
     unsigned char c;
     QString debugBuild;
-    CANFrame buildFrame;
-    QByteArray buildData;
 
     if (serial) data = serial->readAll();
 
@@ -491,40 +489,50 @@ void LAWICELSerial::readSerialData()
         {
             qDebug() << "Got CR!";
 
+            CANFrame buildFrame;
+            QByteArray buildData;
+
             if (useSystemTime)
             {
                 buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
             }
             else
             {
+                bool isFD = false;
                 char offset;
                 char len_index;
                 switch(mBuildLine[0].toLatin1()) {
-                    case 't':
+                    case 'b':
                     case 'd':
+                        isFD = true;
+                        [[fallthrough]];
+                    case 't':
                         offset = 5;
                         len_index = 4;
-                    break;
-                    case 'T':
+                        break;
+                    case 'B':
                     case 'D':
+                        isFD = true;
+                        [[fallthrough]];
+                    case 'T':
                         offset = 10;
                         len_index = 9;
-                    break;
+                        break;
                     default:
                         offset = 5;
                         len_index = 4;
-                    break;
+                        break;
                 }
-                //If total length is greater than command, header and data, timestamps must be enabled.
-                if (data.length() > (offset + mBuildLine.mid(len_index, 1).toInt() * 2 + 1))
+                int dlc = mBuildLine.mid(len_index, 1).toInt();
+                int byteCount = isFD ? (int)dlc_code_to_bytes(dlc) : dlc;
+                int frameStringLen = offset + byteCount * 2;
+                bool hasTimestamp = mBuildLine.length() > frameStringLen + 1;
+                if (hasTimestamp)
                 {
-                    //Four bytes after the end of the data bytes.
-                    buildTimestamp = mBuildLine.mid(offset + mBuildLine.mid(len_index, 1).toInt() * 2, 4).toInt(nullptr, 16);
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16) * 1000l));
                 }
                 else
                 {
-                    //Default to system time if timestamps are disabled.
                     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
             }
