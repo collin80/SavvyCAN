@@ -63,7 +63,6 @@ protected:
     qint64 timeBasis;
     qint64 lastHWTimestamp;
     qint64 wrapAdder;
-    qint64 lastSysMs;
     bool can0Enabled;
     bool can0ListenOnly;
     bool canFd;
