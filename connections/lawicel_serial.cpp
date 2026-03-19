@@ -209,7 +209,6 @@ void LAWICELSerial::rebuildLocalTimeBasis()
     timeBasis = 0;
     lastHWTimestamp = -1;
     wrapAdder = 0;
-    lastSysMs = 0;
 }
 
 void LAWICELSerial::readSettings()
@@ -531,22 +530,17 @@ void LAWICELSerial::readSerialData()
                         len_index = 4;
                         break;
                 }
+
                 int dlc = mBuildLine.mid(len_index, 1).toInt();
                 int byteCount = isFD ? (int)dlc_code_to_bytes(dlc) : dlc;
                 int frameStringLen = offset + byteCount * 2;
                 if (mBuildLine.length() > frameStringLen + 1)
                 {
-                    qint64 hwTs = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16);
-                    qint64 sysMs = QDateTime::currentMSecsSinceEpoch();
-                    if (lastHWTimestamp >= 0 && hwTs < lastHWTimestamp) {
-                        qint64 sysDelta = sysMs - lastSysMs;
-                        wrapAdder += lastHWTimestamp + sysDelta - hwTs;
-                    }
-                    lastHWTimestamp = hwTs;
-                    lastSysMs = sysMs;
-                    qint64 unwrappedMs = wrapAdder + hwTs;
-                    if (timeBasis == 0)
-                        timeBasis = sysMs - unwrappedMs;
+                    qint64 hardwareMs = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16);
+                    if (lastHWTimestamp >= 0 && hardwareMs < lastHWTimestamp) { wrapAdder += 60000; }
+                    lastHWTimestamp = hardwareMs;
+                    qint64 unwrappedMs = wrapAdder + hardwareMs;
+                    if (timeBasis == 0) { timeBasis = QDateTime::currentMSecsSinceEpoch() - unwrappedMs; }
                     buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (timeBasis + unwrappedMs) * 1000ll));
                 }
             }
