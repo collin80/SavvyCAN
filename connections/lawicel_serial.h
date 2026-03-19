@@ -60,8 +60,9 @@ protected:
     bool isAutoRestart;
     QSerialPort *serial;
     int framesRapid;
-    CANFrame buildFrame;
-    qint64 buildTimestamp;
+    qint64 timeBasis;
+    qint64 lastHWTimestamp;
+    qint64 wrapAdder;
     bool can0Enabled;
     bool can0ListenOnly;
     bool canFd;
