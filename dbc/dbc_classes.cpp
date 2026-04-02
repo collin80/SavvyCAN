@@ -23,15 +23,11 @@ void DBC_SIGNAL::addMultiplexRange(int min, int max)
         multiplexLowAndHighValues.append(QPair<int, int>(min, max));
 }
 
-bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
+bool DBC_SIGNAL::isSignalInMessage(const CommFrame &frame)
 {
-    DBC_MESSAGE *msg = nullptr;
-
     if (isMultiplexor && !isMultiplexed) return true; //the root multiplexor is always in the message.
     if (isMultiplexed)
     {
-        DBC_SIGNAL *sig = nullptr;
-
         if (parentMessage->multiplexorSignal != nullptr)
         {
             if (multiplexParent->isSignalInMessage(frame)) //parent is in message so check if value is correct
@@ -162,7 +158,7 @@ bool DBC_SIGNAL::multiplexesIdenticalToSignal(DBC_SIGNAL *other) const
 }
 
 //Take all the children of this signal and see if they exist in the message. Can be called recursively to descend the dependency tree
-QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
+QString DBC_SIGNAL::processSignalTree(const CommFrame &frame)
 {
     QString build;
     int val;
@@ -228,7 +224,7 @@ s 5   47 46 45 44 43 42 41 40
   So, the bits are 12, 11, 10, 9, 8, 23, 22, 21. Yes, that's confusing. They now go in reverse value order too.
   Bit 12 is worth 128, 11 is worth 64, etc until bit 21 is worth 1.
 */
-bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool outputName, bool outputUnit)
+bool DBC_SIGNAL::processAsText(const CommFrame &frame, QString &outString, bool outputName, bool outputUnit)
 {
     int64_t result = 0;
     bool isSigned = false;
@@ -336,7 +332,7 @@ QString DBC_SIGNAL::makePrettyOutput(double floatVal, int64_t intVal, bool outpu
 //as this basically assumes the signal is an integer.
 //The call syntax is different from the more generic processSignal. Instead of returning the value we return
 //true or false to show whether the function succeeded. The variable to fill out is passed by reference.
-bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
+bool DBC_SIGNAL::processAsInt(const CommFrame &frame, int32_t &outValue)
 {
     int32_t result = 0;
     bool isSigned = false;
@@ -368,7 +364,7 @@ bool DBC_SIGNAL::processAsInt(const CANFrame &frame, int32_t &outValue)
 //except STRING. Useful for when you know you'll need floating point data and don't want to incur a conversion
 //back and forth to double or float. Such a use is the graphing window.
 //Similar syntax to processSignalInt but with double instead.
-bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
+bool DBC_SIGNAL::processAsDouble(const CommFrame &frame, double &outValue)
 {
     int64_t result = 0;
     bool isSigned = false;

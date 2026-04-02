@@ -225,7 +225,7 @@ void MQTT_BUS::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool MQTT_BUS::piSendFrame(const CANFrame& frame)
+bool MQTT_BUS::piSendFrame(const CommFrame& frame)
 {
     QByteArray buffer;
     //int c;
@@ -247,9 +247,9 @@ bool MQTT_BUS::piSendFrame(const CANFrame& frame)
     msg.setTopic(topicName + "/s/" + QString::number(frame.frameId()));
     uint8_t flags = 0;
     if (frame.hasExtendedFrameFormat()) flags += 1;
-    if (frame.frameType() == QCanBusFrame::RemoteRequestFrame) flags += 2;
+    if (frame.frameType() == CommFrame::RemoteRequestFrame) flags += 2;
     if (frame.hasFlexibleDataRateFormat()) flags += 4;
-    if (frame.frameType() == QCanBusFrame::ErrorFrame) flags += 8;
+    if (frame.frameType() == CommFrame::ErrorFrame) flags += 8;
 
     uint64_t micros = QDateTime::currentMSecsSinceEpoch() * 1000ull;
     for (int x = 0; x < 8; x++)
@@ -285,7 +285,7 @@ void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
     if(isCapSuspended())
         return;
 
-    CANFrame* frame_p = getQueue().get();
+    CommFrame* frame_p = getQueue().get();
     if(frame_p)
     {
         uint32_t frameID = message.topic().split("/")[1].toInt();
@@ -295,16 +295,16 @@ void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
 
         int flags = message.payload()[8];
         frame_p->setPayload(message.payload().right(message.payload().length() - 9));
-        frame_p->bus = 0;
+        frame_p->setBus(0);
         frame_p->setExtendedFrameFormat(flags & 1);
         frame_p->setFrameId(frameID);
-        frame_p->setFrameType(QCanBusFrame::DataFrame);
-        frame_p->isReceived = true;
+        frame_p->setFrameType(CommFrame::CANDataFrame);
+        frame_p->setReceived(true);
         if (useSystemTime)
         {
-            frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            frame_p->setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
         }
-        else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, timeStamp));
+        else frame_p->setTimeStamp(CommFrame::TimeStamp(0, timeStamp));
 
         checkTargettedFrame(*frame_p);
 

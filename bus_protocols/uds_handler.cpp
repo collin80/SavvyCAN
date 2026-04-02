@@ -172,7 +172,7 @@ UDS_HANDLER::UDS_HANDLER()
 {
     isReceiving = false;
     useExtendedAddressing = false;
-    modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
+    modelFrames = MainWindow::getReference()->getCommFrameModel()->getListReference();
     isoHandler = new ISOTP_HANDLER();
 }
 
@@ -187,10 +187,10 @@ UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(ISOTP_MESSAGE msg, bool *result)
     int dataLen = msg.payload().length();
     *result = true;
     UDS_MESSAGE udsMsg;
-    udsMsg.bus = msg.bus;
+    udsMsg.setBus(msg.getBus());
     udsMsg.setExtendedFrameFormat(msg.hasExtendedFrameFormat());
     udsMsg.setFrameId(msg.frameId());
-    udsMsg.isReceived = msg.isReceived;
+    udsMsg.setReceived(msg.isReceived());
     udsMsg.setTimeStamp(msg.timeStamp());
     udsMsg.reportedLength = msg.reportedLength;
     udsMsg.service = 0;
@@ -273,8 +273,8 @@ void UDS_HANDLER::setReception(bool mode)
 void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
 {
     QByteArray data;
-    if (msg.bus < 0) return;
-    if (msg.bus >= CANConManager::getInstance()->getNumBuses()) return;
+    if (msg.getBus() < 0) return;
+    if (msg.getBus() >= CANConManager::getInstance()->getNumBuses()) return;
     if (msg.service > 0xFF) return;
 
     data.append(msg.service);
@@ -284,11 +284,11 @@ void UDS_HANDLER::sendUDSFrame(const UDS_MESSAGE &msg)
     }
 
     data.append(msg.payload());
-    isoHandler->sendISOTPFrame(msg.bus, msg.frameId(), data);
+    isoHandler->sendISOTPFrame(msg.getBus(), msg.frameId(), data);
 
     //qDebug() << "Data sending: " << data;
 
-    qDebug() << "Sent UDS service: " << getServiceShortDesc(msg.service) << " on bus " << msg.bus;
+    qDebug() << "Sent UDS service: " << getServiceShortDesc(msg.service) << " on bus " << msg.getBus();
 }
 
 QString UDS_HANDLER::getShortDesc(QVector<CODE_STRUCT> &codeVector, int code)

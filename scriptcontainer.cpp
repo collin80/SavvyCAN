@@ -80,7 +80,7 @@ void ScriptContainer::compileScript()
 
         //Find out which callbacks the script has created.
         setupFunction = scriptEngine->globalObject().property("setup");
-        canHelper->setRxCallback(scriptEngine->globalObject().property("gotCANFrame"));
+        canHelper->setRxCallback(scriptEngine->globalObject().property("gotCommFrame"));
         isoHelper->setRxCallback(scriptEngine->globalObject().property("gotISOTPMessage"));
         udsHelper->setRxCallback(scriptEngine->globalObject().property("gotUDSMessage"));
 
@@ -229,7 +229,7 @@ void CANScriptHelper::clearFilters()
 
 void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data)
 {
-    CANFrame frame;
+    CommFrame frame;
     frame.setExtendedFrameFormat(false);
     frame.setFrameId(static_cast<uint32_t>(id.toInt()));
     QByteArray bytes(length.toUInt(), 0);
@@ -241,7 +241,7 @@ void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
         bytes[i] = (uint8_t)data.property(i).toInt();
     }
     frame.setPayload(bytes);
-    frame.bus = (uint32_t)bus.toInt();
+    frame.setBus((uint32_t)bus.toInt());
     //if (frame.bus > 1) frame.bus = 1;
 
     if (frame.frameId() > 0x7FF) frame.setExtendedFrameFormat(true);
@@ -250,7 +250,7 @@ void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     CANConManager::getInstance()->sendFrame(frame);
 }
 
-void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
+void CANScriptHelper::gotTargettedFrame(const CommFrame &frame)
 {
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
     //qDebug() << "Got frame in script interface";
@@ -260,10 +260,10 @@ void CANScriptHelper::gotTargettedFrame(const CANFrame &frame)
 
     for (int i = 0; i < filters.length(); i++)
     {
-        if (filters[i].checkFilter(frame.frameId(), frame.bus))
+        if (filters[i].checkFilter(frame.frameId(), frame.getBus()))
         {
             QJSValueList args;
-            args << frame.bus << frame.frameId() << static_cast<uint>(frame.payload().length());
+            args << frame.getBus() << frame.frameId() << static_cast<uint>(frame.payload().length());
             QJSValue dataBytes = scriptEngine->newArray(dataLen);
 
             for (int j = 0; j < dataLen; j++) dataBytes.setProperty(j, QJSValue(data[j]));
@@ -320,13 +320,13 @@ void ISOTPScriptHelper::sendISOTP(QJSValue bus, QJSValue id, QJSValue length, QJ
     }
     msg.setPayload(dataArray);
 
-    msg.bus = bus.toInt();
+    msg.setBus(bus.toInt());
 
     if (msg.frameId() > 0x7FF) msg.setExtendedFrameFormat(true);
 
     qDebug() << "sending ISOTP message from script";
     
-    handler->sendISOTPFrame(msg.bus, msg.frameId(), msg.payload());
+    handler->sendISOTPFrame(msg.getBus(), msg.frameId(), msg.payload());
 }
 
 void ISOTPScriptHelper::setPaddingByte(QJSValue byt)
@@ -347,7 +347,7 @@ void ISOTPScriptHelper::newISOMessage(ISOTP_MESSAGE msg)
     //qDebug() << "Got frame in script interface";
 
     QJSValueList args;
-    args << msg.bus << msg.frameId() << static_cast<uint>(msg.payload().length());
+    args << msg.getBus() << msg.frameId() << static_cast<uint>(msg.payload().length());
     QJSValue dataBytes = scriptEngine->newArray(static_cast<uint>(msg.payload().length()));
 
     for (int j = 0; j < msg.payload().length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue((unsigned char)msg.payload()[j]));
@@ -404,7 +404,7 @@ void UDSScriptHelper::sendUDS(QJSValue bus, QJSValue id, QJSValue service, QJSVa
     }
     msg.setPayload(dataArray);
 
-    msg.bus = bus.toInt();
+    msg.setBus(bus.toInt());
 
     if (msg.frameId() > 0x7FF) msg.setExtendedFrameFormat( true );
 
@@ -426,7 +426,7 @@ void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
     qDebug() << "Got frame in script interface";
 
     QJSValueList args;
-    args << msg.bus << msg.frameId() << msg.service << msg.subFunc << static_cast<uint>(msg.payload().length());
+    args << msg.getBus() << msg.frameId() << msg.service << msg.subFunc << static_cast<uint>(msg.payload().length());
     QJSValue dataBytes = scriptEngine->newArray(static_cast<unsigned int>(msg.payload().length()));
 
     for (int j = 0; j < msg.payload().length(); j++) dataBytes.setProperty(static_cast<quint32>(j), QJSValue((unsigned char)msg.payload()[j]));

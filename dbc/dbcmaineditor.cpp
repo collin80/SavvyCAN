@@ -10,7 +10,7 @@
 #include <qevent.h>
 #include "helpwindow.h"
 
-DBCMainEditor::DBCMainEditor( const QVector<CANFrame> *frames, QWidget *parent) :
+DBCMainEditor::DBCMainEditor( const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMainEditor)
 {

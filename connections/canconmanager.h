@@ -32,14 +32,14 @@ public:
 
     /**
      * @brief sendFrame sends a single frame out the desired bus
-     * @param pFrame - reference to a CANFrame struct that has been filled out for sending
+     * @param pFrame - reference to a CommFrame struct that has been filled out for sending
      * @return bool specifying whether the send succeeded or not
      * @note Finds which CANConnection object is responsible for this bus and automatically converts bus number to pass properly to CANConnection
      */
-    bool sendFrame(const CANFrame& pFrame);
+    bool sendFrame(const CommFrame& pFrame);
 
     //just the multi-frame version of above function.
-    bool sendFrames(const QList<CANFrame>& pFrames);
+    bool sendFrames(const QList<CommFrame>& pFrames);
 
     /**
      * @brief Add a new filter for the targetted frames. If a frame matches it will immediately be sent via the targettedFrameReceived signal
@@ -64,7 +64,7 @@ public:
     bool removeAllTargettedFrames(QObject *receiver);
 
 signals:
-    void framesReceived(CANConnection* pConn_p, QVector<CANFrame>& pFrames);
+    void framesReceived(CANConnection* pConn_p, QVector<CommFrame>& pFrames);
     void connectionStatusUpdated(int conns);
 
 private slots:
@@ -81,8 +81,8 @@ private:
     uint64_t               mTimestampBasis;
     uint32_t               mNumActiveBuses;
     bool                   useSystemTime;
-    QVector<CANFrame>      buslessFrames;
-    QVector<CANFrame>      tempFrames;
+    QVector<CommFrame>      buslessFrames;
+    QVector<CommFrame>      tempFrames;
     QMutex                 mutex;
 };
 

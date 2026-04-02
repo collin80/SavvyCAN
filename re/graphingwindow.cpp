@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <limits>
 
-GraphingWindow::GraphingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+GraphingWindow::GraphingWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::GraphingWindow)
 {
@@ -179,7 +179,7 @@ void GraphingWindow::writeSettings()
 
 void GraphingWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     QVector<double> x, y;
     bool appendedToGraph = false;
     bool needReplot = false;
@@ -221,7 +221,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
                 thisFrame = modelFrames->at(i);
-                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.bus) ) )
+                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) )
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
@@ -1235,7 +1235,7 @@ void GraphingWindow::addNewGraph()
     showParamsDialog(-1);
 }
 
-void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y)
+void GraphingWindow::appendToGraph(GraphParams &params, CommFrame &frame, QVector<double> &x, QVector<double> &y)
 {
     params.strideSoFar++;
     if (params.strideSoFar >= params.stride)
@@ -1341,9 +1341,9 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     frameCache.clear();
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        CANFrame thisFrame = modelFrames->at(i);
-        if ( (thisFrame.frameId() == params.ID) && (thisFrame.frameType() == QCanBusFrame::DataFrame)
-       &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.bus) ) ) frameCache.append(thisFrame);
+        CommFrame thisFrame = modelFrames->at(i);
+        if ( (thisFrame.frameId() == params.ID) && (thisFrame.frameType() == CommFrame::CANDataFrame)
+            &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.getBus()) ) ) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1351,11 +1351,11 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     //that has all data bytes = 0. This allows the graph to be edited and deleted. No idea why you can't otherwise.
     if (frameCache.count() == 0)
     {
-        CANFrame dummy;
+        CommFrame dummy;
         dummy.setFrameId(params.ID);
-        dummy.bus = 0;
+        dummy.setBus(0);
         dummy.setPayload(QByteArray(8, 0));
-        dummy.setFrameType(QCanBusFrame::DataFrame);
+        dummy.setFrameType(CommFrame::CANDataFrame);
         frameCache.append(dummy);
     }
 

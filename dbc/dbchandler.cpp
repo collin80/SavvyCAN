@@ -2194,11 +2194,11 @@ void DBCHandler::swapFiles(int pos1, int pos2)
  * interpret that frame for you.
  * Returns nullptr if there is no message definition that matches.
 */
-DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
+DBC_MESSAGE* DBCHandler::findMessage(const CommFrame &frame)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == loadedFiles[i].getAssocBus())
+        if (loadedFiles[i].getAssocBus() == -1 || frame.getBus() == loadedFiles[i].getAssocBus())
         {
             DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;

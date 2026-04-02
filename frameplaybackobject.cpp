@@ -34,20 +34,20 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
     }
 
     //only send frame out if its ID is checked in the list. Otherwise discard it.
-    CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
-    uint32_t originalBus = thisFrame->bus;
+    CommFrame *thisFrame = &currentSeqItem->data[currentPosition];
+    uint32_t originalBus = thisFrame->getBus();
     if (currentSeqItem->idFilters.find(thisFrame->frameId()).value())
     {
         if (whichBusSend > -1)
         {
-            thisFrame->bus = whichBusSend;
+            thisFrame->setBus(whichBusSend);
             sendingBuffer.append(*thisFrame);
         }
         else if (whichBusSend == -1)
         {
             for (int c = 0; c < numBuses; c++)
             {
-                thisFrame->bus = c;
+                thisFrame->setBus(c);
                 sendingBuffer.append(*thisFrame);
             }
         }
@@ -56,7 +56,7 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
             sendingBuffer.append(*thisFrame);
         }
 
-        thisFrame->bus = originalBus;
+        thisFrame->setBus(originalBus);
     }
 
     if (forward)
@@ -114,7 +114,7 @@ quint64 FramePlaybackObject::peekPosition(bool forward)
             return 0xFFFFFFFFFFFFFFFFull;
         }
     }
-    CANFrame *thisFrame = &currentSeqItem->data[peekCurrentPosition];
+    CommFrame *thisFrame = &currentSeqItem->data[peekCurrentPosition];
     return thisFrame->timeStamp().microSeconds();
 }
 

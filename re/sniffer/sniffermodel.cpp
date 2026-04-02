@@ -314,9 +314,9 @@ void SnifferModel::filter(fltType pType, int pId)
 /**********         slots       ****************/
 /***********************************************/
 
-void SnifferModel::update(CANConnection*, QVector<CANFrame>& pFrames)
+void SnifferModel::update(CANConnection*, QVector<CommFrame>& pFrames)
 {
-    foreach(const CANFrame& frame, pFrames)
+    foreach(const CommFrame& frame, pFrames)
     {
         if(!mMap.contains(frame.frameId()))
         {

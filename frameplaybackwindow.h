@@ -16,7 +16,7 @@ class FramePlaybackWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FramePlaybackWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FramePlaybackWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~FramePlaybackWindow();
 
 private slots:
@@ -49,8 +49,8 @@ private slots:
 private:
     Ui::FramePlaybackWindow *ui;
     QList<int> foundID;
-    QList<CANFrame> frameCache;
-    const QVector<CANFrame> *modelFrames;
+    QList<CommFrame> frameCache;
+    const QVector<CommFrame> *modelFrames;
     QList<SequenceItem> seqItems;
     SequenceItem *currentSeqItem;
     int currentSeqNum;

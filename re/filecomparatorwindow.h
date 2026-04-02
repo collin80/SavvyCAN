@@ -38,8 +38,8 @@ private slots:
 
 private:
     Ui::FileComparatorWindow *ui;
-    QVector<CANFrame> interestedFrames;
-    QVector<CANFrame> referenceFrames;
+    QVector<CommFrame> interestedFrames;
+    QVector<CommFrame> referenceFrames;
     QString interestedFilename;
     DBCHandler *dbcHandler;
 

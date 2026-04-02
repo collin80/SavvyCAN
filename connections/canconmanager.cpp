@@ -167,8 +167,8 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
 
     if (pConn_p->getQueue().peek() == nullptr) return;
 
-    CANFrame* frame_p = nullptr;
-    QVector<CANFrame> frames;
+    CommFrame* frame_p = nullptr;
+    QVector<CommFrame> frames;
 
     //Each connection only knows about its own bus numbers
     //so this variable is used to fix that up to turn local bus numbers
@@ -184,7 +184,7 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
     //qDebug() << "Bus fixup number: " << busBase;
 
     while( (frame_p = pConn_p->getQueue().peek() ) ) {
-        frame_p->bus += busBase;
+        frame_p->setBus(frame_p->getBus() + busBase);
         //qDebug() << "Rx of frame from bus: " << frame_p->bus;
         frames.append(*frame_p);
         pConn_p->getQueue().dequeue();
@@ -205,10 +205,10 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
  * to be used but is slow. This function uses an on the stack copy of the frame so the way it works
  * is a good thing but performance will suffer. TODO: Investigate a way to use non-blocking calls.
 */
-bool CANConManager::sendFrame(const CANFrame& pFrame)
+bool CANConManager::sendFrame(const CommFrame& pFrame)
 {
     int busBase = 0;
-    CANFrame workingFrame = pFrame;
+    CommFrame workingFrame = pFrame;
 
     if (mConns.count() == 0)
     {
@@ -221,17 +221,17 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     foreach (CANConnection* conn, mConns)
     {
         //check if this CAN connection is supposed to handle the requested bus
-        if (pFrame.bus < (busBase + conn->getNumBuses()))
+        if (pFrame.getBus() < (busBase + conn->getNumBuses()))
         {
-            workingFrame.bus -= busBase;
-            workingFrame.isReceived = false;
+            workingFrame.setBus(workingFrame.getBus() - busBase);
+            workingFrame.setLocalEcho(true);
             if (useSystemTime)
             {
-                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                workingFrame.setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
             }
             else
             {
-                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
+                workingFrame.setTimeStamp(CommFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
                 //workingFrame.timestamp -= mTimestampBasis;
             }
 
@@ -242,9 +242,9 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     return false;
 }
 
-bool CANConManager::sendFrames(const QList<CANFrame>& pFrames)
+bool CANConManager::sendFrames(const QList<CommFrame>& pFrames)
 {
-    foreach(const CANFrame& frame, pFrames)
+    foreach(const CommFrame& frame, pFrames)
     {
         if(!sendFrame(frame))
             return false;

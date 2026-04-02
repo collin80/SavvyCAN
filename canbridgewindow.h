@@ -13,7 +13,7 @@ class CANBridgeWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit CANBridgeWindow(const QVector<CANFrame> *frames, QWidget *parent = nullptr);
+    explicit CANBridgeWindow(const QVector<CommFrame> *frames, QWidget *parent = nullptr);
     ~CANBridgeWindow();
     void showEvent(QShowEvent*);
 
@@ -24,13 +24,13 @@ private slots:
 
 private:
     Ui::CANBridgeWindow *ui;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     QMap<int, bool> foundIDSide1;
     QMap<int, bool> foundIDSide2;
     int side1BusNum;
     int side2BusNum;
 
-    void processIncomingFrame(CANFrame *frame);
+    void processIncomingFrame(CommFrame *frame);
     bool eventFilter(QObject *obj, QEvent *event);
 
 };

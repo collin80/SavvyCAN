@@ -41,12 +41,12 @@ class MotorControllerConfigWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit MotorControllerConfigWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit MotorControllerConfigWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~MotorControllerConfigWindow();
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
-    void sendFrameBatch(const QList<CANFrame> *);
+    void sendCommFrame(const CommFrame *, int);
+    void sendFrameBatch(const QList<CommFrame> *);
 
 private slots:
     void updatedFrames(int numFrames);
@@ -57,9 +57,9 @@ private slots:
 
 private:
     Ui::MotorControllerConfigWindow *ui;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     QTimer timer;
-    CANFrame outFrame;
+    CommFrame outFrame;
     bool doingRequest;
     int transmitStep;
     QList<PARAM> params;

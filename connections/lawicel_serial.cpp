@@ -129,13 +129,13 @@ void LAWICELSerial::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool LAWICELSerial::piSendFrame(const CANFrame& frame)
+bool LAWICELSerial::piSendFrame(const CommFrame& frame)
 {
     QByteArray buffer;
     int c;
     quint32 ID;
 
-    qDebug() << "Sending out lawicel frame on bus " << frame.bus;
+    qDebug() << "Sending out lawicel frame on bus " << frame.getBus();
 
     framesRapid++;
 
@@ -467,7 +467,7 @@ void LAWICELSerial::readSerialData()
     QByteArray data;
     unsigned char c;
     QString debugBuild;
-    CANFrame buildFrame;
+    CommFrame buildFrame;
     QByteArray buildData;
 
     if (serial) data = serial->readAll();
@@ -486,7 +486,7 @@ void LAWICELSerial::readSerialData()
 
             if (useSystemTime)
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                buildFrame.setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
             }
             else
             {
@@ -495,12 +495,12 @@ void LAWICELSerial::readSerialData()
                 {
                     //Four bytes after the end of the data bytes.
                     buildTimestamp = mBuildLine.mid(5 + mBuildLine.mid(4, 1).toInt() * 2, 4).toInt(nullptr, 16) * 1000l;
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
+                    buildFrame.setTimeStamp(CommFrame::TimeStamp(0, buildTimestamp));
                 }
                 else
                 {
                     //Default to system time if timestamps are disabled.
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    buildFrame.setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
             }
 
@@ -509,8 +509,8 @@ void LAWICELSerial::readSerialData()
             case 't': //standard frame
                 //tIIILDD
                 buildFrame.setFrameId(mBuildLine.mid(1, 3).toInt(nullptr, 16));
-                buildFrame.isReceived = true;
-                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildFrame.setReceived(true);
+                buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
                 buildData.resize(mBuildLine.mid(4, 1).toInt());
                 for (int c = 0; c < buildData.size(); c++)
                 {
@@ -520,7 +520,7 @@ void LAWICELSerial::readSerialData()
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
-                    CANFrame* frame_p = getQueue().get();
+                    CommFrame* frame_p = getQueue().get();
                     if(frame_p) {
                         //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
                         /* copy frame */
@@ -536,8 +536,8 @@ void LAWICELSerial::readSerialData()
             case 'T': //extended frame
                 //TIIIIIIIILDD.
                 buildFrame.setFrameId(mBuildLine.mid(1, 8).toInt(nullptr, 16));
-                buildFrame.isReceived = true;
-                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildFrame.setReceived(true);
+                buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
                 buildFrame.setExtendedFrameFormat(true);
                 buildData.resize(mBuildLine.mid(9, 1).toInt());
                 for (int c = 0; c < buildData.size(); c++)
@@ -548,7 +548,7 @@ void LAWICELSerial::readSerialData()
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
-                    CANFrame* frame_p = getQueue().get();
+                    CommFrame* frame_p = getQueue().get();
                     if(frame_p) {
                         //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
                         /* copy frame */
@@ -568,8 +568,8 @@ void LAWICELSerial::readSerialData()
                 //tIIILDD
                 buildFrame.setFlexibleDataRateFormat(true);
                 buildFrame.setFrameId(mBuildLine.mid(1, 3).toInt(nullptr, 16));
-                buildFrame.isReceived = true;
-                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildFrame.setReceived(true);
+                buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
                 buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
                 for (int c = 0; c < buildData.size(); c++)
                 {
@@ -579,7 +579,7 @@ void LAWICELSerial::readSerialData()
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
-                    CANFrame* frame_p = getQueue().get();
+                    CommFrame* frame_p = getQueue().get();
                     if(frame_p) {
                         //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
                         /* copy frame */
@@ -600,8 +600,8 @@ void LAWICELSerial::readSerialData()
                 buildFrame.setFlexibleDataRateFormat(true);
                 buildFrame.setBitrateSwitch(true);
                 buildFrame.setFrameId(mBuildLine.mid(1, 8).toInt(nullptr, 16));
-                buildFrame.isReceived = true;
-                buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
+                buildFrame.setReceived(true);
+                buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
                 buildFrame.setExtendedFrameFormat(true);
                 buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
                 for (int c = 0; c < buildData.size(); c++)
@@ -612,7 +612,7 @@ void LAWICELSerial::readSerialData()
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
-                    CANFrame* frame_p = getQueue().get();
+                    CommFrame* frame_p = getQueue().get();
                     if(frame_p) {
                         //qDebug() << "Lawicel got frame on bus " << frame_p->bus;
                         /* copy frame */

@@ -11,7 +11,7 @@
 //for firmware updates and wouldn't need this specific code. But, it might be able to be turned into a UDS firmware uploader or downloader.
 //Note that this screen is specifically hidden by default because of it's oddball status. You have to re-enable it in mainwindow.cpp to see it.
 
-FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+FirmwareUploaderWindow::FirmwareUploaderWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FirmwareUploaderWindow)
 {
@@ -56,7 +56,7 @@ void FirmwareUploaderWindow::updateProgress()
 
 void FirmwareUploaderWindow::updatedFrames(int numFrames)
 {
-    //CANFrame thisFrame;
+    //CommFrame thisFrame;
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -75,7 +75,7 @@ void FirmwareUploaderWindow::updatedFrames(int numFrames)
     }
 }
 
-void FirmwareUploaderWindow::gotTargettedFrame(CANFrame frame)
+void FirmwareUploaderWindow::gotTargettedFrame(CommFrame frame)
 {
     const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
     int dataLen = frame.payload().length();
@@ -133,12 +133,12 @@ void FirmwareUploaderWindow::timerElapsed()
 
 void FirmwareUploaderWindow::sendFirmwareChunk()
 {
-    CANFrame output;
+    CommFrame output;
     int firmwareLocation = currentSendingPosition * 4;
     int xorByte = 0;
     output.setExtendedFrameFormat(false);
     QByteArray bytes(7,0);
-    output.bus = bus;
+    output.setBus(bus);
     output.setFrameId(baseAddress + 0x16);
     bytes[0] = currentSendingPosition & 0xFF;
     bytes[1] = (currentSendingPosition >> 8) & 0xFF;
@@ -155,9 +155,9 @@ void FirmwareUploaderWindow::sendFirmwareChunk()
 
 void FirmwareUploaderWindow::sendFirmwareEnding()
 {
-    CANFrame output;
+    CommFrame output;
     output.setExtendedFrameFormat(false);
-    output.bus = bus;
+    output.setBus(bus);
     QByteArray bytes(4,0);
     output.setFrameId(baseAddress + 0x30);
     bytes[3] = (char)0xC0;
@@ -165,7 +165,7 @@ void FirmwareUploaderWindow::sendFirmwareEnding()
     bytes[1] = (char)0xFA;
     bytes[0] = (char)0xDE;
     output.setPayload(bytes);
-    //sendCANFrame(output, bus);
+    //sendCommFrame(output, bus);
 }
 
 void FirmwareUploaderWindow::handleStartStopTransfer()
@@ -182,12 +182,12 @@ void FirmwareUploaderWindow::handleStartStopTransfer()
         qDebug() << "Base address: " + QString::number(baseAddress);
         CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x10, 0x7FF, this);
         CANConManager::getInstance()->addTargettedFrame(bus, baseAddress + 0x20, 0x7FF, this);
-        CANFrame output;
+        CommFrame output;
         output.setExtendedFrameFormat(false);
         QByteArray bytes(8,0);
-        output.bus = bus;
+        output.setBus(bus);
         output.setFrameId(baseAddress);
-        output.setFrameType(QCanBusFrame::DataFrame);
+        output.setFrameType(CommFrame::CANDataFrame);
 
         bytes[0] = (char)0xEF;
         bytes[1] = (char)0xBE;

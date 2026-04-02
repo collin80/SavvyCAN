@@ -30,7 +30,7 @@ class DBCMainEditor : public QDialog
     Q_OBJECT
 
 public:
-    explicit DBCMainEditor(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit DBCMainEditor(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~DBCMainEditor();
     void setFileIdx(int idx);
 
@@ -62,7 +62,7 @@ private slots:
 private:
     Ui::DBCMainEditor *ui;
     DBCHandler *dbcHandler;
-    const QVector<CANFrame> *referenceFrames;
+    const QVector<CommFrame> *referenceFrames;
     DBCSignalEditor *sigEditor;
     DBCMessageEditor *msgEditor;
     DBCNodeEditor *nodeEditor;

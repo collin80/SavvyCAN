@@ -23,7 +23,7 @@ static QVector<QString> SCANTYPE_NAMES = {
     QString("Custom UDS"),
 };
 
-UDSScanWindow::UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+UDSScanWindow::UDSScanWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::UDSScanWindow)
 {
@@ -565,7 +565,7 @@ void UDSScanWindow::dumpNode(QTreeWidgetItem* item, QFile *file, int indent)
 
 void UDSScanWindow::sendOnBuses(UDS_MESSAGE test, int buses)
 {
-    test.bus = buses;
+    test.setBus(buses);
     sendingFrames.append(test);
 }
 

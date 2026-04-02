@@ -25,7 +25,7 @@ enum dc
 class SnifferItem
 {
 public:
-    explicit SnifferItem(const CANFrame& pFrame, quint32 seq);
+    explicit SnifferItem(const CommFrame& pFrame, quint32 seq);
     virtual ~SnifferItem();
 
     quint64 getId() const;
@@ -37,7 +37,7 @@ public:
     quint32 getSeqInterval(uchar i) const;
     dc dataChange(uchar) const;
     int elapsed() const;
-    void update(const CANFrame& pFrame, quint32 timeSeq, bool mute);
+    void update(const CommFrame& pFrame, quint32 timeSeq, bool mute);
     void updateMarker();
     void notch(bool);
 

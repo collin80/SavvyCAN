@@ -16,11 +16,11 @@ class FirmwareUploaderWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FirmwareUploaderWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FirmwareUploaderWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~FirmwareUploaderWindow();
 
 public slots:
-    void gotTargettedFrame(CANFrame frame);
+    void gotTargettedFrame(CommFrame frame);
 
 private slots:
     void handleLoadFile();
@@ -43,7 +43,7 @@ private:
     int bus;
     uint32_t token;
     QByteArray firmwareData;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     QTimer *timer;
 };
 

@@ -26,7 +26,7 @@ class FlowViewWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FlowViewWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~FlowViewWindow();
     void showEvent(QShowEvent*);
 
@@ -60,8 +60,8 @@ signals:
 private:
     Ui::FlowViewWindow *ui;
     QList<quint32> foundID;
-    QList<CANFrame> frameCache;
-    const QVector<CANFrame> *modelFrames;
+    QList<CommFrame> frameCache;
+    const QVector<CommFrame> *modelFrames;
     unsigned char refBytes[64];
     unsigned char currBytes[64];
     int triggerValues[64];

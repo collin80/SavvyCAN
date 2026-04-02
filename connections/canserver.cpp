@@ -91,7 +91,7 @@ void CANserver::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool CANserver::piSendFrame(const CANFrame& )
+bool CANserver::piSendFrame(const CommFrame& )
 {
     //We don't support sending frames right now
     return true;
@@ -197,7 +197,7 @@ void CANserver::readNetworkData()
 
         //printf("frameId: %02X, busId: %d, length: %d\n", frameId, busId, length);
         
-        CANFrame* frame_p = getQueue().get();
+        CommFrame* frame_p = getQueue().get();
         if(frame_p)
         {
             frame_p->setFrameId(frameId);
@@ -209,12 +209,12 @@ void CANserver::readNetworkData()
             {
                 busId = 2;
             }
-            frame_p->bus = busId;
+            frame_p->setBus(busId);
             
-            frame_p->setFrameType(QCanBusFrame::DataFrame);
-            frame_p->isReceived = true;
+            frame_p->setFrameType(CommFrame::CANDataFrame);
+            frame_p->setReceived(true);
         
-            frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+            frame_p->setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
 
             frame_p->setPayload(datagram.mid(dataByteLocation, length));
         

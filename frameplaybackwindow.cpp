@@ -24,7 +24,7 @@
  *
 */
 
-FramePlaybackWindow::FramePlaybackWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+FramePlaybackWindow::FramePlaybackWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FramePlaybackWindow)
 {
@@ -287,7 +287,7 @@ void FramePlaybackWindow::loadFilters()
 
 void FramePlaybackWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
 
     if (numFrames == -1) //all frames deleted. Don't care
     {
@@ -551,7 +551,7 @@ void FramePlaybackWindow::btnLoadLive()
     item.filename = "<CAPTURED DATA>";
     item.currentLoopCount = 0;
     item.maxLoops = 1;
-    item.data = QVector<CANFrame>(*modelFrames); //create a copy of the current frames from the main view
+    item.data = QVector<CommFrame>(*modelFrames); //create a copy of the current frames from the main view
     std::sort(item.data.begin(), item.data.end()); //be sure it's all in time based order
     fillIDHash(item);
     if (ui->tblSequence->currentRow() == -1)

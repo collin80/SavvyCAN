@@ -8,7 +8,7 @@
 #define MSG_COL     1
 #define VALUE_COL   2
 
-SignalViewerWindow::SignalViewerWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+SignalViewerWindow::SignalViewerWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::SignalViewerWindow)
 {
@@ -63,7 +63,7 @@ SignalViewerWindow::~SignalViewerWindow()
 
 void SignalViewerWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
 
     if (numFrames == -1) //all frames deleted. Don't care
     {
@@ -88,7 +88,7 @@ void SignalViewerWindow::updatedFrames(int numFrames)
     }
 }
 
-void SignalViewerWindow::processFrame(CANFrame &frame)
+void SignalViewerWindow::processFrame(CommFrame &frame)
 {
     QString sigString;
     DBC_SIGNAL *sig;

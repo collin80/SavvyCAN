@@ -20,7 +20,7 @@ class ScriptingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit ScriptingWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit ScriptingWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     void showEvent(QShowEvent*);
     ~ScriptingWindow();
 
@@ -42,7 +42,7 @@ private slots:
     void reloadScript();
     void recompileScript();
     void changeCurrentScript();
-    void newFrames(const CANConnection*, const QVector<CANFrame>&);
+    void newFrames(const CANConnection*, const QVector<CommFrame>&);
     void clickedLogClear();
     void valuesTimerElapsed();
     void updatedValue(int row, int col);
@@ -58,7 +58,7 @@ private:
     JSEdit *editor;
     QList<ScriptContainer *> scripts;
     ScriptContainer *currentScript;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     QElapsedTimer elapsedTime;
     QTimer valuesTimer;
 };

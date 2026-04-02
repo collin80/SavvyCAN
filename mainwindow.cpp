@@ -41,7 +41,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setWindowTitle("Savvy CAN V" + QString::number(VERSION) + " [Built " + QString(__DATE__) +"]");
 
-    model = new CANFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
+    model = new CommFrameModel(this); // set parent to mainwindow to prevent canframemodel to change thread (might be done by setModel but just in case)
 
     QSortFilterProxyModel* proxyModel = new QSortFilterProxyModel;
     proxyModel->setSourceModel(model);
@@ -145,8 +145,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->canFramesView->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->canFramesView, &QAbstractItemView::customContextMenuRequested, this, &MainWindow::gridContextMenuRequest);
 
-    connect(model, &CANFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
-    connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CANFrameModel::addFrames);
+    connect(model, &CommFrameModel::updatedFiltersList, this, &MainWindow::updateFilterList);
+    connect(CANConManager::getInstance(), &CANConManager::framesReceived, model, &CommFrameModel::addFrames);
     //new implementation for continuous logging
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &MainWindow::logReceivedFrame);
 
@@ -200,11 +200,11 @@ MainWindow::MainWindow(QWidget *parent) :
     //create a temporary frame to be able to capture the correct
     //default height of an item in the table. Need to do this in case
     //of scaling or font differences between different computers.
-    CANFrame temp;
-    temp.bus = 0;
+    CommFrame temp;
+    temp.setBus(0);
     temp.setFrameId(0x100);
-    temp.isReceived = true;
-    temp.setTimeStamp(QCanBusFrame::TimeStamp(0, 100000000));
+    temp.setReceived(true);
+    temp.setTimeStamp(CommFrame::TimeStamp(0, 100000000));
     model->addFrame(temp, true);
     ui->canFramesView->resizeRowToContents(0);      // Resize the row to fit the contents so we get a proper height value
     qApp->processEvents();
@@ -492,8 +492,8 @@ void MainWindow::processSenderCellChange(int line, int col)
         FrameSendData dat;
         dat.enabled = false;
         dat.count = 0;
-        dat.frameCount = 0;
-        dat.bus = 0;
+        dat.setFrameCount(0);
+        dat.setBus(0);
         frameSender->addSendRecord(dat);
         tempData = frameSender->getSendRecordRef(line);
     }
@@ -518,7 +518,7 @@ void MainWindow::processSenderCellChange(int line, int col)
         tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_BUS)->text());
         if (tempVal < -1) tempVal = -1;
         if (tempVal >= numBuses) tempVal = numBuses - 1;
-        tempData->bus = tempVal;
+        tempData->setBus(tempVal);
         qDebug() << "Setting bus to " << tempVal;
         break;
     case SIMP_COL::SC_COL_ID: //ID field
@@ -543,9 +543,9 @@ void MainWindow::processSenderCellChange(int line, int col)
         break;
     case SIMP_COL::SC_COL_REM:
         if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_REM)->checkState() == Qt::Checked) {
-            tempData->setFrameType(QCanBusFrame::RemoteRequestFrame);
+            tempData->setFrameType(CommFrame::RemoteRequestFrame);
         } else {
-            tempData->setFrameType(QCanBusFrame::DataFrame);
+            tempData->setFrameType(CommFrame::CANDataFrame);
         }
         break;
     case SIMP_COL::SC_COL_DATA: //Data bytes
@@ -733,7 +733,7 @@ void MainWindow::gridDoubleClicked(QModelIndex idx)
 {
     qDebug() << "Grid double clicked";
     //grab ID and timestamp and send them away
-    CANFrame frame = model->getListReference()->at(idx.row());
+    CommFrame frame = model->getListReference()->at(idx.row());
     emit sendCenterTimeID(frame.frameId(), frame.timeStamp().microSeconds() / 1000000.0);
 }
 
@@ -955,7 +955,7 @@ void MainWindow::filterClearAll()
     model->setAllFilters(false);
 }
 
-void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CANFrame> frames)
+void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CommFrame> frames)
 {
     Q_UNUSED(conn);
     if (continuousLogging)
@@ -992,7 +992,7 @@ void MainWindow::tickGUIUpdate()
 
         if (continuousLogging)
         {
-//            const QVector<CANFrame> *modelFrames = model->getListReference();
+//            const QVector<CommFrame> *modelFrames = model->getListReference();
 //            FrameFileIO::writeContinuousNative(modelFrames, modelFrames->count() - rxFrames);
 
             continuousLogFlushCounter++;
@@ -1036,7 +1036,7 @@ void MainWindow::gotFrames(int framesSinceLastUpdate)
     emit frameUpdateRapid(framesSinceLastUpdate);
 }
 
-void MainWindow::addFrameToDisplay(CANFrame &frame, bool autoRefresh = false)
+void MainWindow::addFrameToDisplay(CommFrame &frame, bool autoRefresh = false)
 {
     model->addFrame(frame, autoRefresh);
     if (autoRefresh)
@@ -1078,7 +1078,7 @@ void MainWindow::normalizeTiming()
 void MainWindow::handleLoadFile()
 {
     QString filename;
-    QVector<CANFrame> tempFrames;
+    QVector<CommFrame> tempFrames;
 
     QMessageBox::StandardButton confirmDialog;
 
@@ -1122,7 +1122,7 @@ void MainWindow::handleDroppedFile(const QString &filename)
     progress.setMinimumDuration(0);
     progress.show();
     
-    QVector<CANFrame> loadedFrames;
+    QVector<CommFrame> loadedFrames;
     bool loadResult = FrameFileIO::autoDetectLoadFile(filename, &loadedFrames);
     
     progress.cancel();
@@ -1290,11 +1290,11 @@ void MainWindow::handleSaveDecodedMethod(bool csv)
 void MainWindow::saveDecodedTextFileAsColumns(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    const QVector<CANFrame> *frames = model->getFilteredListReference();
+    const QVector<CommFrame> *frames = model->getFilteredListReference();
 
     //const unsigned char *data;
     int dataLen;
-    const CANFrame *frame;
+    const CommFrame *frame;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
@@ -1418,7 +1418,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         //if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
         //else builderString += tr(" Std ");
         //bus
-        builderString += QString::number(frame->bus) + ",";
+        builderString += QString::number(frame->getBus()) + ",";
         dataColumnsAdded++;
         //len
         builderString += QString::number(dataLen) + ",";
@@ -1467,11 +1467,11 @@ Data Bytes: 88 10 00 13 BB 00 06 00
 void MainWindow::saveDecodedTextFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
-    const QVector<CANFrame> *frames = model->getFilteredListReference();
+    const QVector<CommFrame> *frames = model->getFilteredListReference();
 
     const unsigned char *data;
     int dataLen;
-    const CANFrame *frame;
+    const CommFrame *frame;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
         return;
@@ -1491,7 +1491,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         builderString += tr("    ID: ") + Utility::formatCANID(frame->frameId(), frame->hasExtendedFrameFormat());
         if (frame->hasExtendedFrameFormat()) builderString += tr(" Ext ");
         else builderString += tr(" Std ");
-        builderString += tr("Bus: ") + QString::number(frame->bus);
+        builderString += tr("Bus: ") + QString::number(frame->getBus());
         builderString += " Len: " + QString::number(dataLen) + "\n";
         outFile->write(builderString.toUtf8());
 
@@ -1570,7 +1570,7 @@ void MainWindow::updateFileStatus()
     lbStatusFilename.setText(output);
 }
 
-CANFrameModel* MainWindow::getCANFrameModel()
+CommFrameModel* MainWindow::getCommFrameModel()
 {
     return model;
 }
@@ -1626,7 +1626,7 @@ void MainWindow::showTemporalGraphWindow()
     //only create an instance of the object if we dont have one. Otherwise just display the existing one.
     if (!temporalGraphWindow)
     {
-        const QVector<CANFrame> *frames;
+        const QVector<CommFrame> *frames;
         if (!useFiltered)
             frames = model->getListReference();
         else
@@ -1773,8 +1773,8 @@ void MainWindow::showMCConfigWindow()
     if (!motorctrlConfigWindow)
     {
         motorctrlConfigWindow = new MotorControllerConfigWindow(model->getListReference());
-        //connect(motorctrlConfigWindow, SIGNAL(sendCANFrame(const CANFrame*,int)), worker, SLOT(sendFrame(const CANFrame*,int)));
-        //connect(motorctrlConfigWindow, SIGNAL(sendFrameBatch(const QList<CANFrame>*)), worker, SLOT(sendFrameBatch(const QList<CANFrame>*)));
+        //connect(motorctrlConfigWindow, SIGNAL(sendCommFrame(const CommFrame*,int)), worker, SLOT(sendFrame(const CommFrame*,int)));
+        //connect(motorctrlConfigWindow, SIGNAL(sendFrameBatch(const QList<CommFrame>*)), worker, SLOT(sendFrameBatch(const QList<CommFrame>*)));
     }
     motorctrlConfigWindow->show();
 }

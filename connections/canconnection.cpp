@@ -25,7 +25,7 @@ CANConnection::CANConnection(QString pPort,
 {
     /* register types */
     qRegisterMetaType<CANBus>("CANBus");
-    qRegisterMetaType<CANFrame>("CANFrame");
+    qRegisterMetaType<CommFrame>("CommFrame");
     qRegisterMetaType<CANConStatus>("CANConStatus");
     qRegisterMetaType<CANFltObserver>("CANFlt");
 
@@ -169,7 +169,7 @@ void CANConnection::setBusSettings(int pBusIdx, CANBus pBus)
 }
 
 
-bool CANConnection::sendFrame(const CANFrame& pFrame)
+bool CANConnection::sendFrame(const CommFrame& pFrame)
 {
     /* make sure we execute in mThread context */
     if( mThread_p && (mThread_p != QThread::currentThread()) )
@@ -178,11 +178,11 @@ bool CANConnection::sendFrame(const CANFrame& pFrame)
         QMetaObject::invokeMethod(this, "sendFrame",
                                   Qt::BlockingQueuedConnection,
                                   Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(const CANFrame&, pFrame));
+                                  Q_ARG(const CommFrame&, pFrame));
         return ret;
     }
 
-    CANFrame *txFrame;
+    CommFrame *txFrame;
     txFrame = getQueue().get();
     if (txFrame)
     {
@@ -194,7 +194,7 @@ bool CANConnection::sendFrame(const CANFrame& pFrame)
 }
 
 
-bool CANConnection::sendFrames(const QList<CANFrame>& pFrames)
+bool CANConnection::sendFrames(const QList<CommFrame>& pFrames)
 {
     /* make sure we execute in mThread context */
     if( mThread_p && (mThread_p != QThread::currentThread()) )
@@ -203,7 +203,7 @@ bool CANConnection::sendFrames(const QList<CANFrame>& pFrames)
         QMetaObject::invokeMethod(this, "sendFrames",
                                   Qt::BlockingQueuedConnection,
                                   Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(const QList<CANFrame>&, pFrames));
+                                  Q_ARG(const QList<CommFrame>&, pFrames));
         return ret;
     }
 
@@ -260,7 +260,7 @@ QString CANConnection::getDriver()
     return mDriver;
 }
 
-LFQueue<CANFrame>& CANConnection::getQueue() {
+LFQueue<CommFrame>& CANConnection::getQueue() {
     return mQueue;
 }
 
@@ -364,30 +364,30 @@ bool CANConnection::removeAllTargettedFrames(QObject *receiver)
     return true;
 }
 
-void CANConnection::checkTargettedFrame(CANFrame &frame)
+void CANConnection::checkTargettedFrame(CommFrame &frame)
 {
     unsigned int maskedID;
     //qDebug() << "Got frame with ID " << frame.ID << " on bus " << frame.bus;
     if (mBusData.count() == 0) return;
 
-    int bus = frame.bus;
+    int bus = frame.getBus();
     if (bus > (mBusData.length() - 1)) bus = mBusData.length() - 1;
 
     if (mBusData[bus].mTargettedFrames.length() == 0) return;
-    foreach (const CANFltObserver filt, mBusData[frame.bus].mTargettedFrames)
+    foreach (const CANFltObserver filt, mBusData[frame.getBus()].mTargettedFrames)
     {
         //qDebug() << "Checking filter with id " << filt.id << " mask " << filt.mask;
         maskedID = frame.frameId() & filt.mask;
         if (maskedID == filt.id) {
             qDebug() << "In connection object I got a targetted frame. Forwarding it.";
-            QMetaObject::invokeMethod(filt.observer, "gotTargettedFrame",Qt::QueuedConnection, Q_ARG(CANFrame, frame));
+            QMetaObject::invokeMethod(filt.observer, "gotTargettedFrame",Qt::QueuedConnection, Q_ARG(CommFrame, frame));
         }
     }
 }
 
-bool CANConnection::piSendFrames(const QList<CANFrame>& pFrames)
+bool CANConnection::piSendFrames(const QList<CommFrame>& pFrames)
 {
-    foreach(const CANFrame& frame, pFrames)
+    foreach(const CommFrame& frame, pFrames)
     {
         if(!piSendFrame(frame))
             return false;

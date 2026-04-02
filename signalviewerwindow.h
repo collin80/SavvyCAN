@@ -13,7 +13,7 @@ class SignalViewerWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit SignalViewerWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit SignalViewerWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~SignalViewerWindow();
 
 private slots:
@@ -39,9 +39,9 @@ private:
     DBC_MESSAGE *currentlySelectedMsg;
 
     QList<DBC_SIGNAL *> signalList;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
 
-    void processFrame(CANFrame &frame);
+    void processFrame(CommFrame &frame);
 };
 
 #endif // SIGNALVIEWERWINDOW_H

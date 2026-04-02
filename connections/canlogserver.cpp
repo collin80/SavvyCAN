@@ -72,7 +72,7 @@ void CanLogServer::readNetworkData()
                 // Support only normal can message. Extended CAN not supported.
                 if(qstrId.size() <= 4){
                     // Prepare the frame
-                    CANFrame* frame_p = getQueue().get();
+                    CommFrame* frame_p = getQueue().get();
                     // Check for frame existence
                     if(frame_p){
                         // Set frame ID
@@ -80,13 +80,13 @@ void CanLogServer::readNetworkData()
                         // Extended frame NOT SUPPORTED
                         frame_p->setExtendedFrameFormat(0);
                         // Set bus id
-                        frame_p->bus = qstrCanId.toInt();
+                        frame_p->setBus(qstrCanId.toInt());
                         // Set frame type
-                        frame_p->setFrameType(QCanBusFrame::DataFrame);
+                        frame_p->setFrameType(CommFrame::CANDataFrame);
                         // Frame is recived
-                        frame_p->isReceived = true;
+                        frame_p->setReceived(true);
                         // Set timestamp
-                        frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, qstrTs.toULongLong()));
+                        frame_p->setTimeStamp(CommFrame::TimeStamp(0, qstrTs.toULongLong()));
                         // Set payload
                         frame_p->setPayload(QByteArray::fromHex(qstrPayload.toUtf8()));
                         // Elaborate frame
@@ -156,7 +156,7 @@ void CanLogServer::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool CanLogServer::piSendFrame(const CANFrame& )
+bool CanLogServer::piSendFrame(const CommFrame& )
 {
     //We don't support sending frames right now
     return true;

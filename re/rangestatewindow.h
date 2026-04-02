@@ -14,7 +14,7 @@ class RangeStateWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit RangeStateWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit RangeStateWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~RangeStateWindow();
     void showEvent(QShowEvent*);
 
@@ -25,8 +25,8 @@ private slots:
 
 private:
     Ui::RangeStateWindow *ui;
-    const QVector<CANFrame> *modelFrames;
-    QVector<CANFrame> frameCache;
+    const QVector<CommFrame> *modelFrames;
+    QVector<CommFrame> frameCache;
     QList<int64_t> foundSignals;
     QMap<int, bool> idFilters;
 

@@ -22,8 +22,8 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QSettings settings;
 
     qRegisterMetaType<CANBus>("CANBus");
-    qRegisterMetaType<const CANFrame *>("const CANFrame *");
-    qRegisterMetaType<const QList<CANFrame> *>("const QList<CANFrame> *");
+    qRegisterMetaType<const CommFrame *>("const CommFrame *");
+    qRegisterMetaType<const QList<CommFrame> *>("const QList<CommFrame> *");
 
 
     //List of devices with details. None of it can be edited. connection type, serialbus type, port name, number of buses, status

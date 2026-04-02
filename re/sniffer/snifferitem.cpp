@@ -3,7 +3,7 @@
 #include "snifferitem.h"
 
 
-SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
+SnifferItem::SnifferItem(const CommFrame& pFrame, quint32 seq):
     mID(pFrame.frameId())
 {
     const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
@@ -110,7 +110,7 @@ int SnifferItem::elapsed() const
 //timeSeq is stored so we can figure out the last time a specific byte was updated
 //mute is used to specify whether to mask the byte against the notching filter
 //in order to hide any updates of the notched bits. This is toggleable
-void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
+void SnifferItem::update(const CommFrame& pFrame, quint32 timeSeq, bool mute)
 {
     unsigned char maskedCurr, maskedData;
     //qDebug() << "update with ts: " << timeSeq;

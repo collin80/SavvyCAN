@@ -13,7 +13,7 @@
 struct SequenceItem
 {
     QString filename;
-    QVector<CANFrame> data;
+    QVector<CommFrame> data;
     QHash<int, bool> idFilters;
     int maxLoops;
     int currentLoopCount;
@@ -70,7 +70,7 @@ private slots:
     void timerTriggered();
 
 private:
-     QList<CANFrame> sendingBuffer;
+     QList<CommFrame> sendingBuffer;
      SequenceItem *currentSeqItem;
      int currentPosition;
      QTimer *playbackTimer;

@@ -17,7 +17,7 @@ class FrameSenderObject : public QObject
     Q_OBJECT
 
 public:
-    FrameSenderObject(const QVector<CANFrame> *frames);
+    FrameSenderObject(const QVector<CommFrame> *frames);
     ~FrameSenderObject();
 
 public slots:
@@ -47,7 +47,7 @@ private slots:
     void updatedFrames(int);
 
 private:
-    QList<CANFrame> sendingList;
+    QList<CommFrame> sendingList;
     int currentPosition;
     QTimer *sendingTimer;
     QElapsedTimer sendingElapsed;
@@ -55,17 +55,17 @@ private:
     int statusCounter;
     QList<FrameSendData> sendingData;
     QThread*            mThread_p;    
-    QHash<int, CANFrame> frameCache; //hash with frame ID as the key and the most recent frame as the value
-    const QVector<CANFrame> *modelFrames;
+    QHash<int, CommFrame> frameCache; //hash with frame ID as the key and the most recent frame as the value
+    const QVector<CommFrame> *modelFrames;
     bool inhibitChanged = false;
     QMutex mutex;
     DBCHandler *dbcHandler;
 
     void doModifiers(int);
     int fetchOperand(int, ModifierOperand);
-    CANFrame* lookupFrame(int, int);
+    CommFrame* lookupFrame(int, int);
     void buildFrameCache();
-    void processIncomingFrame(CANFrame *frame);
+    void processIncomingFrame(CommFrame *frame);
 
     /**
      * @brief starts the device

@@ -7,7 +7,7 @@
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
 
-DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCLoadSaveWindow)
 {

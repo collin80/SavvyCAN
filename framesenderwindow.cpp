@@ -16,7 +16,7 @@
  * Also, rows default to enabled which is odd because the button state does not reflect that.
 */
 
-FrameSenderWindow::FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+FrameSenderWindow::FrameSenderWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FrameSenderWindow)
 {
@@ -134,7 +134,7 @@ void FrameSenderWindow::createBlankRow()
 
 void FrameSenderWindow::buildFrameCache()
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     frameCache.clear();
     for (int i = 0; i < modelFrames->count(); i++)
     {
@@ -153,7 +153,7 @@ void FrameSenderWindow::buildFrameCache()
 //remember, negative numbers are special -1 = all frames deleted, -2 = totally new set of frames.
 void FrameSenderWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -182,7 +182,7 @@ void FrameSenderWindow::updatedFrames(int numFrames)
     }
 }
 
-void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
+void FrameSenderWindow::processIncomingFrame(CommFrame *frame)
 {
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
@@ -200,7 +200,7 @@ void FrameSenderWindow::processIncomingFrame(CANFrame *frame)
             //qDebug() << "Frame ID: " << frame->frameId();
 
             //Check to see if we have a bus trigger condition and if so does it match
-            if (thisTrigger->bus != frame->bus && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
+            if (thisTrigger->bus != frame->getBus() && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
                 passedChecks = false;
 
             //check to see if we have an ID trigger condition and if so does it match
@@ -475,7 +475,7 @@ void FrameSenderWindow::onCellDoubleTap(int row, int column)
         {
             FrameSendData tempData;
             tempData.enabled = false;
-            tempData.setFrameType(QCanBusFrame::DataFrame);
+            tempData.setFrameType(CommFrame::CANDataFrame);
             tempData.setExtendedFrameFormat(false);
             sendingData.append(tempData);
         }
@@ -645,7 +645,7 @@ void FrameSenderWindow::doModifiers(int idx)
 
 int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 {
-    CANFrame *tempFrame = nullptr;
+    CommFrame *tempFrame = nullptr;
     if (op.ID == 0) //numeric constant
     {
         if (op.notOper) return ~op.databyte;
@@ -674,11 +674,11 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 /// <param name="ID">The ID to find</param>
 /// <param name="bus">Which bus to look on (-1 if you don't care)</param>
 /// <returns></returns>
-CANFrame* FrameSenderWindow::lookupFrame(int ID, int bus)
+CommFrame* FrameSenderWindow::lookupFrame(int ID, int bus)
 {
     if (!frameCache.contains(ID)) return nullptr;
 
-    if (bus == -1 || frameCache[ID].bus == bus) return &frameCache[ID];
+    if (bus == -1 || frameCache[ID].getBus() == bus) return &frameCache[ID];
 
     return nullptr;
 }
@@ -787,7 +787,7 @@ void FrameSenderWindow::processModifierText(int line)
                         secondOp = secondOp.remove(0, 1); //remove the ~ character
                     }
                     else thisOp.second.notOper = false;
-                    thisOp.second.bus = sendingData[line].bus;
+                    thisOp.second.bus = sendingData[line].getBus();
                     thisOp.second.ID = sendingData[line].frameId();
                     parseOperandString(secondOp.split(":"), thisOp.second);
                     thisMod.operations.append(thisOp);
@@ -980,7 +980,7 @@ void FrameSenderWindow::updateGridRow(int idx)
         item->setText(QString::number(temp->count));
     }
 
-    if (temp->frameType() != QCanBusFrame::RemoteRequestFrame)
+    if (temp->frameType() != CommFrame::RemoteRequestFrame)
     {
         for (int i = 0; i < dataLen; i++)
         {
@@ -1009,7 +1009,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
     {
         FrameSendData tempData;
         tempData.enabled = false;
-        tempData.setFrameType(QCanBusFrame::DataFrame);
+        tempData.setFrameType(CommFrame::CANDataFrame);
         tempData.setExtendedFrameFormat(false);
         sendingData.append(tempData);
     }
@@ -1033,7 +1033,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
             tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS)->text());
             if (tempVal < -1) tempVal = -1;
             if (tempVal >= numBuses) tempVal = numBuses - 1;
-            sendingData[line].bus = tempVal;
+            sendingData[line].setBus(tempVal);
             qDebug() << "Setting bus to " << tempVal;
             break;
         case ST_COLS::SENDTAB_COL_ID: //ID field
@@ -1073,9 +1073,9 @@ void FrameSenderWindow::processCellChange(int line, int col)
             break;   
         case ST_COLS::SENDTAB_COL_REM:
             if (ui->tableSender->item(line, SENDTAB_COL_REM)->checkState() == Qt::Checked) {
-                sendingData[line].setFrameType(QCanBusFrame::RemoteRequestFrame);
+                sendingData[line].setFrameType(CommFrame::RemoteRequestFrame);
             } else {
-                sendingData[line].setFrameType(QCanBusFrame::DataFrame);
+                sendingData[line].setFrameType(CommFrame::CANDataFrame);
             }
             break;
         case ST_COLS::SENDTAB_COL_DATA: //Data bytes

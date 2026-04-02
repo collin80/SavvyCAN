@@ -3,7 +3,7 @@
 #include "mainwindow.h"
 #include "helpwindow.h"
 
-DiscreteStateWindow::DiscreteStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+DiscreteStateWindow::DiscreteStateWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DiscreteStateWindow)
 {
@@ -123,7 +123,7 @@ void DiscreteStateWindow::typeChanged()
 
 void DiscreteStateWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
         ui->listID->clear();
@@ -163,7 +163,7 @@ void DiscreteStateWindow::refreshFilterList()
 
     for (int i = 0; i < modelFrames->length(); i++)
     {
-        CANFrame thisFrame = modelFrames->at(i);
+        CommFrame thisFrame = modelFrames->at(i);
         id = thisFrame.frameId();
         if (!idFilters.contains(id))
         {
@@ -273,7 +273,7 @@ void DiscreteStateWindow::handleStartButton()
 
         for (int j = 0; j <= numToggleStates; j++)
         {
-            stateFrames.append(new QVector<CANFrame>());
+            stateFrames.append(new QVector<CommFrame>());
         }
 
         timer->start();
@@ -351,7 +351,7 @@ void DiscreteStateWindow::calculateResults()
         minBits = ui->spinMinBits->value();
         maxBits = ui->spinMaxBits->value();
         QHash<int, bool>::const_iterator it;
-        QList<CANFrame> frameCache;
+        QList<CommFrame> frameCache;
         for (it = idFilters.begin(); it != idFilters.end(); ++it)
         {
             if (it.value())

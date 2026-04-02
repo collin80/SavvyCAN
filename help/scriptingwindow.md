@@ -34,7 +34,7 @@ setup () - If you create a function named setup then it will be called as soon a
 
 tick () - If you registered to receive a periodic tick within your setup function then the script interface will call this function for every tick. You can do whatever you need to periodically do here. But, you get only one tick handler so if you need multiple tick rates you'll have to create a fast tick here and dispatch from this function at different rates yourself.
 
-gotCANFrame (bus, id, len, data) - A callback that will be called whenever a CAN frame comes in that you've registered for. You did register for frames in your setup function didn't you? Well, if you use one of the below callbacks you might not need this one.
+gotCommFrame (bus, id, len, data) - A callback that will be called whenever a CAN frame comes in that you've registered for. You did register for frames in your setup function didn't you? Well, if you use one of the below callbacks you might not need this one.
 
 gotISOTPMessage (bus, id, len, data) - If you are instead looking for ISO-TP messages (which could have been multiple CAN frames in length) then you can create this function and it will automatically be registered with the system. But, you still will need to set which ISO-TP message IDs you want to receive. That is covered later on.
 
@@ -94,7 +94,7 @@ A full example script
         can.sendFrame(0, 0x7E0, 8, [0x0d, 1, 0, 0, 0, 0, 0, 0]);       
     }
 
-    function gotCANFrame (bus, id, len, data)
+    function gotCommFrame (bus, id, len, data)
     {
          var dataBytes = [];
 

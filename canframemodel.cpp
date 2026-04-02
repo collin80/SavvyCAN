@@ -7,7 +7,7 @@
 #include <QSettings>
 #include "utility.h"
 
-CANFrameModel::~CANFrameModel()
+CommFrameModel::~CommFrameModel()
 {
     frames.clear();
     filteredFrames.clear();
@@ -15,7 +15,7 @@ CANFrameModel::~CANFrameModel()
     busFilters.clear();
 }
 
-int CANFrameModel::rowCount(const QModelIndex &parent) const
+int CommFrameModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
     if (filteredFrames.data())
@@ -30,20 +30,20 @@ int CANFrameModel::rowCount(const QModelIndex &parent) const
     return 0;
 }
 
-int CANFrameModel::totalFrameCount()
+int CommFrameModel::totalFrameCount()
 {
     int count;
     count = frames.count();
     return count;
 }
 
-int CANFrameModel::columnCount(const QModelIndex &index) const
+int CommFrameModel::columnCount(const QModelIndex &index) const
 {
     Q_UNUSED(index);
     return (int)Column::NUM_COLUMN;
 }
 
-CANFrameModel::CANFrameModel(QObject *parent)
+CommFrameModel::CommFrameModel(QObject *parent)
     : QAbstractTableModel(parent)
 {
     int maxFramesDefault;
@@ -61,7 +61,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     QSettings settings;
     preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
-    //Each CANFrame object takes up 56 bytes and we're allocating two arrays here so take the
+    //Each CommFrame object takes up 56 bytes and we're allocating two arrays here so take the
     //# of pre-alloc frames and multiply by 112 to get the RAM usage. This is around 1GiB for the default.
 
     //the goal is to prevent a reallocation from ever happening
@@ -85,12 +85,12 @@ CANFrameModel::CANFrameModel(QObject *parent)
     bytesPerLine = 8;
 }
 
-void CANFrameModel::setBytesPerLine(int bpl)
+void CommFrameModel::setBytesPerLine(int bpl)
 {
     bytesPerLine = bpl;
 }
 
-void CANFrameModel::setHexMode(bool mode)
+void CommFrameModel::setHexMode(bool mode)
 {
     if (useHexMode != mode)
     {
@@ -101,7 +101,7 @@ void CANFrameModel::setHexMode(bool mode)
     }
 }
 
-void CANFrameModel::setTimeStyle(TimeStyle newStyle)
+void CommFrameModel::setTimeStyle(TimeStyle newStyle)
 {
     if (timeStyle != newStyle)
     {
@@ -112,7 +112,7 @@ void CANFrameModel::setTimeStyle(TimeStyle newStyle)
     }
 }
 
-void CANFrameModel::setInterpretMode(bool mode)
+void CommFrameModel::setInterpretMode(bool mode)
 {
     //if the state of interpretFrames changes then we need to reset the model
     //so that QT will refresh the view properly
@@ -124,12 +124,12 @@ void CANFrameModel::setInterpretMode(bool mode)
     }
 }
 
-bool CANFrameModel::getInterpretMode()
+bool CommFrameModel::getInterpretMode()
 {
     return interpretFrames;
 }
 
-void CANFrameModel::setTimeFormat(QString format)
+void CommFrameModel::setTimeFormat(QString format)
 {
     Utility::timeFormat = format;
     timeFormat = format;
@@ -137,7 +137,7 @@ void CANFrameModel::setTimeFormat(QString format)
     endResetModel();
 }
 
-void CANFrameModel::setIgnoreDBCColors(bool mode)
+void CommFrameModel::setIgnoreDBCColors(bool mode)
 {
     if(ignoreDBCColors != mode)
     {
@@ -150,7 +150,7 @@ void CANFrameModel::setIgnoreDBCColors(bool mode)
 /*
  * Scan all frames for the smallest timestamp and offset all timestamps so that smallest one is at 0
 */
-void CANFrameModel::normalizeTiming()
+void CommFrameModel::normalizeTiming()
 {
     mutex.lock();
     if (frames.count() == 0) 
@@ -174,20 +174,20 @@ void CANFrameModel::normalizeTiming()
         {
             timeOffset -= prevStamp;
         }
-        frames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, thisStamp));
+        frames[i].setTimeStamp(CommFrame::TimeStamp(0, thisStamp));
     }
 
     this->beginResetModel();
     for (int i = 0; i < filteredFrames.count(); i++)
     {
-        filteredFrames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, filteredFrames[i].timeStamp().microSeconds() - timeOffset));
+        filteredFrames[i].setTimeStamp(CommFrame::TimeStamp(0, filteredFrames[i].timeStamp().microSeconds() - timeOffset));
     }
     this->endResetModel();
 
     mutex.unlock();
 }
 
-void CANFrameModel::setOverwriteMode(bool mode)
+void CommFrameModel::setOverwriteMode(bool mode)
 {
     beginResetModel();
     overwriteDups = mode;
@@ -195,26 +195,26 @@ void CANFrameModel::setOverwriteMode(bool mode)
     endResetModel();
 }
 
-void CANFrameModel::setClearMode(bool mode)
+void CommFrameModel::setClearMode(bool mode)
 {
     filtersPersistDuringClear = mode;
 }
 
-void CANFrameModel::setFilterState(unsigned int ID, bool state)
+void CommFrameModel::setFilterState(unsigned int ID, bool state)
 {
     if (!filters.contains(ID)) return;
     filters[ID] = state;
     sendRefresh();
 }
 
-void CANFrameModel::setBusFilterState(unsigned int BusID, bool state)
+void CommFrameModel::setBusFilterState(unsigned int BusID, bool state)
 {
     if (!busFilters.contains(BusID)) return;
     busFilters[BusID] = state;
     sendRefresh();
 }
 
-void CANFrameModel::setAllFilters(bool state)
+void CommFrameModel::setAllFilters(bool state)
 {
     QMap<int, bool>::iterator it;
     for (it = filters.begin(); it != filters.end(); ++it)
@@ -229,15 +229,15 @@ void CANFrameModel::setAllFilters(bool state)
  * quicksort on the columns and interpret the columns numerically. But, correct or not, this implementation is quite fast
  * and sorts the columns properly.
 */
-uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Column col)
+uint64_t CommFrameModel::getCommFrameVal(QVector<CommFrame> *frames, int row, Column col)
 {
     uint64_t temp = 0;
     if (row >= frames->count()) return 0;
-    CANFrame frame = frames->at(row);
+    CommFrame frame = frames->at(row);
     switch (col)
     {
     case Column::TimeStamp:
-        if (overwriteDups) return frame.timedelta;
+        if (overwriteDups) return frame.getTimeDelta();
         return frame.timeStamp().microSeconds();
     case Column::FrameId:
         return frame.frameId();
@@ -245,14 +245,14 @@ uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Colum
         if (frame.hasExtendedFrameFormat()) return 1;
         return 0;
     case Column::Remote:
-        if (overwriteDups) return frame.frameCount;
-        if (frame.frameType() == QCanBusFrame::RemoteRequestFrame) return 1;
+        if (overwriteDups) return frame.getFrameCount();
+        if (frame.frameType() == CommFrame::RemoteRequestFrame) return 1;
         return 0;
     case Column::Direction:
-        if (frame.isReceived) return 1;
+        if (frame.isReceived()) return 1;
         return 0;
     case Column::Bus:
-        return static_cast<uint64_t>(frame.bus);
+        return static_cast<uint64_t>(frame.getBus());
     case Column::Length:
         return static_cast<uint64_t>(frame.payload().length());
     case Column::ASCII: //sort both the same for now
@@ -266,73 +266,73 @@ uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Colum
     return 0;
 }
 
-void CANFrameModel::qSortCANFrameAsc(QVector<CANFrame> *frames, Column column, int lowerBound, int upperBound)
+void CommFrameModel::qSortCommFrameAsc(QVector<CommFrame> *frames, Column column, int lowerBound, int upperBound)
 {
     int p, i, j;
     qDebug() << "Lower " << lowerBound << " Upper" << upperBound;
     if (lowerBound < upperBound)
     {
-        uint64_t piv = getCANFrameVal(frames, lowerBound + (upperBound - lowerBound) / 2, column);
+        uint64_t piv = getCommFrameVal(frames, lowerBound + (upperBound - lowerBound) / 2, column);
         i = lowerBound - 1;
         j = upperBound + 1;
         for (;;){
             do {
                 i++;
-            } while ((i < upperBound) && getCANFrameVal(frames, i, column) < piv);
+            } while ((i < upperBound) && getCommFrameVal(frames, i, column) < piv);
 
             do
             {
                 j--;
-            } while ((j > lowerBound) && getCANFrameVal(frames, j, column) > piv);
+            } while ((j > lowerBound) && getCommFrameVal(frames, j, column) > piv);
             if (i < j) {
-                CANFrame temp = frames->at(i);
+                CommFrame temp = frames->at(i);
                 frames->replace(i, frames->at(j));
                 frames->replace(j, temp);
             }
             else {p = j; break;}
         }
 
-        qSortCANFrameAsc(frames, column, lowerBound, p);
-        qSortCANFrameAsc(frames, column, p+1, upperBound);
+        qSortCommFrameAsc(frames, column, lowerBound, p);
+        qSortCommFrameAsc(frames, column, p+1, upperBound);
     }
 }
 
-void CANFrameModel::qSortCANFrameDesc(QVector<CANFrame> *frames, Column column, int lowerBound, int upperBound)
+void CommFrameModel::qSortCommFrameDesc(QVector<CommFrame> *frames, Column column, int lowerBound, int upperBound)
 {
     int p, i, j;
     qDebug() << "Lower " << lowerBound << " Upper" << upperBound;
     if (lowerBound < upperBound)
     {
-        uint64_t piv = getCANFrameVal(frames, lowerBound + (upperBound - lowerBound) / 2, column);
+        uint64_t piv = getCommFrameVal(frames, lowerBound + (upperBound - lowerBound) / 2, column);
         i = lowerBound - 1;
         j = upperBound + 1;
         for (;;){
             do {
                 i++;
-            } while ((i < upperBound) && getCANFrameVal(frames, i, column) > piv);
+            } while ((i < upperBound) && getCommFrameVal(frames, i, column) > piv);
 
             do
             {
                 j--;
-            } while ((j > lowerBound) && getCANFrameVal(frames, j, column) < piv);
+            } while ((j > lowerBound) && getCommFrameVal(frames, j, column) < piv);
             if (i < j) {
-                CANFrame temp = frames->at(i);
+                CommFrame temp = frames->at(i);
                 frames->replace(i, frames->at(j));
                 frames->replace(j, temp);
             }
             else {p = j; break;}
         }
 
-        qSortCANFrameDesc(frames, column, lowerBound, p);
-        qSortCANFrameDesc(frames, column, p+1, upperBound);
+        qSortCommFrameDesc(frames, column, lowerBound, p);
+        qSortCommFrameDesc(frames, column, p+1, upperBound);
     }
 }
 
-void CANFrameModel::sortByColumn(int column)
+void CommFrameModel::sortByColumn(int column)
 {
     sortDirAsc = !sortDirAsc;
-    if (sortDirAsc) qSortCANFrameAsc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
-    else qSortCANFrameDesc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
+    if (sortDirAsc) qSortCommFrameAsc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
+    else qSortCommFrameDesc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
 
     mutex.lock();
     beginResetModel();
@@ -342,7 +342,7 @@ void CANFrameModel::sortByColumn(int column)
 
 //End of custom sorting code
 
-void CANFrameModel::recalcOverwrite()
+void CommFrameModel::recalcOverwrite()
 {
     if (!overwriteDups) return; //no need to do a thing if mode is disabled
 
@@ -352,26 +352,26 @@ void CANFrameModel::recalcOverwrite()
     beginResetModel();
 
     //Look at the current list of frames and turn it into just a list of unique IDs
-    QHash<uint64_t, CANFrame> overWriteFrames;
+    QHash<uint64_t, CommFrame> overWriteFrames;
     uint64_t idAugmented; //id in lower 29 bits, bus number shifted up 29 bits
-    foreach(CANFrame frame, frames)
+    foreach(CommFrame frame, frames)
     {
-        if (frame.frameType() != frame.DataFrame) continue;
+        if (frame.frameType() != frame.CANDataFrame) continue;
 
         idAugmented = frame.frameId();
-        idAugmented = idAugmented + (frame.bus << 29ull);
-        if (filters[frame.frameId()] && busFilters[frame.bus])
+        idAugmented = idAugmented + (frame.getBus() << 29ull);
+        if (filters[frame.frameId()] && busFilters[frame.getBus()])
         {
             if (!overWriteFrames.contains(idAugmented))
             {
-                frame.timedelta = 0;
-                frame.frameCount = 1;
+                frame.setTimeDelta(0);
+                frame.setFrameCount(1);
                 overWriteFrames.insert(idAugmented, frame);
             }
             else
             {
-                frame.timedelta = frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds();
-                frame.frameCount = overWriteFrames[idAugmented].frameCount + 1;
+                frame.setTimeDelta(frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds());
+                frame.setFrameCount(overWriteFrames[idAugmented].getFrameCount() + 1);
                 overWriteFrames[idAugmented] = frame;
             }
         }
@@ -397,10 +397,10 @@ void CANFrameModel::recalcOverwrite()
     mutex.unlock();
 }
 
-QVariant CANFrameModel::data(const QModelIndex &index, int role) const
+QVariant CommFrameModel::data(const QModelIndex &index, int role) const
 {
     QString tempString;
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     static bool rowFlip = false;
     QVariant ts;
 
@@ -468,8 +468,8 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             //Reformatting the output a bit with custom code
             if (overwriteDups)
             {
-                if (timeStyle == TS_SECONDS) return QString::number(thisFrame.timedelta / 1000000.0, 'f', 5);
-                return QString::number(thisFrame.timedelta);
+                if (timeStyle == TS_SECONDS) return QString::number(thisFrame.getTimeDelta() / 1000000.0, 'f', 5);
+                return QString::number(thisFrame.getTimeDelta());
             }
             else ts = Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
             if (ts.typeId() == QMetaType::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
@@ -481,13 +481,13 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case Column::Extended:
             return QString::number(thisFrame.hasExtendedFrameFormat());
         case Column::Remote:
-            if (!overwriteDups) return QString::number(thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame);
-            return QString::number(thisFrame.frameCount);
+            if (!overwriteDups) return QString::number(thisFrame.frameType() == CommFrame::RemoteRequestFrame);
+            return QString::number(thisFrame.getFrameCount());
         case Column::Direction:
-            if (thisFrame.isReceived) return QString(tr("Rx"));
+            if (thisFrame.isReceived()) return QString(tr("Rx"));
             return QString(tr("Tx"));
         case Column::Bus:
-            return QString::number(thisFrame.bus);
+            return QString::number(thisFrame.getBus());
         case Column::Length:
             return QString::number(dataLen);
         case Column::ASCII:
@@ -497,7 +497,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(QString::number(thisFrame.frameId() & 0x7));
                 return tempString;
             }
-            if (thisFrame.frameType() == QCanBusFrame::DataFrame) {
+            if (thisFrame.frameType() == CommFrame::CANDataFrame) {
                 if (dataLen < 0) dataLen = 0;
                 //if (dLen > 8) dLen = 8;
                 for (int i = 0; i < dataLen; i++)
@@ -510,7 +510,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                     if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
                 }
             }
-            if (thisFrame.frameType() == QCanBusFrame::ErrorFrame)
+            if (thisFrame.frameType() == CommFrame::ErrorFrame)
             {
                  tempString = "ERROR";
             }
@@ -518,7 +518,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
         case Column::Data:
             if (dataLen < 0) dataLen = 0;
             //if (useHexMode) tempString.append("0x ");
-            if (thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame) {
+            if (thisFrame.frameType() == CommFrame::RemoteRequestFrame) {
                 return tempString;
             }
             for (int i = 0; i < dataLen; i++)
@@ -544,7 +544,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             //TODO: technically the actual returned bytes for an error frame encode some more info. Not interpreting it yet.
 
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
-            if ( (dbcHandler != nullptr) && interpretFrames && (thisFrame.frameType() == thisFrame.DataFrame) )
+            if ( (dbcHandler != nullptr) && interpretFrames && (thisFrame.frameType() == thisFrame.CANDataFrame) )
             {
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != nullptr)
@@ -588,7 +588,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
-QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
+QVariant CommFrameModel::headerData(int section, Qt::Orientation orientation,
                                      int role) const
 {
     if (role != Qt::DisplayRole)
@@ -629,7 +629,7 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
     return QVariant();
 }
 
-bool CANFrameModel::any_filters_are_configured(void)
+bool CommFrameModel::any_filters_are_configured(void)
 {
     for (auto const &val : filters)
     {
@@ -641,7 +641,7 @@ bool CANFrameModel::any_filters_are_configured(void)
     return false;
 }
 
-bool CANFrameModel::any_busfilters_are_configured(void)
+bool CommFrameModel::any_busfilters_are_configured(void)
 {
     for (auto const &val : busFilters)
     {
@@ -654,14 +654,14 @@ bool CANFrameModel::any_busfilters_are_configured(void)
 }
 
 
-void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
+void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
 {
     /*TODO: remove mutex */
     mutex.lock();
-    CANFrame tempFrame;
+    CommFrame tempFrame;
     tempFrame = frame;
 
-    tempFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempFrame.timeStamp().microSeconds() - timeOffset));
+    tempFrame.setTimeStamp(CommFrame::TimeStamp(0, tempFrame.timeStamp().microSeconds() - timeOffset));
 
     lastUpdateNumFrames++;
 
@@ -677,13 +677,13 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     }
 
     //if this BusID isn't found in the busFilters list then add it and show it by default
-    if (!busFilters.contains(tempFrame.bus))
+    if (!busFilters.contains(tempFrame.getBus()))
     {
         // if there are any busFilters already configured, leave the new filter disabled
         if (any_busfilters_are_configured())
-            busFilters.insert(tempFrame.bus, false);
+            busFilters.insert(tempFrame.getBus(), false);
         else
-            busFilters.insert(tempFrame.bus, true);
+            busFilters.insert(tempFrame.getBus(), true);
         needFilterRefresh = true;
     }
 
@@ -693,10 +693,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             frames.append(tempFrame);
 
-            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.getBus()])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-                tempFrame.frameCount = 1;
+                tempFrame.setFrameCount(1);
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
@@ -722,10 +722,10 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 //        }
         for (int i = 0; i < filteredFrames.count(); i++)
         {
-            if ( (filteredFrames[i].frameId() == tempFrame.frameId()) && (filteredFrames[i].bus == tempFrame.bus) )
+            if ( (filteredFrames[i].frameId() == tempFrame.frameId()) && (filteredFrames[i].getBus() == tempFrame.getBus()) )
             {
-                tempFrame.frameCount = filteredFrames[i].frameCount + 1;
-                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - filteredFrames[i].timeStamp().microSeconds();
+                tempFrame.setFrameCount(filteredFrames[i].getFrameCount() + 1);
+                tempFrame.setTimeDelta(tempFrame.timeStamp().microSeconds() - filteredFrames[i].timeStamp().microSeconds());
                 filteredFrames.replace(i, tempFrame);
                 found = true;
                 break;
@@ -735,11 +735,11 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         if (!found)
         {
             //frames.append(tempFrame);
-            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.getBus()])
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-                tempFrame.frameCount = 1;
-                tempFrame.timedelta = 0;
+                tempFrame.setFrameCount(1);
+                tempFrame.setTimeDelta(0);
                 filteredFrames.append(tempFrame);
                 if (autoRefresh) endInsertRows();
             }
@@ -748,7 +748,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
-                if ( (filteredFrames[j].frameId() == tempFrame.frameId()) && (filteredFrames[j].bus == tempFrame.bus) )
+                if ( (filteredFrames[j].frameId() == tempFrame.frameId()) && (filteredFrames[j].getBus() == tempFrame.getBus()) )
                 {
                     if (autoRefresh) beginResetModel();
                     filteredFrames.replace(j, tempFrame);
@@ -762,7 +762,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
 }
 
 
-void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFrames)
+void CommFrameModel::addFrames(const CANConnection*, const QVector<CommFrame>& pFrames)
 {
     if(frames.length() > frames.capacity() * 0.99)
     {
@@ -782,7 +782,7 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
         mutex.unlock();
     }
 
-    foreach(const CANFrame& frame, pFrames)
+    foreach(const CommFrame& frame, pFrames)
     {
         addFrame(frame);
     }
@@ -793,7 +793,7 @@ void CANFrameModel::addFrames(const CANConnection*, const QVector<CANFrame>& pFr
     }
 }
 
-void CANFrameModel::sendRefresh()
+void CommFrameModel::sendRefresh()
 {
     qDebug() << "Sending mass refresh";    
 
@@ -803,11 +803,11 @@ void CANFrameModel::sendRefresh()
     }
     else
     {
-        QVector<CANFrame> tempContainer;
+        QVector<CommFrame> tempContainer;
         int count = frames.count();
         for (int i = 0; i < count; i++)
         {
-            if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
+            if (filters[frames[i].frameId()] && busFilters[frames[i].getBus()])
             {
                 tempContainer.append(frames[i]);
             }
@@ -824,7 +824,7 @@ void CANFrameModel::sendRefresh()
     }
 }
 
-void CANFrameModel::sendRefresh(int pos)
+void CommFrameModel::sendRefresh(int pos)
 {
     beginInsertRows(QModelIndex(), pos, pos);
     endInsertRows();
@@ -833,7 +833,7 @@ void CANFrameModel::sendRefresh(int pos)
 //issue a refresh for the last num entries in the model.
 //used by the serial worker to do batch updates so it doesn't
 //have to send thousands of messages per second
-int CANFrameModel::sendBulkRefresh()
+int CommFrameModel::sendBulkRefresh()
 {
     //int num = filteredFrames.count() - lastUpdateNumFrames;
     if (lastUpdateNumFrames <= 0) return 0;
@@ -852,7 +852,7 @@ int CANFrameModel::sendBulkRefresh()
     return num;
 }
 
-void CANFrameModel::clearFrames()
+void CommFrameModel::clearFrames()
 {
     mutex.lock();
     this->beginResetModel();
@@ -877,7 +877,7 @@ void CANFrameModel::clearFrames()
  * you can't insert frames with it. Instead this function
  * allows for a mass import of frames into the model
  */
-void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
+void CommFrameModel::insertFrames(const QVector<CommFrame> &newFrames)
 {
     //not resetting the model here because the serial worker automatically does a bulk refresh every 1/4 second
     //and that refresh will cause the view to update. If you do both it usually ends up thinking you have
@@ -895,10 +895,10 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
         }
         if (filters[newFrames[i].frameId()])
         {
-            busFilters.insert(newFrames[i].bus, true);
+            busFilters.insert(newFrames[i].getBus(), true);
             needFilterRefresh = true;
         }
-        if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].bus])
+        if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].getBus()])
         {
             insertedFiltered++;
             filteredFrames.append(newFrames[i]);
@@ -912,7 +912,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     if (needFilterRefresh) emit updatedFiltersList();
 }
 
-int CANFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
+int CommFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
 {
     int bestIndex = -1;
     int64_t intTimeStamp = static_cast<int64_t> (timestamp * 1000000l);
@@ -927,7 +927,7 @@ int CANFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
     return bestIndex;
 }
 
-void CANFrameModel::loadFilterFile(QString filename)
+void CommFrameModel::loadFilterFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
     QByteArray line;
@@ -956,7 +956,7 @@ void CANFrameModel::loadFilterFile(QString filename)
     emit updatedFiltersList();
 }
 
-void CANFrameModel::saveFilterFile(QString filename)
+void CommFrameModel::saveFilterFile(QString filename)
 {
     QFile *outFile = new QFile(filename);
 
@@ -975,7 +975,7 @@ void CANFrameModel::saveFilterFile(QString filename)
     outFile->close();
 }
 
-bool CANFrameModel::needsFilterRefresh()
+bool CommFrameModel::needsFilterRefresh()
 {
     bool temp = needFilterRefresh;
     needFilterRefresh = false;
@@ -989,22 +989,22 @@ bool CANFrameModel::needsFilterRefresh()
  * external code that needs to access frames directly and doesn't care about
  * this model's normal output mechanism.
  */
-const QVector<CANFrame>* CANFrameModel::getListReference() const
+const QVector<CommFrame>* CommFrameModel::getListReference() const
 {
     return &frames;
 }
 
-const QVector<CANFrame>* CANFrameModel::getFilteredListReference() const
+const QVector<CommFrame>* CommFrameModel::getFilteredListReference() const
 {
     return &filteredFrames;
 }
 
-const QMap<int, bool>* CANFrameModel::getFiltersReference() const
+const QMap<int, bool>* CommFrameModel::getFiltersReference() const
 {
     return &filters;
 }
 
-const QMap<int, bool>* CANFrameModel::getBusFiltersReference() const
+const QMap<int, bool>* CommFrameModel::getBusFiltersReference() const
 {
     return &busFilters;
 }

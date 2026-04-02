@@ -8,7 +8,7 @@
 #include <QDebug>
 #include <algorithm>
 
-BisectWindow::BisectWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+BisectWindow::BisectWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::BisectWindow)
 {
@@ -180,7 +180,7 @@ void BisectWindow::handleCalculateButton()
         int targetBus = Utility::ParseStringToNum(ui->editBusNum->text());
         for (int i = 0; i < modelFrames->count(); i++)
         {
-            if (modelFrames->at(i).bus == targetBus)
+            if (modelFrames->at(i).getBus() == targetBus)
             {
                 if (saveLower) splitFrames.append(modelFrames->at(i));
             }
@@ -195,8 +195,8 @@ void BisectWindow::handleCalculateButton()
 
 void BisectWindow::handleReplaceButton()
 {
-    CANFrameModel *model;
-    model = MainWindow::getReference()->getCANFrameModel();
+    CommFrameModel *model;
+    model = MainWindow::getReference()->getCommFrameModel();
     model->clearFrames();
     model->insertFrames(splitFrames);
     refreshFrameNumbers();

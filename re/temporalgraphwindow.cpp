@@ -13,7 +13,7 @@ QString HexTicker::getTickLabel (double tick, const QLocale& locale, QChar forma
     return "0x" + QString::number(valu, 16).toUpper().rightJustified(3,'0');
 }
 
-TemporalGraphWindow::TemporalGraphWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+TemporalGraphWindow::TemporalGraphWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::TemporalGraphWindow)
 {
@@ -109,7 +109,7 @@ void TemporalGraphWindow::writeSettings()
 
 void TemporalGraphWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     QVector<double> x, y;
     bool appendedToGraph = false;
     bool needReplot = false;

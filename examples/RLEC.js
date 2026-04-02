@@ -7,7 +7,7 @@ function setup ()
     can.sendFrame(0, 0x7E0, 8, [0x0d, 1, 0, 0, 0, 0, 0, 0]);       
 }
 
-function gotCANFrame (bus, id, len, data)
+function gotCommFrame (bus, id, len, data)
 {
      var dataBytes = [];
 

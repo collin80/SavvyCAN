@@ -12,6 +12,8 @@ public:
     int src;
     int dest;
     int pgn;
+    int dp;
+    int edp;
     int pf;
     int ps;
     int priority;
