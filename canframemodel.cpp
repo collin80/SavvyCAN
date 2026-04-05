@@ -241,12 +241,12 @@ uint64_t CommFrameModel::getCommFrameVal(QVector<CommFrame> *frames, int row, Co
         return frame.timeStamp().microSeconds();
     case Column::FrameId:
         return frame.frameId();
-    case Column::Extended:
-        if (frame.hasExtendedFrameFormat()) return 1;
+    case Column::Type:
+        if (frame.hasExtendedFrameFormat())  temp |= 1;
+        temp = temp | ((int)frame.frameType() * 2);
         return 0;
-    case Column::Remote:
+    case Column::FrameCount:
         if (overwriteDups) return frame.getFrameCount();
-        if (frame.frameType() == CommFrame::RemoteRequestFrame) return 1;
         return 0;
     case Column::Direction:
         if (frame.isReceived()) return 1;
@@ -438,9 +438,9 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
             return Qt::AlignRight;
         case Column::FrameId:
         case Column::Direction:
-        case Column::Extended:
+        case Column::Type:
         case Column::Bus:
-        case Column::Remote:
+        case Column::FrameCount:
         case Column::Length:
             return Qt::AlignHCenter;
         default:
@@ -478,10 +478,34 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
             return Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
-        case Column::Extended:
-            return QString::number(thisFrame.hasExtendedFrameFormat());
-        case Column::Remote:
-            if (!overwriteDups) return QString::number(thisFrame.frameType() == CommFrame::RemoteRequestFrame);
+        case Column::Type:
+            switch (thisFrame.frameType())
+            {
+            case CommFrame::FrameType::CANDataFrame:
+                tempString = "C";
+                break;
+            case CommFrame::FrameType::CANFDDataFrame:
+                tempString = "D";
+                break;
+            case CommFrame::FrameType::FLEXRAYDataFrame:
+                tempString = "F";
+                break;
+            case CommFrame::FrameType::LINDataFrame:
+                tempString = "L";
+                break;
+            case CommFrame::FrameType::ErrorFrame:
+                tempString = "E";
+                break;
+            case CommFrame::FrameType::RemoteRequestFrame:
+                tempString = "R";
+                break;
+            case CommFrame::FrameType::InvalidFrame:
+                tempString = "I";
+                break;
+            }
+            tempString.append(thisFrame.hasExtendedFrameFormat()?'X':' ');
+            return tempString;
+        case Column::FrameCount:
             return QString::number(thisFrame.getFrameCount());
         case Column::Direction:
             if (thisFrame.isReceived()) return QString(tr("Rx"));
@@ -603,10 +627,9 @@ QVariant CommFrameModel::headerData(int section, Qt::Orientation orientation,
             return QString(tr("Timestamp"));
         case Column::FrameId:
             return QString(tr("ID"));
-        case Column::Extended:
-            return QString(tr("Ext"));
-        case Column::Remote:
-            if (!overwriteDups) return QString(tr("RTR"));
+        case Column::Type:
+            return QString(tr("Type"));
+        case Column::FrameCount:
             return QString(tr("Cnt"));
         case Column::Direction:
             return QString(tr("Dir"));

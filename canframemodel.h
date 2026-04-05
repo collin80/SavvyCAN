@@ -14,8 +14,8 @@
 enum class Column {
     TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
     FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
-    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
-    Remote    = 3, ///< True if the frames is a remote frame
+    Type      = 2, ///< Type of packet (CAN, RemoteReq, Err, CANFD, LIN, FlexRay) + X if extended (CAN/FD)
+    FrameCount= 3, ///< Number of frames of this ID that have come in (only when in overwrite mode)
     Direction = 4, ///< Whether the frame was transmitted or received
     Bus       = 5, ///< The bus where the frame was transmitted or received
     Length    = 6, ///< The frames payload data length
