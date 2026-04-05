@@ -166,6 +166,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->tableSimpleSender, SIGNAL(cellChanged(int,int)), this, SLOT(onSenderCellChanged(int,int)));
 
+    //Frame count column should be hidden by default. Only used in overwrite mode
+    ui->canFramesView->hideColumn((int)Column::FrameCount);
+
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     lbHelp.setText(tr("Press F1 on any screen for help"));
     lbHelp.setAlignment(Qt::AlignCenter);
@@ -848,13 +851,16 @@ void MainWindow::overwriteToggled(bool state)
         if (confirmDialog == QMessageBox::Yes)
         {
             model->setOverwriteMode(true);
+            ui->canFramesView->showColumn((int)Column::FrameCount);
         }
         else ui->cbOverwrite->setCheckState(Qt::Unchecked);
+
     }
     else
     {
         rowExpansionActive = false;
         model->setOverwriteMode(false);
+        ui->canFramesView->hideColumn((int)Column::FrameCount);
     }
 }
 

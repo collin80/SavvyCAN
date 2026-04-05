@@ -503,7 +503,7 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 tempString = "I";
                 break;
             }
-            tempString.append(thisFrame.hasExtendedFrameFormat()?'X':' ');
+            if (thisFrame.hasExtendedFrameFormat()) tempString.append('X');
             return tempString;
         case Column::FrameCount:
             return QString::number(thisFrame.getFrameCount());
