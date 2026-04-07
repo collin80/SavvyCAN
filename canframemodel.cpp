@@ -189,10 +189,8 @@ void CommFrameModel::normalizeTiming()
 
 void CommFrameModel::setOverwriteMode(bool mode)
 {
-    beginResetModel();
     overwriteDups = mode;
     recalcOverwrite();
-    endResetModel();
 }
 
 void CommFrameModel::setClearMode(bool mode)
