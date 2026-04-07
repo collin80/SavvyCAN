@@ -17,6 +17,7 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
 
     serial = nullptr;
     isAutoRestart = false;
+    rebuildLocalTimeBasis();
 
     readSettings();
 }
@@ -203,6 +204,13 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
 
 /****************************************************************/
 
+void LAWICELSerial::rebuildLocalTimeBasis()
+{
+    timeBasis = 0;
+    lastHWTimestamp = -1;
+    wrapAdder = 0;
+}
+
 void LAWICELSerial::readSettings()
 {
     QSettings settings;
@@ -253,6 +261,8 @@ void LAWICELSerial::connectDevice()
 void LAWICELSerial::deviceConnected()
 {
     sendDebug("Connecting to LAWICEL Device!");
+
+    rebuildLocalTimeBasis();
 
     QByteArray output;
 
@@ -474,8 +484,6 @@ void LAWICELSerial::readSerialData()
     QByteArray data;
     unsigned char c;
     QString debugBuild;
-    CANFrame buildFrame;
-    QByteArray buildData;
 
     if (serial) data = serial->readAll();
 
@@ -491,41 +499,49 @@ void LAWICELSerial::readSerialData()
         {
             qDebug() << "Got CR!";
 
-            if (useSystemTime)
+            CANFrame buildFrame;
+            QByteArray buildData;
+
+            buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
+            if (!useSystemTime)
             {
-                buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
-            }
-            else
-            {
+                bool isFD = false;
                 char offset;
                 char len_index;
                 switch(mBuildLine[0].toLatin1()) {
-                    case 't':
+                    case 'b':
                     case 'd':
+                        isFD = true;
+                        [[fallthrough]];
+                    case 't':
                         offset = 5;
                         len_index = 4;
-                    break;
-                    case 'T':
+                        break;
+                    case 'B':
                     case 'D':
+                        isFD = true;
+                        [[fallthrough]];
+                    case 'T':
                         offset = 10;
                         len_index = 9;
-                    break;
+                        break;
                     default:
                         offset = 5;
                         len_index = 4;
-                    break;
+                        break;
                 }
-                //If total length is greater than command, header and data, timestamps must be enabled.
-                if (data.length() > (offset + mBuildLine.mid(len_index, 1).toInt() * 2 + 1))
+
+                int dlc = mBuildLine.mid(len_index, 1).toInt();
+                int byteCount = isFD ? (int)dlc_code_to_bytes(dlc) : dlc;
+                int frameStringLen = offset + byteCount * 2;
+                if (mBuildLine.length() > frameStringLen + 1)
                 {
-                    //Four bytes after the end of the data bytes.
-                    buildTimestamp = mBuildLine.mid(offset + mBuildLine.mid(len_index, 1).toInt() * 2, 4).toInt(nullptr, 16);
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, buildTimestamp));
-                }
-                else
-                {
-                    //Default to system time if timestamps are disabled.
-                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    qint64 hardwareMs = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16);
+                    if (lastHWTimestamp >= 0 && hardwareMs < lastHWTimestamp) { wrapAdder += 60000; }
+                    lastHWTimestamp = hardwareMs;
+                    qint64 unwrappedMs = wrapAdder + hardwareMs;
+                    if (timeBasis == 0) { timeBasis = QDateTime::currentMSecsSinceEpoch() - unwrappedMs; }
+                    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, (timeBasis + unwrappedMs) * 1000ll));
                 }
             }
 
