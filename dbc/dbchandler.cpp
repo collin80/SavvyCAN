@@ -669,7 +669,7 @@ bool DBCFile::parseSignalValueTypeLine(QString line)
     if (!match.hasMatch()) { return false; }
     uint32_t id = match.captured(1).toULong() & 0x1FFFFFFFUL;
 
-    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFUL);
+    DBC_MESSAGE *msg = messageHandler->findMsgByID(id);
     if (msg == nullptr) { return false; }
 
     DBC_SIGNAL *thisSignal = msg->sigHandler->findSignalByName(match.captured(2));

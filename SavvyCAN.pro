@@ -279,3 +279,7 @@ helpfiles.path = $$PREFIX/bin/help
 INSTALLS += helpfiles
 
 INSTALLS += target
+
+# undocumented magic to avoid relative filenames in temporary makefiles
+QMAKE_PROJECT_DEPTH = 0
+

@@ -238,7 +238,7 @@ bool DBC_SIGNAL::processAsText(const CommFrame &frame, QString &outString, bool 
         QString buildString;
         int startByte = startBit / 8;
         int bytes = signalSize / 8;
-        for (int x = 0; x < bytes; x++) buildString.append(frame.payload().data()[startByte + x]);
+        for (int x = 0; x < bytes; x++) buildString.append(frame.payload().constData()[startByte + x]);
         outString = buildString;
         cachedValue = outString;
         return true;

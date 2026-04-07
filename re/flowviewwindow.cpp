@@ -724,7 +724,7 @@ void FlowViewWindow::changeID(QString newID)
 
     removeAllGraphs();
     //for (uint32_t c = 0; c < frameCache.at(0).len; c++)
-    for (uint32_t c = 0; c < maxBytes; c++)
+    for (int c = 0; c < maxBytes; c++)
     {
         createGraph(c);
     }
