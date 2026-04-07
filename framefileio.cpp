@@ -1268,8 +1268,8 @@ bool FrameFileIO::saveCRTDFile(QString filename, const QVector<CommFrame>* frame
         outFile.putChar(' ');
 
         outFile.write(QString::number(frame->getBus() + 1).toUtf8());
-        if (frame->isReceived()) outFile->putChar('R');
-        else outFile->putChar('T');
+        if (frame->isReceived()) outFile.putChar('R');
+        else outFile.putChar('T');
 
         if (frame->hasExtendedFrameFormat())
         {
@@ -1878,10 +1878,10 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CommFrame>* f
         //vector seems to keep 10 bytes at the start of the line for the timestamp. It should never exceed this
         //and there should never be a precision over 6 digits after the decimal
         if (tsLen > 3) precision = 9 - tsLen;
-        outFile->write(QString::number((frame->timeStamp().microSeconds() - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
-        outFile->putChar(' ');
-        outFile->write(QString::number(frame->getBus() + 1).toUtf8());
-        outFile->write("  ");
+        outFile.write(QString::number((frame->timeStamp().microSeconds() - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
+        outFile.putChar(' ');
+        outFile.write(QString::number(frame->getBus() + 1).toUtf8());
+        outFile.write("  ");
         if (frames->at(c).hasExtendedFrameFormat())
         {
             outFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
@@ -1894,11 +1894,11 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CommFrame>* f
         }
         outFile.write("   ");
 
-        if (frames->at(c).isReceived()) outFile->write("Rx ");
-        else outFile->write("Tx ");
+        if (frames->at(c).isReceived()) outFile.write("Rx ");
+        else outFile.write("Tx ");
 
-        if (frames->at(c).frameType() == CommFrame::RemoteRequestFrame) outFile->write("r ");
-        else outFile->write("d ");
+        if (frames->at(c).frameType() == CommFrame::RemoteRequestFrame) outFile.write("r ");
+        else outFile.write("d ");
 
         outFile.write(QString::number(dataLen).toUtf8());
         outFile.write("  ");
@@ -2122,10 +2122,10 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CommFrame>* 
         if (frame->hasExtendedFrameFormat()) outFile.write("true,");
         else outFile.write("false,");
 
-        if (frame->isReceived) outFile.write("Rx,");
+        if (frame->isReceived()) outFile.write("Rx,");
         else outFile.write("Tx,");
 
-        outFile.write(QString::number(frame->bus).toUtf8());
+        outFile.write(QString::number(frame->getBus()).toUtf8());
         outFile.putChar(44);
 
         outFile.write(QString::number(dataLen).toUtf8());
@@ -2575,18 +2575,18 @@ bool FrameFileIO::saveLogFile(QString filename, const QVector<CommFrame>* frames
         if (frame->isReceived()) outFile.write(" Rx ");
         else outFile.write(" Tx ");
         // busmaster channel start at 1
-        outFile.write(QString::number(frame->bus + 1).toUtf8() + " ");
+        outFile.write(QString::number(frame->getBus() + 1).toUtf8() + " ");
         outFile.write("0x");
         if (frame->hasExtendedFrameFormat() && frame->frameId() > 0x7FF) {
             outFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
         } else {
             outFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(3, '0').toUtf8());
         }
-        if (frame->hasExtendedFrameFormat()) outFile->write(" x");
-            else outFile->write(" s");
-        if (frame->frameType() == CommFrame::RemoteRequestFrame) outFile->write("r ");
-            else outFile->write(" ");
-        outFile->write(QString::number(dataLen).toUtf8() + " ");
+        if (frame->hasExtendedFrameFormat()) outFile.write(" x");
+            else outFile.write(" s");
+        if (frame->frameType() == CommFrame::RemoteRequestFrame) outFile.write("r ");
+            else outFile.write(" ");
+        outFile.write(QString::number(dataLen).toUtf8() + " ");
 
         if (frame->frameType() != CommFrame::RemoteRequestFrame) {
             for (int temp = 0; temp < dataLen; temp++)
@@ -3019,7 +3019,7 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CommFrame>* frames
                         thisFrame.setTimeStamp(CommFrame::TimeStamp(0, timeStamp));
                         if (tokens[1].at(0) == 'R') thisFrame.setReceived(true);
                             else thisFrame.setReceived(false);
-                        thisFrame.setFrameType(QCanBusFrame::CANDataFrame);
+                        thisFrame.setFrameType(CommFrame::CANDataFrame);
                         thisFrame.setFrameId(static_cast<quint32>( Utility::ParseStringToNum(tokens[2])) );
                         if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
                             else thisFrame.setExtendedFrameFormat(true);
@@ -3090,11 +3090,11 @@ bool FrameFileIO::saveMicrochipFile(QString filename, const QVector<CommFrame>* 
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().length();
 
-        outFile->write(QString::number((frame->timeStamp().microSeconds() / 1000)).toUtf8());
-        if (frame->isReceived()) outFile->write(";RX;");
-        else outFile->write(";TX;");
-        outFile->write("0x" + QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
-        outFile->write(QString::number(dataLen).toUtf8() + ";");
+        outFile.write(QString::number((frame->timeStamp().microSeconds() / 1000)).toUtf8());
+        if (frame->isReceived()) outFile.write(";RX;");
+        else outFile.write(";TX;");
+        outFile.write("0x" + QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8() + ";");
+        outFile.write(QString::number(dataLen).toUtf8() + ";");
 
         for (int temp = 0; temp < dataLen; temp++)
         {
@@ -3378,8 +3378,8 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CommFrame> * f
         outFile.write("#");
 
         if (frame->frameType() == CommFrame::RemoteRequestFrame) {
-            outFile->write("R");
-            outFile->write(QString::number(dataLen).toUtf8());
+            outFile.write("R");
+            outFile.write(QString::number(dataLen).toUtf8());
         } else {
             for (int temp = 0; temp < dataLen; temp++)
             {
@@ -4008,8 +4008,8 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CommFrame>* fra
         outFile.write(QString::number(frame->frameId(), 10).toUpper().toUtf8());
         outFile.putChar(44);
 
-        outFile->write(QString::number(frame->getBus()).toUtf8());
-        outFile->putChar(44);
+        outFile.write(QString::number(frame->getBus()).toUtf8());
+        outFile.putChar(44);
 
         for (int temp = 0; temp < 8; temp++)
         {
