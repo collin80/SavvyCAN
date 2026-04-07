@@ -260,7 +260,7 @@ JSHighlighter::JSHighlighter(QTextDocument *parent)
     //Custom callback functions
     m_customIds << "setup";
     m_customIds << "tick";
-    m_customIds << "gotCANFrame";
+    m_customIds << "gotCommFrame";
     m_customIds << "gotISOTPMessage";
     m_customIds << "gotUDSMessage";
     //Custom functions

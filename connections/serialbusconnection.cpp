@@ -120,14 +120,22 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
+bool SerialBusConnection::piSendFrame(const CommFrame& pFrame)
 {
     /* sanity checks */
-    if(0 != pFrame.bus /*|| pFrame.len>8*/)
+    if(0 != pFrame.getBus() /*|| pFrame.len>8*/)
         return false;
     if (!mDev_p) return false;
 
-    return mDev_p->writeFrame(pFrame);
+    //the CommFrame class is based upon QCanBusFrame so most everything lines up but they are not the same
+    QCanBusFrame frame;
+    frame.setFrameId(pFrame.frameId());
+    frame.setPayload(pFrame.payload());
+    frame.setExtendedFrameFormat(pFrame.hasExtendedFrameFormat());
+    frame.setBitrateSwitch(pFrame.hasBitrateSwitch());
+    frame.setFlexibleDataRateFormat(pFrame.hasFlexibleDataRateFormat());
+
+    return mDev_p->writeFrame(frame);
 }
 
 
@@ -189,31 +197,39 @@ void SerialBusConnection::framesReceived()
         /* check frame */
         //if (recFrame.payload().length() <= 8) {
         if (true) {
-            CANFrame* frame_p = getQueue().get();
+            CommFrame* frame_p = getQueue().get();
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
-                frame_p->bus = 0;
+                frame_p->setBus(0);
                 if (recFrame.frameType() == recFrame.ErrorFrame)
                 {
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId() + 0x20000000ull);
-	            frame_p->isReceived = true;
+                    frame_p->setReceived(true);
                 }
                 else
                 {
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId());
                 }
-                frame_p->setTimeStamp(recFrame.timeStamp());
-                frame_p->setFrameType(recFrame.frameType());
-                frame_p->setError(recFrame.error());
-                /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
-                frame_p->isReceived = !recFrame.hasLocalEcho();
+                //the timestamp structs are identical in theory but the compiler does not know or respect that. Best to regenerate
+                CommFrame::TimeStamp stamp;
+                stamp.fromMicroSeconds(recFrame.timeStamp().seconds() * 1000000ull + recFrame.timeStamp().microSeconds());
+                frame_p->setTimeStamp(stamp);
+
+                //Ditto for error but not frametype. That one is different
+
+                frame_p->setFrameTypeFromQCan(recFrame.frameType());
+
+                //use conversion to and from integer to patch over the difference in structures (there is no practical difference)
+                CommFrame::FrameErrors errs;
+                errs.fromInt(recFrame.error().toInt());
+                frame_p->setError(errs);
 
                 if (useSystemTime) {
-                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    frame_p->setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
-                else frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis));
+                else frame_p->setTimeStamp(CommFrame::TimeStamp(0, (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis));
 
                 checkTargettedFrame(*frame_p);
 

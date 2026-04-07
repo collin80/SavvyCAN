@@ -155,7 +155,7 @@ void FileComparatorWindow::calculateDetails()
     //first we have to fill out the data structures to get ready to do the report
     for (int x = 0; x < interestedFrames.count(); x++)
     {
-        CANFrame frame = interestedFrames.at(x);
+        CommFrame frame = interestedFrames.at(x);
         DBC_MESSAGE *msg = dbcHandler->findMessage(frame.frameId());
         data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
         dataLen = frame.payload().length();
@@ -249,7 +249,7 @@ void FileComparatorWindow::calculateDetails()
 
     for (int x = 0; x < referenceFrames.count(); x++)
     {
-        CANFrame frame = referenceFrames.at(x);
+        CommFrame frame = referenceFrames.at(x);
         DBC_MESSAGE *msg = dbcHandler->findMessage(frame.frameId());
         data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
         dataLen = frame.payload().length();

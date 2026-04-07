@@ -1,5 +1,5 @@
-#ifndef CANFRAMEMODEL_H
-#define CANFRAMEMODEL_H
+#ifndef COMMFRAMEMODEL_H
+#define COMMFRAMEMODEL_H
 
 #include <QAbstractTableModel>
 #include <QList>
@@ -14,8 +14,8 @@
 enum class Column {
     TimeStamp = 0, ///< The timestamp when the frame was transmitted or received
     FrameId   = 1, ///< The frames CAN identifier (Standard: 11 or Extended: 29 bit)
-    Extended  = 2, ///< True if the frames CAN identifier is 29 bit
-    Remote    = 3, ///< True if the frames is a remote frame
+    Type      = 2, ///< Type of packet (CAN, RemoteReq, Err, CANFD, LIN, FlexRay) + X if extended (CAN/FD)
+    FrameCount= 3, ///< Number of frames of this ID that have come in (only when in overwrite mode)
     Direction = 4, ///< Whether the frame was transmitted or received
     Bus       = 5, ///< The bus where the frame was transmitted or received
     Length    = 6, ///< The frames payload data length
@@ -24,13 +24,13 @@ enum class Column {
     NUM_COLUMN
 };
 
-class CANFrameModel: public QAbstractTableModel
+class CommFrameModel: public QAbstractTableModel
 {
     Q_OBJECT
 
 public:
-    CANFrameModel(QObject *parent = 0);
-    virtual ~CANFrameModel();
+    CommFrameModel(QObject *parent = 0);
+    virtual ~CommFrameModel();
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const;
     QVariant data(const QModelIndex &index, int role) const;
@@ -60,30 +60,30 @@ public:
     void normalizeTiming();
     void recalcOverwrite();
     bool needsFilterRefresh();
-    void insertFrames(const QVector<CANFrame> &newFrames);
+    void insertFrames(const QVector<CommFrame> &newFrames);
     void sortByColumn(int column);
     int getIndexFromTimeID(unsigned int ID, double timestamp);
-    const QVector<CANFrame> *getListReference() const; //thou shalt not modify these frames externally!
-    const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
+    const QVector<CommFrame> *getListReference() const; //thou shalt not modify these frames externally!
+    const QVector<CommFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
     const QMap<int, bool> *getBusFiltersReference() const; //this neither
 
 public slots:
-    void addFrame(const CANFrame&, bool);
-    void addFrames(const CANConnection*, const QVector<CANFrame>&);
+    void addFrame(const CommFrame&, bool);
+    void addFrames(const CANConnection*, const QVector<CommFrame>&);
 
 signals:
     void updatedFiltersList();
 
 private:
-    void qSortCANFrameAsc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
-    void qSortCANFrameDesc(QVector<CANFrame>* frames, Column column, int lowerBound, int upperBound);
-    uint64_t getCANFrameVal(QVector<CANFrame> *frames, int row, Column col);
+    void qSortCommFrameAsc(QVector<CommFrame>* frames, Column column, int lowerBound, int upperBound);
+    void qSortCommFrameDesc(QVector<CommFrame>* frames, Column column, int lowerBound, int upperBound);
+    uint64_t getCommFrameVal(QVector<CommFrame> *frames, int row, Column col);
     bool any_filters_are_configured(void);
     bool any_busfilters_are_configured(void);
 
-    QVector<CANFrame> frames;
-    QVector<CANFrame> filteredFrames;
+    QVector<CommFrame> frames;
+    QVector<CommFrame> filteredFrames;
     QMap<int, bool> filters;
     QMap<int, bool> busFilters;
     DBCHandler *dbcHandler;
@@ -104,5 +104,5 @@ private:
 };
 
 
-#endif // CANFRAMEMODEL_H
+#endif // CommFrameMODEL_H
 

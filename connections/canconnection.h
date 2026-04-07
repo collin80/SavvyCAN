@@ -75,7 +75,7 @@ public:
      * @brief getQueue
      * @return the lock free queue of the device
      */
-    LFQueue<CANFrame>& getQueue();
+    LFQueue<CommFrame>& getQueue();
 
     /**
      * @brief getType
@@ -110,7 +110,7 @@ signals:
     /**
      * @brief event sent when a frame matching a filter is received
      */
-    void targettedFrameReceived(CANFrame frame);
+    void targettedFrameReceived(CommFrame frame);
 
     /**
      * @brief event emitted when the CANCon::status of the connection changes (connected->not_connected or the other way round)
@@ -170,7 +170,7 @@ public slots:
      * @return false if parameter is invalid (bus id for instance)
      * @note this calls piSendFrame (in the working thread context if one has been started)
      */
-    bool sendFrame(const CANFrame& pFrame);
+    bool sendFrame(const CommFrame& pFrame);
 
     /**
      * @brief provides device with a list of frames to send
@@ -178,7 +178,7 @@ public slots:
      * @return false if parameter is invalid (bus id for instance)
      * @note this calls piSendFrameBatch (in the working thread context if one has been started)
      */
-    bool sendFrames(const QList<CANFrame>& pFrames);
+    bool sendFrames(const QList<CommFrame>& pFrames);
 
     /**
      * @brief Add a new filter for the targetted frames. If a frame matches it will immediately be sent via the targettedFrameReceived signal
@@ -216,7 +216,7 @@ protected:
     int mSerialSpeed;
 
     //determine if the passed frame is part of a filter or not.
-    void checkTargettedFrame(CANFrame &frame);
+    void checkTargettedFrame(CommFrame &frame);
 
     /**
      * @brief setStatus
@@ -310,7 +310,7 @@ protected:
      * @param pFrame: the frame to send
      * @return false if parameter is invalid (bus id for instance)
      */
-    virtual bool piSendFrame(const CANFrame&) = 0;
+    virtual bool piSendFrame(const CommFrame&) = 0;
 
     /**
      * @brief provides device with a list of frames to send
@@ -318,10 +318,10 @@ protected:
      * @return false if parameter is invalid (bus id for instance)
      * @note implementing this function is optional
      */
-    virtual bool piSendFrames(const QList<CANFrame>&);
+    virtual bool piSendFrames(const QList<CommFrame>&);
 
 private:
-    LFQueue<CANFrame>   mQueue;
+    LFQueue<CommFrame>   mQueue;
     const QString       mPort;
     const QString       mDriver;
     const CANCon::type  mType;

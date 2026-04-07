@@ -19,7 +19,7 @@ https://bitbucket.org/tobylorenz/vector_blf/
 All the code actually below is freshly written but heavily based upon things seen in those
 two source repos.
 */
-bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
+bool BLFHandler::loadBLF(QString filename, QVector<CommFrame>* frames)
 {
     BLF_OBJ_HEADER objHeader;
     QByteArray fileData;
@@ -104,43 +104,43 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
                         if (obj.header.base.objType == BLF_CAN_MSG)
                         {
                             memcpy(&canObject, fileData.constData(), sizeof(BLF_CAN_OBJ));
-                            CANFrame frame;
-                            frame.bus = canObject.channel;
+                            CommFrame frame;
+                            frame.setBus(canObject.channel);
                             frame.setExtendedFrameFormat((canObject.id & 0x80000000ull)?true:false);
                             frame.setFrameId(canObject.id & 0x1FFFFFFFull);
-                            frame.isReceived = true;
+                            frame.setReceived(true);
                             QByteArray bytes(canObject.dlc, 0);
 
                             if (canObject.flags & BLF_REMOTE_FLAG) {
-                                frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                                frame.setFrameType(CommFrame::RemoteRequestFrame);
                             } else {
-                                frame.setFrameType(QCanBusFrame::DataFrame);
+                                frame.setFrameType(CommFrame::CANDataFrame);
                                 for (int i = 0; i < canObject.dlc; i++) bytes[i] = canObject.data[i];
                             }
                             frame.setPayload(bytes);
                             //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
-                            frame.setTimeStamp(QCanBusFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
+                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
                         }
                         else if (obj.header.base.objType == BLF_CAN_MSG2)
                         {
                             memcpy(&canObject2, fileData.constData(), sizeof(BLF_CAN_OBJ2));
-                            CANFrame frame;
-                            frame.bus = canObject2.channel;
+                            CommFrame frame;
+                            frame.setBus(canObject2.channel);
                             frame.setExtendedFrameFormat((canObject2.id & 0x80000000ull)?true:false);
                             frame.setFrameId(canObject2.id & 0x1FFFFFFFull);
-                            frame.isReceived = true;
+                            frame.setReceived(true);
                             QByteArray bytes(canObject2.dlc, 0);
 
                             if (canObject2.flags & BLF_REMOTE_FLAG) {
-                                frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                                frame.setFrameType(CommFrame::RemoteRequestFrame);
                             } else {
-                                frame.setFrameType(QCanBusFrame::DataFrame);
+                                frame.setFrameType(CommFrame::CANDataFrame);
                                 for (int i = 0; i < canObject2.dlc; i++) bytes[i] = canObject2.data[i];
                             }
                             frame.setPayload(bytes);
                             //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
-                            frame.setTimeStamp(QCanBusFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
+                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
                         }
                         else
@@ -168,7 +168,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CANFrame>* frames)
     return true;
 }
 
-bool BLFHandler::saveBLF(QString filename, QVector<CANFrame> *frames)
+bool BLFHandler::saveBLF(QString filename, QVector<CommFrame> *frames)
 {
     Q_UNUSED(filename)
     Q_UNUSED(frames)

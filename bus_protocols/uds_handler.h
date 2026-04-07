@@ -115,11 +115,11 @@ signals:
 
 private:
     QList<ISOTP_MESSAGE> messageBuffer;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     bool isReceiving;
     bool useExtendedAddressing;
 
-    void processFrame(const CANFrame &frame);
+    void processFrame(const CommFrame &frame);
 
     ISOTP_HANDLER *isoHandler;
 };

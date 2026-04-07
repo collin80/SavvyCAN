@@ -22,8 +22,8 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QSettings settings;
 
     qRegisterMetaType<CANBus>("CANBus");
-    qRegisterMetaType<const CANFrame *>("const CANFrame *");
-    qRegisterMetaType<const QList<CANFrame> *>("const QList<CANFrame> *");
+    qRegisterMetaType<const CommFrame *>("const CommFrame *");
+    qRegisterMetaType<const QList<CommFrame> *>("const QList<CommFrame> *");
 
 
     //List of devices with details. None of it can be edited. connection type, serialbus type, port name, number of buses, status
@@ -315,10 +315,21 @@ void ConnectionWindow::handleResetConn()
     type = conn_p->getType();
     port = conn_p->getPort();
     driver = conn_p->getDriver();
-    serSpeed = 0; //TODO: implement these
-    busSpeed = 0;
-    dataRate = 0;
-    canFd = false;
+    serSpeed = conn_p->getSerialSpeed();
+    // For multi-bus devices this grabs bus 0; better than zeroing it out.
+    CANBus bus;
+    if (conn_p->getBusSettings(0, bus))
+    {
+        busSpeed = bus.getSpeed();
+        canFd = bus.isCanFD();
+        dataRate = bus.getDataRate();
+    }
+    else
+    {
+        busSpeed = 0;
+        dataRate = 0;
+        canFd = false;
+    }
 
 
     /* stop and delete connection */

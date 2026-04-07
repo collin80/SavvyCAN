@@ -1,7 +1,7 @@
 #include "framesenderobject.h"
 #include "mainwindow.h"
 
-FrameSenderObject::FrameSenderObject(const QVector<CANFrame> *frames)
+FrameSenderObject::FrameSenderObject(const QVector<CommFrame> *frames)
 {
     mThread_p = new QThread();
 
@@ -219,7 +219,7 @@ void FrameSenderObject::timerTriggered()
 
 void FrameSenderObject::buildFrameCache()
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     frameCache.clear();
     for (int i = 0; i < modelFrames->count(); i++)
     {
@@ -238,7 +238,7 @@ void FrameSenderObject::buildFrameCache()
 //remember, negative numbers are special -1 = all frames deleted, -2 = totally new set of frames.
 void FrameSenderObject::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -267,7 +267,7 @@ void FrameSenderObject::updatedFrames(int numFrames)
     }
 }
 
-void FrameSenderObject::processIncomingFrame(CANFrame *frame)
+void FrameSenderObject::processIncomingFrame(CommFrame *frame)
 {
     for (int sd = 0; sd < sendingData.count(); sd++)
     {
@@ -285,7 +285,7 @@ void FrameSenderObject::processIncomingFrame(CANFrame *frame)
             //qDebug() << "Frame ID: " << frame->frameId();
 
             //Check to see if we have a bus trigger condition and if so does it match
-            if (thisTrigger->bus != frame->bus && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
+            if (thisTrigger->bus != frame->getBus() && (thisTrigger->triggerMask & TriggerMask::TRG_BUS) )
                 passedChecks = false;
 
             //check to see if we have an ID trigger condition and if so does it match
@@ -417,7 +417,7 @@ void FrameSenderObject::doModifiers(int idx)
 
 int FrameSenderObject::fetchOperand(int idx, ModifierOperand op)
 {
-    CANFrame *tempFrame = nullptr;
+    CommFrame *tempFrame = nullptr;
     if (op.ID == 0) //numeric constant
     {
         if (op.notOper) return ~op.databyte;
@@ -446,11 +446,11 @@ int FrameSenderObject::fetchOperand(int idx, ModifierOperand op)
 /// <param name="ID">The ID to find</param>
 /// <param name="bus">Which bus to look on (-1 if you don't care)</param>
 /// <returns></returns>
-CANFrame* FrameSenderObject::lookupFrame(int ID, int bus)
+CommFrame* FrameSenderObject::lookupFrame(int ID, int bus)
 {
     if (!frameCache.contains(ID)) return nullptr;
 
-    if (bus == -1 || frameCache[ID].bus == bus) return &frameCache[ID];
+    if (bus == -1 || frameCache[ID].getBus() == bus) return &frameCache[ID];
 
     return nullptr;
 }

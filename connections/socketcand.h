@@ -46,7 +46,7 @@ protected:
     virtual void piSetBusSettings(int pBusIdx, CANBus pBus);
     virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus);
     virtual void piSuspend(bool pSuspend);
-    virtual bool piSendFrame(const CANFrame&);
+    virtual bool piSendFrame(const CommFrame&);
 
     void disconnectDevice();
 
@@ -74,7 +74,7 @@ protected:
     QList<QString> hostCanIDs;
     int framesRapid;
     QVarLengthArray<MODE> rx_state;
-    CANFrame buildFrame;
+    CommFrame buildFrame;
     QVarLengthArray<QString> unprocessedData;
 };
 

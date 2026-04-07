@@ -15,7 +15,7 @@
  * these days too. It is not maintained any longer as the project it was meant for is abandoned. YMMV.
 */
 
-MotorControllerConfigWindow::MotorControllerConfigWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+MotorControllerConfigWindow::MotorControllerConfigWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MotorControllerConfigWindow)
 {
@@ -50,7 +50,7 @@ MotorControllerConfigWindow::~MotorControllerConfigWindow()
 
 void MotorControllerConfigWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     uint32_t id;
     QTableWidgetItem *item = nullptr;
     if (numFrames == -1) //all frames deleted
@@ -189,7 +189,7 @@ void MotorControllerConfigWindow::timerTick()
 
         outFrame.setFrameId(0xC1);
         QByteArray bytes(8, 0);
-        outFrame.bus = 0;
+        outFrame.setBus(0);
         outFrame.setExtendedFrameFormat(false);
         bytes[0] = params[transmitStep].paramID & 0xFF;
         bytes[1] = (params[transmitStep].paramID >> 8) & 0xFF;
@@ -226,7 +226,7 @@ void MotorControllerConfigWindow::timerTick()
         {
             outFrame.setFrameId(0xC1);
             QByteArray bytes(8, 0);
-            outFrame.bus = 0;
+            outFrame.setBus(0);
             outFrame.setExtendedFrameFormat(false);
             bytes[0] = params[transmitStep].paramID & 0xFF;
             bytes[1] = (params[transmitStep].paramID >> 8) & 0xFF;

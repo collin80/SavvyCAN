@@ -30,7 +30,7 @@ public:
 
 public slots:
     void updatedFrames(int);
-    void rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames);
+    void rapidFrames(const CANConnection* conn, const QVector<CommFrame>& pFrames);
     void frameTimerTick();
 
 signals:
@@ -38,9 +38,9 @@ signals:
 
 private:
     QHash<uint32_t, ISOTP_MESSAGE> messageBuffer;
-    QList<CANFrame> sendingFrames;
+    QList<CommFrame> sendingFrames;
     QList<CANFilter> filters;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     bool useExtendedAddressing;
     bool isReceiving;
     bool waitingForFlow;
@@ -53,6 +53,6 @@ private:
     uint32_t lastSenderBus;
     char padByte;
 
-    void processFrame(const CANFrame &frame);
+    void processFrame(const CommFrame &frame);
     void checkNeedFlush(uint64_t ID);
 };

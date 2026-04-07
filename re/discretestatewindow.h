@@ -27,7 +27,7 @@ class DiscreteStateWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit DiscreteStateWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit DiscreteStateWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~DiscreteStateWindow();
     void showEvent(QShowEvent*);
 
@@ -39,8 +39,8 @@ private slots:
 
 private:
     Ui::DiscreteStateWindow *ui;
-    const QVector<CANFrame> *modelFrames;
-    QList< QVector<CANFrame> *> stateFrames;
+    const QVector<CommFrame> *modelFrames;
+    QList< QVector<CommFrame> *> stateFrames;
     QTimer *timer;
     DiscreteWindowState operatingState;
     int ticksUntilStateChange;

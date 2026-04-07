@@ -16,7 +16,7 @@ class DBCLoadSaveWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit DBCLoadSaveWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~DBCLoadSaveWindow();
 
 private slots:
@@ -39,7 +39,7 @@ private:
     Ui::DBCLoadSaveWindow *ui;
     DBCHandler *dbcHandler;
     DBCFile *currentlyEditingFile;
-    const QVector<CANFrame> *referenceFrames;
+    const QVector<CommFrame> *referenceFrames;
     DBCMainEditor *editorWindow;
     bool inhibitCellProcessing;
 

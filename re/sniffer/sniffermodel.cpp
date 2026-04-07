@@ -53,7 +53,7 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
         return QVariant();
 
     SnifferItem *item = static_cast<SnifferItem*>(index.internalPointer());
-    if(!item) QVariant();
+    if(!item) return QVariant();
 
     int col = index.column();
 
@@ -314,9 +314,9 @@ void SnifferModel::filter(fltType pType, int pId)
 /**********         slots       ****************/
 /***********************************************/
 
-void SnifferModel::update(CANConnection*, QVector<CANFrame>& pFrames)
+void SnifferModel::update(CANConnection*, QVector<CommFrame>& pFrames)
 {
-    foreach(const CANFrame& frame, pFrames)
+    foreach(const CommFrame& frame, pFrames)
     {
         if(!mMap.contains(frame.frameId()))
         {

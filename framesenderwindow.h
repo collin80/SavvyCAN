@@ -35,7 +35,7 @@ class FrameSenderWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FrameSenderWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FrameSenderWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~FrameSenderWindow();
 
 private slots:
@@ -52,8 +52,8 @@ private slots:
 private:
     Ui::FrameSenderWindow *ui;
     QList<FrameSendData> sendingData;
-    QHash<int, CANFrame> frameCache; //hash with frame ID as the key and the most recent frame as the value
-    const QVector<CANFrame> *modelFrames;
+    QHash<int, CommFrame> frameCache; //hash with frame ID as the key and the most recent frame as the value
+    const QVector<CommFrame> *modelFrames;
     QTimer *intervalTimer;
     QElapsedTimer elapsedTimer;
     bool inhibitChanged = false;
@@ -65,7 +65,7 @@ private:
     void createBlankRow();
     void doModifiers(int);
     int fetchOperand(int, ModifierOperand);
-    CANFrame* lookupFrame(int, int);
+    CommFrame* lookupFrame(int, int);
     void processModifierText(int);
     void processTriggerText(int);
     void parseOperandString(QStringList tokens, ModifierOperand&);
@@ -75,7 +75,7 @@ private:
     void updateGridRow(int idx);
     void processCellChange(int line, int col);
     void buildFrameCache();
-    void processIncomingFrame(CANFrame *frame);
+    void processIncomingFrame(CommFrame *frame);
     bool eventFilter(QObject *obj, QEvent *event);
     void setupGrid();
     void finishedTriggerDialog(int result);

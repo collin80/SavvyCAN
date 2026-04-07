@@ -669,7 +669,7 @@ bool DBCFile::parseSignalValueTypeLine(QString line)
     if (!match.hasMatch()) { return false; }
     uint32_t id = match.captured(1).toULong() & 0x1FFFFFFFUL;
 
-    DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFUL);
+    DBC_MESSAGE *msg = messageHandler->findMsgByID(id);
     if (msg == nullptr) { return false; }
 
     DBC_SIGNAL *thisSignal = msg->sigHandler->findSignalByName(match.captured(2));
@@ -2194,11 +2194,11 @@ void DBCHandler::swapFiles(int pos1, int pos2)
  * interpret that frame for you.
  * Returns nullptr if there is no message definition that matches.
 */
-DBC_MESSAGE* DBCHandler::findMessage(const CANFrame &frame)
+DBC_MESSAGE* DBCHandler::findMessage(const CommFrame &frame)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getAssocBus() == -1 || frame.bus == loadedFiles[i].getAssocBus())
+        if (loadedFiles[i].getAssocBus() == -1 || frame.getBus() == loadedFiles[i].getAssocBus())
         {
             DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;

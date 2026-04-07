@@ -29,7 +29,7 @@ QPen FrameInfoWindow::bytePens[64];
 
 const int numIntervalHistBars = 20;
 
-FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+FrameInfoWindow::FrameInfoWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FrameInfoWindow)
 {
@@ -354,7 +354,7 @@ void FrameInfoWindow::updatedFrames(int numFrames)
         bool thisID = false;
         for (int x = modelFrames->count() - numFrames; x < modelFrames->count(); x++)
         {
-            CANFrame thisFrame = modelFrames->at(x);
+            CommFrame thisFrame = modelFrames->at(x);
             int32_t id = static_cast<int32_t>(thisFrame.frameId());
             if (!foundID.contains(id))
             {
@@ -425,7 +425,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         frameCache.clear();
         for (int i = 0; i < modelFrames->count(); i++)
         {
-            CANFrame thisFrame = modelFrames->at(i);
+            CommFrame thisFrame = modelFrames->at(i);
             if (thisFrame.frameId() == static_cast<uint32_t>(targettedID)) frameCache.append(thisFrame);
         }
 
@@ -447,7 +447,9 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             J1939ID jid;
             jid.src = targettedID & 0xFF;
             jid.priority = targettedID >> 26;
-            jid.pgn = (targettedID >> 8) & 0x3FFFF; //18 bits
+            jid.edp = (targettedID >> 25) & 1;
+            jid.dp = (targettedID >> 24) & 1;
+            jid.pgn = (targettedID >> 8) & 0x3FFFF; //18 bits. Includes EDP and DP
             jid.pf = (targettedID >> 16) & 0xFF;
             jid.ps = (targettedID >> 8) & 0xFF;
 
@@ -472,6 +474,14 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             }
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, tr("   SRC: ") + Utility::formatNumber(static_cast<uint64_t>(jid.src)));
+            baseNode->addChild(tempItem);
+
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   EDP: ") + QString::number(jid.edp));
+            baseNode->addChild(tempItem);
+
+            tempItem = new QTreeWidgetItem();
+            tempItem->setText(0, tr("   DP: ") + QString::number(jid.dp));
             baseNode->addChild(tempItem);
 
             tempItem = new QTreeWidgetItem();
@@ -842,7 +852,7 @@ void FrameInfoWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        CANFrame thisFrame = modelFrames->at(i);
+        CommFrame thisFrame = modelFrames->at(i);
         id = (int)thisFrame.frameId();
         if (!foundID.contains(id))
         {

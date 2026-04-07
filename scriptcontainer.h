@@ -27,7 +27,7 @@ public slots:
     void setRxCallback(QJSValue cb);
 
 private slots:
-    void gotTargettedFrame(const CANFrame &frame);
+    void gotTargettedFrame(const CommFrame &frame);
 
 private:
     QList<CANFilter> filters;

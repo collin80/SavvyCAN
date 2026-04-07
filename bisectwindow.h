@@ -13,13 +13,13 @@ class BisectWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit BisectWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit BisectWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~BisectWindow();
     void showEvent(QShowEvent*);
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
-    void sendFrameBatch(const QList<CANFrame> *);
+    void sendCommFrame(const CommFrame *, int);
+    void sendFrameBatch(const QList<CommFrame> *);
 
 private slots:
     void updatedFrames(int numFrames);
@@ -34,8 +34,8 @@ private slots:
 
 private:
     Ui::BisectWindow *ui;
-    const QVector<CANFrame> *modelFrames;
-    QVector<CANFrame> splitFrames;
+    const QVector<CommFrame> *modelFrames;
+    QVector<CommFrame> splitFrames;
     QList<int> foundID;
 
     void refreshIDList();

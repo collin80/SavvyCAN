@@ -81,9 +81,9 @@ public:
     QList<ModifierOp> operations;
 };
 
-//A single line from the data grid. Inherits from CANFrame so it stores a canbus frame
+//A single line from the data grid. Inherits from CommFrame so it stores a canbus frame
 //plus the extra stuff for the data grid
-class FrameSendData : public CANFrame
+class FrameSendData : public CommFrame
 {
 public:
     bool enabled;

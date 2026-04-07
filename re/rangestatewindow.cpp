@@ -5,7 +5,7 @@
 #include "helpwindow.h"
 #include "filterutility.h"
 
-RangeStateWindow::RangeStateWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+RangeStateWindow::RangeStateWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::RangeStateWindow)
 {
@@ -143,7 +143,7 @@ void RangeStateWindow::writeSettings()
 
 void RangeStateWindow::updatedFrames(int numFrames)
 {
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     if (numFrames == -1) //all frames deleted. We don't need to do a thing on this window but erase everything in the filters section
     {
         ui->listFilter->clear();

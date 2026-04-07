@@ -136,15 +136,15 @@ public: //TODO: Clean up this class so that not everything is public. There is o
     QList<DBC_VAL_ENUM_ENTRY> valList;
     DBC_SIGNAL *self;
 
-    bool processAsText(const CANFrame &frame, QString &outString, bool outputName = true, bool outputUnit = true);
-    bool processAsInt(const CANFrame &frame, int32_t &outValue);
-    bool processAsDouble(const CANFrame &frame, double &outValue);
+    bool processAsText(const CommFrame &frame, QString &outString, bool outputName = true, bool outputUnit = true);
+    bool processAsInt(const CommFrame &frame, int32_t &outValue);
+    bool processAsDouble(const CommFrame &frame, double &outValue);
     bool getValueString(int64_t intVal, QString &outString);
     QString makePrettyOutput(double floatVal, int64_t intVal, bool outputName = true, bool isInteger = false, bool outputUnit = true);
-    QString processSignalTree(const CANFrame &frame);
+    QString processSignalTree(const CommFrame &frame);
     DBC_ATTRIBUTE_VALUE *findAttrValByName(QString name);
     DBC_ATTRIBUTE_VALUE *findAttrValByIdx(int idx);
-    bool isSignalInMessage(const CANFrame &frame);
+    bool isSignalInMessage(const CommFrame &frame);
     bool isValueMatchingMultiplex(int val) const;
     int getSimpleMultiplexValue();
 

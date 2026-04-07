@@ -11,7 +11,7 @@
 #include "connections/canconmanager.h"
 #include "helpwindow.h"
 
-ScriptingWindow::ScriptingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+ScriptingWindow::ScriptingWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ScriptingWindow)
 {
@@ -69,7 +69,7 @@ ScriptingWindow::~ScriptingWindow()
 }
 
 
-void ScriptingWindow::newFrames(const CANConnection* pConn, const QVector<CANFrame>& pFrames)
+void ScriptingWindow::newFrames(const CANConnection* pConn, const QVector<CommFrame>& pFrames)
 {
     /*FIXME: name of the probe and bus should be checked */
     Q_UNUSED(pConn);
@@ -77,7 +77,7 @@ void ScriptingWindow::newFrames(const CANConnection* pConn, const QVector<CANFra
 
     /*for (int j = 0; j < scripts.length(); j++)
     {
-        foreach(const CANFrame& frame, pFrames)
+        foreach(const CommFrame& frame, pFrames)
         {
             //scripts[j]->gotFrame(frame);
         }

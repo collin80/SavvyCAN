@@ -21,7 +21,7 @@ class FrameInfoWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FrameInfoWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~FrameInfoWindow();
     void showEvent(QShowEvent*);
 
@@ -40,8 +40,8 @@ private:
     CANDataGrid *heatmap;
 
     QList<int> foundID;
-    QList<CANFrame> frameCache;
-    const QVector<CANFrame> *modelFrames;
+    QList<CommFrame> frameCache;
+    const QVector<CommFrame> *modelFrames;
     bool useOpenGL;
     bool useHexTicker;
     static const QColor byteGraphColors[64];

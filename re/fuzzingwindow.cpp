@@ -8,7 +8,7 @@
 #include "connections/canconmanager.h"
 #include "filterutility.h"
 
-FuzzingWindow::FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+FuzzingWindow::FuzzingWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FuzzingWindow)
 {
@@ -171,7 +171,7 @@ void FuzzingWindow::changedNumDataBytes(int newVal)
 void FuzzingWindow::timerTriggered()
 {
     static uint64_t lastByteUpdate = 0;
-    CANFrame thisFrame;
+    CommFrame thisFrame;
     sendingBuffer.clear();
     //Every 250ms update the text fields to show our progress and what's going on.
     if (QDateTime::currentMSecsSinceEpoch() - lastByteUpdate > 250)
@@ -194,18 +194,18 @@ void FuzzingWindow::timerTriggered()
         thisFrame.setPayload(bytes);
         if (currentID > 0x7FF) thisFrame.setExtendedFrameFormat(true);
         else thisFrame.setExtendedFrameFormat(false);
-        thisFrame.bus = 0; //hard coded for now. TODO: do not hard code        
+        thisFrame.setBus(0); //hard coded for now. TODO: do not hard code
 
         if (buses < (ui->cbBuses->count() - 1))
         {
-            thisFrame.bus = buses;
+            thisFrame.setBus(buses);
             sendingBuffer.append(thisFrame);
         }
         else //fuzz all the buses! HACK THE PLANET! Er, something...
         {
             for (int j = 0; j < ui->cbBuses->count() - 1; j++)
             {
-                thisFrame.bus = j;
+                thisFrame.setBus(j);
                 sendingBuffer.append(thisFrame);
             }
         }
@@ -421,7 +421,7 @@ void FuzzingWindow::refreshIDList()
     int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        CANFrame thisFrame = modelFrames->at(i);
+        CommFrame thisFrame = modelFrames->at(i);
         id = thisFrame.frameId();
         if (!foundIDs.contains(id))
         {

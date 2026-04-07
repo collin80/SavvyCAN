@@ -25,12 +25,12 @@ class FuzzingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit FuzzingWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit FuzzingWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~FuzzingWindow();
 
 signals:
-    void sendCANFrame(const CANFrame *);
-    void sendFrameBatch(const QList<CANFrame> *);
+    void sendCommFrame(const CommFrame *);
+    void sendFrameBatch(const QList<CommFrame> *);
 
 private slots:
     void changePlaybackSpeed(int newSpeed);
@@ -48,11 +48,11 @@ private slots:
 
 private:
     Ui::FuzzingWindow *ui;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     QTimer *fuzzTimer;
     QList<int> foundIDs;
     QList<int> selectedIDs;
-    QList<CANFrame> sendingBuffer;
+    QList<CommFrame> sendingBuffer;
     int startID, endID, currentID, currentIdx;
     bool seqIDScan, rangeIDSelect;
     int bitSequenceType;

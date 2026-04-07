@@ -4,7 +4,7 @@
 #include "helpwindow.h"
 #include "filterutility.h"
 
-ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+ISOTP_InterpreterWindow::ISOTP_InterpreterWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::ISOTP_InterpreterWindow)
 {
@@ -350,8 +350,8 @@ void ISOTP_InterpreterWindow::newISOMessage(ISOTP_MESSAGE msg)
     //ui->tableIsoFrames->setItem(rowNum, 0, (double)msg.timestamp, Utility::formatTimestamp(msg.timestamp)));
     ui->tableIsoFrames->setItem(rowNum, 0, item);
     ui->tableIsoFrames->setItem(rowNum, 1, new QTableWidgetItem(QString::number(msg.frameId(), 16)));
-    ui->tableIsoFrames->setItem(rowNum, 2, new QTableWidgetItem(QString::number(msg.bus)));
-    if (msg.isReceived) ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Rx"));
+    ui->tableIsoFrames->setItem(rowNum, 2, new QTableWidgetItem(QString::number(msg.getBus())));
+    if (msg.isReceived()) ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Rx"));
     else ui->tableIsoFrames->setItem(rowNum, 3, new QTableWidgetItem("Tx"));
     ui->tableIsoFrames->setItem(rowNum, 4, new QTableWidgetItem(QString::number(msg.payload().length())));
 

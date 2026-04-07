@@ -435,7 +435,7 @@ bool NewConnectionDialog::isCanFd()
  {
      if (getConnectionType() == CANCon::LAWICEL)
      {
-         return ui->cbCanFd;
+         return ui->cbCanFd->isChecked();
      }
      else return 0;
  }

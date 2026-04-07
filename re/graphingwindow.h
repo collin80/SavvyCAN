@@ -51,7 +51,7 @@ class GraphingWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit GraphingWindow(const QVector<CANFrame> *, QWidget *parent = 0);
+    explicit GraphingWindow(const QVector<CommFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
     void showEvent(QShowEvent*);
 
@@ -80,7 +80,7 @@ private slots:
     void rescaleToData();
     void toggleFollowMode();
     void addNewGraph();    
-    void appendToGraph(GraphParams &params, CANFrame &frame, QVector<double> &x, QVector<double> &y);
+    void appendToGraph(GraphParams &params, CommFrame &frame, QVector<double> &x, QVector<double> &y);
     void editSelectedGraph();
     void updatedFrames(int);
     void gotCenterTimeID(uint32_t ID, double timestamp);
@@ -94,8 +94,8 @@ signals:
 private:
     Ui::GraphingWindow *ui;
     DBCHandler *dbcHandler;
-    QList<CANFrame> frameCache;
-    const QVector<CANFrame> *modelFrames;
+    QList<CommFrame> frameCache;
+    const QVector<CommFrame> *modelFrames;
     QList<GraphParams> graphParams;
     QPen selectedPen;
     QCPSelectionDecorator *selDecorator;

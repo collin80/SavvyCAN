@@ -9,7 +9,7 @@ const QColor FlowViewWindow::graphColors[8] = {Qt::blue, Qt::green, Qt::black, Q
                                                Qt::gray, Qt::darkYellow, Qt::cyan, Qt::darkMagenta}; //4 5 6 7
 
 
-FlowViewWindow::FlowViewWindow(const QVector<CANFrame> *frames, QWidget *parent) :
+FlowViewWindow::FlowViewWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::FlowViewWindow)
 {
@@ -510,7 +510,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
     const unsigned char *data;
     int dataLen = 0;
 
-    const CANFrame *thisFrame;
+    const CommFrame *thisFrame;
     if (numFrames == -1) //all frames deleted. Kill the display
     {
         ui->listFrameID->clear();
@@ -615,7 +615,7 @@ void FlowViewWindow::createGraph(int byteNum)
     int tempVal;
     double minval = 1000000.0, maxval = -100000.0;
     const unsigned char *data;
-    const CANFrame *frame;
+    const CommFrame *frame;
 
     qDebug() << "Create Graph " << byteNum;
 
@@ -674,7 +674,7 @@ void FlowViewWindow::refreshIDList()
     unsigned int id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
-        CANFrame thisFrame = modelFrames->at(i);
+        CommFrame thisFrame = modelFrames->at(i);
         id = static_cast<unsigned int>(thisFrame.frameId());
         if (!foundID.contains(id))
         {
@@ -707,7 +707,7 @@ void FlowViewWindow::changeID(QString newID)
     int maxBytes = 0;
     for (int x = 0; x < modelFrames->count(); x++)
     {
-        CANFrame thisFrame = modelFrames->at(x);
+        CommFrame thisFrame = modelFrames->at(x);
         if (thisFrame.frameId() == id)
         {
             thisFrame.payload().clear();
@@ -724,7 +724,7 @@ void FlowViewWindow::changeID(QString newID)
 
     removeAllGraphs();
     //for (uint32_t c = 0; c < frameCache.at(0).len; c++)
-    for (uint32_t c = 0; c < maxBytes; c++)
+    for (int c = 0; c < maxBytes; c++)
     {
         createGraph(c);
     }

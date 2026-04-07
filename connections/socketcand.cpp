@@ -150,7 +150,7 @@ void SocketCANd::piSetBusSettings(int pBusIdx, CANBus bus)
 }
 
 
-bool SocketCANd::piSendFrame(const CANFrame& frame)
+bool SocketCANd::piSendFrame(const CommFrame& frame)
 {
     QByteArray buffer;
     int c;
@@ -167,7 +167,7 @@ bool SocketCANd::piSendFrame(const CANFrame& frame)
 //    }
 //    int busNum = frame.bus - busOffset;
 
-    int busNum = frame.bus;
+    int busNum = frame.getBus();
 
     framesRapid++;
 
@@ -298,12 +298,12 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
     }
 
     buildFrame.setFrameId(frameParsed[1].toUInt(nullptr, 16));
-    buildFrame.bus = busNum;
+    buildFrame.setBus(busNum);
 
     if (buildFrame.frameId() > 0x7FF) buildFrame.setExtendedFrameFormat(true);
     else buildFrame.setExtendedFrameFormat(false);
 
-    buildFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
+    buildFrame.setTimeStamp(CommFrame::TimeStamp(0, frameParsed[2].toDouble() * 1000000l));
     //buildFrame.len =  frameParsed[3].length() * 0.5;
 
     int framelength = 0;
@@ -329,12 +329,12 @@ QString SocketCANd::decodeFrames(QString data, int busNum)
     if (!isCapSuspended())
     {
         /* get frame from queue */
-        CANFrame* frame_p = getQueue().get();
+        CommFrame* frame_p = getQueue().get();
         if(frame_p) {
             /* copy frame */
             *frame_p = buildFrame;
             //frame_p->remote = false;
-            frame_p->setFrameType(QCanBusFrame::DataFrame);
+            frame_p->setFrameType(CommFrame::CANDataFrame);
             checkTargettedFrame(buildFrame);
             /* enqueue frame */
             getQueue().queue();

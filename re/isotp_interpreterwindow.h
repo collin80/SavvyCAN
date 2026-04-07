@@ -16,7 +16,7 @@ class ISOTP_InterpreterWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit ISOTP_InterpreterWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit ISOTP_InterpreterWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~ISOTP_InterpreterWindow();
     void showEvent(QShowEvent*);
 
@@ -39,7 +39,7 @@ private:
     ISOTP_HANDLER *decoder;
     UDS_HANDLER *udsDecoder;
 
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     QVector<ISOTP_MESSAGE> messages;
     QHash<int, bool> idFilters;
 

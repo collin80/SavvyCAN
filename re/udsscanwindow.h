@@ -56,7 +56,7 @@ class UDSScanWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit UDSScanWindow(const QVector<CANFrame> *frames, QWidget *parent = 0);
+    explicit UDSScanWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~UDSScanWindow();
 
 private slots:
@@ -85,7 +85,7 @@ private slots:
 
 private:
     Ui::UDSScanWindow *ui;
-    const QVector<CANFrame> *modelFrames;
+    const QVector<CommFrame> *modelFrames;
     UDS_HANDLER *udsHandler;
     QTimer *waitTimer;
     QList<UDS_MESSAGE> sendingFrames;

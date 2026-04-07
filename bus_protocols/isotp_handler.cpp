@@ -12,7 +12,7 @@ ISOTP_HANDLER::ISOTP_HANDLER()
     lastSenderID = 0;
     padByte = (char)0xAA;
 
-    modelFrames = MainWindow::getReference()->getCANFrameModel()->getListReference();
+    modelFrames = MainWindow::getReference()->getCommFrameModel()->getListReference();
 
     connect(&frameTimer, SIGNAL(timeout()), this, SLOT(frameTimerTick()));
 }
@@ -56,8 +56,8 @@ void ISOTP_HANDLER::setReception(bool mode)
 
 void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
 {
-    CANFrame frame;
-    frame.setFrameType(QCanBusFrame::DataFrame);
+    CommFrame frame;
+    frame.setFrameType(CommFrame::CANDataFrame);
     int currByte = 0;
     int sequence = 1; //Initial Sequence number is 1
     if (bus < 0) return;
@@ -66,7 +66,7 @@ void ISOTP_HANDLER::sendISOTPFrame(int bus, int ID, QByteArray data)
     lastSenderID = ID;
     lastSenderBus = bus;
 
-    frame.bus = bus;
+    frame.setBus(bus);
     frame.setFrameId(ID);
     if (ID > 0x7FF) frame.setExtendedFrameFormat(true);
     else frame.setExtendedFrameFormat(false);
@@ -129,14 +129,14 @@ void ISOTP_HANDLER::updatedFrames(int numFrames)
     }
 }
 
-void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFrame>& pFrames)
+void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CommFrame>& pFrames)
 {
     Q_UNUSED(conn)
     if (pFrames.length() <= 0) return;
 
     qDebug() << "received " << QString::number(pFrames.count()) << " messages in ISOTP handler";
 
-    foreach(const CANFrame& thisFrame, pFrames)
+    foreach(const CommFrame& thisFrame, pFrames)
     {
         //only process frames that we've marked are ISOTP frames
         //unless processAll is true
@@ -145,7 +145,7 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
         {
             for (int i = 0; i < filters.count(); i++)
             {
-                if ((thisFrame.bus == filters[i].bus) && ((thisFrame.frameId() & filters[i].mask) == filters[i].ID))
+                if ((thisFrame.getBus() == filters[i].bus) && ((thisFrame.frameId() & filters[i].mask) == filters[i].ID))
                 {
                     processFrame(thisFrame);
                     break;
@@ -156,7 +156,7 @@ void ISOTP_HANDLER::rapidFrames(const CANConnection* conn, const QVector<CANFram
     }
 }
 
-void ISOTP_HANDLER::processFrame(const CANFrame &frame)
+void ISOTP_HANDLER::processFrame(const CommFrame &frame)
 {
     uint64_t ID = frame.frameId();
     int frameType;
@@ -195,11 +195,11 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         if (frameLen > 6 && useExtendedAddressing) return; //impossible
         if (frameLen > 7) return;
 
-        msg.bus = frame.bus;
-        msg.setFrameType(QCanBusFrame::FrameType::DataFrame);
+        msg.setBus(frame.getBus());
+        msg.setFrameType(CommFrame::FrameType::CANDataFrame);
         msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
         msg.setFrameId(ID);
-        msg.isReceived = frame.isReceived;
+        msg.setReceived(frame.isReceived());
         dataBytes.reserve(frameLen);
         msg.reportedLength = frameLen;
         msg.setTimeStamp(frame.timeStamp());
@@ -226,12 +226,12 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         break;
     case 1: //first frame of a multi-frame message
         checkNeedFlush(ID);
-        msg.bus = frame.bus;
+        msg.setBus(frame.getBus());
         if (frame.payload().length() < 8) return; //MUST have all 8 data bytes in this first frame.
         msg.setExtendedFrameFormat( frame.hasExtendedFrameFormat() );
         msg.setFrameId(ID);
         msg.setTimeStamp(frame.timeStamp());
-        msg.isReceived = frame.isReceived;
+        msg.setReceived(frame.isReceived());
         msg.isMultiframe = true;
         frameLen = frameLen << 8;
         if (useExtendedAddressing)
@@ -255,10 +255,10 @@ void ISOTP_HANDLER::processFrame(const CANFrame &frame)
         messageBuffer.insert(msg.frameId(), msg);
         //The sending ID is set to the last ID we used to send from this class which is
         //very likely to be correct. But, caution, there is a chance that it isn't. Beware.
-        if (issueFlowMsgs && lastSenderID > 0 && lastSenderBus==static_cast<uint32_t>(frame.bus))
+        if (issueFlowMsgs && lastSenderID > 0 && lastSenderBus==static_cast<uint32_t>(frame.getBus()))
         {
-            CANFrame outFrame;
-            outFrame.bus = lastSenderBus;
+            CommFrame outFrame;
+            outFrame.setBus(lastSenderBus);
             outFrame.setExtendedFrameFormat(false);
             outFrame.setFrameId(lastSenderID);
             QByteArray bytes(8, 0);
@@ -352,7 +352,7 @@ void ISOTP_HANDLER::checkNeedFlush(uint64_t ID)
 
 void ISOTP_HANDLER::frameTimerTick()
 {
-    CANFrame frame;
+    CommFrame frame;
     if (!waitingForFlow)
     {
         if (!sendingFrames.isEmpty())

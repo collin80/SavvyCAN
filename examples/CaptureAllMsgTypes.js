@@ -9,7 +9,7 @@ function setup ()
 
 }
 
-function gotCANFrame (bus, id, len, data)
+function gotCommFrame (bus, id, len, data)
 {
     host.log("Bus: " + bus + "  id: " + id.toString(16));
 }

@@ -51,7 +51,7 @@ public:
 
 
 public slots:
-    void update(CANConnection*, QVector<CANFrame>&);
+    void update(CANConnection*, QVector<CommFrame>&);
     void notch();
     void unNotch();
 

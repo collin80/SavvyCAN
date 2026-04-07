@@ -64,7 +64,7 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     static QString loadedFileName;
     static MainWindow *getReference();
-    CANFrameModel * getCANFrameModel();
+    CommFrameModel * getCommFrameModel();
     ~MainWindow();
 
     void handleDroppedFile(const QString &filename);
@@ -115,7 +115,7 @@ private slots:
     void interpretToggled(bool);
     void overwriteToggled(bool);
     void presistentFiltersToggled(bool state);
-    void logReceivedFrame(CANConnection*, QVector<CANFrame>);
+    void logReceivedFrame(CANConnection*, QVector<CommFrame>);
     void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
@@ -136,7 +136,7 @@ public slots:
     void updateConnectionSettings(QString connectionType, QString port, int speed0, int speed1);
 
 signals:
-    void sendCANFrame(const CANFrame *, int);
+    void sendCommFrame(const CommFrame *, int);
     void suspendCapturing(bool);
 
     //-1 = frames cleared, -2 = a new file has been loaded (so all frames are different), otherwise # of new frames
@@ -150,7 +150,7 @@ private:
     static MainWindow *selfRef;
 
     //canbus related data
-    CANFrameModel *model;
+    CommFrameModel *model;
     DBCHandler *dbcHandler;
     QByteArray inputBuffer;
     QTimer updateTimer;
@@ -216,7 +216,7 @@ private:
     void handleSaveDecodedMethod(bool csv);
     void saveDecodedTextFile(QString);
     void saveDecodedTextFileAsColumns(QString);
-    void addFrameToDisplay(CANFrame &, bool);
+    void addFrameToDisplay(CommFrame &, bool);
     void updateFileStatus();
     void closeEvent(QCloseEvent *event);
     void killEmAll();
