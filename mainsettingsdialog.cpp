@@ -26,7 +26,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
 
     //update the GUI with all the settings we have stored giving things
     //defaults if nothing was stored (if this is the first time)
-    ui->cbDisplayHex->setChecked(settings.value("Main/UseHex", true).toBool());
+    ui->cbDisplayAsciiDec->setChecked(settings.value("Main/UseAsciiDec", true).toBool());
     ui->cbFlowAutoRef->setChecked(settings.value("FlowView/AutoRef", false).toBool());
     ui->cbHexGraphFlow->setChecked(settings.value("FlowView/GraphHex", false).toBool());
     ui->cbFlowUseTimestamp->setChecked(settings.value("FlowView/UseTimestamp", true).toBool());
@@ -47,8 +47,8 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
 
     ui->cbLoadConnections->setChecked(settings.value("Main/SaveRestoreConnections", false).toBool());
 
-    ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
-    ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", false).toBool());
+    ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->spinFontSize->font().pointSize()).toUInt());
+    ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", true).toBool());
 
     bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
     bool clockMode = settings.value("Main/TimeClock", false).toBool();
@@ -108,7 +108,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->spinBytesPerLine->setValue(settings.value("Main/BytesPerLine", 8).toInt());
 
     //just for simplicity they all call the same function and that function updates all settings at once
-    connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbDisplayAsciiDec, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFlowAutoRef, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFlowUseTimestamp, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbInfoAutoExpand, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -177,7 +177,7 @@ void MainSettingsDialog::updateSettings()
 {
     QSettings settings;
 
-    settings.setValue("Main/UseHex", ui->cbDisplayHex->isChecked());
+    settings.setValue("Main/UseAsciiDec", ui->cbDisplayAsciiDec->isChecked());
     settings.setValue("FlowView/AutoRef", ui->cbFlowAutoRef->isChecked());
     settings.setValue("FlowView/UseTimestamp", ui->cbFlowUseTimestamp->isChecked());
     settings.setValue("FlowView/GraphHex", ui->cbHexGraphFlow->isChecked());

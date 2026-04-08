@@ -161,7 +161,7 @@ private:
     int framesPerSec;
     int rxFrames;
     bool inhibitFilterUpdate;
-    bool useHex;
+    bool UseAsciiDec;
     bool allowCapture;
     bool ignoreDBCColors;
     bool CSVAbsTime;

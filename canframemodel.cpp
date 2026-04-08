@@ -75,7 +75,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     interpretFrames = false;
     overwriteDups = false;
     filtersPersistDuringClear = false;
-    useHexMode = true;
+    useAsciiDec = true;
     timeStyle = TS_MICROS;
     timeOffset = 0;
     needFilterRefresh = false;
@@ -90,13 +90,13 @@ void CANFrameModel::setBytesPerLine(int bpl)
     bytesPerLine = bpl;
 }
 
-void CANFrameModel::setHexMode(bool mode)
+void CANFrameModel::setUseAsciiDec(bool mode)
 {
-    if (useHexMode != mode)
+    if (useAsciiDec != mode)
     {
         this->beginResetModel();
-        useHexMode = mode;
-        Utility::decimalMode = !useHexMode;
+        useAsciiDec = mode;
+        Utility::decimalMode = useAsciiDec;
         this->endResetModel();
     }
 }
@@ -476,20 +476,27 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
             if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
             if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
             return Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
+
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
+
         case Column::Extended:
             return QString::number(thisFrame.hasExtendedFrameFormat());
+
         case Column::Remote:
             if (!overwriteDups) return QString::number(thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame);
             return QString::number(thisFrame.frameCount);
+
         case Column::Direction:
             if (thisFrame.isReceived) return QString(tr("Rx"));
             return QString(tr("Tx"));
+
         case Column::Bus:
             return QString::number(thisFrame.bus);
+
         case Column::Length:
             return QString::number(dataLen);
+
         case Column::ASCII:
             if (thisFrame.frameId() >= 0x7FFFFFF0ull)
             {
@@ -497,37 +504,57 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(QString::number(thisFrame.frameId() & 0x7));
                 return tempString;
             }
+
             if (thisFrame.frameType() == QCanBusFrame::DataFrame) {
                 if (dataLen < 0) dataLen = 0;
-                //if (dLen > 8) dLen = 8;
-                for (int i = 0; i < dataLen; i++)
+                
+                if (useAsciiDec)
                 {
-                    char byt = thisFrame.payload()[i];
-                    //0x20 through 0x7E are printable characters. Outside of that range they aren't. So use dots instead
-                    if (byt < 0x20) byt = 0x2E; //dot character
-                    if (byt > 0x7E) byt = 0x2E;
-                    tempString.append(QString::fromUtf8(&byt, 1));
-                    if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
+                    for (int i = 0; i < dataLen; i++)
+                    {
+                        tempString.append(QString::number(data[i], 10).rightJustified(3, ' '));
+
+                        (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) ? 
+                            tempString.append("\n") : tempString.append(" ");
+                    }
+                } else {
+                    // classic ascii mode, non-printable characters are dots, and bytesPerLine determines when to wrap to a new line
+                    for (int i = 0; i < dataLen; i++)
+                    {
+                        char byt = thisFrame.payload()[i];
+                        //0x20 through 0x7E are printable characters. Outside of that range they aren't. So use dots instead
+                        if (byt < 0x20) byt = 0x2E; //dot character
+                        if (byt > 0x7E) byt = 0x2E;
+                        tempString.append(QString::fromUtf8(&byt, 1));
+                        if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
+                    }
                 }
             }
+
             if (thisFrame.frameType() == QCanBusFrame::ErrorFrame)
             {
                  tempString = "ERROR";
             }
             return tempString;
+
         case Column::Data:
+
             if (dataLen < 0) dataLen = 0;
-            //if (useHexMode) tempString.append("0x ");
+
             if (thisFrame.frameType() == QCanBusFrame::RemoteRequestFrame) {
                 return tempString;
             }
-            for (int i = 0; i < dataLen; i++)
-            {
-                if (useHexMode) tempString.append( QString::number(data[i], 16).toUpper().rightJustified(2, '0'));
-                else tempString.append(QString::number(data[i], 10));
-                if (!((i+1) % bytesPerLine) && (i != (dataLen - 1))) tempString.append("\n");
-                else tempString.append(" ");
+
+            for (int i = 0; i < dataLen; i++) {
+
+                tempString.append( QString::number(data[i], 16).toUpper().rightJustified(2, '0'));
+
+                if (!((i+1) % bytesPerLine) && (i != (dataLen - 1)))
+                    tempString.append("\n");
+                else
+                    tempString.append(" ");
             }
+
             if (thisFrame.frameType() == thisFrame.ErrorFrame)
             {
                 if (thisFrame.error() & thisFrame.TransmissionTimeoutError) tempString.append("\nTX Timeout");
@@ -577,8 +604,9 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 }
             }
             return tempString;
-        default:
-            return tempString;
+
+            default:
+                return tempString;
         }
     }
 
@@ -612,7 +640,7 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         case Column::Length:
             return QString(tr("Len"));
         case Column::ASCII:
-            return QString(tr("ASCII"));
+            return QString(useAsciiDec ? tr("Decimal") : tr("ASCII"));
         case Column::Data:
             return QString(tr("Data"));
         default:
