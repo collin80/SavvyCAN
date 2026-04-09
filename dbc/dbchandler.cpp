@@ -1335,7 +1335,7 @@ bool DBCFile::saveFile(QString fileName)
     int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput, extMultiplexOutput;
-    QString defaultsOutput, attrValOutput;
+    QString defaultsOutput, attrValOutput, sigValTypeOutput;
     bool hasExtendedMultiplexing = false;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
@@ -1503,16 +1503,10 @@ bool DBCFile::saveFile(QString fileName)
                 else msgOutput.append("0+");
                 break;
             case SIGNED_INT:
+            case SP_FLOAT:
+            case DP_FLOAT:
                 if (sig->intelByteOrder) msgOutput.append("1-");
                 else msgOutput.append("0-");
-                break;
-            case SP_FLOAT:
-                if (sig->intelByteOrder) msgOutput.append("5-");
-                else msgOutput.append("2-");
-                break;
-            case DP_FLOAT:
-                if (sig->intelByteOrder) msgOutput.append("6-");
-                else msgOutput.append("3-");
                 break;
             case STRING:
                 msgOutput.append("4-");
@@ -1524,6 +1518,8 @@ bool DBCFile::saveFile(QString fileName)
             msgOutput.append(" (" + QString::number(sig->factor) + "," + QString::number(sig->bias) + ") [" +
                              QString::number(sig->min) + "|" + QString::number(sig->max) + "] \"" + sig->unitName
                              + "\" " + sig->receiver->name + "\n");
+            if (sig->valType == SP_FLOAT || sig->valType == DP_FLOAT)
+                sigValTypeOutput.append("SIG_VALTYPE_ " + QString::number(ID) + " " + sig->name + " : " + QString::number(sig->valType == SP_FLOAT ? 1 : 2) + ";\n");
             if (sig->comment.length() > 0)
             {
                 commentsOutput.append("CM_ SG_ " + QString::number(ID) + " " + sig->name + " \"" + sig->comment + "\";\n");
@@ -1678,11 +1674,14 @@ bool DBCFile::saveFile(QString fileName)
     outFile->write(attrValOutput.toUtf8());    
     outFile->write(valuesOutput.toUtf8());
     outFile->write(extMultiplexOutput.toUtf8());
+    if (!sigValTypeOutput.isEmpty())
+        outFile->write(sigValTypeOutput.toUtf8());
 
     attrValOutput.clear();
     defaultsOutput.clear();
     valuesOutput.clear();
     extMultiplexOutput.clear();
+    sigValTypeOutput.clear();
 
     outFile->close();
     delete outFile;

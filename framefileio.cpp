@@ -1613,16 +1613,6 @@ bool FrameFileIO::isCanalyzerASC(QString filename)
             line = inFile.readLine();
             if (!line.startsWith("base")) isMatch = false;
         }
-        if (!inFile.atEnd() && isMatch)
-        {
-            line = inFile.readLine();
-            if (!line.contains("logged")) isMatch = false;
-        }
-        if (!inFile.atEnd() && isMatch)
-        {
-            line = inFile.readLine();
-            if (!line.contains("version")) isMatch = false;
-        }
     }
     catch (...)
     {
@@ -2027,12 +2017,9 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
             {
                 if (tokens[0].length() > 3)
                 {
-                    qint64 ts = tokens[0].toLongLong();
-                    //this next line somewhat hamfistedly fixes a bug where older versions of savvycan would save captures
-                    //with negative timestamps if you use system clock mode. With this line you'll at least get timestamps
-                    //though they won't be correlated to the system clock any longer.
-                    //if (ts < 0) ts = (ts & 0xFFFFFFFFFFFFFF); //mask off top byte
-                    thisFrame.setTimeStamp(CommFrame::TimeStamp(0, ts));
+                    quint64 tstamp = tokens[0].toULongLong();
+                    if (tstamp == 0) tstamp = (quint64)(tokens[0].toLongLong());
+                    thisFrame.setTimeStamp(CommFrame::TimeStamp(0, tstamp));
                 }
                 else
                 {

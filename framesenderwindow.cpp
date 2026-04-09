@@ -158,6 +158,7 @@ void FrameSenderWindow::buildFrameCache()
 void FrameSenderWindow::updatedFrames(int numFrames)
 {
     CommFrame thisFrame;
+
     if (numFrames == -1) //all frames deleted.
     {
     }
@@ -561,7 +562,6 @@ void FrameSenderWindow::handleTick()
             {
                 trigger = &sendData->triggers[j];
                 if (trigger->maxCount > 0 && trigger->currCount >= trigger->maxCount) continue; //don't process if we've sent max frames we were supposed to
-
                 if (!trigger->readyCount) continue; //don't tick if not ready to tick
                 qDebug() << "Primed to fire";
                 //is it time to fire?
@@ -1028,7 +1028,6 @@ void FrameSenderWindow::processCellChange(int line, int col)
         tempData.enabled = false;
         tempData.setFrameType(CommFrame::CANDataFrame);
         tempData.setBus(0);  // Initialize bus to 0
-
         tempData.setExtendedFrameFormat(false);
         tempData.setFrameId(0);  // Initialize ID
         sendingData.append(tempData);
@@ -1048,7 +1047,6 @@ void FrameSenderWindow::processCellChange(int line, int col)
                 // Process all fields to ensure frame is properly configured
                 // Do this in a specific order: Bus, ID, Ext, Len, Data, Triggers
                 inhibitChanged = true;
-
                 // Only process fields that have values
                 if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS) &&
                     !ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BUS)->text().isEmpty())
@@ -1071,7 +1069,6 @@ void FrameSenderWindow::processCellChange(int line, int col)
 
                 if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_TRIGGER))
                     processCellChange(line, ST_COLS::SENDTAB_COL_TRIGGER);
-
                 inhibitChanged = false;
             }
             else sendingData[line].enabled = false;
@@ -1105,7 +1102,7 @@ void FrameSenderWindow::processCellChange(int line, int col)
             qDebug() << "setting ID to " << tempVal << "hex:" << QString::number(tempVal, 16);
             break;
         case ST_COLS::SENDTAB_COL_LEN:
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, SENDTAB_COL_LEN)->text());
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, SENDTAB_COL_LEN)->text());            
             if (tempVal < 0) tempVal = 0;
             if (tempVal > 8) tempVal = 8;
             // Only resize if the current payload is different size
@@ -1117,7 +1114,6 @@ void FrameSenderWindow::processCellChange(int line, int col)
             }
             break;
         case ST_COLS::SENDTAB_COL_EXT:
-
             if (ui->tableSender->item(line, SENDTAB_COL_EXT)->checkState() == Qt::Checked) {
                 sendingData[line].setExtendedFrameFormat(true);
             } else {
