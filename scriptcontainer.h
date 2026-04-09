@@ -3,7 +3,6 @@
 
 #include "can_structs.h"
 #include "canfilter.h"
-#include "bus_protocols/isotp_handler.h"
 #include "bus_protocols/isotp_message.h"
 #include "bus_protocols/uds_handler.h"
 
@@ -13,6 +12,9 @@
 #include <qlistwidget.h>
 
 class ScriptingWindow;
+class QTableWidget;
+class ISOTP_HANDLER;
+class UDS_HANDLER;
 
 class CANScriptHelper: public QObject
 {
