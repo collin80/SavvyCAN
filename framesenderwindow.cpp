@@ -533,7 +533,7 @@ void FrameSenderWindow::handleTick()
 {
     FrameSendData *sendData;
     Trigger *trigger;
-    QList<CANFrame> sendingList;
+    QList<CommFrame> sendingList;
     
     if(mutex.tryLock())
     {
