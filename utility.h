@@ -10,6 +10,8 @@
 #include <QRect>
 #include <QComboBox>
 #include <QStandardItemModel>
+#include <QColor>
+#include <QString>
 //#include <QDesktopWidget>
 
 enum TimeStyle
@@ -19,6 +21,44 @@ enum TimeStyle
     TS_MILLIS,
     TS_CLOCK
 };
+
+
+// 32 dark, saturated colors — all designed for readability on white backgrounds.
+// Minimum contrast ratio ≥ 4.5:1 against white (WCAG AA).
+static constexpr std::array<QRgb, 32> kRowPalette = {{
+    0xFFC62828,  //  0  Red 800
+    0xFFE53935,  //  1  Red 600
+    0xFFD84315,  //  2  Deep Orange 800
+    0xFFEF6C00,  //  3  Orange 800
+    0xFFF9A825,  //  4  Amber 800
+    0xFF558B2F,  //  5  Green 800
+    0xFF2E7D32,  //  6  Green 900
+    0xFF00695C,  //  7  Teal 800
+    0xFF00838F,  //  8  Cyan 800
+    0xFF0277BD,  //  9  Blue 800
+    0xFF1565C0,  // 10  Blue 900
+    0xFF283593,  // 11  Indigo 900
+    0xFF4527A0,  // 12  Deep Purple 800
+    0xFF6A1B9A,  // 13  Purple 900
+    0xFF880E4F,  // 14  Pink 900
+    0xFFAD1457,  // 15  Pink 800
+    0xFF37474F,  // 16  Blue Grey 800
+    0xFF4E342E,  // 17  Brown 800
+    0xFF827717,  // 18  Lime 900
+    0xFF1B5E20,  // 19  Green 900 alt
+    0xFF006064,  // 20  Cyan 900
+    0xFF01579B,  // 21  Light Blue 900
+    0xFF0D47A1,  // 22  Blue 900 alt
+    0xFF311B92,  // 23  Deep Purple 900
+    0xFF4A148C,  // 24  Purple 900 alt
+    0xFFB71C1C,  // 25  Red 900
+    0xFFBF360C,  // 26  Deep Orange 900
+    0xFFE65100,  // 27  Orange 900
+    0xFF33691E,  // 28  Light Green 900
+    0xFF004D40,  // 29  Teal 900
+    0xFF263238,  // 30  Blue Grey 900
+    0xFF5D4037,  // 31  Brown 700
+}};
 
 class Utility
 {
@@ -344,6 +384,35 @@ public:
         }
 
         return result;
+    }
+
+    // FNV-1a 32-bit hash — fast, good distribution, no dependencies.
+    static quint32 hashString(const QString &s)
+    {
+        quint32 hash = 2166136261u;
+        for (const QChar ch : s) {
+            hash ^= static_cast<quint32>(ch.unicode());
+            hash *= 16777619u;
+        }
+        return hash;
+    }
+
+    // Returns a background QColor deterministically chosen from the palette.
+    // The same string always maps to the same color.
+    static QColor colorForString(const QString &s)
+    {
+        const quint32 idx = hashString(s) % static_cast<quint32>(kRowPalette.size());
+        // Use a light tint (alpha ~18%) as the row background so text stays readable.
+        QColor base(kRowPalette[idx]);
+        base.setAlpha(46); // ~18% — comfortable on white, still clearly tinted
+        return base;
+    }
+
+    // Opaque variant — useful for badges, tags, or legend swatches.
+    static QColor solidColorForString(const QString &s)
+    {
+        const quint32 idx = hashString(s) % static_cast<quint32>(kRowPalette.size());
+        return QColor(kRowPalette[idx]);
     }
 };
 

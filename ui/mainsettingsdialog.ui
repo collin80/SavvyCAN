@@ -98,6 +98,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="cbColorsByCanId">
+          <property name="text">
+           <string>Color rows by CAN ID</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbUseOpenGL">
           <property name="text">
            <string>OpenGL Accelerated AntiAliased Graphing</string>
