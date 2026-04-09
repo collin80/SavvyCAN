@@ -25,7 +25,7 @@ jobs:
 
       - name: Compile
         run: |
-          qmake CONFIG+=release PREFIX=/usr SavvyCAN.pro
+          cmake . --config Release
           make -j`grep -c ^processor /proc/cpuinfo`
           
       - name: Package     
@@ -47,6 +47,7 @@ jobs:
     steps:
       - name: Prepare macOS Environment
         run: |
+            brew install cmake
             brew install qt@6
             brew link qt@6 --force
 
@@ -55,7 +56,7 @@ jobs:
 
       - name: Compile     
         run: |
-          qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
+          cmake . --config Release
           make -j`sysctl kern.aioprocmax | awk '{print $2}'`
 
       - name: Package     
@@ -80,6 +81,7 @@ jobs:
       - name: Prepare macOS Environment
         run: |
             brew install qt@6
+            brew install cmake
             brew link qt@6 --force
 
       - name: Clone
@@ -87,7 +89,7 @@ jobs:
 
       - name: Compile     
         run: |
-          qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
+          cmake . --config Release
           make -j`sysctl kern.aioprocmax | awk '{print $2}'`
 
       - name: Package     
@@ -120,10 +122,9 @@ jobs:
         shell: cmd
         run: | 
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-
-          qmake CONFIG+=release SavvyCAN.pro
-          nmake /C
-
+          cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{github.workspace}}/build --config Release
+          
       - name: Package
         run: |
           mkdir package
