@@ -47,6 +47,7 @@ public:
     bool getInterpretMode();
     void setOverwriteMode(bool);
     void setHexMode(bool);
+    void setUseColorsByCanId(bool);
     void setClearMode(bool mode);
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
@@ -94,6 +95,7 @@ private:
     QString timeFormat;
     TimeStyle timeStyle;
     bool useHexMode;
+    bool useColorsByCanId;
     bool needFilterRefresh;
     bool ignoreDBCColors;
     int64_t timeOffset;
