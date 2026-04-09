@@ -9,6 +9,7 @@
 #include "helpwindow.h"
 #include "utility.h"
 #include "filterutility.h"
+#include "candataitemdelegate.h"
 
 #include <QClipboard>
 /*
@@ -48,6 +49,9 @@ MainWindow::MainWindow(QWidget *parent) :
     proxyModel->setSourceModel(model);
 
     ui->canFramesView->setModel(proxyModel);
+
+    CanDataItemDelegate* dataColumnFormatter = new CanDataItemDelegate(model);
+    ui->canFramesView->setItemDelegateForColumn(8, dataColumnFormatter);
 
     settingsDialog = new MainSettingsDialog(); //instantiate the settings dialog so it can initialize settings if this is the first run or the config file was deleted.
     settingsDialog->updateSettings(); //write out all the settings. If this is the first run it'll write defaults out.
@@ -437,6 +441,8 @@ void MainWindow::readUpdateableSettings()
     model->setIgnoreDBCColors(ignoreDBCColors);
     int bpl = settings.value("Main/BytesPerLine", 8).toInt();
     model->setBytesPerLine(bpl);
+    int mcb = settings.value("Main/MarkChangedBytes", true).toBool();
+    model->setMarkChangedBytes(mcb);
 
     CSVAbsTime = settings.value("Main/CSVAbsTime", false).toBool();
 
