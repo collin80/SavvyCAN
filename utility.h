@@ -386,6 +386,32 @@ public:
         return result;
     }
 
+    // split comma-separated list of quoted strings
+    // "A","B","C,D,E"
+    static QStringList splitQuotedString(QString input)
+    {
+        QStringList parts;
+        bool inQuotes = false;
+        QString currentToken;
+
+        for (int i = 0; i < input.length(); ++i)
+        {
+            QChar c = input.at(i);
+
+            if (c == '\"') {
+                inQuotes = !inQuotes;
+                //currentToken += c;
+            } else if (c == ',' && !inQuotes) {
+                parts.append(currentToken.trimmed());
+                currentToken.clear();
+            } else {
+                currentToken += c;
+            }
+        }
+        parts.append(currentToken.trimmed()); // the last token
+        return parts;
+    }
+
     // FNV-1a 32-bit hash — fast, good distribution, no dependencies.
     static quint32 hashString(const QString &s)
     {
