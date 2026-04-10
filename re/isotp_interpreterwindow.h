@@ -2,10 +2,14 @@
 #define ISOTP_INTERPRETERWINDOW_H
 
 #include <QDialog>
-#include "bus_protocols/isotp_handler.h"
+#include <QListWidgetItem>
+#include "can_structs.h"
+
 
 class ISOTP_MESSAGE;
+class UDS_MESSAGE;
 class ISOTP_HANDLER;
+class UDS_HANDLER;
 
 namespace Ui {
 class ISOTP_InterpreterWindow;

@@ -90,7 +90,9 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
+    ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
+    ui->cbColorsByCanId->setChecked(settings.value("Main/ColorsByCanId", false).toBool());
 
     ui->cbEqualSniffer->setChecked(settings.value("Main/EqualDataSniff", false).toBool());
 
@@ -212,6 +214,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
     settings.setValue("Main/BytesPerLine", ui->spinBytesPerLine->value());
     settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
+    settings.setValue("Main/ColorsByCanId", ui->cbColorsByCanId->isChecked());
 
     settings.sync();
     emit updatedSettings();

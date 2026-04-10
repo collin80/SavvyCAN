@@ -401,31 +401,34 @@ void DBCMainEditor::refreshTree()
 
     if (dbcFile->findNodeByName("Vector__XXX") == nullptr)
     {
+        qDebug() << "creating a new default node";
         DBC_NODE *newNode = new DBC_NODE;
         newNode->name = "Vector__XXX";
         newNode->comment = "Default node if no other node is specified";
         dbcFile->dbc_nodes.append(newNode);
     }
 
+    //start by creating each node
     for (int n = 0; n < dbcFile->dbc_nodes.count(); n++)
     {
         DBC_NODE *node = dbcFile->dbc_nodes[n];
         QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
         QString nodeInfo = node->name;
         if (node->comment.length() > 0) nodeInfo.append(" - ").append(node->comment);
+        qDebug() << nodeInfo;
         nodeItem->setText(0, nodeInfo);
         nodeItem->setIcon(0, nodeIcon);
         nodeItem->setData(0, Qt::UserRole, DBCItemTypes::NODE);
         nodeToItem.insert(node, nodeItem);
         itemToNode.insert(nodeItem, node);
         QList<DBC_MESSAGE *>  msgs = dbcFile->messageHandler->getMsgsAsList();
-        qDebug() << msgs;
         for (int x = 0; x < dbcFile->messageHandler->getCount(); x++)
         {
             DBC_MESSAGE *msg = msgs[x];
-            qDebug() << msg->sender->name << " | " << node->name;
-            if (msg->sender->name == node->name)
+            //qDebug() << msg->sender->name << " | " << node->name;
+            if (msg->sender == node)
             {
+                //qDebug() << "Got match of sender and this node";
                 QTreeWidgetItem *msgItem = new QTreeWidgetItem(nodeItem);
                 QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
                 if (msg->comment.length() > 0) msgInfo.append(" - ").append(msg->comment);

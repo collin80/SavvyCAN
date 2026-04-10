@@ -133,7 +133,7 @@ public:
     static DBCHandler *getReference();
 
 private:
-    QList<DBCFile> loadedFiles;
+    QList<DBCFile *> loadedFiles;
 
     DBCHandler();
     static DBCHandler *instance;
