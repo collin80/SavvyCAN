@@ -27,6 +27,7 @@ jobs:
         run: |
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`grep -c ^processor /proc/cpuinfo`
+          mv ${{github.workspace}}/build/SavvyCAN ${{github.workspace}}
           
       - name: Package     
         run: |
@@ -58,15 +59,16 @@ jobs:
         run: |
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`sysctl kern.aioprocmax | awk '{print $2}'`
-
+          mv ${{github.workspace}}/build/SavvyCAN.app ${{github.workspace}}
+          
       - name: Package     
         run: |
-          mkdir -p SavvyCAN.app/Contents/MacOS/help
-          mkdir -p SavvyCAN.app/Frameworks
-          cp -R help/* SavvyCAN.app/Contents/MacOS/help
-          cp /usr/local/share/qt/plugins/canbus/* SavvyCAN.app/Frameworks
-          macdeployqt SavvyCAN.app -dmg
-          mv SavvyCAN.dmg SavvyCAN_x64.dmg
+          mkdir -p build/SavvyCAN.app/Contents/MacOS/help
+          mkdir -p build/SavvyCAN.app/Frameworks
+          cp -R help/* build/SavvyCAN.app/Contents/MacOS/help
+          cp /usr/local/share/qt/plugins/canbus/* build/SavvyCAN.app/Frameworks
+          macdeployqt build/SavvyCAN.app -dmg
+          mv build/SavvyCAN.dmg ./SavvyCAN_x64.dmg
       
       - uses: actions/upload-artifact@v4
         with:
@@ -94,10 +96,10 @@ jobs:
 
       - name: Package     
         run: |
-          mkdir -p SavvyCAN.app/Contents/MacOS/help
-          cp -R help/* SavvyCAN.app/Contents/MacOS/help
-          macdeployqt SavvyCAN.app -dmg
-          mv SavvyCAN.dmg SavvyCAN_arm64.dmg
+          mkdir -p build/SavvyCAN.app/Contents/MacOS/help
+          cp -R help/* build/SavvyCAN.app/Contents/MacOS/help
+          macdeployqt build/SavvyCAN.app -dmg
+          mv build/SavvyCAN.dmg ./SavvyCAN_arm64.dmg
       
       - uses: actions/upload-artifact@v4
         with:
@@ -128,7 +130,7 @@ jobs:
       - name: Package
         run: |
           mkdir package
-          copy "release/SavvyCAN.exe" package/
+          copy "build/release/SavvyCAN.exe" package/
           mkdir package/help
           copy  help/*.md package/help/
           mkdir package/help/images
