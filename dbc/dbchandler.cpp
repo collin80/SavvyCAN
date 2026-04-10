@@ -972,7 +972,7 @@ bool DBCFile::loadFile(QString fileName)
                 if (match.hasMatch())
                 {
                     QStringList nodeStrings = match.captured(1).split(' ');
-                    qDebug() << "Found " << nodeStrings.count() << " node names";
+                    qDebug() << "Found" << nodeStrings.count() << "node names";
                     for (int i = 0; i < nodeStrings.count(); i++)
                     {
                         //qDebug() << nodeStrings[i];
@@ -982,6 +982,7 @@ bool DBCFile::loadFile(QString fileName)
                             node->name = nodeStrings[i];
                             node->sourceFileName = fileBaseName;
                             dbc_nodes.append(node);
+                            qDebug() << "Added node to list with address " << node;
                         }
                     }
                     inMultilineBU = true; //we might be... Need to check next line.
@@ -1334,7 +1335,7 @@ bool DBCFile::saveFile(QString fileName)
     int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
     QString nodesOutput, msgOutput, commentsOutput, valuesOutput, extMultiplexOutput;
-    QString defaultsOutput, attrValOutput;
+    QString defaultsOutput, attrValOutput, sigValTypeOutput;
     bool hasExtendedMultiplexing = false;
 
     if (!outFile->open(QIODevice::WriteOnly | QIODevice::Text))
@@ -1502,16 +1503,10 @@ bool DBCFile::saveFile(QString fileName)
                 else msgOutput.append("0+");
                 break;
             case SIGNED_INT:
+            case SP_FLOAT:
+            case DP_FLOAT:
                 if (sig->intelByteOrder) msgOutput.append("1-");
                 else msgOutput.append("0-");
-                break;
-            case SP_FLOAT:
-                if (sig->intelByteOrder) msgOutput.append("5-");
-                else msgOutput.append("2-");
-                break;
-            case DP_FLOAT:
-                if (sig->intelByteOrder) msgOutput.append("6-");
-                else msgOutput.append("3-");
                 break;
             case STRING:
                 msgOutput.append("4-");
@@ -1523,6 +1518,8 @@ bool DBCFile::saveFile(QString fileName)
             msgOutput.append(" (" + QString::number(sig->factor) + "," + QString::number(sig->bias) + ") [" +
                              QString::number(sig->min) + "|" + QString::number(sig->max) + "] \"" + sig->unitName
                              + "\" " + sig->receiver->name + "\n");
+            if (sig->valType == SP_FLOAT || sig->valType == DP_FLOAT)
+                sigValTypeOutput.append("SIG_VALTYPE_ " + QString::number(ID) + " " + sig->name + " : " + QString::number(sig->valType == SP_FLOAT ? 1 : 2) + ";\n");
             if (sig->comment.length() > 0)
             {
                 commentsOutput.append("CM_ SG_ " + QString::number(ID) + " " + sig->name + " \"" + sig->comment + "\";\n");
@@ -1677,11 +1674,14 @@ bool DBCFile::saveFile(QString fileName)
     outFile->write(attrValOutput.toUtf8());    
     outFile->write(valuesOutput.toUtf8());
     outFile->write(extMultiplexOutput.toUtf8());
+    if (!sigValTypeOutput.isEmpty())
+        outFile->write(sigValTypeOutput.toUtf8());
 
     attrValOutput.clear();
     defaultsOutput.clear();
     valuesOutput.clear();
     extMultiplexOutput.clear();
+    sigValTypeOutput.clear();
 
     outFile->close();
     delete outFile;
@@ -1711,20 +1711,20 @@ void DBCHandler::saveDBCFile(int idx)
     dialog.setNameFilters(filters);
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
-    dialog.selectFile(loadedFiles[idx].getFullFilename());
+    dialog.selectFile(loadedFiles[idx]->getFullFilename());
 
     if (dialog.exec() == QDialog::Accepted)
     {
         QString filename = dialog.selectedFiles().constFirst();
         if (!filename.contains('.')) filename += ".dbc";
-        loadedFiles[idx].saveFile(filename);
+        loadedFiles[idx]->saveFile(filename);
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
     }
 }
 
 int DBCHandler::createBlankFile()
 {
-    DBCFile newFile;
+    DBCFile *newFile = new DBCFile;
     DBC_ATTRIBUTE attr;
 
     //add our custom attributes to the new file so that we know they're already there.
@@ -1736,7 +1736,7 @@ int DBCHandler::createBlankFile()
     attr.upper = 0;
     attr.name = "GenMsgBackgroundColor";
     attr.valType = ATTR_STRING;
-    newFile.dbc_attributes.append(attr);
+    newFile->dbc_attributes.append(attr);
 
     attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = QApplication::palette().color(QPalette::WindowText).name();
@@ -1746,7 +1746,7 @@ int DBCHandler::createBlankFile()
     attr.upper = 0;
     attr.name = "GenMsgForegroundColor";
     attr.valType = ATTR_STRING;
-    newFile.dbc_attributes.append(attr);
+    newFile->dbc_attributes.append(attr);
 
     attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = 0;
@@ -1755,7 +1755,7 @@ int DBCHandler::createBlankFile()
     attr.upper = 0;
     attr.name = "matchingcriteria";
     attr.valType = ATTR_INT;
-    newFile.dbc_attributes.append(attr);
+    newFile->dbc_attributes.append(attr);
 
     attr.attrType = ATTR_TYPE_MESSAGE;
     attr.defaultValue = 0;
@@ -1764,13 +1764,13 @@ int DBCHandler::createBlankFile()
     attr.upper = 0;
     attr.name = "filterlabeling";
     attr.valType = ATTR_INT;
-    newFile.dbc_attributes.append(attr);
+    newFile->dbc_attributes.append(attr);
 
     DBC_NODE *falseNode = new DBC_NODE;
     falseNode->name = "Vector__XXX";
     falseNode->comment = "Default node if none specified";
-    newFile.dbc_nodes.append(falseNode);
-    newFile.setAssocBus(-1);
+    newFile->dbc_nodes.append(falseNode);
+    newFile->setAssocBus(-1);
 
     loadedFiles.append(newFile);
     return loadedFiles.count();
@@ -1778,8 +1778,8 @@ int DBCHandler::createBlankFile()
 
 DBCFile* DBCHandler::loadDBCFile(QString filename)
 {
-    DBCFile newFile;
-    if (newFile.loadFile(filename))
+    DBCFile *newFile = new DBCFile;
+    if (newFile->loadFile(filename))
     {
         loadedFiles.append(newFile);
     }
@@ -1787,7 +1787,7 @@ DBCFile* DBCHandler::loadDBCFile(QString filename)
     {
         //createBlankFile();
     }
-    if (loadedFiles.count()> 0) return &loadedFiles.last();
+    if (loadedFiles.count()> 0) return loadedFiles.last();
     else return nullptr;
 }
 
@@ -1827,7 +1827,8 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
     DBC_SIGNAL *pSig {};
     int lineCounter = 0;
     createBlankFile();
-    DBCFile *thisFile = &loadedFiles.last();
+
+    DBCFile *thisFile = loadedFiles.last();
 
     QFile *inFile = new QFile(filename);
 
@@ -1997,7 +1998,7 @@ DBCFile* DBCHandler::loadJSONFile(QString filename)
      DBC_MESSAGE *pMsg;
 
          createBlankFile();
-         thisFile = &loadedFiles.last();
+         thisFile = loadedFiles.last();
 
          QFile *inFile = new QFile(filename);
          if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
@@ -2164,11 +2165,21 @@ void DBCHandler::removeDBCFile(int idx)
     if (loadedFiles.count() == 0) return;
     if (idx < 0) return;
     if (idx >= loadedFiles.count()) return;
+
+    //must delete the object before removing it from the list as we've stored a pointer
+    DBCFile *file = loadedFiles[idx];
+    delete file;
+
     loadedFiles.removeAt(idx);
 }
 
 void DBCHandler::removeAllFiles()
 {
+    DBCFile *file;
+    foreach (file, loadedFiles)
+    {
+        delete file;
+    }
     loadedFiles.clear();
 }
 
@@ -2193,9 +2204,9 @@ DBC_MESSAGE* DBCHandler::findMessage(const CommFrame &frame)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getAssocBus() == -1 || frame.getBus() == loadedFiles[i].getAssocBus())
+        if (loadedFiles[i]->getAssocBus() == -1 || frame.getBus() == loadedFiles[i]->getAssocBus())
         {
-            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(frame.frameId());
+            DBC_MESSAGE* msg = loadedFiles[i]->messageHandler->findMsgByID(frame.frameId());
             if (msg != nullptr) return msg;
         }
     }
@@ -2206,7 +2217,7 @@ DBC_MESSAGE* DBCHandler::findMessage(uint32_t id)
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(id);
+        DBC_MESSAGE* msg = loadedFiles[i]->messageHandler->findMsgByID(id);
         if (msg != nullptr)
         {
             return msg;
@@ -2223,12 +2234,12 @@ DBC_MESSAGE* DBCHandler::findMessageForFilter(uint32_t id, MatchingCriteria_t * 
 {
     for(int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].messageHandler->filterLabeling())
+        if (loadedFiles[i]->messageHandler->filterLabeling())
         {
-            DBC_MESSAGE* msg = loadedFiles[i].messageHandler->findMsgByID(id);
+            DBC_MESSAGE* msg = loadedFiles[i]->messageHandler->findMsgByID(id);
             if (msg != nullptr) 
             {
-                if (matchingCriteria) *matchingCriteria = loadedFiles[i].messageHandler->getMatchingCriteria();
+                if (matchingCriteria) *matchingCriteria = loadedFiles[i]->messageHandler->getMatchingCriteria();
                 return msg;
             }
         }
@@ -2297,7 +2308,7 @@ DBCFile* DBCHandler::getFileByIdx(int idx)
     if (loadedFiles.count() == 0) return nullptr;
     if (idx < 0) return nullptr;
     if (idx >= loadedFiles.count()) return nullptr;
-    return &loadedFiles[idx];
+    return loadedFiles[idx];
 }
 
 DBCFile* DBCHandler::getFileByName(QString name)
@@ -2305,9 +2316,9 @@ DBCFile* DBCHandler::getFileByName(QString name)
     if (loadedFiles.count() == 0) return nullptr;
     for (int i = 0; i < loadedFiles.count(); i++)
     {
-        if (loadedFiles[i].getFilename().compare(name, Qt::CaseInsensitive) == 0)
+        if (loadedFiles[i]->getFilename().compare(name, Qt::CaseInsensitive) == 0)
         {
-            return &loadedFiles[i];
+            return loadedFiles[i];
         }
     }
     return nullptr;

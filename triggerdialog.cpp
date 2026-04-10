@@ -9,6 +9,12 @@ TriggerDialog::TriggerDialog(QList<Trigger> trigs, QWidget *parent) :
     ui->setupUi(this);
     triggers.clear();
     triggers.append(trigs); //make sure it's just a clone of the existing triggers
+    
+    // Set wider minimum width for Msg ID combo box to accommodate extended IDs
+    ui->cmMsgID->setMinimumWidth(250);
+
+    // Set wider minimum width for Msg ID combo box to accommodate extended IDs
+    ui->cmMsgID->setMinimumWidth(250);
 
     //if there are no triggers then create a default one
     if (triggers.count() == 0)
@@ -187,16 +193,21 @@ void TriggerDialog::regenerateCurrentListItem()
             //the right message. Should at least search by message name instead
             //if possible.
             DBC_MESSAGE *msg = dbcHandler->findMessage(trig.ID);
-            int numSigs = msg->sigHandler->getCount();
-            QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
-            for (int s = 0; s < numSigs; s++)
+            if (msg)
             {
-                DBC_SIGNAL *sig = sigs[s];
-
-                entries.append(sig->name);
+                int numSigs = msg->sigHandler->getCount();
+                QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
+                for (int s = 0; s < numSigs; s++)
+                {
+                    DBC_SIGNAL *sig = sigs[s];
+                    if (sig)
+                    {
+                        entries.append(sig->name);
+                    }
+                }
+                entries.sort();
+                ui->cmSignal->addItems(entries);
             }
-            entries.sort();
-            ui->cmSignal->addItems(entries);
         }
     }
 

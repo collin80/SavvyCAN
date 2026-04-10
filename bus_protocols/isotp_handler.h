@@ -2,21 +2,31 @@
 
 #include <Qt>
 #include <QObject>
-#include <QDebug>
 #include <QTimer>
+#include <QHash>
 #include "can_structs.h"
-#include "mainwindow.h"
-#include "canframemodel.h"
 #include "isotp_message.h"
 #include "canfilter.h"
+
 
 class ISOTP_HANDLER : public QObject
 {
     Q_OBJECT
 
+    using CanSendCallback = std::function<void(const CommFrame& pFrame)>;
+
 public:
-    ISOTP_HANDLER();
+    using GetNoOfBusesCallback = std::function<int(void)>;
+    template <typename handler>
+    using PendingConnection = std::function<QMetaObject::Connection(handler*)>; // lambda to call connect() in setReception()
+
+    ISOTP_HANDLER(const QVector<CommFrame> &modelFrames,
+                  CanSendCallback sendCb,
+                  GetNoOfBusesCallback getBusesCb,
+                  PendingConnection<ISOTP_HANDLER> pendingConn
+                );
     ~ISOTP_HANDLER();
+
     void setExtendedAddressing(bool mode);
     void setReception(bool mode); //set whether to accept and forward frames or not
     void setEmitPartials(bool mode);
@@ -30,7 +40,7 @@ public:
 
 public slots:
     void updatedFrames(int);
-    void rapidFrames(const CANConnection* conn, const QVector<CommFrame>& pFrames);
+    void rapidFrames(const QVector<CommFrame>& pFrames);
     void frameTimerTick();
 
 signals:
@@ -40,7 +50,7 @@ private:
     QHash<uint32_t, ISOTP_MESSAGE> messageBuffer;
     QList<CommFrame> sendingFrames;
     QList<CANFilter> filters;
-    const QVector<CommFrame> *modelFrames;
+    const QVector<CommFrame> &modelFrames;
     bool useExtendedAddressing;
     bool isReceiving;
     bool waitingForFlow;
@@ -55,4 +65,20 @@ private:
 
     void processFrame(const CommFrame &frame);
     void checkNeedFlush(uint64_t ID);
+    void updateIsoTpCanFrameInfo();
+
+    CanSendCallback canSendCallback;
+    GetNoOfBusesCallback getNoOfBusesCallback;
+
+    PendingConnection<ISOTP_HANDLER> pendingConnection;
+    QMetaObject::Connection connection;
+
+    // Info about ISO-TP frame formats
+    struct FrameInfo {
+        int cfAndSfPciOffset;
+        int sfFrameLen;
+        int ffPciOffset;
+        int ffFrameLen;
+        int cfFrameLen;
+    } frameInfo;
 };

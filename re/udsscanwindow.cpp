@@ -2,6 +2,7 @@
 #include "ui_udsscanwindow.h"
 #include "mainwindow.h"
 #include "connections/canconmanager.h"
+#include "bus_protocols/handler_factory.h"
 #include "bus_protocols/uds_handler.h"
 #include "utility.h"
 #include "helpwindow.h"
@@ -37,7 +38,7 @@ UDSScanWindow::UDSScanWindow(const QVector<CommFrame> *frames, QWidget *parent) 
     waitTimer = new QTimer;
     waitTimer->setInterval(100);
 
-    udsHandler = new UDS_HANDLER;
+    udsHandler = HandlerFactory::createUDSHandler();
     inhibitUpdates = false;
 
     for (int i = 0; i < 13; i++) ui->cbScanType->addItem(SCANTYPE_NAMES[i]);
@@ -118,8 +119,9 @@ bool UDSScanWindow::eventFilter(QObject *obj, QEvent *event)
 
 void UDSScanWindow::setControlState(QWidget & widget, bool valid)
 {
-    QPalette pal = widget.palette();
-    pal.setColor(QPalette::ColorRole::Base , valid ? Qt::white : Qt::red);
+    QPalette pal = QApplication::palette(&widget);    // default palette for widget's class
+    if (!valid)
+        pal.setColor(QPalette::ColorRole::Base, Qt::red);
     widget.setPalette(pal);
 }
 
