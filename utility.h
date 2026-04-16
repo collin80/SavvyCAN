@@ -12,6 +12,7 @@
 #include <QStandardItemModel>
 #include <QColor>
 #include <QString>
+#include <array>
 //#include <QDesktopWidget>
 
 enum TimeStyle
