@@ -3,6 +3,10 @@
 #include "helpwindow.h"
 #include <qevent.h>
 #include <QDebug>
+#include <QDir>
+#include <QRegExp>
+#include <QCoreApplication>
+#include <QDebug>
 #include "simplecrypt.h"
 
 //using this simple encryption library to obfuscate stored password a bit. It's not super secure but better than
@@ -10,12 +14,50 @@
 //whatever key, you'd see it. Just behave yourselves
 SimpleCrypt crypto(Q_UINT64_C(0xdeadbeefface6285));
 
+static QStringList availableLanguageCodes()
+{
+    QStringList codes;
+    QDir transDir(QCoreApplication::applicationDirPath() + "/translations");
+    QStringList list = transDir.entryList(QStringList() << "SavvyCAN_*.qm");
+    //* just for test purposes
+    if (list.isEmpty()) {
+        // maybe only ts files exist during development
+        list = transDir.entryList(QStringList() << "SavvyCAN_*.ts");
+    }
+    for (QString file : list) {
+        QRegExp re("SavvyCAN_(.*)\\.(qm|ts)");
+        if (re.indexIn(file) != -1) {
+            codes << re.cap(1);
+        }
+    }
+    return codes;
+}
+
+void MainSettingsDialog::populateLanguageCombo()
+{
+    ui->comboLanguage->clear();
+    QStringList codes = availableLanguageCodes();
+    if (codes.isEmpty()) {
+        codes << "en"; // fallback
+    }
+    for (const QString &code : codes) {
+        QLocale locale(code);
+        QString name = locale.nativeLanguageName();
+        qInfo() << code;
+        if (name.isEmpty())
+            name = code;
+        ui->comboLanguage->addItem(name, code);
+    }
+}
+
 MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MainSettingsDialog)
 {
     QSettings settings;
     ui->setupUi(this);
+
+    populateLanguageCombo();
 
     //TODO: This is still hard coded to support only two buses. Sometimes there is none, sometimes 1, sometimes much more than 2. Fix this.
     ui->comboSendingBus->addItem(tr("None"));
@@ -94,6 +136,12 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
     ui->cbColorsByCanId->setChecked(settings.value("Main/ColorsByCanId", false).toBool());
 
+    if (QString savedLang = settings.value("Main/Language").toString(); !savedLang.isEmpty()) {
+        int idx = ui->comboLanguage->findData(savedLang);
+        if (idx >= 0)
+            ui->comboLanguage->setCurrentIndex(idx);
+    }
+
     int maxFramesDefault;
     if (QSysInfo::WordSize > 32)
     {
@@ -110,6 +158,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->spinBytesPerLine->setValue(settings.value("Main/BytesPerLine", 8).toInt());
 
     //just for simplicity they all call the same function and that function updates all settings at once
+    connect(ui->comboLanguage, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbDisplayHex, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFlowAutoRef, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbFlowUseTimestamp, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
@@ -179,6 +228,7 @@ void MainSettingsDialog::updateSettings()
 {
     QSettings settings;
 
+    settings.setValue("Main/Language", ui->comboLanguage->currentData().toString());
     settings.setValue("Main/UseHex", ui->cbDisplayHex->isChecked());
     settings.setValue("FlowView/AutoRef", ui->cbFlowAutoRef->isChecked());
     settings.setValue("FlowView/UseTimestamp", ui->cbFlowUseTimestamp->isChecked());
