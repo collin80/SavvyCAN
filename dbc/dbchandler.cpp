@@ -15,6 +15,28 @@
 
 DBCHandler* DBCHandler::instance = nullptr;
 
+static bool parseValueDescriptions(QString tokenString, QList<DBC_VAL_ENUM_ENTRY> &values)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+    DBC_VAL_ENUM_ENTRY val;
+
+    values.clear();
+    tokenString = tokenString.trimmed();
+    while (tokenString.length() > 2)
+    {
+        regex.setPattern("^([+-]?\\d+) \\\"(.*?)\\\"(.*)");
+        match = regex.match(tokenString);
+        if (!match.hasMatch()) return false;
+
+        val.value = match.captured(1).toInt();
+        val.descript = match.captured(2);
+        values.append(val);
+        tokenString = match.captured(3).trimmed();
+    }
+    return values.count() > 0;
+}
+
 DBC_SIGNAL* DBCSignalHandler::findSignalByName(QString name)
 {
     if (sigs.count() == 0) return nullptr;
@@ -275,6 +297,8 @@ DBCFile::DBCFile(const DBCFile& cpy) : QObject()
         }
     }
 
+    dbc_value_tables.clear();
+    dbc_value_tables.append(cpy.dbc_value_tables);
     dbc_attributes.clear();
     dbc_attributes.append(cpy.dbc_attributes);
     isDirty = cpy.isDirty;
@@ -303,6 +327,8 @@ DBCFile& DBCFile::operator=(const DBCFile& cpy)
         assocBuses = cpy.assocBuses;
         dbc_nodes.clear();
         dbc_nodes.append(cpy.dbc_nodes);
+        dbc_value_tables.clear();
+        dbc_value_tables.append(cpy.dbc_value_tables);
         dbc_attributes.clear();
         dbc_attributes.append(cpy.dbc_attributes);
     }
@@ -353,6 +379,19 @@ DBC_NODE* DBCFile::findNodeByNameAndComment(QString fullname)
         if (fullname.compare(nameAndComment, Qt::CaseInsensitive) == 0)
         {
             return dbc_nodes[i];
+        }
+    }
+    return nullptr;
+}
+
+DBC_VAL_TABLE* DBCFile::findValueTableByName(QString name)
+{
+    if (dbc_value_tables.length() == 0) return nullptr;
+    for (int i = 0; i < dbc_value_tables.length(); i++)
+    {
+        if (name.compare(dbc_value_tables[i].name, Qt::CaseInsensitive) == 0)
+        {
+            return &dbc_value_tables[i];
         }
     }
     return nullptr;
@@ -691,6 +730,29 @@ bool DBCFile::parseSignalValueTypeLine(QString line)
 }
 
 
+bool DBCFile::parseValueTableLine(QString line)
+{
+    QRegularExpression regex;
+    QRegularExpressionMatch match;
+
+    regex.setPattern("^VAL\\_TABLE\\_ ([-\\w]+) (.*);");
+    match = regex.match(line);
+    //captured 1 is the table name
+    //captured 2 is a series of values in the form (number "text")
+    if (match.hasMatch())
+    {
+        DBC_VAL_TABLE table;
+        table.name = match.captured(1);
+        if (!parseValueDescriptions(match.captured(2), table.valList)) return false;
+
+        DBC_VAL_TABLE *existingTable = findValueTableByName(table.name);
+        if (existingTable) existingTable->valList = table.valList;
+        else dbc_value_tables.append(table);
+        return true;
+    }
+    return false;
+}
+
 bool DBCFile::parseValueLine(QString line)
 {
     QRegularExpression regex;
@@ -712,25 +774,18 @@ bool DBCFile::parseValueLine(QString line)
             if (sig != nullptr)
             {
                 QString tokenString = match.captured(3);
-                DBC_VAL_ENUM_ENTRY val;
-                while (tokenString.length() > 2)
+                QList<DBC_VAL_ENUM_ENTRY> values;
+                DBC_VAL_TABLE *valueTable = findValueTableByName(tokenString.trimmed());
+                if (valueTable)
                 {
-                    regex.setPattern("(\\d+) \\\"(.*?)\\\"(.*)");
-                    match = regex.match(tokenString);
-                    if (match.hasMatch())
-                    {
-                        val.value = match.captured(1).toULong() & 0x1FFFFFFFul;
-                        val.descript = match.captured(2);
-                        //qDebug() << "sig val " << val.value << " desc " <<val.descript;
-                        sig->valList.append(val);
-                        int rightSize = tokenString.length() - match.captured(1).length() - match.captured(2).length() - 4;
-                        if (rightSize > 0) tokenString = tokenString.right(rightSize);
-                        else tokenString = "";
-                        //qDebug() << "New token string: " << tokenString;
-                    }
-                    else tokenString = "";
+                    sig->valList = valueTable->valList;
+                    return true;
                 }
-                return true;
+                if (parseValueDescriptions(tokenString, values))
+                {
+                    sig->valList.append(values);
+                    return true;
+                }
             }
         }
     }
@@ -898,6 +953,8 @@ bool DBCFile::loadFile(QString fileName)
     QString fileBaseName = QFileInfo(fileName).baseName();
 
     bool inMultilineBU = false;
+    bool inMultilineValTable = false;
+    QString multilineValTable;
 
     qDebug() << "DBC File: " << fileName;
 
@@ -910,6 +967,7 @@ bool DBCFile::loadFile(QString fileName)
 
     qDebug() << "Starting DBC load";
     dbc_nodes.clear();
+    dbc_value_tables.clear();
     messageHandler->removeAllMessages();
     messageHandler->setMatchingCriteria(EXACT);
     messageHandler->setFilterLabeling(false);
@@ -939,6 +997,18 @@ bool DBCFile::loadFile(QString fileName)
                 dbc_nodes.append(node);
             }
             else inMultilineBU = false;
+        }
+
+        if (inMultilineValTable)
+        {
+            multilineValTable.append(" " + line);
+            if (line.endsWith(";"))
+            {
+                parseValueTableLine(multilineValTable);
+                multilineValTable.clear();
+                inMultilineValTable = false;
+            }
+            continue;
         }
 
         if (!inMultilineBU)
@@ -1044,6 +1114,19 @@ bool DBCFile::loadFile(QString fileName)
                     }
                 }
             }
+            if (line.startsWith("VAL_TABLE_ "))
+            {
+                if (line.endsWith(";"))
+                {
+                    parseValueTableLine(line);
+                }
+                else
+                {
+                    multilineValTable = line;
+                    inMultilineValTable = true;
+                }
+            }
+
             //VAL_ (1090) (VCUPresentParkLightOC) (1 "Error present" 0 "Error not present") ;
             if (line.startsWith("VAL_ "))
             {
@@ -1334,7 +1417,7 @@ bool DBCFile::saveFile(QString fileName)
     int msgNumber = 1;
     int sigNumber = 1;
     QFile *outFile = new QFile(fileName);
-    QString nodesOutput, msgOutput, commentsOutput, valuesOutput, extMultiplexOutput;
+    QString nodesOutput, msgOutput, commentsOutput, valuesOutput, valueTableOutput, extMultiplexOutput;
     QString defaultsOutput, attrValOutput, sigValTypeOutput;
     bool hasExtendedMultiplexing = false;
 
@@ -1419,6 +1502,23 @@ bool DBCFile::saveFile(QString fileName)
     }
     nodesOutput.append("\n");
     outFile->write(nodesOutput.toUtf8());
+
+    for (int x = 0; x < dbc_value_tables.count(); x++)
+    {
+        DBC_VAL_TABLE table = dbc_value_tables[x];
+        valueTableOutput.append("VAL_TABLE_ " + table.name);
+        for (int v = 0; v < table.valList.count(); v++)
+        {
+            DBC_VAL_ENUM_ENTRY val = table.valList[v];
+            valueTableOutput.append(" " + QString::number(val.value) + " \"" + val.descript + "\"");
+        }
+        valueTableOutput.append(";\n");
+    }
+    if (!valueTableOutput.isEmpty())
+    {
+        outFile->write(valueTableOutput.toUtf8());
+        valueTableOutput.clear();
+    }
 
     QList<DBC_MESSAGE *> msgs = messageHandler->getMsgsAsList();
 
