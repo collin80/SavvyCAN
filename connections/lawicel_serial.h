@@ -3,16 +3,9 @@
 
 #include <QSerialPort>
 #include <QCanBusDevice>
-#include <QThread>
 #include <QTimer>
-
-/*************/
-#include <QDateTime>
-/*************/
-
-#include "canframemodel.h"
 #include "canconnection.h"
-#include "canconmanager.h"
+
 
 class LAWICELSerial : public CANConnection
 {
@@ -54,10 +47,8 @@ private:
 
 protected:
     QTimer             mTimer;
-    QThread            mThread;
     QString            mBuildLine;
 
-    bool isAutoRestart;
     QSerialPort *serial;
     int framesRapid;
     qint64 timeBasis;
