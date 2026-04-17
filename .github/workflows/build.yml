@@ -54,6 +54,7 @@ jobs:
         run: |
           qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
           make -j`sysctl kern.aioprocmax | awk '{print $2}'`
+          lrelease translations/*.ts
 
       - name: Package     
         run: |
@@ -86,7 +87,8 @@ jobs:
         run: |
           qmake CONFIG+=release CONFIG+=sdk_no_version_check SavvyCAN.pro
           make -j`sysctl kern.aioprocmax | awk '{print $2}'`
-
+          lrelease translations/*.ts
+      
       - name: Package     
         run: |
           mkdir -p SavvyCAN.app/Contents/MacOS/translations
