@@ -50,6 +50,10 @@ protected:
     QString            mBuildLine;
 
     QSerialPort *serial;
+    int framesRapid;
+    qint64 timeBasis;
+    qint64 lastHWTimestamp;
+    qint64 wrapAdder;
     bool can0Enabled;
     bool can0ListenOnly;
     bool canFd;

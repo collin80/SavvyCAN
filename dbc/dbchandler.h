@@ -71,6 +71,7 @@ public:
     DBC_NODE *findNodeByName(QString name);
     DBC_NODE *findNodeByNameAndComment(QString fullname);
     DBC_NODE *findNodeByIdx(int idx);
+    DBC_VAL_TABLE *findValueTableByName(QString name);
     DBC_ATTRIBUTE *findAttributeByName(QString name, DBC_ATTRIBUTE_TYPE type = ATTR_TYPE_ANY);
     DBC_ATTRIBUTE *findAttributeByIdx(int idx);
     void findAttributesByType(DBC_ATTRIBUTE_TYPE typ, QList<DBC_ATTRIBUTE> *list);
@@ -89,6 +90,7 @@ public:
 
     DBCMessageHandler *messageHandler;
     QList<DBC_NODE *> dbc_nodes;
+    QList<DBC_VAL_TABLE> dbc_value_tables;
     QList<DBC_ATTRIBUTE> dbc_attributes;
 private:
     QString fileName;
@@ -101,6 +103,7 @@ private:
     DBC_SIGNAL* parseSignalLine(QString line, DBC_MESSAGE *msg);
     bool parseSignalMultiplexValueLine(QString line);
     DBC_MESSAGE* parseMessageLine(QString line);
+    bool parseValueTableLine(QString line);
     bool parseValueLine(QString line);
     bool parseSignalValueTypeLine(QString line);
     bool parseAttributeLine(QString line);
@@ -133,7 +136,7 @@ public:
     static DBCHandler *getReference();
 
 private:
-    QList<DBCFile> loadedFiles;
+    QList<DBCFile *> loadedFiles;
 
     DBCHandler();
     static DBCHandler *instance;

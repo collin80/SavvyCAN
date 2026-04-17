@@ -66,6 +66,13 @@ public:
     QString descript;
 };
 
+class DBC_VAL_TABLE
+{
+public:
+    QString name;
+    QList<DBC_VAL_ENUM_ENTRY> valList;
+};
+
 class DBC_NODE
 {
 public:
@@ -187,4 +194,3 @@ public:
 
 
 #endif // DBC_CLASSES_H
-

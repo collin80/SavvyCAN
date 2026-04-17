@@ -15,6 +15,8 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
     sendDebug("LAWICELSerial()");
 
     serial = nullptr;
+    isAutoRestart = false;
+    rebuildLocalTimeBasis();
 
     readSettings();
 }
@@ -198,6 +200,13 @@ bool LAWICELSerial::piSendFrame(const CommFrame& frame)
 
 /****************************************************************/
 
+void LAWICELSerial::rebuildLocalTimeBasis()
+{
+    timeBasis = 0;
+    lastHWTimestamp = -1;
+    wrapAdder = 0;
+}
+
 void LAWICELSerial::readSettings()
 {
     //QSettings settings;
@@ -248,6 +257,8 @@ void LAWICELSerial::connectDevice()
 void LAWICELSerial::deviceConnected()
 {
     sendDebug("Connecting to LAWICEL Device!");
+
+    rebuildLocalTimeBasis();
 
     QByteArray output;
 
@@ -474,21 +485,48 @@ void LAWICELSerial::readSerialData()
         {
             //qDebug() << "Got CR!";
 
-            CommFrame buildFrame;
             QByteArray buildData;
-            auto addTimestamp = [this, &buildFrame](int frameStringLen)
+
+            buildFrame.setTimeStamp(CommFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
+            if (!useSystemTime)
             {
-                //If total length is greater than command, header and data, it's a timestamp
-                bool hasTimestamp = mBuildLine.length() > frameStringLen + 1;
-                if (useSystemTime || !hasTimestamp)
-                {
-                    buildFrame.setTimeStamp({0, QDateTime::currentMSecsSinceEpoch() * 1000ul});
+                bool isFD = false;
+                char offset;
+                char len_index;
+                switch(mBuildLine[0].toLatin1()) {
+                    case 'b':
+                    case 'd':
+                        isFD = true;
+                        [[fallthrough]];
+                    case 't':
+                        offset = 5;
+                        len_index = 4;
+                        break;
+                    case 'B':
+                    case 'D':
+                        isFD = true;
+                        [[fallthrough]];
+                    case 'T':
+                        offset = 10;
+                        len_index = 9;
+                        break;
+                    default:
+                        offset = 5;
+                        len_index = 4;
+                        break;
                 }
-                else
+
+                int dlc = mBuildLine.mid(len_index, 1).toInt();
+                int byteCount = isFD ? (int)dlc_code_to_bytes(dlc) : dlc;
+                int frameStringLen = offset + byteCount * 2;
+                if (mBuildLine.length() > frameStringLen + 1)
                 {
-                    //Four bytes after the end of the data bytes.
-                    qint64 buildTimestamp = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16) * 1000l;
-                    buildFrame.setTimeStamp({0, buildTimestamp});
+                    qint64 hardwareMs = mBuildLine.mid(frameStringLen, 4).toInt(nullptr, 16);
+                    if (lastHWTimestamp >= 0 && hardwareMs < lastHWTimestamp) { wrapAdder += 60000; }
+                    lastHWTimestamp = hardwareMs;
+                    qint64 unwrappedMs = wrapAdder + hardwareMs;
+                    if (timeBasis == 0) { timeBasis = QDateTime::currentMSecsSinceEpoch() - unwrappedMs; }
+                    buildFrame.setTimeStamp(CommFrame::TimeStamp(0, (timeBasis + unwrappedMs) * 1000ll));
                 }
             };
 
@@ -593,7 +631,7 @@ void LAWICELSerial::readSerialData()
                 buildFrame.setReceived(true);
                 buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
                 buildFrame.setExtendedFrameFormat(true);
-                buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
+                buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(9, 1).toInt(nullptr, 16)));
                 for (int c = 0; c < buildData.size(); c++)
                 {
                     buildData[c] = mBuildLine.mid(10 + (c*2), 2).toInt(nullptr, 16);

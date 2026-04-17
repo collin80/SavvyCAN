@@ -14,7 +14,7 @@
    <string>ISO-TP Decoder</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
-   <item alignment="Qt::AlignHCenter">
+   <item alignment="Qt::AlignmentFlag::AlignHCenter">
     <widget class="QLabel" name="label">
      <property name="text">
       <string>Interpreted Messages Overview</string>
@@ -22,7 +22,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QTableWidget" name="tableIsoFrames"/>
+    <widget class="QTableView" name="tableIsoFrames"/>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -49,14 +49,14 @@
      </item>
     </layout>
    </item>
-   <item alignment="Qt::AlignLeft">
+   <item alignment="Qt::AlignmentFlag::AlignLeft">
     <widget class="QCheckBox" name="cbShowIncomplete">
      <property name="text">
       <string>Show incomplete and/or corrupted messages</string>
      </property>
     </widget>
    </item>
-   <item alignment="Qt::AlignLeft">
+   <item alignment="Qt::AlignmentFlag::AlignLeft">
     <widget class="QCheckBox" name="cbUseExtendedAddressing">
      <property name="text">
       <string>Use extended addressing</string>
@@ -67,7 +67,7 @@
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_2">
-       <item alignment="Qt::AlignHCenter">
+       <item alignment="Qt::AlignmentFlag::AlignHCenter">
         <widget class="QLabel" name="label_2">
          <property name="text">
           <string>Data Details of Selected Message</string>
@@ -88,7 +88,7 @@
      </item>
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_4">
-       <item alignment="Qt::AlignHCenter">
+       <item alignment="Qt::AlignmentFlag::AlignHCenter">
         <widget class="QLabel" name="lblFilter">
          <property name="text">
           <string>IDs to Decode</string>
