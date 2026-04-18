@@ -425,7 +425,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     thisFrame = filteredFrames.at(index.row());
 
     const unsigned char *data = reinterpret_cast<const unsigned char *>(thisFrame.payload().constData());
-    int dataLen = thisFrame.payload().count();
+    int dataLen = thisFrame.payload().size();
 
     if (role == Qt::BackgroundRole)
     {
@@ -493,9 +493,9 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 return QString::number(thisFrame.timedelta);
             }
             else ts = Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
-            if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
-            if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
-            if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
+            if (ts.typeId() == QMetaType::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
+            if (ts.typeId() == QMetaType::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
+            if (ts.typeId() == QMetaType::QDateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
             return Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
