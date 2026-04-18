@@ -93,7 +93,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
     ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", false).toBool());
 
-    bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+    bool secondsMode = settings.value("Main/TimeSeconds", true).toBool();
     bool clockMode = settings.value("Main/TimeClock", false).toBool();
     bool milliMode = settings.value("Main/TimeMillis", false).toBool();
     if (clockMode)
