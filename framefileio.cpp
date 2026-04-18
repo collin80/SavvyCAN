@@ -1415,6 +1415,8 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
     int lineCounter = 0;
     int fileVersion = 11;
     bool foundErrors = false;
+    QMap<QByteArray, int> colIndex; // maps $COLUMNS identifier -> token index
+    bool hasColumnSpec = false;
 
     if (!inFile->open(QIODevice::ReadOnly | QIODevice::Text))
     {
@@ -1436,12 +1438,83 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CANFrame>* frames)
             if (line.contains("$FILEVERSION=2.0")) fileVersion = 20;
             if (line.contains("$FILEVERSION=1.3")) fileVersion = 13;
             if (line.contains("$FILEVERSION=1.1")) fileVersion = 11;
+            if (line.startsWith(";$COLUMNS=")) {
+                QByteArray colDef = line.mid(10).trimmed();
+                QList<QByteArray> cols = colDef.split(',');
+                for (int i = 0; i < cols.size(); i++) {
+                    colIndex[cols[i].trimmed()] = i;
+                }
+                hasColumnSpec = true;
+            }
             continue;
         }
         if (line.length() > 41)
         {
             line = line.simplified();
             QList<QByteArray> tokens = line.split(' ');
+
+            // $COLUMNS-aware parsing: takes priority when header specifies column layout
+            if (hasColumnSpec)
+            {
+                int idxO = colIndex.value("O", -1);
+                int idxT = colIndex.value("T", -1);
+                int idxB = colIndex.value("B", -1);
+                int idxI = colIndex.value("I", -1);
+                int idxd = colIndex.value("d", -1);
+                int idxl = colIndex.value("l", -1); // lowercase: actual byte count
+                int idxL = colIndex.value("L", -1); // uppercase: DLC
+                int idxD = colIndex.value("D", -1);
+
+                if (idxO < 0 || idxO >= tokens.size() || idxI < 0 || idxI >= tokens.size())
+                    continue;
+
+                thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, static_cast<uint64_t>(tokens[idxO].toDouble() * 1000.0)));
+                thisFrame.setFrameId(tokens[idxI].toUInt(nullptr, 16));
+                if (thisFrame.frameId() > 0x1FFFFFFF)
+                    continue; // invalid CAN ID
+
+                thisFrame.bus = (idxB >= 0 && idxB < tokens.size()) ? tokens[idxB].toInt() : 0;
+                thisFrame.isReceived = !(idxd >= 0 && idxd < tokens.size() && tokens[idxd].toLower() == "tx");
+                thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF ||
+                    (idxI < tokens.size() && tokens[idxI].length() >= 8));
+
+                // Prefer lowercase l (actual payload bytes) over uppercase L (DLC)
+                int numBytes = 0;
+                if (idxl >= 0 && idxl < tokens.size())
+                    numBytes = tokens[idxl].toInt();
+                else if (idxL >= 0 && idxL < tokens.size())
+                    numBytes = tokens[idxL].toInt();
+
+                QByteArray msgType = (idxT >= 0 && idxT < tokens.size()) ? tokens[idxT] : QByteArray("DT");
+
+                if (msgType == "RR") {
+                    thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+                    thisFrame.setPayload(QByteArray());
+                } else if (msgType == "ER") {
+                    thisFrame.setFrameType(QCanBusFrame::ErrorFrame);
+                    thisFrame.setPayload(QByteArray());
+                } else if (msgType == "ST" || msgType == "EC" || msgType == "EV") {
+                    continue; // status/event entries, not CAN data frames
+                } else {
+                    // DT = classic data, FD/FB/FE/BI = CAN FD variants
+                    thisFrame.setFrameType(QCanBusFrame::DataFrame);
+                    bool isFD = (msgType == "FD" || msgType == "FB" || msgType == "FE" || msgType == "BI");
+                    thisFrame.setFlexibleDataRateFormat(isFD);
+                    if (msgType == "FB" || msgType == "BI")
+                        thisFrame.setBitrateSwitch(true);
+
+                    QByteArray bytes(numBytes, 0);
+                    if (idxD >= 0) {
+                        for (int d = 0; d < numBytes && (idxD + d) < tokens.size(); d++) {
+                            bytes[d] = static_cast<char>(tokens[idxD + d].toInt(nullptr, 16));
+                        }
+                    }
+                    thisFrame.setPayload(bytes);
+                }
+                frames->append(thisFrame);
+                continue;
+            }
+
             if (fileVersion == 11)
             {
                 if (tokens.length() > 4)
