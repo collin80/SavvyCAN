@@ -907,7 +907,7 @@ void MainWindow::overwriteToggled(bool state)
     if (state)
     {
         QMessageBox::StandardButton confirmDialog;
-        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
+        confirmDialog = QMessageBox::question(this, "Confirm", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
                                       QMessageBox::Yes|QMessageBox::No);
         if (confirmDialog == QMessageBox::Yes)
         {
@@ -1696,7 +1696,7 @@ void MainWindow::showTemporalGraphWindow()
         if(frames->count() > 2000)
         {
             QMessageBox::StandardButton confirmDialog;
-            confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "There are a lot of frames (>2000) to plot, this may take a while or crash the app. Crash likely with more than 10k frames. Continue?",
+            confirmDialog = QMessageBox::question(this, "Confirm", "There are a lot of frames (>2000) to plot, this may take a while or crash the app. Crash likely with more than 10k frames. Continue?",
                                           QMessageBox::Yes|QMessageBox::No);
             if (confirmDialog == QMessageBox::No)
             {
