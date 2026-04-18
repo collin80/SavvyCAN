@@ -782,7 +782,7 @@ void GraphingWindow::saveSpreadsheet()
         for (auto && graph : graphParams) {
             xMin = std::min(xMin, graph.x[0]);
             xMax = std::max(xMax, graph.x[graph.x.count() - 1]);
-            maxCount = std::max(maxCount, graph.x.count());
+            maxCount = std::max(maxCount, static_cast<int>(graph.x.count()));
         }
         qDebug() << "xMin: " << xMin;
         qDebug() << "xMax: " << xMax;

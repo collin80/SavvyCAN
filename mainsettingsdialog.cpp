@@ -4,7 +4,7 @@
 #include <qevent.h>
 #include <QDebug>
 #include <QDir>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QCoreApplication>
 #include <QDebug>
 #include "simplecrypt.h"
@@ -25,9 +25,10 @@ static QStringList availableLanguageCodes()
         list = transDir.entryList(QStringList() << "SavvyCAN_*.ts");
     }
     for (QString file : list) {
-        QRegExp re("SavvyCAN_(.*)\\.(qm|ts)");
-        if (re.indexIn(file) != -1) {
-            codes << re.cap(1);
+        QRegularExpression re("SavvyCAN_(.*)\\.(qm|ts)");
+        QRegularExpressionMatch match = re.match(file);
+        if (match.hasMatch()) {
+            codes << match.captured(1);
         }
     }
     return codes;
