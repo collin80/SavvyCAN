@@ -617,8 +617,18 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         switch (Column(section))
         {
         case Column::TimeStamp:
-            if (overwriteDups) return QString(tr("Time Delta"));
-            return QString(tr("Timestamp"));
+        {
+            QString unit;
+            switch (Utility::timeStyle)
+            {
+            case TS_MICROS:  unit = " (us)"; break;
+            case TS_MILLIS:  unit = " (ms)"; break;
+            case TS_SECONDS: unit = " (s)";  break;
+            default: break;
+            }
+            if (overwriteDups) return QString(tr("Time Delta")) + unit;
+            return QString(tr("Timestamp")) + unit;
+        }
         case Column::FrameId:
             return QString(tr("ID"));
         case Column::Extended:
