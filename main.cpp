@@ -57,11 +57,12 @@ int main(int argc, char *argv[])
     QLocale locale(localeString);
     QString lang = locale.name();
     QString shortLang = locale.name().left(2);
+    bool loadedTranslator = false;
 
-    if (QString translationDir = QCoreApplication::applicationDirPath() + "/translations"; !translator.load("SavvyCAN_" + lang, translationDir)) {
-        translator.load("SavvyCAN_" + shortLang, translationDir);
+    if (QString translationDir = QCoreApplication::applicationDirPath() + "/translations"; !(loadedTranslator = translator.load("SavvyCAN_" + lang, translationDir))) {
+        loadedTranslator = translator.load("SavvyCAN_" + shortLang, translationDir);
     }
-    a.installTranslator(&translator);
+    if (loadedTranslator) a.installTranslator(&translator);
 
     qInfo() << "Locale Value is:" << locale.name();
 

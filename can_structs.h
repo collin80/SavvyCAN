@@ -15,11 +15,18 @@ public:
     bool isReceived; //did we receive this or send it?
     uint64_t timedelta;
     uint32_t frameCount; //used in overwrite mode
+    qint64 originalTimestamp;
+    bool hasOriginalTimestamp;
+
+    qint64 totalMicroSeconds() const
+    {
+        return timeStamp().seconds() * 1000000ll + timeStamp().microSeconds();
+    }
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
     {
-        qint64 lStamp = l.timeStamp().seconds() * 1000000 + l.timeStamp().microSeconds();
-        qint64 rStamp = r.timeStamp().seconds() * 1000000 + r.timeStamp().microSeconds();
+        qint64 lStamp = l.totalMicroSeconds();
+        qint64 rStamp = r.totalMicroSeconds();
         return lStamp < rStamp;
     }
 
@@ -32,6 +39,8 @@ public:
         isReceived = true;
         timedelta = 0;
         frameCount = 1;
+        originalTimestamp = 0;
+        hasOriginalTimestamp = false;
     }
 };
 
