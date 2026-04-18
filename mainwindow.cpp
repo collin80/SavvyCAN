@@ -194,7 +194,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->listFilters->horizontalScrollBar()->setEnabled(false);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
-    updateTimer.setInterval(250);
+    updateTimer.setInterval(100); // default 10 Hz; overridden by readUpdateableSettings()
     updateTimer.start();
 
     elapsedTime = new QElapsedTimer;
@@ -442,6 +442,10 @@ void MainWindow::readUpdateableSettings()
     model->setBytesPerLine(bpl);
 
     CSVAbsTime = settings.value("Main/CSVAbsTime", false).toBool();
+
+    int refreshHz = settings.value("Main/RefreshRate", 10).toInt();
+    refreshHz = qBound(4, refreshHz, 60);
+    updateTimer.setInterval(1000 / refreshHz);
 
     if (settings.value("Main/FilterLabeling", false).toBool())
         ui->listFilters->setMaximumWidth(250);
@@ -1459,7 +1463,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         dataColumnsAdded = 0;
         frame = &frames->at(c);
         //data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().size();
 
         QString builderString;
         if (CSVAbsTime)
@@ -1546,7 +1550,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     {
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().size();
 
         QString builderString;
         builderString += tr("Time: ") + QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6);
