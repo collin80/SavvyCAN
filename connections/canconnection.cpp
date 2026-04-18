@@ -347,9 +347,19 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData[pBusId].mTargettedFrames.removeAll(target);
 
-    return true;
+    if (pBusId == -1)
+    {
+        bool removed = false;
+        for (int i = 0; i < mBusData.count(); i++)
+        {
+            if (mBusData[i].mTargettedFrames.removeAll(target) > 0)
+                removed = true;
+        }
+        return removed;
+    }
+
+    return (mBusData[pBusId].mTargettedFrames.removeAll(target) > 0);
 }
 
 bool CANConnection::removeAllTargettedFrames(QObject *receiver)

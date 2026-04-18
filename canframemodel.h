@@ -50,6 +50,7 @@ public:
     void setUseColorsByCanId(bool);
     void setClearMode(bool mode);
     void setTimeStyle(TimeStyle newStyle);
+    void setUseZeroTime(bool mode);
     void setIgnoreDBCColors(bool mode);
     void setFilterState(unsigned int ID, bool state);
     void setBusFilterState(unsigned int BusID, bool state);
@@ -82,6 +83,8 @@ private:
     uint64_t getCANFrameVal(QVector<CANFrame> *frames, int row, Column col);
     bool any_filters_are_configured(void);
     bool any_busfilters_are_configured(void);
+    qint64 getOriginalTimestamp(const CANFrame &frame) const;
+    void applyTimeOffsetLocked();
 
     QVector<CANFrame> frames;
     QVector<CANFrame> filteredFrames;
@@ -96,8 +99,10 @@ private:
     TimeStyle timeStyle;
     bool useHexMode;
     bool useColorsByCanId;
+    bool useZeroTime;
     bool needFilterRefresh;
     bool ignoreDBCColors;
+    bool zeroTimeOffsetInitialized;
     int64_t timeOffset;
     int lastUpdateNumFrames;
     uint32_t preallocSize;

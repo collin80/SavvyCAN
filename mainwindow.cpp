@@ -433,6 +433,7 @@ void MainWindow::readUpdateableSettings()
     tempBool = settings.value("Main/TimeMillis", false).toBool();
     if (tempBool) ts = TS_MILLIS;
     model->setTimeStyle(ts);
+    model->setUseZeroTime(settings.value("Main/UseZeroTime", false).toBool());
 
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
@@ -491,6 +492,7 @@ void MainWindow::processSenderCellChange(int line, int col)
 {
     qDebug() << "processSenderCellChange";
     FrameSendData *tempData;
+    QTableWidgetItem *cellItem;
     QStringList tokens;
     int tempVal;
 
@@ -517,10 +519,17 @@ void MainWindow::processSenderCellChange(int line, int col)
         return;
     }
 
+    cellItem = ui->tableSimpleSender->item(line, col);
+    if (!cellItem)
+    {
+        qDebug() << "Sender cell item missing for row" << line << "col" << col;
+        return;
+    }
+
     switch (col)
     {
     case SIMP_COL::SC_COL_EN: //Enable check box
-        if (ui->tableSimpleSender->item(line, 0)->checkState() == Qt::Checked)
+        if (cellItem->checkState() == Qt::Checked)
         {
             tempData->enabled = true;
         }
@@ -528,50 +537,49 @@ void MainWindow::processSenderCellChange(int line, int col)
         qDebug() << "Setting enabled to " << tempData->enabled;
         break;
     case SIMP_COL::SC_COL_BUS: //Bus designation
-        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_BUS)->text());
+        tempVal = Utility::ParseStringToNum(cellItem->text());
         if (tempVal < -1) tempVal = -1;
         if (tempVal >= numBuses) tempVal = numBuses - 1;
         tempData->bus = tempVal;
         qDebug() << "Setting bus to " << tempVal;
         break;
     case SIMP_COL::SC_COL_ID: //ID field
-        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_ID)->text());
+        tempVal = Utility::ParseStringToNum(cellItem->text());
         if (tempVal < 0) tempVal = 0;
         if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
         tempData->setFrameId(tempVal);
         if (tempData->frameId() > 0x7FF) {
             tempData->setExtendedFrameFormat(true);
             ui->tableSimpleSender->blockSignals(true);
-            ui->tableSimpleSender->item(line, ST_COLS::SENDTAB_COL_EXT)->setCheckState(Qt::Checked);
+            if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT))
+                ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT)->setCheckState(Qt::Checked);
             ui->tableSimpleSender->blockSignals(false);
         }
         qDebug() << "setting ID to " << tempVal;
         break;
     case SIMP_COL::SC_COL_EXT:
-        if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT)->checkState() == Qt::Checked) {
+        if (cellItem->checkState() == Qt::Checked) {
             tempData->setExtendedFrameFormat(true);
         } else {
             tempData->setExtendedFrameFormat(false);
         }
         break;
     case SIMP_COL::SC_COL_REM:
-        if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_REM)->checkState() == Qt::Checked) {
+        if (cellItem->checkState() == Qt::Checked) {
             tempData->setFrameType(QCanBusFrame::RemoteRequestFrame);
         } else {
             tempData->setFrameType(QCanBusFrame::DataFrame);
         }
         break;
     case SIMP_COL::SC_COL_DATA: //Data bytes
-        for (int i = 0; i < 8; i++) tempData->payload().data()[i] = 0;
-
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
-        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
+        tokens = cellItem->text().split(" ", Qt::SkipEmptyParts);
 #else
-        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", QString::SkipEmptyParts);
+        tokens = cellItem->text().split(" ", QString::SkipEmptyParts);
 #endif
         arr.clear();
-        arr.reserve(tokens.count());
-        for (int j = 0; j < tokens.count(); j++)
+    arr.reserve(std::min<int>(static_cast<int>(tokens.count()), 8));
+        for (int j = 0; j < tokens.count() && j < 8; j++)
         {
             arr.append((uint8_t)Utility::ParseStringToNum(tokens[j]));
         }
@@ -579,7 +587,7 @@ void MainWindow::processSenderCellChange(int line, int col)
         break;
     case SIMP_COL::SC_COL_INTERVAL: //interval in ms
 
-        QString trigger = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_INTERVAL)->text().toUpper();
+        QString trigger = cellItem->text().toUpper();
 
         Trigger thisTrigger;
         thisTrigger.bus = -1; //-1 means we don't care which
@@ -1406,7 +1414,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     {
         frame = &frames->at(c);
         //data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().size();
 
         //add all column names
         if (dbcHandler != nullptr)

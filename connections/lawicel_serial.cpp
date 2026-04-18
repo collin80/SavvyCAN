@@ -174,11 +174,11 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
     else {
         if (frame.hasExtendedFrameFormat())
         {
-            buildStr = QString::asprintf("T%08X%u", ID, frame.payload().length());
+            buildStr = QString::asprintf("T%08X%u", ID, static_cast<unsigned int>(frame.payload().length()));
         }
         else
         {
-            buildStr = QString::asprintf("t%03X%u", ID, frame.payload().length());
+            buildStr = QString::asprintf("t%03X%u", ID, static_cast<unsigned int>(frame.payload().length()));
         }
     }
     foreach (QChar chr, buildStr)
