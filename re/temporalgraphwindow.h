@@ -2,28 +2,22 @@
 #define TEMPORALGRAPHWINDOW_H
 
 #include <QDialog>
-#include "qcustomplot.h"
 #include "can_structs.h"
 
 namespace Ui {
 class TemporalGraphWindow;
 }
 
-class HexTicker : public QCPAxisTicker
-{
-    QString getTickLabel (double tick, const QLocale& locale, QChar formatChar, int precision);
-};
+class QCPGraph;
 
 class TemporalGraphWindow : public QDialog
 {
-    Q_OBJECT
-
 public:
     explicit TemporalGraphWindow(const QVector<CANFrame> *, QWidget *parent = nullptr);
     ~TemporalGraphWindow();
     void showEvent(QShowEvent*);
 
-private slots:
+private:
     void updatedFrames(int);
     void mousePress();
     void mouseWheel();
@@ -32,7 +26,6 @@ private slots:
     void zoomOut();
     void selectionChanged();
 
-private:
     Ui::TemporalGraphWindow *ui;    
     const QVector<CANFrame> *modelFrames;
     bool useOpenGL;

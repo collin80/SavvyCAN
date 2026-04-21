@@ -165,6 +165,12 @@ public slots:
     void suspend(bool pSuspend);
 
     /**
+     * @brief setUseSystemTime controls whether incoming timestamps use epoch time or manager-relative time
+     * @param mode true to use epoch/system time, false for manager-relative time
+     */
+    void setUseSystemTime(bool mode);
+
+    /**
      * @brief provides device with the frame to send
      * @param pFrame: the frame to send
      * @return false if parameter is invalid (bus id for instance)

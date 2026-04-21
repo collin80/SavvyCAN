@@ -425,15 +425,20 @@ void MainWindow::readUpdateableSettings()
     model->setUseColorsByCanId(useColorsByCanId);
 
     bool tempBool;
+    const bool useZeroTime = settings.value("Main/UseZeroTime", false).toBool();
     TimeStyle ts = TS_MICROS;
     tempBool = settings.value("Main/TimeSeconds", false).toBool();
     if (tempBool) ts = TS_SECONDS;
-    tempBool = settings.value("Main/TimeClock", false).toBool();
-    if (tempBool) ts = TS_CLOCK;
+    bool useClockTime = settings.value("Main/TimeClock", false).toBool();
+    if (useClockTime) ts = TS_CLOCK;
     tempBool = settings.value("Main/TimeMillis", false).toBool();
     if (tempBool) ts = TS_MILLIS;
+
     model->setTimeStyle(ts);
-    model->setUseZeroTime(settings.value("Main/UseZeroTime", false).toBool());
+    // Keep live RX/TX timestamps on a single absolute epoch basis.
+    // Zero time is then applied as a model/view offset rather than by changing the source clock.
+    CANConManager::getInstance()->setUseSystemTime(true);
+    model->setUseZeroTime(useZeroTime);
 
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
@@ -1147,8 +1152,13 @@ void MainWindow::clearFrames()
 
 void MainWindow::normalizeTiming()
 {
-    model->normalizeTiming();
+    // Persist the zero-time setting so it survives settings dialog open/close,
+    // then let readUpdateableSettings drive the model exactly like toggling the checkbox does.
+    QSettings settings;
+    settings.setValue("Main/UseZeroTime", true);
+    readUpdateableSettings();
     emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
+    emit settingsUpdated(); //sync the settings dialog checkbox
 }
 
 void MainWindow::handleLoadFile()

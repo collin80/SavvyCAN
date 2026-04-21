@@ -57,6 +57,7 @@ void CANConManager::stopAllConnections()
 
 void CANConManager::add(CANConnection* pConn_p)
 {
+    pConn_p->setUseSystemTime(useSystemTime);
     mConns.append(pConn_p);
 }
 
@@ -70,6 +71,7 @@ void CANConManager::remove(CANConnection* pConn_p)
 void CANConManager::replace(int idx, CANConnection* pConn_p)
 {
     CANConnection *original = mConns[idx];
+    pConn_p->setUseSystemTime(useSystemTime);
     mConns.replace(idx, pConn_p);
     delete original; original = NULL;
 }
@@ -94,6 +96,19 @@ int CANConManager::getBusBase(CANConnection *which)
         else return buses;
     }
     return -1;
+}
+
+void CANConManager::setUseSystemTime(bool mode)
+{
+    if (useSystemTime == mode) return;
+    useSystemTime = mode;
+
+    foreach (CANConnection* conn, mConns)
+    {
+        conn->setUseSystemTime(mode);
+    }
+
+    resetTimeBasis();
 }
 
 void CANConManager::refreshCanList()
@@ -129,6 +144,11 @@ void CANConManager::refreshCanList()
 uint64_t CANConManager::getTimeBasis()
 {
     return mTimestampBasis;
+}
+
+bool CANConManager::getUseSystemTime() const
+{
+    return useSystemTime;
 }
 
 QList<CANConnection*>& CANConManager::getConnections()
@@ -207,9 +227,19 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
     int busBase = 0;
     CANFrame workingFrame = pFrame;
 
+    workingFrame.isReceived = false;
+    if (useSystemTime)
+    {
+        workingFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+    }
+    else
+    {
+        workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
+    }
+
     if (mConns.count() == 0)
     {
-        buslessFrames.append(pFrame);
+        buslessFrames.append(workingFrame);
         return true;
     }
 
@@ -219,16 +249,6 @@ bool CANConManager::sendFrame(const CANFrame& pFrame)
         if (pFrame.bus < (busBase + conn->getNumBuses()))
         {
             workingFrame.bus -= busBase;
-            workingFrame.isReceived = false;
-            if (useSystemTime)
-            {
-                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
-            }
-            else
-            {
-                workingFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, mElapsedTimer.nsecsElapsed() / 1000));
-                //workingFrame.timestamp -= mTimestampBasis;
-            }
 
             return conn->sendFrame(workingFrame);
         }

@@ -409,7 +409,7 @@ void DBCMainEditor::refreshTree()
         DBC_NODE *node = &dbcFile->dbc_nodes[n];
         QTreeWidgetItem *nodeItem = new QTreeWidgetItem();
         QString nodeInfo = node->name;
-        if (node->comment.count() > 0) nodeInfo.append(" - ").append(node->comment);
+        if (!node->comment.isEmpty()) nodeInfo.append(" - ").append(node->comment);
         nodeItem->setText(0, nodeInfo);
         nodeItem->setIcon(0, nodeIcon);
         nodeItem->setData(0, Qt::UserRole, DBCItemTypes::NODE);
@@ -422,7 +422,7 @@ void DBCMainEditor::refreshTree()
             {
                 QTreeWidgetItem *msgItem = new QTreeWidgetItem(nodeItem);
                 QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
-                if (msg->comment.count() > 0) msgInfo.append(" - ").append(msg->comment);
+                if (!msg->comment.isEmpty()) msgInfo.append(" - ").append(msg->comment);
                 msgItem->setText(0, msgInfo);
                 msgItem->setIcon(0, messageIcon);
                 msgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
@@ -455,7 +455,7 @@ QString DBCMainEditor::createSignalText(DBC_SIGNAL *sig)
     else
         sigInfo.append(" [" + QString::number(sig->startBit) + "m " + QString::number(sig->signalSize) + "]");
 
-    if (sig->comment.count() > 0) sigInfo.append(" - ").append(sig->comment);
+    if (!sig->comment.isEmpty()) sigInfo.append(" - ").append(sig->comment);
     return sigInfo;
 }
 
@@ -486,7 +486,7 @@ void DBCMainEditor::updatedNode(DBC_NODE *node)
     {
         QTreeWidgetItem *item = nodeToItem[node];
         QString nodeInfo = node->name;
-        if (node->comment.count() > 0) nodeInfo.append(" - ").append(node->comment);
+        if (!node->comment.isEmpty()) nodeInfo.append(" - ").append(node->comment);
         item->setText(0, nodeInfo);
     }
     else qDebug() << "That node doesn't exist. That's a bug dude.";
@@ -498,7 +498,7 @@ void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg)
     {
         QTreeWidgetItem *item = messageToItem.value(msg);
         QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
-        if (msg->comment.count() > 0) msgInfo.append(" - ").append(msg->comment);
+        if (!msg->comment.isEmpty()) msgInfo.append(" - ").append(msg->comment);
         item->setText(0, msgInfo);
         //editor could have changed the parent Node too. Have to figure out which node
         //is parent in the GUI and compare that to parent in the data.
@@ -647,7 +647,7 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
     msgPtr = dbcFile->messageHandler->findMsgByIdx(dbcFile->messageHandler->getCount() - 1);
     QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
     QString msgInfo = Utility::formatCANID(msg.ID) + " " + msg.name;
-    if (msg.comment.count() > 0) msgInfo.append(" - ").append(msg.comment);
+    if (!msg.comment.isEmpty()) msgInfo.append(" - ").append(msg.comment);
     newMsgItem->setText(0, msgInfo);
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
@@ -727,7 +727,7 @@ void DBCMainEditor::newMessage()
     msgPtr = dbcFile->messageHandler->findMsgByIdx(dbcFile->messageHandler->getCount() - 1);
     QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
     QString msgInfo = Utility::formatCANID(msg.ID) + " " + msg.name;
-    if (msg.comment.count() > 0) msgInfo.append(" - ").append(msg.comment);
+    if (!msg.comment.isEmpty()) msgInfo.append(" - ").append(msg.comment);
     newMsgItem->setText(0, msgInfo);
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);

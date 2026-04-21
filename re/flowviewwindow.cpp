@@ -295,7 +295,7 @@ void FlowViewWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, QMous
 {
     int id = 0;
     //apply transforms to get the X axis value where we double clicked
-    double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
+    double coord = plottable->keyAxis()->pixelToCoord(event->position().x());
     if (frameCache.count() > 0) id = frameCache[0].frameId();
     if (secondsMode) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
@@ -521,10 +521,9 @@ void FlowViewWindow::updatedFrames(int numFrames)
         if (ui->cbLiveMode->checkState() == Qt::Checked)
         {
             currentPosition = frameCache.count() - 1;
+            memcpy(refBytes, currBytes, 64); // save previous current as new reference before updating current
             memset(currBytes, 0, 64);
             memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
-            memcpy(refBytes, currBytes, 64);
-
         }
         if (needRefresh)
         {
@@ -607,7 +606,7 @@ void FlowViewWindow::createGraph(int byteNum)
 
 void FlowViewWindow::refreshIDList()
 {
-    int id;
+    uint32_t id;
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CANFrame thisFrame = modelFrames->at(i);
