@@ -2313,6 +2313,7 @@ bool FrameFileIO::openContinuousNative()
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
     dialog.setNameFilters(filters);
+    dialog.selectNameFilter(filters[1]); // Default to SocketCAN
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
 
