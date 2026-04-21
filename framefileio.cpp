@@ -57,7 +57,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CANFrame>* fram
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
     filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
     filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
-    filters.append(QString(tr("Candump/Kayak (*.log)")));
+    filters.append(QString(tr("SocketCAN (*.log)")));
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
     filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));

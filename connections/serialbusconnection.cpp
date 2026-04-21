@@ -27,6 +27,7 @@ SerialBusConnection::~SerialBusConnection()
 void SerialBusConnection::piStarted()
 {
     qDebug() << "piStarted()";
+    mSerialDeviceEpochOffsetValid = false;
     /* create device */
     QString errorString;
     qDebug() << "Creating device instance";
@@ -204,20 +205,42 @@ void SerialBusConnection::framesReceived()
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId());
                 }
-                frame_p->setTimeStamp(recFrame.timeStamp());
                 frame_p->setFrameType(recFrame.frameType());
                 frame_p->setError(recFrame.error());
                 /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
                 frame_p->isReceived = !recFrame.hasLocalEcho();
 
-                if (useSystemTime) {
-                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                const qint64 deviceTimestamp = recFrame.timeStamp().seconds() * 1000000ll + recFrame.timeStamp().microSeconds();
+                const bool hasDeviceTimestamp = (deviceTimestamp > 0);
+
+                if (useSystemTime)
+                {
+                    if (hasDeviceTimestamp)
+                    {
+                        if (!mSerialDeviceEpochOffsetValid)
+                        {
+                            mSerialDeviceEpochOffsetUs = QDateTime::currentMSecsSinceEpoch() * 1000ll - deviceTimestamp;
+                            mSerialDeviceEpochOffsetValid = true;
+                        }
+                        const qint64 adjustedTimestamp = qMax<qint64>(0, mSerialDeviceEpochOffsetUs + deviceTimestamp);
+                        frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, adjustedTimestamp));
+                    }
+                    else
+                    {
+                        frame_p->setTimeStamp(QCanBusFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
+                    }
                 }
                 else
                 {
-                    const qint64 deviceTimestamp = recFrame.timeStamp().seconds() * 1000000ll + recFrame.timeStamp().microSeconds();
-                    const qint64 adjustedTimestamp = qMax<qint64>(0, deviceTimestamp - timeBasis);
-                    frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, adjustedTimestamp));
+                    if (hasDeviceTimestamp)
+                    {
+                        frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, deviceTimestamp));
+                    }
+                    else
+                    {
+                        const qint64 adjustedTimestamp = qMax<qint64>(0, QDateTime::currentMSecsSinceEpoch() * 1000ll - timeBasis);
+                        frame_p->setTimeStamp(QCanBusFrame::TimeStamp(0, adjustedTimestamp));
+                    }
                 }
 
                 checkTargettedFrame(*frame_p);

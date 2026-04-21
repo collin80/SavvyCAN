@@ -51,6 +51,8 @@ private slots:
 protected:
     QCanBusDevice     *mDev_p = nullptr;
     QTimer             mTimer;
+    qint64             mSerialDeviceEpochOffsetUs = 0;
+    bool               mSerialDeviceEpochOffsetValid = false;
 };
 
 
