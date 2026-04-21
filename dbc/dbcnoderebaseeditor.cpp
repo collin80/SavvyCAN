@@ -24,15 +24,13 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
         {
             if (dbcNode == nullptr)
             {
-                QMessageBox::question(this, "Node Invalid", "There was an problem identifying the selected node.",
-                                                  QMessageBox::Ok);
+                QMessageBox::information(this, "Node Invalid", "There was an problem identifying the selected node.");
                 return;
             }
 
             if (lowestMsgId > 0x1FFFFFFFul)
             {
-                QMessageBox::question(this, "No Valid Messages", "The node has no valid messages to change.",
-                                                  QMessageBox::Ok);
+                QMessageBox::information(this, "No Valid Messages", "The node has no valid messages to change.");
                 return;
             }
 
@@ -40,15 +38,13 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
 
             if(newBase <= 0 || newBase > 0x1FFFFFFFul)
             {
-                QMessageBox::question(this, "Invalid Address", "The new address is outside of the valid range.",
-                                                  QMessageBox::Ok);
+                QMessageBox::information(this, "Invalid Address", "The new address is outside of the valid range.");
                 return;
             }
 
             if(newBase == lowestMsgId)
             {
-                QMessageBox::question(this, "Invalid Address", "The new address is the same as the original.",
-                                                  QMessageBox::Ok);
+                QMessageBox::information(this, "Invalid Address", "The new address is the same as the original.");
                 return;
             }
 
@@ -57,8 +53,7 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
             QList<DBC_MESSAGE*> messagesForNode = dbcFile->messageHandler->findMsgsByNode(dbcNode);
             if(messagesForNode.count() == 0)
             {
-                QMessageBox::question(this, "No Messages", "The node has no messages to change.",
-                                                  QMessageBox::Ok);
+                QMessageBox::information(this, "No Messages", "The node has no messages to change.");
                 return;
             }
 
@@ -68,8 +63,7 @@ DBCNodeRebaseEditor::DBCNodeRebaseEditor(QWidget *parent) :
 
                 if(newMsgId < 0 || newMsgId > 0x1FFFFFFFl)
                 {
-                    QMessageBox::question(this, "Invalid Address Range", "The new starting address would cause a message to be outside of the valid address range.",
-                                                      QMessageBox::Ok);
+                    QMessageBox::information(this, "Invalid Address Range", "The new starting address would cause a message to be outside of the valid address range.");
                     return;
                 }
             }

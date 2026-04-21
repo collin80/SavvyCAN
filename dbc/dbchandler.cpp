@@ -725,8 +725,6 @@ bool DBCFile::parseSignalValueTypeLine(QString line)
     // captured 2 is the signal name
     // captured 3 is the valtype
     if (!match.hasMatch()) { return false; }
-    uint32_t id = match.captured(1).toULong() & 0x1FFFFFFFUL;
-
     DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFUL);
     if (msg == nullptr) { return false; }
 
@@ -1497,12 +1495,12 @@ bool DBCFile::saveFile(QString fileName)
             {
                 foreach (DBC_ATTRIBUTE_VALUE val, node.attributes) {
                     attrValOutput.append("BA_ \"" + val.attrName + "\" BU_ ");
-                    switch (val.value.type())
+                    switch (val.value.typeId())
                     {
-                    case QVariant::Type::String:
+                    case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
-                    case QVariant::Type::Bool:
+                    case QMetaType::Bool:
                         attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:
@@ -1562,12 +1560,12 @@ bool DBCFile::saveFile(QString fileName)
         {
             foreach (DBC_ATTRIBUTE_VALUE val, msg->attributes) {
                 attrValOutput.append("BA_ \"" + val.attrName + "\" BO_ " + QString::number(ID) + " ");
-                switch (val.value.type())
+                switch (val.value.typeId())
                 {
-                case QVariant::Type::String:
+                case QMetaType::QString:
                     attrValOutput.append("\"" + val.value.toString() + "\";\n");
                     break;
-                case QVariant::Type::Bool:
+                case QMetaType::Bool:
                     attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                     break;
                 default:
@@ -1639,12 +1637,12 @@ bool DBCFile::saveFile(QString fileName)
             {
                 foreach (DBC_ATTRIBUTE_VALUE val, sig->attributes) {
                     attrValOutput.append("BA_ \"" + val.attrName + "\" SG_ " + QString::number(ID) + " " + sig->name + " ");
-                    switch (val.value.type())
+                    switch (val.value.typeId())
                     {
-                    case QVariant::Type::String:
+                    case QMetaType::QString:
                         attrValOutput.append("\"" + val.value.toString() + "\";\n");
                         break;
-                    case QVariant::Type::Bool:
+                    case QMetaType::Bool:
                         attrValOutput.append(QString::number(val.value.toBool() ? 1 : 0) + ";\n");
                         break;
                     default:
@@ -1935,8 +1933,8 @@ DBCFile* DBCHandler::loadDBCFile(int idx)
 DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
 {
     DBCFile *thisFile;
-    DBC_MESSAGE *pMsg;
-    DBC_SIGNAL *pSig;
+    DBC_MESSAGE *pMsg = nullptr;
+    DBC_SIGNAL *pSig = nullptr;
     QByteArray line;
     int lineCounter = 0;
     createBlankFile();
@@ -2093,7 +2091,7 @@ DBCFile* DBCHandler::loadSecretCSVFile(QString filename)
                 DBC_VAL_ENUM_ENTRY entry;
                 entry.value = valToks[0].toInt();
                 entry.descript = valToks[1];
-                pSig->valList.append(entry);
+                if (pSig) pSig->valList.append(entry);
             }
         }
     }

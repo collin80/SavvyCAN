@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QListWidgetItem>
+#include <QSpinBox>
 #include "sniffermodel.h"
 #include "SnifferDelegate.h"
 
@@ -61,6 +62,7 @@ private:
     SnifferDelegate             *sniffDel;
     QAbstractItemDelegate       *defaultDel;
     bool                        notchPingPong;
+    QSpinBox                    *mRefreshSpin;
 };
 
 #endif // SNIFFER_H

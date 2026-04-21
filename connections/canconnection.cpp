@@ -1,6 +1,6 @@
-#include <QSettings>
 #include <QThread>
 #include "canconnection.h"
+#include "canconmanager.h"
 
 CANConnection::CANConnection(QString pPort,
                              QString pDriver,
@@ -85,13 +85,7 @@ void CANConnection::start()
     /* set started flag */
     mStarted = true;
 
-    QSettings settings;
-
-    if (settings.value("Main/TimeClock", false).toBool())
-    {
-        useSystemTime = true;
-    }
-    else useSystemTime = false;
+    useSystemTime = CANConManager::getInstance()->getUseSystemTime();
 
     /* in multithread case, this will be called before entering thread event loop */
     return piStarted();
@@ -109,6 +103,18 @@ void CANConnection::suspend(bool pSuspend)
     }
 
     return piSuspend(pSuspend);
+}
+
+void CANConnection::setUseSystemTime(bool mode)
+{
+    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
+        QMetaObject::invokeMethod(this, "setUseSystemTime",
+                                  Qt::BlockingQueuedConnection,
+                                  Q_ARG(bool, mode));
+        return;
+    }
+
+    useSystemTime = mode;
 }
 
 
@@ -347,9 +353,19 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData[pBusId].mTargettedFrames.removeAll(target);
 
-    return true;
+    if (pBusId == -1)
+    {
+        bool removed = false;
+        for (int i = 0; i < mBusData.count(); i++)
+        {
+            if (mBusData[i].mTargettedFrames.removeAll(target) > 0)
+                removed = true;
+        }
+        return removed;
+    }
+
+    return (mBusData[pBusId].mTargettedFrames.removeAll(target) > 0);
 }
 
 bool CANConnection::removeAllTargettedFrames(QObject *receiver)

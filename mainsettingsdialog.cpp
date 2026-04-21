@@ -4,7 +4,7 @@
 #include <qevent.h>
 #include <QDebug>
 #include <QDir>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QCoreApplication>
 #include <QDebug>
 #include "simplecrypt.h"
@@ -25,9 +25,10 @@ static QStringList availableLanguageCodes()
         list = transDir.entryList(QStringList() << "SavvyCAN_*.ts");
     }
     for (QString file : list) {
-        QRegExp re("SavvyCAN_(.*)\\.(qm|ts)");
-        if (re.indexIn(file) != -1) {
-            codes << re.cap(1);
+        QRegularExpression re("SavvyCAN_(.*)\\.(qm|ts)");
+        QRegularExpressionMatch match = re.match(file);
+        if (match.hasMatch()) {
+            codes << match.captured(1);
         }
     }
     return codes;
@@ -92,7 +93,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->spinFontSize->setValue(settings.value("Main/FontSize", ui->cbDisplayHex->font().pointSize()).toUInt());
     ui->cbFontFixedWidth->setChecked(settings.value("Main/FontFixedWidth", false).toBool());
 
-    bool secondsMode = settings.value("Main/TimeSeconds", false).toBool();
+    bool secondsMode = settings.value("Main/TimeSeconds", true).toBool();
     bool clockMode = settings.value("Main/TimeClock", false).toBool();
     bool milliMode = settings.value("Main/TimeMillis", false).toBool();
     if (clockMode)
@@ -131,6 +132,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->comboSendingBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
+    ui->spinRefreshRate->setValue(settings.value("Main/RefreshRate", 10).toInt());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
@@ -177,6 +179,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->spinRefreshRate, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
     connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->lineRemotePort, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->lineRemoteUser, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
@@ -248,6 +251,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings.setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
+    settings.setValue("Main/RefreshRate", ui->spinRefreshRate->value());
     settings.setValue("Main/TimeFormat", ui->lineClockFormat->text());
     settings.setValue("Main/FontSize", ui->spinFontSize->value());
     settings.setValue("Remote/Host", ui->lineRemoteHost->text());

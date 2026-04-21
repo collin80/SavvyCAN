@@ -62,14 +62,23 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
     QRect viewport = option.rect;
 
-    int xSpan = viewport.right() - viewport.left();
-    int ySpan = viewport.bottom() - viewport.top();
-    int yOffset = (ySpan - (xSpan / 4)) / 2;
-    if (yOffset < 0) yOffset = 0;
-
-    //qDebug() << "XSpan" << xSpan << " YSpan " << ySpan;
+    int xSpan = viewport.width();
+    int ySpan = viewport.height();
+    int textHeight = qMax(mainFontInfo->pixelSize() + 2, 12);
+    int graphHeight = ySpan - textHeight;
+    if (graphHeight < 8) graphHeight = ySpan;
 
     int xSector = xSpan / 8;
+    if (xSector < 1) xSector = 1;
+    if (xSector > graphHeight) xSector = graphHeight;
+
+    int graphWidth = xSector * 8;
+    int xOffset = (xSpan - graphWidth) / 2;
+    if (xOffset < 0) xOffset = 0;
+
+    int yOffset = (graphHeight - xSector) / 2;
+    if (yOffset < 0) yOffset = 0;
+
     int v = item->getSeqInterval(index.column() - 3) * 10;
     if (v > 225) v = 225;
     if (v < 0) v = 0;
@@ -109,14 +118,15 @@ void SnifferDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         }
         if (mFadeInactive) painter->setOpacity((255 - v) / 255.0);
         else painter->setOpacity(1.0);
-        painter->drawRect(viewport.left() + x * xSector, viewport.top() + yOffset, xSector, xSector);
+        painter->drawRect(viewport.left() + xOffset + x * xSector, viewport.top() + yOffset, xSector, xSector);
     }
 
     //painter->setPen(QPen(QColor(v,v,v,255)));
     painter->setOpacity(1.0);
     painter->setPen(QApplication::palette().color(QPalette::Text));
     painter->setFont(mainFont);
-    painter->drawText(QRect(viewport.left(), viewport.top() + xSector + yOffset, xSpan, mainFontInfo->pixelSize()), Qt::AlignCenter, Utility::formatNumber((unsigned char)val));
+    QRect textRect(viewport.left(), viewport.top() + graphHeight, xSpan, ySpan - graphHeight);
+    painter->drawText(textRect, Qt::AlignCenter, Utility::formatNumber((unsigned char)val));
 }
 
 QSize SnifferDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const

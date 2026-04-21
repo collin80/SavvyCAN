@@ -194,7 +194,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->listFilters->horizontalScrollBar()->setEnabled(false);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
-    updateTimer.setInterval(250);
+    updateTimer.setInterval(100); // default 10 Hz; overridden by readUpdateableSettings()
     updateTimer.start();
 
     elapsedTime = new QElapsedTimer;
@@ -425,14 +425,20 @@ void MainWindow::readUpdateableSettings()
     model->setUseColorsByCanId(useColorsByCanId);
 
     bool tempBool;
+    const bool useZeroTime = settings.value("Main/UseZeroTime", false).toBool();
     TimeStyle ts = TS_MICROS;
     tempBool = settings.value("Main/TimeSeconds", false).toBool();
     if (tempBool) ts = TS_SECONDS;
-    tempBool = settings.value("Main/TimeClock", false).toBool();
-    if (tempBool) ts = TS_CLOCK;
+    bool useClockTime = settings.value("Main/TimeClock", false).toBool();
+    if (useClockTime) ts = TS_CLOCK;
     tempBool = settings.value("Main/TimeMillis", false).toBool();
     if (tempBool) ts = TS_MILLIS;
+
     model->setTimeStyle(ts);
+    // Keep live RX/TX timestamps on a single absolute epoch basis.
+    // Zero time is then applied as a model/view offset rather than by changing the source clock.
+    CANConManager::getInstance()->setUseSystemTime(true);
+    model->setUseZeroTime(useZeroTime);
 
     useFiltered = settings.value("Main/UseFiltered", false).toBool();
     model->setTimeFormat(settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString());
@@ -442,6 +448,10 @@ void MainWindow::readUpdateableSettings()
     model->setBytesPerLine(bpl);
 
     CSVAbsTime = settings.value("Main/CSVAbsTime", false).toBool();
+
+    int refreshHz = settings.value("Main/RefreshRate", 10).toInt();
+    refreshHz = qBound(4, refreshHz, 60);
+    updateTimer.setInterval(1000 / refreshHz);
 
     if (settings.value("Main/FilterLabeling", false).toBool())
         ui->listFilters->setMaximumWidth(250);
@@ -487,6 +497,7 @@ void MainWindow::processSenderCellChange(int line, int col)
 {
     qDebug() << "processSenderCellChange";
     FrameSendData *tempData;
+    QTableWidgetItem *cellItem;
     QStringList tokens;
     int tempVal;
 
@@ -513,10 +524,17 @@ void MainWindow::processSenderCellChange(int line, int col)
         return;
     }
 
+    cellItem = ui->tableSimpleSender->item(line, col);
+    if (!cellItem)
+    {
+        qDebug() << "Sender cell item missing for row" << line << "col" << col;
+        return;
+    }
+
     switch (col)
     {
     case SIMP_COL::SC_COL_EN: //Enable check box
-        if (ui->tableSimpleSender->item(line, 0)->checkState() == Qt::Checked)
+        if (cellItem->checkState() == Qt::Checked)
         {
             tempData->enabled = true;
         }
@@ -524,50 +542,49 @@ void MainWindow::processSenderCellChange(int line, int col)
         qDebug() << "Setting enabled to " << tempData->enabled;
         break;
     case SIMP_COL::SC_COL_BUS: //Bus designation
-        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_BUS)->text());
+        tempVal = Utility::ParseStringToNum(cellItem->text());
         if (tempVal < -1) tempVal = -1;
         if (tempVal >= numBuses) tempVal = numBuses - 1;
         tempData->bus = tempVal;
         qDebug() << "Setting bus to " << tempVal;
         break;
     case SIMP_COL::SC_COL_ID: //ID field
-        tempVal = Utility::ParseStringToNum(ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_ID)->text());
+        tempVal = Utility::ParseStringToNum(cellItem->text());
         if (tempVal < 0) tempVal = 0;
         if (tempVal > 0x7FFFFFFF) tempVal = 0x7FFFFFFF;
         tempData->setFrameId(tempVal);
         if (tempData->frameId() > 0x7FF) {
             tempData->setExtendedFrameFormat(true);
             ui->tableSimpleSender->blockSignals(true);
-            ui->tableSimpleSender->item(line, ST_COLS::SENDTAB_COL_EXT)->setCheckState(Qt::Checked);
+            if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT))
+                ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT)->setCheckState(Qt::Checked);
             ui->tableSimpleSender->blockSignals(false);
         }
         qDebug() << "setting ID to " << tempVal;
         break;
     case SIMP_COL::SC_COL_EXT:
-        if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_EXT)->checkState() == Qt::Checked) {
+        if (cellItem->checkState() == Qt::Checked) {
             tempData->setExtendedFrameFormat(true);
         } else {
             tempData->setExtendedFrameFormat(false);
         }
         break;
     case SIMP_COL::SC_COL_REM:
-        if (ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_REM)->checkState() == Qt::Checked) {
+        if (cellItem->checkState() == Qt::Checked) {
             tempData->setFrameType(QCanBusFrame::RemoteRequestFrame);
         } else {
             tempData->setFrameType(QCanBusFrame::DataFrame);
         }
         break;
     case SIMP_COL::SC_COL_DATA: //Data bytes
-        for (int i = 0; i < 8; i++) tempData->payload().data()[i] = 0;
-
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 14, 0 )
-        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", Qt::SkipEmptyParts);
+        tokens = cellItem->text().split(" ", Qt::SkipEmptyParts);
 #else
-        tokens = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_DATA)->text().split(" ", QString::SkipEmptyParts);
+        tokens = cellItem->text().split(" ", QString::SkipEmptyParts);
 #endif
         arr.clear();
-        arr.reserve(tokens.count());
-        for (int j = 0; j < tokens.count(); j++)
+    arr.reserve(std::min<int>(static_cast<int>(tokens.count()), 8));
+        for (int j = 0; j < tokens.count() && j < 8; j++)
         {
             arr.append((uint8_t)Utility::ParseStringToNum(tokens[j]));
         }
@@ -575,7 +592,7 @@ void MainWindow::processSenderCellChange(int line, int col)
         break;
     case SIMP_COL::SC_COL_INTERVAL: //interval in ms
 
-        QString trigger = ui->tableSimpleSender->item(line, SIMP_COL::SC_COL_INTERVAL)->text().toUpper();
+        QString trigger = cellItem->text().toUpper();
 
         Trigger thisTrigger;
         thisTrigger.bus = -1; //-1 means we don't care which
@@ -907,7 +924,7 @@ void MainWindow::overwriteToggled(bool state)
     if (state)
     {
         QMessageBox::StandardButton confirmDialog;
-        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
+        confirmDialog = QMessageBox::question(this, "Confirm", "Enabling Overwrite mode will\ndelete your captured frames\nand replace them with one\nframe per ID.\n\nAre you ready to do that?",
                                       QMessageBox::Yes|QMessageBox::No);
         if (confirmDialog == QMessageBox::Yes)
         {
@@ -1135,8 +1152,13 @@ void MainWindow::clearFrames()
 
 void MainWindow::normalizeTiming()
 {
-    model->normalizeTiming();
+    // Persist the zero-time setting so it survives settings dialog open/close,
+    // then let readUpdateableSettings drive the model exactly like toggling the checkbox does.
+    QSettings settings;
+    settings.setValue("Main/UseZeroTime", true);
+    readUpdateableSettings();
     emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
+    emit settingsUpdated(); //sync the settings dialog checkbox
 }
 
 void MainWindow::handleLoadFile()
@@ -1238,8 +1260,16 @@ void MainWindow::handleContinousLogging()
 
     if (continuousLogging)
     {
-        ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
-        FrameFileIO::openContinuousNative();
+        if (FrameFileIO::openContinuousNative())
+        {
+            ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
+        }
+        else
+        {
+            continuousLogging = false;
+            ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
+            ui->lblContMsg->setText("");
+        }
     }
     else
     {
@@ -1402,7 +1432,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     {
         frame = &frames->at(c);
         //data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().size();
 
         //add all column names
         if (dbcHandler != nullptr)
@@ -1459,7 +1489,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
         dataColumnsAdded = 0;
         frame = &frames->at(c);
         //data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().size();
 
         QString builderString;
         if (CSVAbsTime)
@@ -1546,7 +1576,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
     {
         frame = &frames->at(c);
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        dataLen = frame->payload().count();
+        dataLen = frame->payload().size();
 
         QString builderString;
         builderString += tr("Time: ") + QString::number((frame->timeStamp().microSeconds() / 1000000.0), 'f', 6);
@@ -1696,7 +1726,7 @@ void MainWindow::showTemporalGraphWindow()
         if(frames->count() > 2000)
         {
             QMessageBox::StandardButton confirmDialog;
-            confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "There are a lot of frames (>2000) to plot, this may take a while or crash the app. Crash likely with more than 10k frames. Continue?",
+            confirmDialog = QMessageBox::question(this, "Confirm", "There are a lot of frames (>2000) to plot, this may take a while or crash the app. Crash likely with more than 10k frames. Continue?",
                                           QMessageBox::Yes|QMessageBox::No);
             if (confirmDialog == QMessageBox::No)
             {

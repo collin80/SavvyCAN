@@ -1,5 +1,7 @@
 #Build directory
 build/
+debug/
+release/
 
 # Compiled Object files
 *.slo
@@ -43,6 +45,20 @@ SavvyCAN
 SavvyCAN.pro.user.*
 .qmake.stash
 Makefile
+Makefile.Debug
+Makefile.Release
+object_script.*
+SavvyCAN_resource.rc
+
+# Qt runtime deployment output (windeployqt)
+platforms/
+imageformats/
+iconengines/
+networkinformation/
+styles/
+tls/
+generic/
+translations/qt_*.qm
 
 # Editor files
 *.code-workspace

@@ -185,7 +185,7 @@ UDS_HANDLER::~UDS_HANDLER()
 UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(ISOTP_MESSAGE msg, bool *result)
 {
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
-    int dataLen = msg.payload().count();
+    int dataLen = msg.payload().size();
     *result = true;
     UDS_MESSAGE udsMsg;
     udsMsg.bus = msg.bus;

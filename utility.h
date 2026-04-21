@@ -328,7 +328,7 @@ public:
             {
                 if (bit < 512) {
                     int bytePos = bit / 8;
-                    if (bytePos >= data.count()) return 0; //error!
+                    if (bytePos >= data.size()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
                         result += (1ULL << bitpos);
                 }
@@ -343,7 +343,7 @@ public:
             {
                 if (bit < 512) {
                     int bytePos = bit / 8;
-                    if (bytePos >= data.count()) return 0; //error!
+                    if (bytePos >= data.size()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
                         result += (1ULL << (sigSize - bitpos - 1));
                 }

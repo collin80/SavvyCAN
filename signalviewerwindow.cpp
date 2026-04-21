@@ -259,7 +259,7 @@ void SignalViewerWindow::clearSignalsTable(bool askForConfirmation)
     if(askForConfirmation)
     {
         QMessageBox::StandardButton confirmDialog;
-        confirmDialog = QMessageBox::question(this, "Danger Will Robinson", "Are you sure you want to clear all of your signals?",
+        confirmDialog = QMessageBox::question(this, "Confirm", "Are you sure you want to clear all of your signals?",
                                       QMessageBox::Yes|QMessageBox::No);
         if (confirmDialog == QMessageBox::No)
         {

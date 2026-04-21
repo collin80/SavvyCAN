@@ -79,7 +79,9 @@ CANFrameModel::CANFrameModel(QObject *parent)
     filtersPersistDuringClear = false;
     useHexMode = true;
     useColorsByCanId = false;
+    useZeroTime = false;
     timeStyle = TS_MICROS;
+    zeroTimeOffsetInitialized = false;
     timeOffset = 0;
     needFilterRefresh = false;
     lastUpdateNumFrames = 0;
@@ -160,6 +162,56 @@ void CANFrameModel::setIgnoreDBCColors(bool mode)
     }
 }
 
+qint64 CANFrameModel::getOriginalTimestamp(const CANFrame &frame) const
+{
+    if (frame.hasOriginalTimestamp) return frame.originalTimestamp;
+    return frame.totalMicroSeconds();
+}
+
+void CANFrameModel::applyTimeOffsetLocked()
+{
+    for (int i = 0; i < frames.count(); i++)
+    {
+        const qint64 originalTimestamp = getOriginalTimestamp(frames[i]);
+        frames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, originalTimestamp - timeOffset));
+    }
+
+    for (int i = 0; i < filteredFrames.count(); i++)
+    {
+        const qint64 originalTimestamp = getOriginalTimestamp(filteredFrames[i]);
+        filteredFrames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, originalTimestamp - timeOffset));
+    }
+}
+
+void CANFrameModel::setUseZeroTime(bool mode)
+{
+    if (useZeroTime == mode) return;
+
+    mutex.lock();
+    useZeroTime = mode;
+
+    if (useZeroTime && frames.count() > 0)
+    {
+        timeOffset = getOriginalTimestamp(frames[0]);
+        for (int i = 1; i < frames.count(); i++)
+        {
+            if (getOriginalTimestamp(frames[i]) < timeOffset)
+                timeOffset = getOriginalTimestamp(frames[i]);
+        }
+        zeroTimeOffsetInitialized = true;
+    }
+    else
+    {
+        timeOffset = 0;
+        zeroTimeOffsetInitialized = false;
+    }
+
+    beginResetModel();
+    applyTimeOffsetLocked();
+    endResetModel();
+    mutex.unlock();
+}
+
 /*
  * Scan all frames for the smallest timestamp and offset all timestamps so that smallest one is at 0
 */
@@ -171,31 +223,20 @@ void CANFrameModel::normalizeTiming()
         mutex.unlock();
         return;
     }
-    timeOffset = frames[0].timeStamp().microSeconds();
-    qint64 prevStamp = 0;
+    timeOffset = getOriginalTimestamp(frames[0]);
 
     //find the absolute lowest timestamp in the whole time. Needed because maybe timestamp was reset in the middle.
     for (int j = 0; j < frames.count(); j++)
     {
-        if (frames[j].timeStamp().microSeconds() < timeOffset) timeOffset = frames[j].timeStamp().microSeconds();
+        if (getOriginalTimestamp(frames[j]) < timeOffset) timeOffset = getOriginalTimestamp(frames[j]);
     }
 
-    for (int i = 0; i < frames.count(); i++)
-    {
-        qint64 thisStamp = frames[i].timeStamp().microSeconds() - timeOffset;
-        if (thisStamp <= prevStamp)
-        {
-            timeOffset -= prevStamp;
-        }
-        frames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, thisStamp));
-    }
-
+    useZeroTime = true;
     this->beginResetModel();
-    for (int i = 0; i < filteredFrames.count(); i++)
-    {
-        filteredFrames[i].setTimeStamp(QCanBusFrame::TimeStamp(0, filteredFrames[i].timeStamp().microSeconds() - timeOffset));
-    }
+    applyTimeOffsetLocked();
     this->endResetModel();
+
+    zeroTimeOffsetInitialized = true;
 
     mutex.unlock();
 }
@@ -251,7 +292,7 @@ uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Colum
     {
     case Column::TimeStamp:
         if (overwriteDups) return frame.timedelta;
-        return frame.timeStamp().microSeconds();
+        return frame.totalMicroSeconds();
     case Column::FrameId:
         return frame.frameId();
     case Column::Extended:
@@ -270,7 +311,7 @@ uint64_t CANFrameModel::getCANFrameVal(QVector<CANFrame> *frames, int row, Colum
         return static_cast<uint64_t>(frame.payload().length());
     case Column::ASCII: //sort both the same for now
     case Column::Data:
-        for (int i = 0; i < std::min(frame.payload().length(), 8); i++) temp += (static_cast<uint64_t>(frame.payload()[i]) << (56 - (8 * i)));
+        for (int i = 0; i < std::min<int>(static_cast<int>(frame.payload().length()), 8); i++) temp += (static_cast<uint64_t>(frame.payload()[i]) << (56 - (8 * i)));
         //qDebug() << temp;
         return temp;
     case Column::NUM_COLUMN:
@@ -383,7 +424,7 @@ void CANFrameModel::recalcOverwrite()
             }
             else
             {
-                frame.timedelta = frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds();
+                frame.timedelta = frame.totalMicroSeconds() - overWriteFrames[idAugmented].totalMicroSeconds();
                 frame.frameCount = overWriteFrames[idAugmented].frameCount + 1;
                 overWriteFrames[idAugmented] = frame;
             }
@@ -425,7 +466,7 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
     thisFrame = filteredFrames.at(index.row());
 
     const unsigned char *data = reinterpret_cast<const unsigned char *>(thisFrame.payload().constData());
-    int dataLen = thisFrame.payload().count();
+    int dataLen = thisFrame.payload().size();
 
     if (role == Qt::BackgroundRole)
     {
@@ -492,11 +533,11 @@ QVariant CANFrameModel::data(const QModelIndex &index, int role) const
                 if (timeStyle == TS_SECONDS) return QString::number(thisFrame.timedelta / 1000000.0, 'f', 5);
                 return QString::number(thisFrame.timedelta);
             }
-            else ts = Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
-            if (ts.type() == QVariant::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
-            if (ts.type() == QVariant::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
-            if (ts.type() == QVariant::DateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
-            return Utility::formatTimestamp(thisFrame.timeStamp().microSeconds());
+            else ts = Utility::formatTimestamp(thisFrame.totalMicroSeconds());
+            if (ts.typeId() == QMetaType::Double) return QString::number(ts.toDouble(), 'f', 5); //never scientific notation, 5 decimal places
+            if (ts.typeId() == QMetaType::LongLong) return QString::number(ts.toLongLong()); //never scientific notion, all digits shown
+            if (ts.typeId() == QMetaType::QDateTime) return ts.toDateTime().toString(timeFormat); //custom set format for dates and times
+            return Utility::formatTimestamp(thisFrame.totalMicroSeconds());
         case Column::FrameId:
             return Utility::formatCANID(thisFrame.frameId(), thisFrame.hasExtendedFrameFormat());
         case Column::Extended:
@@ -617,8 +658,18 @@ QVariant CANFrameModel::headerData(int section, Qt::Orientation orientation,
         switch (Column(section))
         {
         case Column::TimeStamp:
-            if (overwriteDups) return QString(tr("Time Delta"));
-            return QString(tr("Timestamp"));
+        {
+            QString unit;
+            switch (Utility::timeStyle)
+            {
+            case TS_MICROS:  unit = " (us)"; break;
+            case TS_MILLIS:  unit = " (ms)"; break;
+            case TS_SECONDS: unit = " (s)";  break;
+            default: break;
+            }
+            if (overwriteDups) return QString(tr("Time Delta")) + unit;
+            return QString(tr("Timestamp")) + unit;
+        }
         case Column::FrameId:
             return QString(tr("ID"));
         case Column::Extended:
@@ -679,7 +730,20 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     CANFrame tempFrame;
     tempFrame = frame;
 
-    tempFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempFrame.timeStamp().microSeconds() - timeOffset));
+    tempFrame.originalTimestamp = tempFrame.totalMicroSeconds();
+    tempFrame.hasOriginalTimestamp = true;
+
+    if (useZeroTime && !zeroTimeOffsetInitialized)
+    {
+        timeOffset = tempFrame.originalTimestamp;
+        zeroTimeOffsetInitialized = true;
+    }
+    else if (!useZeroTime)
+    {
+        timeOffset = 0;
+    }
+
+    tempFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempFrame.originalTimestamp - timeOffset));
 
     lastUpdateNumFrames++;
 
@@ -743,7 +807,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
             if ( (filteredFrames[i].frameId() == tempFrame.frameId()) && (filteredFrames[i].bus == tempFrame.bus) )
             {
                 tempFrame.frameCount = filteredFrames[i].frameCount + 1;
-                tempFrame.timedelta = tempFrame.timeStamp().microSeconds() - filteredFrames[i].timeStamp().microSeconds();
+                tempFrame.timedelta = tempFrame.totalMicroSeconds() - filteredFrames[i].totalMicroSeconds();
                 filteredFrames.replace(i, tempFrame);
                 found = true;
                 break;
@@ -883,6 +947,8 @@ void CANFrameModel::clearFrames()
     }
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize);
+    timeOffset = 0;
+    zeroTimeOffsetInitialized = false;
     this->endResetModel();
     lastUpdateNumFrames = 0;
     mutex.unlock();
@@ -902,24 +968,46 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     //double the number of frames.
     //beginResetModel();
     mutex.lock();
+
+    if (useZeroTime && !zeroTimeOffsetInitialized && newFrames.count() > 0)
+    {
+        timeOffset = newFrames[0].hasOriginalTimestamp ? newFrames[0].originalTimestamp : newFrames[0].totalMicroSeconds();
+        for (int i = 1; i < newFrames.count(); i++)
+        {
+            const qint64 frameTimestamp = newFrames[i].hasOriginalTimestamp ? newFrames[i].originalTimestamp : newFrames[i].totalMicroSeconds();
+            if (frameTimestamp < timeOffset)
+                timeOffset = frameTimestamp;
+        }
+        zeroTimeOffsetInitialized = true;
+    }
+    else if (!useZeroTime)
+    {
+        timeOffset = 0;
+    }
+
     int insertedFiltered = 0;
     for (int i = 0; i < newFrames.count(); i++)
     {
-        frames.append(newFrames[i]);
-        if (!filters.contains(newFrames[i].frameId()))
+        CANFrame tempFrame = newFrames[i];
+        tempFrame.originalTimestamp = tempFrame.hasOriginalTimestamp ? tempFrame.originalTimestamp : tempFrame.totalMicroSeconds();
+        tempFrame.hasOriginalTimestamp = true;
+        tempFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempFrame.originalTimestamp - timeOffset));
+
+        frames.append(tempFrame);
+        if (!filters.contains(tempFrame.frameId()))
         {
-            filters.insert(newFrames[i].frameId(), true);
+            filters.insert(tempFrame.frameId(), true);
             needFilterRefresh = true;
         }
-        if (filters[newFrames[i].frameId()])
+        if (filters[tempFrame.frameId()])
         {
-            busFilters.insert(newFrames[i].bus, true);
+            busFilters.insert(tempFrame.bus, true);
             needFilterRefresh = true;
         }
-        if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].bus])
+        if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
         {
             insertedFiltered++;
-            filteredFrames.append(newFrames[i]);
+            filteredFrames.append(tempFrame);
         }
     }
     lastUpdateNumFrames = newFrames.count();
@@ -938,7 +1026,7 @@ int CANFrameModel::getIndexFromTimeID(unsigned int ID, double timestamp)
     {
         if ((frames[i].frameId() == ID))
         {
-            if (frames[i].timeStamp().microSeconds() <= intTimeStamp) bestIndex = i;
+            if (frames[i].totalMicroSeconds() <= intTimeStamp) bestIndex = i;
             else break; //drop out of loop as soon as we pass the proper timestamp
         }
     }

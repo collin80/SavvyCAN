@@ -1,6 +1,7 @@
 #include "dbc_classes.h"
 #include "dbchandler.h"
 #include "utility.h"
+#include <cstring>
 #include <QtMath>
 
 DBC_MESSAGE::DBC_MESSAGE()
@@ -261,7 +262,10 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
         result = Utility::processIntegerSignal(frame.payload(), startBit, 32, intelByteOrder, false);
-        endResult = (*((float *)(&result)) * factor) + bias; //look away! This is awful. I don't even know for sure if it works. Should test that.
+        uint32_t rawFloat = static_cast<uint32_t>(result);
+        float floatValue;
+        std::memcpy(&floatValue, &rawFloat, sizeof(floatValue));
+        endResult = (floatValue * factor) + bias;
     }
     else //double precision float
     {
@@ -273,7 +277,10 @@ bool DBC_SIGNAL::processAsText(const CANFrame &frame, QString &outString, bool o
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
         result = Utility::processIntegerSignal(frame.payload(), startBit, 64, intelByteOrder, false);
-        endResult = (*((double *)(&result)) * factor) + bias;
+        uint64_t rawDouble = static_cast<uint64_t>(result);
+        double doubleValue;
+        std::memcpy(&doubleValue, &rawDouble, sizeof(doubleValue));
+        endResult = (doubleValue * factor) + bias;
     }
 
     outString = makePrettyOutput(endResult, result, outputName, isInteger, outputUnit);
@@ -403,7 +410,10 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         //a 32 bit single precision float. That's evil incarnate but it is very fast and small
         //in terms of new code.
         result = Utility::processIntegerSignal(frame.payload(), startBit, 32, false, false);
-        endResult = (*((float *)(&result)) * factor) + bias;
+        uint32_t rawFloat = static_cast<uint32_t>(result);
+        float floatValue;
+        std::memcpy(&floatValue, &rawFloat, sizeof(floatValue));
+        endResult = (floatValue * factor) + bias;
     }
     else //double precision float
     {
@@ -415,7 +425,10 @@ bool DBC_SIGNAL::processAsDouble(const CANFrame &frame, double &outValue)
         //like the above, this is rotten and evil and wrong in so many ways. Force
         //calculation of a 64 bit integer and then cast it into a double.
         result = Utility::processIntegerSignal(frame.payload(), startBit, 64, false, false);
-        endResult = (*((double *)(&result)) * factor) + bias;
+        uint64_t rawDouble = static_cast<uint64_t>(result);
+        double doubleValue;
+        std::memcpy(&doubleValue, &rawDouble, sizeof(doubleValue));
+        endResult = (doubleValue * factor) + bias;
     }
     cachedValue = endResult;
     outValue = endResult;

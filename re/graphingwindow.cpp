@@ -263,7 +263,7 @@ void GraphingWindow::plottableClick(QCPAbstractPlottable* plottable, int dataIdx
     qDebug() << "plottableClick";
     double x, y;
     QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
-    graph->pixelsToCoords(event->localPos(), x, y);
+    graph->pixelsToCoords(event->position(), x, y);
     locationText->setText("X: " + QString::number(x, 'f', 3) + " Y: " + QString::number(y, 'f', 3));
 }
 
@@ -273,15 +273,15 @@ void GraphingWindow::plottableDoubleClick(QCPAbstractPlottable* plottable, int d
     qDebug() << "plottableDoubleClick";
     int id = 0;
     //apply transforms to get the X axis value where we double clicked
-    double coord = plottable->keyAxis()->pixelToCoord(event->localPos().x());
+    double coord = plottable->keyAxis()->pixelToCoord(event->position().x());
     id = plottable->property("id").toInt();
     if (Utility::timeStyle == TS_SECONDS) emit sendCenterTimeID(id, coord);
     else emit sendCenterTimeID(id, coord / 1000000.0);
 
     double x, y;
     QCPGraph *graph = reinterpret_cast<QCPGraph *>(plottable);
-    graph->pixelsToCoords(event->localPos(), x, y);
-    x = ui->graphingView->xAxis->pixelToCoord(event->localPos().x());
+    graph->pixelsToCoords(event->position(), x, y);
+    x = ui->graphingView->xAxis->pixelToCoord(event->position().x());
 
     itemTracer->setGraph(graph);
     itemTracer->setVisible(true);
@@ -782,7 +782,7 @@ void GraphingWindow::saveSpreadsheet()
         for (auto && graph : graphParams) {
             xMin = std::min(xMin, graph.x[0]);
             xMax = std::max(xMax, graph.x[graph.x.count() - 1]);
-            maxCount = std::max(maxCount, graph.x.count());
+            maxCount = std::max(maxCount, static_cast<int>(graph.x.count()));
         }
         qDebug() << "xMin: " << xMin;
         qDebug() << "xMax: " << xMax;
@@ -1324,7 +1324,7 @@ void GraphingWindow::appendToGraph(GraphParams &params, CANFrame &frame, QVector
 
 void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
 {
-    int64_t tempVal; //64 bit temp value.
+    int64_t tempVal = 0; //64 bit temp value.
     double yminval=10000000.0, ymaxval = -1000000.0;
     double xminval=10000000000.0, xmaxval = -10000000000.0;
     GraphParams *refParam = &params;

@@ -4,7 +4,10 @@
 
 
 SnifferItem::SnifferItem(const CANFrame& pFrame, quint32 seq):
-    mID(pFrame.frameId())
+    mID(pFrame.frameId()),
+    mLastTime(0),
+    mCurrentTime(0),
+    mCurrSeqVal(seq)
 {
     const unsigned char *data = reinterpret_cast<const unsigned char *>(pFrame.payload().constData());
     int dataLen = pFrame.payload().length();
@@ -38,7 +41,9 @@ quint64 SnifferItem::getId() const
 
 float SnifferItem::getDelta() const
 {
-    return ((float)(mCurrentTime-mLastTime))/1000000;
+    qint64 diff = mCurrentTime - mLastTime;
+    if (diff <= 0) return 0.0f;
+    return ((float)diff) / 1000000.0f;
 }
 
 //Get a data byte by index 0-7 (but not more than the length of the actual frame)
@@ -134,7 +139,7 @@ void SnifferItem::update(const CANFrame& pFrame, quint32 timeSeq, bool mute)
         }
     }
     mCurrent.len = dataLen;
-    mCurrentTime = pFrame.timeStamp().microSeconds();
+    mCurrentTime = pFrame.totalMicroSeconds();
 
     /* update marker */
     //We "OR" our stored marker with the changed bits.
