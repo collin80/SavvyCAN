@@ -64,10 +64,13 @@ QVariant SnifferModel::data(const QModelIndex &index, int role) const
             switch(col)
             {
                 case tc::DELTA:
-                    return QString::number(item->getDelta(), 'f');
+                    return QString::number(item->getDelta(), 'f', 4);
                 case tc::FREQUENCY:
-                    if (item->getDelta() == 0) return QString("0 hz");
-                    return QString("%1 hz").arg(qRound(1.00 / item->getDelta()));
+                {
+                    float delta = item->getDelta();
+                    if (delta <= 0.0f) return QString("0.0000 hz");
+                    return QString("%1 hz").arg(QString::number(1.0 / delta, 'f', 4));
+                }
                 case tc::ID:
                     return "0x" + QString("%1").arg(item->getId(), 5, 16, QLatin1Char('0')).toUpper();
                 default:

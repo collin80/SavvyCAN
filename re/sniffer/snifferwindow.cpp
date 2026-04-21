@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QListWidgetItem>
+#include <QLabel>
 #include <qevent.h>
 #include "snifferwindow.h"
 #include "ui_snifferwindow.h"
@@ -13,7 +14,8 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     ui(new Ui::snifferWindow),
     mModel(this),
     mGUITimer(this),
-    mFilter(false)
+    mFilter(false),
+    mRefreshSpin(nullptr)
 {
     ui->setupUi(this);
     setWindowFlags(Qt::Window);
@@ -30,13 +32,32 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     ui->treeView->setUniformRowHeights(true);
     ui->treeView->header()->setDefaultAlignment(Qt::AlignCenter);
     //ui->treeView->setItemDelegate(new SnifferDelegate());
+    connect(ui->treeView->header(), &QHeaderView::sectionResized, this,
+            [this](int, int, int)
+            {
+                ui->treeView->viewport()->update();
+            });
 
     /* activate sorting */
     ui->listWidget->setSortingEnabled(true);
 
+    QLabel *refreshLabel = new QLabel(tr("Refresh Interval"), this);
+    refreshLabel->setAlignment(Qt::AlignCenter);
+    mRefreshSpin = new QSpinBox(this);
+    mRefreshSpin->setSuffix("ms");
+    mRefreshSpin->setMinimum(16);
+    mRefreshSpin->setMaximum(1000);
+    mRefreshSpin->setSingleStep(10);
+    mRefreshSpin->setValue(50);
+
+    int expireLabelIndex = ui->verticalLayout->indexOf(ui->label_2);
+    if (expireLabelIndex < 0) expireLabelIndex = ui->verticalLayout->count();
+    ui->verticalLayout->insertWidget(expireLabelIndex, refreshLabel);
+    ui->verticalLayout->insertWidget(expireLabelIndex + 1, mRefreshSpin);
+
     /* connect timer */
     connect(&mGUITimer, &QTimer::timeout, this, &SnifferWindow::update);
-    mGUITimer.setInterval(200);
+    mGUITimer.setInterval(mRefreshSpin->value());
     connect(&mNotchTimer, &QTimer::timeout,this, &SnifferWindow::notchTick);
     mNotchTimer.setInterval(ui->spinNotchInterval->value());
 
@@ -65,6 +86,7 @@ SnifferWindow::SnifferWindow(QWidget *parent) :
     );
     connect(ui->spinNotchInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int i){mNotchTimer.setInterval(i);});
     connect(ui->spinExpireInterval, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int i){mModel.setExpireInterval(i);});
+    connect(mRefreshSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int i){mGUITimer.setInterval(i);});
 }
 
 SnifferWindow::~SnifferWindow()
@@ -92,6 +114,11 @@ void SnifferWindow::readSettings()
         ui->treeView->setColumnWidth(8, settings.value("Sniffer/Data5Column", 92).toUInt());
         ui->treeView->setColumnWidth(9, settings.value("Sniffer/Data6Column", 92).toUInt());
         ui->treeView->setColumnWidth(10, settings.value("Sniffer/Data7Column", 92).toUInt());
+
+        int refreshInterval = settings.value("Sniffer/RefreshInterval", 50).toInt();
+        refreshInterval = qBound(16, refreshInterval, 1000);
+        mRefreshSpin->setValue(refreshInterval);
+        mGUITimer.setInterval(refreshInterval);
     }
 }
 
@@ -114,6 +141,7 @@ void SnifferWindow::writeSettings()
         settings.setValue("Sniffer/Data5Column", ui->treeView->columnWidth(8));
         settings.setValue("Sniffer/Data6Column", ui->treeView->columnWidth(9));
         settings.setValue("Sniffer/Data7Column", ui->treeView->columnWidth(10));
+        settings.setValue("Sniffer/RefreshInterval", mRefreshSpin->value());
     }
 }
 
@@ -121,9 +149,9 @@ void SnifferWindow::showEvent(QShowEvent* event)
 {
     QDialog::showEvent(event);
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, &mModel, &SnifferModel::update);
+    readSettings();
     mGUITimer.start();
     mNotchTimer.start();
-    readSettings();
     installEventFilter(this);
     qDebug() << "show";
 }

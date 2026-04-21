@@ -1260,8 +1260,16 @@ void MainWindow::handleContinousLogging()
 
     if (continuousLogging)
     {
-        ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
-        FrameFileIO::openContinuousNative();
+        if (FrameFileIO::openContinuousNative())
+        {
+            ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
+        }
+        else
+        {
+            continuousLogging = false;
+            ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
+            ui->lblContMsg->setText("");
+        }
     }
     else
     {

@@ -15,6 +15,14 @@
 
 QFile FrameFileIO::continuousFile;
 
+enum ContinuousLogFormat
+{
+    ContinuousLogGVRET,
+    ContinuousLogSocketCAN
+};
+
+static ContinuousLogFormat continuousLogFormat = ContinuousLogGVRET;
+
 struct TeslaAPCANRecord
 {
     #pragma pack(push, 1)
@@ -2300,6 +2308,7 @@ bool FrameFileIO::openContinuousNative()
 
     QStringList filters;
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
+    filters.append(QString(tr("SocketCAN Logs (*.log *.LOG)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -2310,14 +2319,31 @@ bool FrameFileIO::openContinuousNative()
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
+
+        if (dialog.selectedNameFilter() == filters[0])
+        {
+            continuousLogFormat = ContinuousLogGVRET;
+            if (!filename.contains('.')) filename += ".csv";
+        }
+        else
+        {
+            continuousLogFormat = ContinuousLogSocketCAN;
+            if (!filename.contains('.')) filename += ".log";
+        }
+
         continuousFile.setFileName(filename);
 
         if (!continuousFile.open(QIODevice::WriteOnly | QIODevice::Text))
         {
             return false;
         }
-        continuousFile.write("Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
-        continuousFile.write("\n");
+
+        if (continuousLogFormat == ContinuousLogGVRET)
+        {
+            continuousFile.write("Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8");
+            continuousFile.write("\n");
+        }
+
         settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
         return true;
     }
@@ -2349,31 +2375,67 @@ bool FrameFileIO::writeContinuousNative(const QVector<CANFrame>* frames, int beg
         data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
         dataLen = frame->payload().size();
 
-        continuousFile.write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
-        continuousFile.putChar(44);
-
-        continuousFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
-        continuousFile.putChar(44);
-
-        if (frame->hasExtendedFrameFormat()) continuousFile.write("true,");
-        else continuousFile.write("false,");
-
-        if (frame->isReceived) continuousFile.write("Rx,");
-        else continuousFile.write("Tx,");
-
-        continuousFile.write(QString::number(frame->bus).toUtf8());
-        continuousFile.putChar(44);
-
-        continuousFile.write(QString::number(dataLen).toUtf8());
-        continuousFile.putChar(44);
-
-        for (int temp = 0; temp < 8; temp++)
+        if (continuousLogFormat == ContinuousLogGVRET)
         {
-            if (temp < dataLen)
-                continuousFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
-            else
-                continuousFile.write("00");
+            continuousFile.write(QString::number(frame->totalMicroSeconds()).toUtf8());
             continuousFile.putChar(44);
+
+            continuousFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+            continuousFile.putChar(44);
+
+            if (frame->hasExtendedFrameFormat()) continuousFile.write("true,");
+            else continuousFile.write("false,");
+
+            if (frame->isReceived) continuousFile.write("Rx,");
+            else continuousFile.write("Tx,");
+
+            continuousFile.write(QString::number(frame->bus).toUtf8());
+            continuousFile.putChar(44);
+
+            continuousFile.write(QString::number(dataLen).toUtf8());
+            continuousFile.putChar(44);
+
+            for (int temp = 0; temp < 8; temp++)
+            {
+                if (temp < dataLen)
+                    continuousFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+                else
+                    continuousFile.write("00");
+                continuousFile.putChar(44);
+            }
+        }
+        else
+        {
+            double tempTime = frame->totalMicroSeconds() / 1000000.0;
+            continuousFile.write("(");
+            continuousFile.write(QString::number(tempTime, 'f', 6).rightJustified(17, '0').toUtf8());
+            continuousFile.write(") can");
+            continuousFile.write(QString::number(frame->bus).toUtf8());
+            continuousFile.write(" ");
+
+            if (frame->hasExtendedFrameFormat())
+            {
+                continuousFile.write(QString::number(frame->frameId(), 16).rightJustified(8,'0').toUpper().toUtf8());
+            }
+            else
+            {
+                continuousFile.write(QString::number(frame->frameId(), 16).rightJustified(3,'0').toUpper().toUtf8());
+            }
+
+            continuousFile.write("#");
+
+            if (frame->frameType() == QCanBusFrame::RemoteRequestFrame)
+            {
+                continuousFile.write("R");
+                continuousFile.write(QString::number(dataLen).toUtf8());
+            }
+            else
+            {
+                for (int temp = 0; temp < dataLen; temp++)
+                {
+                    continuousFile.write(QString::number(data[temp], 16).rightJustified(2,'0').toUpper().toUtf8());
+                }
+            }
         }
 
         continuousFile.write("\n");
