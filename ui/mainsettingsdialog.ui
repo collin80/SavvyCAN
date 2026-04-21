@@ -261,13 +261,6 @@
             </layout>
            </item>
            <item>
-            <widget class="QCheckBox" name="cbUseZeroTime">
-             <property name="text">
-              <string>Use Zero Time</string>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QCheckBox" name="cbCSVAbsTime">
              <property name="text">
               <string>Use absolute time in decoded CSV output</string>

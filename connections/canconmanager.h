@@ -24,10 +24,12 @@ public:
     CANConnection* getByName(const QString& pName) const;
 
     uint64_t getTimeBasis();
+    bool getUseSystemTime() const;
     void resetTimeBasis();
 
     int getNumBuses();
     int getBusBase(CANConnection *);
+    void setUseSystemTime(bool mode);
 
     /**
      * @brief sendFrame sends a single frame out the desired bus
