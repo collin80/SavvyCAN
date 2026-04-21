@@ -46,8 +46,8 @@ private:
     struct fstCan   mLastMarker;
     struct fstCan   mMarker;
     quint8          mNotch[8];
-    quint64         mLastTime;
-    quint64         mCurrentTime;
+    qint64          mLastTime;
+    qint64          mCurrentTime;
     quint64         mCurrSeqVal;
 
     QElapsedTimer   mTime;
