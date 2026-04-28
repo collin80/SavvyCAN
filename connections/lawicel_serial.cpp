@@ -15,7 +15,7 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
     sendDebug("LAWICELSerial()");
 
     serial = nullptr;
-    isAutoRestart = false;
+    //isAutoRestart = false;
     rebuildLocalTimeBasis();
 
     readSettings();
@@ -485,6 +485,7 @@ void LAWICELSerial::readSerialData()
         {
             //qDebug() << "Got CR!";
 
+            CommFrame buildFrame;
             QByteArray buildData;
 
             buildFrame.setTimeStamp(CommFrame::TimeStamp(0, QDateTime::currentMSecsSinceEpoch() * 1000ll));
@@ -543,7 +544,7 @@ void LAWICELSerial::readSerialData()
                     buildData[c] = mBuildLine.mid(5 + (c*2), 2).toInt(nullptr, 16);
                 }
                 buildFrame.setPayload(buildData);
-                addTimestamp(1 + 3 + 1 + buildData.size() * 2);
+                //addTimestamp(1 + 3 + 1 + buildData.size() * 2);
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
@@ -572,7 +573,7 @@ void LAWICELSerial::readSerialData()
                     buildData[c] = mBuildLine.mid(10 + (c*2), 2).toInt(nullptr, 16);
                 }
                 buildFrame.setPayload(buildData);
-                addTimestamp(1 + 8 + 1 + buildData.size() * 2);
+                //addTimestamp(1 + 8 + 1 + buildData.size() * 2);
                 if (!isCapSuspended())
                 {
                     /* get frame from queue */
