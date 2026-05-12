@@ -288,12 +288,15 @@ void ScriptingWindow::deleteCurrentScript()
     switch (ret)
     {
     case QMessageBox::Yes:
-        ui->listLoadedScripts->takeItem(sel);
+        // Obtain the script pointer and update the data model before manipulating
+        // the list widget, so that the currentRowChanged signal (fired by takeItem)
+        // does not cause changeCurrentScript() to touch the script being deleted.
         thisScript = scripts.at(sel);
+        if (currentScript == thisScript) currentScript = nullptr;
         scripts.removeAt(sel);
-        delete thisScript;  //causes a seg fault. Seems to be due to currently running javascript code. No idea how to stop code from running
+        ui->listLoadedScripts->takeItem(sel);
+        delete thisScript;
         thisScript = nullptr;
-        currentScript = nullptr;
 
         if (ui->listLoadedScripts->count() > 0)
         {
@@ -304,6 +307,8 @@ void ScriptingWindow::deleteCurrentScript()
         {
             editor->setPlainText("");
             editor->setEnabled(false);
+            ui->tableVariables->clearContents();
+            for (int i = ui->tableVariables->rowCount() - 1; i >= 0; i--) ui->tableVariables->removeRow(i);
         }
         break;
     case QMessageBox::No:
