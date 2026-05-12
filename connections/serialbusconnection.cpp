@@ -113,9 +113,11 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
 
     /* connect device */
-    if (!mDev_p->connectDevice()) {
-        disconnectDevice();
-        qDebug() << "can't connect device";
+    if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
+        if (!mDev_p->connectDevice()) {
+            disconnectDevice();
+            qDebug() << "SerialBusConnection::piSetBusSettings - can't connect device";
+        }
     }
 }
 
