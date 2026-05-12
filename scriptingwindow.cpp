@@ -3,6 +3,7 @@
 
 #include <QFile>
 #include <QFileDialog>
+#include <QFontDatabase>
 #include <QSettings>
 #include <QMessageBox>
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 10, 0 )
@@ -24,7 +25,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CommFrame> *frames, QWidget *pare
     editor->setFrameShape(JSEdit::NoFrame);
     editor->setWordWrapMode(QTextOption::NoWrap);
     editor->setEnabled(false);
-    editor->setFont(QFont("Monospace", 12));
+    editor->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     editor->show();
 
     //Show whitespaces
