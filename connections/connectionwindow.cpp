@@ -266,6 +266,13 @@ void ConnectionWindow::handleNewConn()
         newBusSpeed = thisDialog->getBusSpeed();
         newCanFd=thisDialog->isCanFd();
         newDataRate = thisDialog->getDataRate();
+
+        /* For SerialBus connections the dialog has no speed picker; restore last used speed */
+        if (newType == CANCon::SERIALBUS && newBusSpeed == 0) {
+            QSettings cfg;
+            newBusSpeed = cfg.value("Main/LastSerialBusSpeed", 250000).toInt();
+        }
+
         conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate);
         if (conn)
         {
@@ -389,6 +396,12 @@ void ConnectionWindow::saveBusSettings()
         bus.setListenOnly(ui->ckListenOnly->isChecked());
         bus.setCanFD(ui->canFDEnable->isChecked());
         bus.setDataRate(ui->cbDataRate->currentText().toInt());
+
+        /* Persist last SerialBus speed so new connections start with it */
+        if (conn_p->getType() == CANCon::SERIALBUS && bus.getSpeed() > 0) {
+            QSettings cfg;
+            cfg.setValue("Main/LastSerialBusSpeed", bus.getSpeed());
+        }
 
         conn_p->setBusSettings(offset, bus);
     }

@@ -47,6 +47,7 @@ private slots:
     void framesWritten(qint64 count);
     void framesReceived();
     void testConnection();
+    void deviceStateChanged(QCanBusDevice::CanBusDeviceState state);
 
 protected:
     QCanBusDevice     *mDev_p = nullptr;

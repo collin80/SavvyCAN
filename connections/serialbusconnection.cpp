@@ -44,6 +44,7 @@ void SerialBusConnection::piStarted()
     connect(mDev_p, &QCanBusDevice::errorOccurred, this, &SerialBusConnection::errorReceived);
     connect(mDev_p, &QCanBusDevice::framesWritten, this, &SerialBusConnection::framesWritten);
     connect(mDev_p, &QCanBusDevice::framesReceived, this, &SerialBusConnection::framesReceived);
+    connect(mDev_p, &QCanBusDevice::stateChanged, this, &SerialBusConnection::deviceStateChanged);
 
     connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
     mTimer.setInterval(1000);
@@ -53,6 +54,14 @@ void SerialBusConnection::piStarted()
     mBusData[0].mBus.setActive(true);
     mBusData[0].mBus.setCanFD(false);
     mBusData[0].mConfigured = true;
+
+    /* Connect immediately if a speed is already configured (e.g. restored from last session) */
+    if (mBusData[0].mBus.getSpeed() > 0) {
+        mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, mBusData[0].mBus.getSpeed());
+        if (!mDev_p->connectDevice()) {
+            qDebug() << "SerialBusConnection::piStarted() - initial connectDevice() failed:" << mDev_p->errorString();
+        }
+    }
 }
 
 
@@ -161,6 +170,23 @@ bool SerialBusConnection::piSendFrame(const CommFrame& pFrame)
 void SerialBusConnection::disconnectDevice() {
     if(mDev_p && mDev_p->state() == QCanBusDevice::ConnectedState){
         mDev_p->disconnectDevice();
+    }
+}
+
+/* Immediately update status when the device state changes */
+void SerialBusConnection::deviceStateChanged(QCanBusDevice::CanBusDeviceState state)
+{
+    CANConStatus stats;
+    if (state == QCanBusDevice::ConnectedState) {
+        setStatus(CANCon::CONNECTED);
+        stats.conStatus = getStatus();
+        stats.numHardwareBuses = mNumBuses;
+        emit status(stats);
+    } else if (state == QCanBusDevice::UnconnectedState && getStatus() == CANCon::CONNECTED) {
+        setStatus(CANCon::NOT_CONNECTED);
+        stats.conStatus = getStatus();
+        stats.numHardwareBuses = mNumBuses;
+        emit status(stats);
     }
 }
 
@@ -304,23 +330,20 @@ void SerialBusConnection::testConnection()
             }
             break;
         case CANCon::NOT_CONNECTED:
-            if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
-                /* try to reconnect */                
-                CANBus bus;
-                if(getBusConfig(0, bus))
-                {
-                    bus.setActive(true);
-                    setBusSettings(0, bus);
-                }
-
-                mDev_p->connectDevice();
-                qDebug() << "Connect device";
+            if (mDev_p && mDev_p->state() == QCanBusDevice::ConnectedState) {
+                /* stateChanged should have caught this, but handle it as a fallback */
                 setStatus(CANCon::CONNECTED);
-                qDebug() << "   setStatus(CANCon::CONNECTED)";
-
+                qDebug() << "   setStatus(CANCon::CONNECTED) - fallback from timer";
                 stats.conStatus = getStatus();
                 stats.numHardwareBuses = mNumBuses;
                 emit status(stats);
+            } else if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
+                /* Retry connecting - config parameters already set by piSetBusSettings or piStarted */
+                CANBus bus;
+                if (getBusConfig(0, bus) && bus.getSpeed() > 0) {
+                    qDebug() << "   timer retry: connectDevice()";
+                    mDev_p->connectDevice();
+                }
             }
             break;
         default: {}
