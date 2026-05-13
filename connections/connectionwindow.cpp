@@ -255,6 +255,8 @@ void ConnectionWindow::handleNewConn()
     int newBusSpeed;
     bool newCanFd;
     int newDataRate;
+    bool newListenOnly = false;
+    bool newActive = true;
     CANConnection *conn;
 
     if (thisDialog->exec() == QDialog::Accepted)
@@ -267,13 +269,20 @@ void ConnectionWindow::handleNewConn()
         newCanFd=thisDialog->isCanFd();
         newDataRate = thisDialog->getDataRate();
 
-        /* For SerialBus connections the dialog has no speed picker; restore last used speed */
-        if (newType == CANCon::SERIALBUS && newBusSpeed == 0) {
+        /* For SerialBus connections the dialog has no speed picker; restore last used settings */
+        if (newType == CANCon::SERIALBUS) {
             QSettings cfg;
-            newBusSpeed = cfg.value("Main/LastSerialBusSpeed", 250000).toInt();
+            if (newBusSpeed == 0)
+                newBusSpeed = cfg.value("Main/LastSerialBusSpeed", 250000).toInt();
+            if (!newCanFd)
+                newCanFd = cfg.value("Main/LastSerialBusCanFd", false).toBool();
+            if (newDataRate == 0)
+                newDataRate = cfg.value("Main/LastSerialBusDataRate", 0).toInt();
+            newListenOnly = cfg.value("Main/LastSerialBusListenOnly", false).toBool();
+            newActive = cfg.value("Main/LastSerialBusActive", true).toBool();
         }
 
-        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate);
+        conn = create(newType, newPort, newDriver, newSerialSpeed, newBusSpeed, newCanFd, newDataRate, newListenOnly, newActive);
         if (conn)
         {
             connModel->add(conn);
@@ -324,12 +333,16 @@ void ConnectionWindow::handleResetConn()
     driver = conn_p->getDriver();
     serSpeed = conn_p->getSerialSpeed();
     // For multi-bus devices this grabs bus 0; better than zeroing it out.
+    bool listenOnly = false;
+    bool active = true;
     CANBus bus;
     if (conn_p->getBusSettings(0, bus))
     {
         busSpeed = bus.getSpeed();
         canFd = bus.isCanFD();
         dataRate = bus.getDataRate();
+        listenOnly = bus.isListenOnly();
+        active = bus.isActive();
     }
     else
     {
@@ -344,8 +357,10 @@ void ConnectionWindow::handleResetConn()
 
     conn_p = nullptr;
 
-    conn_p = create(type, port, driver, serSpeed, busSpeed,canFd,dataRate);
-    if (conn_p) connModel->replace(selIdx, conn_p);
+    conn_p = create(type, port, driver, serSpeed, busSpeed, canFd, dataRate, listenOnly, active);
+    if (conn_p) {
+        connModel->replace(selIdx, conn_p);
+    }
 }
 
 /* status */
@@ -397,10 +412,14 @@ void ConnectionWindow::saveBusSettings()
         bus.setCanFD(ui->canFDEnable->isChecked());
         bus.setDataRate(ui->cbDataRate->currentText().toInt());
 
-        /* Persist last SerialBus speed so new connections start with it */
-        if (conn_p->getType() == CANCon::SERIALBUS && bus.getSpeed() > 0) {
+        /* Persist last SerialBus settings so new connections start with them */
+        if (conn_p->getType() == CANCon::SERIALBUS) {
             QSettings cfg;
-            cfg.setValue("Main/LastSerialBusSpeed", bus.getSpeed());
+            if (bus.getSpeed() > 0) cfg.setValue("Main/LastSerialBusSpeed", bus.getSpeed());
+            cfg.setValue("Main/LastSerialBusCanFd", bus.isCanFD());
+            cfg.setValue("Main/LastSerialBusDataRate", bus.getDataRate());
+            cfg.setValue("Main/LastSerialBusListenOnly", bus.isListenOnly());
+            cfg.setValue("Main/LastSerialBusActive", bus.isActive());
         }
 
         conn_p->setBusSettings(offset, bus);
@@ -543,12 +562,12 @@ void ConnectionWindow::handleSendText() {
     emit sendDebugData(bytes);
 }
 
-CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, bool pListenOnly, bool pActive)
 {
     CANConnection* conn_p = nullptr;
 
     /* create connection */
-    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate);
+    conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate, pListenOnly, pActive);
     if(conn_p)
     {
         /* connect signal */
@@ -578,6 +597,8 @@ void ConnectionWindow::loadConnections()
     QVector<int>    DataRates;
     QVector<int>    isCanFds;
     QVector<int>    serialSpeeds;
+    QVector<int>    listenOnlys;
+    QVector<int>    actives;
 
     slist = settings.value("connections/portNames").toStringList();
     portNames.reserve(slist.size());
@@ -621,6 +642,18 @@ void ConnectionWindow::loadConnections()
         serialSpeeds << v.toInt();
     vlist.clear();
 
+    vlist = settings.value("connections/listenOnlys").toList();
+    listenOnlys.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        listenOnlys << v.toInt();
+    vlist.clear();
+
+    vlist = settings.value("connections/actives").toList();
+    actives.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        actives << v.toInt();
+    vlist.clear();
+
     //don't load the connections if the three setting arrays above aren't all the same size.
     int err = 0;
 
@@ -659,12 +692,20 @@ void ConnectionWindow::loadConnections()
         err++;
     }
 
+    /* listenOnlys is optional (older sessions won't have it); pad with zeros if missing */
+    while (listenOnlys.count() < driverNames.count())
+        listenOnlys.append(0);
+
+    /* actives is optional (older sessions won't have it); default to active=true */
+    while (actives.count() < driverNames.count())
+        actives.append(1);
+
     if (err)
         return;
 
     for(int i = 0 ; i < portNames.count() ; i++)
     {
-        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i]);
+        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i], listenOnlys[i] ? true : false, actives[i] ? true : false);
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -686,6 +727,8 @@ void ConnectionWindow::saveConnections()
     QVector<int> busSpeeds;
     QVector<int> DataRates;
     QVector<int> CanFds;
+    QVector<int> ListenOnlys;
+    QVector<int> Actives;
 
     QStringList  slist;
     QVariantList vlist;
@@ -699,6 +742,8 @@ void ConnectionWindow::saveConnections()
             busSpeeds.append(bus.getSpeed());
             CanFds.append(bus.isCanFD() ? 1 : 0);
             DataRates.append(bus.getDataRate());
+            ListenOnlys.append(bus.isListenOnly() ? 1 : 0);
+            Actives.append(bus.isActive() ? 1 : 0);
         }
         serialSpeeds.append(conn_p->getSerialSpeed());
         portNames.append(conn_p->getPort());
@@ -747,6 +792,18 @@ void ConnectionWindow::saveConnections()
     for (int v : CanFds)
         vlist << v;
     settings.setValue("connections/CanFds", vlist);
+
+    vlist.clear();
+    vlist.reserve(ListenOnlys.size());
+    for (int v : ListenOnlys)
+        vlist << v;
+    settings.setValue("connections/listenOnlys", vlist);
+
+    vlist.clear();
+    vlist.reserve(Actives.size());
+    for (int v : Actives)
+        vlist << v;
+    settings.setValue("connections/actives", vlist);
 }
 
 void ConnectionWindow::moveConnUp()

@@ -36,7 +36,9 @@ protected:
                   int pDataRate,
                   int pNumBuses,
                   int pQueueLen,
-                  bool pUseThread);
+                  bool pUseThread,
+                  bool pListenOnly = false,
+                  bool pActive = true);
 
 public:
 

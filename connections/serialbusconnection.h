@@ -28,7 +28,7 @@ class SerialBusConnection : public CANConnection
 
 public:
   SerialBusConnection(QString portName, QString driverName, int pBusSpeed,
-		      int pDataRate, bool pCanFd);
+		      int pDataRate, bool pCanFd, bool pListenOnly = false, bool pActive = true);
     virtual ~SerialBusConnection();
 
 protected:

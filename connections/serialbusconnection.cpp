@@ -13,8 +13,8 @@
 /****    class definition       ****/
 /***********************************/
 
-SerialBusConnection::SerialBusConnection(QString portName, QString driverName, int pBusSpeed, int pDataRate, bool pCanFd) :
-    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,pBusSpeed, pCanFd, pDataRate ,1, 4000, true),
+SerialBusConnection::SerialBusConnection(QString portName, QString driverName, int pBusSpeed, int pDataRate, bool pCanFd, bool pListenOnly, bool pActive) :
+    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,pBusSpeed, pCanFd, pDataRate ,1, 4000, true, pListenOnly, pActive),
     mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
@@ -51,13 +51,18 @@ void SerialBusConnection::piStarted()
     mTimer.setSingleShot(false); //keep ticking
     mTimer.start();
 
-    mBusData[0].mBus.setActive(true);
-    mBusData[0].mBus.setCanFD(false);
     mBusData[0].mConfigured = true;
 
     /* Connect immediately if a speed is already configured (e.g. restored from last session) */
-    if (mBusData[0].mBus.getSpeed() > 0) {
+    if (mBusData[0].mBus.isActive() && mBusData[0].mBus.getSpeed() > 0) {
+        quint32 sbusconfig = 0;
         mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, mBusData[0].mBus.getSpeed());
+        mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, mBusData[0].mBus.isCanFD());
+        if (mBusData[0].mBus.isCanFD() && mBusData[0].mBus.getDataRate() > 0)
+            mDev_p->setConfigurationParameter(QCanBusDevice::DataBitRateKey, mBusData[0].mBus.getDataRate());
+        if (mBusData[0].mBus.isListenOnly())
+            sbusconfig |= EN_SILENT_MODE;
+        mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
         if (!mDev_p->connectDevice()) {
             qDebug() << "SerialBusConnection::piStarted() - initial connectDevice() failed:" << mDev_p->errorString();
         }

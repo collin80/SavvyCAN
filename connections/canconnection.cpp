@@ -11,7 +11,9 @@ CANConnection::CANConnection(QString pPort,
                              int pDataRate,
                              int pNumBuses,
                              int pQueueLen,
-                             bool pUseThread) :
+                             bool pUseThread,
+                             bool pListenOnly,
+                             bool pActive) :
     mNumBuses(pNumBuses),
     mSerialSpeed(pSerialSpeed),
     mQueue(),
@@ -47,6 +49,8 @@ CANConnection::CANConnection(QString pPort,
             mBusData[0].mBus.setCanFD(pCanFd);
         }
     }
+    mBusData[0].mBus.setListenOnly(pListenOnly);
+    mBusData[0].mBus.setActive(pActive);
  
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {
