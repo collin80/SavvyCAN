@@ -9,6 +9,7 @@ namespace CANCon {
     enum status
     {
         NOT_CONNECTED,  /*!< device is not connected */
+        //IN_PROGRESS,    //GS
         CONNECTED       /*!< device is connected */
     };
 
