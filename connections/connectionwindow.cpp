@@ -63,6 +63,7 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     connect(ui->btnMoveUp, &QPushButton::clicked, this, &ConnectionWindow::moveConnUp);
     connect(ui->btnMoveDown, &QPushButton::clicked, this, &ConnectionWindow::moveConnDown);
 
+
     ui->cbBusSpeed->addItem("33333");
     ui->cbBusSpeed->addItem("50000");
     ui->cbBusSpeed->addItem("83333");
@@ -738,12 +739,20 @@ void ConnectionWindow::saveConnections()
     {
         CANBus bus;
 
+        /* Always append to every array so all arrays stay the same length.
+           If the bus is not yet configured (device not connected), store zeros/defaults. */
         if (conn_p->getBusSettings(0, bus)) {
             busSpeeds.append(bus.getSpeed());
             CanFds.append(bus.isCanFD() ? 1 : 0);
             DataRates.append(bus.getDataRate());
             ListenOnlys.append(bus.isListenOnly() ? 1 : 0);
             Actives.append(bus.isActive() ? 1 : 0);
+        } else {
+            busSpeeds.append(0);
+            CanFds.append(0);
+            DataRates.append(0);
+            ListenOnlys.append(0);
+            Actives.append(1);
         }
         serialSpeeds.append(conn_p->getSerialSpeed());
         portNames.append(conn_p->getPort());
