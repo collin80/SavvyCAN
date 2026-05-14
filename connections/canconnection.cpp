@@ -75,12 +75,21 @@ CANConnection::~CANConnection()
 
 void CANConnection::start()
 {
+    //qDebug() << "CANConnection::start.b()";
+    //qDebug() << QThread::currentThread();
+    //qDebug() << QThread::currentThreadId();
+    //qDebug() << mThread_p->currentThread();
+    //qDebug() << mThread_p->currentThreadId();
+    //qDebug() << mThread_p;
+
     if( mThread_p && (mThread_p != QThread::currentThread()) )
     {
         QMetaObject::invokeMethod(this, "start",
                                   Qt::BlockingQueuedConnection);
         return;
     }
+
+    //qDebug() << "CANConnection::start.e()";
 
     /* set started flag */
     mStarted = true;
@@ -230,7 +239,7 @@ void CANConnection::setConfigured(int pBusId, bool pConfigured) {
 bool CANConnection::getBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses() || !isConfigured(pBusId))
         return false;
-    qDebug() << "getBusConfig id: " << pBusId;
+    //qDebug() << "getBusConfig id: " << pBusId;
     pBus = mBusData[pBusId].mBus;
     return true;
 }
@@ -264,11 +273,15 @@ CANCon::type CANConnection::getType() {
 }
 
 
-CANCon::status CANConnection::getStatus() {
+CANCon::status CANConnection::getStatus()
+{
+//    qDebug() << "CANConnection::getStatus = " << mStatus.loadRelaxed();
     return (CANCon::status) mStatus.loadRelaxed();
 }
 
-void CANConnection::setStatus(CANCon::status pStatus) {
+void CANConnection::setStatus(CANCon::status pStatus)
+{
+    qDebug() << "CANConnection::setStatus = " << pStatus;
     mStatus.storeRelaxed(pStatus);
 }
 
