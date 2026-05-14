@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
     //qSetMessagePattern("Type: %{type}\nProduct Name: %{appname}\nFile: %{file}\nLine: %{line}\nMethod: %{function}\nThreadID: %{threadid}\nThreadPtr: %{qthreadptr}\nMessage: %{message}");
 #endif
 
+    QLoggingCategory::setFilterRules("qt.canbus=true");
+
     SavvyCANApplication a(argc, argv);
 
     //Add a local path for Qt extensions, to allow for per-application extensions.
@@ -48,6 +50,8 @@ int main(int argc, char *argv[])
     QFont sysFont = QFont(); //get default font
     sysFont.setPointSize(fontSize);
     a.setFont(sysFont);
+
+    qDebug() << "Config file path:" << settings.fileName();
 
     a.mainWindow->show();
 

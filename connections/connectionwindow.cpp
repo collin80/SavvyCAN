@@ -32,8 +32,9 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     ui->tableConnections->setColumnWidth(0, 100);
     ui->tableConnections->setColumnWidth(1, 100);
     ui->tableConnections->setColumnWidth(2, 130);
-    ui->tableConnections->setColumnWidth(3, 70);
-    ui->tableConnections->setColumnWidth(4, 200);
+    ui->tableConnections->setColumnWidth(3, 100);
+    ui->tableConnections->setColumnWidth(4, 70);
+    ui->tableConnections->setColumnWidth(5, 200);
     QHeaderView *HorzHdr = ui->tableConnections->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
 
@@ -47,18 +48,18 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     {
         /* load connection configuration */
         loadConnections();
-    }    
+    }
 
-    connect(ui->btnDisconnect, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn);
+    connect(ui->btnDisconnect, &QPushButton::clicked, this, &ConnectionWindow::handleRemoveConn); // <-- Disconnect
     connect(ui->btnSendHex, &QPushButton::clicked, this, &ConnectionWindow::handleSendHex);
     connect(ui->btnSendText, &QPushButton::clicked, this, &ConnectionWindow::handleSendText);
     connect(ui->ckEnableConsole, &QCheckBox::toggled, this, &ConnectionWindow::consoleEnableChanged);
     connect(ui->btnClearDebug, &QPushButton::clicked, this, &ConnectionWindow::handleClearDebugText);
-    connect(ui->btnNewConnection, &QPushButton::clicked, this, &ConnectionWindow::handleNewConn);
-    connect(ui->btnResetConn, &QPushButton::clicked, this, &ConnectionWindow::handleResetConn);
+    connect(ui->btnNewConnection, &QPushButton::clicked, this, &ConnectionWindow::handleNewConn); // <-- New connection
+    connect(ui->btnResetConn, &QPushButton::clicked, this, &ConnectionWindow::handleResetConn); // <-- Reset
     connect(ui->tableConnections->selectionModel(), &QItemSelectionModel::currentRowChanged, this, &ConnectionWindow::currentRowChanged);
     connect(ui->tabBuses, &QTabBar::currentChanged, this, &ConnectionWindow::currentTabChanged);
-    connect(ui->btnSaveBus, &QPushButton::clicked, this, &ConnectionWindow::saveBusSettings);
+    connect(ui->btnSaveBus, &QPushButton::clicked, this, &ConnectionWindow::saveBusSettings); // <-- Save settings
     connect(ui->btnMoveUp, &QPushButton::clicked, this, &ConnectionWindow::moveConnUp);
     connect(ui->btnMoveDown, &QPushButton::clicked, this, &ConnectionWindow::moveConnDown);
 
@@ -163,7 +164,6 @@ ConnectionWindow::~ConnectionWindow()
 
     delete ui;
 }
-
 
 void ConnectionWindow::showEvent(QShowEvent* event)
 {
@@ -343,10 +343,11 @@ void ConnectionWindow::handleResetConn()
 
 /* status */
 void ConnectionWindow::connectionStatus(CANConStatus pStatus)
-{
+{    
     Q_UNUSED(pStatus);
 
-    qDebug() << "Connectionstatus changed";
+    qDebug() << "ConnectionWindow::connectionStatus(CANConStatus pStatus)";
+
     int selIdx = ui->tableConnections->selectionModel()->currentIndex().row();
     connModel->refresh();
     ui->tableConnections->selectRow(selIdx);
@@ -379,7 +380,7 @@ void ConnectionWindow::saveBusSettings()
 
         if (!conn_p->getBusSettings(offset, bus))
         {
-            qDebug() << "Could not retrieve bus settings!";
+            qDebug() << "!!!!!!!!!!!!!!!!!!!!Could not retrieve bus settings!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
             return;
         }
 
@@ -388,6 +389,7 @@ void ConnectionWindow::saveBusSettings()
         bus.setListenOnly(ui->ckListenOnly->isChecked());
         bus.setCanFD(ui->canFDEnable->isChecked());
         bus.setDataRate(ui->cbDataRate->currentText().toInt());
+
         conn_p->setBusSettings(offset, bus);
     }
 }
@@ -530,7 +532,7 @@ void ConnectionWindow::handleSendText() {
 
 CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
 {
-    CANConnection* conn_p;
+    CANConnection* conn_p = nullptr;
 
     /* create connection */
     conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate);
@@ -552,29 +554,104 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
 
 void ConnectionWindow::loadConnections()
 {
-#if QT_VERSION < QT_VERSION_CHECK( 6, 0, 0 )
-    qRegisterMetaTypeStreamOperators<CANBus>();
-    qRegisterMetaTypeStreamOperators<QList<CANBus>>();
-#endif
-
     QSettings settings;
 
-    /* fill connection list */
-    QVector<QString> portNames = settings.value("connections/portNames").value<QVector<QString>>();
-    QVector<QString> driverNames = settings.value("connections/driverNames").value<QVector<QString>>();
-    QVector<int>    devTypes = settings.value("connections/types").value<QVector<int>>();
+    QStringList slist;
+    QVariantList vlist;
+    QVector<QString> portNames;
+    QVector<QString> driverNames;
+    QVector<int>    devTypes;
+    QVector<int>    busSpeeds;
+    QVector<int>    DataRates;
+    QVector<int>    isCanFds;
+    QVector<int>    serialSpeeds;
 
-    QVector<int> busSpeeds = settings.value("connections/busSpeeds_0").value<QVector<int>>();
-    QVector<int> DataRates = settings.value("connections/DataRates_0").value<QVector<int>>();
-    QVector<int> isCanFds = settings.value("connections/isCanFds_0").value<QVector<int>>();
-    QVector<int> serialSpeeds = settings.value("connections/serialSpeeds").value<QVector<int>>();
+    slist = settings.value("connections/portNames").toStringList();
+    portNames.reserve(slist.size());
+    for (const QString &s : std::as_const(slist))
+        portNames << s;
+    slist.clear();
+
+    slist = settings.value("connections/driverNames").toStringList();
+    driverNames.reserve(slist.size());
+    for (const QString &s : std::as_const(slist))
+        driverNames << s;
+    slist.clear();
+
+    vlist = settings.value("connections/devTypes").toList();
+    devTypes.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        devTypes << v.toInt();
+    vlist.clear();
+
+    vlist = settings.value("connections/busSpeeds").toList();
+    busSpeeds.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        busSpeeds << v.toInt();
+    vlist.clear();
+
+    vlist = settings.value("connections/DataRates").toList();
+    DataRates.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        DataRates << v.toInt();
+    vlist.clear();
+
+    vlist = settings.value("connections/CanFds").toList();
+    isCanFds.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        isCanFds << v.toInt();
+    vlist.clear();
+
+    vlist = settings.value("connections/serialSpeeds").toList();
+    serialSpeeds.reserve(vlist.size());
+    for (const QVariant &v : std::as_const(vlist))
+        serialSpeeds << v.toInt();
+    vlist.clear();
+
     //don't load the connections if the three setting arrays above aren't all the same size.
-    if (portNames.count() != driverNames.count() || devTypes.count() != driverNames.count() ||  busSpeeds.count() != driverNames.count() || isCanFds.count() != driverNames.count() ||
-	DataRates.count() != driverNames.count() || serialSpeeds.count() != driverNames.count() ) return;
+    int err = 0;
+
+    if (portNames.count() != driverNames.count() )
+    {
+        qDebug() << "portNames.count()" << portNames.count();
+        err++;
+    }
+
+    if (devTypes.count() != driverNames.count() )
+    {
+        qDebug() << "devTypes.count()" << devTypes.count();
+        err++;
+    }
+
+    if( busSpeeds.count() != driverNames.count() )
+    {
+        qDebug() << "devTypes.count()" << busSpeeds.count();
+        err++;
+    }
+
+    if( isCanFds.count() != driverNames.count() )
+    {
+        qDebug() << "isCanFds.count()" << isCanFds.count();
+        err++;
+    }
+
+    if( DataRates.count() != driverNames.count() )
+    {
+        qDebug() << "DataRates.count()" << DataRates.count();
+        err++;
+    }
+    if( serialSpeeds.count() != driverNames.count() )
+    {
+        qDebug() << "serialSpeeds.count()" << serialSpeeds.count();
+        err++;
+    }
+
+    if (err)
+        return;
 
     for(int i = 0 ; i < portNames.count() ; i++)
     {
-      CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i]);
+        CANConnection* conn_p = create((CANCon::type)devTypes[i], portNames[i], driverNames[i], serialSpeeds[i], busSpeeds[i], isCanFds[i] ? true : false, DataRates[i]);
         /* add connection to model */
         connModel->add(conn_p);
     }
@@ -590,13 +667,16 @@ void ConnectionWindow::saveConnections()
 
     QSettings settings;
     QVector<QString> portNames;
-    QVector<int> devTypes;
     QVector<QString> driverNames;
+    QVector<int> devTypes;
     QVector<int> serialSpeeds;
     QVector<int> busSpeeds;
     QVector<int> DataRates;
     QVector<int> CanFds;
- 
+
+    QStringList  slist;
+    QVariantList vlist;
+
     /* save connections */
     foreach(CANConnection* conn_p, conns)
     {
@@ -613,13 +693,47 @@ void ConnectionWindow::saveConnections()
         driverNames.append(conn_p->getDriver());
     }
 
-    settings.setValue("connections/portNames", QVariant::fromValue(portNames));
-    settings.setValue("connections/types", QVariant::fromValue(devTypes));
-    settings.setValue("connections/driverNames", QVariant::fromValue(driverNames));
-    settings.setValue("connections/busSpeeds_0", QVariant::fromValue(busSpeeds));
-    settings.setValue("connections/isCanFds_0", QVariant::fromValue(CanFds)); 
-    settings.setValue("connections/DataRates_0", QVariant::fromValue(DataRates)); 
-    settings.setValue("connections/serialSpeeds", QVariant::fromValue(serialSpeeds)); 
+    slist.clear();
+    slist.reserve(portNames.size());
+    for (const QString &s : portNames)
+        slist << s;
+    settings.setValue("connections/portNames", slist);
+
+    slist.clear();
+    slist.reserve(driverNames.size());
+    for (const QString &s : driverNames)
+        slist << s;
+    settings.setValue("connections/driverNames", slist);
+
+    slist.clear();
+    vlist.reserve(devTypes.size());
+    for (int v : devTypes)
+        vlist << v;
+    settings.setValue("connections/devTypes", vlist);
+
+    vlist.clear();
+    vlist.reserve(serialSpeeds.size());
+    for (int v : serialSpeeds)
+        vlist << v;
+    settings.setValue("connections/serialSpeeds", vlist);
+
+    vlist.clear();
+    vlist.reserve(busSpeeds.size());
+    for (int v : busSpeeds)
+        vlist << v;
+    settings.setValue("connections/busSpeeds", vlist);
+
+    vlist.clear();
+    vlist.reserve(DataRates.size());
+    for (int v : DataRates)
+        vlist << v;
+    settings.setValue("connections/DataRates", vlist);
+
+    vlist.clear();
+    vlist.reserve(CanFds.size());
+    for (int v : CanFds)
+        vlist << v;
+    settings.setValue("connections/CanFds", vlist);
 }
 
 void ConnectionWindow::moveConnUp()
