@@ -39,6 +39,11 @@ void CANConManager::resetTimeBasis()
 {
     mTimestampBasis = QDateTime::currentMSecsSinceEpoch() * 1000;
     mElapsedTimer.restart();
+    // Flush any frames already queued by connections — they carry timestamps
+    // computed against the old mElapsedTimer and would appear with incorrect
+    // (large) values after the reset if not discarded now.
+    foreach (CANConnection* conn_p, mConns)
+        conn_p->getQueue().flush();
 }
 
 CANConManager::~CANConManager()
