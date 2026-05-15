@@ -25,6 +25,7 @@ public:
     CANConnection* getByName(const QString& pName) const;
 
     uint64_t getTimeBasis();
+    uint64_t getElapsedUs(); // µs elapsed since last resetTimeBasis() — same reference as Tx timestamps
     void resetTimeBasis();
 
     int getNumBuses();

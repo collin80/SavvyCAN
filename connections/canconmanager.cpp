@@ -134,6 +134,11 @@ uint64_t CANConManager::getTimeBasis()
     return mTimestampBasis;
 }
 
+uint64_t CANConManager::getElapsedUs()
+{
+    return static_cast<uint64_t>(mElapsedTimer.nsecsElapsed()) / 1000ULL;
+}
+
 QList<CANConnection*>& CANConManager::getConnections()
 {
     return mConns;

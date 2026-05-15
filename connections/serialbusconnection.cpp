@@ -151,6 +151,22 @@ void SerialBusConnection::disconnectDevice() {
     }
 }
 
+/* Immediately update status when the device state changes */
+void SerialBusConnection::deviceStateChanged(QCanBusDevice::CanBusDeviceState state)
+{
+    CANConStatus stats;
+    if (state == QCanBusDevice::ConnectedState) {
+        setStatus(CANCon::CONNECTED);
+        stats.conStatus = getStatus();
+        stats.numHardwareBuses = mNumBuses;
+        emit status(stats);
+    } else if (state == QCanBusDevice::UnconnectedState && getStatus() == CANCon::CONNECTED) {
+        setStatus(CANCon::NOT_CONNECTED);
+        stats.conStatus = getStatus();
+        stats.numHardwareBuses = mNumBuses;
+        emit status(stats);
+    }
+}
 
 void SerialBusConnection::errorReceived(QCanBusDevice::CanBusError error) const
 {
@@ -229,7 +245,22 @@ void SerialBusConnection::framesReceived()
                 if (useSystemTime) {
                     frame_p->setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
-                else frame_p->setTimeStamp(CommFrame::TimeStamp(0, (recFrame.timeStamp().seconds() * 1000000ul + recFrame.timeStamp().microSeconds()) - timeBasis));
+                else {
+                    uint64_t hwTimestamp = static_cast<uint64_t>(recFrame.timeStamp().seconds()) * 1000000ULL
+                                          + static_cast<uint64_t>(recFrame.timeStamp().microSeconds());
+                    uint64_t relTimestamp;
+                    if (hwTimestamp >= timeBasis) {
+                        // Epoch-based hw timestamp (e.g. SocketCAN): subtract session basis.
+                        relTimestamp = hwTimestamp - timeBasis;
+                    } else {
+                        // Uptime-based hw timestamp (e.g. PCAN): the hw clock cannot be
+                        // synchronised to the elapsed timer without a fixed anchor bias,
+                        // so use the elapsed timer directly — the same source as Tx timestamps.
+                        // This guarantees Tx and Rx share one consistent clock with no drift.
+                        relTimestamp = CANConManager::getInstance()->getElapsedUs();
+                    }
+                    frame_p->setTimeStamp(CommFrame::TimeStamp(0, relTimestamp));
+                }
 
                 checkTargettedFrame(*frame_p);
 
