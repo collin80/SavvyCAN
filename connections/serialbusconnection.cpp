@@ -113,9 +113,11 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
 
     /* connect device */
-    if (!mDev_p->connectDevice()) {
-        disconnectDevice();
-        qDebug() << "can't connect device";
+    if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
+        if (!mDev_p->connectDevice()) {
+            disconnectDevice();
+            qDebug() << "SerialBusConnection::piSetBusSettings - can't connect device";
+        }
     }
 }
 
@@ -201,11 +203,16 @@ void SerialBusConnection::framesReceived()
             if(frame_p) {
                 frame_p->setPayload(recFrame.payload());
                 frame_p->setBus(0);
+                // All frames arriving via framesReceived() are genuinely received frames.
+                // Do not use QCanBusFrame::hasLocalEcho() to determine direction: some backends
+                // (e.g. PeakCAN/PCAN on certain platforms) report local echo unreliably,
+                // causing all received frames to appear as Tx.
+                frame_p->setReceived(true);
+
                 if (recFrame.frameType() == recFrame.ErrorFrame)
                 {
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId() + 0x20000000ull);
-                    frame_p->setReceived(true);
                 }
                 else
                 {
