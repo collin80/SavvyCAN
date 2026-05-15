@@ -475,7 +475,9 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(5, settings.value("Main/BusColumn", 40).toUInt()); //bus
         ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
-        //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
+        //readUpdateableSettings() runs after this, so read the flag straight from the settings here
+        if (settings.value("Main/UseHexAndDec", false).toBool())
+            ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 300).toUInt()); //data
 
         QByteArray splitterMainState = settings.value("Main/SplitterMain").toByteArray();
         if (!splitterMainState.isEmpty())
@@ -562,6 +564,8 @@ void MainWindow::readUpdateableSettings()
 
     useColorsByCanId = settings.value("Main/ColorsByCanId", false).toBool();
     model->setUseColorsByCanId(useColorsByCanId);
+    useHexAndDec = settings.value("Main/UseHexAndDec", false).toBool();
+    model->setHexAndDecMode(useHexAndDec);
 
     bool tempBool;
     TimeStyle ts = TS_MICROS;
@@ -610,7 +614,8 @@ void MainWindow::writeSettings()
         settings.setValue("Main/BusColumn", ui->canFramesView->columnWidth(5));
         settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
-        //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
+        if (useHexAndDec)
+            settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
         settings.setValue("Main/SplitterMain", ui->splitterMain->saveState());
     }
     // Always save splitterLeft so send-panel height is restored on next launch
