@@ -1,6 +1,7 @@
 #include <QJSValueIterator>
 #include <QDebug>
 #include <QTableWidget>
+#include <QCoreApplication>
 
 #include "scriptcontainer.h"
 #include "connections/canconmanager.h"
@@ -24,25 +25,28 @@ ScriptContainer::~ScriptContainer()
     qDebug() << "Script Container Destructor " << (uint64_t)this << "c: " << (uint64_t)canHelper;
     timer.stop();
     disconnect(&timer, SIGNAL(timeout()), this, SLOT(tick()));
-    if (scriptEngine)
-    {
-        scriptText = "";
-        compileScript();
-        //delete scriptEngine;   //doing this here seems to cause a crash. No crash if you don't.
-        //scriptEngine = nullptr;
-    }
+    // Clear CAN filters and flush any pending queued events before deleting helpers.
+    // Qt::QueuedConnection means gotTargettedFrame calls may still be in the event
+    // queue; removePostedEvents() ensures those events are discarded before the
+    // objects are freed, preventing the segfault on script deletion.
     if (canHelper)
     {
+        canHelper->clearFilters();
+        QCoreApplication::removePostedEvents(canHelper);
         delete canHelper;
         canHelper = nullptr;
     }
     if (isoHelper)
     {
+        isoHelper->clearFilters();
+        QCoreApplication::removePostedEvents(isoHelper);
         delete isoHelper;
         isoHelper = nullptr;
     }
     if (udsHelper)
     {
+        udsHelper->clearFilters();
+        QCoreApplication::removePostedEvents(udsHelper);
         delete udsHelper;
         udsHelper = nullptr;
     }
