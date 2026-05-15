@@ -18,12 +18,12 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,1">
    <property name="sizeConstraint">
-    <enum>QLayout::SetDefaultConstraint</enum>
+    <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
    </property>
    <item>
     <layout class="QGridLayout" name="gridLayout" columnstretch="1,0">
      <property name="sizeConstraint">
-      <enum>QLayout::SetMaximumSize</enum>
+      <enum>QLayout::SizeConstraint::SetMaximumSize</enum>
      </property>
      <item row="6" column="0" colspan="2">
       <widget class="QPushButton" name="btnDisconnect">
@@ -45,14 +45,30 @@
         <bool>true</bool>
        </property>
        <property name="selectionMode">
-        <enum>QAbstractItemView::SingleSelection</enum>
+        <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
        </property>
        <property name="selectionBehavior">
-        <enum>QAbstractItemView::SelectRows</enum>
+        <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
        </property>
       </widget>
      </item>
      <item row="7" column="0" colspan="2">
+      <spacer name="verticalSpacer_groupBus">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Policy::Fixed</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>16</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="8" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBus">
        <property name="enabled">
         <bool>false</bool>
@@ -61,7 +77,7 @@
         <string>Bus Details:</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignCenter</set>
+        <set>Qt::AlignmentFlag::AlignCenter</set>
        </property>
        <layout class="QVBoxLayout" name="qhBox20">
         <item>
@@ -216,7 +232,7 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
      <property name="sizeConstraint">
-      <enum>QLayout::SetNoConstraint</enum>
+      <enum>QLayout::SizeConstraint::SetNoConstraint</enum>
      </property>
      <item>
       <widget class="QCheckBox" name="ckEnableConsole">
