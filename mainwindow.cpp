@@ -175,6 +175,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //Frame count column should be hidden by default. Only used in overwrite mode
     ui->canFramesView->hideColumn((int)Column::FrameCount);
+    //If overwrite mode was restored from settings, show the column again
+    if (ui->cbOverwrite->isChecked()) {
+        ui->canFramesView->showColumn((int)Column::FrameCount);
+    }
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     lbHelp.setText(tr("Press F1 on any screen for help"));
