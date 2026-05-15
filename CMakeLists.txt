@@ -139,9 +139,14 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
 )
 
 if(APPLE)
+    set(APP_ICON_MACOS "${CMAKE_CURRENT_SOURCE_DIR}/icons/SavvyIcon.icns")
+    set_source_files_properties(${APP_ICON_MACOS} PROPERTIES
+        MACOSX_PACKAGE_LOCATION "Resources"
+    )
+    target_sources(SavvyCAN PRIVATE ${APP_ICON_MACOS})
     set_target_properties(SavvyCAN PROPERTIES
         MACOSX_BUNDLE_ICON_FILE SavvyIcon.icns
-        RESOURCE "icons/SavvyIcon.icns"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Info.plist.cmake"
     )
 endif()
 
