@@ -111,6 +111,7 @@ HEADERS  += mainwindow.h \
     can_structs.h \
     canbridgewindow.h \
     canframemodel.h \
+    connections/gs_usb_driver/gs_usb_definitions.h \
     connections/canlogserver.h \
     connections/canserver.h \
     connections/lawicel_serial.h \
@@ -248,6 +249,8 @@ win32-msvc* {
 
 win32-g++ {
    LIBS += libopengl32
+   DEFINES += GS_USB_DRIVER_ENABLED
+   include($$PWD/connections/gs_usb_driver/gs_usb.pri)
 }
 
 unix {

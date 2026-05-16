@@ -1,12 +1,15 @@
 #include <QCanBus>
 #include "newconnectiondialog.h"
 #include "ui_newconnectiondialog.h"
+#include "gs_usb_driver/gs_usb_definitions.h"
+#include "gs_usb_driver/gs_usb.h"
 
-NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QString>* kayakhosts, QWidget *parent) :
+NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QString>* kayakhosts, QVector<candle_handle>* gsusbIDs, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::NewConnectionDialog),
     remoteDeviceIPGVRET(gvretips),
-    remoteBusKayak(kayakhosts)
+    remoteBusKayak(kayakhosts),
+    remoteDeviceGSUSB(gsusbIDs)
 {
     ui->setupUi(this);
     if (isSerialBusAvailable())
@@ -30,8 +33,14 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QSt
     connect(ui->rbLawicel, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbCANserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbCanlogserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+#ifdef GS_USB_DRIVER_ENABLED
+    connect(ui->rbGSUSB, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+#else
+    ui->rbGSUSB->setVisible(false);
+#endif
 
     connect(ui->cbDeviceType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewConnectionDialog::handleDeviceTypeChanged);
+    connect(ui->cbPort, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewConnectionDialog::handlePortChanged);
     connect(ui->btnOK, &QPushButton::clicked, this, &NewConnectionDialog::handleCreateButton);
 
     ui->lblDeviceType->setHidden(true);
@@ -70,6 +79,7 @@ void NewConnectionDialog::handleConnTypeChanged()
     if (ui->rbMQTT->isChecked()) selectMQTT();
     if (ui->rbCANserver->isChecked()) selectCANserver();
     if (ui->rbCanlogserver->isChecked()) selectCANlogserver();
+    if (ui->rbGSUSB->isChecked()) selectGSUSB();
 }
 
 void NewConnectionDialog::handleDeviceTypeChanged()
@@ -82,10 +92,30 @@ void NewConnectionDialog::handleDeviceTypeChanged()
         ui->cbPort->addItem(canDevices[i].name());
 }
 
+void NewConnectionDialog::handlePortChanged()
+{
+#ifdef GS_USB_DRIVER_ENABLED
+    if (ui->rbGSUSB->isChecked()) {
+        // GS USB is checked - attempt to populate bitrate based on device capability
+        ui->cbCANSpeed->clear();
+        int currentIndex = ui->cbPort->currentIndex();
+        if ((currentIndex >= 0) && (currentIndex < remoteDeviceGSUSB->length())) {
+            QList<GSUSB_timing_t> supportedTiming;
+            candle_handle handle = remoteDeviceGSUSB->at(currentIndex);
+            GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+            foreach (const GSUSB_timing_t timing, supportedTiming) {
+                ui->cbCANSpeed->addItem(GSUSBDevice::timingToString(timing));
+            }
+        }
+    }
+#endif
+}
+
 void NewConnectionDialog::selectLawicel()
 {
     ui->lPort->setText("Serial Port:");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
 
@@ -103,18 +133,17 @@ void NewConnectionDialog::selectLawicel()
     for (int i = 0; i < ports.count(); i++)
         ui->cbPort->addItem(ports[i].portName());
 
-    if (ui->cbCANSpeed->count() == 0)
-    {
-        ui->cbCANSpeed->addItem("10000");
-        ui->cbCANSpeed->addItem("20000");
-        ui->cbCANSpeed->addItem("50000");
-        ui->cbCANSpeed->addItem("83333");
-        ui->cbCANSpeed->addItem("100000");
-        ui->cbCANSpeed->addItem("125000");
-        ui->cbCANSpeed->addItem("250000");
-        ui->cbCANSpeed->addItem("500000");
-        ui->cbCANSpeed->addItem("1000000");
-    }
+    ui->cbCANSpeed->clear();
+    ui->cbCANSpeed->addItem("10000");
+    ui->cbCANSpeed->addItem("20000");
+    ui->cbCANSpeed->addItem("50000");
+    ui->cbCANSpeed->addItem("83333");
+    ui->cbCANSpeed->addItem("100000");
+    ui->cbCANSpeed->addItem("125000");
+    ui->cbCANSpeed->addItem("250000");
+    ui->cbCANSpeed->addItem("500000");
+    ui->cbCANSpeed->addItem("1000000");
+
     if (ui->cbDataRate->count() == 0)
     {
         ui->cbDataRate->addItem("1000000");
@@ -139,6 +168,7 @@ void NewConnectionDialog::selectSerial()
 {
     ui->lPort->setText("Serial Port:");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     ui->cbCANSpeed->setHidden(true);
@@ -159,6 +189,7 @@ void NewConnectionDialog::selectSerial()
 void NewConnectionDialog::selectSocketCan()
 {
     ui->lPort->setText("Port:");
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(false);
     ui->cbDeviceType->setHidden(false);
     ui->cbCANSpeed->setHidden(true);
@@ -181,6 +212,7 @@ void NewConnectionDialog::selectRemote()
 {
     ui->lPort->setText("IP Address:");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     ui->cbCANSpeed->setHidden(true);
@@ -202,6 +234,7 @@ void NewConnectionDialog::selectKayak()
 {
     ui->lPort->setText("Available Bus(ses):");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     ui->cbCANSpeed->setHidden(true);
@@ -219,10 +252,34 @@ void NewConnectionDialog::selectKayak()
     }
 }
 
+void NewConnectionDialog::selectGSUSB()
+{
+    ui->lPort->setText("Port:");
+    ui->cbPort->setEditable(false);
+    ui->lblDeviceType->setHidden(true);
+    ui->cbDeviceType->setHidden(true);
+    ui->cbCANSpeed->setHidden(false);
+    ui->cbSerialSpeed->setHidden(true);
+    ui->lblCANSpeed->setHidden(false);
+    ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
+
+    ui->cbCANSpeed->clear();
+    ui->cbPort->clear();
+#ifdef GS_USB_DRIVER_ENABLED
+    foreach(candle_handle handle, *remoteDeviceGSUSB) {
+        ui->cbPort->addItem(GSUSBDevice::handleToDeviceIDString(handle));
+    }
+#endif
+}
+
 void NewConnectionDialog::selectMQTT()
 {
     ui->lPort->setText("Topic Name:");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     ui->cbCANSpeed->setHidden(true);
@@ -240,6 +297,7 @@ void NewConnectionDialog::selectCANserver()
 {
     ui->lPort->setText("CANserver IP Address:");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     ui->cbCANSpeed->setHidden(true);
@@ -257,6 +315,7 @@ void NewConnectionDialog::selectCANlogserver()
 {
     ui->lPort->setText("CANlogserver IP Address:");
 
+    ui->cbPort->setEditable(true);
     ui->lblDeviceType->setHidden(true);
     ui->cbDeviceType->setHidden(true);
     ui->cbCANSpeed->setHidden(true);
@@ -294,11 +353,14 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             ui->rbLawicel->setChecked(true);
             break;
         case CANCon::CANSERVER:
-          ui->rbCANserver->setChecked(true);
-          break;
+            ui->rbCANserver->setChecked(true);
+            break;
         case CANCon::CANLOGSERVER:
-          ui->rbCanlogserver->setChecked(true);
-          break;
+            ui->rbCanlogserver->setChecked(true);
+            break;
+        case CANCon::GSUSB:
+            ui->rbGSUSB->setChecked(true);
+            break;
         default: {}
     }
 
@@ -307,6 +369,9 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
 
     switch(pType)
     {
+        case CANCon::GSUSB:
+            // Note that this function isn't currently called
+            // For now, just fall through to default functionality
         case CANCon::GVRET_SERIAL:
         case CANCon::LAWICEL:
         {
@@ -365,8 +430,8 @@ QString NewConnectionDialog::getPortName()
         return ui->cbPort->currentText();
     case CANCon::CANSERVER:
     case CANCon::CANLOGSERVER:
+    case CANCon::GSUSB:
         return ui->cbPort->currentText();
-
     default:
         qDebug() << "getPortName: can't get port";
     }
@@ -394,11 +459,46 @@ int NewConnectionDialog::getSerialSpeed()
 
 int NewConnectionDialog::getBusSpeed()
 {
-    if (getConnectionType() == CANCon::LAWICEL)
-    {
+    if (getConnectionType() == CANCon::LAWICEL) {
         return ui->cbCANSpeed->currentText().toInt();
+    } else if (getConnectionType() == CANCon::GSUSB) {
+#ifdef GS_USB_DRIVER_ENABLED
+        QList<GSUSB_timing_t> supportedTiming;
+        int currentDeviceIndex = ui->cbPort->currentIndex();
+        int currentSpeedIndex = ui->cbCANSpeed->currentIndex();
+        if ((currentDeviceIndex >= 0) && (currentSpeedIndex >= 0)) {
+            candle_handle handle = remoteDeviceGSUSB->at(currentDeviceIndex);
+            GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+            if (supportedTiming.length() > currentSpeedIndex) {
+                return supportedTiming.at(currentSpeedIndex).bitrate;
+            }
+        }
+#endif
+        return 0;
+    } else {
+        return 0;
     }
-    else return 0;
+}
+
+int NewConnectionDialog::getSamplePoint()
+{
+    if (getConnectionType() == CANCon::GSUSB) {
+#ifdef GS_USB_DRIVER_ENABLED
+        QList<GSUSB_timing_t> supportedTiming;
+        int currentDeviceIndex = ui->cbPort->currentIndex();
+        int currentSpeedIndex = ui->cbCANSpeed->currentIndex();
+        if ((currentDeviceIndex >= 0) && (currentSpeedIndex >= 0)) {
+            candle_handle handle = remoteDeviceGSUSB->at(currentDeviceIndex);
+            GSUSBDevice::getSupportedTimings(handle, supportedTiming);
+            if (supportedTiming.length() > currentSpeedIndex) {
+                return supportedTiming.at(currentSpeedIndex).samplePoint;
+            }
+        }
+#endif
+        return 0;
+    } else {
+        return 875;
+    }
 }
 
 CANCon::type NewConnectionDialog::getConnectionType()
@@ -411,6 +511,7 @@ CANCon::type NewConnectionDialog::getConnectionType()
     if (ui->rbLawicel->isChecked()) return CANCon::LAWICEL;
     if (ui->rbCANserver->isChecked()) return CANCon::CANSERVER;
     if (ui->rbCanlogserver->isChecked()) return CANCon::CANLOGSERVER;
+    if (ui->rbGSUSB->isChecked()) return CANCon::GSUSB;
     qDebug() << "getConnectionType: error";
 
     return CANCon::NONE;

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>426</width>
-    <height>540</height>
+    <height>749</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,23 +23,6 @@
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
      </property>
      <layout class="QGridLayout" name="gridLayout">
-      <item row="4" column="0">
-       <widget class="QRadioButton" name="rbKayak">
-        <property name="text">
-         <string>socketcand (SocketCAN over Ethernet)</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0">
-       <widget class="QRadioButton" name="rbSocketCAN">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="text">
-         <string>QT SerialBus Devices (SocketCAN, PeakCAN, etc)</string>
-        </property>
-       </widget>
-      </item>
       <item row="5" column="0">
        <widget class="QRadioButton" name="rbMQTT">
         <property name="text">
@@ -57,6 +40,23 @@
         </property>
        </widget>
       </item>
+      <item row="3" column="0">
+       <widget class="QRadioButton" name="rbSocketCAN">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="text">
+         <string>QT SerialBus Devices (SocketCAN, PeakCAN, etc)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QRadioButton" name="rbKayak">
+        <property name="text">
+         <string>socketcand (SocketCAN over Ethernet)</string>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="0">
        <widget class="QRadioButton" name="rbRemote">
         <property name="text">
@@ -64,10 +64,10 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QRadioButton" name="rbLawicel">
+      <item row="7" column="0">
+       <widget class="QRadioButton" name="rbCanlogserver">
         <property name="text">
-         <string>LAWICEL / SLCAN Serial</string>
+         <string>CANlogserver</string>
         </property>
        </widget>
       </item>
@@ -78,10 +78,17 @@
         </property>
        </widget>
       </item>
-      <item row="7" column="0">
-       <widget class="QRadioButton" name="rbCanlogserver">
+      <item row="2" column="0">
+       <widget class="QRadioButton" name="rbLawicel">
         <property name="text">
-         <string>CANlogserver</string>
+         <string>LAWICEL / SLCAN Serial</string>
+        </property>
+       </widget>
+      </item>
+      <item row="8" column="0">
+       <widget class="QRadioButton" name="rbGSUSB">
+        <property name="text">
+         <string>GS USB (CAN Bus Debugger, CANtact, etc)</string>
         </property>
        </widget>
       </item>

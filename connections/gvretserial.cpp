@@ -9,7 +9,7 @@
 #include "gvretserial.h"
 
 GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
-    CANConnection(portName, "gvret", CANCon::GVRET_SERIAL, 0, 0, false, 0, 3, 4000, true),
+    CANConnection(portName, "gvret", CANCon::GVRET_SERIAL, 0, 0, 0, false, 0, 3, 4000, true),
     mTimer(this), /*NB: set this as parent of timer to manage it from working thread */
     useTcp(useTcp)
 {

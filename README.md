@@ -18,6 +18,10 @@ within the collin80 repos.
 
 It is now possible to use any Qt SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
 
+It's now also possible to connect to CANable, CAN Bus Debugger, or any other device using a variant
+of the gs_usb protocol natively in Windows. These devices can be connected using socketcan on other
+operating systems.
+
 It should, however, be noted that use of a capture device is not required to make use
 of this program. It can load and save in several formats:
 
@@ -38,6 +42,9 @@ of this program. It can load and save in several formats:
 
 Now this code does not depend on anything other than what is in the source tree or available
 from the Qt installer.
+
+For connecting to gs_usb based devices on Windows, this application dynamically links to
+candle_api.dll which is licensed under the LGPL-3.0. The source for this DLL is available [here](https://github.com/BennyEvans/candle_dll)
 
 Uses QCustomPlot available at:
 
