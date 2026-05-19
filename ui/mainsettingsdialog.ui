@@ -133,6 +133,13 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="cbEnableFrameHighlight">
+          <property name="text">
+           <string>Enable frame ID highlight feature</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbUseOpenGL">
           <property name="text">
            <string>OpenGL Accelerated AntiAliased Graphing</string>
