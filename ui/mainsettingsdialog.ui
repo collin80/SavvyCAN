@@ -175,6 +175,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="cbEnableFrameHighlight">
+              <property name="text">
+               <string>Enable frame ID highlight feature</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <layout class="QHBoxLayout" name="horizontalLayout_6">
               <property name="topMargin">
                <number>0</number>
