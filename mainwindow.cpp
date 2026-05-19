@@ -196,6 +196,9 @@ MainWindow::MainWindow(QWidget *parent) :
     // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
     ui->listFilters->horizontalScrollBar()->setEnabled(false);
 
+    ui->leSearchFilter->setClearButtonEnabled(true);
+    connect(ui->leSearchFilter, &QLineEdit::textChanged, this, &MainWindow::onSearchFilterChanged);
+
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
     updateTimer.start();
@@ -508,6 +511,30 @@ void MainWindow::onSenderCellChanged(int row, int col)
     }
 
     processSenderCellChange(row, col);
+}
+
+void MainWindow::onSearchFilterChanged(const QString &text)
+{
+    // Apply search text to the model (filters main table rows)
+    model->setSearchFilter(text);
+
+    // Show/hide items in the filter list to match the search text
+    QString stripped = text;
+    if (stripped.startsWith("0x", Qt::CaseInsensitive))
+        stripped = stripped.mid(2);
+
+    for (int i = 0; i < ui->listFilters->count(); ++i) {
+        QListWidgetItem *item = ui->listFilters->item(i);
+        if (stripped.isEmpty())
+            item->setHidden(false);
+        else {
+            QString idStr = FilterUtility::getId(item);
+            // strip leading "0x" from the displayed id string too
+            if (idStr.startsWith("0x", Qt::CaseInsensitive))
+                idStr = idStr.mid(2);
+            item->setHidden(!idStr.contains(stripped, Qt::CaseInsensitive));
+        }
+    }
 }
 
 void MainWindow::processSenderCellChange(int line, int col)

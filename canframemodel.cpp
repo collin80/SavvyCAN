@@ -235,6 +235,16 @@ void CommFrameModel::setAllFilters(bool state)
     sendRefresh();
 }
 
+void CommFrameModel::setSearchFilter(const QString &text)
+{
+    // strip leading "0x" or "0X" to keep comparison clean
+    QString stripped = text;
+    if (stripped.startsWith("0x", Qt::CaseInsensitive))
+        stripped = stripped.mid(2);
+    m_searchFilter = stripped;
+    sendRefresh();
+}
+
 /*
  * There is probably a more correct way to have done this but below are several functions that collectively implement
  * quicksort on the columns and interpret the columns numerically. But, correct or not, this implementation is quite fast
@@ -854,6 +864,17 @@ void CommFrameModel::sendRefresh()
             {
                 tempContainer.append(frames[i]);
             }
+        }
+
+        if (!m_searchFilter.isEmpty()) {
+            QVector<CommFrame> searched;
+            searched.reserve(tempContainer.count());
+            for (int i = 0; i < tempContainer.count(); ++i) {
+                QString idStr = QString::number(tempContainer[i].frameId(), 16).toUpper();
+                if (idStr.contains(m_searchFilter, Qt::CaseInsensitive))
+                    searched.append(tempContainer[i]);
+            }
+            tempContainer = searched;
         }
 
         mutex.lock();

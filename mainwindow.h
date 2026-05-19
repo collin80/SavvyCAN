@@ -128,6 +128,7 @@ private slots:
     void headerClicked (int logicalIndex);
     void DBCSettingsUpdated();
     void onSenderCellChanged(int, int);
+    void onSearchFilterChanged(const QString &text);
 
 public slots:
     void gotFrames(int);
