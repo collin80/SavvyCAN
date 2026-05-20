@@ -153,11 +153,70 @@ jobs:
         with:
           name: SavvyCAN-Windows_x64
           path: package
- 
+
+  buildwindows32:
+    name: Windows x86 (32-bit)
+    runs-on: windows-2022
+
+    # A 32-bit Windows build is required to use J2534 PassThru devices
+    # (Tactrix Openport, Mongoose, etc.). Vendor PassThru DLLs are only
+    # shipped as 32-bit, and Windows cannot mix bitness in a single process,
+    # so a 64-bit SavvyCAN cannot LoadLibrary them. Qt5 is the last Qt that
+    # ships a prebuilt 32-bit Windows toolchain (win32_msvc2019); Qt6 does
+    # not, so this job will need to be removed if/when master moves to Qt6.
+    steps:
+      - name: Prepare Qt Libraries
+        uses: jurplel/install-qt-action@v3
+        with:
+          arch: 'win32_msvc2019'
+
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: Compile
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          qmake CONFIG+=release SavvyCAN.pro
+          nmake /C
+
+      - name: Package
+        run: |
+          mkdir package
+          copy "release/SavvyCAN.exe" package/
+          mkdir package/help
+          copy  translations/*.qm package/translations/
+          copy  help/*.md package/help/
+          mkdir package/help/images
+          copy help/images/*.* package/help/images/
+          mkdir package/examples
+          copy examples/*.* package/examples/
+          copy "${Env:Qt5_Dir}/bin/Qt5Core.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Gui.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Network.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5PrintSupport.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Qml.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5SerialBus.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5SerialPort.dll" package/
+          copy "${Env:Qt5_Dir}/bin/Qt5Widgets.dll" package/
+          mkdir package/imageformats
+          copy "${Env:Qt5_Dir}/plugins/imageformats/*.*" package/imageformats/
+          mkdir package/platforms
+          copy "${Env:Qt5_Dir}/plugins/platforms/*.*" package/platforms/
+          mkdir package/styles
+          copy "${Env:Qt5_Dir}/plugins/styles/*.*" package/styles/
+          mkdir package/canbus
+          copy "${Env:Qt5_Dir}/plugins/canbus/*.*" package/canbus/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SavvyCAN-Windows_x86
+          path: package
+
   pre-release:
     name: "pre-release"
     runs-on: "ubuntu-latest"
-    needs: [buildwindows, buildmacos86, buildmacos-arm64, buildlinux]
+    needs: [buildwindows, buildwindows32, buildmacos86, buildmacos-arm64, buildlinux]
 
     steps:
       - uses: actions/checkout@v3
@@ -166,6 +225,8 @@ jobs:
 
       - name: Display structure of downloaded files
         run: zip -r SavvyCAN-Windows_x64_CIBuild.zip SavvyCAN-Windows_x64
+      - name: Display structure of downloaded files (x86)
+        run: zip -r SavvyCAN-Windows_x86_CIBuild.zip SavvyCAN-Windows_x86
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
@@ -175,13 +236,14 @@ jobs:
           files: |
             SavvyCAN-Linux_x64.AppImage/SavvyCAN-*x86_64.AppImage
             SavvyCAN-Windows_x64_CIBuild.zip
+            SavvyCAN-Windows_x86_CIBuild.zip
             SavvyCAN-macOS_x64.dmg/SavvyCAN_x64.dmg
             SavvyCAN-macOS_ARM64.dmg/SavvyCAN_arm64.dmg
-          
+
   notify:
     name: Notify Discord
     runs-on: ubuntu-latest
-    needs: [buildwindows, buildmacos86, buildmacos-arm64, buildlinux]
+    needs: [buildwindows, buildwindows32, buildmacos86, buildmacos-arm64, buildlinux]
     steps:
       - id: msg_var
         name: remove newlines
