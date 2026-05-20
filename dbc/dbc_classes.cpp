@@ -7,6 +7,7 @@ DBC_MESSAGE::DBC_MESSAGE()
 {
     sigHandler = new DBCSignalHandler;
     ID = 0;
+    extendedID = false;
     len = 0;
     multiplexorSignal = nullptr;
     sender = nullptr;

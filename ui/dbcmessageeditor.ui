@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>311</width>
+    <width>460</width>
     <height>371</height>
    </rect>
   </property>
@@ -26,72 +26,100 @@
      <item row="0" column="1">
       <widget class="QLineEdit" name="lineFrameID"/>
      </item>
-     <item row="1" column="1">
-      <widget class="QLineEdit" name="lineMsgName"/>
+    <item row="2" column="1">
+      <widget class="QLineEdit" name="lineMsgName">
+       <property name="minimumSize">
+        <size>
+           <width>390</width>
+         <height>0</height>
+        </size>
+       </property>
+      </widget>
      </item>
-     <item row="1" column="0">
+    <item row="2" column="0">
       <widget class="QLabel" name="label_2">
        <property name="text">
         <string>Message Name:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+    <item row="3" column="1">
       <widget class="QLineEdit" name="lineFrameLen"/>
      </item>
-     <item row="2" column="0">
+    <item row="3" column="0">
       <widget class="QLabel" name="label_3">
        <property name="text">
         <string>Frame Length:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
+    <item row="1" column="0">
+      <widget class="QLabel" name="label_extended">
+       <property name="text">
+        <string>Frame Type:</string>
+       </property>
+      </widget>
+     </item>
+    <item row="1" column="1">
+      <widget class="QCheckBox" name="checkExtended">
+       <property name="text">
+        <string>Extended</string>
+       </property>
+      </widget>
+     </item>
+    <item row="4" column="0">
       <widget class="QLabel" name="label_5">
        <property name="text">
         <string>Text Color:</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="0">
+   <item row="5" column="0">
       <widget class="QLabel" name="label_7">
        <property name="text">
         <string>Background Color:</string>
        </property>
       </widget>
      </item>
-     <item row="6" column="0">
+   <item row="7" column="0">
       <widget class="QLabel" name="label_8">
        <property name="text">
         <string>Comments:</string>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
-      <widget class="QLineEdit" name="lineComment"/>
+   <item row="7" column="1">
+    <widget class="QLineEdit" name="lineComment">
+     <property name="minimumSize">
+      <size>
+         <width>390</width>
+       <height>0</height>
+      </size>
+     </property>
+    </widget>
      </item>
-     <item row="5" column="0">
+   <item row="6" column="0">
       <widget class="QLabel" name="label_9">
        <property name="text">
         <string>Sending Node:</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
+   <item row="6" column="1">
       <widget class="QComboBox" name="comboSender">
        <property name="editable">
         <bool>true</bool>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+   <item row="4" column="1">
       <widget class="QPushButton" name="btnTextColor">
        <property name="text">
         <string>Set</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+   <item row="5" column="1">
       <widget class="QPushButton" name="btnBackgroundColor">
        <property name="text">
         <string>Set</string>

@@ -500,7 +500,8 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         msgPtr = new DBC_MESSAGE();
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
         msgPtr->ID = ID & 0x1FFFFFFFul;
-        msgPtr->extendedID = (ID & 0x80000000ul) ? true : false;
+        // BO_ encodes extended frame information in bit 31.
+        msgPtr->extendedID = ((ID & 0x80000000ul) != 0);
         msgPtr->name = match.captured(2);
         msgPtr->len = match.captured(3).toUInt();
         msgPtr->sender = findNodeByName(match.captured(4));
