@@ -18,6 +18,14 @@ within the collin80 repos.
 
 It is now possible to use any Qt SerialBus driver (socketcan, Vector, PeakCAN, TinyCAN).
 
+### Windows note for J2534 PassThru devices
+
+If you intend to use a J2534 PassThru device (Tactrix Openport, Mongoose, DrewTech,
+etc.), download the **32-bit (x86)** Windows build rather than the 64-bit one.
+Vendor PassThru drivers are only shipped as 32-bit DLLs and Windows cannot mix
+bitness within a single process, so the 64-bit SavvyCAN cannot load them and the
+device will not appear.
+
 It should, however, be noted that use of a capture device is not required to make use
 of this program. It can load and save in several formats:
 
