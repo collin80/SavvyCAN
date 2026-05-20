@@ -399,7 +399,25 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
         //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
+
+        QByteArray splitterMainState = settings.value("Main/SplitterMain").toByteArray();
+        if (!splitterMainState.isEmpty())
+            ui->splitterMain->restoreState(splitterMainState);
+        else
+            ui->splitterMain->setSizes({750, 250});
+
+        QByteArray splitterLeftState = settings.value("Main/SplitterLeft").toByteArray();
+        if (!splitterLeftState.isEmpty())
+            ui->splitterLeft->restoreState(splitterLeftState);
+        else
+            ui->splitterLeft->setSizes({800, 200});
     }
+    else
+    {
+        ui->splitterMain->setSizes({750, 250});
+        ui->splitterLeft->setSizes({800, 200});
+    }
+
     if (settings.value("Main/AutoScroll", false).toBool())
     {
         ui->cbAutoScroll->setChecked(true);
@@ -450,6 +468,10 @@ void MainWindow::readUpdateableSettings()
         ui->listFilters->setMaximumWidth(250);
     else
         ui->listFilters->setMaximumWidth(175);
+
+    bool showSendPanel = settings.value("Main/ShowSendPanel", true).toBool();
+    ui->tableSimpleSender->setVisible(showSendPanel);
+
     updateFilterList();    
 }    
 
@@ -471,6 +493,8 @@ void MainWindow::writeSettings()
         settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
         //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
+        settings.setValue("Main/SplitterMain", ui->splitterMain->saveState());
+        settings.setValue("Main/SplitterLeft", ui->splitterLeft->saveState());
     }
 }
 
@@ -1519,7 +1543,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
                     }
 
                     QString temp;
-                    if (sigs[j]->processAsText(*frame, temp, false))
+                    if (sigs[j]->processAsText(*frame, temp))
                     {
                         builderString.append(temp);
                         builderString.append(",");
