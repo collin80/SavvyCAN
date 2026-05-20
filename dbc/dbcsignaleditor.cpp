@@ -45,6 +45,11 @@ DBCSignalEditor::DBCSignalEditor(QWidget *parent) :
     ui->valuesTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(ui->valuesTable, SIGNAL(cellChanged(int,int)), this, SLOT(onValuesCellChanged(int,int)));
 
+    // Set up context menu for table header
+    ui->valuesTable->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(ui->valuesTable->horizontalHeader(), &QHeaderView::customContextMenuRequested,
+            this, &DBCSignalEditor::onValueTableHeaderContextMenu);
+
     //now with 100% more lambda expressions just to make it interesting (and shorter, and easier...)
     connect(ui->cbIntelFormat, &QCheckBox::toggled,
             [=]()
@@ -461,6 +466,8 @@ void DBCSignalEditor::readSettings()
         resize(settings.value("DBCSignalEditor/WindowSize", QSize(1000, 600)).toSize());
         move(Utility::constrainedWindowPos(settings.value("DBCSignalEditor/WindowPos", QPoint(100, 100)).toPoint()));
     }
+    
+    valueTableHexMode = settings.value("DBCSignalEditor/ValueTableHexMode", false).toBool();
 }
 
 void DBCSignalEditor::writeSettings()
@@ -472,6 +479,8 @@ void DBCSignalEditor::writeSettings()
         settings.setValue("DBCSignalEditor/WindowSize", size());
         settings.setValue("DBCSignalEditor/WindowPos", pos());
     }
+    
+    settings.setValue("DBCSignalEditor/ValueTableHexMode", valueTableHexMode);
 }
 
 
@@ -549,6 +558,32 @@ void DBCSignalEditor::deleteCurrentValue()
         ui->valuesTable->removeRow(currIdx);
         currentSignal->valList.removeAt(currIdx);
     }
+}
+
+void DBCSignalEditor::onValueTableHeaderContextMenu(QPoint point)
+{
+    QMenu *menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+
+    QAction *hexAction = menu->addAction(tr("Show in Hex"));
+    hexAction->setCheckable(true);
+    hexAction->setChecked(valueTableHexMode);
+    connect(hexAction, &QAction::triggered, [this](bool checked) {
+        valueTableHexMode = true;
+        if (currentSignal)
+            fillValueTable(currentSignal);
+    });
+
+    QAction *decAction = menu->addAction(tr("Show in Decimal"));
+    decAction->setCheckable(true);
+    decAction->setChecked(!valueTableHexMode);
+    connect(decAction, &QAction::triggered, [this](bool checked) {
+        valueTableHexMode = false;
+        if (currentSignal)
+            fillValueTable(currentSignal);
+    });
+
+    menu->popup(ui->valuesTable->horizontalHeader()->mapToGlobal(point));
 }
 
 /* fillSignalForm also handles group "enabled" state */
@@ -723,6 +758,18 @@ void DBCSignalEditor::refreshBitGrid()
 
 }
 
+QString DBCSignalEditor::formatValueTableEntry(int64_t value)
+{
+    if (valueTableHexMode)
+    {
+        return "0x" + QString::number(value, 16).toUpper();
+    }
+    else
+    {
+        return QString::number(value, 10);
+    }
+}
+
 /* fillValueTable also handles "enabled" state */
 void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 {
@@ -743,7 +790,7 @@ void DBCSignalEditor::fillValueTable(DBC_SIGNAL *sig)
 
     for (int i = 0; i < sig->valList.count(); i++)
     {
-        QTableWidgetItem *val = new QTableWidgetItem(Utility::formatNumber((uint64_t)sig->valList[i].value));
+        QTableWidgetItem *val = new QTableWidgetItem(formatValueTableEntry(sig->valList[i].value));
         QTableWidgetItem *desc = new QTableWidgetItem(sig->valList[i].descript);
         rowIdx = ui->valuesTable->rowCount();
         ui->valuesTable->insertRow(rowIdx);
