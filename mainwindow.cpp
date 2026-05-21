@@ -11,6 +11,7 @@
 #include "filterutility.h"
 
 #include <QClipboard>
+#include <QTimer>
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
 
@@ -195,6 +196,20 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
     ui->listFilters->horizontalScrollBar()->setEnabled(false);
+
+    // Restore or default splitterLeft after the window has real geometry.
+    // QTimer::singleShot(0) defers to first event loop tick.
+    QTimer::singleShot(0, this, [this]() {
+        QSettings s;
+        QByteArray state = s.value("Main/SplitterLeft").toByteArray();
+        if (!state.isEmpty()) {
+            ui->splitterLeft->restoreState(state);
+        } else {
+            int h = ui->splitterLeft->height();
+            if (h > 0)
+                ui->splitterLeft->setSizes({h * 3 / 4, h / 4}); // 75% frame table, 25% send panel
+        }
+    });
 
     ui->leSearchFilter->setClearButtonEnabled(true);
     connect(ui->leSearchFilter, &QLineEdit::textChanged, this, &MainWindow::onSearchFilterChanged);
@@ -409,16 +424,12 @@ void MainWindow::readSettings()
         else
             ui->splitterMain->setSizes({750, 250});
 
-        QByteArray splitterLeftState = settings.value("Main/SplitterLeft").toByteArray();
-        if (!splitterLeftState.isEmpty())
-            ui->splitterLeft->restoreState(splitterLeftState);
-        else
-            ui->splitterLeft->setSizes({800, 200});
+        // splitterLeft is restored/defaulted via deferred QTimer in constructor
     }
     else
     {
         ui->splitterMain->setSizes({750, 250});
-        ui->splitterLeft->setSizes({800, 200});
+        // splitterLeft is defaulted via deferred QTimer in constructor
     }
 
     if (settings.value("Main/AutoScroll", false).toBool())
@@ -497,8 +508,9 @@ void MainWindow::writeSettings()
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
         //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
         settings.setValue("Main/SplitterMain", ui->splitterMain->saveState());
-        settings.setValue("Main/SplitterLeft", ui->splitterLeft->saveState());
     }
+    // Always save splitterLeft so send-panel height is restored on next launch
+    settings.setValue("Main/SplitterLeft", ui->splitterLeft->saveState());
 }
 
 void MainWindow::onSenderCellChanged(int row, int col)
@@ -1985,8 +1997,15 @@ void MainWindow::showSignalViewer()
 void MainWindow::showConnectionSettingsWindow()
 {
     if (!connectionWindow)
-    {
         connectionWindow = new ConnectionWindow();
+
+    // Trigger a one-shot state probe on all SerialBus connections before showing the
+    // window.  PCAN on macOS never emits stateChanged on USB unplug, so this is the
+    // only time we can pay the cost of a brief disconnect+reconnect (user-visible action).
+    for (CANConnection *conn : CANConManager::getInstance()->getConnections()) {
+        if (conn->getType() == CANCon::SERIALBUS)
+            QMetaObject::invokeMethod(conn, "probeConnectionState", Qt::QueuedConnection);
     }
+
     connectionWindow->show();
 }
