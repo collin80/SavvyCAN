@@ -142,6 +142,13 @@ public slots:
     void stop();
 
     /**
+     * @brief Trigger a reconnect using the stored bus configuration.
+     * Runs in the worker thread (posted via QueuedConnection from main thread).
+     * Override in subclasses; default is a no-op.
+     */
+    virtual void autoReconnect() {}
+
+    /**
      * @brief setBusSettings
      * @param pBusIdx: the index of the bus for which settings have to be set
      * @param pBus: the settings to set

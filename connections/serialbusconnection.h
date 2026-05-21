@@ -42,12 +42,26 @@ protected:
 
     void disconnectDevice();
 
+public slots:
+    /* One-shot probe: forces a disconnect+reconnect to update the connection status.
+     * Called when the connection window is opened so stale CONNECTED state (e.g. after
+     * a silent USB unplug on PCAN/macOS) is detected immediately. Runs in worker thread. */
+    void probeConnectionState();
+
+    /* Reconnect using stored bus config. Posted via Qt::QueuedConnection from the main-thread
+     * auto-reconnect timer so it works even when the worker-thread timer is stalled. */
+    void autoReconnect() override;
+
 private slots:
-    void errorReceived(QCanBusDevice::CanBusError) const;
+    void errorReceived(QCanBusDevice::CanBusError);
     void framesWritten(qint64 count);
     void framesReceived();
     void testConnection();
     void deviceStateChanged(QCanBusDevice::CanBusDeviceState state);
+    void recreateDevice();
+
+private:
+    void applyBusConfig(const CANBus &bus); // sets bitrate/FD/listenOnly params on mDev_p
 
 protected:
     QCanBusDevice     *mDev_p = nullptr;
