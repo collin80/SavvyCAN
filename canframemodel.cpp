@@ -384,17 +384,22 @@ void CommFrameModel::recalcOverwrite()
         idAugmented = idAugmented + (frame.getBus() << 29ull);
         if (filters[frame.frameId()] && busFilters[frame.getBus()])
         {
-            if (!overWriteFrames.contains(idAugmented))
+            bool passesSearch = m_searchFilter.isEmpty() ||
+                QString::number(frame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
+            if (passesSearch)
             {
-                frame.setTimeDelta(0);
-                frame.setFrameCount(1);
-                overWriteFrames.insert(idAugmented, frame);
-            }
-            else
-            {
-                frame.setTimeDelta(frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds());
-                frame.setFrameCount(overWriteFrames[idAugmented].getFrameCount() + 1);
-                overWriteFrames[idAugmented] = frame;
+                if (!overWriteFrames.contains(idAugmented))
+                {
+                    frame.setTimeDelta(0);
+                    frame.setFrameCount(1);
+                    overWriteFrames.insert(idAugmented, frame);
+                }
+                else
+                {
+                    frame.setTimeDelta(frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds());
+                    frame.setFrameCount(overWriteFrames[idAugmented].getFrameCount() + 1);
+                    overWriteFrames[idAugmented] = frame;
+                }
             }
         }
     }
@@ -748,10 +753,15 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
 
             if (filters[tempFrame.frameId()] && busFilters[tempFrame.getBus()])
             {
-                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-                tempFrame.setFrameCount(1);
-                filteredFrames.append(tempFrame);
-                if (autoRefresh) endInsertRows();
+                bool passesSearch = m_searchFilter.isEmpty() ||
+                    QString::number(tempFrame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
+                if (passesSearch)
+                {
+                    if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+                    tempFrame.setFrameCount(1);
+                    filteredFrames.append(tempFrame);
+                    if (autoRefresh) endInsertRows();
+                }
             }
         }
         catch (const std::exception& ex)
@@ -790,11 +800,16 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
             //frames.append(tempFrame);
             if (filters[tempFrame.frameId()] && busFilters[tempFrame.getBus()])
             {
-                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-                tempFrame.setFrameCount(1);
-                tempFrame.setTimeDelta(0);
-                filteredFrames.append(tempFrame);
-                if (autoRefresh) endInsertRows();
+                bool passesSearch = m_searchFilter.isEmpty() ||
+                    QString::number(tempFrame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
+                if (passesSearch)
+                {
+                    if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+                    tempFrame.setFrameCount(1);
+                    tempFrame.setTimeDelta(0);
+                    filteredFrames.append(tempFrame);
+                    if (autoRefresh) endInsertRows();
+                }
             }
         }
         else
