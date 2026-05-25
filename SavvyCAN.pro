@@ -105,7 +105,8 @@ SOURCES += main.cpp\
     connections/newconnectiondialog.cpp \
     re/temporalgraphwindow.cpp \
     filterutility.cpp \
-    pcaplite.cpp
+    pcaplite.cpp \
+    bus_protocols/handler_factory.cpp
 
 HEADERS  += mainwindow.h \
     can_structs.h \
@@ -201,7 +202,8 @@ HEADERS  += mainwindow.h \
     connections/newconnectiondialog.h \
     re/temporalgraphwindow.h \
     filterutility.h \
-    pcaplite.h
+    pcaplite.h \
+    bus_protocols/handler_factory.h
 
 FORMS    += ui/candatagrid.ui \
     triggerdialog.ui \
