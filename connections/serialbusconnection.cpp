@@ -13,7 +13,7 @@
 
 SerialBusConnection::SerialBusConnection(QString portName, QString driverName, int pBusSpeed, int pDataRate, bool pCanFd) :
     CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,pBusSpeed, pCanFd, pDataRate ,1, 4000, true),
-    mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
+    mTimer(nullptr) /*NB: set connection as parent of timer to manage it from working thread */
 {
 }
 
@@ -42,10 +42,14 @@ void SerialBusConnection::piStarted()
     connect(mDev_p, &QCanBusDevice::framesWritten, this, &SerialBusConnection::framesWritten);
     connect(mDev_p, &QCanBusDevice::framesReceived, this, &SerialBusConnection::framesReceived);
 
-    connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
-    mTimer.setInterval(1000);
-    mTimer.setSingleShot(false); //keep ticking
-    mTimer.start();
+    if (!mTimer) {
+        mTimer = new QTimer(this);
+        connect(mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
+    }
+
+    mTimer->setInterval(1000);
+    mTimer->setSingleShot(false); //keep ticking
+    mTimer->start();
     mBusData[0].mBus.setActive(true);
     mBusData[0].mBus.setCanFD(false);
     mBusData[0].mConfigured = true;
@@ -63,9 +67,13 @@ void SerialBusConnection::piSuspend(bool pSuspend)
 }
 
 
-void SerialBusConnection::piStop() {
+void SerialBusConnection::piStop()
+{
     qDebug() << "piStop()";
-    mTimer.stop();
+
+    if (mTimer)
+        mTimer->stop();
+
     disconnectDevice();
 }
 
