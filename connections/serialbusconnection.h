@@ -51,7 +51,11 @@ private slots:
 
 protected:
     QCanBusDevice     *mDev_p = nullptr;
-    QTimer            *mTimer;
+    uint64_t           mConnectTime = 0; // system time (µs) when device connected, for relative-timestamp devices like PCAN
+    QTimer            *mTimer = nullptr;
+    int                mNoFrameSeconds = 0;       // timer ticks (1 s each) since last real frame while CONNECTED
+    bool               mHadFrameSinceConnect = false; // true once a valid frame arrives after connecting
+    int                mReconnectAttempts = 0;    // consecutive connectDevice() calls in NOT_CONNECTED state
 };
 
 

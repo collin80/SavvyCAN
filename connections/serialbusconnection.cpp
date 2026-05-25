@@ -49,6 +49,9 @@ void SerialBusConnection::piStarted()
         mTimer = new QTimer(this);
         connect(mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
     }
+    mTimer->setInterval(1000);
+    mTimer->setSingleShot(false);
+    mTimer->start();
 
     mTimer->setInterval(1000);
     mTimer->setSingleShot(false); //keep ticking
