@@ -33,12 +33,12 @@ public:
 
 protected:
 
-    virtual void piStarted();
-    virtual void piStop();
-    virtual void piSetBusSettings(int pBusIdx, CANBus pBus);
-    virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus);
-    virtual void piSuspend(bool pSuspend);
-    virtual bool piSendFrame(const CommFrame&);
+    virtual void piStarted() override;
+    virtual void piStop() override;
+    virtual void piSetBusSettings(int pBusIdx, CANBus pBus) override;
+    virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus) override;
+    virtual void piSuspend(bool pSuspend) override;
+    virtual bool piSendFrame(const CommFrame&) override;
 
     void disconnectDevice();
 

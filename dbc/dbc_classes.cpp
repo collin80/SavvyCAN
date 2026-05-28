@@ -196,6 +196,38 @@ QString DBC_SIGNAL::processSignalTree(const CommFrame &frame)
     return build;
 }
 
+void DBC_SIGNAL::processAvailableSignals(const CommFrame &frame, std::map<DBC_SIGNAL, QString> &displayValues)
+{
+    std::map<DBC_SIGNAL, QString> out;
+    int val;
+    if (!this->processAsInt(frame, val))
+    {
+        qDebug() << "Could not process multiplexor as an integer.";
+        return;
+    }
+    qDebug() << val;
+
+    foreach (DBC_SIGNAL *sig, multiplexedChildren)
+    {
+        if (sig->isValueMatchingMultiplex(val))
+        {
+            qDebug() << "Found match for multiplex value range - " << sig->name;
+            QString sigString;
+            if (sig->processAsText(frame, sigString))
+            {
+                qDebug() << "Returned value: " << sigString;
+                displayValues[*sig] = sigString;
+                if (sig->isMultiplexor)
+                {
+                    qDebug() << "Spelunkin!";
+                    sig->processSignalTree(frame);
+                }
+            }
+        }
+    }
+    return;
+}
+
 /*
  The way that the DBC file format works is kind of weird... For intel format signals you count up
 from the start bit to the end bit which is (startbit + signallength - 1). At each point

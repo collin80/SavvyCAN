@@ -291,6 +291,7 @@ uint64_t CommFrameModel::getCommFrameVal(QVector<CommFrame> *frames, int row, Co
         return static_cast<uint64_t>(frame.getBus());
     case Column::Length:
         return static_cast<uint64_t>(frame.payload().length());
+    case Column::DataDec:
     case Column::ASCII: //sort both the same for now
     case Column::Data:
         for (int i = 0; i < std::min(static_cast<int>(frame.payload().length()), 8); i++)
@@ -663,7 +664,28 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 }
             }
             return tempString;
-        default:
+
+            case Column::DataDec:
+
+                if(!useHexAndDecMode)
+                    return tempString;;
+
+                if (dataLen < 0)
+                    dataLen = 0;
+                    //if (useHexMode) tempString.append("0x ");
+
+                if (thisFrame.frameType() == CommFrame::RemoteRequestFrame) {
+                        return tempString;
+                    }
+                for (int i = 0; i < dataLen; i++) {
+                     tempString.append(QString::number(data[i], 10));
+
+                if (!((i+1) % bytesPerLine) && (i != (dataLen - 1)))
+                    tempString.append("\n");
+                else
+                    tempString.append(" ");
+                }
+            default:
             return tempString;
         }
     }
