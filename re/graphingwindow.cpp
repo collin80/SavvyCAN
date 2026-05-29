@@ -221,7 +221,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
                 thisFrame = modelFrames->at(i);
-                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) )
+                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) && ( (graphParams[j].frameLen == -1) || (graphParams[j].frameLen == thisFrame.payload().length()) ) )
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
@@ -774,7 +774,6 @@ void GraphingWindow::saveSpreadsheet()
          * and a reference for which graph it came from. This is better than nothing.
         */
 
-        QList<GraphParams>::iterator iter;
         double xMin = std::numeric_limits<double>::max(),
                xMax = std::numeric_limits<double>::min();
         int maxCount = 0;
@@ -942,6 +941,8 @@ void GraphingWindow::saveDefinitions()
                 outFile.putChar(',');
                 outFile.write(iter->associatedSignal->name.toUtf8());
             }
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->frameLen).toUtf8());
 
             outFile.write("\n");
         }
@@ -1031,6 +1032,11 @@ void GraphingWindow::loadDefinitions()
                             gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[22]);
                        }
                        else qDebug() << "Couldn't find the message by name! " << tokens[21] << "  " << tokens[22];
+                       if (tokens.length() > 23) gp.frameLen = tokens[23].toInt();
+                   }
+                   else if (tokens.length() > 21)
+                   {
+                       gp.frameLen = tokens[21].toInt();
                    }
 
                    createGraph(gp, true);
@@ -1342,8 +1348,10 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CommFrame thisFrame = modelFrames->at(i);
+<<<<<<< HEAD
         if ( (thisFrame.frameId() == params.ID) && thisFrame.isDataFrame()
-            &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.getBus()) ) ) frameCache.append(thisFrame);
+            &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.getBus()) )
+            &&  ( ( params.frameLen == -1) ||  (params.frameLen == thisFrame.payload().length()) ) ) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1595,6 +1603,7 @@ GraphParams::GraphParams()
     stride = 1;
     strideSoFar = 1;
     bus = -1;
+    frameLen = -1;
     lineColor = QColor(0,0,0);
     fillColor = QColor(255,255,255,0);
     lineWidth = 1;

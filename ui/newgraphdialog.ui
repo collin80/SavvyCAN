@@ -292,6 +292,20 @@
          </property>
         </widget>
        </item>
+       <item row="9" column="0">
+        <widget class="QLabel" name="label_framelen">
+         <property name="text">
+          <string>Frame Len (bytes)</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1">
+        <widget class="QLineEdit" name="editFrameLen">
+         <property name="text">
+          <string>-1</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>

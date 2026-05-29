@@ -6,6 +6,8 @@
 #include "dbc/dbchandler.h"
 
 #include <QDialog>
+#include <QHBoxLayout>
+#include <QMenuBar>
 
 namespace Ui {
 class GraphingWindow;
@@ -26,6 +28,7 @@ public:
     int stride;
     int strideSoFar;
     int bus;
+    int frameLen;
     QColor lineColor;
     QColor fillColor;
     int lineWidth;
