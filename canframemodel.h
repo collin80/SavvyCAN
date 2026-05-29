@@ -54,7 +54,11 @@ public:
     void setFilterState(unsigned int ID, bool state);
     void setFilterStatesBatch(const QList<QPair<int,bool>> &updates);
     void setBusFilterState(unsigned int BusID, bool state);
+    void setDirFilterState(int dir, bool state);
+    void setLengthFilterState(int length, bool state);
     void setAllFilters(bool state);
+    void setChangingOnly(bool state);
+    bool getChangingOnly() const;
     void setTimeFormat(QString);
     void setBytesPerLine(int bpl);
     void loadFilterFile(QString filename);
@@ -70,6 +74,8 @@ public:
     const QVector<CommFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
     const QMap<int, bool> *getBusFiltersReference() const; //this neither
+    const QMap<int, bool> *getDirFiltersReference() const;
+    const QMap<int, bool> *getLengthFiltersReference() const;
 
 public slots:
     void addFrame(const CommFrame&, bool);
@@ -82,13 +88,19 @@ private:
     void qSortCommFrameAsc(QVector<CommFrame>* frames, Column column, int lowerBound, int upperBound);
     void qSortCommFrameDesc(QVector<CommFrame>* frames, Column column, int lowerBound, int upperBound);
     uint64_t getCommFrameVal(QVector<CommFrame> *frames, int row, Column col);
+    bool passesFrameFilters(const CommFrame &frame);
+    quint64 changingKey(const CommFrame &frame) const;
     bool any_filters_are_configured(void);
     bool any_busfilters_are_configured(void);
+    bool any_dirfilters_are_configured(void);
+    bool any_lengthfilters_are_configured(void);
 
     QVector<CommFrame> frames;
     QVector<CommFrame> filteredFrames;
     QMap<int, bool> filters;
     QMap<int, bool> busFilters;
+    QMap<int, bool> dirFilters;
+    QMap<int, bool> lengthFilters;
     DBCHandler *dbcHandler;
     QMutex mutex;
     bool interpretFrames; //should we use the dbcHandler?
@@ -98,6 +110,9 @@ private:
     TimeStyle timeStyle;
     bool useHexMode;
     bool useColorsByCanId;
+    bool useHexAndDecMode;
+    bool changingOnly;
+    QHash<quint64, QByteArray> lastSeenData;
     bool needFilterRefresh;
     bool ignoreDBCColors;
     int64_t timeOffset;

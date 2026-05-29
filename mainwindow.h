@@ -119,6 +119,7 @@ private slots:
     void setupSendToLatestGraphWindow();
     void interpretToggled(bool);
     void overwriteToggled(bool);
+    void changingOnlyToggled(bool);
     void presistentFiltersToggled(bool state);
     void logReceivedFrame(CANConnection*, QVector<CommFrame>);
     void tickGUIUpdate();
@@ -128,6 +129,8 @@ private slots:
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
     void busFilterListItemChanged(QListWidgetItem *item);
+    void dirFilterListItemChanged(QListWidgetItem *item);
+    void lengthFilterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
     void headerClicked (int logicalIndex);

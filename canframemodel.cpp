@@ -76,6 +76,7 @@ CommFrameModel::CommFrameModel(QObject *parent)
     dbcHandler = DBCHandler::getReference();
     interpretFrames = false;
     overwriteDups = false;
+    changingOnly = false;
     filtersPersistDuringClear = false;
     useHexMode = true;
     useColorsByCanId = false;
@@ -396,35 +397,47 @@ void CommFrameModel::recalcOverwrite()
 
         idAugmented = frame.frameId();
         idAugmented = idAugmented + (frame.getBus() << 29ull);
-        if (filters[frame.frameId()] && busFilters[frame.getBus()])
+        if (passesFrameFilters(frame))
         {
-            bool passesSearch = m_searchFilter.isEmpty() ||
-                QString::number(frame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
-            if (passesSearch)
+            if (!overWriteFrames.contains(idAugmented))
             {
-                if (!overWriteFrames.contains(idAugmented))
-                {
-                    frame.setTimeDelta(0);
-                    frame.setFrameCount(1);
-                    overWriteFrames.insert(idAugmented, frame);
-                }
-                else
-                {
-                    frame.setTimeDelta(frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds());
-                    frame.setFrameCount(overWriteFrames[idAugmented].getFrameCount() + 1);
-                    overWriteFrames[idAugmented] = frame;
-                }
+                frame.setTimeDelta(0);
+                frame.setFrameCount(1);
+                overWriteFrames.insert(idAugmented, frame);
+            }
+            else
+            {
+                frame.setTimeDelta(frame.timeStamp().microSeconds() - overWriteFrames[idAugmented].timeStamp().microSeconds());
+                frame.setFrameCount(overWriteFrames[idAugmented].getFrameCount() + 1);
+                overWriteFrames[idAugmented] = frame;
             }
         }
     }
     //Then replace the old list of frames with just the unique list
-    //frames.clear();
-    //frames.append(overWriteFrames.values().toVector());
-    //frames.reserve(preallocSize);
 
     filteredFrames.clear();
     filteredFrames.append(overWriteFrames.values());
     filteredFrames.reserve(preallocSize);
+
+    if (changingOnly)
+    {
+        QVector<CommFrame> changingFiltered;
+        QHash<quint64, QByteArray> newSeen;
+        for (const CommFrame &f : filteredFrames)
+        {
+            quint64 ckey = changingKey(f);
+            if (!lastSeenData.contains(ckey) || lastSeenData[ckey] != f.payload())
+                changingFiltered.append(f);
+            newSeen[ckey] = f.payload();
+        }
+        filteredFrames = changingFiltered;
+        lastSeenData = newSeen;
+    }
+
+    // Rebuild per-ID count cache from the overwrite frames (count already stored per frame)
+    m_idCounts.clear();
+    for (const CommFrame &f : filteredFrames)
+        m_idCounts[(int)f.frameId()] = (int)f.getFrameCount();
 
     /*for (int i = 0; i < frames.count(); i++)
     {
@@ -725,6 +738,76 @@ bool CommFrameModel::any_busfilters_are_configured(void)
     return false;
 }
 
+bool CommFrameModel::any_dirfilters_are_configured(void)
+{
+    for (auto const &val : std::as_const(dirFilters))
+        if (val == false) return true;
+    return false;
+}
+
+bool CommFrameModel::any_lengthfilters_are_configured(void)
+{
+    for (auto const &val : std::as_const(lengthFilters))
+        if (val == false) return true;
+    return false;
+}
+
+// Returns true if the frame passes ALL active filters (ID, bus, type, dir, length, search).
+// Uses value(key, true) for type/dir/length so unknown entries default to visible.
+bool CommFrameModel::passesFrameFilters(const CommFrame &frame)
+{
+    if (!filters.value((int)frame.frameId(), false)) return false;
+    if (!busFilters.value((int)frame.getBus(), false)) return false;
+    int dir = frame.isReceived() ? 1 : 0;
+    if (!dirFilters.value(dir, true)) return false;
+    if (!lengthFilters.value(frame.payload().length(), true)) return false;
+    if (!m_searchFilter.isEmpty() &&
+        !QString::number(frame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive))
+        return false;
+    return true;
+}
+
+quint64 CommFrameModel::changingKey(const CommFrame &frame) const
+{
+    quint64 key  = (quint64)(frame.frameId()         & 0x1FFFFFFF);        // bits  0-28: frame ID
+    key         |= (quint64)((int)frame.frameType()  & 0x07)        << 29; // bits 29-31: frame type
+    key         |= (quint64)(frame.isReceived() ? 1 : 0)           << 32; // bit  32:    direction
+    key         |= (quint64)(frame.getBus()          & 0xFF)        << 33; // bits 33-40: bus
+    key         |= (quint64)(frame.payload().length() & 0xFF)       << 41; // bits 41-48: length
+    return key;
+}
+
+void CommFrameModel::setDirFilterState(int dir, bool state)
+{
+    if (!dirFilters.contains(dir)) return;
+    dirFilters[dir] = state;
+    sendRefresh();
+}
+
+void CommFrameModel::setLengthFilterState(int length, bool state)
+{
+    if (!lengthFilters.contains(length)) return;
+    lengthFilters[length] = state;
+    sendRefresh();
+}
+
+void CommFrameModel::setChangingOnly(bool state)
+{
+    changingOnly = state;
+    lastSeenData.clear();
+    sendRefresh();
+}
+
+const QMap<int, bool> *CommFrameModel::getDirFiltersReference() const
+{
+    return &dirFilters;
+}
+
+const QMap<int, bool> *CommFrameModel::getLengthFiltersReference() const
+{
+    return &lengthFilters;
+}
+
 
 void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
 {
@@ -759,17 +842,44 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
         needFilterRefresh = true;
     }
 
+    // Register direction in dirFilters
+    {
+        int dir = tempFrame.isReceived() ? 1 : 0;
+        if (!dirFilters.contains(dir))
+        {
+            dirFilters.insert(dir, any_dirfilters_are_configured() ? false : true);
+            needFilterRefresh = true;
+        }
+    }
+
+    // Register payload length in lengthFilters
+    {
+        int len = tempFrame.payload().length();
+        if (!lengthFilters.contains(len))
+        {
+            lengthFilters.insert(len, any_lengthfilters_are_configured() ? false : true);
+            needFilterRefresh = true;
+        }
+    }
+
     if (!overwriteDups)
     {
         try
         {
             frames.append(tempFrame);
 
-            if (filters[tempFrame.frameId()] && busFilters[tempFrame.getBus()])
+            if (passesFrameFilters(tempFrame))
             {
-                bool passesSearch = m_searchFilter.isEmpty() ||
-                    QString::number(tempFrame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
-                if (passesSearch)
+                bool show = true;
+                if (changingOnly)
+                {
+                    quint64 ckey = changingKey(tempFrame);
+                    if (lastSeenData.contains(ckey) && lastSeenData[ckey] == tempFrame.payload())
+                        show = false;
+                    else
+                        lastSeenData[ckey] = tempFrame.payload();
+                }
+                if (show)
                 {
                     if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                     tempFrame.setFrameCount(1);
@@ -786,6 +896,7 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
     else //yes, overwrite dups
     {
         bool found = false;
+        bool dataChanged = true;
 //        for (int i = 0; i < frames.count(); i++)
 //        {
 //            if ( (frames[i].frameId() == tempFrame.frameId()) && (frames[i].bus == tempFrame.bus) )
@@ -803,7 +914,16 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
             {
                 tempFrame.setFrameCount(filteredFrames[i].getFrameCount() + 1);
                 tempFrame.setTimeDelta(tempFrame.timeStamp().microSeconds() - filteredFrames[i].timeStamp().microSeconds());
-                filteredFrames.replace(i, tempFrame);
+                if (changingOnly)
+                {
+                    quint64 ckey = changingKey(tempFrame);
+                    if (lastSeenData.contains(ckey) && lastSeenData[ckey] == tempFrame.payload())
+                        dataChanged = false;
+                    else
+                        lastSeenData[ckey] = tempFrame.payload();
+                }
+                if (dataChanged)
+                    filteredFrames.replace(i, tempFrame);
                 found = true;
                 break;
             }
@@ -812,21 +932,18 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
         if (!found)
         {
             //frames.append(tempFrame);
-            if (filters[tempFrame.frameId()] && busFilters[tempFrame.getBus()])
+            if (passesFrameFilters(tempFrame))
             {
-                bool passesSearch = m_searchFilter.isEmpty() ||
-                    QString::number(tempFrame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
-                if (passesSearch)
-                {
-                    if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
-                    tempFrame.setFrameCount(1);
-                    tempFrame.setTimeDelta(0);
-                    filteredFrames.append(tempFrame);
-                    if (autoRefresh) endInsertRows();
-                }
+                if (changingOnly)
+                    lastSeenData[changingKey(tempFrame)] = tempFrame.payload();
+                if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
+                tempFrame.setFrameCount(1);
+                tempFrame.setTimeDelta(0);
+                filteredFrames.append(tempFrame);
+                if (autoRefresh) endInsertRows();
             }
         }
-        else
+        else if (dataChanged)
         {
             for (int j = 0; j < filteredFrames.count(); j++)
             {
@@ -889,21 +1006,27 @@ void CommFrameModel::sendRefresh()
         int count = frames.count();
         for (int i = 0; i < count; i++)
         {
-            if (filters[frames[i].frameId()] && busFilters[frames[i].getBus()])
+            if (passesFrameFilters(frames[i]))
             {
                 tempContainer.append(frames[i]);
             }
         }
 
-        if (!m_searchFilter.isEmpty()) {
-            QVector<CommFrame> searched;
-            searched.reserve(tempContainer.count());
-            for (int i = 0; i < tempContainer.count(); ++i) {
-                QString idStr = QString::number(tempContainer[i].frameId(), 16).toUpper();
-                if (idStr.contains(m_searchFilter, Qt::CaseInsensitive))
-                    searched.append(tempContainer[i]);
+        if (changingOnly)
+        {
+            QVector<CommFrame> changingFiltered;
+            QHash<quint64, QByteArray> newSeen;
+            for (const CommFrame &f : tempContainer)
+            {
+                quint64 ckey = changingKey(f);
+                if (!newSeen.contains(ckey) || newSeen[ckey] != f.payload())
+                {
+                    newSeen[ckey] = f.payload();
+                    changingFiltered.append(f);
+                }
             }
-            tempContainer = searched;
+            tempContainer = changingFiltered;
+            lastSeenData = newSeen;
         }
 
         mutex.lock();
@@ -955,7 +1078,10 @@ void CommFrameModel::clearFrames()
     {
         filters.clear();
         busFilters.clear();
+        dirFilters.clear();
+        lengthFilters.clear();
     }
+    lastSeenData.clear();
     frames.reserve(preallocSize);
     filteredFrames.reserve(preallocSize);
     this->endResetModel();
@@ -991,7 +1117,13 @@ void CommFrameModel::insertFrames(const QVector<CommFrame> &newFrames)
             busFilters.insert(newFrames[i].getBus(), true);
             needFilterRefresh = true;
         }
-        if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].getBus()])
+        {
+            int dir = newFrames[i].isReceived() ? 1 : 0;
+            if (!dirFilters.contains(dir)) { dirFilters.insert(dir, true); needFilterRefresh = true; }
+            int len = newFrames[i].payload().length();
+            if (!lengthFilters.contains(len)) { lengthFilters.insert(len, true); needFilterRefresh = true; }
+        }
+        if (passesFrameFilters(newFrames[i]))
         {
             // insertedFiltered++;
             filteredFrames.append(newFrames[i]);
@@ -1031,15 +1163,28 @@ void CommFrameModel::loadFilterFile(QString filename)
 
     filters.clear();
     busFilters.clear();
+    dirFilters.clear();
+    lengthFilters.clear();
 
     while (!inFile->atEnd()) {
         line = inFile->readLine().simplified();
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
-            ID = tokens[0].toInt(nullptr, 16);
-            if (tokens[1].toUpper() == "T") filters.insert(ID, true);
-                else filters.insert(ID, false);
+            QByteArray prefix = tokens[0].toUpper();
+            if (prefix == "BUS" && tokens.size() >= 3) {
+                busFilters.insert(tokens[1].toInt(), tokens[2].toUpper() == "T");
+            } else if (prefix == "DIR" && tokens.size() >= 3) {
+                dirFilters.insert(tokens[1].toInt(), tokens[2].toUpper() == "T");
+            } else if (prefix == "LEN" && tokens.size() >= 3) {
+                lengthFilters.insert(tokens[1].toInt(), tokens[2].toUpper() == "T");
+            } else if (prefix == "CHANGINGONLY") {
+                // handled via QSettings now; skip
+            } else {
+                ID = tokens[0].toInt(nullptr, 16);
+                if (tokens[1].toUpper() == "T") filters.insert(ID, true);
+                    else filters.insert(ID, false);
+            }
         }
     }
     inFile->close();
@@ -1065,7 +1210,18 @@ void CommFrameModel::saveFilterFile(QString filename)
             else outFile->putChar('F');
         outFile->write("\n");
     }
+    for (it = busFilters.cbegin(); it != busFilters.cend(); ++it)
+        outFile->write(QString("BUS,%1,%2\n").arg(it.key()).arg(it.value() ? "T" : "F").toUtf8());
+    for (it = dirFilters.cbegin(); it != dirFilters.cend(); ++it)
+        outFile->write(QString("DIR,%1,%2\n").arg(it.key()).arg(it.value() ? "T" : "F").toUtf8());
+    for (it = lengthFilters.cbegin(); it != lengthFilters.cend(); ++it)
+        outFile->write(QString("LEN,%1,%2\n").arg(it.key()).arg(it.value() ? "T" : "F").toUtf8());
     outFile->close();
+}
+
+bool CommFrameModel::getChangingOnly() const
+{
+    return changingOnly;
 }
 
 bool CommFrameModel::needsFilterRefresh()
