@@ -673,6 +673,8 @@ void GraphingWindow::setupMenuBar()
 {
     QMenuBar *menuBar = new QMenuBar(this);
     menuBar->setNativeMenuBar(false);
+    menuBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    menuBar->setMaximumHeight(20);
 
     // Graph menu
     QMenu *graphMenu = menuBar->addMenu(tr("Graph"));
@@ -709,7 +711,8 @@ void GraphingWindow::setupMenuBar()
     legendMenu->addAction(tr("Move to Bottom Right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignRight));
     legendMenu->addAction(tr("Move to Bottom Left"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignLeft));
 
-    ui->verticalLayout->insertWidget(0, menuBar);
+    ui->verticalLayout->insertWidget(0, menuBar, 0);
+    ui->verticalLayout->setStretchFactor(ui->graphingView, 1);
 }
 
 void GraphingWindow::contextMenuRequest(QPoint pos)
