@@ -434,11 +434,6 @@ void CommFrameModel::recalcOverwrite()
         lastSeenData = newSeen;
     }
 
-    // Rebuild per-ID count cache from the overwrite frames (count already stored per frame)
-    m_idCounts.clear();
-    for (const CommFrame &f : filteredFrames)
-        m_idCounts[(int)f.frameId()] = (int)f.getFrameCount();
-
     /*for (int i = 0; i < frames.count(); i++)
     {
         if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
