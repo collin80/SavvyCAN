@@ -276,7 +276,6 @@ uint64_t CommFrameModel::getCommFrameVal(QVector<CommFrame> *frames, int row, Co
         return static_cast<uint64_t>(frame.getBus());
     case Column::Length:
         return static_cast<uint64_t>(frame.payload().length());
-    case Column::DataDec:
     case Column::ASCII: //sort both the same for now
     case Column::Data:
         for (int i = 0; i < std::min(static_cast<int>(frame.payload().length()), 8); i++)

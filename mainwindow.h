@@ -120,6 +120,7 @@ private slots:
     void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
+    void handleCropLog();
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
     void busFilterListItemChanged(QListWidgetItem *item);

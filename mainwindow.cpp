@@ -12,6 +12,9 @@
 
 #include <QClipboard>
 #include <QTimer>
+#include <QSpinBox>
+#include <QFormLayout>
+#include <QDialogButtonBox>
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
 
@@ -123,6 +126,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
     connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
     connect(ui->actionSave_Decoded_Frames_CSV, &QAction::triggered, this, &MainWindow::handleSaveDecodedCsv);
+    connect(ui->actionCrop_Log, &QAction::triggered, this, &MainWindow::handleCropLog);
     connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
     connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
     connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
@@ -1206,6 +1210,60 @@ void MainWindow::normalizeTiming()
 {
     model->normalizeTiming();
     emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
+}
+
+void MainWindow::handleCropLog()
+{
+    int totalFrames = model->getListReference()->count();
+    if (totalFrames == 0)
+    {
+        QMessageBox::information(this, tr("Crop Log"), tr("No frames loaded."));
+        return;
+    }
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Crop Log to Frame Range"));
+    QFormLayout form(&dlg);
+
+    QSpinBox *spinStart = new QSpinBox(&dlg);
+    spinStart->setMinimum(1);
+    spinStart->setMaximum(totalFrames);
+    spinStart->setValue(1);
+    form.addRow(tr("Start frame (1 = first):"), spinStart);
+
+    QSpinBox *spinEnd = new QSpinBox(&dlg);
+    spinEnd->setMinimum(1);
+    spinEnd->setMaximum(totalFrames);
+    spinEnd->setValue(totalFrames);
+    form.addRow(tr("End frame (%1 = last):").arg(totalFrames), spinEnd);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, &dlg);
+    form.addRow(buttons);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    int startIdx = spinStart->value() - 1; // convert to 0-based
+    int endIdx   = spinEnd->value() - 1;
+
+    if (startIdx > endIdx)
+    {
+        QMessageBox::warning(this, tr("Crop Log"), tr("Start frame must not be greater than end frame."));
+        return;
+    }
+
+    const QVector<CommFrame> *src = model->getListReference();
+    QVector<CommFrame> cropped = src->mid(startIdx, endIdx - startIdx + 1);
+
+    model->clearFrames();
+    model->insertFrames(cropped);
+    CANConManager::getInstance()->resetTimeBasis();
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    bDirty = true;
+    emit framesUpdated(-2);
 }
 
 void MainWindow::handleLoadFile()
