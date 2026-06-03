@@ -1934,9 +1934,13 @@ void MainWindow::showSearchWindow()
 {
     if (!searchWindow)
     {
-        searchWindow = new SearchWindow(model->getListReference(), dbcHandler);
+        searchWindow = new SearchWindow(model->getFilteredListReference(), dbcHandler);
         connect(searchWindow, &SearchWindow::jumpToFrameIndex, this, &MainWindow::jumpToSearchFrame);
         connect(this, &MainWindow::framesUpdated, searchWindow, &SearchWindow::updatedFrames);
+        // Clear stale results whenever the filter changes (sendRefresh rebuilds filteredFrames)
+        connect(model, &QAbstractItemModel::modelReset, searchWindow, [this]() {
+            searchWindow->updatedFrames(0);
+        });
     }
     searchWindow->show();
     searchWindow->raise();
@@ -1944,20 +1948,18 @@ void MainWindow::showSearchWindow()
 
 void MainWindow::jumpToSearchFrame(int frameIndex)
 {
-    if (!model || frameIndex < 0 || frameIndex >= model->getListReference()->size())
+    if (!model || frameIndex < 0 || frameIndex >= model->getFilteredListReference()->size())
         return;
 
-    // The main table uses a proxy model; find the corresponding proxy row
+    // frameIndex is a row in CommFrameModel (filteredFrames); map through the
+    // sort proxy so the view scrolls to the correct visible row.
     QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel *>(ui->canFramesView->model());
-    if (proxy)
+    QModelIndex srcIndex = model->index(frameIndex, 0);
+    QModelIndex target = proxy ? proxy->mapFromSource(srcIndex) : srcIndex;
+    if (target.isValid())
     {
-        QModelIndex srcIndex = model->index(frameIndex, 0);
-        QModelIndex proxyIndex = proxy->mapFromSource(srcIndex);
-        if (proxyIndex.isValid())
-        {
-            ui->canFramesView->scrollTo(proxyIndex, QAbstractItemView::PositionAtCenter);
-            ui->canFramesView->setCurrentIndex(proxyIndex);
-        }
+        ui->canFramesView->scrollTo(target, QAbstractItemView::PositionAtCenter);
+        ui->canFramesView->setCurrentIndex(target);
     }
 }
 

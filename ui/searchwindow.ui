@@ -21,8 +21,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_main">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_top" stretch="3,1,2">
-     <!-- Left: search criteria + bitfield -->
+    <layout class="QHBoxLayout" name="horizontalLayout_top">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_left">
        <item>
@@ -247,12 +246,19 @@
           <item>
            <layout class="QHBoxLayout" name="hboxValueMode">
             <item>
-             <widget class="QRadioButton" name="rbValueAny">
+             <widget class="QRadioButton" name="rbValueNone">
               <property name="text">
-               <string>Any change</string>
+               <string>No filter</string>
               </property>
               <property name="checked">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="rbValueAny">
+              <property name="text">
+               <string>Any change</string>
               </property>
              </widget>
             </item>
@@ -291,7 +297,6 @@
        </item>
       </layout>
      </item>
-     <!-- Vertical divider -->
      <item>
       <widget class="Line" name="lineDivider">
        <property name="orientation">
@@ -299,7 +304,6 @@
        </property>
       </widget>
      </item>
-     <!-- Right: DBC signal picker -->
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_right">
        <item>
@@ -388,7 +392,6 @@
      </item>
     </layout>
    </item>
-   <!-- Horizontal divider -->
    <item>
     <widget class="Line" name="lineHDivider">
      <property name="orientation">
@@ -396,7 +399,6 @@
      </property>
     </widget>
    </item>
-   <!-- Bottom: search controls + results -->
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_bottom">
      <item>
@@ -409,7 +411,7 @@
      <item>
       <widget class="QPushButton" name="btnPrev">
        <property name="text">
-        <string>◀ Previous</string>
+        <string>&lt; Previous</string>
        </property>
        <property name="enabled">
         <bool>false</bool>
@@ -419,7 +421,7 @@
      <item>
       <widget class="QPushButton" name="btnNext">
        <property name="text">
-        <string>Next ▶</string>
+        <string>Next &gt;</string>
        </property>
        <property name="enabled">
         <bool>false</bool>

@@ -30,6 +30,7 @@ SearchWindow::SearchWindow(const QVector<CommFrame> *frames, DBCHandler *handler
     connect(ui->cbIntel,     SIGNAL(toggled(bool)),  this, SLOT(drawBitfield()));
 
     // Value mode toggle
+    connect(ui->rbValueNone,     SIGNAL(toggled(bool)), this, SLOT(onValueModeChanged()));
     connect(ui->rbValueAny,      SIGNAL(toggled(bool)), this, SLOT(onValueModeChanged()));
     connect(ui->rbValueSpecific, SIGNAL(toggled(bool)), this, SLOT(onValueModeChanged()));
 
@@ -59,7 +60,6 @@ void SearchWindow::updatedFrames(int /*numFrames*/)
         updateNavigationState();
     }
 }
-
 // ──────────────────────────────────────────────
 //  DBC hierarchy loading  (mirrors NewGraphDialog)
 // ──────────────────────────────────────────────
@@ -200,6 +200,11 @@ void SearchWindow::handleStartBitUpdate()
     startBit = ui->txtStartBit->text().toInt();
     if (startBit < 0)   startBit = 0;
     if (startBit > 511) startBit = 511;
+    // Manual edit overrides any loaded DBC signal
+    if (assocSignal) {
+        assocSignal = nullptr;
+        ui->lblSignalStatus->setText("(manual – DBC signal cleared)");
+    }
     drawBitfield();
 }
 
@@ -208,6 +213,11 @@ void SearchWindow::handleDataLenUpdate()
     dataLen = ui->txtDataLen->text().toInt();
     if (dataLen < 1)  dataLen = 1;
     if (dataLen > 512) dataLen = 512;
+    // Manual edit overrides any loaded DBC signal
+    if (assocSignal) {
+        assocSignal = nullptr;
+        ui->lblSignalStatus->setText("(manual – DBC signal cleared)");
+    }
     drawBitfield();
 }
 
@@ -253,6 +263,14 @@ void SearchWindow::drawBitfield()
 // ──────────────────────────────────────────────
 void SearchWindow::onValueModeChanged()
 {
+    bool hasValueFilter = !ui->rbValueNone->isChecked();
+    ui->txtStartBit->setEnabled(hasValueFilter);
+    ui->txtDataLen->setEnabled(hasValueFilter);
+    ui->cbIntel->setEnabled(hasValueFilter);
+    ui->cbSigned->setEnabled(hasValueFilter);
+    ui->txtScale->setEnabled(hasValueFilter);
+    ui->txtBias->setEnabled(hasValueFilter);
+    ui->gridData->setEnabled(hasValueFilter);
     ui->txtValue->setEnabled(ui->rbValueSpecific->isChecked());
 }
 
@@ -312,12 +330,19 @@ void SearchWindow::performSearch()
     if (ui->rbDirRX->isChecked())  dirMode = 1;
     if (ui->rbDirTX->isChecked())  dirMode = 2;
 
-    bool specificValue = ui->rbValueSpecific->isChecked();
-    double targetValue = ui->txtValue->text().toDouble();
+    bool noValueFilter  = ui->rbValueNone->isChecked();
+    bool specificValue  = ui->rbValueSpecific->isChecked();
+    double targetValue  = ui->txtValue->text().toDouble();
 
-    // For "any change" mode we need to track the last decoded value per CAN ID
-    QMap<uint32_t, double> lastSeen;
-    const double NO_PREV = std::numeric_limits<double>::max();
+    // For "any change" mode we track the last value per CAN ID.
+    // Use int64_t for raw bit-range comparisons to avoid double precision loss
+    // when dataLen approaches 64 bits (double only has 53-bit mantissa).
+    // When a DBC signal is active, fall back to double (scale/bias decoded).
+    const bool useRawCompare = (assocSignal == nullptr);
+    QMap<uint32_t, int64_t> lastSeenRaw;
+    QMap<uint32_t, double>  lastSeen;
+    const int64_t NO_PREV_RAW = std::numeric_limits<int64_t>::min();
+    const double  NO_PREV     = std::numeric_limits<double>::max();
 
     for (int i = 0; i < modelFrames->size(); i++)
     {
@@ -336,6 +361,9 @@ void SearchWindow::performSearch()
         if (dirMode == 2 &&  f.isReceived())   continue; // want TX, frame is RX
 
         // ── Value filter ───────────────────────────────────────
+        // Skip entirely when "No filter" is selected
+        if (noValueFilter) { matchingIndices.append(i); continue; }
+
         // Only apply value filter when there's at least one data byte covered
         if (startBit / 8 < f.payload().size())
         {
@@ -349,10 +377,24 @@ void SearchWindow::performSearch()
             else // any change
             {
                 uint32_t key = f.frameId();
-                double prev  = lastSeen.value(key, NO_PREV);
-                if (prev != NO_PREV && qFuzzyCompare(val, prev))
-                    continue;          // same as last time → skip
-                lastSeen[key] = val;
+                if (useRawCompare && !assocSignal)
+                {
+                    // Compare as raw integer to avoid double precision loss
+                    int64_t raw = Utility::processIntegerSignal(
+                        f.payload(), startBit, dataLen,
+                        ui->cbIntel->isChecked(), ui->cbSigned->isChecked());
+                    int64_t prev = lastSeenRaw.value(key, NO_PREV_RAW);
+                    if (prev != NO_PREV_RAW && raw == prev)
+                        continue;
+                    lastSeenRaw[key] = raw;
+                }
+                else
+                {
+                    double prev = lastSeen.value(key, NO_PREV);
+                    if (prev != NO_PREV && qFuzzyCompare(val, prev))
+                        continue;
+                    lastSeen[key] = val;
+                }
             }
         }
 
