@@ -52,6 +52,7 @@ public:
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
     void setFilterState(unsigned int ID, bool state);
+    void setFilterStatesBatch(const QList<QPair<int,bool>> &updates);
     void setBusFilterState(unsigned int BusID, bool state);
     void setAllFilters(bool state);
     void setTimeFormat(QString);

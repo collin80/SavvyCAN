@@ -218,6 +218,20 @@ void CommFrameModel::setFilterState(unsigned int ID, bool state)
     sendRefresh();
 }
 
+void CommFrameModel::setFilterStatesBatch(const QList<QPair<int,bool>> &updates)
+{
+    bool anyChanged = false;
+    for (const auto &pair : updates)
+    {
+        if (filters.contains(pair.first))
+        {
+            filters[pair.first] = pair.second;
+            anyChanged = true;
+        }
+    }
+    if (anyChanged) sendRefresh();
+}
+
 void CommFrameModel::setBusFilterState(unsigned int BusID, bool state)
 {
     if (!busFilters.contains(BusID)) return;

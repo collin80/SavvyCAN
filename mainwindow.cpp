@@ -200,6 +200,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
     ui->listFilters->horizontalScrollBar()->setEnabled(false);
+    // Allow drag-select and Shift/Ctrl+click multi-selection in the ID filter list
+    ui->listFilters->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    ui->listFilters->installEventFilter(this);
 
     // Restore or default splitterLeft after the window has real geometry.
     // QTimer::singleShot(0) defers to first event loop tick.
@@ -380,6 +383,41 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    // Space key on the ID filter list: toggle checkbox state for all selected items
+    if (obj == ui->listFilters && event->type() == QEvent::KeyPress) {
+        QKeyEvent *ke = static_cast<QKeyEvent*>(event);
+        if (ke->key() == Qt::Key_Space) {
+            QList<QListWidgetItem*> selected = ui->listFilters->selectedItems();
+            if (!selected.isEmpty()) {
+                Qt::CheckState newState = (selected.first()->checkState() == Qt::Checked)
+                                          ? Qt::Unchecked : Qt::Checked;
+                inhibitFilterUpdate = true;
+                for (QListWidgetItem *item : selected)
+                    item->setCheckState(newState);
+                inhibitFilterUpdate = false;
+                QList<QPair<int,bool>> updates;
+                updates.reserve(selected.size());
+                for (QListWidgetItem *item : selected)
+                    updates.append({FilterUtility::getIdAsInt(item), newState == Qt::Checked});
+                model->setFilterStatesBatch(updates);
+                manageRowExpansion();
+                return true;
+            }
+        }
+    }
+    // Recalculate height of wrapping filter lists when they are resized (panel drag etc.)
+    if ((obj == ui->listBusFilters || obj == ui->listDirFilters || obj == ui->listLengthFilters)
+        && event->type() == QEvent::Resize) {
+        QListWidget *list = qobject_cast<QListWidget*>(obj);
+        QTimer::singleShot(0, this, [list]() {
+            if (list->count() > 0) {
+                QRect r = list->visualItemRect(list->item(list->count() - 1));
+                int h = r.bottom() + 1 + 2 * list->frameWidth();
+                if (h > 0 && h != list->height()) list->setFixedHeight(h);
+            }
+        });
+        return false;
+    }
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         switch (keyEvent->key())
@@ -1889,6 +1927,7 @@ void MainWindow::showCANBridgeWindow()
     }
     canBridgeWindow->show();
 }
+
 
 void MainWindow::showFrameSenderWindow()
 {
