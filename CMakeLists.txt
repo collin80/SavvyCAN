@@ -121,6 +121,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     re/isotp_interpreterwindow.cpp re/isotp_interpreterwindow.h
     re/newgraphdialog.cpp re/newgraphdialog.h
     re/rangestatewindow.cpp re/rangestatewindow.h
+    re/searchwindow.cpp re/searchwindow.h
     re/sniffer/SnifferDelegate.cpp re/sniffer/SnifferDelegate.h
     re/sniffer/snifferitem.cpp re/sniffer/snifferitem.h
     re/sniffer/sniffermodel.cpp re/sniffer/sniffermodel.h

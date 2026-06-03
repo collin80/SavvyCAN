@@ -101,6 +101,7 @@ MainWindow::MainWindow(QWidget *parent) :
     temporalGraphWindow = nullptr;
     dbcComparatorWindow = nullptr;
     canBridgeWindow = nullptr;
+    searchWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -144,6 +145,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
     connect(ui->actionCAN_Bridge, &QAction::triggered, this, &MainWindow::showCANBridgeWindow);
+    connect(ui->actionFrame_Search, &QAction::triggered, this, &MainWindow::showSearchWindow);
 
     //handlers fror interactions with the main can frame view table
     connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
@@ -1928,6 +1930,36 @@ void MainWindow::showCANBridgeWindow()
     canBridgeWindow->show();
 }
 
+void MainWindow::showSearchWindow()
+{
+    if (!searchWindow)
+    {
+        searchWindow = new SearchWindow(model->getListReference(), dbcHandler);
+        connect(searchWindow, &SearchWindow::jumpToFrameIndex, this, &MainWindow::jumpToSearchFrame);
+        connect(this, &MainWindow::framesUpdated, searchWindow, &SearchWindow::updatedFrames);
+    }
+    searchWindow->show();
+    searchWindow->raise();
+}
+
+void MainWindow::jumpToSearchFrame(int frameIndex)
+{
+    if (!model || frameIndex < 0 || frameIndex >= model->getListReference()->size())
+        return;
+
+    // The main table uses a proxy model; find the corresponding proxy row
+    QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel *>(ui->canFramesView->model());
+    if (proxy)
+    {
+        QModelIndex srcIndex = model->index(frameIndex, 0);
+        QModelIndex proxyIndex = proxy->mapFromSource(srcIndex);
+        if (proxyIndex.isValid())
+        {
+            ui->canFramesView->scrollTo(proxyIndex, QAbstractItemView::PositionAtCenter);
+            ui->canFramesView->setCurrentIndex(proxyIndex);
+        }
+    }
+}
 
 void MainWindow::showFrameSenderWindow()
 {

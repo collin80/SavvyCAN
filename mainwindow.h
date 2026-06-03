@@ -34,6 +34,7 @@
 #include "re/temporalgraphwindow.h"
 #include "re/dbccomparatorwindow.h"
 #include "canbridgewindow.h"
+#include "re/searchwindow.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -103,6 +104,8 @@ private slots:
     void showTemporalGraphWindow();
     void showDBCComparisonWindow();
     void showCANBridgeWindow();
+    void showSearchWindow();
+    void jumpToSearchFrame(int frameIndex);
     void exitApp();
     void handleSaveDecoded();
     void handleSaveDecodedCsv();
@@ -204,6 +207,7 @@ private:
     TemporalGraphWindow *temporalGraphWindow;
     DBCComparatorWindow *dbcComparatorWindow;
     CANBridgeWindow *canBridgeWindow;
+    SearchWindow *searchWindow;
 
     //various private storage
     QLabel lbStatusConnected;

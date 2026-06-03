@@ -415,6 +415,7 @@
     <addaction name="actionCapture_Bisector"/>
     <addaction name="actionSignal_Viewer"/>
     <addaction name="actionTemporal_Graph"/>
+    <addaction name="actionFrame_Search"/>
    </widget>
    <widget class="QMenu" name="menuSend_Frames">
     <property name="title">
@@ -660,6 +661,11 @@
   <action name="actionCrop_Log">
    <property name="text">
     <string>Crop Log to Frame Range</string>
+   </property>
+  </action>
+  <action name="actionFrame_Search">
+   <property name="text">
+    <string>Frame Search</string>
    </property>
   </action>
  </widget>
