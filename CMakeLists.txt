@@ -42,6 +42,7 @@ qt_standard_project_setup()
 qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     bisectwindow.cpp bisectwindow.h
     blfhandler.cpp blfhandler.h
+    croplogdialog.cpp croplogdialog.h
     bus_protocols/isotp_handler.cpp bus_protocols/isotp_handler.h
     bus_protocols/handler_factory.cpp bus_protocols/handler_factory.h
     bus_protocols/isotp_message.h

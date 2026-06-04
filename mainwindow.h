@@ -35,6 +35,7 @@
 #include "re/dbccomparatorwindow.h"
 #include "canbridgewindow.h"
 #include "re/searchwindow.h"
+#include "croplogdialog.h"
 
 class CANConnection;
 class ConnectionWindow;
