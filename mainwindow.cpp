@@ -11,6 +11,7 @@
 #include "filterutility.h"
 
 #include <QClipboard>
+#include <QTimer>
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
 
@@ -97,6 +98,7 @@ MainWindow::MainWindow(QWidget *parent) :
     temporalGraphWindow = nullptr;
     dbcComparatorWindow = nullptr;
     canBridgeWindow = nullptr;
+    searchWindow = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -122,6 +124,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionRange_State_2, &QAction::triggered, this, &MainWindow::showRangeWindow);
     connect(ui->actionSave_Decoded_Frames, &QAction::triggered, this, &MainWindow::handleSaveDecoded);
     connect(ui->actionSave_Decoded_Frames_CSV, &QAction::triggered, this, &MainWindow::handleSaveDecodedCsv);
+    connect(ui->actionCrop_Log, &QAction::triggered, this, &MainWindow::handleCropLog);
     connect(ui->actionSingle_Multi_State_2, &QAction::triggered, this, &MainWindow::showSingleMultiWindow);
     connect(ui->actionFile_Comparison, &QAction::triggered, this, &MainWindow::showComparisonWindow);
     connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
@@ -139,6 +142,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
     connect(ui->actionCAN_Bridge, &QAction::triggered, this, &MainWindow::showCANBridgeWindow);
+    connect(ui->actionFrame_Search, &QAction::triggered, this, &MainWindow::showSearchWindow);
 
     //handlers fror interactions with the main can frame view table
     connect(ui->canFramesView, &QAbstractItemView::clicked, this, &MainWindow::gridClicked);
@@ -158,9 +162,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
+    connect(ui->cbChangingOnly, &QAbstractButton::toggled, this, &MainWindow::changingOnlyToggled);
     connect(ui->cbPersistentFilters, &QAbstractButton::toggled, this, &MainWindow::presistentFiltersToggled);
     connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
     connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
+    connect(ui->listDirFilters, &QListWidget::itemChanged, this, &MainWindow::dirFilterListItemChanged);
+    connect(ui->listLengthFilters, &QListWidget::itemChanged, this, &MainWindow::lengthFilterListItemChanged);
 
     connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
     connect(ui->btnClearFrames, &QAbstractButton::clicked, this, &MainWindow::clearFrames);
@@ -195,6 +202,37 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // Prevent annoying accidental horizontal scrolling when filter list is populated with long interpreted message names
     ui->listFilters->horizontalScrollBar()->setEnabled(false);
+    // Allow drag-select and Shift/Ctrl+click multi-selection in the ID filter list
+    ui->listFilters->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    ui->listFilters->installEventFilter(this);
+
+    // Wrapping filter lists: items reflow on resize and height is recalculated via event filter
+    ui->listBusFilters->setWrapping(true);
+    ui->listBusFilters->setResizeMode(QListView::Adjust);
+    ui->listDirFilters->setWrapping(true);
+    ui->listDirFilters->setResizeMode(QListView::Adjust);
+    ui->listLengthFilters->setWrapping(true);
+    ui->listLengthFilters->setResizeMode(QListView::Adjust);
+    ui->listBusFilters->installEventFilter(this);
+    ui->listDirFilters->installEventFilter(this);
+    ui->listLengthFilters->installEventFilter(this);
+
+    // Restore or default splitterLeft after the window has real geometry.
+    // QTimer::singleShot(0) defers to first event loop tick.
+    QTimer::singleShot(0, this, [this]() {
+        QSettings s;
+        QByteArray state = s.value("Main/SplitterLeft").toByteArray();
+        if (!state.isEmpty()) {
+            ui->splitterLeft->restoreState(state);
+        } else {
+            int h = ui->splitterLeft->height();
+            if (h > 0)
+                ui->splitterLeft->setSizes({h * 3 / 4, h / 4}); // 75% frame table, 25% send panel
+        }
+    });
+
+    ui->leSearchFilter->setClearButtonEnabled(true);
+    connect(ui->leSearchFilter, &QLineEdit::textChanged, this, &MainWindow::onSearchFilterChanged);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
@@ -358,6 +396,41 @@ void MainWindow::closeEvent(QCloseEvent *event)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    // Space key on the ID filter list: toggle checkbox state for all selected items
+    if (obj == ui->listFilters && event->type() == QEvent::KeyPress) {
+        QKeyEvent *ke = static_cast<QKeyEvent*>(event);
+        if (ke->key() == Qt::Key_Space) {
+            QList<QListWidgetItem*> selected = ui->listFilters->selectedItems();
+            if (!selected.isEmpty()) {
+                Qt::CheckState newState = (selected.first()->checkState() == Qt::Checked)
+                                          ? Qt::Unchecked : Qt::Checked;
+                inhibitFilterUpdate = true;
+                for (QListWidgetItem *item : selected)
+                    item->setCheckState(newState);
+                inhibitFilterUpdate = false;
+                QList<QPair<int,bool>> updates;
+                updates.reserve(selected.size());
+                for (QListWidgetItem *item : selected)
+                    updates.append({FilterUtility::getIdAsInt(item), newState == Qt::Checked});
+                model->setFilterStatesBatch(updates);
+                manageRowExpansion();
+                return true;
+            }
+        }
+    }
+    // Recalculate height of wrapping filter lists when they are resized (panel drag etc.)
+    if ((obj == ui->listBusFilters || obj == ui->listDirFilters || obj == ui->listLengthFilters)
+        && event->type() == QEvent::Resize) {
+        QListWidget *list = qobject_cast<QListWidget*>(obj);
+        QTimer::singleShot(0, this, [this, list]() {
+            if (list->count() > 0) {
+                QRect r = list->visualItemRect(list->item(list->count() - 1));
+                int h = r.bottom() + 1 + 2 * list->frameWidth();
+                if (h > 0 && h != list->height()) list->setFixedHeight(h);
+            }
+        });
+        return false;
+    }
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         switch (keyEvent->key())
@@ -399,11 +472,53 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(6, settings.value("Main/LengthColumn", 40).toUInt()); //length
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
         //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
+
+        QByteArray splitterMainState = settings.value("Main/SplitterMain").toByteArray();
+        if (!splitterMainState.isEmpty())
+            ui->splitterMain->restoreState(splitterMainState);
+        else
+            ui->splitterMain->setSizes({750, 250});
+
+        // splitterLeft is restored/defaulted via deferred QTimer in constructor
     }
+    else
+    {
+        ui->splitterMain->setSizes({750, 250});
+        // splitterLeft is defaulted via deferred QTimer in constructor
+    }
+
     if (settings.value("Main/AutoScroll", false).toBool())
     {
         ui->cbAutoScroll->setChecked(true);
     }
+
+    if (settings.value("Main/Overwrite", false).toBool())
+    {
+        ui->cbOverwrite->setChecked(Qt::Checked);
+        model->setOverwriteMode(true);
+    }
+    else
+    {
+        model->setOverwriteMode(false);
+        rowExpansionActive = false;
+    }
+
+    if (settings.value("Main/ChangingOnly", false).toBool())
+    {
+        ui->cbChangingOnly->setChecked(Qt::Checked);
+        model->setChangingOnly(true);
+    }
+    else
+        model->setChangingOnly(false);
+
+    if (settings.value("Main/PersistentFilters", false).toBool())
+    {
+        ui->cbPersistentFilters->setChecked(Qt::Checked);
+        model->setClearMode(true);
+    }
+    else
+        model->setClearMode(false);
+
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
     QFont newFont = QFont(ui->canFramesView->font());
     newFont.setPointSize(fontSize);
@@ -450,6 +565,10 @@ void MainWindow::readUpdateableSettings()
         ui->listFilters->setMaximumWidth(250);
     else
         ui->listFilters->setMaximumWidth(175);
+
+    bool showSendPanel = settings.value("Main/ShowSendPanel", true).toBool();
+    ui->tableSimpleSender->setVisible(showSendPanel);
+
     updateFilterList();    
 }    
 
@@ -471,7 +590,10 @@ void MainWindow::writeSettings()
         settings.setValue("Main/LengthColumn", ui->canFramesView->columnWidth(6));
         settings.setValue("Main/AsciiColumn", ui->canFramesView->columnWidth(7));
         //settings.setValue("Main/DataColumn", ui->canFramesView->columnWidth(8));
+        settings.setValue("Main/SplitterMain", ui->splitterMain->saveState());
     }
+    // Always save splitterLeft so send-panel height is restored on next launch
+    settings.setValue("Main/SplitterLeft", ui->splitterLeft->saveState());
 }
 
 void MainWindow::onSenderCellChanged(int row, int col)
@@ -484,6 +606,30 @@ void MainWindow::onSenderCellChanged(int row, int col)
     }
 
     processSenderCellChange(row, col);
+}
+
+void MainWindow::onSearchFilterChanged(const QString &text)
+{
+    // Apply search text to the model (filters main table rows)
+    model->setSearchFilter(text);
+
+    // Show/hide items in the filter list to match the search text
+    QString stripped = text;
+    if (stripped.startsWith("0x", Qt::CaseInsensitive))
+        stripped = stripped.mid(2);
+
+    for (int i = 0; i < ui->listFilters->count(); ++i) {
+        QListWidgetItem *item = ui->listFilters->item(i);
+        if (stripped.isEmpty())
+            item->setHidden(false);
+        else {
+            QString idStr = FilterUtility::getId(item);
+            // strip leading "0x" from the displayed id string too
+            if (idStr.startsWith("0x", Qt::CaseInsensitive))
+                idStr = idStr.mid(2);
+            item->setHidden(!idStr.contains(stripped, Qt::CaseInsensitive));
+        }
+    }
 }
 
 void MainWindow::processSenderCellChange(int line, int col)
@@ -928,6 +1074,13 @@ void MainWindow::overwriteToggled(bool state)
     }
 }
 
+void MainWindow::changingOnlyToggled(bool state)
+{
+    QSettings settings;
+    settings.setValue("Main/ChangingOnly", state);
+    model->setChangingOnly(state);
+}
+
 void MainWindow::presistentFiltersToggled(bool state)
 {
     if (state)
@@ -953,6 +1106,8 @@ void MainWindow::updateFilterList()
 
     ui->listFilters->clear();
     ui->listBusFilters->clear();
+    ui->listDirFilters->clear();
+    ui->listLengthFilters->clear();
 
     if (filters->isEmpty()) return;
 
@@ -962,13 +1117,55 @@ void MainWindow::updateFilterList()
         /*QListWidgetItem *thisItem = */FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
     }
 
-    if (busFilters->isEmpty()) return;
-
-    for (filterIter = busFilters->begin(); filterIter != busFilters->end(); ++filterIter)
+    if (!busFilters->isEmpty())
     {
-        /*QListWidgetItem *thisItem = */ FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listBusFilters);
+        for (filterIter = busFilters->begin(); filterIter != busFilters->end(); ++filterIter)
+        {
+            FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listBusFilters);
+        }
     }
+
+    // Direction filters
+    const QMap<int, bool> *dirFilters = model->getDirFiltersReference();
+    if (dirFilters && !dirFilters->isEmpty())
+    {
+        for (filterIter = dirFilters->begin(); filterIter != dirFilters->end(); ++filterIter)
+        {
+            QString label = (filterIter.key() == 1) ? tr("Rx") : tr("Tx");
+            QListWidgetItem *item = new QListWidgetItem(label, ui->listDirFilters);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(filterIter.value() ? Qt::Checked : Qt::Unchecked);
+            item->setData(Qt::UserRole, filterIter.key());
+        }
+    }
+
+    // Length filters
+    const QMap<int, bool> *lengthFilters = model->getLengthFiltersReference();
+    if (lengthFilters && !lengthFilters->isEmpty())
+    {
+        for (filterIter = lengthFilters->begin(); filterIter != lengthFilters->end(); ++filterIter)
+        {
+            FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listLengthFilters);
+        }
+    }
+
+    // Adjust height of the wrapping filter lists to fit their items (deferred so layout is done first)
+    QTimer::singleShot(0, this, [this]() {
+        auto fitH = [](QListWidget *list) {
+            if (list->count() == 0) { list->setFixedHeight(0); return; }
+            QRect r = list->visualItemRect(list->item(list->count() - 1));
+            int h = r.bottom() + 1 + 2 * list->frameWidth();
+            if (h > 0) list->setFixedHeight(h);
+        };
+        fitH(ui->listBusFilters);
+        fitH(ui->listDirFilters);
+        fitH(ui->listLengthFilters);
+    });
+
     inhibitFilterUpdate = false;
+
+    // Re-apply any active search filter text so items stay hidden/shown after the list is repopulated
+    onSearchFilterChanged(ui->leSearchFilter->text());
 }
 
 void MainWindow::filterListItemChanged(QListWidgetItem *item)
@@ -989,17 +1186,40 @@ void MainWindow::filterListItemChanged(QListWidgetItem *item)
 void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
 {
     if (inhibitFilterUpdate) return;
-    //qDebug() << item->text();
 
-    // strip away possible filter label
     int ID = FilterUtility::getIdAsInt(item);
-    bool isSet = false;
-    if (item->checkState() == Qt::Checked) isSet = true;
+    bool isSet = (item->checkState() == Qt::Checked);
 
     model->setBusFilterState(ID, isSet);
 
     manageRowExpansion();
 }
+
+void MainWindow::dirFilterListItemChanged(QListWidgetItem *item)
+{
+    if (inhibitFilterUpdate) return;
+
+    int dir = item->data(Qt::UserRole).toInt();
+    bool isSet = (item->checkState() == Qt::Checked);
+
+    model->setDirFilterState(dir, isSet);
+
+    manageRowExpansion();
+}
+
+void MainWindow::lengthFilterListItemChanged(QListWidgetItem *item)
+{
+    if (inhibitFilterUpdate) return;
+
+    int len = FilterUtility::getIdAsInt(item);
+    bool isSet = (item->checkState() == Qt::Checked);
+
+    model->setLengthFilterState(len, isSet);
+
+    manageRowExpansion();
+}
+
+
 
 void MainWindow::filterSetAll()
 {
@@ -1143,6 +1363,31 @@ void MainWindow::normalizeTiming()
 {
     model->normalizeTiming();
     emit framesUpdated(-2); //claim an all new set of frames because every frame was updated.
+}
+
+void MainWindow::handleCropLog()
+{
+    const QVector<CommFrame> *src = model->getListReference();
+    if (src->isEmpty())
+    {
+        QMessageBox::information(this, tr("Crop Log"), tr("No frames loaded."));
+        return;
+    }
+
+    CropLogDialog dlg(src, this);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    int startIdx = dlg.startIndex();
+    int endIdx   = dlg.endIndex();
+    QVector<CommFrame> cropped = src->mid(startIdx, endIdx - startIdx + 1);
+
+    model->clearFrames();
+    model->insertFrames(cropped);
+    CANConManager::getInstance()->resetTimeBasis();
+    ui->lbNumFrames->setText(QString::number(model->rowCount()));
+    bDirty = true;
+    emit framesUpdated(-2);
 }
 
 void MainWindow::handleLoadFile()
@@ -1519,7 +1764,7 @@ Data Bytes: 88 10 00 13 BB 00 06 00
                     }
 
                     QString temp;
-                    if (sigs[j]->processAsText(*frame, temp, false))
+                    if (sigs[j]->processAsText(*frame, temp))
                     {
                         builderString.append(temp);
                         builderString.append(",");
@@ -1769,6 +2014,39 @@ void MainWindow::showCANBridgeWindow()
     canBridgeWindow->show();
 }
 
+void MainWindow::showSearchWindow()
+{
+    if (!searchWindow)
+    {
+        searchWindow = new SearchWindow(model->getFilteredListReference(), dbcHandler);
+        connect(searchWindow, &SearchWindow::jumpToFrameIndex, this, &MainWindow::jumpToSearchFrame);
+        connect(this, &MainWindow::framesUpdated, searchWindow, &SearchWindow::updatedFrames);
+        // Clear stale results whenever the filter changes (sendRefresh rebuilds filteredFrames)
+        connect(model, &QAbstractItemModel::modelReset, searchWindow, [this]() {
+            searchWindow->updatedFrames(0);
+        });
+    }
+    searchWindow->show();
+    searchWindow->raise();
+}
+
+void MainWindow::jumpToSearchFrame(int frameIndex)
+{
+    if (!model || frameIndex < 0 || frameIndex >= model->getFilteredListReference()->size())
+        return;
+
+    // frameIndex is a row in CommFrameModel (filteredFrames); map through the
+    // sort proxy so the view scrolls to the correct visible row.
+    QAbstractProxyModel *proxy = qobject_cast<QAbstractProxyModel *>(ui->canFramesView->model());
+    QModelIndex srcIndex = model->index(frameIndex, 0);
+    QModelIndex target = proxy ? proxy->mapFromSource(srcIndex) : srcIndex;
+    if (target.isValid())
+    {
+        ui->canFramesView->scrollTo(target, QAbstractItemView::PositionAtCenter);
+        ui->canFramesView->setCurrentIndex(target);
+    }
+}
+
 void MainWindow::showFrameSenderWindow()
 {
     if (!frameSenderWindow)
@@ -1934,8 +2212,15 @@ void MainWindow::showSignalViewer()
 void MainWindow::showConnectionSettingsWindow()
 {
     if (!connectionWindow)
-    {
         connectionWindow = new ConnectionWindow();
+
+    // Trigger a one-shot state probe on all SerialBus connections before showing the
+    // window.  PCAN on macOS never emits stateChanged on USB unplug, so this is the
+    // only time we can pay the cost of a brief disconnect+reconnect (user-visible action).
+    for (CANConnection *conn : CANConManager::getInstance()->getConnections()) {
+        if (conn->getType() == CANCon::SERIALBUS)
+            QMetaObject::invokeMethod(conn, "probeConnectionState", Qt::QueuedConnection);
     }
+
     connectionWindow->show();
 }

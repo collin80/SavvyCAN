@@ -93,6 +93,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
     ui->cbColorsByCanId->setChecked(settings.value("Main/ColorsByCanId", false).toBool());
+    ui->cbShowSendPanel->setChecked(settings.value("Main/ShowSendPanel", true).toBool());
 
     ui->cbEqualSniffer->setChecked(settings.value("Main/EqualDataSniff", false).toBool());
 
@@ -143,6 +144,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->spinMaximumFrames, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbFontFixedWidth, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinBytesPerLine, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
+    connect(ui->cbShowSendPanel, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 
     installEventFilter(this);
 }
@@ -215,6 +217,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/BytesPerLine", ui->spinBytesPerLine->value());
     settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
     settings.setValue("Main/ColorsByCanId", ui->cbColorsByCanId->isChecked());
+    settings.setValue("Main/ShowSendPanel", ui->cbShowSendPanel->isChecked());
 
     settings.sync();
     emit updatedSettings();

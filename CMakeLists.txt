@@ -42,6 +42,7 @@ qt_standard_project_setup()
 qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     bisectwindow.cpp bisectwindow.h
     blfhandler.cpp blfhandler.h
+    croplogdialog.cpp croplogdialog.h
     bus_protocols/isotp_handler.cpp bus_protocols/isotp_handler.h
     bus_protocols/handler_factory.cpp bus_protocols/handler_factory.h
     bus_protocols/isotp_message.h
@@ -121,6 +122,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     re/isotp_interpreterwindow.cpp re/isotp_interpreterwindow.h
     re/newgraphdialog.cpp re/newgraphdialog.h
     re/rangestatewindow.cpp re/rangestatewindow.h
+    re/searchwindow.cpp re/searchwindow.h
     re/sniffer/SnifferDelegate.cpp re/sniffer/SnifferDelegate.h
     re/sniffer/snifferitem.cpp re/sniffer/snifferitem.h
     re/sniffer/sniffermodel.cpp re/sniffer/sniffermodel.h
