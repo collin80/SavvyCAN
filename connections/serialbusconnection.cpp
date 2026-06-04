@@ -226,6 +226,9 @@ void SerialBusConnection::framesReceived()
                 errs.fromInt(recFrame.error().toInt());
                 frame_p->setError(errs);
 
+                /* If recorded frame has a local echo, it is a Tx message, and thus should not be marked as Rx */
+                frame_p->setLocalEcho(recFrame.hasLocalEcho());
+
                 if (useSystemTime) {
                     frame_p->setTimeStamp(CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ul));
                 }
