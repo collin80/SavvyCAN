@@ -53,6 +53,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
     filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
     filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
     filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));
+    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -142,6 +143,11 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
         {
             if (!filename.contains('.')) filename += ".trc";
             result = saveCARBUSAnalzyer(filename, frameCache);
+        }
+        if (dialog.selectedNameFilter() == filters[13])
+        {
+            if (!filename.contains('.')) filename += ".trc";
+            result = savePCANFile(filename, frameCache);
         }
 
         progress.cancel();
@@ -2039,6 +2045,94 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CommFrame>* f
         }
 
         outFile.write("\n");
+    }
+    return true;
+}
+
+bool FrameFileIO::savePCANFile(QString filename, const QVector<CommFrame>* frames)
+{
+    QFile outFile(filename);
+    int lineCounter = 0;
+    int64_t offsetTime = frames->at(0).timeStamp().microSeconds();
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        if (frames->at(c).timeStamp().microSeconds() < offsetTime)
+            offsetTime = frames->at(c).timeStamp().microSeconds();
+    }
+
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Text))
+        return false;
+
+    QTextStream out(&outFile);
+
+    // Compute OLE Automation date (days since Dec 30, 1899) for the $STARTTIME header.
+    // Unix epoch (Jan 1 1970) corresponds to OLE date 25569.
+    QDateTime startDateTime = QDateTime::currentDateTimeUtc();
+    if (offsetTime > 10000000000LL) // absolute system-time timestamps (microseconds)
+        startDateTime.setMSecsSinceEpoch(offsetTime / 1000);
+    double oleDate = startDateTime.toMSecsSinceEpoch() / 86400000.0 + 25569.0;
+
+    out << ";$FILEVERSION=2.1\n";
+    out << QString(";$STARTTIME=%1\n").arg(oleDate, 0, 'f', 10);
+    out << ";\n";
+    out << ";   Message    Time    Type    ID     Rx/Tx\n";
+    out << ";   Number     Offset  |  Bus  [hex]  |  Reserved\n";
+    out << ";   |          [ms]    |  |    |      |  |  Data Length Code\n";
+    out << ";   |          |       |  |    |      |  |  |    Data [hex] ...\n";
+    out << ";   |          |       |  |    |      |  |  |    |\n";
+    out << ";---+--- ------+------ +- +- --+----- +- +- +--- +- -- -- -- -- -- -- --\n";
+
+    for (int c = 0; c < frames->count(); c++)
+    {
+        lineCounter++;
+        if (lineCounter > 100)
+        {
+            qApp->processEvents();
+            lineCounter = 0;
+        }
+
+        const CommFrame& frame = frames->at(c);
+        double timeMs = (frame.timeStamp().microSeconds() - offsetTime) / 1000.0;
+
+        // Message number, right-justified in 6 chars followed by ")"
+        out << QString("%1)").arg(c + 1, 6);
+
+        // Time offset in ms with 3 decimal places, right-justified in 12 chars
+        out << QString("  %1").arg(timeMs, 12, 'f', 3);
+
+        // Frame type
+        if (frame.frameType() == CommFrame::RemoteRequestFrame)
+            out << " R";
+        else
+            out << " DT";
+
+        // Bus number (PCAN is 1-based)
+        out << QString(" %1").arg(frame.getBus() + 1);
+
+        // CAN ID: 8 hex digits for extended frames, 4 for standard
+        if (frame.hasExtendedFrameFormat())
+            out << QString(" %1").arg(frame.frameId(), 8, 16, QChar('0')).toUpper();
+        else
+            out << QString(" %1").arg(frame.frameId(), 4, 16, QChar('0')).toUpper();
+
+        // Direction and reserved field
+        out << (frame.isReceived() ? " Rx" : " Tx");
+        out << " -";
+
+        // Data length
+        int dataLen = frame.payload().length();
+        out << QString("  %1").arg(dataLen);
+
+        // Data bytes
+        if (frame.frameType() != CommFrame::RemoteRequestFrame)
+        {
+            const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
+            for (int d = 0; d < dataLen; d++)
+                out << QString(" %1").arg(data[d], 2, 16, QChar('0')).toUpper();
+        }
+
+        out << "\n";
     }
     return true;
 }
