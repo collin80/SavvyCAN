@@ -817,14 +817,10 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
 
     lastUpdateNumFrames++;
 
-    //if this ID isn't found in the filters list then add it and show it by default
+    //if this ID isn't found in the filters list then add it and show it enabled by default
     if (!filters.contains(tempFrame.frameId()))
     {
-        // if there are any filters already configured, leave the new filter disabled
-        if (any_filters_are_configured())
-            filters.insert(tempFrame.frameId(), false);
-        else
-            filters.insert(tempFrame.frameId(), true);
+        filters.insert(tempFrame.frameId(), true);
         needFilterRefresh = true;
     }
 
