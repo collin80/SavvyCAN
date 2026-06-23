@@ -105,6 +105,7 @@ MainWindow::MainWindow(QWidget *parent) :
     rxFrames = 0;
     framesPerSec = 0;
     continuousLogging = false;
+    continuousLoggingUseFilter = false;
     continuousLogFlushCounter = 0;
 
     //handlers for all menu entries
@@ -140,6 +141,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionCapture_Bisector, &QAction::triggered, this, &MainWindow::showBisectWindow);
     connect(ui->actionSignal_Viewer, &QAction::triggered, this, &MainWindow::showSignalViewer);
     connect(ui->actionSave_Continuous_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLogging);
+    connect(ui->actionSave_Continuous_Filtered_Logfile, &QAction::triggered, this, &MainWindow::handleContinousLoggingFiltered);
     connect(ui->actionTemporal_Graph, &QAction::triggered, this, &MainWindow::showTemporalGraphWindow);
     connect(ui->actionCAN_Bridge, &QAction::triggered, this, &MainWindow::showCANBridgeWindow);
     connect(ui->actionFrame_Search, &QAction::triggered, this, &MainWindow::showSearchWindow);
@@ -1285,9 +1287,22 @@ void MainWindow::filterClearAll()
 void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CommFrame> frames)
 {
     Q_UNUSED(conn);
-    if (continuousLogging)
+    if (!continuousLogging) return;
+
+    if (!continuousLoggingUseFilter)
     {
         FrameFileIO::writeContinuousNative(&frames, 0);
+    }
+    else
+    {
+        QVector<CommFrame> filtered;
+        for (const CommFrame &f : std::as_const(frames))
+        {
+            if (model->passesFrameFilters(f))
+                filtered.append(f);
+        }
+        if (!filtered.isEmpty())
+            FrameFileIO::writeContinuousNative(&filtered, 0);
     }
 }
 
@@ -1522,19 +1537,62 @@ void MainWindow::handleSaveFile()
 
 void MainWindow::handleContinousLogging()
 {
-    continuousLogging = !continuousLogging;
-
-    if (continuousLogging)
+    // If already doing unfiltered logging, stop it
+    if (continuousLogging && !continuousLoggingUseFilter)
     {
-        ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
-        FrameFileIO::openContinuousNative();
-    }
-    else
-    {
+        continuousLogging = false;
         ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
         ui->lblContMsg->setText("");
         FrameFileIO::closeContinuousNative();
+        return;
     }
+
+    // If filtered logging is running, stop it before switching
+    if (continuousLogging)
+    {
+        FrameFileIO::closeContinuousNative();
+        continuousLogging = false;
+        ui->actionSave_Continuous_Filtered_Logfile->setText(tr("Start Continuous Logging (Filtered)"));
+        ui->lblContMsg->setText("");
+    }
+
+    // Start unfiltered logging — open file first; if cancelled, do nothing
+    if (!FrameFileIO::openContinuousNative())
+        return;
+
+    continuousLoggingUseFilter = false;
+    continuousLogging = true;
+    ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
+}
+
+void MainWindow::handleContinousLoggingFiltered()
+{
+    // If already doing filtered logging, stop it
+    if (continuousLogging && continuousLoggingUseFilter)
+    {
+        continuousLogging = false;
+        ui->actionSave_Continuous_Filtered_Logfile->setText(tr("Start Continuous Logging (Filtered)"));
+        ui->lblContMsg->setText("");
+        FrameFileIO::closeContinuousNative();
+        return;
+    }
+
+    // If unfiltered logging is running, stop it before switching
+    if (continuousLogging)
+    {
+        FrameFileIO::closeContinuousNative();
+        continuousLogging = false;
+        ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
+        ui->lblContMsg->setText("");
+    }
+
+    // Start filtered logging — open file first; if cancelled, do nothing
+    if (!FrameFileIO::openContinuousNative())
+        return;
+
+    continuousLoggingUseFilter = true;
+    continuousLogging = true;
+    ui->actionSave_Continuous_Filtered_Logfile->setText(tr("Cease Continuous Logging (Filtered)"));
 }
 
 void MainWindow::handleSaveFilteredFile()
