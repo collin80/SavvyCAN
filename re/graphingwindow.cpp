@@ -359,7 +359,9 @@ void GraphingWindow::legendSingleClick(QCPLegend *legend, QCPAbstractLegendItem 
    if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
    {
       QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
+      if (!plItem) return;
       QCPGraph *pGraph = qobject_cast<QCPGraph *>(plItem->plottable());
+      if (!pGraph) return;
       QCPDataSelection sel;
       QCPDataRange rang;
       rang.setBegin(0);
@@ -377,7 +379,9 @@ void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem 
    if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
    {
       QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
+      if (!plItem) return;
       QCPGraph *pGraph = qobject_cast<QCPGraph *>(plItem->plottable());
+      if (!pGraph) return;
       QCPDataSelection sel;
       QCPDataRange rang;
       rang.setBegin(0);
@@ -425,7 +429,7 @@ void GraphingWindow::selectionChanged()
   {
     QCPGraph *graph = ui->graphingView->graph(i);
     QCPPlottableLegendItem *item = ui->graphingView->legend->itemWithPlottable(graph);
-    if (item->selected() || graph->selected())
+    if (item && (item->selected() || graph->selected()))
     {
       item->setSelected(true);
       //select graph too.
