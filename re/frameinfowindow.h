@@ -5,8 +5,10 @@
 #include <QFile>
 #include <QListWidget>
 #include <QTreeWidget>
+#include <QPushButton>
 #include <candatagrid.h>
 #include "can_structs.h"
+#include "utility.h"
 #include "bus_protocols/j1939_handler.h"
 #include "dbc/dbchandler.h"
 
@@ -32,6 +34,10 @@ private slots:
     void mousePress();
     void mouseWheel();
     void mouseDoubleClick();
+    void resetByteGraph(int idx);
+    void resetAllByteGraphs();
+    void togglePlotType(int idx, bool scatter);
+    void toggleAllPlotType(bool scatter);
 
 private:
     Ui::FrameInfoWindow *ui;
@@ -44,13 +50,17 @@ private:
     const QVector<CANFrame> *modelFrames;
     bool useOpenGL;
     bool useHexTicker;
+    TimeStyle timeStyle;
     static const QColor byteGraphColors[8];
     static QPen bytePens[8];
     DBCHandler *dbcHandler;
 
     QCPGraph *graphRef[8];
+    QPushButton *btnResetByteGraph[8];
+    QPushButton *btnTogglePlotType[8];
 
     void refreshIDList();
+    void captureXRange(double &xmin, double &xmax);
     void closeEvent(QCloseEvent *event);
     bool eventFilter(QObject *obj, QEvent *event);
     void setupByteGraph(QCustomPlot *plot, int num);
