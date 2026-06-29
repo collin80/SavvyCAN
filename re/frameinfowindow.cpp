@@ -4,6 +4,7 @@
 #include "helpwindow.h"
 #include <QtDebug>
 #include <vector>
+#include <limits>
 #include "filterutility.h"
 #include "qcpaxistickerhex.h"
 
@@ -41,8 +42,27 @@ FrameInfoWindow::FrameInfoWindow(const QVector<CANFrame> *frames, QWidget *paren
     {
         graphByte[i] = new QCustomPlot();
         setupByteGraph(graphByte[i], i);
+
+        btnResetByteGraph[i] = new QPushButton(QString(QChar(0x2302)), graphByte[i]);
+        btnResetByteGraph[i]->setFixedSize(26, 22);
+        btnResetByteGraph[i]->setToolTip(tr("Reset axis scaling"));
+        connect(btnResetByteGraph[i], &QPushButton::clicked, [this, i]() { resetByteGraph(i); });
+
+        btnTogglePlotType[i] = new QPushButton(QString(QChar(0x2500)), graphByte[i]); // "─" = line mode
+        btnTogglePlotType[i]->setFixedSize(26, 22);
+        btnTogglePlotType[i]->setCheckable(true);
+        btnTogglePlotType[i]->setToolTip(tr("Toggle line / scatter plot"));
+        connect(btnTogglePlotType[i], &QPushButton::clicked, [this, i](bool checked) { togglePlotType(i, checked); });
+
+        graphByte[i]->installEventFilter(this);
         ui->gridLower->addWidget(graphByte[i], i / 4, i & 3);
     }
+
+    ui->btnResetAllByteGraphs->setText(QString(QChar(0x2302)));
+    connect(ui->btnResetAllByteGraphs, &QPushButton::clicked, this, &FrameInfoWindow::resetAllByteGraphs);
+
+    ui->btnToggleAllPlotType->setText(QString(QChar(0x2500)));
+    connect(ui->btnToggleAllPlotType, &QPushButton::clicked, this, &FrameInfoWindow::toggleAllPlotType);
 
     ui->gridUpper->addWidget(new QLabel("Heatmap"), 0, 0);
     heatmap = new CANDataGrid();
@@ -143,7 +163,28 @@ void FrameInfoWindow::setupByteGraph(QCustomPlot *plot, int num)
     }
     //plot->axisRect()->setupFullAxesBox();
 
-    plot->xAxis->setLabel("Time [" + QString::number(num) + "]");
+    if (timeStyle == TS_CLOCK)
+    {
+        QSharedPointer<QCPAxisTickerDateTime> dateTicker(new QCPAxisTickerDateTime);
+        dateTicker->setDateTimeFormat(Utility::timeFormat);
+        plot->xAxis->setTicker(dateTicker);
+        plot->xAxis->setLabel("Timestamp [" + QString::number(num) + "]");
+    }
+    else if (timeStyle == TS_SECONDS)
+    {
+        QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+        timeTicker->setTimeFormat("%h:%m:%s");
+        plot->xAxis->setTicker(timeTicker);
+        plot->xAxis->setLabel("Time [s] [" + QString::number(num) + "]");
+    }
+    else if (timeStyle == TS_MILLIS)
+    {
+        plot->xAxis->setLabel("Time [ms] [" + QString::number(num) + "]");
+    }
+    else
+    {
+        plot->xAxis->setLabel("Time [s] [" + QString::number(num) + "]");
+    }
     //if (useHexTicker) plot->yAxis->setLabel("Value (HEX)");
     //else plot->yAxis->setLabel("Value (Dec)");
     plot->yAxis->setLabel("");
@@ -242,6 +283,23 @@ void FrameInfoWindow::showEvent(QShowEvent* event)
 
 bool FrameInfoWindow::eventFilter(QObject *obj, QEvent *event)
 {
+    if (event->type() == QEvent::Resize)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            if (obj == graphByte[i])
+            {
+                int btnW = btnResetByteGraph[i]->width();
+                int btnH = btnResetByteGraph[i]->height();
+                int y = graphByte[i]->height() - btnH;
+                btnResetByteGraph[i]->move(0, y);
+                btnResetByteGraph[i]->raise();
+                btnTogglePlotType[i]->move(btnW, y);
+                btnTogglePlotType[i]->raise();
+                return false;
+            }
+        }
+    }
     if (event->type() == QEvent::KeyRelease) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
         switch (keyEvent->key())
@@ -251,10 +309,8 @@ bool FrameInfoWindow::eventFilter(QObject *obj, QEvent *event)
             break;
         }
         return true;
-    } else {
-        // standard event processing
-        return QObject::eventFilter(obj, event);
     }
+    return QObject::eventFilter(obj, event);
 }
 
 FrameInfoWindow::~FrameInfoWindow()
@@ -289,6 +345,11 @@ void FrameInfoWindow::readSettings()
         move(Utility::constrainedWindowPos(settings.value("FrameInfo/WindowPos", QPoint(50, 50)).toPoint()));
     }
     useOpenGL = settings.value("Main/UseOpenGL", false).toBool();
+    timeStyle = TS_MICROS;
+    if (settings.value("Main/TimeSeconds", false).toBool()) timeStyle = TS_SECONDS;
+    if (settings.value("Main/TimeMillis", false).toBool()) timeStyle = TS_MILLIS;
+    if (settings.value("Main/TimeClock", false).toBool()) timeStyle = TS_CLOCK;
+    Utility::timeFormat = settings.value("Main/TimeFormat", "MMM-dd HH:mm:ss.zzz").toString();
     useHexTicker = settings.value("InfoCompare/GraphHex", false).toBool();
 }
 
@@ -300,6 +361,74 @@ void FrameInfoWindow::writeSettings()
     {
         settings.setValue("FrameInfo/WindowSize", size());
         settings.setValue("FrameInfo/WindowPos", pos());
+    }
+}
+
+void FrameInfoWindow::captureXRange(double &xmin, double &xmax)
+{
+    xmin = 0.0;
+    xmax = 1.0;
+    if (modelFrames->isEmpty()) return;
+
+    int64_t minTs = std::numeric_limits<int64_t>::max();
+    int64_t maxTs = std::numeric_limits<int64_t>::lowest();
+    for (const CANFrame &f : *modelFrames)
+    {
+        const int64_t ts = f.timeStamp().seconds() * 1000000ll + f.timeStamp().microSeconds();
+        if (ts < minTs) minTs = ts;
+        if (ts > maxTs) maxTs = ts;
+    }
+    xmin = (timeStyle == TS_MILLIS) ? minTs / 1000.0 : minTs / 1000000.0;
+    xmax = (timeStyle == TS_MILLIS) ? maxTs / 1000.0 : maxTs / 1000000.0;
+    if (xmin == xmax) xmax = xmin + 1.0;
+}
+
+void FrameInfoWindow::resetByteGraph(int idx)
+{
+    double xmin, xmax;
+    captureXRange(xmin, xmax);
+    graphByte[idx]->xAxis->setRange(xmin, xmax);
+    graphByte[idx]->yAxis->setRange(0, 265);
+    graphByte[idx]->replot();
+}
+
+void FrameInfoWindow::resetAllByteGraphs()
+{
+    double xmin, xmax;
+    captureXRange(xmin, xmax);
+    for (int i = 0; i < 8; i++)
+    {
+        graphByte[i]->xAxis->setRange(xmin, xmax);
+        graphByte[i]->yAxis->setRange(0, 265);
+        graphByte[i]->replot();
+    }
+}
+
+void FrameInfoWindow::togglePlotType(int idx, bool scatter)
+{
+    if (!graphRef[idx]) return;
+    if (scatter)
+    {
+        graphRef[idx]->setLineStyle(QCPGraph::lsNone);
+        graphRef[idx]->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, 4));
+        btnTogglePlotType[idx]->setText(QString(QChar(0x25CF))); // "●" = scatter mode
+    }
+    else
+    {
+        graphRef[idx]->setLineStyle(QCPGraph::lsLine);
+        graphRef[idx]->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssNone));
+        btnTogglePlotType[idx]->setText(QString(QChar(0x2500))); // "─" = line mode
+    }
+    graphByte[idx]->replot();
+}
+
+void FrameInfoWindow::toggleAllPlotType(bool scatter)
+{
+    ui->btnToggleAllPlotType->setText(scatter ? QString(QChar(0x25CF)) : QString(QChar(0x2500)));
+    for (int i = 0; i < 8; i++)
+    {
+        btnTogglePlotType[i]->setChecked(scatter);
+        togglePlotType(i, scatter);
     }
 }
 
@@ -550,7 +679,21 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             data = reinterpret_cast<const unsigned char *>(frameCache.at(j).payload().constData());
             dataLen = frameCache.at(j).payload().length();
 
-            byteGraphX.append(j);
+            const int64_t thisTimestamp = frameCache.at(j).timeStamp().seconds() * 1000000ll + frameCache.at(j).timeStamp().microSeconds();
+            switch (timeStyle)
+            {
+            case TS_CLOCK:
+            case TS_SECONDS:
+                byteGraphX.append(thisTimestamp / 1000000.0);
+                break;
+            case TS_MILLIS:
+                byteGraphX.append(thisTimestamp / 1000.0);
+                break;
+            case TS_MICROS:
+            default:
+                byteGraphX.append(thisTimestamp / 1000000.0);
+                break;
+            }
             for (int bytcnt = 0; bytcnt < dataLen; bytcnt++)
             {
                 byteGraphY[bytcnt].append(data[bytcnt]);
@@ -560,10 +703,11 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             {
                 //TODO - we try the interval whichever way doesn't go negative. But, we should probably sort the frame list before
                 //starting so that the intervals are all correct.
-                if (frameCache[j].timeStamp().microSeconds() > frameCache[j-1].timeStamp().microSeconds())
-                    thisInterval = (frameCache[j].timeStamp().microSeconds() - frameCache[j-1].timeStamp().microSeconds());
+                const int64_t prevTimestamp = frameCache[j-1].timeStamp().seconds() * 1000000ll + frameCache[j-1].timeStamp().microSeconds();
+                if (thisTimestamp > prevTimestamp)
+                    thisInterval = (thisTimestamp - prevTimestamp);
                 else
-                    thisInterval = (frameCache[j-1].timeStamp().microSeconds() - frameCache[j].timeStamp().microSeconds());
+                    thisInterval = (prevTimestamp - thisTimestamp);
 
                 sortedIntervals.push_back(thisInterval);
                 intervalSum += thisInterval;
@@ -803,13 +947,21 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         graphHistogram->axisRect()->setupFullAxesBox();
         graphHistogram->replot();
 
+        double xRangeMin, xRangeMax;
+        captureXRange(xRangeMin, xRangeMax);
+
         for (int graphs = 0; graphs < 8; graphs++)
         {
             graphByte[graphs]->clearGraphs();
             graphRef[graphs] = graphByte[graphs]->addGraph();
             graphByte[graphs]->graph()->setData(byteGraphX, byteGraphY[graphs]);
             graphByte[graphs]->graph()->setPen(bytePens[graphs]);
-            graphByte[graphs]->xAxis->setRange(0, byteGraphX.count());
+            if (btnTogglePlotType[graphs]->isChecked())
+            {
+                graphRef[graphs]->setLineStyle(QCPGraph::lsNone);
+                graphRef[graphs]->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, 4));
+            }
+            graphByte[graphs]->xAxis->setRange(xRangeMin, xRangeMax);
             graphByte[graphs]->replot();
         }
 
