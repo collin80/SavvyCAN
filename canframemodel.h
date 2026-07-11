@@ -52,6 +52,7 @@ public:
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
     void setFilterState(unsigned int ID, bool state);
+    void setFilterRangeState(unsigned int minimumID, unsigned int maximumID, bool state);
     void setBusFilterState(unsigned int BusID, bool state);
     void setAllFilters(bool state);
     void setTimeFormat(QString);
