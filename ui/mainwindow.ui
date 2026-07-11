@@ -328,6 +328,45 @@
          </widget>
         </item>
         <item>
+         <layout class="QVBoxLayout" name="verticalLayout_filterIdGroups">
+          <property name="spacing">
+           <number>6</number>
+          </property>
+          <item>
+           <widget class="QCheckBox" name="cbFilterStandardIds">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Select or deselect all IDs from 0x000 through 0x7FF</string>
+            </property>
+            <property name="text">
+             <string>Standard (11-bit)</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="cbFilterExtendedIds">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>Select or deselect all IDs from 0x800 through 0x1FFFFFFF</string>
+            </property>
+            <property name="text">
+             <string>Extended (29-bit)</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
          <widget class="QListWidget" name="listFilters">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
