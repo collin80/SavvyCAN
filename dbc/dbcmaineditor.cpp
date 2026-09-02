@@ -293,13 +293,15 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         msgID = getParentMessageID(firstCol);
         msg = dbcFile->messageHandler->findMsgByID(msgID);
         QString nameString = firstCol->text(0);
-        if (nameString.contains("("))
+        if (nameString.startsWith("("))
         {
             nameString = nameString.split(")")[1].trimmed(); //remove (1-2) type stuff from beginning of string
         }
         nameString = nameString.split(" ")[0]; //get rid of [32m 8] type stuff after the name
 
+        qDebug() << "try to find signal with name: " << nameString;
         sig = msg->sigHandler->findSignalByName(nameString);
+        qDebug() << "signal: " << (sig ? "yes" : "no");
         if (sig)
         {
             sigEditor->setSignalRef(sig);
