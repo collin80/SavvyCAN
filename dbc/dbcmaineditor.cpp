@@ -299,9 +299,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         }
         nameString = nameString.split(" ")[0]; //get rid of [32m 8] type stuff after the name
 
-        qDebug() << "try to find signal with name: " << nameString;
         sig = msg->sigHandler->findSignalByName(nameString);
-        qDebug() << "signal: " << (sig ? "yes" : "no");
         if (sig)
         {
             sigEditor->setSignalRef(sig);
