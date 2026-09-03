@@ -711,7 +711,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         {
             frames.append(tempFrame);
 
-            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus] && passesSearchFilter(tempFrame))
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                 tempFrame.frameCount = 1;
@@ -753,7 +753,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
         if (!found)
         {
             //frames.append(tempFrame);
-            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus])
+            if (filters[tempFrame.frameId()] && busFilters[tempFrame.bus] && passesSearchFilter(tempFrame))
             {
                 if (autoRefresh) beginInsertRows(QModelIndex(), filteredFrames.count(), filteredFrames.count());
                 tempFrame.frameCount = 1;
@@ -825,7 +825,7 @@ void CANFrameModel::sendRefresh()
         int count = frames.count();
         for (int i = 0; i < count; i++)
         {
-            if (filters[frames[i].frameId()] && busFilters[frames[i].bus])
+            if (filters[frames[i].frameId()] && busFilters[frames[i].bus] && passesSearchFilter(frames[i]))
             {
                 tempContainer.append(frames[i]);
             }
@@ -998,6 +998,24 @@ bool CANFrameModel::needsFilterRefresh()
     bool temp = needFilterRefresh;
     needFilterRefresh = false;
     return temp;
+}
+
+bool CANFrameModel::passesSearchFilter(const CANFrame& frame) const
+{
+    if (searchText.isEmpty()) return true;
+    QString idStr = QString::number(frame.frameId(), 16);
+    if (idStr.contains(searchText, Qt::CaseInsensitive)) return true;
+    QString dataStr = QString(frame.payload().toHex(' '));
+    if (dataStr.contains(searchText, Qt::CaseInsensitive)) return true;
+    return false;
+}
+
+void CANFrameModel::setSearchText(const QString &text)
+{
+    mutex.lock();
+    searchText = text.trimmed();
+    mutex.unlock();
+    sendRefresh();
 }
 
 /*
