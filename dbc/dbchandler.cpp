@@ -75,6 +75,7 @@ bool DBCSignalHandler::removeSignal(DBC_SIGNAL *sig)
         {
             sigs.removeAt(i);
             qDebug() << "Removed signal at idx " << i;
+            break;
         }
     }
     return true;
