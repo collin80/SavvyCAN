@@ -1,6 +1,7 @@
 #include <QtTest>
 
 #include "tst_lfqueue.h"
+#include "tst_blf.h"
 #include "tst_cancon.h"
 
 
@@ -15,6 +16,7 @@ int main(int argc, char** argv)
    };
 
    ASSERT_TEST(new TestLFQueue());
+   ASSERT_TEST(new TestBLF());
    ASSERT_TEST(new TestCanCon(CANCon::SOCKETCAN, "vcan0", 1));
 
    return status;
