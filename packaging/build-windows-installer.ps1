@@ -9,7 +9,7 @@ param(
     [string]$MingwDir = "C:\Qt\Tools\mingw810_64",
     [string]$Jobs     = "8"
 )
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $root  = Split-Path -Parent $PSScriptRoot
 $build = Join-Path $root "build"
 $rel   = Join-Path $build "release"
@@ -21,14 +21,16 @@ $env:Path = "$MingwDir\bin;$QtDir\bin;" + $env:Path
 Write-Host "==> Building SavvyCAN (release)"
 New-Item -ItemType Directory -Force $build | Out-Null
 Push-Location $build
-qmake "$root\SavvyCAN.pro" CONFIG+=release
-mingw32-make -j$Jobs
+qmake "$root\SavvyCAN.pro" CONFIG+=release *> (Join-Path $build "setup_qmake.log")
+if ($LASTEXITCODE -ne 0) { throw "qmake failed ($LASTEXITCODE)" }
+mingw32-make "--jobs=$Jobs" *> (Join-Path $build "setup_make.log")
+if ($LASTEXITCODE -ne 0) { throw "mingw32-make failed ($LASTEXITCODE)" }
 Pop-Location
 
 Write-Host "==> Compiling translations"
 New-Item -ItemType Directory -Force "$rel\translations" | Out-Null
 Get-ChildItem "$root\translations\*.ts" | ForEach-Object {
-    lrelease $_.FullName | Out-Null
+    lrelease $_.FullName 2>&1 | Out-Null
     $qm = [System.IO.Path]::ChangeExtension($_.FullName, ".qm")
     if (Test-Path $qm) { Copy-Item $qm "$rel\translations\" -Force }
 }
@@ -67,7 +69,7 @@ $nsi    = Join-Path $inst "installer.nsi"
 # makensis needs UTF-8 with BOM for non-ASCII (Chinese) text.
 $text = Get-Content -Raw -Encoding UTF8 $nsiSrc
 [System.IO.File]::WriteAllText($nsi, $text, (New-Object System.Text.UTF8Encoding($true)))
-makensis.exe /V2 $nsi
-if ($LASTEXITCODE -ne 0) { throw "makensis failed" }
+makensis.exe /V2 $nsi 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "makensis failed ($LASTEXITCODE)" }
 
 Write-Host "==> Done:" (Get-ChildItem "$inst\*.exe" | Select-Object -ExpandProperty FullName)

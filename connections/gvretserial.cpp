@@ -251,6 +251,7 @@ bool GVRetSerial::piSendFrame(const CANFrame& frame)
     }
     ID = frame.frameId();
     if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
+    if (frame.frameType() == QCanBusFrame::RemoteRequestFrame) ID |= 0x40000000u; // RTR flag
 
     buffer[0] = (char)0xF1; //start of a command over serial
     buffer[1] = 0; //command ID for sending a CANBUS frame
@@ -701,13 +702,12 @@ void GVRetSerial::procRXChar(unsigned char c)
             break;
         case 7:
             buildId |= c << 24;
-            if ((buildId & 1 << 31) == 1u << 31)
-            {
-                buildId &= 0x7FFFFFFF;
-                buildFrame.setExtendedFrameFormat(true);
-            }
-            else buildFrame.setExtendedFrameFormat(false);
-            buildFrame.setFrameId(buildId);
+            // bit31 = extended frame, bit30 = remote (RTR) frame
+            buildFrame.setExtendedFrameFormat((buildId & 0x80000000u) != 0);
+            buildFrame.setFrameType(((buildId & 0x40000000u) != 0) ?
+                                    QCanBusFrame::FrameType::RemoteRequestFrame :
+                                    QCanBusFrame::FrameType::DataFrame);
+            buildFrame.setFrameId(buildId & 0x1FFFFFFFu);
             break;
         case 8:
             buildData.resize(c & 0xF);
@@ -723,7 +723,6 @@ void GVRetSerial::procRXChar(unsigned char c)
                     rx_step = 0;
                     buildFrame.isReceived = true;
                     buildFrame.setPayload(buildData);
-                    buildFrame.setFrameType(QCanBusFrame::FrameType::DataFrame);
                     if (!isCapSuspended())
                     {
                         /* get frame from queue */
@@ -802,11 +801,14 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildFrame.bus = c;
             break;
         default:
-            if (rx_step < buildData.length() + 10)
+            if (rx_step >= buildData.length() + 10)
             {
-                buildData[rx_step - 9] = c;
+                rx_state = IDLE;
+                rx_step = 0;
+                break;
             }
-            else
+            buildData[rx_step - 10] = c;
+            if (rx_step == buildData.length() + 9) // last data byte: process immediately
             {
                 rx_state = IDLE;
                 rx_step = 0;
