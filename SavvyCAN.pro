@@ -275,7 +275,7 @@ iconfiles.path = $$PREFIX/share
 INSTALLS += iconfiles
 
 helpfiles.files=help/*
-helpfiles.path = $$PREFIX/bin/help
+helpfiles.path = $$PREFIX/share/savvycan/help
 INSTALLS += helpfiles
 
 INSTALLS += target
