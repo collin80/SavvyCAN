@@ -745,6 +745,13 @@ void FrameSenderWindow::doModifiers(int idx)
     }
 }
 
+//byte idx of a payload, or 0 if the payload is shorter than that
+static unsigned char payloadByte(const QByteArray &payload, int idx)
+{
+    if (idx < 0 || idx >= payload.size()) return 0;
+    return (unsigned char)payload.at(idx);
+}
+
 int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
 {
     CommFrame *tempFrame = nullptr;
@@ -755,17 +762,17 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
     }
     else if (op.ID == -2) //fetch data from a data byte within the output frame
     {
-        //value() returns 0 past the end of the payload instead of reading out of bounds
-        if (op.notOper) return ~((unsigned char)sendingData.at(idx).payload().value(op.databyte));
-        else return (unsigned char)sendingData.at(idx).payload().value(op.databyte);
+        //payloadByte() returns 0 past the end of the payload instead of reading out of bounds
+        if (op.notOper) return ~payloadByte(sendingData.at(idx).payload(), op.databyte);
+        else return payloadByte(sendingData.at(idx).payload(), op.databyte);
     }
     else //look up external data byte
     {
         tempFrame = lookupFrame(op.ID, op.bus);
         if (tempFrame != nullptr)
         {
-            if (op.notOper) return ~((unsigned char)tempFrame->payload().value(op.databyte));
-            else return (unsigned char)tempFrame->payload().value(op.databyte);
+            if (op.notOper) return ~payloadByte(tempFrame->payload(), op.databyte);
+            else return payloadByte(tempFrame->payload(), op.databyte);
         }
         else return 0;
     }
