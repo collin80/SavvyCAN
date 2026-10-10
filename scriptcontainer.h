@@ -26,6 +26,7 @@ public slots:
     void setFilter(QJSValue id, QJSValue mask, QJSValue bus);
     void clearFilters();
     void sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data);
+    void sendFDFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data, QJSValue brs);
     void setRxCallback(QJSValue cb);
 
 private slots:

@@ -21,7 +21,13 @@ This screen is laid out as a data grid.
   then this line will be active.
 * The second field is "Bus" and sets which bus to use for sending.
 * The third field is "ID" and is the ID to use for sending. It can be specified in hex or decimal formats.
-* The fourth field is "Len" and sets the number of data bytes for this frame.
+* The fourth field is "Len" and sets the number of data bytes for this frame. Classic CAN frames carry up to
+  8 bytes. CAN FD frames carry up to 64; a length that isn't a valid CAN FD size is padded with zeros up to
+  the next one (12, 16, 20, 24, 32, 48 or 64).
+* The check boxes "Ext", "Rem", "FD" and "BRS" select an extended (29 bit) ID, a remote frame, a CAN FD
+  frame, and CAN FD bit rate switching (a faster data phase). BRS implies FD, and CAN FD frames can't be
+  remote frames. Sending CAN FD frames needs a connection that supports them (e.g. LAWICEL with CAN FD
+  enabled, or a GVRET device that accepts CAN FD frames).
 * The fifth field is "Data" and specifies what values will be sent for the next frame. These values can be
   automatically updated by the modifiers which will be covered later on.
 * The sixth field is "Trigger" which specifies when this frame will be sent. Proper syntax for triggers is

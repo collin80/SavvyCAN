@@ -255,6 +255,46 @@ void CANScriptHelper::sendFrame(QJSValue bus, QJSValue id, QJSValue length, QJSV
     CANConManager::getInstance()->sendFrame(frame);
 }
 
+//CAN FD version of sendFrame. length can be 0-64; anything that isn't a valid CAN FD length
+//(0-8, 12, 16, 20, 24, 32, 48, 64) is padded with zeros up to the next valid one. brs = bit rate switch.
+void CANScriptHelper::sendFDFrame(QJSValue bus, QJSValue id, QJSValue length, QJSValue data, QJSValue brs)
+{
+    static const int fdSizes[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+    CommFrame frame;
+    frame.setExtendedFrameFormat(false);
+    frame.setFrameId(static_cast<uint32_t>(id.toInt()));
+
+    int requested = static_cast<int>(length.toUInt());
+    if (requested > 64) requested = 64;
+    int fdLen = 64;
+    for (int size : fdSizes)
+    {
+        if (requested <= size)
+        {
+            fdLen = size;
+            break;
+        }
+    }
+
+    if (!data.isArray()) qDebug() << "data isn't an array";
+
+    QByteArray bytes(fdLen, 0);
+    for (int i = 0; i < requested; i++)
+    {
+        bytes[i] = (uint8_t)data.property(i).toInt();
+    }
+    frame.setPayload(bytes);
+    frame.setBus((uint32_t)bus.toInt());
+    frame.setFrameType(CommFrame::CANFDDataFrame);
+    frame.setFlexibleDataRateFormat(true);
+    frame.setBitrateSwitch(brs.toBool());
+
+    if (frame.frameId() > 0x7FF) frame.setExtendedFrameFormat(true);
+
+    qDebug() << "sending CAN FD frame from script";
+    CANConManager::getInstance()->sendFrame(frame);
+}
+
 void CANScriptHelper::gotTargettedFrame(const CommFrame &frame)
 {
     if (!gotFrameFunction.isCallable()) return; //nothing to do if we can't even call the function
