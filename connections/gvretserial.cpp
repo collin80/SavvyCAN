@@ -190,17 +190,19 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         /* update baud rates */
         QByteArray buffer;
         sendDebug("Got signal to update bauds. 1: " + QString::number((can0Baud & 0xFFFFFFF)) + " 2: " + QString::number((can1Baud & 0xFFFFFFF)));
-        buffer[0] = (char)0xF1; //start of a command over serial
-        buffer[1] = 5; //setup canbus
-        buffer[2] = (char)(can0Baud & 0xFF); //four bytes of ID LSB first
-        buffer[3] = (char)(can0Baud >> 8);
-        buffer[4] = (char)(can0Baud >> 16);
-        buffer[5] = (char)(can0Baud >> 24);
-        buffer[6] = (char)(can1Baud & 0xFF); //four bytes of ID LSB first
-        buffer[7] = (char)(can1Baud >> 8);
-        buffer[8] = (char)(can1Baud >> 16);
-        buffer[9] = (char)(can1Baud >> 24);
-        buffer[10] = 0;
+        //append() rather than buffer[n] = ...: indexing past the end of an empty QByteArray
+        //writes to read-only shared storage under Qt 6 and crashes
+        buffer.append((char)0xF1); //start of a command over serial
+        buffer.append((char)5); //setup canbus
+        buffer.append((char)(can0Baud & 0xFF)); //four bytes of ID LSB first
+        buffer.append((char)(can0Baud >> 8));
+        buffer.append((char)(can0Baud >> 16));
+        buffer.append((char)(can0Baud >> 24));
+        buffer.append((char)(can1Baud & 0xFF)); //four bytes of ID LSB first
+        buffer.append((char)(can1Baud >> 8));
+        buffer.append((char)(can1Baud >> 16));
+        buffer.append((char)(can1Baud >> 24));
+        buffer.append((char)0);
         sendToSerial(buffer);
     }
     else
@@ -208,21 +210,21 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         /* update baud rates */
         QByteArray buffer;
         sendDebug("Got signal to update extended bus speeds SWCAN: " + QString::number(swcanBaud) + " LIN1: " + QString::number(lin1Baud) + " LIN2: " + QString::number(lin2Baud));
-        buffer[0] = (char)0xF1; //start of a command over serial
-        buffer[1] = 14; //setup extended buses
-        buffer[2] = (char)(swcanBaud & 0xFF); //four bytes of ID LSB first
-        buffer[3] = (char)(swcanBaud >> 8);
-        buffer[4] = (char)(swcanBaud >> 16);
-        buffer[5] = (char)(swcanBaud >> 24);
-        buffer[6] = (char)(lin1Baud & 0xFF); //four bytes of ID LSB first
-        buffer[7] = (char)(lin1Baud >> 8);
-        buffer[8] = (char)(lin1Baud >> 16);
-        buffer[9] = (char)(lin1Baud >> 24);
-        buffer[10] = (char)(lin2Baud & 0xFF); //four bytes of ID LSB first
-        buffer[11] = (char)(lin2Baud >> 8);
-        buffer[12] = (char)(lin2Baud >> 16);
-        buffer[13] = (char)(lin2Baud >> 24);
-        buffer[14] = 0;
+        buffer.append((char)0xF1); //start of a command over serial
+        buffer.append((char)14); //setup extended buses
+        buffer.append((char)(swcanBaud & 0xFF)); //four bytes of ID LSB first
+        buffer.append((char)(swcanBaud >> 8));
+        buffer.append((char)(swcanBaud >> 16));
+        buffer.append((char)(swcanBaud >> 24));
+        buffer.append((char)(lin1Baud & 0xFF)); //four bytes of ID LSB first
+        buffer.append((char)(lin1Baud >> 8));
+        buffer.append((char)(lin1Baud >> 16));
+        buffer.append((char)(lin1Baud >> 24));
+        buffer.append((char)(lin2Baud & 0xFF)); //four bytes of ID LSB first
+        buffer.append((char)(lin2Baud >> 8));
+        buffer.append((char)(lin2Baud >> 16));
+        buffer.append((char)(lin2Baud >> 24));
+        buffer.append((char)0);
         sendToSerial(buffer);
     }
 }
