@@ -67,6 +67,7 @@ private slots:
 private:
     void readSettings();
     void procRXChar(unsigned char);
+    void emitBuiltFrame(CommFrame::FrameType frameType);
     void sendCommValidation();
     void rebuildLocalTimeBasis();
     void sendToSerial(const QByteArray &bytes);

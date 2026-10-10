@@ -598,6 +598,37 @@ void GVRetSerial::debugInput(QByteArray bytes) {
    sendToSerial(bytes);
 }
 
+//Hand a fully received frame (buildFrame/buildData) to the capture queue
+void GVRetSerial::emitBuiltFrame(CommFrame::FrameType frameType)
+{
+    //a corrupt bus byte must not land the frame on another connection's buses
+    if (buildFrame.getBus() >= getNumBuses())
+    {
+        qDebug() << "GVRET frame on invalid bus" << (int)buildFrame.getBus() << "dropped";
+        return;
+    }
+
+    buildFrame.setReceived(true);
+    buildFrame.setPayload(buildData);
+    buildFrame.setFrameType(frameType);
+    //buildFrame is reused, so set the FD flag both ways (clearing it also clears BRS)
+    buildFrame.setFlexibleDataRateFormat(frameType == CommFrame::FrameType::CANFDDataFrame);
+    if (isCapSuspended()) return;
+
+    /* get frame from queue */
+    CommFrame* frame_p = getQueue().get();
+    if (frame_p)
+    {
+        /* copy frame */
+        *frame_p = buildFrame;
+        checkTargettedFrame(buildFrame);
+        /* enqueue frame */
+        getQueue().queue();
+    }
+    else
+        qDebug() << "can't get a frame, ERROR";
+}
+
 void GVRetSerial::procRXChar(unsigned char c)
 {
     CANConStatus stats;
@@ -712,6 +743,12 @@ void GVRetSerial::procRXChar(unsigned char c)
         case 8:
             buildData.resize(c & 0xF);
             buildFrame.setBus((c & 0xF0) >> 4);
+            if (buildData.isEmpty()) //no data bytes follow, so the frame is complete now
+            {
+                rx_state = IDLE;
+                rx_step = 0;
+                emitBuiltFrame(CommFrame::FrameType::CANDataFrame);
+            }
             break;
         default:
             if (rx_step < buildData.length() + 9)
@@ -721,27 +758,7 @@ void GVRetSerial::procRXChar(unsigned char c)
                 {
                     rx_state = IDLE;
                     rx_step = 0;
-                    buildFrame.setReceived(true);
-                    buildFrame.setPayload(buildData);
-                    buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
-                    if (!isCapSuspended())
-                    {
-                        /* get frame from queue */
-                        CommFrame* frame_p = getQueue().get();
-                        if(frame_p) {
-                            //qDebug() << "GVRET got frame on bus " << frame_p->bus;
-                            /* copy frame */
-                            *frame_p = buildFrame;
-                            checkTargettedFrame(buildFrame);
-                            /* enqueue frame */
-                            getQueue().queue();
-                        }
-                        else
-                            qDebug() << "can't get a frame, ERROR";
-
-                        //take the time the frame came in and try to resync the time base.
-                        //if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame.timestamp / 1000);
-                    }
+                    emitBuiltFrame(CommFrame::FrameType::CANDataFrame);
                 }
             }
             else //should never get here! But, just in case, reset the comm
@@ -796,41 +813,31 @@ void GVRetSerial::procRXChar(unsigned char c)
             buildFrame.setFrameId(buildId);
             break;
         case 8:
-            buildData.resize(c & 0x3F);
+            //bits 0-6 = payload length (0-64), bit 7 = bit rate switch
+            //(the old 0x3F mask turned a 64 byte frame into an empty one)
+            if ((c & 0x7F) > 64) //not a valid FD length, drop it and resync on the next 0xF1
+            {
+                rx_state = IDLE;
+                rx_step = 0;
+                break;
+            }
+            buildData.resize(c & 0x7F);
+            buildFrame.setBitrateSwitch((c & 0x80) != 0);
             break;
         case 9:
             buildFrame.setBus(c);
             break;
         default:
+            //data bytes occupy steps 10 .. length + 9, then one trailing byte completes the frame
             if (rx_step < buildData.length() + 10)
             {
-                buildData[rx_step - 9] = c;
+                buildData[rx_step - 10] = c;
             }
             else
             {
                 rx_state = IDLE;
                 rx_step = 0;
-                buildFrame.setReceived(true);
-                buildFrame.setPayload(buildData);
-                buildFrame.setFrameType(CommFrame::FrameType::CANFDDataFrame);
-                if (!isCapSuspended())
-                {
-                    /* get frame from queue */
-                    CommFrame* frame_p = getQueue().get();
-                    if(frame_p) {
-                        //qDebug() << "GVRET got frame on bus " << frame_p->bus;
-                        /* copy frame */
-                        *frame_p = buildFrame;
-                        checkTargettedFrame(buildFrame);
-                        /* enqueue frame */
-                        getQueue().queue();
-                    }
-                    else
-                        qDebug() << "can't get a frame, ERROR";
-
-                    //take the time the frame came in and try to resync the time base.
-                    //if (continuousTimeSync) txTimestampBasis = QDateTime::currentMSecsSinceEpoch() - (buildFrame.timestamp / 1000);
-                }
+                emitBuiltFrame(CommFrame::FrameType::CANFDDataFrame);
             }
             break;
         }
