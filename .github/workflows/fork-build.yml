@@ -1,6 +1,7 @@
-# Fork-only workflow: builds the Windows x64 package for this fork's branches.
+# Fork-only workflow: builds the Linux x64 AppImage and the Windows x64 package for this fork's branches.
+# Both jobs are copied unchanged from upstream's build.yml.
 # Upstream's build.yml only runs on QT6WIP and also publishes a release and notifies Discord.
-name: Fork Windows Build
+name: Fork Build (Linux + Windows)
 
 on:
   push:
@@ -9,6 +10,41 @@ on:
   workflow_dispatch:
 
 jobs:
+  buildlinux:
+    name: Linux x64
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Prepare Environment
+        run: |
+            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-cursor0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0 libfuse2
+
+      - name: Prepare Qt Libraries
+        uses: jurplel/install-qt-action@v4
+        with:
+           version: '6.10'
+           modules: 'qtserialbus qtserialport'
+
+      - name: Clone
+        uses: actions/checkout@v3
+
+      - name: Compile
+        run: |
+          cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{github.workspace}}/build --config Release -j`grep -c ^processor /proc/cpuinfo`
+          mv ${{github.workspace}}/build/SavvyCAN ${{github.workspace}}
+          
+      - name: Package     
+        run: |
+          wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
+          chmod a+x linuxdeployqt-continuous-x86_64.AppImage
+          ./linuxdeployqt-continuous-x86_64.AppImage ./SavvyCAN.desktop -appimage -extra-plugins=iconengines,platformthemes/libqgtk3.so,canbus
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SavvyCAN-Linux_x64.AppImage
+          path: SavvyCAN-*x86_64.AppImage
+
   buildwindows:
     name: Windows x64
     runs-on: windows-2022
