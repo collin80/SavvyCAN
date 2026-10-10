@@ -136,6 +136,10 @@ bool LAWICELSerial::piSendFrame(const CANFrame& frame)
     int c;
     quint32 ID;
 
+    CANBus bus;
+    if (getBusConfig(0, bus) && bus.isListenOnly())
+        return false;
+
     //qDebug() << "Sending out lawicel frame with id " << frame.ID << " on bus " << frame.bus;
 
     framesRapid++;
