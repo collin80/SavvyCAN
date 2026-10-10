@@ -145,33 +145,35 @@ bool LAWICELSerial::piSendFrame(const CommFrame& frame)
         return true;
     }
 
-    quint32 ID = frame.frameId();
-    if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
+    //The command letter (t/T, d/D, b/B) says whether the ID is 11 or 29 bits, so only the ID itself is
+    //printed (setting bit 31 here, as before, printed extended IDs as e.g. 98DA0040).
+    quint32 ID = frame.frameId() & (frame.hasExtendedFrameFormat() ? 0x1FFFFFFF : 0x7FF);
 
     int idx = 0;
     QString buildStr;
+    //The DLC is one hex character, 0-F. FD lengths over 8 use codes 9-F, which %u printed as "10".."15".
     uint8_t dlcByte = LAWICELSerial::bytes_to_dlc_code(frame.payload().length());
     if(frame.hasFlexibleDataRateFormat()){
         if (frame.hasExtendedFrameFormat())
         {
             if (frame.hasBitrateSwitch())
-                buildStr = QString::asprintf("B%08X%u", ID, dlcByte);
+                buildStr = QString::asprintf("B%08X%X", ID, dlcByte);
             else
-                buildStr = QString::asprintf("D%08X%u", ID, dlcByte);
+                buildStr = QString::asprintf("D%08X%X", ID, dlcByte);
         }
         else
         {
             if (frame.hasBitrateSwitch())
-                buildStr = QString::asprintf("b%03X%u", ID, dlcByte);
+                buildStr = QString::asprintf("b%03X%X", ID, dlcByte);
             else
-                buildStr = QString::asprintf("d%03X%u", ID, dlcByte);
+                buildStr = QString::asprintf("d%03X%X", ID, dlcByte);
         }
     }
     else {
         if (frame.hasExtendedFrameFormat())
-            buildStr = QString::asprintf("T%08X%u", ID, dlcByte);
+            buildStr = QString::asprintf("T%08X%X", ID, dlcByte);
         else
-            buildStr = QString::asprintf("t%03X%u", ID, dlcByte);
+            buildStr = QString::asprintf("t%03X%X", ID, dlcByte);
     }
 
     QByteArray buffer;

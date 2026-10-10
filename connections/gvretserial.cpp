@@ -252,15 +252,32 @@ bool GVRetSerial::piSendFrame(const CommFrame& frame)
     ID = frame.frameId();
     if (frame.hasExtendedFrameFormat()) ID |= 1u << 31;
 
+    const bool isFD = frame.hasFlexibleDataRateFormat();
+    int len = frame.payload().length();
+
     buffer.append((char)0xF1); //start of a command over serial
-    buffer.append((char)0); //command ID for sending a CANBUS frame
+    if (isFD)
+    {
+        //CAN FD frame, opcode 20: id[4] (bit 31 = extended), bus, length (bits 0-6) with BRS in bit 7,
+        //data[length], trailing byte. Same layout as opcode 0 below; the length byte matches the one in
+        //the opcode 20 frames GVRET devices send to us.
+        if (len > 64) len = 64;
+        buffer.append((char)20);
+    }
+    else
+    {
+        //classic frame, opcode 0. A longer payload isn't a valid classic frame and would throw the
+        //device's parser out of step (it would read the extra bytes as commands).
+        if (len > 8) len = 8;
+        buffer.append((char)0); //command ID for sending a CANBUS frame
+    }
     buffer.append((char)(ID & 0xFF)); //four bytes of ID LSB first
     buffer.append((char)(ID >> 8));
     buffer.append((char)(ID >> 16));
     buffer.append((char)(ID >> 24));
     buffer.append( (char)((frame.getBus()) & 3) );
-    buffer.append( (char)frame.payload().length() );
-    for (c = 0; c < frame.payload().length(); c++)
+    buffer.append( (char)(len | ((isFD && frame.hasBitrateSwitch()) ? 0x80 : 0)) );
+    for (c = 0; c < len; c++)
     {
         buffer.append(frame.payload()[c]);
     }
