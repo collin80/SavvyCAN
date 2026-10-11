@@ -80,8 +80,6 @@ Every fix or new feature that lands on `fork-ci` gets:
 
 ## Known issues
 
-- **QtSerialBus timestamps:** frames from QtSerialBus devices all have a zero timestamp. `framesReceived()` calls
-  the static `TimeStamp::fromMicroSeconds()` and throws the result away. Not fixed yet.
 - **GVRET FD layout:** `GET_FD`/`SETUP_FD` use a byte layout this fork proposed. It still needs agreeing with
   collin80, since it's his protocol. The matching firmware is ESP32RET branch `t2canfd-board` in
   `Tom-evnut/ESP32RET`.
@@ -102,6 +100,14 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-11: QtSerialBus timestamp code cleaned up (`fd-serialbus`)
+
+- **Dead code removed:** `framesReceived()` built a timestamp with the static `TimeStamp::fromMicroSeconds()`,
+  threw it away, and set the frame's timestamp to zero.
+- **Timestamps were already right:** the frame's real timestamp is set later in the same loop. The dead code only
+  made it look as if every frame had a zero timestamp (it was listed as a known issue here by mistake).
+- **New test:** received frames have non-zero timestamps in arrival order.
 
 ### 2026-10-11: fixes found by the automated tests
 
