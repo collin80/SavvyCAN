@@ -63,6 +63,14 @@ void CanLogServer::readNetworkData()
             QString qstrCanId = "0";
             // Split frame
             QStringList lstMsg = lstData[2].split("#");
+            // CAN FD frames are sent as <id>##<flags><payload>, flags being one hex digit (1 = BRS, 2 = ESI)
+            bool isFD = false;
+            int fdFlags = 0;
+            if(lstMsg.size() == 3 && lstMsg[1].isEmpty() && !lstMsg[2].isEmpty()){
+                isFD = true;
+                fdFlags = lstMsg[2].left(1).toInt(nullptr, 16);
+                lstMsg = QStringList() << lstMsg[0] << lstMsg[2].mid(1);
+            }
             // Expect 2 item (<id>#<payload>)
             if(lstMsg.size() == 2){
                 // Extract id
@@ -82,7 +90,13 @@ void CanLogServer::readNetworkData()
                         // Set bus id
                         frame_p->setBus(qstrCanId.toInt());
                         // Set frame type
-                        frame_p->setFrameType(CommFrame::CANDataFrame);
+                        if(isFD){
+                            frame_p->setFrameType(CommFrame::CANFDDataFrame);
+                            frame_p->setBitrateSwitch(fdFlags & 1);
+                            frame_p->setErrorStateIndicator(fdFlags & 2);
+                        }
+                        else
+                            frame_p->setFrameType(CommFrame::CANDataFrame);
                         // Frame is recived
                         frame_p->setReceived(true);
                         // Set timestamp
