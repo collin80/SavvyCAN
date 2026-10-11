@@ -239,10 +239,7 @@ void SerialBusConnection::framesReceived()
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId());
                 }
-                //the timestamp structs are identical in theory but the compiler does not know or respect that. Best to regenerate
-                CommFrame::TimeStamp stamp;
-                stamp.fromMicroSeconds(recFrame.timeStamp().seconds() * 1000000ull + recFrame.timeStamp().microSeconds());
-                frame_p->setTimeStamp(stamp);
+                //(the timestamp is set further down, once the frame type is known)
 
                 //Ditto for error but not frametype. That one is different
 
