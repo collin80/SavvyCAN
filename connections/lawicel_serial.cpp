@@ -311,8 +311,12 @@ void LAWICELSerial::deviceConnected()
 
     output.clear();
 
-    if (this->canFd){
-        switch (this->dataRate)
+    //CAN FD mode and data rate come from the bus settings (filled in from the connection dialog). The
+    //canFd/dataRate members this used were never set, so whether Y was sent depended on leftover memory.
+    const bool canFd = mBusData[0].mBus.isCanFD();
+    const int dataRate = mBusData[0].mBus.getDataRate();
+    if (canFd){
+        switch (dataRate)
         {
         case 1000000:
             output.append("Y1");
@@ -328,7 +332,7 @@ void LAWICELSerial::deviceConnected()
             break;
         default:
             //only 1/2/4/5 Mbit/s are mapped to Y codes here
-            qWarning() << "LAWICEL: CAN FD data rate" << this->dataRate << "not supported, using 2 Mbit/s";
+            qWarning() << "LAWICEL: CAN FD data rate" << dataRate << "not supported, using 2 Mbit/s";
             output.append("Y2");
             break;
         }
