@@ -10,6 +10,7 @@ CANBus::CANBus()
     active      = false;
     canFD       = false;
     dataRate    = 2000000;
+    canFDCapable = false;
 }
 
 
@@ -19,7 +20,8 @@ bool CANBus::operator==(const CANBus& bus) const{
             singleWire == bus.singleWire &&
             active == bus.active &&
             canFD == bus.canFD &&
-            dataRate == bus.dataRate;
+            dataRate == bus.dataRate &&
+            canFDCapable == bus.canFDCapable;
 }
 
 void CANBus::setSpeed(int newSpeed){
@@ -74,6 +76,14 @@ bool CANBus::isActive() const {
 
 bool CANBus::isCanFD() const {
     return canFD;
+}
+
+void CANBus::setCanFDCapable(bool capable){
+    canFDCapable = capable;
+}
+
+bool CANBus::isCanFDCapable() const {
+    return canFDCapable;
 }
 
 
