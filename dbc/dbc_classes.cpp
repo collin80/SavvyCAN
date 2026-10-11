@@ -8,6 +8,8 @@ DBC_MESSAGE::DBC_MESSAGE()
     sigHandler = new DBCSignalHandler;
     ID = 0;
     len = 0;
+    canFD = false;
+    bitRateSwitch = true;
     multiplexorSignal = nullptr;
     sender = nullptr;
 }

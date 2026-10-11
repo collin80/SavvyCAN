@@ -93,6 +93,8 @@ public:
     QList<DBC_VAL_TABLE> dbc_value_tables;
     QList<DBC_ATTRIBUTE> dbc_attributes;
 private:
+    void syncCanFDAttributes();
+
     QString fileName;
     QString filePath;
     int assocBuses; //-1 = all buses, 0 = first bus, 1 = second bus, etc.
