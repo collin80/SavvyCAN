@@ -161,23 +161,6 @@ void SerialBusConnection::disconnectDevice() {
     }
 }
 
-/* Immediately update status when the device state changes */
-void SerialBusConnection::deviceStateChanged(QCanBusDevice::CanBusDeviceState state)
-{
-    CANConStatus stats;
-    if (state == QCanBusDevice::ConnectedState) {
-        setStatus(CANCon::CONNECTED);
-        stats.conStatus = getStatus();
-        stats.numHardwareBuses = mNumBuses;
-        emit status(stats);
-    } else if (state == QCanBusDevice::UnconnectedState && getStatus() == CANCon::CONNECTED) {
-        setStatus(CANCon::NOT_CONNECTED);
-        stats.conStatus = getStatus();
-        stats.numHardwareBuses = mNumBuses;
-        emit status(stats);
-    }
-}
-
 void SerialBusConnection::errorReceived(QCanBusDevice::CanBusError error) const
 {
     switch (error) {
