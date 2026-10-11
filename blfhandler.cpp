@@ -143,6 +143,59 @@ bool BLFHandler::loadBLF(QString filename, QVector<CommFrame>* frames)
                             frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
                             frames->append(frame);
                         }
+                        else if (obj.header.base.objType == BLF_CAN_FD_MSG && fileData.length() >= (int)sizeof(BLF_CANFD_OBJ))
+                        {
+                            BLF_CANFD_OBJ fdObject;
+                            memcpy(&fdObject, fileData.constData(), sizeof(BLF_CANFD_OBJ));
+                            CommFrame frame;
+                            frame.setBus(fdObject.channel);
+                            frame.setExtendedFrameFormat((fdObject.id & 0x80000000ull)?true:false);
+                            frame.setFrameId(fdObject.id & 0x1FFFFFFFull);
+                            frame.setReceived(true);
+                            int len = qMin((int)fdObject.validDataBytes, 64);
+                            if (fdObject.flags & BLF_REMOTE_FLAG) {
+                                frame.setFrameType(CommFrame::RemoteRequestFrame);
+                                frame.setPayload(QByteArray(len, 0));
+                            } else {
+                                frame.setPayload(QByteArray(reinterpret_cast<const char *>(fdObject.data), len));
+                                //classic frames on a CAN FD channel are logged with this object type too
+                                if (fdObject.fdFlags & 0x01)
+                                {
+                                    frame.setFlexibleDataRateFormat(true);
+                                    frame.setBitrateSwitch(fdObject.fdFlags & 0x02);
+                                    frame.setErrorStateIndicator(fdObject.fdFlags & 0x04);
+                                }
+                            }
+                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0));
+                            frames->append(frame);
+                        }
+                        else if (obj.header.base.objType == BLF_CAN_FD_MSG64 && fileData.length() >= (int)sizeof(BLF_CANFD64_OBJ))
+                        {
+                            BLF_CANFD64_OBJ fdObject;
+                            memcpy(&fdObject, fileData.constData(), sizeof(BLF_CANFD64_OBJ));
+                            CommFrame frame;
+                            frame.setBus(fdObject.channel);
+                            frame.setExtendedFrameFormat((fdObject.id & 0x80000000ull)?true:false);
+                            frame.setFrameId(fdObject.id & 0x1FFFFFFFull);
+                            frame.setReceived(true);
+                            int len = qMin((int)fdObject.validDataBytes, 64);
+                            len = qMin(len, (int)(fileData.length() - sizeof(BLF_CANFD64_OBJ))); //data follows the structure
+                            if (len < 0) len = 0;
+                            if (fdObject.flags & 0x0010) {
+                                frame.setFrameType(CommFrame::RemoteRequestFrame);
+                                frame.setPayload(QByteArray(len, 0));
+                            } else {
+                                frame.setPayload(fileData.mid(sizeof(BLF_CANFD64_OBJ), len));
+                                if (fdObject.flags & 0x1000) //EDL; classic frames on a CAN FD channel don't have it
+                                {
+                                    frame.setFlexibleDataRateFormat(true);
+                                    frame.setBitrateSwitch(fdObject.flags & 0x2000);
+                                    frame.setErrorStateIndicator(fdObject.flags & 0x4000);
+                                }
+                            }
+                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0));
+                            frames->append(frame);
+                        }
                         else
                         {
                             qDebug() << "Not a can frame! ObjType: " << obj.header.base.objType;
