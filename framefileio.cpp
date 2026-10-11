@@ -1399,6 +1399,28 @@ bool FrameFileIO::isPCANFile(QString filename)
   It seems as if Version 2 files might be able to store other protocols like ISO-TP or J1939
 
 */
+//PCAN TRC 2.x message types for CAN FD: FD = CAN FD, FB = with bit rate switch, FE = with error state
+//indicator, BI = both. For these the length column holds the DLC code (0-15), not a byte count.
+static bool trcIsFDType(const QByteArray &type)
+{
+    return type == "FD" || type == "FB" || type == "FE" || type == "BI";
+}
+
+static int trcFDLength(int dlc)
+{
+    static const int fdLengths[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+    if (dlc < 0) return 0;
+    if (dlc > 15) return 64;
+    return fdLengths[dlc];
+}
+
+static void trcApplyFDType(CommFrame &frame, const QByteArray &type)
+{
+    frame.setFrameType(CommFrame::CANFDDataFrame);
+    frame.setBitrateSwitch(type == "FB" || type == "BI");
+    frame.setErrorStateIndicator(type == "FE" || type == "BI");
+}
+
 bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
 {
     QFile inFile(filename);
@@ -1533,7 +1555,10 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
-                        int numBytes = tokens[5].toInt();
+                        const QByteArray msgType = tokens[2].toUpper();
+                        const bool isFD = trcIsFDType(msgType);
+                        int numBytes = isFD ? trcFDLength(tokens[5].toInt()) : tokens[5].toInt();
+                        if (tokens.length() - 6 < numBytes) numBytes = qMax(0, (int)tokens.length() - 6);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -1546,13 +1571,14 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                         {
                             thisFrame.setExtendedFrameFormat(false);
                         }
-                        if (tokens.value(6) == "R")
+                        if (msgType == "RR" || tokens.value(6) == "R")
                         {
                             thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
                         }
                         else
                         {
-                            thisFrame.setFrameType(CommFrame::CANDataFrame);
+                            if (isFD) trcApplyFDType(thisFrame, msgType);
+                            else thisFrame.setFrameType(CommFrame::CANDataFrame);
                             for (int d = 0; d < numBytes; d++)
                             {
                                 if (tokens[d + 6] != "")
@@ -1585,7 +1611,10 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
-                        int numBytes = tokens[7].toInt();
+                        const QByteArray msgType = tokens[2].toUpper();
+                        const bool isFD = trcIsFDType(msgType);
+                        int numBytes = isFD ? trcFDLength(tokens[7].toInt()) : tokens[7].toInt();
+                        if (tokens.length() - 8 < numBytes) numBytes = qMax(0, (int)tokens.length() - 8);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -1598,13 +1627,14 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                         {
                             thisFrame.setExtendedFrameFormat(false);
                         }
-                        if (tokens[2] == "R")
+                        if (msgType == "RR" || msgType == "R") //PCAN writes remote frames as "RR"
                         {
                             thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
                         }
                         else
                         {
-                            thisFrame.setFrameType(CommFrame::CANDataFrame);
+                            if (isFD) trcApplyFDType(thisFrame, msgType);
+                            else thisFrame.setFrameType(CommFrame::CANDataFrame);
                             for (int d = 0; d < numBytes; d++)
                             {
                                 if (tokens[d + 8] != "")
@@ -1732,6 +1762,9 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
             {
                 if (tokens[3].toUpper().startsWith("RX") || tokens[3].toUpper().startsWith("TX"))
                 {
+                    //thisFrame is reused: start every frame as a plain CAN data frame (a remote frame used to
+                    //make every later frame in the file remote)
+                    thisFrame.setFrameType(CommFrame::CANDataFrame);
                     thisFrame.setTimeStamp(CommFrame::TimeStamp(0, static_cast<uint64_t>(tokens[0].toDouble() * 1000000.0)));
                     if (tokens[1].contains("CAN")) //the different format I haven't seen a whole lot of, seems to support CANFD in this format
                     {
@@ -1748,7 +1781,16 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                             thisFrame.setExtendedFrameFormat(thisFrame.frameId() > 0x7FF);  //some .asc files have extended IDs without 'x'
                         }
 
-                        int payloadLen = tokens[8].toInt();
+                        //Time CANFD Channel Dir ID [SymbolicName] BRS ESI DLC DataLength Data... Duration Length Flags ...
+                        //The symbolic name is optional, which shifts the fields after the ID by one.
+                        const int nameOffset = (tokens[5].at(0) >= '0' && tokens[5].at(0) <= '9') ? 0 : 1;
+                        if (tokens.length() < 9 + nameOffset)
+                        {
+                            qDebug() << "CANFD line too short. Original line: " << line;
+                            foundErrors = true;
+                            continue;
+                        }
+                        int payloadLen = tokens[8 + nameOffset].toInt(); //was always tokens[8], wrong with a name
                         qDebug() << "PayloadLen: " << payloadLen << " Tokens: " << tokens;
                         QByteArray bytes(payloadLen, 0);
                         if (payloadLen > 64)
@@ -1799,6 +1841,26 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                                 }
                             }
                             thisFrame.setPayload(bytes);
+                        }
+                        //CANFD lines are also used for classic frames on a CAN FD channel. The Flags field after the
+                        //data (hex) has EDL (0x1000) set for real CAN FD frames; without it, fall back to the length
+                        //and the BRS field.
+                        const int dataStart = 9 + nameOffset;
+                        const bool brs = (tokens[5 + nameOffset].toInt() == 1);
+                        const bool esi = (tokens[6 + nameOffset].toInt() == 1);
+                        const int flagsIdx = dataStart + payloadLen + 2;
+                        bool isFD = (payloadLen > 8) || brs;
+                        if (flagsIdx < tokens.count())
+                        {
+                            bool ok;
+                            uint flags = tokens[flagsIdx].toUInt(&ok, 16);
+                            if (ok) isFD = (flags & 0x1000) || (payloadLen > 8);
+                        }
+                        if (isFD)
+                        {
+                            thisFrame.setFlexibleDataRateFormat(true);
+                            thisFrame.setBitrateSwitch(brs);
+                            thisFrame.setErrorStateIndicator(esi);
                         }
                     }
                     else
@@ -1905,6 +1967,40 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CommFrame>* f
         if (tsLen > 3) precision = 9 - tsLen;
         outFile.write(QString::number((frame->timeStamp().microSeconds() - offsetTime) / 1000000.0, 'f', precision).rightJustified(10, ' ').toUtf8());
         outFile.putChar(' ');
+
+        if (frame->hasFlexibleDataRateFormat())
+        {
+            //Time CANFD Channel Dir ID BRS ESI DLC DataLength Data... Duration Length Flags CRC BitTimings(4)
+            //Flags: EDL (0x1000, CAN FD frame), BRS (0x2000), ESI (0x4000). Unknown values are written as 0.
+            static const int fdLengths[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+            int dlc = 15;
+            for (int i = 0; i < 16; i++)
+            {
+                if (dataLen <= fdLengths[i]) { dlc = i; break; }
+            }
+            uint flags = 0x1000 | (frame->hasBitrateSwitch() ? 0x2000 : 0) | (frame->hasErrorStateIndicator() ? 0x4000 : 0);
+            outFile.write("CANFD ");
+            outFile.write(QString::number(frame->getBus() + 1).toUtf8());
+            outFile.write(frame->isReceived() ? " Rx " : " Tx ");
+            outFile.write(QString::number(frame->frameId(), 16).toUpper().toUtf8());
+            if (frame->hasExtendedFrameFormat()) outFile.write("x");
+            outFile.write(frame->hasBitrateSwitch() ? " 1" : " 0");
+            outFile.write(frame->hasErrorStateIndicator() ? " 1 " : " 0 ");
+            outFile.write(QString::number(dlc, 16).toUtf8());
+            outFile.putChar(' ');
+            outFile.write(QString::number(dataLen).toUtf8());
+            for (int temp = 0; temp < dataLen; temp++)
+            {
+                outFile.putChar(' ');
+                outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+            }
+            outFile.write(" 0 0 ");
+            outFile.write(QString::number(flags, 16).toUtf8());
+            outFile.write(" 0 0 0 0 0");
+            outFile.putChar('\n');
+            continue;
+        }
+
         outFile.write(QString::number(frame->getBus() + 1).toUtf8());
         outFile.write("  ");
         if (frames->at(c).hasExtendedFrameFormat())
@@ -4941,16 +5037,27 @@ bool FrameFileIO::loadWiresharkSocketCANFile(QString filename, QVector<CommFrame
         quint8 direction = (quint8) *(packetData + 6);
         thisFrame.setReceived((direction != 1));
 
-        // Data
-        quint8 numBytes = (quint8) *(packetData + 4);
-        if (numBytes > 8) {
-            numBytes = 8;
+        // Data. A CAN FD frame is captured as 72 bytes (struct canfd_frame) instead of 16, and byte 5 holds
+        // its flags: 0x01 = bit rate switch, 0x02 = error state indicator, 0x04 = FD frame (newer kernels).
+        const quint8 fdFlags = (quint8) *(packetData + 5);
+        const bool isFD = !(can_id & 0x60000000U) && ((packetHeader.caplen > 16) || (fdFlags & 0x04));
+        int numBytes = (quint8) *(packetData + 4);
+        if (numBytes > (isFD ? 64 : 8)) {
+            numBytes = isFD ? 64 : 8;
+        }
+        if (numBytes > (int)packetHeader.caplen - 8) { // never read past the captured data
+            numBytes = qMax(0, (int)packetHeader.caplen - 8);
         }
         QByteArray bytes(numBytes, 0);
         for (int d = 0; d < numBytes; d++) {
             bytes[d] = *(packetData + 8 + d);
         }
         thisFrame.setPayload(bytes);
+        if (isFD) {
+            thisFrame.setFlexibleDataRateFormat(true);
+            thisFrame.setBitrateSwitch(fdFlags & 0x01);
+            thisFrame.setErrorStateIndicator(fdFlags & 0x02);
+        }
         frames->append(thisFrame);
 
         packetData = (const char*) pcap_next(pcap_data_file, &packetHeader);
