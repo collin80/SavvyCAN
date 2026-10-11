@@ -5037,16 +5037,27 @@ bool FrameFileIO::loadWiresharkSocketCANFile(QString filename, QVector<CommFrame
         quint8 direction = (quint8) *(packetData + 6);
         thisFrame.setReceived((direction != 1));
 
-        // Data
-        quint8 numBytes = (quint8) *(packetData + 4);
-        if (numBytes > 8) {
-            numBytes = 8;
+        // Data. A CAN FD frame is captured as 72 bytes (struct canfd_frame) instead of 16, and byte 5 holds
+        // its flags: 0x01 = bit rate switch, 0x02 = error state indicator, 0x04 = FD frame (newer kernels).
+        const quint8 fdFlags = (quint8) *(packetData + 5);
+        const bool isFD = !(can_id & 0x60000000U) && ((packetHeader.caplen > 16) || (fdFlags & 0x04));
+        int numBytes = (quint8) *(packetData + 4);
+        if (numBytes > (isFD ? 64 : 8)) {
+            numBytes = isFD ? 64 : 8;
+        }
+        if (numBytes > (int)packetHeader.caplen - 8) { // never read past the captured data
+            numBytes = qMax(0, (int)packetHeader.caplen - 8);
         }
         QByteArray bytes(numBytes, 0);
         for (int d = 0; d < numBytes; d++) {
             bytes[d] = *(packetData + 8 + d);
         }
         thisFrame.setPayload(bytes);
+        if (isFD) {
+            thisFrame.setFlexibleDataRateFormat(true);
+            thisFrame.setBitrateSwitch(fdFlags & 0x01);
+            thisFrame.setErrorStateIndicator(fdFlags & 0x02);
+        }
         frames->append(thisFrame);
 
         packetData = (const char*) pcap_next(pcap_data_file, &packetHeader);
