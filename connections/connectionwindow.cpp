@@ -75,6 +75,12 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     //ui->cbBusSpeed->addItem("233333");
     //ui->cbBusSpeed->addItem("400000");
 
+    //CAN FD data phase rates (the list used to be empty apart from the bus's current rate)
+    ui->cbDataRate->addItem("1000000");
+    ui->cbDataRate->addItem("2000000");
+    ui->cbDataRate->addItem("4000000");
+    ui->cbDataRate->addItem("5000000");
+
     rxBroadcastGVRET = new QUdpSocket(this);
     //Need to make sure it tries to share the address in case there are
     //multiple instances of SavvyCAN running.
