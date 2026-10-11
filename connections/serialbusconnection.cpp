@@ -147,8 +147,16 @@ bool SerialBusConnection::piSendFrame(const CommFrame& pFrame)
     frame.setFrameId(pFrame.frameId());
     frame.setPayload(pFrame.payload());
     frame.setExtendedFrameFormat(pFrame.hasExtendedFrameFormat());
-    frame.setBitrateSwitch(pFrame.hasBitrateSwitch());
-    frame.setFlexibleDataRateFormat(pFrame.hasFlexibleDataRateFormat());
+    if (pFrame.frameType() == CommFrame::RemoteRequestFrame)
+    {
+        //remote frames went out as data frames; the payload size gives the DLC
+        frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+    }
+    else
+    {
+        frame.setBitrateSwitch(pFrame.hasBitrateSwitch());
+        frame.setFlexibleDataRateFormat(pFrame.hasFlexibleDataRateFormat());
+    }
 
     return mDev_p->writeFrame(frame);
 }
