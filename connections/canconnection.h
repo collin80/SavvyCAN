@@ -3,6 +3,7 @@
 
 #include <Qt>
 #include <QObject>
+#include <QMutex>
 #include "utils/lfqueue.h"
 #include "can_structs.h"
 #include "canbus.h"
@@ -328,6 +329,9 @@ private:
     QAtomicInt          mStatus;
     bool                mStarted;
     QThread*            mThread_p;
+    // Protects mTargettedFrames across the worker-thread reader (checkTargettedFrame)
+    // and the main-thread writers (add/removeTargettedFrame).
+    QMutex              mTargettedMutex;
 };
 
 #endif // CANCONNECTION_H
