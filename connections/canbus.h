@@ -11,7 +11,7 @@ class CANBus
     bool active; //is this bus turned on?
     bool canFD;
     int dataRate;
-
+    bool canFDCapable; //the device reported that this bus can do CAN FD (set by the driver, not saved)
     friend QDataStream& operator<<(QDataStream & pStream, const CANBus& pCanBus);
     friend QDataStream& operator>>(QDataStream & pStream, CANBus& pCanBus);
 public:
@@ -25,13 +25,14 @@ public:
     void setActive(bool); //whether this bus should be enabled or not.
     void setCanFD(bool); // enable or disable CANFD support
     void setDataRate(int newSpeed);
-
+    void setCanFDCapable(bool);
     int getSpeed() const;
     int getDataRate() const;
     bool isListenOnly() const;
     bool isSingleWire() const;
     bool isActive() const;
     bool isCanFD() const;
+    bool isCanFDCapable() const;
 };
 
 QDataStream& operator<<(QDataStream & pStream, const CANBus& pCanBus);
