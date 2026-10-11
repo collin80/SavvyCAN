@@ -1448,6 +1448,9 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
+    //loadFile() passes the same DBC_ATTRIBUTE for every definition, so start from a clean one: the enum
+    //values used to pile up, giving every ENUM attribute the values of the ones defined before it
+    attr = DBC_ATTRIBUTE();
     regex.setPattern("\\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"* (\\d+) (\\d+)");
     match = regex.match(inpString);
     //captured 1 is the name of the attribute to set up
