@@ -1342,7 +1342,7 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     for (int i = 0; i < modelFrames->count(); i++)
     {
         CommFrame thisFrame = modelFrames->at(i);
-        if ( (thisFrame.frameId() == params.ID) && (thisFrame.frameType() == CommFrame::CANDataFrame)
+        if ( (thisFrame.frameId() == params.ID) && thisFrame.isDataFrame()
             &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.getBus()) ) ) frameCache.append(thisFrame);
     }
 
