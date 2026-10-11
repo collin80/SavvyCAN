@@ -6,7 +6,7 @@
 - bug fixes;
 - 11 open upstream pull requests merged in.
 
-Each change is also kept on its own branch so it can be offered upstream as a separate pull request.
+Each change is also kept on its own branch, offered upstream as a separate pull request (see [Branches](#branches)).
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
 *Fork Build (Linux + Windows)* runs under **Actions**.
@@ -47,18 +47,18 @@ Every fix or new feature that lands on `fork-ci` gets:
 
 ## Branches
 
-| Branch | Based on | Contents |
-|---|---|---|
-| `fix-gvret-qt6` | `QT6WIP` | GVRET crash when saving bus settings (#910); zero-length and CAN FD frame parsing (#1121) |
-| `fd-send` | `fix-gvret-qt6` | Sending CAN FD: GVRET opcode 20, LAWICEL DLC and IDs, Send Frames FD/BRS columns, `can.sendFDFrame()` |
-| `fd-core` | `QT6WIP` | One CAN FD representation: frame type and FD flag kept in step; `isDataFrame()` |
-| `fd-serialbus` | `fd-core` | QtSerialBus CAN FD |
-| `fd-lawicel` | `fd-core` | LAWICEL CAN FD receive fixes and data rate |
-| `fd-logs` | `fd-core` | CAN FD in log files |
-| `fd-network` | `fd-core` | MQTT and CANlogserver CAN FD |
-| `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` |
-| `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages |
-| `fork-ci` | all of the above | Everything, plus the upstream PRs below and the fork's CI |
+| Branch | Based on | Contents | Upstream PR |
+|---|---|---|---|
+| `fix-gvret-qt6` | `QT6WIP` | GVRET crash when saving bus settings (collin80/SavvyCAN#910); zero-length and CAN FD frame parsing (collin80/SavvyCAN#1121) | in [#1135](https://github.com/collin80/SavvyCAN/pull/1135) |
+| `fd-send` | `fix-gvret-qt6` | Sending CAN FD: GVRET opcode 20, LAWICEL DLC and IDs, Send Frames FD/BRS columns, `can.sendFDFrame()` | [#1135](https://github.com/collin80/SavvyCAN/pull/1135) |
+| `fd-core` | `QT6WIP` | One CAN FD representation: frame type and FD flag kept in step; `isDataFrame()` | [#1134](https://github.com/collin80/SavvyCAN/pull/1134) |
+| `fd-serialbus` | `fd-core` | QtSerialBus CAN FD | [#1136](https://github.com/collin80/SavvyCAN/pull/1136) |
+| `fd-lawicel` | `fd-core` | LAWICEL CAN FD receive fixes and data rate | [#1137](https://github.com/collin80/SavvyCAN/pull/1137) |
+| `fd-logs` | `fd-core` | CAN FD in log files | [#1138](https://github.com/collin80/SavvyCAN/pull/1138) |
+| `fd-network` | `fd-core` | MQTT and CANlogserver CAN FD | [#1139](https://github.com/collin80/SavvyCAN/pull/1139) |
+| `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` | [#1140](https://github.com/collin80/SavvyCAN/pull/1140) (draft: protocol proposal) |
+| `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
+| `fork-ci` | all of the above | Everything, plus the upstream PRs below and the fork's CI | - |
 
 ## Upstream pull requests merged into `fork-ci`
 
@@ -76,12 +76,12 @@ Every fix or new feature that lands on `fork-ci` gets:
 | [#1099](https://github.com/collin80/SavvyCAN/pull/1099) | @dry-75 | serialbus: create the connection timer in the worker thread |
 | [#1101](https://github.com/collin80/SavvyCAN/pull/1101) | @dry-75 | serialbusconnection.cpp: restore `setLocalEcho()` |
 
-#1087 brought in a call to a `deviceStateChanged()` that doesn't exist on `QT6WIP`; `fork-ci` drops it (`2a3a57b`).
+collin80/SavvyCAN#1087 brought in a call to a `deviceStateChanged()` that doesn't exist on `QT6WIP`; `fork-ci` drops it (`2a3a57b`).
 
 ## Known issues
 
 - **GVRET FD layout:** `GET_FD`/`SETUP_FD` use a byte layout this fork proposed. It still needs agreeing with
-  collin80, since it's his protocol. The matching firmware is ESP32RET branch `t2canfd-board` in
+  collin80, since it's his protocol. It's proposed in the draft PR [#1140](https://github.com/collin80/SavvyCAN/pull/1140). The matching firmware is ESP32RET branch `t2canfd-board` in
   `Tom-evnut/ESP32RET`.
 - **socketcand and CANserver:** classic CAN only (see the CAN FD table).
 
@@ -100,6 +100,13 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-11: CAN FD series offered upstream
+
+- **Pull requests:** the eight `fd-*` branches are open against `collin80/SavvyCAN` `QT6WIP` as collin80/SavvyCAN#1134 to collin80/SavvyCAN#1141,
+  listed in [Branches](#branches). collin80/SavvyCAN#1135 includes the GVRET fixes from `fix-gvret-qt6`.
+- **Draft:** collin80/SavvyCAN#1140 (GVRET `GET_FD`/`SETUP_FD`) is a draft until collin80 agrees the byte layout.
+- **Before opening:** each branch was checked to build on its own.
 
 ### 2026-10-11: QtSerialBus timestamp code cleaned up (`fd-serialbus`)
 
@@ -205,5 +212,5 @@ CAN FD in six formats:
 
 ### 2026-10-10: GVRET fixes (`fix-gvret-qt6`)
 
-- **#910:** fixed the crash when saving bus settings under Qt 6.
-- **#1121:** fixed zero-length and CAN FD frame parsing.
+- **collin80/SavvyCAN#910:** fixed the crash when saving bus settings under Qt 6.
+- **collin80/SavvyCAN#1121:** fixed zero-length and CAN FD frame parsing.
