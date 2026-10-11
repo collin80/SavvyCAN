@@ -1195,10 +1195,20 @@ void FrameSenderWindow::processCellChange(int line, int col)
             msg = dbcHandler->findMessage(sendingData[line].frameId());
             if (msg)
             {
+                //a CAN FD message in the DBC file: send it as CAN FD, with BRS as the file says. Done before the
+                //length below, since changing the frame type refits the payload and rewrites the Len cell.
+                if (msg->canFD)
+                {
+                    setCheckState(line, ST_COLS::SENDTAB_COL_FD, true);
+                    processCellChange(line, ST_COLS::SENDTAB_COL_FD);
+                    setCheckState(line, ST_COLS::SENDTAB_COL_BRS, msg->bitRateSwitch);
+                    processCellChange(line, ST_COLS::SENDTAB_COL_BRS);
+                }
                 ui->tableSender->blockSignals(true);
                 ui->tableSender->item(line, ST_COLS::SENDTAB_COL_MSGNAME)->setText(msg->name);
                 ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN)->setText(QString::number(msg->len));
                 ui->tableSender->blockSignals(false);
+                processCellChange(line, ST_COLS::SENDTAB_COL_LEN); //size the payload to the message length
             }
             qDebug() << "setting ID to " << tempVal << "hex:" << QString::number(tempVal, 16);
             break;

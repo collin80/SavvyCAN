@@ -63,9 +63,34 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if (dbcMessage->len != Utility::ParseStringToNum(ui->lineFrameLen->text())) dbcFile->setDirtyFlag();
-            dbcMessage->len = Utility::ParseStringToNum(ui->lineFrameLen->text());
+            unsigned int newLen = Utility::ParseStringToNum(ui->lineFrameLen->text());
+            if (newLen > 64) newLen = 64; //CAN FD maximum
+            if (dbcMessage->len != newLen) dbcFile->setDirtyFlag();
+            dbcMessage->len = newLen;
+            if (newLen > 8) dbcMessage->canFD = true; //only CAN FD carries more than 8 bytes
+            refreshView();
             emit updatedTreeInfo(dbcMessage, origID);
+        });
+
+    connect(ui->checkCanFD, &QCheckBox::toggled,
+        [=](bool checked)
+        {
+            if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
+            if (dbcMessage->canFD != checked) dbcFile->setDirtyFlag();
+            dbcMessage->canFD = checked;
+            if (!checked && dbcMessage->len > 8) dbcMessage->len = 8; //classic CAN carries at most 8 bytes
+            refreshView();
+            emit updatedTreeInfo(dbcMessage, origID);
+        });
+
+    connect(ui->checkBRS, &QCheckBox::toggled,
+        [=](bool checked)
+        {
+            if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
+            if (dbcMessage->bitRateSwitch != checked) dbcFile->setDirtyFlag();
+            dbcMessage->bitRateSwitch = checked;
         });
 
     connect(ui->checkExtended, &QCheckBox::toggled,
@@ -250,6 +275,9 @@ void DBCMessageEditor::refreshView()
     ui->lineFrameLen->setText(QString::number(dbcMessage->len));
     if (ui->checkExtended)
         ui->checkExtended->setChecked(dbcMessage->extendedID);
+    ui->checkCanFD->setChecked(dbcMessage->canFD);
+    ui->checkBRS->setChecked(dbcMessage->canFD && dbcMessage->bitRateSwitch);
+    ui->checkBRS->setEnabled(dbcMessage->canFD);
 
     for (int i = 0; i < ui->comboSender->count(); i++)
     {
