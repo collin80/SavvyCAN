@@ -1399,6 +1399,28 @@ bool FrameFileIO::isPCANFile(QString filename)
   It seems as if Version 2 files might be able to store other protocols like ISO-TP or J1939
 
 */
+//PCAN TRC 2.x message types for CAN FD: FD = CAN FD, FB = with bit rate switch, FE = with error state
+//indicator, BI = both. For these the length column holds the DLC code (0-15), not a byte count.
+static bool trcIsFDType(const QByteArray &type)
+{
+    return type == "FD" || type == "FB" || type == "FE" || type == "BI";
+}
+
+static int trcFDLength(int dlc)
+{
+    static const int fdLengths[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 32, 48, 64};
+    if (dlc < 0) return 0;
+    if (dlc > 15) return 64;
+    return fdLengths[dlc];
+}
+
+static void trcApplyFDType(CommFrame &frame, const QByteArray &type)
+{
+    frame.setFrameType(CommFrame::CANFDDataFrame);
+    frame.setBitrateSwitch(type == "FB" || type == "BI");
+    frame.setErrorStateIndicator(type == "FE" || type == "BI");
+}
+
 bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
 {
     QFile inFile(filename);
@@ -1533,7 +1555,10 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setFrameId(tokens[3].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
-                        int numBytes = tokens[5].toInt();
+                        const QByteArray msgType = tokens[2].toUpper();
+                        const bool isFD = trcIsFDType(msgType);
+                        int numBytes = isFD ? trcFDLength(tokens[5].toInt()) : tokens[5].toInt();
+                        if (tokens.length() - 6 < numBytes) numBytes = qMax(0, (int)tokens.length() - 6);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -1546,13 +1571,14 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                         {
                             thisFrame.setExtendedFrameFormat(false);
                         }
-                        if (tokens.value(6) == "R")
+                        if (msgType == "RR" || tokens.value(6) == "R")
                         {
                             thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
                         }
                         else
                         {
-                            thisFrame.setFrameType(CommFrame::CANDataFrame);
+                            if (isFD) trcApplyFDType(thisFrame, msgType);
+                            else thisFrame.setFrameType(CommFrame::CANDataFrame);
                             for (int d = 0; d < numBytes; d++)
                             {
                                 if (tokens[d + 6] != "")
@@ -1585,7 +1611,10 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setFrameId(tokens[4].toUInt(nullptr, 16));
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
-                        int numBytes = tokens[7].toInt();
+                        const QByteArray msgType = tokens[2].toUpper();
+                        const bool isFD = trcIsFDType(msgType);
+                        int numBytes = isFD ? trcFDLength(tokens[7].toInt()) : tokens[7].toInt();
+                        if (tokens.length() - 8 < numBytes) numBytes = qMax(0, (int)tokens.length() - 8);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -1598,13 +1627,14 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                         {
                             thisFrame.setExtendedFrameFormat(false);
                         }
-                        if (tokens[2] == "R")
+                        if (msgType == "RR" || msgType == "R") //PCAN writes remote frames as "RR"
                         {
                             thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
                         }
                         else
                         {
-                            thisFrame.setFrameType(CommFrame::CANDataFrame);
+                            if (isFD) trcApplyFDType(thisFrame, msgType);
+                            else thisFrame.setFrameType(CommFrame::CANDataFrame);
                             for (int d = 0; d < numBytes; d++)
                             {
                                 if (tokens[d + 8] != "")
