@@ -3388,8 +3388,13 @@ bool FrameFileIO::saveCanDumpFile(QString filename, const QVector<CommFrame> * f
             outFile.write(QString::number(frame->frameId(), 16).rightJustified(3,'0').toUpper().toUtf8());
         }
 
-        outFile.write("#");
-
+        if (frame->hasFlexibleDataRateFormat()) {
+            //CAN FD: "##" then one hex digit of flags (1 = bit rate switch, 2 = error state indicator)
+            int fdFlags = (frame->hasBitrateSwitch() ? 1 : 0) | (frame->hasErrorStateIndicator() ? 2 : 0);
+            outFile.write("##");
+            outFile.write(QString::number(fdFlags, 16).toUpper().toUtf8());
+        }
+        else outFile.write("#");
         if (frame->frameType() == CommFrame::RemoteRequestFrame) {
             outFile.write("R");
             outFile.write(QString::number(dataLen).toUtf8());
@@ -3410,7 +3415,8 @@ bool FrameFileIO::isCanDumpFile(QString filename)
 {
     QFile inFile(filename);
     QRegularExpression timeExp(QRegularExpression::anchoredPattern("^\\((\\S+)\\)$")); //anchored pattern causes exact match
-    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
+    //id#data (CAN) or id##<flags digit><data> (CAN FD)
+    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^([0-9A-F]+)(##?)(\\S*)$"));
     QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
     bool isMatch = true;
@@ -3480,11 +3486,12 @@ bool FrameFileIO::isCanDumpFile(QString filename)
 
                     /* ID */
                     /*int ID = */IdValExpMatched.captured(1).toInt(&ret, 16);
-
-                    QString val= IdValExpMatched.captured(2);
-
+                    const bool isFD = (IdValExpMatched.captured(2) == "##");
+                    QString val= IdValExpMatched.captured(3);
+                    if (isFD) val = val.mid(1); //skip the CAN FD flags digit
+                    const int maxLen = isFD ? 64 : 8;
                     int len = 0;
-                    if (val.startsWith("R") && val.at(1).isDigit()) {
+                    if (!isFD && val.startsWith("R") && val.length() > 1 && val.at(1).isDigit()) {
                         len = val.at(1).toLatin1() - '0';
                         if (len < 0 || len > 8)
                         {
@@ -3499,7 +3506,7 @@ bool FrameFileIO::isCanDumpFile(QString filename)
                         while (i.hasNext()) {
                             valExpMatch = i.next();
                             lng++;
-                            if (lng > 8)
+                            if (lng > maxLen)
                             {
                                 isMatch = false;
                                 break;
@@ -3535,7 +3542,8 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CommFrame>* frames)
     QFile inFile(filename);
     CommFrame thisFrame;
     QRegularExpression timeExp(QRegularExpression::anchoredPattern("^\\((\\S+)\\)$")); //anchored pattern causes exact match
-    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^(\\S+)#(\\S+)$"));
+    //id#data (CAN) or id##<flags digit><data> (CAN FD)
+    QRegularExpression IdValExp(QRegularExpression::anchoredPattern("^([0-9A-F]+)(##?)(\\S*)$"));
     QRegularExpression valExp("(\\S{2})");
     int lineCounter = 0;
 
@@ -3606,6 +3614,7 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CommFrame>* frames)
                     if ((4 + c) < tokens.size()) bytes[c] = static_cast<char>(tokens[4 + c].toInt(nullptr, 16));
                 }
                 thisFrame.setPayload(bytes);
+                if (numBytes > 8) thisFrame.setFlexibleDataRateFormat(true); //only CAN FD carries more than 8 bytes
             }
             else  //the more concise format (first one from list above)
             {
@@ -3630,12 +3639,27 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setExtendedFrameFormat(false);
                 }
 
-                QString val = IdValExpMatched.captured(2);
-
+                const bool isFD = (IdValExpMatched.captured(2) == "##");
+                QString val = IdValExpMatched.captured(3);
                 QByteArray bytes;
-                if (val.startsWith("R") && val.at(1).isDigit()) {
-                    thisFrame.payload().resize( val.at(1).toLatin1() - '0' );
+                if (!isFD && val.startsWith("R")) {
+                    //remote frame: "R" with an optional length digit. The length used to be written to a
+                    //temporary copy of the payload, so it was lost.
+                    int rtrLen = (val.length() > 1 && val.at(1).isDigit()) ? (val.at(1).toLatin1() - '0') : 0;
+                    bytes = QByteArray(rtrLen, 0);
                     thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
+                } else if (isFD) {
+                    //CAN FD: one hex digit of flags (1 = bit rate switch, 2 = error state indicator), then the data
+                    int fdFlags = val.left(1).toInt(nullptr, 16);
+                    val = val.mid(1);
+                    thisFrame.setFrameType(CommFrame::CANFDDataFrame);
+                    thisFrame.setBitrateSwitch(fdFlags & 1);
+                    thisFrame.setErrorStateIndicator(fdFlags & 2);
+                    QRegularExpressionMatchIterator i = valExp.globalMatch(val);
+                    while (i.hasNext())
+                    {
+                        bytes.append((char)i.next().captured(1).toInt(nullptr, 16));
+                    }
                 } else {
                     thisFrame.setFrameType(CommFrame::CANDataFrame);
                     /* val byte per byte */
