@@ -368,7 +368,7 @@ void CommFrameModel::recalcOverwrite()
     uint64_t idAugmented; //id in lower 29 bits, bus number shifted up 29 bits
     foreach(CommFrame frame, frames)
     {
-        if (frame.frameType() != frame.CANDataFrame) continue;
+        if (!frame.isDataFrame()) continue; //CAN and CAN FD data frames
 
         idAugmented = frame.frameId();
         idAugmented = idAugmented + (frame.getBus() << 29ull);
@@ -506,6 +506,8 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 break;
             case CommFrame::FrameType::CANFDDataFrame:
                 tempString = "D";
+                if (thisFrame.hasBitrateSwitch()) tempString.append("B");       //bit rate switch (fast data phase)
+                if (thisFrame.hasErrorStateIndicator()) tempString.append("E"); //sender was error passive
                 break;
             case CommFrame::FrameType::FLEXRAYDataFrame:
                 tempString = "F";
@@ -541,7 +543,7 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(QString::number(thisFrame.frameId() & 0x7));
                 return tempString;
             }
-            if (thisFrame.frameType() == CommFrame::CANDataFrame) {
+            if (thisFrame.isDataFrame()) { //CAN and CAN FD data frames
                 if (dataLen < 0) dataLen = 0;
                 //if (dLen > 8) dLen = 8;
                 for (int i = 0; i < dataLen; i++)
@@ -588,7 +590,7 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
             //TODO: technically the actual returned bytes for an error frame encode some more info. Not interpreting it yet.
 
             //now, if we're supposed to interpret the data and the DBC handler is loaded then use it
-            if ( (dbcHandler != nullptr) && interpretFrames && (thisFrame.frameType() == thisFrame.CANDataFrame) )
+            if ( (dbcHandler != nullptr) && interpretFrames && thisFrame.isDataFrame() )
             {
                 DBC_MESSAGE *msg = dbcHandler->findMessage(thisFrame);
                 if (msg != nullptr)
