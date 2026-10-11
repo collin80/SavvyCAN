@@ -155,7 +155,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CommFrame>* frames)
                             int len = qMin((int)fdObject.validDataBytes, 64);
                             if (fdObject.flags & BLF_REMOTE_FLAG) {
                                 frame.setFrameType(CommFrame::RemoteRequestFrame);
-                                frame.setPayload(QByteArray(len, 0));
+                                frame.setPayload(QByteArray(qMin((int)fdObject.dlc, 8), 0)); //no data: the DLC is the length
                             } else {
                                 frame.setPayload(QByteArray(reinterpret_cast<const char *>(fdObject.data), len));
                                 //classic frames on a CAN FD channel are logged with this object type too
@@ -183,7 +183,7 @@ bool BLFHandler::loadBLF(QString filename, QVector<CommFrame>* frames)
                             if (len < 0) len = 0;
                             if (fdObject.flags & 0x0010) {
                                 frame.setFrameType(CommFrame::RemoteRequestFrame);
-                                frame.setPayload(QByteArray(len, 0));
+                                frame.setPayload(QByteArray(qMin((int)fdObject.dlc, 8), 0)); //no data: the DLC is the length
                             } else {
                                 frame.setPayload(fileData.mid(sizeof(BLF_CANFD64_OBJ), len));
                                 if (fdObject.flags & 0x1000) //EDL; classic frames on a CAN FD channel don't have it

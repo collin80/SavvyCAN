@@ -1558,7 +1558,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                         const QByteArray msgType = tokens[2].toUpper();
                         const bool isFD = trcIsFDType(msgType);
                         int numBytes = isFD ? trcFDLength(tokens[5].toInt()) : tokens[5].toInt();
-                        if (tokens.length() - 6 < numBytes) numBytes = qMax(0, (int)tokens.length() - 6);
+                        if (msgType != "RR" && tokens.length() - 6 < numBytes) numBytes = qMax(0, (int)tokens.length() - 6);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -1614,7 +1614,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                         const QByteArray msgType = tokens[2].toUpper();
                         const bool isFD = trcIsFDType(msgType);
                         int numBytes = isFD ? trcFDLength(tokens[7].toInt()) : tokens[7].toInt();
-                        if (tokens.length() - 8 < numBytes) numBytes = qMax(0, (int)tokens.length() - 8);
+                        if (msgType != "RR" && tokens.length() - 8 < numBytes) numBytes = qMax(0, (int)tokens.length() - 8);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -1732,10 +1732,13 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
         QByteArray line = inFile.readLine();
         if (inHeader)
         {
-            if (line.startsWith("//"))
+            //The header ends at the "// version" line, or after 4 lines. The version line used to be cut down
+            //before it was checked, so the header only ended at line 5, and that line (often the first frame)
+            //was skipped.
+            const bool versionLine = line.startsWith("//");
+            if (versionLine)
             {
-                line = line.right(line.length() - 11);
-                QList<QByteArray> versionTokens = line.split('.');
+                QList<QByteArray> versionTokens = line.right(line.length() - 11).split('.');
                 if (versionTokens.length() > 2)
                 {
                     int verMajor = versionTokens[0].toInt();
@@ -1744,11 +1747,12 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                     qDebug() << "Major: " << verMajor << " Minor:" << verMinor << " Rev:" << verRevision;
                 }
             }
-            if (line.startsWith("//") ||  lineCounter > 4)
+            if (versionLine) //the next line is the first one after the header
             {
                 inHeader = false;
                 continue;
             }
+            if (lineCounter > 4) inHeader = false; //no version line: this line is already past the header
         }
         if (inHeader) continue;
         if (line.length() > 2 && !line.startsWith("//"))
@@ -1804,7 +1808,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                             return false;
                         }
                         thisFrame.setReceived(tokens[3].toUpper().contains("RX"));
-                        thisFrame.setBus(tokens[2].toInt());
+                        thisFrame.setBus(qMax(0, tokens[2].toInt() - 1)); //ASC channels start at 1
 
                         if (tokens[5].at(0) >= '0' && tokens[5].at(0) <= '9')
                         {
@@ -1892,9 +1896,11 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                             return false;
                         }
                         thisFrame.setReceived(tokens[3].toUpper().contains("RX"));
-                        thisFrame.setBus(tokens[1].toInt());
-                        if (tokens[4] == "r") thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
-                        for (int d = 6; d < (6 + payloadLen); d++)
+                        thisFrame.setBus(qMax(0, tokens[1].toInt() - 1)); //ASC channels start at 1
+                        const bool isRemote = (tokens[4] == "r");
+                        if (isRemote) thisFrame.setFrameType(CommFrame::RemoteRequestFrame);
+                        //a remote frame line has the DLC but no data bytes
+                        for (int d = 6; d < (6 + (isRemote ? 0 : payloadLen)); d++)
                         {
                             if (tokens.count() > d)
                             {
@@ -2024,7 +2030,9 @@ bool FrameFileIO::saveCanalyzerASC(QString filename, const QVector<CommFrame>* f
         outFile.write(QString::number(dataLen).toUtf8());
         outFile.write("  ");
 
-        for (int temp = 0; temp < dataLen; temp++)
+        //a remote frame has a DLC but no data
+        const int bytesToWrite = (frames->at(c).frameType() == CommFrame::RemoteRequestFrame) ? 0 : dataLen;
+        for (int temp = 0; temp < bytesToWrite; temp++)
         {
             outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
             outFile.write("  ");
@@ -3772,10 +3780,11 @@ bool FrameFileIO::loadCanDumpFile(QString filename, QVector<CommFrame>* frames)
                 thisFrame.setPayload(bytes);
             }
 
-            /*NB: should we make sure len <= 8? */
+            //longer than the frame type allows (CAN FD 64 bytes, classic 8): not a valid frame, skip the line
+            if (thisFrame.payload().size() > (thisFrame.hasFlexibleDataRateFormat() ? 64 : 8)) continue;
             thisFrame.setReceived(true);
+            frames->append(thisFrame); //was outside this block, so a blank line added the previous frame again
        }
-       frames->append(thisFrame);
     }
     return true;
 }
