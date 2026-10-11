@@ -2001,7 +2001,7 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
                     }
                     else if (fileVersion == 2)
                     {
-                        if ( tokens[5].toUInt() > 8) isMatch = false;
+                        if ( tokens[5].toUInt() > 64) isMatch = false; //CAN FD frames carry up to 64 bytes
                     }
                 }
                 else isMatch = false;
@@ -2018,6 +2018,49 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
 //The "native" file format for this program
 //Time Stamp,ID,Extended,Dir,Bus,LEN,D1,D2,D3,D4,D5,D6,D7,D8
 //39747828,000005EB,false,Rx,0,8,E8,45,85,4B,4A,28,36,69,
+//CAN FD frames (version 2 only) use the same columns: LEN is the payload length (up to 64), followed by
+//max(8, LEN) data columns and then a flags column with "FD", plus "+BRS" (bit rate switch) and/or "+ESI"
+//(error state indicator). Classic CAN rows are unchanged and have nothing in that column. Readers that
+//don't know about it still get the first 8 data bytes.
+//39747828,000001A0,false,Rx,1,12,00,01,02,03,04,05,06,07,08,09,0A,0B,FD+BRS,
+
+//one row of the native CSV format (see above), including the line end
+static QByteArray nativeCSVRow(const CommFrame &frame)
+{
+    const unsigned char *data = reinterpret_cast<const unsigned char *>(frame.payload().constData());
+    int dataLen = frame.payload().length();
+    QByteArray row;
+    row.append(QString::number(frame.timeStamp().microSeconds()).toUtf8());
+    row.append(',');
+    row.append(QString::number(frame.frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
+    row.append(',');
+    row.append(frame.hasExtendedFrameFormat() ? "true," : "false,");
+    row.append(frame.isReceived() ? "Rx," : "Tx,");
+    row.append(QString::number(frame.getBus()).toUtf8());
+    row.append(',');
+    row.append(QString::number(dataLen).toUtf8());
+    row.append(',');
+    const bool fd = frame.hasFlexibleDataRateFormat();
+    const int columns = fd ? qMax(8, dataLen) : 8; //classic rows always have exactly 8 data columns
+    for (int temp = 0; temp < columns; temp++)
+    {
+        if (temp < dataLen)
+            row.append(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
+        else
+            row.append("00");
+        row.append(',');
+    }
+    if (fd)
+    {
+        row.append("FD");
+        if (frame.hasBitrateSwitch()) row.append("+BRS");
+        if (frame.hasErrorStateIndicator()) row.append("+ESI");
+        row.append(',');
+    }
+    row.append('\n');
+    return row;
+}
+
 bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames)
 {
     QFile inFile(filename);
@@ -2091,7 +2134,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
                     else thisFrame.setReceived(false);
                     thisFrame.setBus(tokens[4].toInt());
                     int lng = tokens[5].toInt();
-                    if (lng > 8) lng = 8;
+                    if (lng > 64) lng = 64; //CAN FD frames carry up to 64 bytes
                     if (lng < 0) lng = 0;
                     if (lng + 6 > tokens.length()) lng = tokens.length() - 6;
                     QByteArray bytes(lng, 0);
@@ -2099,6 +2142,16 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
                     for (int d = 0; d < lng; d++)
                         bytes[d] = static_cast<char>(tokens[6 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
+                    //flags column after the max(8, LEN) data columns: "FD", "FD+BRS", ... (empty for classic CAN).
+                    //More than 8 bytes can only be CAN FD, even if a file has no flags column.
+                    int flagsIdx = 6 + qMax(8, lng);
+                    QByteArray flags = (flagsIdx < tokens.length()) ? tokens[flagsIdx].trimmed().toUpper() : QByteArray();
+                    if (flags.startsWith("FD") || lng > 8)
+                    {
+                        thisFrame.setFlexibleDataRateFormat(true);
+                        thisFrame.setBitrateSwitch(flags.contains("BRS"));
+                        thisFrame.setErrorStateIndicator(flags.contains("ESI"));
+                    }
                 }
 
                 frames->append(thisFrame);
@@ -2131,38 +2184,7 @@ bool FrameFileIO::saveNativeCSVFile(QString filename, const QVector<CommFrame>* 
             lineCounter = 0;
         }
 
-        const CommFrame *frame = &frames->at(c);
-        const unsigned char *data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        int dataLen = frame->payload().length();
-
-        outFile.write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
-        outFile.putChar(44);
-
-        outFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
-        outFile.putChar(44);
-
-        if (frame->hasExtendedFrameFormat()) outFile.write("true,");
-        else outFile.write("false,");
-
-        if (frame->isReceived()) outFile.write("Rx,");
-        else outFile.write("Tx,");
-
-        outFile.write(QString::number(frame->getBus()).toUtf8());
-        outFile.putChar(44);
-
-        outFile.write(QString::number(dataLen).toUtf8());
-        outFile.putChar(44);
-
-        for (int temp = 0; temp < 8; temp++)
-        {
-            if (temp < dataLen)
-                outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
-            else
-                outFile.write("00");
-            outFile.putChar(44);
-        }
-
-        outFile.write("\n");
+        outFile.write(nativeCSVRow(frames->at(c)));
 
     }
     return true;
@@ -2215,38 +2237,7 @@ bool FrameFileIO::writeContinuousNative(const QVector<CommFrame>* frames, int be
     qDebug() << "Bgn: " << beginningFrame << "  Count: " << frames->count();
     for (int c = beginningFrame; c < frames->count(); c++)
     {
-        const CommFrame *frame = &frames->at(c);
-        const unsigned char *data = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        int dataLen = frame->payload().length();
-
-        continuousFile.write(QString::number(frame->timeStamp().microSeconds()).toUtf8());
-        continuousFile.putChar(44);
-
-        continuousFile.write(QString::number(frame->frameId(), 16).toUpper().rightJustified(8, '0').toUtf8());
-        continuousFile.putChar(44);
-
-        if (frame->hasExtendedFrameFormat()) continuousFile.write("true,");
-        else continuousFile.write("false,");
-
-        if (frame->isReceived()) continuousFile.write("Rx,");
-        else continuousFile.write("Tx,");
-
-        continuousFile.write(QString::number(frame->getBus()).toUtf8());
-        continuousFile.putChar(44);
-
-        continuousFile.write(QString::number(dataLen).toUtf8());
-        continuousFile.putChar(44);
-
-        for (int temp = 0; temp < 8; temp++)
-        {
-            if (temp < dataLen)
-                continuousFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
-            else
-                continuousFile.write("00");
-            continuousFile.putChar(44);
-        }
-
-        continuousFile.write("\n");
+        continuousFile.write(nativeCSVRow(frames->at(c)));
     }
     return true;
 }
