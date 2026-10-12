@@ -401,8 +401,10 @@ void FramePlaybackObject::timerTriggered()
         {
             if (!playbackActive)
             {
+                //the end of the log was reached during this burst: still send the frames already queued below (this
+                //returned instead, so with a burst over 1 the last frames of the log were never sent)
                 playbackTimer->stop();
-                return;
+                break;
             }
             if (playbackForward)
             {
