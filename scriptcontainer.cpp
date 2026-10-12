@@ -89,7 +89,14 @@ void ScriptContainer::compileScript()
 
         //Find out which callbacks the script has created.
         setupFunction = scriptEngine->globalObject().property("setup");
-        canHelper->setRxCallback(scriptEngine->globalObject().property("gotCommFrame"));
+        QJSValue canRxCallback = scriptEngine->globalObject().property("gotCommFrame");
+        if (!canRxCallback.isCallable())
+        {
+            // Backward compatibility with older scripts.
+            canRxCallback = scriptEngine->globalObject().property("gotCANFrame");
+            if (canRxCallback.isCallable()) qDebug() << "Using legacy gotCANFrame callback";
+        }
+        canHelper->setRxCallback(canRxCallback);
         isoHelper->setRxCallback(scriptEngine->globalObject().property("gotISOTPMessage"));
         udsHelper->setRxCallback(scriptEngine->globalObject().property("gotUDSMessage"));
 
@@ -442,4 +449,3 @@ void UDSScriptHelper::newUDSMessage(UDS_MESSAGE msg)
     args.append(dataBytes);
     gotFrameFunction.call(args);
 }
-
