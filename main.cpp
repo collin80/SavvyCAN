@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QKeyEvent>
 
 class SavvyCANApplication : public QApplication
 {
@@ -19,6 +20,24 @@ public:
         }
 
         return QApplication::event(event);
+    }
+
+    bool notify(QObject *receiver, QEvent *event) override
+    {
+        if (event->type() == QEvent::KeyPress)
+        {
+            QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+            if (keyEvent->matches(QKeySequence::Close))
+            {
+                QWidget *active = QApplication::activeWindow();
+                if (active)
+                {
+                    active->close();
+                    return true;
+                }
+            }
+        }
+        return QApplication::notify(receiver, event);
     }
 };
 
