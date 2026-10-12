@@ -156,6 +156,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //new implementation for continuous logging
     connect(CANConManager::getInstance(), &CANConManager::framesReceived, this, &MainWindow::logReceivedFrame);
 
+    connect(ui->cbAutoScroll, &QAbstractButton::toggled, this, &MainWindow::interpretAutoScroll);
     connect(ui->cbInterpret, &QAbstractButton::toggled, this, &MainWindow::interpretToggled);
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
     connect(ui->cbPersistentFilters, &QAbstractButton::toggled, this, &MainWindow::presistentFiltersToggled);
@@ -174,6 +175,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //Frame count column should be hidden by default. Only used in overwrite mode
     ui->canFramesView->hideColumn((int)Column::FrameCount);
+    //If overwrite mode was restored from settings, show the column again
+    if (ui->cbOverwrite->isChecked()) {
+        ui->canFramesView->showColumn((int)Column::FrameCount);
+    }
 
     lbStatusConnected.setText(tr("Connected to 0 buses"));
     lbHelp.setText(tr("Press F1 on any screen for help"));
@@ -333,7 +338,6 @@ void MainWindow::exitApp()
 //the close event can be trapped and ignored so put unsaved warnings in here so the user can abort the program closing if they forgot to save things.
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-
     QMessageBox::StandardButton confirmDialog;
 
     for (int i = 0; i < dbcHandler->getFileCount(); i++)
@@ -400,10 +404,39 @@ void MainWindow::readSettings()
         ui->canFramesView->setColumnWidth(7, settings.value("Main/AsciiColumn", 50).toUInt()); //ascii
         //ui->canFramesView->setColumnWidth(8, settings.value("Main/DataColumn", 225).toUInt()); //data
     }
+
+    if (settings.value("Main/Interpret", false).toBool())
+    {
+        ui->cbInterpret->setChecked(Qt::Checked);
+        model->setInterpretMode(true);
+    }
+    else
+        model->setInterpretMode(false);
+
     if (settings.value("Main/AutoScroll", false).toBool())
     {
-        ui->cbAutoScroll->setChecked(true);
+        ui->cbAutoScroll->setChecked(Qt::Checked);
     }
+
+    if (settings.value("Main/Overwrite", false).toBool())
+    {
+        ui->cbOverwrite->setChecked(Qt::Checked);
+        model->setOverwriteMode(true);
+    }
+    else
+    {
+        model->setOverwriteMode(false);
+        rowExpansionActive = false;
+    }
+
+    if (settings.value("Main/PersistentFilters", false).toBool())
+    {
+        ui->cbPersistentFilters->setChecked(Qt::Checked);
+        model->setClearMode(true);
+    }
+    else
+        model->setClearMode(false);
+
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
     QFont newFont = QFont(ui->canFramesView->font());
     newFont.setPointSize(fontSize);
@@ -899,14 +932,27 @@ void MainWindow::setupSendToLatestGraphWindow()
         msgbox.exec();
     }
 }
+
+void MainWindow::interpretAutoScroll(bool state)
+{
+    QSettings settings;
+    settings.setValue("Main/AutoScroll", state);
+}
+
 void MainWindow::interpretToggled(bool state)
 {
+    QSettings settings;
+    settings.setValue("Main/Interpret", state);
+
     model->setInterpretMode(state);
     //ui->canFramesView->resizeRowsToContents();   //a VERY costly operation!
 }
 
 void MainWindow::overwriteToggled(bool state)
 {
+    QSettings settings;
+    settings.setValue("Main/Overwrite", state);
+
     if (state)
     {
         QMessageBox::StandardButton confirmDialog;
@@ -929,7 +975,10 @@ void MainWindow::overwriteToggled(bool state)
 }
 
 void MainWindow::presistentFiltersToggled(bool state)
-{
+{    
+    QSettings settings;
+    settings.setValue("Main/PersistentFilters", state);
+
     if (state)
     {
         model->setClearMode(true);

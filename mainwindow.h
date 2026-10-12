@@ -113,6 +113,7 @@ private slots:
     void copyFromTable();
     void setupAddToNewGraph();
     void setupSendToLatestGraphWindow();
+    void interpretAutoScroll(bool);
     void interpretToggled(bool);
     void overwriteToggled(bool);
     void presistentFiltersToggled(bool state);

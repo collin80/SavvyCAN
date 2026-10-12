@@ -182,39 +182,49 @@ void MainSettingsDialog::updateSettings()
 {
     QSettings settings;
 
-    settings.setValue("Main/UseHex", ui->cbDisplayHex->isChecked());
     settings.setValue("FlowView/AutoRef", ui->cbFlowAutoRef->isChecked());
     settings.setValue("FlowView/UseTimestamp", ui->cbFlowUseTimestamp->isChecked());
     settings.setValue("FlowView/GraphHex", ui->cbHexGraphFlow->isChecked());
     settings.setValue("InfoCompare/GraphHex", ui->cbHexGraphInfo->isChecked());
     settings.setValue("InfoCompare/AutoExpand", ui->cbInfoAutoExpand->isChecked());
-    settings.setValue("Main/AutoScroll", ui->cbMainAutoScroll->isChecked());
-    settings.setValue("Playback/AutoLoop", ui->cbPlaybackLoop->isChecked());
-    settings.setValue("Main/SaveRestorePositions", ui->cbRestorePositions->isChecked());
-    settings.setValue("Main/SaveRestoreConnections", ui->cbLoadConnections->isChecked());
-    settings.setValue("Main/ValidateComm", ui->cbValidate->isChecked());
-    settings.setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
-    settings.setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
-    settings.setValue("Main/TimeMillis", ui->rbMillis->isChecked());
-    settings.setValue("Main/TimeClock", ui->rbSysClock->isChecked());
-    settings.setValue("Main/CSVAbsTime", ui->cbCSVAbsTime->isChecked());
-    settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
+
+    settings.setValue("Main/MainAutoScroll", ui->cbMainAutoScroll->isChecked());
+
+/*
+    settings.setValue("Main/AutoScroll", false);
+    settings.setValue("Main/Interpret", false);
+    settings.setValue("Main/Overwrite", false);
+    settings.setValue("Main/PersistentFilters", false);
+*/
+    settings.setValue("Main/UseHex", ui->cbDisplayHex->isChecked());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings.setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
     settings.setValue("Main/EqualDataSniff", ui->cbEqualSniffer->isChecked());
     settings.setValue("Main/TimeFormat", ui->lineClockFormat->text());
     settings.setValue("Main/FontSize", ui->spinFontSize->value());
-    settings.setValue("Remote/Host", ui->lineRemoteHost->text());
-    settings.setValue("Remote/Port", ui->lineRemotePort->text());
-    settings.setValue("Remote/User", ui->lineRemoteUser->text());
-    QByteArray encPass = crypto.encryptToByteArray(ui->lineRemotePassword->text());
-    settings.setValue("Remote/Pass", encPass);
+    settings.setValue("Main/TimeSeconds", ui->rbSeconds->isChecked());
+    settings.setValue("Main/TimeMillis", ui->rbMillis->isChecked());
+    settings.setValue("Main/TimeClock", ui->rbSysClock->isChecked());
+    settings.setValue("Main/CSVAbsTime", ui->cbCSVAbsTime->isChecked());
+    settings.setValue("Main/SaveRestorePositions", ui->cbRestorePositions->isChecked());
+    settings.setValue("Main/SaveRestoreConnections", ui->cbLoadConnections->isChecked());
+    settings.setValue("Main/ValidateComm", ui->cbValidate->isChecked());
     settings.setValue("Main/FilterLabeling", ui->cbFilterLabeling->isChecked());
     settings.setValue("Main/IgnoreDBCColors", ui->cbIgnoreDBCColors->isChecked());
     settings.setValue("Main/MaximumFrames", ui->spinMaximumFrames->value());
     settings.setValue("Main/BytesPerLine", ui->spinBytesPerLine->value());
     settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
     settings.setValue("Main/ColorsByCanId", ui->cbColorsByCanId->isChecked());
+
+    settings.setValue("Playback/AutoLoop", ui->cbPlaybackLoop->isChecked());
+    settings.setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
+    settings.setValue("Playback/SendingBus", ui->comboSendingBus->currentIndex());
+
+    settings.setValue("Remote/Host", ui->lineRemoteHost->text());
+    settings.setValue("Remote/Port", ui->lineRemotePort->text());
+    settings.setValue("Remote/User", ui->lineRemoteUser->text());
+    QByteArray encPass = crypto.encryptToByteArray(ui->lineRemotePassword->text());
+    settings.setValue("Remote/Pass", encPass);
 
     settings.sync();
     emit updatedSettings();
