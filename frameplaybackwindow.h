@@ -42,6 +42,7 @@ private slots:
     void saveFilters();
     void loadFilters();
     void useOrigTimingClicked();
+    void forceCanFDClicked();
     void getStatusUpdate(int frameNum);
     void EndOfFrameCache();
     void updatedFrames(int);
