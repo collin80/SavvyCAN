@@ -251,6 +251,8 @@ win32-g++ {
    LIBS += libopengl32
 }
 
+   LIBS += libopengl32
+
 unix {
    isEmpty(PREFIX) {
       PREFIX=/usr/local
