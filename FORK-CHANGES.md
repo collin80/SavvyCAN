@@ -40,6 +40,7 @@ Every fix or new feature that lands on `fork-ci` gets:
 | Wireshark SocketCAN pcap | ✅ | (no pcap saver) | | `fd-logs` |
 | DBC files | ✅ `VFrameFormat`, `CANFD_BRS`, signals past byte 8 | ✅ saved back | FD and BRS check boxes in the message editor | `fd-dbc` |
 | Send Frames window and scripts | n/a | ✅ FD/BRS columns, `can.sendFDFrame()` | DBC CAN FD messages tick FD/BRS | `fd-send`, `fd-dbc` |
+| Playback window | n/a | ✅ as loaded, or **Send all frames as CAN FD** (with or without BRS) | n/a | `fd-playback` |
 
 **Frame list:** the frame type column shows `D` for CAN FD frames, with `B` for BRS and `E` for ESI.
 
@@ -58,6 +59,7 @@ Every fix or new feature that lands on `fork-ci` gets:
 | `fd-network` | `fd-core` | MQTT and CANlogserver CAN FD | [#1139](https://github.com/collin80/SavvyCAN/pull/1139) |
 | `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` | [#1140](https://github.com/collin80/SavvyCAN/pull/1140) (draft: protocol proposal) |
 | `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
+| `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | not yet |
 | `fork-ci` | all of the above | Everything, plus the upstream PRs below and the fork's CI | - |
 
 ## Upstream pull requests merged into `fork-ci`
@@ -100,6 +102,17 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-12: Playback can send everything as CAN FD (`fd-playback`)
+
+- **New option:** "Send all frames as CAN FD" in the Playback window, with "with bit rate switch (BRS)" (on by default).
+  - **Why:** for logs that don't record which frames were CAN FD. In candump's screen format, for example, CAN FD
+    frames of 8 bytes or less load as classic.
+  - **What it changes:** every data frame is sent as CAN FD. Remote frames are sent as they are, since CAN FD has
+    none, and the loaded frames aren't changed.
+  - **Saved:** both settings are remembered.
+- **Fixed (already in SavvyCAN):** with a burst setting over 1, playback dropped up to burst - 1 frames at the end of
+  every log. The tick that reached the end returned before sending what it had queued.
 
 ### 2026-10-11: CAN FD series offered upstream
 
