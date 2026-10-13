@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QKeyEvent>
 
 class SavvyCANApplication : public QApplication
 {
@@ -20,6 +21,24 @@ public:
 
         return QApplication::event(event);
     }
+
+    bool notify(QObject *receiver, QEvent *event) override
+    {
+        if (event->type() == QEvent::KeyPress)
+        {
+            QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+            if (keyEvent->matches(QKeySequence::Close))
+            {
+                QWidget *active = QApplication::activeWindow();
+                if (active)
+                {
+                    active->close();
+                    return true;
+                }
+            }
+        }
+        return QApplication::notify(receiver, event);
+    }
 };
 
 int main(int argc, char *argv[])
@@ -29,6 +48,8 @@ int main(int argc, char *argv[])
     //qputenv("QT_FATAL_WARNINGS", "1");
     //qSetMessagePattern("Type: %{type}\nProduct Name: %{appname}\nFile: %{file}\nLine: %{line}\nMethod: %{function}\nThreadID: %{threadid}\nThreadPtr: %{qthreadptr}\nMessage: %{message}");
 #endif
+
+    QLoggingCategory::setFilterRules("qt.canbus=true");
 
     SavvyCANApplication a(argc, argv);
 
@@ -48,6 +69,8 @@ int main(int argc, char *argv[])
     QFont sysFont = QFont(); //get default font
     sysFont.setPointSize(fontSize);
     a.setFont(sysFont);
+
+    qDebug() << "Config file path:" << settings.fileName();
 
     a.mainWindow->show();
 

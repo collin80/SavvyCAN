@@ -31,6 +31,7 @@ private slots:
     void onValuesCellChanged(int row,int col);
     void onCustomMenuValues(QPoint);
     void deleteCurrentValue();
+    void onValueTableHeaderContextMenu(QPoint);
 
 private:
     Ui::DBCSignalEditor *ui;
@@ -41,9 +42,11 @@ private:
     DBCFile *dbcFile;
     bool inhibitCellChanged;
     bool inhibitMsgProc;
+    bool valueTableHexMode;
 
     void fillSignalForm(DBC_SIGNAL *sig);
     void fillValueTable(DBC_SIGNAL *sig);
+    QString formatValueTableEntry(int64_t value);
     void generateUsedBits();
     void refreshBitGrid();
 
