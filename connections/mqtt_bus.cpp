@@ -250,6 +250,8 @@ bool MQTT_BUS::piSendFrame(const CommFrame& frame)
     if (frame.frameType() == CommFrame::RemoteRequestFrame) flags += 2;
     if (frame.hasFlexibleDataRateFormat()) flags += 4;
     if (frame.frameType() == CommFrame::ErrorFrame) flags += 8;
+    if (frame.hasBitrateSwitch()) flags += 0x10;
+    if (frame.hasErrorStateIndicator()) flags += 0x20;
 
     uint64_t micros = QDateTime::currentMSecsSinceEpoch() * 1000ull;
     for (int x = 0; x < 8; x++)
@@ -293,12 +295,21 @@ void MQTT_BUS::clientMessageReceived(const QMQTT::Message& message)
         QByteArray timeStampBytes = message.payload().left(8);
         uint64_t timeStamp = qFromLittleEndian<uint64_t>(timeStampBytes.data());
 
-        int flags = message.payload()[8];
+        //flags: 1 = extended ID, 2 = remote frame, 4 = CAN FD, 8 = error frame, 0x10 = BRS, 0x20 = ESI
+        int flags = (quint8)message.payload()[8];
         frame_p->setPayload(message.payload().right(message.payload().length() - 9));
         frame_p->setBus(0);
         frame_p->setExtendedFrameFormat(flags & 1);
         frame_p->setFrameId(frameID);
-        frame_p->setFrameType(CommFrame::CANDataFrame);
+        if (flags & 8) frame_p->setFrameType(CommFrame::ErrorFrame);
+        else if (flags & 2) frame_p->setFrameType(CommFrame::RemoteRequestFrame);
+        else if (flags & 4)
+        {
+            frame_p->setFrameType(CommFrame::CANFDDataFrame);
+            frame_p->setBitrateSwitch(flags & 0x10);
+            frame_p->setErrorStateIndicator(flags & 0x20);
+        }
+        else frame_p->setFrameType(CommFrame::CANDataFrame);
         frame_p->setReceived(true);
         if (useSystemTime)
         {
