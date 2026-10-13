@@ -663,7 +663,7 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 }
             }
             return tempString;
-        default:
+            default:
             return tempString;
         }
     }

@@ -15,8 +15,9 @@ enum class Column {
     Type       = 0, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
     Subtype    = 1, ///< Mostly used by SerialBus devices to pick the sub type
     Port       = 2, ///< The CAN hardware port, e.g. can0 for socketcan
-    NumBuses   = 3, ///< Number of buses exposed by this device. Usually non-GVRET devices will just have one
-    Status     = 4  ///< The bus status as text message
+    Speed      = 3,
+    NumBuses   = 4, ///< Number of buses exposed by this device. Usually non-GVRET devices will just have one
+    Status     = 5  ///< The bus status as text message
 };
 
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -34,6 +35,8 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
             return QString(tr("Subtype"));
         case Column::Port:
             return QString(tr("Port"));
+        case Column::Speed:
+            return QString(tr("Speed"));
         case Column::NumBuses:
             return QString(tr("Buses"));
         case Column::Status:
@@ -50,7 +53,8 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
 int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
-    return 5;
+    //return 5;
+    return 6;
 }
 
 
@@ -74,6 +78,11 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     if (!conn_p) return QVariant();
 
     //bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
+    CANBus Bus;
+    conn_p->getBusSettings(0,Bus);
+
+    //conn_p->getSerialSpeed();
+    //getBusSettings(int pBusIdx, CANBus& pBus);
 
     if (role == Qt::DisplayRole) {
 
@@ -100,11 +109,14 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
             case Column::Subtype:
                 return conn_p->getDriver();
                 break;
+            case Column::Speed:
+                return Bus.getSpeed();
+                break;
             case Column::NumBuses:
                 return conn_p->getNumBuses();
                 break;
             case Column::Status:
-                 return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";
+                 return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";                                
         }
     }
     return QVariant();

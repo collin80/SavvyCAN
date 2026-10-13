@@ -33,25 +33,43 @@ public:
 
 protected:
 
-    virtual void piStarted();
-    virtual void piStop();
-    virtual void piSetBusSettings(int pBusIdx, CANBus pBus);
-    virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus);
-    virtual void piSuspend(bool pSuspend);
-    virtual bool piSendFrame(const CommFrame&);
+    virtual void piStarted() override;
+    virtual void piStop() override;
+    virtual void piSetBusSettings(int pBusIdx, CANBus pBus) override;
+    virtual bool piGetBusSettings(int pBusIdx, CANBus& pBus) override;
+    virtual void piSuspend(bool pSuspend) override;
+    virtual bool piSendFrame(const CommFrame&) override;
 
     void disconnectDevice();
 
+public slots:
+    /* One-shot probe: forces a disconnect+reconnect to update the connection status.
+     * Called when the connection window is opened so stale CONNECTED state (e.g. after
+     * a silent USB unplug on PCAN/macOS) is detected immediately. Runs in worker thread. */
+    void probeConnectionState();
+
+    /* Reconnect using stored bus config. Posted via Qt::QueuedConnection from the main-thread
+     * auto-reconnect timer so it works even when the worker-thread timer is stalled. */
+    void autoReconnect() override;
+
 private slots:
-    void errorReceived(QCanBusDevice::CanBusError) const;
+    void errorReceived(QCanBusDevice::CanBusError);
     void framesWritten(qint64 count);
     void framesReceived();
     void testConnection();
     void deviceStateChanged(QCanBusDevice::CanBusDeviceState state);
+    void recreateDevice();
+
+private:
+    void applyBusConfig(const CANBus &bus); // sets bitrate/FD/listenOnly params on mDev_p
 
 protected:
     QCanBusDevice     *mDev_p = nullptr;
-    QTimer            *mTimer;
+    uint64_t           mConnectTime = 0; // system time (µs) when device connected, for relative-timestamp devices like PCAN
+    QTimer            *mTimer = nullptr;
+    int                mNoFrameSeconds = 0;       // timer ticks (1 s each) since last real frame while CONNECTED
+    bool               mHadFrameSinceConnect = false; // true once a valid frame arrives after connecting
+    int                mReconnectAttempts = 0;    // consecutive connectDevice() calls in NOT_CONNECTED state
 };
 
 
