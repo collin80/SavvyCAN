@@ -93,7 +93,7 @@ public:
 
 
     explicit CommFrame(quint32 identifier, const QByteArray &data) :
-        format(CANDataFrame),
+        format(data.size() > 8 ? CANFDDataFrame : CANDataFrame), //more than 8 bytes can only be CAN FD
         isExtendedFrame(0x0),
         isFlexibleDataRate(data.size() > 8 ? 0x1 : 0x0),
         isBitrateSwitch(0x0),
@@ -121,42 +121,60 @@ public:
         return InvalidFrame;
     }
 
+    /*
+     * CAN FD is represented in two places: the frame type (CANFDDataFrame) and the FD flag
+     * (hasFlexibleDataRateFormat()). The setters keep them in step, so code can use either:
+     *   frameType() == CANFDDataFrame  <=>  hasFlexibleDataRateFormat()
+     * Setting the type to CANFDDataFrame sets the FD flag; any other type clears it (and BRS/ESI).
+     * Setting the FD flag (directly, or via BRS/ESI) turns a CAN data frame into a CAN FD data frame,
+     * and clearing it turns a CAN FD data frame back into a CAN data frame.
+     */
     constexpr void setFrameType(FrameType newFormat) noexcept
     {
         switch (newFormat) {
         case CANDataFrame:
-            format = 0x0; return;
+            format = 0x0; break;
         case CANFDDataFrame:
-            format = 0x1; return;
+            format = 0x1; break;
         case FLEXRAYDataFrame:
-            format = 0x2; return;
+            format = 0x2; break;
         case LINDataFrame:
-            format = 0x3; return;
+            format = 0x3; break;
         case ErrorFrame:
-            format = 0x4; return;
+            format = 0x4; break;
         case RemoteRequestFrame:
-            format = 0x5; return;
+            format = 0x5; break;
         case InvalidFrame:
-            format = 0x6; return;
+            format = 0x6; break;
+        }
+        isFlexibleDataRate = (format == 0x1) ? 0x1 : 0x0;
+        if (!isFlexibleDataRate) {
+            isBitrateSwitch = 0x0;
+            isErrorStateIndicator = 0x0;
         }
     }
 
+    //QCanBusFrame has no separate CAN FD type: a FD data frame is a DataFrame with the FD flag set,
+    //so call setFlexibleDataRateFormat() (and BRS/ESI) after this to carry the FD information over.
     constexpr void setFrameTypeFromQCan(QCanBusFrame::FrameType newFormat) noexcept
     {
         switch (newFormat) {
         case QCanBusFrame::FrameType::DataFrame:
-            format = 0; return;
+            setFrameType(CANDataFrame); return;
         case QCanBusFrame::FrameType::ErrorFrame:
-            format = 4; return;
+            setFrameType(ErrorFrame); return;
         case QCanBusFrame::FrameType::UnknownFrame:
-            format = 6; return;
+            setFrameType(InvalidFrame); return;
         case QCanBusFrame::FrameType::RemoteRequestFrame:
-            format = 5; return;
+            setFrameType(RemoteRequestFrame); return;
         case QCanBusFrame::FrameType::InvalidFrame:
-            format = 6; return;
+            setFrameType(InvalidFrame); return;
 
         }
     }
+
+    //A frame carrying data: classic CAN or CAN FD (as opposed to remote, error, LIN, ...)
+    constexpr bool isDataFrame() const noexcept { return format == 0x0 || format == 0x1; }
 
     constexpr QCanBusFrame::FrameType toQCanBusFrameType() noexcept
     {
@@ -226,10 +244,16 @@ public:
     }
 
     constexpr bool hasFlexibleDataRateFormat() const noexcept { return (isFlexibleDataRate & 0x1); }
+    //keeps the frame type in step with the FD flag (see setFrameType())
     constexpr void setFlexibleDataRateFormat(bool isFlexibleData) noexcept
     {
-        isFlexibleDataRate = (isFlexibleData & 0x1);
-        if (!isFlexibleData) {
+        if (isFlexibleData) {
+            if (format != 0x0 && format != 0x1) return; //only data frames can be CAN FD (there are no FD remote frames)
+            format = 0x1; //CAN data frame -> CAN FD data frame
+            isFlexibleDataRate = 0x1;
+        } else {
+            isFlexibleDataRate = 0x0;
+            if (format == 0x1) format = 0x0; //CAN FD data frame -> CAN data frame
             isBitrateSwitch = 0x0;
             isErrorStateIndicator = 0x0;
         }
@@ -238,17 +262,15 @@ public:
     constexpr bool hasBitrateSwitch() const noexcept { return (isBitrateSwitch & 0x1); }
     constexpr void setBitrateSwitch(bool bitrateSwitch) noexcept
     {
-        isBitrateSwitch = (bitrateSwitch & 0x1);
-        if (bitrateSwitch)
-            isFlexibleDataRate = 0x1;
+        if (bitrateSwitch) setFlexibleDataRateFormat(true); //only CAN FD frames have BRS
+        isBitrateSwitch = (bitrateSwitch && isFlexibleDataRate) ? 0x1 : 0x0;
     }
 
     constexpr bool hasErrorStateIndicator() const noexcept { return (isErrorStateIndicator & 0x1); }
     constexpr void setErrorStateIndicator(bool errorStateIndicator) noexcept
     {
-        isErrorStateIndicator = (errorStateIndicator & 0x1);
-        if (errorStateIndicator)
-            isFlexibleDataRate = 0x1;
+        if (errorStateIndicator) setFlexibleDataRateFormat(true); //only CAN FD frames have ESI
+        isErrorStateIndicator = (errorStateIndicator && isFlexibleDataRate) ? 0x1 : 0x0;
     }
 
     constexpr bool hasLocalEcho() const noexcept { return (isLocalEcho & 0x1); }

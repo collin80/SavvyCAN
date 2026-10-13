@@ -598,7 +598,7 @@ void LAWICELSerial::readSerialData()
                 buildFrame.setFlexibleDataRateFormat(true);
                 buildFrame.setFrameId(mBuildLine.mid(1, 3).toInt(nullptr, 16));
                 buildFrame.setReceived(true);
-                buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
+                buildFrame.setFrameType(CommFrame::FrameType::CANFDDataFrame); //keeps the FD flag (and BRS) set above
                 buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(4, 1).toInt(nullptr, 16)));
                 for (int c = 0; c < buildData.size(); c++)
                 {
@@ -630,7 +630,7 @@ void LAWICELSerial::readSerialData()
                 buildFrame.setBitrateSwitch(true);
                 buildFrame.setFrameId(mBuildLine.mid(1, 8).toInt(nullptr, 16));
                 buildFrame.setReceived(true);
-                buildFrame.setFrameType(CommFrame::FrameType::CANDataFrame);
+                buildFrame.setFrameType(CommFrame::FrameType::CANFDDataFrame); //keeps the FD flag (and BRS) set above
                 buildFrame.setExtendedFrameFormat(true);
                 buildData.resize(LAWICELSerial::dlc_code_to_bytes(mBuildLine.mid(9, 1).toInt(nullptr, 16)));
                 for (int c = 0; c < buildData.size(); c++)
