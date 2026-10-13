@@ -621,7 +621,8 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         msgPtr = new DBC_MESSAGE();
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
         msgPtr->ID = ID & 0x1FFFFFFFul;
-        msgPtr->extendedID = (ID & 0x80000000ul) ? true : false;
+        // BO_ encodes extended frame information in bit 31.
+        msgPtr->extendedID = ((ID & 0x80000000ul) != 0);
         msgPtr->name = match.captured(2);
         msgPtr->len = match.captured(3).toUInt();
         msgPtr->sender = findNodeByName(match.captured(4));
@@ -1795,9 +1796,26 @@ bool DBCFile::saveFile(QString fileName)
     outFile->write(commentsOutput.toUtf8());
     commentsOutput.clear();
 
+    bool wroteMatchingCriteriaAttr = false;
+    bool wroteFilterLabelingAttr = false;
+
     //Now dump out all of the stored attributes
     for (int x = 0; x < dbc_attributes.count(); x++)
     {
+        if (dbc_attributes[x].attrType == ATTR_TYPE_MESSAGE)
+        {
+            if (dbc_attributes[x].name.compare("matchingcriteria", Qt::CaseInsensitive) == 0)
+            {
+                if (wroteMatchingCriteriaAttr) continue;
+                wroteMatchingCriteriaAttr = true;
+            }
+            else if (dbc_attributes[x].name.compare("filterlabeling", Qt::CaseInsensitive) == 0)
+            {
+                if (wroteFilterLabelingAttr) continue;
+                wroteFilterLabelingAttr = true;
+            }
+        }
+
         msgOutput.append("BA_DEF_ ");
         switch (dbc_attributes[x].attrType)
         {
@@ -2572,27 +2590,43 @@ DBCHandler::DBCHandler()
 
             MatchingCriteria_t matchingCriteria = (MatchingCriteria_t)settings.value("DBC/MatchingCriteria_" + QString::number(i),0).toInt();
 
-            DBC_ATTRIBUTE attr;
-
-            attr.attrType = ATTR_TYPE_MESSAGE;
-            attr.defaultValue = matchingCriteria;
-            attr.enumVals.clear();
-            attr.lower = 0;
-            attr.upper = 0;
-            attr.name = "matchingcriteria";
-            attr.valType = ATTR_INT;
-            file->dbc_attributes.append(attr);
+            DBC_ATTRIBUTE *attr = file->findAttributeByName("matchingcriteria", ATTR_TYPE_MESSAGE);
+            if (attr)
+            {
+                attr->defaultValue = matchingCriteria;
+            }
+            else
+            {
+                DBC_ATTRIBUTE newAttr;
+                newAttr.attrType = ATTR_TYPE_MESSAGE;
+                newAttr.defaultValue = matchingCriteria;
+                newAttr.enumVals.clear();
+                newAttr.lower = 0;
+                newAttr.upper = 0;
+                newAttr.name = "matchingcriteria";
+                newAttr.valType = ATTR_INT;
+                file->dbc_attributes.append(newAttr);
+            }
             file->messageHandler->setMatchingCriteria(matchingCriteria);
 
             int filterLabeling = settings.value("DBC/FilterLabeling_" + QString::number(i),0).toInt();
-            attr.attrType = ATTR_TYPE_MESSAGE;
-            attr.defaultValue = filterLabeling;
-            attr.enumVals.clear();
-            attr.lower = 0;
-            attr.upper = 0;
-            attr.name = "filterlabeling";
-            attr.valType = ATTR_INT;
-            file->dbc_attributes.append(attr);
+            attr = file->findAttributeByName("filterlabeling", ATTR_TYPE_MESSAGE);
+            if (attr)
+            {
+                attr->defaultValue = filterLabeling;
+            }
+            else
+            {
+                DBC_ATTRIBUTE newAttr;
+                newAttr.attrType = ATTR_TYPE_MESSAGE;
+                newAttr.defaultValue = filterLabeling;
+                newAttr.enumVals.clear();
+                newAttr.lower = 0;
+                newAttr.upper = 0;
+                newAttr.name = "filterlabeling";
+                newAttr.valType = ATTR_INT;
+                file->dbc_attributes.append(newAttr);
+            }
             file->messageHandler->setFilterLabeling(filterLabeling);
 
             qInfo() << "Loaded DBC file" << filename << " (bus:" << bus

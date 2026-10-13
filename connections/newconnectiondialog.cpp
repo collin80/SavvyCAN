@@ -103,25 +103,7 @@ void NewConnectionDialog::selectLawicel()
     for (int i = 0; i < ports.count(); i++)
         ui->cbPort->addItem(ports[i].portName());
 
-    if (ui->cbCANSpeed->count() == 0)
-    {
-        ui->cbCANSpeed->addItem("10000");
-        ui->cbCANSpeed->addItem("20000");
-        ui->cbCANSpeed->addItem("50000");
-        ui->cbCANSpeed->addItem("83333");
-        ui->cbCANSpeed->addItem("100000");
-        ui->cbCANSpeed->addItem("125000");
-        ui->cbCANSpeed->addItem("250000");
-        ui->cbCANSpeed->addItem("500000");
-        ui->cbCANSpeed->addItem("1000000");
-    }
-    if (ui->cbDataRate->count() == 0)
-    {
-        ui->cbDataRate->addItem("1000000");
-        ui->cbDataRate->addItem("2000000");
-        ui->cbDataRate->addItem("4000000");
-        ui->cbDataRate->addItem("5000000");
-    }
+    fillBusSpeedLists();
     if (ui->cbSerialSpeed->count() == 0)
     {
         ui->cbSerialSpeed->addItem("115200");
@@ -161,13 +143,17 @@ void NewConnectionDialog::selectSocketCan()
     ui->lPort->setText("Port:");
     ui->lblDeviceType->setHidden(false);
     ui->cbDeviceType->setHidden(false);
-    ui->cbCANSpeed->setHidden(true);
+    //CAN speed, CAN FD and the CAN FD data rate are passed to the QtSerialBus driver. Drivers that can't set
+    //bit rates themselves (e.g. socketcan, configured with "ip link") ignore the speeds but still need CAN FD
+    //enabled to receive and send CAN FD frames.
+    ui->cbCANSpeed->setHidden(false);
     ui->cbSerialSpeed->setHidden(true);
-    ui->lblCANSpeed->setHidden(true);
+    ui->lblCANSpeed->setHidden(false);
     ui->lblSerialSpeed->setHidden(true);
-    ui->cbCanFd->setHidden(true);
-    ui->cbDataRate->setHidden(true);
-    ui->lblDataRate->setHidden(true);
+    ui->cbCanFd->setHidden(false);
+    ui->cbDataRate->setHidden(false);
+    ui->lblDataRate->setHidden(false);
+    fillBusSpeedLists();
 
     ui->cbDeviceType->clear();
     QStringList plugins;
@@ -392,9 +378,41 @@ int NewConnectionDialog::getSerialSpeed()
     else return 0;
 }
 
+//connection types whose CAN speed / CAN FD / data rate are chosen in this dialog
+bool NewConnectionDialog::hasBusSettings()
+{
+    return getConnectionType() == CANCon::LAWICEL || getConnectionType() == CANCon::SERIALBUS;
+}
+
+//CAN speed and CAN FD data rate choices shared by LAWICEL and QtSerialBus. Defaults to 500k / 2M.
+void NewConnectionDialog::fillBusSpeedLists()
+{
+    if (ui->cbCANSpeed->count() == 0)
+    {
+        ui->cbCANSpeed->addItem("10000");
+        ui->cbCANSpeed->addItem("20000");
+        ui->cbCANSpeed->addItem("50000");
+        ui->cbCANSpeed->addItem("83333");
+        ui->cbCANSpeed->addItem("100000");
+        ui->cbCANSpeed->addItem("125000");
+        ui->cbCANSpeed->addItem("250000");
+        ui->cbCANSpeed->addItem("500000");
+        ui->cbCANSpeed->addItem("1000000");
+        ui->cbCANSpeed->setCurrentText("500000");
+    }
+    if (ui->cbDataRate->count() == 0)
+    {
+        ui->cbDataRate->addItem("1000000");
+        ui->cbDataRate->addItem("2000000");
+        ui->cbDataRate->addItem("4000000");
+        ui->cbDataRate->addItem("5000000");
+        ui->cbDataRate->setCurrentText("2000000");
+    }
+}
+
 int NewConnectionDialog::getBusSpeed()
 {
-    if (getConnectionType() == CANCon::LAWICEL)
+    if (hasBusSettings())
     {
         return ui->cbCANSpeed->currentText().toInt();
     }
@@ -424,7 +442,7 @@ bool NewConnectionDialog::isSerialBusAvailable()
 
 int NewConnectionDialog::getDataRate()
 {
-    if (getConnectionType() == CANCon::LAWICEL)
+    if (hasBusSettings())
     {
         return ui->cbDataRate->currentText().toInt();
     }
@@ -433,7 +451,7 @@ int NewConnectionDialog::getDataRate()
 
 bool NewConnectionDialog::isCanFd()
  {
-     if (getConnectionType() == CANCon::LAWICEL)
+     if (hasBusSettings())
      {
          return ui->cbCanFd->isChecked();
      }

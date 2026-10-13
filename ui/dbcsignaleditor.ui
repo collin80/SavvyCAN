@@ -231,7 +231,7 @@ and the value ranges by hypens
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Value Table:</string>
+            <string>Value Table:</string>
      </property>
     </widget>
    </item>

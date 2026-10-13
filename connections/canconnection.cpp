@@ -1,5 +1,6 @@
 #include <QSettings>
 #include <QThread>
+#include <QMutexLocker>
 #include "canconnection.h"
 
 CANConnection::CANConnection(QString pPort,
@@ -11,7 +12,9 @@ CANConnection::CANConnection(QString pPort,
                              int pDataRate,
                              int pNumBuses,
                              int pQueueLen,
-                             bool pUseThread) :
+                             bool pUseThread,
+                             bool pListenOnly,
+                             bool pActive) :
     mNumBuses(pNumBuses),
     mSerialSpeed(pSerialSpeed),
     mQueue(),
@@ -47,6 +50,8 @@ CANConnection::CANConnection(QString pPort,
             mBusData[0].mBus.setCanFD(pCanFd);
         }
     }
+    mBusData[0].mBus.setListenOnly(pListenOnly);
+    mBusData[0].mBus.setActive(pActive);
  
     /* if needed, create a thread and move ourself into it */
     if(pUseThread) {
@@ -75,12 +80,21 @@ CANConnection::~CANConnection()
 
 void CANConnection::start()
 {
+    //qDebug() << "CANConnection::start.b()";
+    //qDebug() << QThread::currentThread();
+    //qDebug() << QThread::currentThreadId();
+    //qDebug() << mThread_p->currentThread();
+    //qDebug() << mThread_p->currentThreadId();
+    //qDebug() << mThread_p;
+
     if( mThread_p && (mThread_p != QThread::currentThread()) )
     {
         QMetaObject::invokeMethod(this, "start",
                                   Qt::BlockingQueuedConnection);
         return;
     }
+
+    //qDebug() << "CANConnection::start.e()";
 
     /* set started flag */
     mStarted = true;
@@ -230,7 +244,7 @@ void CANConnection::setConfigured(int pBusId, bool pConfigured) {
 bool CANConnection::getBusConfig(int pBusId, CANBus& pBus) {
     if( pBusId < 0 || pBusId >= getNumBuses() || !isConfigured(pBusId))
         return false;
-    qDebug() << "getBusConfig id: " << pBusId;
+    //qDebug() << "getBusConfig id: " << pBusId;
     pBus = mBusData[pBusId].mBus;
     return true;
 }
@@ -264,11 +278,15 @@ CANCon::type CANConnection::getType() {
 }
 
 
-CANCon::status CANConnection::getStatus() {
+CANCon::status CANConnection::getStatus()
+{
+//    qDebug() << "CANConnection::getStatus = " << mStatus.loadRelaxed();
     return (CANCon::status) mStatus.loadRelaxed();
 }
 
-void CANConnection::setStatus(CANCon::status pStatus) {
+void CANConnection::setStatus(CANCon::status pStatus)
+{
+    qDebug() << "CANConnection::setStatus = " << pStatus;
     mStatus.storeRelaxed(pStatus);
 }
 
@@ -286,19 +304,6 @@ void CANConnection::debugInput(QByteArray bytes) {
 
 bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-/*
-    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
-        bool ret;
-        QMetaObject::invokeMethod(this, "addTargettedFrame",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(int, pBusId),
-                                  Q_ARG(uint32_t , ID),
-                                  Q_ARG(uint32_t , mask),
-                                  Q_ARG(QObject *, receiver));
-        return ret;
-    }
-*/
     /* sanity checks */
     if(pBusId < -1 || pBusId >=  getNumBuses())
         return false;
@@ -308,6 +313,7 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
+    QMutexLocker locker(&mTargettedMutex);
     if (pBusId > -1)
         mBusData[pBusId].mTargettedFrames.append(target);
     else
@@ -320,19 +326,6 @@ bool CANConnection::addTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QO
 
 bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask, QObject *receiver)
 {
-/*
-    if( mThread_p && (mThread_p != QThread::currentThread()) ) {
-        bool ret;
-        QMetaObject::invokeMethod(this, "removeTargettedFrame",
-                                  Qt::BlockingQueuedConnection,
-                                  Q_RETURN_ARG(bool, ret),
-                                  Q_ARG(int, pBusId),
-                                  Q_ARG(uint32_t , ID),
-                                  Q_ARG(uint32_t , mask),
-                                  Q_ARG(QObject *, receiver));
-        return ret;
-    }
-*/
     /* sanity checks */
     if(pBusId < -1 || pBusId >= getNumBuses())
         return false;
@@ -341,13 +334,20 @@ bool CANConnection::removeTargettedFrame(int pBusId, uint32_t ID, uint32_t mask,
     target.id = ID;
     target.mask = mask;
     target.observer = receiver;
-    mBusData[pBusId].mTargettedFrames.removeAll(target);
+    QMutexLocker locker(&mTargettedMutex);
+    if (pBusId > -1)
+        mBusData[pBusId].mTargettedFrames.removeAll(target);
+    else
+    {
+        for (int i = 0; i < mBusData.count(); i++) mBusData[i].mTargettedFrames.removeAll(target);
+    }
 
     return true;
 }
 
 bool CANConnection::removeAllTargettedFrames(QObject *receiver)
 {
+    QMutexLocker locker(&mTargettedMutex);
     for (int i = 0; i < getNumBuses(); i++) {
         foreach (const CANFltObserver filt, mBusData[i].mTargettedFrames)
         {
@@ -367,6 +367,9 @@ void CANConnection::checkTargettedFrame(CommFrame &frame)
     int bus = frame.getBus();
     if (bus > (mBusData.length() - 1)) bus = mBusData.length() - 1;
 
+    // Hold the mutex through invokeMethod so the observer cannot be deleted
+    // between us reading the pointer and posting the event to it.
+    QMutexLocker locker(&mTargettedMutex);
     if (mBusData[bus].mTargettedFrames.length() == 0) return;
     foreach (const CANFltObserver filt, mBusData[frame.getBus()].mTargettedFrames)
     {

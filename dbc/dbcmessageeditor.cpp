@@ -7,6 +7,8 @@
 #include "helpwindow.h"
 #include "utility.h"
 
+#include <QCheckBox>
+
 DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMessageEditor)
@@ -37,8 +39,11 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if ((dbcMessage->ID & 0x1FFFFFFFul) != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
             dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
 
-            if (dbcMessage->ID > 0x7FF) dbcMessage->extendedID = true;
-            else dbcMessage->extendedID = false;
+            // Auto-enable extended for IDs that exceed standard 11-bit range.
+            if (dbcMessage->ID > 0x7FF && ui->checkExtended)
+            {
+                ui->checkExtended->setChecked(true);
+            }
 
             emit updatedTreeInfo(dbcMessage, origID);
         });
@@ -235,6 +240,8 @@ void DBCMessageEditor::setMessageRef(DBC_MESSAGE *msg)
 {
     dbcMessage = msg;
     origID = msg->ID;
+    if (ui->checkExtended)
+        ui->checkExtended->setChecked(dbcMessage->extendedID);
 }
 
 void DBCMessageEditor::showEvent(QShowEvent* event)
@@ -246,6 +253,8 @@ void DBCMessageEditor::showEvent(QShowEvent* event)
 
 void DBCMessageEditor::refreshView()
 {
+    if (!dbcMessage) return;
+
     suppressEditCallbacks = true;
 
     ui->lineComment->setText(dbcMessage->comment);
@@ -255,6 +264,9 @@ void DBCMessageEditor::refreshView()
     ui->checkCanFD->setChecked(dbcMessage->canFD);
     ui->checkBRS->setChecked(dbcMessage->canFD && dbcMessage->bitRateSwitch);
     ui->checkBRS->setEnabled(dbcMessage->canFD);    
+    if (ui->checkExtended)
+        ui->checkExtended->setChecked(dbcMessage->extendedID);
+
     for (int i = 0; i < ui->comboSender->count(); i++)
     {
         if (ui->comboSender->itemText(i) == dbcMessage->sender->name)

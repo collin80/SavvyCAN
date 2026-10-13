@@ -95,6 +95,10 @@ protected:
     bool can0ListenOnly, can1ListenOnly, swcanListenOnly;
     int deviceBuildNum;
     int deviceSingleWireMode;
+    bool deviceHasFDSetup; //device answered GET_FD (22), so it also understands SETUP_FD (21)
+    int fdReplyBuses;
+    quint8 fdReplyFlags;
+    quint32 fdReplyRate;
     uint32_t buildTimeBasis;
     int32_t timeBasis;
     uint64_t lastSystemTimeBasis;

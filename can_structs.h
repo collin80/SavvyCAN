@@ -247,10 +247,12 @@ public:
     //keeps the frame type in step with the FD flag (see setFrameType())
     constexpr void setFlexibleDataRateFormat(bool isFlexibleData) noexcept
     {
-        isFlexibleDataRate = (isFlexibleData & 0x1);
         if (isFlexibleData) {
-            if (format == 0x0) format = 0x1; //CAN data frame -> CAN FD data frame
+            if (format != 0x0 && format != 0x1) return; //only data frames can be CAN FD (there are no FD remote frames)
+            format = 0x1; //CAN data frame -> CAN FD data frame
+            isFlexibleDataRate = 0x1;
         } else {
+            isFlexibleDataRate = 0x0;
             if (format == 0x1) format = 0x0; //CAN FD data frame -> CAN data frame
             isBitrateSwitch = 0x0;
             isErrorStateIndicator = 0x0;
@@ -261,14 +263,14 @@ public:
     constexpr void setBitrateSwitch(bool bitrateSwitch) noexcept
     {
         if (bitrateSwitch) setFlexibleDataRateFormat(true); //only CAN FD frames have BRS
-        isBitrateSwitch = (bitrateSwitch & 0x1);
+        isBitrateSwitch = (bitrateSwitch && isFlexibleDataRate) ? 0x1 : 0x0;
     }
 
     constexpr bool hasErrorStateIndicator() const noexcept { return (isErrorStateIndicator & 0x1); }
     constexpr void setErrorStateIndicator(bool errorStateIndicator) noexcept
     {
         if (errorStateIndicator) setFlexibleDataRateFormat(true); //only CAN FD frames have ESI
-        isErrorStateIndicator = (errorStateIndicator & 0x1);
+        isErrorStateIndicator = (errorStateIndicator && isFlexibleDataRate) ? 0x1 : 0x0;
     }
 
     constexpr bool hasLocalEcho() const noexcept { return (isLocalEcho & 0x1); }
