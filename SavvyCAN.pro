@@ -251,6 +251,8 @@ win32-g++ {
    LIBS += libopengl32
 }
 
+   LIBS += libopengl32
+
 unix {
    isEmpty(PREFIX) {
       PREFIX=/usr/local
@@ -275,7 +277,7 @@ iconfiles.path = $$PREFIX/share
 INSTALLS += iconfiles
 
 helpfiles.files=help/*
-helpfiles.path = $$PREFIX/bin/help
+helpfiles.path = $$PREFIX/share/savvycan/help
 INSTALLS += helpfiles
 
 INSTALLS += target

@@ -10,11 +10,11 @@
 
 using namespace CANCon;
 
-CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDriverName, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, bool pListenOnly, bool pActive)
 {
     switch(pType) {
     case SERIALBUS:
-      return new SerialBusConnection(pPortName, pDriverName, pBusSpeed, pDataRate, pCanFd);
+      return new SerialBusConnection(pPortName, pDriverName, pBusSpeed, pDataRate, pCanFd, pListenOnly, pActive);
     case GVRET_SERIAL:
         if(pPortName.contains(".") && !pPortName.contains("tty") && !pPortName.contains("serial"))
         return new GVRetSerial(pPortName, true);
