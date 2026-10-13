@@ -1,12 +1,16 @@
 #!/bin/bash
 
-PROJECT_ROOT="$(dirname "$(dirname "$(realpath "$0")")")"
-TRANSLATIONS_DIR="$PROJECT_ROOT/translations"
+PROJECT_ROOT="$(pwd)"
 
-echo "Gerando arquivos .qm..."
+# To add this tool in Qt Creator:
+# Category: Linguist
+# Name: Release Translations (lrelease)
+# Executable: lrelease
+# Arguments: SavvyCAN.pro
+# Working Directory: %{ActiveProject:Path}
 
-for file in "$TRANSLATIONS_DIR"/*.ts; do
-    lrelease "$file"
-done
+echo "Generating .qm files..."
 
-echo "Arquivos .qm gerados."
+lrelease "$PROJECT_ROOT"/SavvyCAN.pro
+
+echo ".qm files generated."
