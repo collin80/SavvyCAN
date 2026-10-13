@@ -9,6 +9,15 @@
 #include "connections/canconmanager.h"
 #include "triggerdialog.h"
 
+//Column order of the tokens in a .fsd file (after the leading enable token). This is the original column
+//order; the FD and BRS columns were added later and are appended at the end so old files still load and
+//older SavvyCAN versions ignore the extra tokens.
+static const QList<int> fileColumnOrder = {
+    ST_COLS::SENDTAB_COL_BUS, ST_COLS::SENDTAB_COL_ID, ST_COLS::SENDTAB_COL_MSGNAME, ST_COLS::SENDTAB_COL_LEN,
+    ST_COLS::SENDTAB_COL_EXT, ST_COLS::SENDTAB_COL_REM, ST_COLS::SENDTAB_COL_DATA, ST_COLS::SENDTAB_COL_TRIGGER,
+    ST_COLS::SENDTAB_COL_MODS, ST_COLS::SENDTAB_COL_FD, ST_COLS::SENDTAB_COL_BRS
+};
+
 /*
  * notes: need to ensure that you grab pointers when modifying data structures and dont
  * make copies. Also, check # of ms elapsed since last tick since they don't tend to come in at 1ms
@@ -56,9 +65,9 @@ FrameSenderWindow::FrameSenderWindow(const QVector<CommFrame> *frames, QWidget *
 void FrameSenderWindow::setupGrid()
 {
     QStringList headers;
-    headers << "En" << "Bus" << "ID" << "MsgName" << "Len" << "Ext" << "Rem" << "Data"
+    headers << "En" << "Bus" << "ID" << "MsgName" << "Len" << "Ext" << "Rem" << "FD" << "BRS" << "Data"
             << "Trigger" << "Modifications" << "Count";
-    ui->tableSender->setColumnCount(11);
+    ui->tableSender->setColumnCount(ST_COLS::SENDTAB_COL_COUNT + 1);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_EN, 50);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_BUS, 50);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_ID, 50);
@@ -66,6 +75,8 @@ void FrameSenderWindow::setupGrid()
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_LEN, 50);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_EXT, 50);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_REM, 50);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_FD, 40);
+    ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_BRS, 40);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_DATA, 220);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_TRIGGER, 270);
     ui->tableSender->setColumnWidth(ST_COLS::SENDTAB_COL_MODS, 270);
@@ -100,30 +111,95 @@ bool FrameSenderWindow::eventFilter(QObject *obj, QEvent *event)
     return false;
 }
 
+bool FrameSenderWindow::isCheckBoxColumn(int col)
+{
+    return (col == ST_COLS::SENDTAB_COL_EN || col == ST_COLS::SENDTAB_COL_EXT || col == ST_COLS::SENDTAB_COL_REM ||
+            col == ST_COLS::SENDTAB_COL_FD || col == ST_COLS::SENDTAB_COL_BRS);
+}
+
+QTableWidgetItem *FrameSenderWindow::makeCheckBoxItem(bool checked)
+{
+    QTableWidgetItem *item = new QTableWidgetItem();
+    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+    item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+    return item;
+}
+
+bool FrameSenderWindow::rowIsFD(int line)
+{
+    QTableWidgetItem *item = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_FD);
+    return item && item->checkState() == Qt::Checked;
+}
+
+//change a check box from code without re-entering processCellChange()
+void FrameSenderWindow::setCheckState(int line, int col, bool checked)
+{
+    QTableWidgetItem *item = ui->tableSender->item(line, col);
+    if (!item) return;
+    ui->tableSender->blockSignals(true);
+    item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+    ui->tableSender->blockSignals(false);
+}
+
+//Classic frames carry at most 8 bytes. CAN FD frames carry 0-8, 12, 16, 20, 24, 32, 48 or 64 bytes, so other
+//lengths are padded with zeros up to the next valid size. The Len cell is updated to match.
+void FrameSenderWindow::fitPayloadToFrameType(int line)
+{
+    static const int fdSizes[] = {12, 16, 20, 24, 32, 48, 64};
+    QByteArray arr = sendingData[line].payload();
+    const int oldLen = arr.size();
+    int len = oldLen;
+
+    if (!rowIsFD(line))
+    {
+        if (len > 8) len = 8;
+    }
+    else if (len > 8)
+    {
+        int fdLen = 64;
+        for (int size : fdSizes)
+        {
+            if (len <= size)
+            {
+                fdLen = size;
+                break;
+            }
+        }
+        len = fdLen;
+    }
+
+    if (len != oldLen)
+    {
+        arr.resize(len);
+        for (int i = oldLen; i < len; i++) arr[i] = 0; //resize() leaves added bytes uninitialised
+        sendingData[line].setPayload(arr);
+    }
+
+    QTableWidgetItem *lenItem = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN);
+    if (lenItem && lenItem->text() != QString::number(len))
+    {
+        ui->tableSender->blockSignals(true);
+        lenItem->setText(QString::number(len));
+        ui->tableSender->blockSignals(false);
+    }
+}
+
 void FrameSenderWindow::createBlankRow()
 {
     int row = ui->tableSender->rowCount();
     ui->tableSender->insertRow(row);
 
-    QTableWidgetItem *item = new QTableWidgetItem();
-    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(Qt::Unchecked);
+    QTableWidgetItem *item;
     inhibitChanged = true;
-    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EN, item);
-
-    item = new QTableWidgetItem();
-    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(Qt::Unchecked);
-    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EXT, item);
-
-    item = new QTableWidgetItem();
-    item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-    item->setCheckState(Qt::Unchecked);
-    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_REM, item);
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EN, makeCheckBoxItem(false));
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EXT, makeCheckBoxItem(false));
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_REM, makeCheckBoxItem(false));
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_FD, makeCheckBoxItem(false));
+    ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_BRS, makeCheckBoxItem(false));
 
     for (int i = 1; i <= ST_COLS::SENDTAB_COL_COUNT; i++)
     {
-        if (i != ST_COLS::SENDTAB_COL_EXT && i != ST_COLS::SENDTAB_COL_REM) {
+        if (!isCheckBoxColumn(i)) {
             item = new QTableWidgetItem("");
             //msgname is looked up via DBC interface and not able to be edited.
             //Though, it might be perhaps interesting to allow renaming it to
@@ -383,9 +459,10 @@ void FrameSenderWindow::saveSenderFile(QString filename)
             outString = "T#";
         }
         else outString = "F#";
-        for (int i = 1; i < ST_COLS::SENDTAB_COL_COUNT; i++)
+        //token order is the file format, not the column order (see fileColumnOrder)
+        for (int i : fileColumnOrder)
         {
-            if (i == ST_COLS::SENDTAB_COL_EXT || i == ST_COLS::SENDTAB_COL_REM) {
+            if (isCheckBoxColumn(i)) {
                 if (ui->tableSender->item(c, i)->checkState() == Qt::Checked) {
                     outString.append("T");
                 } else {
@@ -427,34 +504,23 @@ void FrameSenderWindow::loadSenderFile(QString filename)
             QList<QByteArray> tokens = line.split('#');
             int row = ui->tableSender->rowCount();
             ui->tableSender->insertRow(row);
-            QTableWidgetItem *item = new QTableWidgetItem();
-            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EN, item);
-            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EN, makeCheckBoxItem(tokens[0] == "T"));
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EXT, makeCheckBoxItem(false));
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_REM, makeCheckBoxItem(false));
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_FD, makeCheckBoxItem(false));
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_BRS, makeCheckBoxItem(false));
+            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_COUNT, new QTableWidgetItem(""));
 
-            item = new QTableWidgetItem();
-            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_EXT, item);
-            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(Qt::Unchecked);
-
-            item = new QTableWidgetItem();
-            ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_REM, item);
-            ui->tableSender->item(row, ST_COLS::SENDTAB_COL_REM)->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-            item->setCheckState(Qt::Unchecked);
-
-            if (tokens[0] == "T")
-            {
-                ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setCheckState(Qt::Checked);
-            }
-            else ui->tableSender->item(row, ST_COLS::SENDTAB_COL_EN)->setCheckState(Qt::Unchecked);
             if (tokens.length() >= 9) {
-                for (int i = 1; i < ST_COLS::SENDTAB_COL_COUNT; i++)
+                //tokens[1..] follow fileColumnOrder. Files from before CAN FD support simply end before
+                //the FD/BRS tokens, which then stay unchecked.
+                for (int t = 0; t < fileColumnOrder.count() && (t + 1) < tokens.length(); t++)
                 {
-                    if (i != ST_COLS::SENDTAB_COL_EXT && i != ST_COLS::SENDTAB_COL_REM) {
-                        ui->tableSender->setItem(row, i, new QTableWidgetItem(QString(tokens[i])));
-                    } else {
-                        if (tokens[i] == "T") {
-                            ui->tableSender->item(row, i)->setCheckState(Qt::Checked);
-                        }
+                    int col = fileColumnOrder[t];
+                    if (!isCheckBoxColumn(col)) {
+                        ui->tableSender->setItem(row, col, new QTableWidgetItem(QString(tokens[t + 1])));
+                    } else if (tokens[t + 1] == "T") {
+                        ui->tableSender->item(row, col)->setCheckState(Qt::Checked);
                     }
                 }
             } else {
@@ -465,8 +531,23 @@ void FrameSenderWindow::loadSenderFile(QString filename)
                 ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_TRIGGER, new QTableWidgetItem(QString(tokens[5])));
                 ui->tableSender->setItem(row, ST_COLS::SENDTAB_COL_MODS, new QTableWidgetItem(QString(tokens[6])));
             }
+            //make sure every text cell exists (the short format above leaves some out)
+            for (int col = 1; col <= ST_COLS::SENDTAB_COL_COUNT; col++)
+            {
+                if (!isCheckBoxColumn(col) && !ui->tableSender->item(row, col))
+                {
+                    QTableWidgetItem *blank = new QTableWidgetItem("");
+                    if (col == ST_COLS::SENDTAB_COL_MSGNAME) blank->setFlags(blank->flags() & ~Qt::ItemIsEditable);
+                    ui->tableSender->setItem(row, col, blank);
+                }
+            }
             inhibitChanged = false;
-            for (int k = 0; k < ST_COLS::SENDTAB_COL_COUNT; k++) processCellChange(row, k);
+            //FD/BRS are applied before Len/Data so the payload limits match the frame type
+            const int processOrder[] = {ST_COLS::SENDTAB_COL_BUS, ST_COLS::SENDTAB_COL_ID, ST_COLS::SENDTAB_COL_EXT,
+                                        ST_COLS::SENDTAB_COL_REM, ST_COLS::SENDTAB_COL_FD, ST_COLS::SENDTAB_COL_BRS,
+                                        ST_COLS::SENDTAB_COL_LEN, ST_COLS::SENDTAB_COL_DATA, ST_COLS::SENDTAB_COL_TRIGGER,
+                                        ST_COLS::SENDTAB_COL_MODS, ST_COLS::SENDTAB_COL_EN};
+            for (int k : processOrder) processCellChange(row, k);
 
         }
     }
@@ -655,9 +736,20 @@ void FrameSenderWindow::doModifiers(int idx)
         }
         //Finally, drop the result into the proper data byte
         QByteArray newArr(sendData->payload());
-        newArr[mod->destByte] = (char) shadowReg;
-        sendData->setPayload(newArr);
+        //a modifier for a byte past the end of this frame's payload is ignored (writing it is out of bounds)
+        if (mod->destByte >= 0 && mod->destByte < newArr.size())
+        {
+            newArr[mod->destByte] = (char) shadowReg;
+            sendData->setPayload(newArr);
+        }
     }
+}
+
+//byte idx of a payload, or 0 if the payload is shorter than that
+static unsigned char payloadByte(const QByteArray &payload, int idx)
+{
+    if (idx < 0 || idx >= payload.size()) return 0;
+    return (unsigned char)payload.at(idx);
 }
 
 int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
@@ -670,16 +762,17 @@ int FrameSenderWindow::fetchOperand(int idx, ModifierOperand op)
     }
     else if (op.ID == -2) //fetch data from a data byte within the output frame
     {
-        if (op.notOper) return ~((unsigned char)sendingData.at(idx).payload()[op.databyte]);
-        else return (unsigned char)sendingData.at(idx).payload()[op.databyte];
+        //payloadByte() returns 0 past the end of the payload instead of reading out of bounds
+        if (op.notOper) return ~payloadByte(sendingData.at(idx).payload(), op.databyte);
+        else return payloadByte(sendingData.at(idx).payload(), op.databyte);
     }
     else //look up external data byte
     {
         tempFrame = lookupFrame(op.ID, op.bus);
         if (tempFrame != nullptr)
         {
-            if (op.notOper) return ~((unsigned char)tempFrame->payload()[op.databyte]);
-            else return (unsigned char)tempFrame->payload()[op.databyte];
+            if (op.notOper) return ~payloadByte(tempFrame->payload(), op.databyte);
+            else return payloadByte(tempFrame->payload(), op.databyte);
         }
         else return 0;
     }
@@ -729,6 +822,7 @@ void FrameSenderWindow::processModifierText(int line)
 
     //yeah, lots of operations on this one line but it's for a good cause. Removes the convenience English versions of the
     //logical operators and replaces them with the math equivs. Also uppercases and removes all superfluous whitespace
+    //(this used to read column 8, which was the Trigger column, so modifiers were parsed from the trigger text)
     modString = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_MODS)->text().toUpper().trimmed().replace("AND", "&").replace("XOR", "^").replace("OR", "|").replace(" ", "");
     if (modString != "")
     {
@@ -1059,6 +1153,13 @@ void FrameSenderWindow::processCellChange(int line, int col)
                 if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_EXT))
                     processCellChange(line, ST_COLS::SENDTAB_COL_EXT);
 
+                //frame type before Len/Data so the payload limits are right
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_FD))
+                    processCellChange(line, ST_COLS::SENDTAB_COL_FD);
+
+                if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BRS))
+                    processCellChange(line, ST_COLS::SENDTAB_COL_BRS);
+
                 if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN) &&
                     !ui->tableSender->item(line, ST_COLS::SENDTAB_COL_LEN)->text().isEmpty())
                     processCellChange(line, ST_COLS::SENDTAB_COL_LEN);
@@ -1102,16 +1203,19 @@ void FrameSenderWindow::processCellChange(int line, int col)
             qDebug() << "setting ID to " << tempVal << "hex:" << QString::number(tempVal, 16);
             break;
         case ST_COLS::SENDTAB_COL_LEN:
-            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, SENDTAB_COL_LEN)->text());            
+            tempVal = Utility::ParseStringToNum(ui->tableSender->item(line, SENDTAB_COL_LEN)->text());
             if (tempVal < 0) tempVal = 0;
-            if (tempVal > 8) tempVal = 8;
+            if (tempVal > 64) tempVal = 64;
             // Only resize if the current payload is different size
             if (sendingData[line].payload().size() != tempVal)
             {
                 arr = sendingData[line].payload();
+                const int oldLen = arr.size();
                 arr.resize(tempVal);
+                for (int i = oldLen; i < tempVal; i++) arr[i] = 0;
                 sendingData[line].setPayload(arr);
             }
+            fitPayloadToFrameType(line); //classic: max 8, FD: next valid FD length
             break;
         case ST_COLS::SENDTAB_COL_EXT:
             if (ui->tableSender->item(line, SENDTAB_COL_EXT)->checkState() == Qt::Checked) {
@@ -1122,9 +1226,39 @@ void FrameSenderWindow::processCellChange(int line, int col)
             break;
         case ST_COLS::SENDTAB_COL_REM:
             if (ui->tableSender->item(line, SENDTAB_COL_REM)->checkState() == Qt::Checked) {
-                sendingData[line].setFrameType(CommFrame::RemoteRequestFrame);
-            } else {
+                if (rowIsFD(line)) {
+                    //CAN FD has no remote frames
+                    setCheckState(line, ST_COLS::SENDTAB_COL_REM, false);
+                } else {
+                    sendingData[line].setFrameType(CommFrame::RemoteRequestFrame);
+                }
+            } else if (!rowIsFD(line)) {
                 sendingData[line].setFrameType(CommFrame::CANDataFrame);
+            }
+            break;
+        case ST_COLS::SENDTAB_COL_FD:
+            if (rowIsFD(line)) {
+                setCheckState(line, ST_COLS::SENDTAB_COL_REM, false); //CAN FD has no remote frames
+                sendingData[line].setFrameType(CommFrame::CANFDDataFrame);
+                sendingData[line].setFlexibleDataRateFormat(true);
+            } else {
+                //back to a classic frame: drop BRS and any payload beyond 8 bytes
+                setCheckState(line, ST_COLS::SENDTAB_COL_BRS, false);
+                sendingData[line].setFrameType(CommFrame::CANDataFrame);
+                sendingData[line].setFlexibleDataRateFormat(false);
+            }
+            fitPayloadToFrameType(line);
+            break;
+        case ST_COLS::SENDTAB_COL_BRS:
+            if (ui->tableSender->item(line, ST_COLS::SENDTAB_COL_BRS)->checkState() == Qt::Checked) {
+                //bit rate switching only exists for CAN FD frames, so BRS implies FD
+                if (!rowIsFD(line)) {
+                    setCheckState(line, ST_COLS::SENDTAB_COL_FD, true);
+                    processCellChange(line, ST_COLS::SENDTAB_COL_FD);
+                }
+                sendingData[line].setBitrateSwitch(true);
+            } else {
+                sendingData[line].setBitrateSwitch(false);
             }
             break;
         case ST_COLS::SENDTAB_COL_DATA: //Data bytes
@@ -1135,11 +1269,12 @@ void FrameSenderWindow::processCellChange(int line, int col)
 #endif
             arr.clear();
             arr.reserve(tokens.count());
-            for (int j = 0; j < tokens.count(); j++)
+            for (int j = 0; j < tokens.count() && j < 64; j++)
             {
                 arr.append((uint8_t)Utility::ParseStringToNum(tokens[j]));
             }
             sendingData[line].setPayload(arr);
+            fitPayloadToFrameType(line); //classic: max 8, FD: pad to the next valid FD length; updates Len
             break;
         case ST_COLS::SENDTAB_COL_TRIGGER: //triggers
             processTriggerText(line);

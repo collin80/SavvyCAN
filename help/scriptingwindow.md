@@ -62,6 +62,8 @@ can.clearFilters() - remove all filters and revert to a clean state. You will no
     
 can.sendFrame(bus, id, length, data) - Send a CAN frame out the given bus. The CAN id will be what you set as will the length. The length can thus be different from the actual length of "data" which should be a valid javascript array. The length can not exceed 8. The frame will be sent as soon as possible so long as that bus is connected and not in listen only mode.
 
+can.sendFDFrame(bus, id, length, data, brs) - Send a CAN FD frame. Works like sendFrame but the length can be up to 64. A length that isn't a valid CAN FD size is padded with zeros up to the next one (12, 16, 20, 24, 32, 48 or 64). Set brs to true to use bit rate switching (faster data phase). The connection has to support sending CAN FD frames.
+
 The isotp Object
 ================
 

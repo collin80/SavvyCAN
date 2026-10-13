@@ -6,6 +6,7 @@
 #include <QElapsedTimer>
 #include <QTime>
 #include <QMutex>
+#include <QTableWidgetItem>
 #include "can_structs.h"
 #include "can_trigger_structs.h"
 #include "dbc/dbchandler.h"
@@ -24,10 +25,12 @@ enum ST_COLS
     SENDTAB_COL_LEN = 4,
     SENDTAB_COL_EXT = 5,
     SENDTAB_COL_REM = 6,
-    SENDTAB_COL_DATA = 7,
-    SENDTAB_COL_TRIGGER = 8,
-    SENDTAB_COL_MODS = 9,
-    SENDTAB_COL_COUNT = 10,
+    SENDTAB_COL_FD = 7,     //CAN FD frame (up to 64 bytes)
+    SENDTAB_COL_BRS = 8,    //CAN FD bit rate switch
+    SENDTAB_COL_DATA = 9,
+    SENDTAB_COL_TRIGGER = 10,
+    SENDTAB_COL_MODS = 11,
+    SENDTAB_COL_COUNT = 12,
 };
 
 class FrameSenderWindow : public QDialog
@@ -79,6 +82,11 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void setupGrid();
     void finishedTriggerDialog(int result);
+    static bool isCheckBoxColumn(int col);
+    QTableWidgetItem *makeCheckBoxItem(bool checked);
+    bool rowIsFD(int line);
+    void setCheckState(int line, int col, bool checked);
+    void fitPayloadToFrameType(int line);
 };
 
 #endif // FRAMESENDERWINDOW_H
