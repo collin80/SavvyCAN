@@ -7,6 +7,8 @@
 #include "helpwindow.h"
 #include "utility.h"
 
+#include <QCheckBox>
+
 DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::DBCMessageEditor)
@@ -37,8 +39,11 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if ((dbcMessage->ID & 0x1FFFFFFFul) != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
             dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
 
-            if (dbcMessage->ID > 0x7FF) dbcMessage->extendedID = true;
-            else dbcMessage->extendedID = false;
+            // Auto-enable extended for IDs that exceed standard 11-bit range.
+            if (dbcMessage->ID > 0x7FF && ui->checkExtended)
+            {
+                ui->checkExtended->setChecked(true);
+            }
 
             emit updatedTreeInfo(dbcMessage, origID);
         });
@@ -60,6 +65,17 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if (suppressEditCallbacks) return;
             if (dbcMessage->len != Utility::ParseStringToNum(ui->lineFrameLen->text())) dbcFile->setDirtyFlag();
             dbcMessage->len = Utility::ParseStringToNum(ui->lineFrameLen->text());
+            emit updatedTreeInfo(dbcMessage, origID);
+        });
+
+    connect(ui->checkExtended, &QCheckBox::toggled,
+        [=](bool checked)
+        {
+            if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
+            if (dbcMessage->extendedID != checked) dbcFile->setDirtyFlag();
+            dbcMessage->extendedID = checked;
+            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->comboSender, &QComboBox::currentTextChanged,
@@ -211,6 +227,8 @@ void DBCMessageEditor::setMessageRef(DBC_MESSAGE *msg)
 {
     dbcMessage = msg;
     origID = msg->ID;
+    if (ui->checkExtended)
+        ui->checkExtended->setChecked(dbcMessage->extendedID);
 }
 
 void DBCMessageEditor::showEvent(QShowEvent* event)
@@ -222,12 +240,17 @@ void DBCMessageEditor::showEvent(QShowEvent* event)
 
 void DBCMessageEditor::refreshView()
 {
+    if (!dbcMessage) return;
+
     suppressEditCallbacks = true;
 
     ui->lineComment->setText(dbcMessage->comment);
     ui->lineFrameID->setText(Utility::formatCANID(dbcMessage->ID & 0x1FFFFFFFul));
     ui->lineMsgName->setText(dbcMessage->name);
-    ui->lineFrameLen->setText(QString::number(dbcMessage->len));    
+    ui->lineFrameLen->setText(QString::number(dbcMessage->len));
+    if (ui->checkExtended)
+        ui->checkExtended->setChecked(dbcMessage->extendedID);
+
     for (int i = 0; i < ui->comboSender->count(); i++)
     {
         if (ui->comboSender->itemText(i) == dbcMessage->sender->name)

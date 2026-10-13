@@ -3,6 +3,7 @@
 
 #include <QFile>
 #include <QFileDialog>
+#include <QFontDatabase>
 #include <QSettings>
 #include <QMessageBox>
 #if QT_VERSION >= QT_VERSION_CHECK( 5, 10, 0 )
@@ -24,7 +25,7 @@ ScriptingWindow::ScriptingWindow(const QVector<CommFrame> *frames, QWidget *pare
     editor->setFrameShape(JSEdit::NoFrame);
     editor->setWordWrapMode(QTextOption::NoWrap);
     editor->setEnabled(false);
-    editor->setFont(QFont("Monospace", 12));
+    editor->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     editor->show();
 
     //Show whitespaces
@@ -33,6 +34,11 @@ ScriptingWindow::ScriptingWindow(const QVector<CommFrame> *frames, QWidget *pare
     editor->document()->setDefaultTextOption(option);
 
     ui->verticalLayout->insertWidget(2,editor, 10);
+
+    // Default splitter ratios (overridden by readSettings if positions are saved)
+    ui->splitterMain->setSizes({1, 2});   // left 1/3, right 2/3
+    ui->splitterLeft->setSizes({3, 2});   // variables 3/5, scripts 2/5
+    ui->splitterRight->setSizes({3, 2});  // editor 3/5, log 2/5
 
     readSettings();
 
@@ -139,8 +145,14 @@ void ScriptingWindow::readSettings()
     QSettings settings;
     if (settings.value("Main/SaveRestorePositions", false).toBool())
     {
-        resize(settings.value("ScriptingWindow/WindowSize", QSize(860, 650)).toSize());
+        resize(settings.value("ScriptingWindow/WindowSize", QSize(1000, 700)).toSize());
         move(Utility::constrainedWindowPos(settings.value("ScriptingWindow/WindowPos", QPoint(100, 100)).toPoint()));
+        if (settings.contains("ScriptingWindow/SplitterMain"))
+            ui->splitterMain->restoreState(settings.value("ScriptingWindow/SplitterMain").toByteArray());
+        if (settings.contains("ScriptingWindow/SplitterLeft"))
+            ui->splitterLeft->restoreState(settings.value("ScriptingWindow/SplitterLeft").toByteArray());
+        if (settings.contains("ScriptingWindow/SplitterRight"))
+            ui->splitterRight->restoreState(settings.value("ScriptingWindow/SplitterRight").toByteArray());
     }
 }
 
@@ -152,6 +164,9 @@ void ScriptingWindow::writeSettings()
     {
         settings.setValue("ScriptingWindow/WindowSize", size());
         settings.setValue("ScriptingWindow/WindowPos", pos());
+        settings.setValue("ScriptingWindow/SplitterMain", ui->splitterMain->saveState());
+        settings.setValue("ScriptingWindow/SplitterLeft", ui->splitterLeft->saveState());
+        settings.setValue("ScriptingWindow/SplitterRight", ui->splitterRight->saveState());
     }
 }
 
@@ -274,12 +289,15 @@ void ScriptingWindow::deleteCurrentScript()
     switch (ret)
     {
     case QMessageBox::Yes:
-        ui->listLoadedScripts->takeItem(sel);
+        // Obtain the script pointer and update the data model before manipulating
+        // the list widget, so that the currentRowChanged signal (fired by takeItem)
+        // does not cause changeCurrentScript() to touch the script being deleted.
         thisScript = scripts.at(sel);
+        if (currentScript == thisScript) currentScript = nullptr;
         scripts.removeAt(sel);
-        delete thisScript;  //causes a seg fault. Seems to be due to currently running javascript code. No idea how to stop code from running
+        ui->listLoadedScripts->takeItem(sel);
+        delete thisScript;
         thisScript = nullptr;
-        currentScript = nullptr;
 
         if (ui->listLoadedScripts->count() > 0)
         {
@@ -290,6 +308,8 @@ void ScriptingWindow::deleteCurrentScript()
         {
             editor->setPlainText("");
             editor->setEnabled(false);
+            ui->tableVariables->clearContents();
+            for (int i = ui->tableVariables->rowCount() - 1; i >= 0; i--) ui->tableVariables->removeRow(i);
         }
         break;
     case QMessageBox::No:
