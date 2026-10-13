@@ -47,6 +47,7 @@ NewGraphDialog::NewGraphDialog(DBCHandler *handler, QWidget *parent) :
     connect(ui->cbMessages, SIGNAL(currentIndexChanged(int)), this, SLOT(loadSignals(int)));
     connect(ui->gridData, SIGNAL(gridClicked(int)), this, SLOT(bitfieldClicked(int)));
     connect(ui->txtDataLen, SIGNAL(textChanged(QString)), this, SLOT(handleDataLenUpdate()));
+    connect(ui->txtStartBit, SIGNAL(textChanged(QString)), this, SLOT(handleStartBitUpdate()));
     connect(ui->cbIntel, SIGNAL(toggled(bool)), this, SLOT(drawBitfield()));
     connect(ui->btnCopySignal, SIGNAL(clicked(bool)), this, SLOT(copySignalToParamsUI()));
     connect(ui->cbSignals, SIGNAL(currentIndexChanged(int)), this, SLOT(drawBitfield()));
@@ -208,11 +209,15 @@ void NewGraphDialog::setParams(GraphParams &params)
     ui->cbIntel->setChecked(params.intelFormat);
 
     startBit = params.startBit;
+    ui->txtStartBit->blockSignals(true);
+    ui->txtStartBit->setText(QString::number(startBit));
+    ui->txtStartBit->blockSignals(false);
     dataLen = params.numBits;
     ui->txtDataLen->setText(QString::number(dataLen));
     ui->txtID->setText(Utility::formatCANID(params.ID));
     ui->txtName->setText(params.graphName);
     ui->editBus->setText(QString::number(params.bus));
+    ui->editFrameLen->setText(QString::number(params.frameLen));
     QPalette p = ui->colorSwatch->palette();
     p.setColor(QPalette::Button, params.lineColor);
     ui->colorSwatch->setPalette(p);
@@ -303,6 +308,7 @@ void NewGraphDialog::getParams(GraphParams &params)
     params.scale = ui->txtScale->text().toFloat();
     params.stride = Utility::ParseStringToNum(ui->txtStride->text());
     params.bus = Utility::ParseStringToNum(ui->editBus->text());
+    params.frameLen = ui->editFrameLen->text().toInt();
 
     params.startBit = startBit;
     params.numBits = dataLen;
@@ -419,7 +425,18 @@ void NewGraphDialog::bitfieldClicked(int bit)
 {
     qDebug() << "Clicked bit: " << bit;
     startBit = bit;
+    ui->txtStartBit->blockSignals(true);
+    ui->txtStartBit->setText(QString::number(startBit));
+    ui->txtStartBit->blockSignals(false);
     drawBitfield();    
+}
+
+void NewGraphDialog::handleStartBitUpdate()
+{
+    startBit = ui->txtStartBit->text().toInt();
+    if (startBit < 0) startBit = 0;
+    if (startBit > 511) startBit = 511;
+    drawBitfield();
 }
 
 void NewGraphDialog::drawBitfield()
@@ -491,6 +508,9 @@ void NewGraphDialog::copySignalToParamsUI()
     if (!sig) return;
 
     startBit = sig->startBit;
+    ui->txtStartBit->blockSignals(true);
+    ui->txtStartBit->setText(QString::number(startBit));
+    ui->txtStartBit->blockSignals(false);
     ui->txtBias->setText(QString::number(sig->bias));
     ui->txtDataLen->setText(QString::number(sig->signalSize));
     ui->txtID->setText(Utility::formatCANID(msg->ID));

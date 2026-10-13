@@ -29,6 +29,7 @@ private slots:
     void loadMessages(int idx);
     void loadSignals(int idx);
     void bitfieldClicked(int);
+    void handleStartBitUpdate();
     void handleDataLenUpdate();
     void drawBitfield();
     void copySignalToParamsUI();
