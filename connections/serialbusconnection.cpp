@@ -46,11 +46,16 @@ void SerialBusConnection::piStarted()
     connect(mDev_p, &QCanBusDevice::framesReceived, this, &SerialBusConnection::framesReceived);
     connect(mDev_p, &QCanBusDevice::stateChanged, this, &SerialBusConnection::deviceStateChanged);
 
-    connect(&mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
-    mTimer.setInterval(1000);
-    mTimer.setSingleShot(false); //keep ticking
-    mTimer.start();
+    if (!mTimer) {
+        mTimer = new QTimer(this);
+        connect(mTimer, SIGNAL(timeout()), this, SLOT(testConnection()));
+    }
 
+    mTimer->setInterval(1000);
+    mTimer->setSingleShot(false); //keep ticking
+    mTimer->start();
+    mBusData[0].mBus.setActive(true);
+    mBusData[0].mBus.setCanFD(false);
     mBusData[0].mConfigured = true;
 
     /* Connect immediately if a speed is already configured (e.g. restored from last session) */
@@ -81,9 +86,13 @@ void SerialBusConnection::piSuspend(bool pSuspend)
 }
 
 
-void SerialBusConnection::piStop() {
+void SerialBusConnection::piStop()
+{
     qDebug() << "piStop()";
-    mTimer.stop();
+
+    if (mTimer)
+        mTimer->stop();
+
     disconnectDevice();
 }
 

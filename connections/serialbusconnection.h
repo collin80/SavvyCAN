@@ -51,7 +51,7 @@ private slots:
 
 protected:
     QCanBusDevice     *mDev_p = nullptr;
-    QTimer             mTimer;
+    QTimer            *mTimer;
 };
 
 
