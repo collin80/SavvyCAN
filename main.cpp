@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include <QApplication>
 #include <QKeyEvent>
+#include <QTranslator>
+#include <QLocale>
 
 class SavvyCANApplication : public QApplication
 {
@@ -52,6 +54,17 @@ int main(int argc, char *argv[])
     QLoggingCategory::setFilterRules("qt.canbus=true");
 
     SavvyCANApplication a(argc, argv);
+
+    QTranslator translator;
+    QLocale locale = QLocale::system();
+    QString lang = locale.name();
+    QString shortLang = locale.name().left(2);  // pt
+
+    if (!translator.load("savvycan_" + lang, "translations"))
+    {
+      translator.load("savvycan_" + lang, "translations");
+    }
+    a.installTranslator(&translator);
 
     //Add a local path for Qt extensions, to allow for per-application extensions.
     a.addLibraryPath("plugins");
