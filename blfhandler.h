@@ -146,6 +146,27 @@ struct BLF_CANFD_OBJ
     uint8_t data[64];
 };
 
+#pragma pack(push, 1)
+struct BLF_CANFD64_OBJ
+{
+    uint8_t channel;
+    uint8_t dlc;
+    uint8_t validDataBytes;
+    uint8_t txCount;
+    uint32_t frameId;
+    uint32_t frameLength;
+    uint32_t flags;
+    uint32_t btrCfgArb;
+    uint32_t btrCfgData;
+    uint32_t timeOffsetBrsNs;
+    uint32_t timeOffsetCrcDelNs;
+    uint16_t bitCount;
+    uint8_t dir;
+    uint8_t extDataOffset;
+    uint32_t crc;
+};
+#pragma pack(pop)
+
 struct BLF_ERROR_EXT
 {
     uint16_t channel;
