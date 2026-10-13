@@ -285,3 +285,10 @@ INSTALLS += target
 # undocumented magic to avoid relative filenames in temporary makefiles
 QMAKE_PROJECT_DEPTH = 0
 
+TRANSLATIONS += \
+    translations/SavvyCAN_en.ts \
+    translations/SavvyCAN_pt_BR.ts
+
+DISTFILES += \
+    translations/pt_BR.qph
+
