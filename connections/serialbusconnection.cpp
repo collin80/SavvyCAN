@@ -6,6 +6,170 @@
 #include <QCanBusFrame>
 #include <QDateTime>
 #include <QDebug>
+#include <QLibrary>
+
+namespace
+{
+constexpr quint8 PCAN_LISTEN_ONLY_PARAMETER = 0x08U;
+constexpr quint32 PCAN_PARAMETER_OFF_VALUE = 0x00U;
+constexpr quint32 PCAN_PARAMETER_ON_VALUE = 0x01U;
+constexpr quint32 PCAN_ERROR_OK_VALUE = 0x00000U;
+
+#ifdef Q_OS_WIN
+using PcanSetValueFunction = quint32 (__stdcall *)(quint16, quint8, void *, quint32);
+using PcanGetValueFunction = quint32 (__stdcall *)(quint16, quint8, void *, quint32);
+using PcanGetErrorTextFunction = quint32 (__stdcall *)(quint32, quint16, char *);
+#else
+using PcanSetValueFunction = quint32 (*)(quint16, quint8, void *, quint32);
+using PcanGetValueFunction = quint32 (*)(quint16, quint8, void *, quint32);
+using PcanGetErrorTextFunction = quint32 (*)(quint32, quint16, char *);
+#endif
+
+bool parsePcanPortIndex(const QString &portName, const QString &prefix, int count, int *index)
+{
+    const QString trimmedPortName = portName.trimmed();
+    if (!trimmedPortName.startsWith(prefix, Qt::CaseInsensitive))
+        return false;
+
+    bool conversionOk = false;
+    const int parsedIndex = trimmedPortName.mid(prefix.size()).toInt(&conversionOk);
+    if (!conversionOk || parsedIndex < 0 || parsedIndex >= count)
+        return false;
+
+    *index = parsedIndex;
+    return true;
+}
+
+quint16 pcanChannelHandle(const QString &portName, bool *ok)
+{
+    int index = 0;
+    *ok = true;
+
+    if (parsePcanPortIndex(portName, QStringLiteral("usb"), 16, &index))
+        return static_cast<quint16>(index < 8 ? 0x51U + index : 0x509U + (index - 8));
+
+    if (parsePcanPortIndex(portName, QStringLiteral("pci"), 16, &index))
+        return static_cast<quint16>(index < 8 ? 0x41U + index : 0x409U + (index - 8));
+
+    *ok = false;
+    return 0U;
+}
+
+QLibrary &pcanBasicLibrary()
+{
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    static QLibrary library(QStringLiteral("PCBUSB"));
+#else
+    static QLibrary library(QStringLiteral("pcanbasic"));
+#endif
+    return library;
+}
+
+QString pcanStatusText(QLibrary &library, quint32 status)
+{
+    const auto getErrorText = reinterpret_cast<PcanGetErrorTextFunction>(library.resolve("CAN_GetErrorText"));
+    if (getErrorText)
+    {
+        char buffer[256] = {};
+        if (getErrorText(status, 0U, buffer) == PCAN_ERROR_OK_VALUE && buffer[0] != '\0')
+            return QString::fromLocal8Bit(buffer);
+    }
+
+    return QStringLiteral("PCAN-Basic status 0x%1")
+            .arg(status, 8, 16, QLatin1Char('0'));
+}
+
+bool configurePeakCanListenOnly(const QString &portName, bool enabled, QString *errorString)
+{
+    bool validChannel = false;
+    const quint16 channel = pcanChannelHandle(portName, &validChannel);
+    if (!validChannel)
+    {
+        if (errorString)
+            *errorString = QStringLiteral("Unsupported PeakCAN channel name: %1").arg(portName);
+        return false;
+    }
+
+    QLibrary &library = pcanBasicLibrary();
+    if (!library.isLoaded() && !library.load())
+    {
+        if (errorString)
+            *errorString = QStringLiteral("Could not load PCAN-Basic: %1").arg(library.errorString());
+        return false;
+    }
+
+    const auto setValue = reinterpret_cast<PcanSetValueFunction>(library.resolve("CAN_SetValue"));
+    if (!setValue)
+    {
+        if (errorString)
+            *errorString = QStringLiteral("PCAN-Basic does not export CAN_SetValue");
+        return false;
+    }
+
+    quint32 value = enabled ? PCAN_PARAMETER_ON_VALUE : PCAN_PARAMETER_OFF_VALUE;
+    const quint32 status = setValue(channel, PCAN_LISTEN_ONLY_PARAMETER, &value, sizeof(value));
+    if (status != PCAN_ERROR_OK_VALUE)
+    {
+        if (errorString)
+            *errorString = pcanStatusText(library, status);
+        return false;
+    }
+
+    return true;
+}
+
+bool verifyPeakCanListenOnly(const QString &portName, bool expected, QString *errorString)
+{
+    bool validChannel = false;
+    const quint16 channel = pcanChannelHandle(portName, &validChannel);
+    if (!validChannel)
+    {
+        if (errorString)
+            *errorString = QStringLiteral("Unsupported PeakCAN channel name: %1").arg(portName);
+        return false;
+    }
+
+    QLibrary &library = pcanBasicLibrary();
+    if (!library.isLoaded() && !library.load())
+    {
+        if (errorString)
+            *errorString = QStringLiteral("Could not load PCAN-Basic: %1").arg(library.errorString());
+        return false;
+    }
+
+    const auto getValue = reinterpret_cast<PcanGetValueFunction>(library.resolve("CAN_GetValue"));
+    if (!getValue)
+    {
+        if (errorString)
+            *errorString = QStringLiteral("PCAN-Basic does not export CAN_GetValue");
+        return false;
+    }
+
+    quint32 actualValue = PCAN_PARAMETER_OFF_VALUE;
+    const quint32 status = getValue(channel, PCAN_LISTEN_ONLY_PARAMETER,
+                                    &actualValue, sizeof(actualValue));
+    if (status != PCAN_ERROR_OK_VALUE)
+    {
+        if (errorString)
+            *errorString = pcanStatusText(library, status);
+        return false;
+    }
+
+    const bool actual = actualValue == PCAN_PARAMETER_ON_VALUE;
+    if (actual != expected)
+    {
+        if (errorString)
+        {
+            *errorString = QStringLiteral("PCAN-Basic reported listen-only %1 instead of %2")
+                    .arg(actual ? QStringLiteral("on") : QStringLiteral("off"),
+                         expected ? QStringLiteral("on") : QStringLiteral("off"));
+        }
+        return false;
+    }
+
+    return true;
+}
+}
 
 /***********************************/
 /****    class definition       ****/
@@ -108,14 +272,49 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
     mDev_p->setConfigurationParameter(QCanBusDevice::BitRateKey, bus.getSpeed());
     mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, bus.isCanFD());
 
-    if(bus.isListenOnly())
-        sbusconfig |= EN_SILENT_MODE;
-    mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
+    const bool isPeakCan = getDriver().compare(QStringLiteral("peakcan"), Qt::CaseInsensitive) == 0;
+    if (isPeakCan)
+    {
+        // Qt's PeakCAN backend does not consume SavvyCAN's UserKey bit mask. Set the
+        // native PCAN-Basic parameter before QCanBusDevice initializes the channel.
+        QString pcanError;
+        if (!configurePeakCanListenOnly(getPort(), bus.isListenOnly(), &pcanError))
+        {
+            if (bus.isListenOnly())
+            {
+                qCritical() << "Refusing to open PeakCAN without verified listen-only setup:"
+                            << pcanError;
+                return;
+            }
+
+            qWarning() << "Could not explicitly disable PeakCAN listen-only mode:"
+                       << pcanError;
+        }
+    }
+    else
+    {
+        if(bus.isListenOnly())
+            sbusconfig |= EN_SILENT_MODE;
+        mDev_p->setConfigurationParameter(QCanBusDevice::UserKey, sbusconfig);
+    }
 
     /* connect device */
     if (!mDev_p->connectDevice()) {
         disconnectDevice();
         qDebug() << "can't connect device";
+        return;
+    }
+
+    if (isPeakCan && bus.isListenOnly())
+    {
+        QString pcanError;
+        if (!verifyPeakCanListenOnly(getPort(), true, &pcanError))
+        {
+            qCritical() << "PeakCAN did not enter listen-only mode; disconnecting to avoid"
+                           " acknowledging or disturbing the CAN bus:"
+                        << pcanError;
+            disconnectDevice();
+        }
     }
 }
 
@@ -126,6 +325,10 @@ bool SerialBusConnection::piSendFrame(const CANFrame& pFrame)
     if(0 != pFrame.bus /*|| pFrame.len>8*/)
         return false;
     if (!mDev_p) return false;
+
+    CANBus bus;
+    if (getBusConfig(0, bus) && bus.isListenOnly())
+        return false;
 
     return mDev_p->writeFrame(pFrame);
 }
@@ -245,7 +448,13 @@ void SerialBusConnection::testConnection() {
             }
             break;
         case CANCon::NOT_CONNECTED:
-            if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
+            if (mDev_p && mDev_p->state() == QCanBusDevice::ConnectedState) {
+                setStatus(CANCon::CONNECTED);
+                stats.conStatus = getStatus();
+                stats.numHardwareBuses = mNumBuses;
+                emit status(stats);
+            }
+            else if (mDev_p && mDev_p->state() == QCanBusDevice::UnconnectedState) {
                 /* try to reconnect */
                 CANBus bus;
                 if(getBusConfig(0, bus))
@@ -254,10 +463,13 @@ void SerialBusConnection::testConnection() {
                     setBusSettings(0, bus);
                 }
 
-                setStatus(CANCon::CONNECTED);
-                stats.conStatus = getStatus();
-                stats.numHardwareBuses = mNumBuses;
-                emit status(stats);
+                if (mDev_p->state() == QCanBusDevice::ConnectedState)
+                {
+                    setStatus(CANCon::CONNECTED);
+                    stats.conStatus = getStatus();
+                    stats.numHardwareBuses = mNumBuses;
+                    emit status(stats);
+                }
             }
             break;
         default: {}
