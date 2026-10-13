@@ -23,6 +23,10 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     rx_step = 0;
     validationCounter = 10; //how many times we can miss validation before we die
     espSerialMode = true;
+    deviceHasFDSetup = false;
+    fdReplyBuses = 0;
+    fdReplyFlags = 0;
+    fdReplyRate = 0;
 
     timeBasis = 0;
     lastSystemTimeBasis = 0;
@@ -227,6 +231,26 @@ void GVRetSerial::piSetBusSettings(int pBusIdx, CANBus bus)
         buffer.append((char)0);
         sendToSerial(buffer);
     }
+
+    /* CAN FD mode and data rate. Only sent to devices that answered GET_FD: an older device would read
+       the bytes after an opcode it doesn't know as further commands. */
+    if (deviceHasFDSetup && bus.isCanFDCapable())
+    {
+        QByteArray buffer;
+        quint32 dataRate = (quint32)bus.getDataRate();
+        sendDebug("Setting CAN FD on bus " + QString::number(pBusIdx) + ": " + (bus.isCanFD() ? "on" : "off") +
+                  ", data rate " + QString::number(dataRate));
+        //SETUP_FD (21): bus, flags (bit 1 = FD mode on), data rate[4] LSB first (0 = keep the current rate)
+        buffer.append((char)0xF1);
+        buffer.append((char)21);
+        buffer.append((char)pBusIdx);
+        buffer.append((char)(bus.isCanFD() ? 0x02 : 0x00));
+        buffer.append((char)(dataRate & 0xFF));
+        buffer.append((char)(dataRate >> 8));
+        buffer.append((char)(dataRate >> 16));
+        buffer.append((char)(dataRate >> 24));
+        sendToSerial(buffer);
+    }
 }
 
 
@@ -405,6 +429,11 @@ void GVRetSerial::deviceConnected()
     output.append((char)0xF1); //another command to the GVRET
     output.append((char)0x07); //request device information
 
+    //request CAN FD settings. Devices without GET_FD (22) take the 0xF1 of the next command as an unknown
+    //opcode and carry on with the one after it, so this is safe to send to them.
+    deviceHasFDSetup = false;
+    output.append((char)0xF1);
+    output.append((char)22);
     /*output.append((char)0xF1);
     output.append((char)0x08); //setting singlewire mode
     if (settings.value("Main/SingleWireMode", false).toBool())
@@ -1038,6 +1067,56 @@ void GVRetSerial::procRXChar(unsigned char c)
         emit status(stats);
         break;
     case GET_FD_SETTINGS:
+        //GET_FD (22) reply: number of buses, then per bus: flags (bit 0 = bus can do CAN FD,
+        //bit 1 = FD mode on), data rate[4] LSB first
+        if (rx_step == 0)
+        {
+            fdReplyBuses = c;
+            if (fdReplyBuses == 0 || fdReplyBuses > 16) //nothing to read, or not a valid reply
+            {
+                rx_state = IDLE;
+                break;
+            }
+        }
+        else
+        {
+            const int busIdx = (rx_step - 1) / 5;
+            switch ((rx_step - 1) % 5)
+            {
+            case 0:
+                fdReplyFlags = c;
+                break;
+            case 1:
+                fdReplyRate = c;
+                break;
+            case 2:
+                fdReplyRate |= (quint32)c << 8;
+                break;
+            case 3:
+                fdReplyRate |= (quint32)c << 16;
+                break;
+            case 4:
+                fdReplyRate |= (quint32)c << 24;
+                qDebug() << "Bus" << busIdx << "FD capable" << (fdReplyFlags & 1) << "FD on" << ((fdReplyFlags >> 1) & 1)
+                         << "data rate" << fdReplyRate;
+                if (busIdx < mBusData.count())
+                {
+                    mBusData[busIdx].mBus.setCanFDCapable(fdReplyFlags & 0x01);
+                    mBusData[busIdx].mBus.setCanFD((fdReplyFlags & 0x03) == 0x03);
+                    if (fdReplyRate > 0) mBusData[busIdx].mBus.setDataRate(fdReplyRate);
+                }
+                if (busIdx == fdReplyBuses - 1)
+                {
+                    rx_state = IDLE;
+                    deviceHasFDSetup = true;
+                    stats.conStatus = getStatus();
+                    stats.numHardwareBuses = mNumBuses;
+                    emit status(stats);
+                }
+                break;
+            }
+        }
+        rx_step++;
         break;
     case GET_EXT_BUSES:
         switch (rx_step)

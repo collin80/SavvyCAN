@@ -463,7 +463,8 @@ void ConnectionWindow::populateBusDetails(int offset)
         //ui->lblBusNum->setText(QString::number(busBase + offset));
         ui->ckListenOnly->setChecked(bus.isListenOnly());
         ui->ckEnable->setChecked(bus.isActive());
-        if (conn_p->getType() == CANCon::type::SERIALBUS || conn_p->getType() == CANCon::type::LAWICEL)
+        if (conn_p->getType() == CANCon::type::SERIALBUS || conn_p->getType() == CANCon::type::LAWICEL ||
+            bus.isCanFDCapable()) //GVRET: the device said this bus can do CAN FD (GET_FD reply)
         {
             ui->canFDEnable->setVisible(true);
             ui->canFDEnable_label->setVisible(true);
