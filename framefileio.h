@@ -100,6 +100,7 @@ public:
     static bool saveCabanaFile(QString filename, const QVector<CommFrame>* frames);
     static bool saveCanalyzerASC(QString filename, const QVector<CommFrame>* frames);
     static bool saveCARBUSAnalzyer(QString filename, const QVector<CommFrame>* frames);
+    static bool savePCANFile(QString filename, const QVector<CommFrame>* frames);
 
     static bool openContinuousNative();
     static bool closeContinuousNative();
