@@ -311,8 +311,12 @@ void LAWICELSerial::deviceConnected()
 
     output.clear();
 
-    if (this->canFd){
-        switch (this->dataRate)
+    //CAN FD mode and data rate come from the bus settings (filled in from the connection dialog). The
+    //canFd/dataRate members this used were never set, so whether Y was sent depended on leftover memory.
+    const bool canFd = mBusData[0].mBus.isCanFD();
+    const int dataRate = mBusData[0].mBus.getDataRate();
+    if (canFd){
+        switch (dataRate)
         {
         case 1000000:
             output.append("Y1");
@@ -327,6 +331,8 @@ void LAWICELSerial::deviceConnected()
             output.append("Y5");
             break;
         default:
+            //only 1/2/4/5 Mbit/s are mapped to Y codes here
+            qWarning() << "LAWICEL: CAN FD data rate" << dataRate << "not supported, using 2 Mbit/s";
             output.append("Y2");
             break;
         }
@@ -519,7 +525,9 @@ void LAWICELSerial::readSerialData()
                         break;
                 }
 
-                int dlc = mBuildLine.mid(len_index, 1).toInt();
+                //the DLC is one hex digit: CAN FD codes A-F (16-64 bytes) read as decimal gave 0, so the
+                //hardware timestamp was taken from the middle of the data for frames of 16 bytes or more
+                int dlc = mBuildLine.mid(len_index, 1).toInt(nullptr, 16);
                 int byteCount = isFD ? (int)dlc_code_to_bytes(dlc) : dlc;
                 int frameStringLen = offset + byteCount * 2;
                 if (mBuildLine.length() > frameStringLen + 1)
@@ -626,10 +634,9 @@ void LAWICELSerial::readSerialData()
             case 'B':
                 buildFrame.setBitrateSwitch(true); //BRS enabled
                 [[fallthrough]];
-            case 'D': //extended fd frame
+            case 'D': //extended fd frame, BRS disabled ('B' falls through with BRS already set)
                 //TIIIIIIIILDD.
                 buildFrame.setFlexibleDataRateFormat(true);
-                buildFrame.setBitrateSwitch(true);
                 buildFrame.setFrameId(mBuildLine.mid(1, 8).toInt(nullptr, 16));
                 buildFrame.setReceived(true);
                 buildFrame.setFrameType(CommFrame::FrameType::CANFDDataFrame); //keeps the FD flag (and BRS) set above

@@ -56,8 +56,6 @@ protected:
     qint64 wrapAdder;
     bool can0Enabled;
     bool can0ListenOnly;
-    bool canFd;
-    int dataRate;
 };
 
 #endif // LAWICELSERIAL_H
