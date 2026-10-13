@@ -28,8 +28,8 @@ jobs:
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`grep -c ^processor /proc/cpuinfo`
           mv ${{github.workspace}}/build/SavvyCAN ${{github.workspace}}
-          
-      - name: Package     
+
+      - name: Package
         run: |
           wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage"
           chmod a+x linuxdeployqt-continuous-x86_64.AppImage
@@ -39,7 +39,7 @@ jobs:
         with:
           name: SavvyCAN-Linux_x64.AppImage
           path: SavvyCAN-*x86_64.AppImage
-      
+
   buildmacos86:
     name: macOS x64
     runs-on: macos-15-intel
@@ -54,21 +54,23 @@ jobs:
       - name: Clone
         uses: actions/checkout@v3
 
-      - name: Compile     
+      - name: Compile
         run: |
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`sysctl kern.aioprocmax | awk '{print $2}'`
           mv ${{github.workspace}}/build/SavvyCAN.app ${{github.workspace}}
-          
-      - name: Package     
+
+      - name: Package
         run: |
-          mkdir -p build/SavvyCAN.app/Contents/MacOS/help
           mkdir -p build/SavvyCAN.app/Frameworks
-          cp -R help/* build/SavvyCAN.app/Contents/MacOS/help
           cp /usr/local/share/qt/plugins/canbus/* build/SavvyCAN.app/Frameworks
+          mkdir -p build/SavvyCAN.app/Contents/MacOS/translations
+          mkdir -p build/SavvyCAN.app/Contents/MacOS/help
+          cp -R translations/*.qm build/SavvyCAN.app/Contents/MacOS/translations
+          cp -R help/* build/SavvyCAN.app/Contents/MacOS/help
           macdeployqt build/SavvyCAN.app -dmg
-          mv build/SavvyCAN.dmg ./SavvyCAN_x64.dmg
-      
+          mv build/SavvyCAN.dmg SavvyCAN_x64.dmg
+
       - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_x64.dmg
@@ -88,28 +90,30 @@ jobs:
       - name: Clone
         uses: actions/checkout@v3
 
-      - name: Compile     
+      - name: Compile
         run: |
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`sysctl kern.aioprocmax | awk '{print $2}'`
 
-      - name: Package     
+      - name: Package
         run: |
+          mkdir -p build/SavvyCAN.app/Contents/MacOS/translations
           mkdir -p build/SavvyCAN.app/Contents/MacOS/help
+          cp -R translations/*.qm build/SavvyCAN.app/Contents/MacOS/translations
           cp -R help/* build/SavvyCAN.app/Contents/MacOS/help
           macdeployqt build/SavvyCAN.app -dmg
-          mv build/SavvyCAN.dmg ./SavvyCAN_arm64.dmg
-      
+          mv build/SavvyCAN.dmg SavvyCAN_arm64.dmg
+
       - uses: actions/upload-artifact@v4
         with:
           name: SavvyCAN-macOS_ARM64.dmg
           path: SavvyCAN_arm64.dmg
-          
+
   buildwindows:
     name: Windows x64
     runs-on: windows-2022
 
-    steps:      
+    steps:
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v4
         with:
@@ -118,24 +122,25 @@ jobs:
 
       - name: Clone
         uses: actions/checkout@v3
-      
+
       - name: Compile
         shell: cmd
-        run: | 
+        run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j 2
-          
+
       - name: Package
         run: |
           mkdir package
           copy "build/release/SavvyCAN.exe" package/
           mkdir package/help
+          copy  translations/*.qm package/translations/
           copy  help/*.md package/help/
           mkdir package/help/images
           copy help/images/*.* package/help/images/
           mkdir package/examples
-          copy examples/*.* package/examples/          
+          copy examples/*.* package/examples/
           copy "${Env:QT_ROOT_DIR}/bin/Qt6Core.dll" package/
           copy "${Env:QT_ROOT_DIR}/bin/Qt6Gui.dll" package/
           copy "${Env:QT_ROOT_DIR}/bin/Qt6Network.dll" package/
@@ -158,7 +163,7 @@ jobs:
         with:
           name: SavvyCAN-Windows_x64
           path: package
- 
+
   pre-release:
     name: "pre-release"
     runs-on: "ubuntu-latest"
@@ -182,7 +187,7 @@ jobs:
             SavvyCAN-Windows_x64_CIBuild.zip
             SavvyCAN-macOS_x64.dmg/SavvyCAN_x64.dmg
             SavvyCAN-macOS_ARM64.dmg/SavvyCAN_arm64.dmg
-          
+
   notify:
     name: Notify Discord
     runs-on: ubuntu-latest
@@ -192,7 +197,7 @@ jobs:
         name: remove newlines
         run: |
           export release_msg=$(cat << EOF
-          ${{ github.event.head_commit.message }} 
+          ${{ github.event.head_commit.message }}
           EOF
           )
           release_msg="${release_msg//$'\n'/'-'}"
@@ -201,7 +206,7 @@ jobs:
           release_msg="${release_msg//$')'/'-'}"
           echo $release_msg
           echo "{msg}={$release_msg}" >> $GITHUB_OUTPUT
-                                                                  
+
       - name: Notify Discord
         run: |
           curl -i -H "Accept: application/json" \
