@@ -34,6 +34,13 @@ don't support changing the baud rate within a program. You must do this when you
 the connection via console commands. This is outside the scope of this documentation. 
 Consult the SocketCAN documentation for details on configuring such devices.
 
+For CAN FD, tick "CAN FD" and pick the data phase rate before creating the connection (both can also be
+changed later in the bus settings of the connection window). The CAN speed and data rate are passed to
+the driver; drivers that set bit rates themselves (e.g. PEAK) use them, while for SocketCAN they are set
+with "ip link" (e.g. `ip link set can0 type can bitrate 500000 dbitrate 2000000 fd on`) and only the CAN FD
+setting matters. A virtual SocketCAN interface can carry CAN FD frames too: `ip link set vcan0 mtu 72`.
+Received CAN FD frames show "D" in the Type column of the main frame list, "DB" with bit rate switching.
+
 QT also includes a "virtualcan" device type. You can use this to create a bus that will loop back anything you send to it. This is useful for testing without needing to connect any devices or load any log files.
 
 Connecting to Socketcand

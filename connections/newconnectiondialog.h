@@ -52,6 +52,8 @@ private:
     void selectCANlogserver();
     bool isSerialBusAvailable();
     void setPortName(CANCon::type pType, QString pPortName, QString pDriver);
+    void fillBusSpeedLists();
+    bool hasBusSettings();
 };
 
 #endif // NEWCONNECTIONDIALOG_H

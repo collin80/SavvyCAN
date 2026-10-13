@@ -54,7 +54,8 @@ void SerialBusConnection::piStarted()
     mTimer->setSingleShot(false); //keep ticking
     mTimer->start();
     mBusData[0].mBus.setActive(true);
-    mBusData[0].mBus.setCanFD(false);
+    //keep the CAN FD setting and data rate the connection was created with (they used to be reset here,
+    //so a CAN FD connection always came up as classic CAN)
     mBusData[0].mConfigured = true;
 
     /* Connect immediately if a speed is already configured (e.g. restored from last session) */
@@ -138,6 +139,10 @@ void SerialBusConnection::piSetBusSettings(int pBusIdx, CANBus bus)
 
     qDebug() << "SerialBusConnection::piSetBusSettings -> setConfigurationParameter()";
     mDev_p->setConfigurationParameter(QCanBusDevice::CanFdKey, bus.isCanFD());
+    //CAN FD data phase bit rate. As with BitRateKey, drivers that can't set it (e.g. socketcan, where it is
+    //set with "ip link") report a configuration error, which is only logged.
+    if (bus.isCanFD() && bus.getDataRate() > 0)
+        mDev_p->setConfigurationParameter(QCanBusDevice::DataBitRateKey, bus.getDataRate());
 
     if(bus.isListenOnly()){
         sbusconfig |= EN_SILENT_MODE;
@@ -167,8 +172,16 @@ bool SerialBusConnection::piSendFrame(const CommFrame& pFrame)
     frame.setFrameId(pFrame.frameId());
     frame.setPayload(pFrame.payload());
     frame.setExtendedFrameFormat(pFrame.hasExtendedFrameFormat());
-    frame.setBitrateSwitch(pFrame.hasBitrateSwitch());
-    frame.setFlexibleDataRateFormat(pFrame.hasFlexibleDataRateFormat());
+    if (pFrame.frameType() == CommFrame::RemoteRequestFrame)
+    {
+        //remote frames went out as data frames; the payload size gives the DLC
+        frame.setFrameType(QCanBusFrame::RemoteRequestFrame);
+    }
+    else
+    {
+        frame.setBitrateSwitch(pFrame.hasBitrateSwitch());
+        frame.setFlexibleDataRateFormat(pFrame.hasFlexibleDataRateFormat());
+    }
 
     return mDev_p->writeFrame(frame);
 }
@@ -268,14 +281,20 @@ void SerialBusConnection::framesReceived()
                     frame_p->setExtendedFrameFormat(recFrame.hasExtendedFrameFormat());
                     frame_p->setFrameId(recFrame.frameId());
                 }
-                //the timestamp structs are identical in theory but the compiler does not know or respect that. Best to regenerate
-                CommFrame::TimeStamp stamp;
-                stamp.fromMicroSeconds(recFrame.timeStamp().seconds() * 1000000ull + recFrame.timeStamp().microSeconds());
-                frame_p->setTimeStamp(stamp);
+                //(the timestamp is set further down, once the frame type is known)
 
                 //Ditto for error but not frametype. That one is different
 
                 frame_p->setFrameTypeFromQCan(recFrame.frameType());
+                //QCanBusFrame marks CAN FD with flags on a DataFrame rather than a separate type, so carry them
+                //over (this also makes the frame a CANFDDataFrame). They used to be dropped, so CAN FD frames
+                //showed up as over-long classic frames.
+                if (recFrame.frameType() == QCanBusFrame::DataFrame)
+                {
+                    frame_p->setFlexibleDataRateFormat(recFrame.hasFlexibleDataRateFormat());
+                    frame_p->setBitrateSwitch(recFrame.hasBitrateSwitch());
+                    frame_p->setErrorStateIndicator(recFrame.hasErrorStateIndicator());
+                }
 
                 //use conversion to and from integer to patch over the difference in structures (there is no practical difference)
                 CommFrame::FrameErrors errs;
