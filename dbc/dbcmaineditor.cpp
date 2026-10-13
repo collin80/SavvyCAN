@@ -293,7 +293,7 @@ void DBCMainEditor::onTreeDoubleClicked(const QModelIndex &index)
         msgID = getParentMessageID(firstCol);
         msg = dbcFile->messageHandler->findMsgByID(msgID);
         QString nameString = firstCol->text(0);
-        if (nameString.contains("("))
+        if (nameString.startsWith("("))
         {
             nameString = nameString.split(")")[1].trimmed(); //remove (1-2) type stuff from beginning of string
         }
