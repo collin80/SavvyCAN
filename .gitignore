@@ -39,6 +39,7 @@ SavvyCAN
 **/moc_*
 **/ui_*.h
 **/qrc_*.cpp
+.qtc_clangd
 SavvyCAN.pro.user.*
 .qmake.stash
 Makefile
