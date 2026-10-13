@@ -34,6 +34,8 @@
 #include "re/temporalgraphwindow.h"
 #include "re/dbccomparatorwindow.h"
 #include "canbridgewindow.h"
+#include "re/searchwindow.h"
+#include "croplogdialog.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -103,6 +105,8 @@ private slots:
     void showTemporalGraphWindow();
     void showDBCComparisonWindow();
     void showCANBridgeWindow();
+    void showSearchWindow();
+    void jumpToSearchFrame(int frameIndex);
     void exitApp();
     void handleSaveDecoded();
     void handleSaveDecodedCsv();
@@ -116,19 +120,24 @@ private slots:
     void interpretAutoScroll(bool);
     void interpretToggled(bool);
     void overwriteToggled(bool);
+    void changingOnlyToggled(bool);
     void presistentFiltersToggled(bool state);
     void logReceivedFrame(CANConnection*, QVector<CommFrame>);
     void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
+    void handleCropLog();
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
     void busFilterListItemChanged(QListWidgetItem *item);
+    void dirFilterListItemChanged(QListWidgetItem *item);
+    void lengthFilterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
     void headerClicked (int logicalIndex);
     void DBCSettingsUpdated();
     void onSenderCellChanged(int, int);
+    void onSearchFilterChanged(const QString &text);
 
 public slots:
     void gotFrames(int);
@@ -203,6 +212,7 @@ private:
     TemporalGraphWindow *temporalGraphWindow;
     DBCComparatorWindow *dbcComparatorWindow;
     CANBridgeWindow *canBridgeWindow;
+    SearchWindow *searchWindow;
 
     //various private storage
     QLabel lbStatusConnected;
