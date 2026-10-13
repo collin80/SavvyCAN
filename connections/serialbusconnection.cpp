@@ -14,8 +14,7 @@
 /***********************************/
 
 SerialBusConnection::SerialBusConnection(QString portName, QString driverName, int pBusSpeed, int pDataRate, bool pCanFd, bool pListenOnly, bool pActive) :
-    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,pBusSpeed, pCanFd, pDataRate ,1, 4000, true, pListenOnly, pActive),
-    mTimer(this) /*NB: set connection as parent of timer to manage it from working thread */
+    CANConnection(portName, driverName, CANCon::SERIALBUS,0 ,pBusSpeed, pCanFd, pDataRate ,1, 4000, true, pListenOnly, pActive)
 {
 }
 
