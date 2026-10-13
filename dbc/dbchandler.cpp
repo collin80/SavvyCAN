@@ -431,6 +431,127 @@ void DBCFile::setAssocBus(int bus)
     assocBuses = bus;
 }
 
+//The value a message attribute has for this message (its own value, else the attribute's default): the enum
+//name for ENUM attributes, the number otherwise.
+static QString msgAttrValueText(const DBC_ATTRIBUTE *attr, DBC_MESSAGE *msg)
+{
+    DBC_ATTRIBUTE_VALUE *val = msg->findAttrValByName(attr->name);
+    QVariant v = val ? val->value : attr->defaultValue;
+    if (attr->valType == ATTR_ENUM) return attr->enumVals.value(v.toInt()).trimmed();
+    return v.toString().trimmed();
+}
+
+//Vector's VFrameFormat attribute: "StandardCAN_FD" and "ExtendedCAN_FD" (values 14 and 15) are CAN FD messages
+static bool frameFormatIsFD(const DBC_ATTRIBUTE *attr, DBC_MESSAGE *msg)
+{
+    if (!attr) return false;
+    QString text = msgAttrValueText(attr, msg);
+    if (attr->valType == ATTR_ENUM) return text.endsWith("CAN_FD", Qt::CaseInsensitive);
+    return text == "14" || text == "15";
+}
+
+static void setMsgAttrValue(DBC_MESSAGE *msg, const QString &name, const QVariant &value)
+{
+    DBC_ATTRIBUTE_VALUE *val = msg->findAttrValByName(name);
+    if (val)
+    {
+        val->value = value;
+    }
+    else
+    {
+        DBC_ATTRIBUTE_VALUE newVal;
+        newVal.attrName = name;
+        newVal.value = value;
+        msg->attributes.append(newVal);
+    }
+}
+
+//Writes each message's CAN FD flags back as Vector's VFrameFormat and CANFD_BRS attributes, adding the attribute
+//definitions if the file has CAN FD messages but no definitions yet. Files without CAN FD are left alone.
+void DBCFile::syncCanFDAttributes()
+{
+    QList<DBC_MESSAGE *> msgs = messageHandler->getMsgsAsList();
+    bool anyFD = false;
+    for (DBC_MESSAGE *msg : msgs) if (msg->canFD) anyFD = true;
+
+    if (!findAttributeByName("VFrameFormat", ATTR_TYPE_MESSAGE))
+    {
+        if (!anyFD) return;
+        DBC_ATTRIBUTE attr;
+        attr.name = "VFrameFormat";
+        attr.attrType = ATTR_TYPE_MESSAGE;
+        attr.valType = ATTR_ENUM;
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.enumVals << "StandardCAN" << "ExtendedCAN" << "reserved" << "J1939PG";
+        for (int i = 4; i < 14; i++) attr.enumVals << "reserved";
+        attr.enumVals << "StandardCAN_FD" << "ExtendedCAN_FD";
+        attr.defaultValue = 0;
+        dbc_attributes.append(attr);
+    }
+    if (anyFD && !findAttributeByName("CANFD_BRS", ATTR_TYPE_MESSAGE))
+    {
+        DBC_ATTRIBUTE attr;
+        attr.name = "CANFD_BRS";
+        attr.attrType = ATTR_TYPE_MESSAGE;
+        attr.valType = ATTR_ENUM;
+        attr.lower = 0;
+        attr.upper = 0;
+        attr.enumVals << "0" << "1";
+        attr.defaultValue = 1;
+        dbc_attributes.append(attr);
+    }
+    //look both up after appending: appending can move the list's items
+    DBC_ATTRIBUTE *frameFormat = findAttributeByName("VFrameFormat", ATTR_TYPE_MESSAGE);
+    DBC_ATTRIBUTE *brs = findAttributeByName("CANFD_BRS", ATTR_TYPE_MESSAGE);
+    static const QStringList plainFormats = {"StandardCAN", "ExtendedCAN", "StandardCAN_FD", "ExtendedCAN_FD"};
+
+    for (DBC_MESSAGE *msg : msgs)
+    {
+        const bool extended = msg->extendedID || msg->ID > 0x7FF; //as saveFile() decides it
+        const QString current = msgAttrValueText(frameFormat, msg);
+        const QString wanted = QString(extended ? "ExtendedCAN" : "StandardCAN") + (msg->canFD ? "_FD" : "");
+        //change it if FD doesn't match, or if a value this message sets has the wrong standard/extended. Other
+        //formats (J1939PG) are kept, and classic messages that only use the default aren't given a value.
+        if (frameFormatIsFD(frameFormat, msg) != msg->canFD ||
+            (msg->findAttrValByName(frameFormat->name) && plainFormats.contains(current, Qt::CaseInsensitive) &&
+             current.compare(wanted, Qt::CaseInsensitive) != 0))
+        {
+            if (frameFormat->valType == ATTR_ENUM)
+            {
+                int idx = -1;
+                for (int i = 0; i < frameFormat->enumVals.count(); i++)
+                {
+                    if (frameFormat->enumVals[i].trimmed().compare(wanted, Qt::CaseInsensitive) == 0)
+                    {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx >= 0) setMsgAttrValue(msg, frameFormat->name, idx);
+            }
+            else
+            {
+                setMsgAttrValue(msg, frameFormat->name, (extended ? 1 : 0) + (msg->canFD ? 14 : 0));
+            }
+        }
+
+        if (msg->canFD && brs)
+        {
+            const QString wantedBrs = msg->bitRateSwitch ? "1" : "0";
+            if (msgAttrValueText(brs, msg) != wantedBrs)
+            {
+                if (brs->valType == ATTR_ENUM)
+                {
+                    int idx = brs->enumVals.indexOf(wantedBrs);
+                    if (idx >= 0) setMsgAttrValue(msg, brs->name, idx);
+                }
+                else setMsgAttrValue(msg, brs->name, msg->bitRateSwitch ? 1 : 0);
+            }
+        }
+    }
+}
+
 DBC_ATTRIBUTE *DBCFile::findAttributeByName(QString name, DBC_ATTRIBUTE_TYPE type)
 {
     if (dbc_attributes.length() == 0) return nullptr;
@@ -1241,6 +1362,8 @@ bool DBCFile::loadFile(QString fileName)
 
     QColor DefaultBG = QColor(findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString());
     QColor DefaultFG = QColor(findAttributeByName("GenMsgForegroundColor")->defaultValue.toString());
+    DBC_ATTRIBUTE *frameFormatAttr = findAttributeByName("VFrameFormat", ATTR_TYPE_MESSAGE);
+    DBC_ATTRIBUTE *brsAttr = findAttributeByName("CANFD_BRS", ATTR_TYPE_MESSAGE);
     QList<DBC_MESSAGE *> msgs = messageHandler->getMsgsAsList();
 
     for (int x = 0; x < messageHandler->getCount(); x++)
@@ -1248,6 +1371,9 @@ bool DBCFile::loadFile(QString fileName)
         DBC_MESSAGE *msg = msgs[x];
         msg->bgColor = DefaultBG;
         msg->fgColor = DefaultFG;
+        //CAN FD: marked by VFrameFormat, and anything longer than 8 bytes can only be CAN FD
+        msg->canFD = frameFormatIsFD(frameFormatAttr, msg) || msg->len > 8;
+        msg->bitRateSwitch = brsAttr ? (msgAttrValueText(brsAttr, msg) == "1") : true;
         DBC_ATTRIBUTE_VALUE *thisBG = msg->findAttrValByName("GenMsgBackgroundColor");
         DBC_ATTRIBUTE_VALUE *thisFG = msg->findAttrValByName("GenMsgForegroundColor");
         if (thisBG) msg->bgColor = QColor(thisBG->value.toString());
@@ -1322,6 +1448,9 @@ bool DBCFile::parseAttribute(QString inpString, DBC_ATTRIBUTE &attr)
     QRegularExpression regex;
     QRegularExpressionMatch match;
 
+    //loadFile() passes the same DBC_ATTRIBUTE for every definition, so start from a clean one: the enum
+    //values used to pile up, giving every ENUM attribute the values of the ones defined before it
+    attr = DBC_ATTRIBUTE();
     regex.setPattern("\\\"*(\\w+)\\\"* \\\"*(\\w+)\\\"* (\\d+) (\\d+)");
     match = regex.match(inpString);
     //captured 1 is the name of the attribute to set up
@@ -1428,6 +1557,7 @@ bool DBCFile::saveFile(QString fileName)
         return false;
     }
 
+    syncCanFDAttributes();
     //right now it outputs a standard hard coded boilerplate
     outFile->write("VERSION \"\"\n");
     outFile->write("\n");

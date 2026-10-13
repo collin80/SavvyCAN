@@ -176,6 +176,8 @@ public:
     QString name;
     QString comment;
     unsigned int len;
+    bool canFD;         //CAN FD message (VFrameFormat attribute StandardCAN_FD/ExtendedCAN_FD, or longer than 8 bytes)
+    bool bitRateSwitch; //CAN FD with bit rate switching (CANFD_BRS attribute; on unless the file says otherwise)
     DBC_NODE *sender;
     QColor bgColor;
     QColor fgColor;

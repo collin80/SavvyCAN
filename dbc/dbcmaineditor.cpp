@@ -618,6 +618,8 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
     msgPtr->name = source->name;
     msgPtr->ID = newMsgId;
     msgPtr->len = source->len;
+    msgPtr->canFD = source->canFD;
+    msgPtr->bitRateSwitch = source->bitRateSwitch;
     msgPtr->bgColor = source->bgColor;
     msgPtr->fgColor = source->fgColor;
     msgPtr->comment = source->comment;
@@ -715,6 +717,8 @@ void DBCMainEditor::newMessage()
             }
 
             msgPtr->len = oldMsg->len;
+            msgPtr->canFD = oldMsg->canFD;
+            msgPtr->bitRateSwitch = oldMsg->bitRateSwitch;
             msgPtr->bgColor = oldMsg->bgColor;
             msgPtr->fgColor = oldMsg->fgColor;
             msgPtr->comment = oldMsg->comment;            

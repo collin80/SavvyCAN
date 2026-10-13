@@ -9,6 +9,8 @@ DBC_MESSAGE::DBC_MESSAGE()
     ID = 0;
     extendedID = false;
     len = 0;
+    canFD = false;
+    bitRateSwitch = true;
     multiplexorSignal = nullptr;
     sender = nullptr;
 }
