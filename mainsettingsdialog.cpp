@@ -93,7 +93,6 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
     ui->cbColorsByCanId->setChecked(settings.value("Main/ColorsByCanId", false).toBool());
-    ui->cbEnableFrameHighlight->setChecked(settings.value("Main/EnableFrameHighlight", false).toBool());
     ui->cbShowSendPanel->setChecked(settings.value("Main/ShowSendPanel", true).toBool());
 
     ui->cbEqualSniffer->setChecked(settings.value("Main/EqualDataSniff", false).toBool());
