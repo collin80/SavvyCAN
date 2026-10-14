@@ -11,6 +11,6 @@ PROJECT_ROOT="$(pwd)"
 
 echo "Generating .qm files..."
 
-lrelease "$PROJECT_ROOT"/SavvyCAN.pro
+lrelease -verbose "$PROJECT_ROOT"/SavvyCAN.pro
 
 echo ".qm files generated."
