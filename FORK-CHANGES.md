@@ -34,7 +34,7 @@ Every fix or new feature that lands on `fork-ci` gets:
 | CANserver | ❌ fixed 16-byte Panda records, classic only | | | |
 | Native CSV | ✅ | ✅ (save) | | `fd-logs` |
 | candump | ✅ `##<flags>` | ✅ | | `fd-logs` |
-| Vector ASC | ✅ `CANFD` lines | ✅ | | `fd-logs` |
+| Vector ASC | ✅ `CANFD` lines, and `d` lines over 8 bytes (CANalyzer 8.x) | ✅ | | `fd-logs` |
 | Vector BLF | ✅ objects 100 and 101 | (no BLF saver) | | `fd-logs` |
 | PCAN TRC 2.0/2.1 | ✅ `FD/FB/FE/BI` | (no TRC saver) | | `fd-logs` |
 | Wireshark SocketCAN pcap | ✅ | (no pcap saver) | | `fd-logs` |
@@ -102,6 +102,18 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-14: ASC files from CANalyzer 8.x; crash in the CRTD check (`fd-logs`)
+
+- **ASC from CANalyzer 8.x:** CANalyzer 8.x (and older `log2asc`) write CAN FD frames as ordinary `d` lines with
+  their full length (`d 32 ...`). These now load as CAN FD, without BRS, since the line doesn't record it. Any such
+  line used to fail the whole file.
+- **CRTD crash (already in SavvyCAN):** the CRTD format check read past the end of an empty token on lines such as
+  ASC's `0.000 1 c0 Rx ...`. Auto-detection runs that check after a failed ASC load, so opening such a file could
+  crash SavvyCAN.
+- **How it was found:** loading a VW ID.4 drive unit log in the automated tests. It now loads all 2,166 frames,
+  1,951 of them CAN FD.
+- **Upstream:** not yet in collin80/SavvyCAN#1138.
 
 ### 2026-10-12: Playback can send everything as CAN FD (`fd-playback`)
 
