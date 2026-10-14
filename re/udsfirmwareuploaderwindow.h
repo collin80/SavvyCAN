@@ -89,6 +89,7 @@ private:
     void sendTesterPresent();
     void sendReadBuildID();
     void lookupVersionMap();
+    bool loadBhxFile(const QString &path, QByteArray &outData, uint32_t &outAddr);
     void handleNRC(int nrc);
     void advanceState();
 

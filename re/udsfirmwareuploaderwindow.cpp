@@ -736,6 +736,54 @@ void UDSFirmwareUploaderWindow::testerPresentTick()
     logMessage("Tester Present keep-alive sent");
 }
 
+bool UDSFirmwareUploaderWindow::loadBhxFile(const QString &path, QByteArray &outData, uint32_t &outAddr)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        logMessage("ERROR: Could not open BHX file: " + path);
+        return false;
+    }
+    QByteArray raw = file.readAll();
+    file.close();
+
+    const auto *d = reinterpret_cast<const quint8 *>(raw.constData());
+
+    if (raw.size() < 12 || d[0] != 'G' || d[1] != 'H' || d[2] != 'D' || d[3] != 'R')
+    {
+        logMessage("ERROR: BHX missing GHDR magic: " + path);
+        return false;
+    }
+
+    quint32 ghdrVersion = ((quint32)d[4] << 24) | ((quint32)d[5] << 16) | ((quint32)d[6] << 8) | d[7];
+    int shdrOffset = (ghdrVersion == 2) ? 16 : 12;
+
+    if (raw.size() < shdrOffset + 20 || d[shdrOffset]   != 'S' || d[shdrOffset+1] != 'H'
+                                     || d[shdrOffset+2] != 'D' || d[shdrOffset+3] != 'R')
+    {
+        logMessage("ERROR: BHX missing SHDR magic: " + path);
+        return false;
+    }
+
+    quint32 targetAddr  = ((quint32)d[shdrOffset +  8] << 24) | ((quint32)d[shdrOffset +  9] << 16)
+                        | ((quint32)d[shdrOffset + 10] <<  8) |  (quint32)d[shdrOffset + 11];
+    quint32 payloadSize = ((quint32)d[shdrOffset + 12] << 24) | ((quint32)d[shdrOffset + 13] << 16)
+                        | ((quint32)d[shdrOffset + 14] <<  8) |  (quint32)d[shdrOffset + 15];
+
+    int payloadOffset = shdrOffset + 20;
+    if (raw.size() - payloadOffset < (int)payloadSize)
+    {
+        logMessage(QString("ERROR: BHX payload truncated (expected %1, have %2): %3")
+                   .arg(payloadSize).arg(raw.size() - payloadOffset).arg(path));
+        return false;
+    }
+
+    outAddr = targetAddr;
+    outData = raw.mid(payloadOffset, (int)payloadSize);
+    logMessage(QString("BHX: addr=0x%1 size=%2").arg(targetAddr, 8, 16, QChar('0')).arg(payloadSize));
+    return true;
+}
+
 void UDSFirmwareUploaderWindow::handleLookupVersion()
 {
     lookupVersionMap();
@@ -811,33 +859,24 @@ void UDSFirmwareUploaderWindow::lookupVersionMap()
         if (isCpu2 && !cpu2Loaded)
         {
             QString fwPath = tsvDir + "/" + cols[1];
-            QFile fwFile(fwPath);
-            if (!fwFile.open(QIODevice::ReadOnly))
+            if (loadBhxFile(fwPath, firmwareData2, flashAddr2))
             {
-                logMessage("ERROR: Could not open CPU2 firmware file: " + fwPath);
-                continue;
+                firmwareSize2 = firmwareData2.length();
+                logMessage("Loaded CPU2 firmware: " + fwPath + " (" + QString::number(firmwareSize2) + " bytes)");
+                cpu2Loaded = true;
             }
-            firmwareData2 = fwFile.readAll();
-            firmwareSize2 = firmwareData2.length();
-            fwFile.close();
-            logMessage("Loaded CPU2 firmware: " + fwPath + " (" + QString::number(firmwareSize2) + " bytes)");
-            cpu2Loaded = true;
         }
         else if (!isCpu2 && !cpu1Loaded)
         {
             QString fwPath = tsvDir + "/" + cols[1];
-            QFile fwFile(fwPath);
-            if (!fwFile.open(QIODevice::ReadOnly))
+            if (loadBhxFile(fwPath, firmwareData, flashAddr))
             {
-                logMessage("ERROR: Could not open firmware file: " + fwPath);
-                continue;
+                firmwareSize = firmwareData.length();
+                ui->txtFlashAddr->setText(QString("0x%1").arg(flashAddr, 8, 16, QChar('0')));
+                ui->lblFilename->setText(fwPath + QString(" (%1 bytes)").arg(firmwareSize));
+                logMessage("Loaded firmware: " + fwPath + " (" + QString::number(firmwareSize) + " bytes)");
+                cpu1Loaded = true;
             }
-            firmwareData = fwFile.readAll();
-            firmwareSize = firmwareData.length();
-            fwFile.close();
-            ui->lblFilename->setText(fwPath + QString(" (%1 bytes)").arg(firmwareSize));
-            logMessage("Loaded firmware: " + fwPath + " (" + QString::number(firmwareSize) + " bytes)");
-            cpu1Loaded = true;
         }
     }
     f.close();
