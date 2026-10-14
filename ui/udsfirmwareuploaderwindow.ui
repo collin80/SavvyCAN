@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>624</width>
-    <height>520</height>
+    <height>527</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -44,43 +44,82 @@
        </item>
       </layout>
      </item>
-     <item row="5" column="0">
+     <item row="2" column="1">
+      <widget class="QPushButton" name="btnBrowseTeslaDir">
+       <property name="text">
+        <string>Browse...</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QPushButton" name="btnReloadNodes">
+       <property name="text">
+        <string>Reload</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
       <widget class="QLabel" name="labelNode">
        <property name="text">
         <string>Target ECU:</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
+     <item row="4" column="1">
       <widget class="QComboBox" name="cmbTeslaNode"/>
      </item>
-     <item row="6" column="0">
+     <item row="5" column="0">
       <widget class="QLabel" name="labelRespID">
        <property name="text">
         <string>Target Response ID:</string>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
+     <item row="5" column="1">
       <widget class="QLineEdit" name="txtResponseID">
        <property name="text">
         <string>0x7E8</string>
        </property>
       </widget>
      </item>
-     <item row="7" column="0">
+     <item row="6" column="0">
       <widget class="QLabel" name="labelTargetID">
        <property name="text">
         <string>Target Request ID:</string>
        </property>
       </widget>
      </item>
-     <item row="7" column="1">
+     <item row="6" column="1">
       <widget class="QLineEdit" name="txtTargetID">
        <property name="text">
         <string>0x7E0</string>
        </property>
       </widget>
+     </item>
+     <item row="7" column="0">
+      <widget class="QLabel" name="labelBuildID">
+       <property name="text">
+        <string>Device Build ID:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <item>
+        <widget class="QPushButton" name="btnReadBuildID">
+         <property name="text">
+          <string>Read Build ID</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="lblBuildID">
+         <property name="text">
+          <string>(not read)</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
      </item>
      <item row="8" column="0">
       <widget class="QLabel" name="labelSession">
@@ -107,20 +146,6 @@
       <widget class="QLabel" name="labelSecurity">
        <property name="text">
         <string>Security Level:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="10" column="0">
-      <widget class="QLabel" name="labelAddr">
-       <property name="text">
-        <string>Flash Address:</string>
-       </property>
-      </widget>
-     </item>
-     <item row="10" column="1">
-      <widget class="QLineEdit" name="txtFlashAddr">
-       <property name="text">
-        <string>0x08000000</string>
        </property>
       </widget>
      </item>
@@ -151,17 +176,17 @@
        </item>
       </layout>
      </item>
-     <item row="3" column="1">
-      <widget class="QPushButton" name="btnReloadNodes">
+     <item row="10" column="0">
+      <widget class="QLabel" name="labelAddr">
        <property name="text">
-        <string>Reload</string>
+        <string>Flash Address:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
-      <widget class="QPushButton" name="btnBrowseTeslaDir">
+     <item row="10" column="1">
+      <widget class="QLineEdit" name="txtFlashAddr">
        <property name="text">
-        <string>Browse...</string>
+        <string>0x08000000</string>
        </property>
       </widget>
      </item>

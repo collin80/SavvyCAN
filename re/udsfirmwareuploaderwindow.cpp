@@ -48,6 +48,7 @@ UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *f
     connect(ui->btnLoadFile, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleLoadFile);
     connect(ui->btnStartStop, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleStartStop);
     connect(ui->btnAbort, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleAbort);
+    connect(ui->btnReadBuildID, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleReadBuildID);
     connect(ui->btnBrowseTeslaDir, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleBrowseTeslaDir);
     connect(ui->btnReloadNodes, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleReloadNodes);
     connect(udsHandler, &UDS_HANDLER::newUDSMessage, this, &UDSFirmwareUploaderWindow::gotUDSReply);
@@ -85,6 +86,7 @@ void UDSFirmwareUploaderWindow::setState(UPLOAD_STATE newState)
         ui->btnStartStop->setEnabled(true);
         ui->btnAbort->setEnabled(false);
         ui->btnLoadFile->setEnabled(true);
+        ui->btnReadBuildID->setEnabled(true);
     }
 }
 
@@ -156,6 +158,7 @@ void UDSFirmwareUploaderWindow::startUpload()
     ui->btnStartStop->setEnabled(false);
     ui->btnAbort->setEnabled(true);
     ui->btnLoadFile->setEnabled(false);
+    ui->btnReadBuildID->setEnabled(false);
 
     udsHandler->setReception(true);
     udsHandler->addFilter(busId, responseId, 0x7FF);
@@ -334,6 +337,41 @@ void UDSFirmwareUploaderWindow::sendTesterPresent()
     udsHandler->sendUDSFrame(msg);
 }
 
+void UDSFirmwareUploaderWindow::handleReadBuildID()
+{
+    if (currentState != STATE_IDLE && currentState != STATE_COMPLETE && currentState != STATE_ERROR)
+        return;
+
+    busId = ui->spinBus->value();
+    targetId = Utility::ParseStringToNum(ui->txtTargetID->text());
+    responseId = Utility::ParseStringToNum(ui->txtResponseID->text());
+
+    ui->btnReadBuildID->setEnabled(false);
+
+    udsHandler->setReception(true);
+    udsHandler->addFilter(busId, responseId, 0x7FF);
+
+    logMessage(QString("Reading build ID from 0x%1 (response 0x%2, bus %3)...")
+               .arg(targetId, 0, 16).arg(responseId, 0, 16).arg(busId));
+
+    sendReadBuildID();
+}
+
+void UDSFirmwareUploaderWindow::sendReadBuildID()
+{
+    UDS_MESSAGE msg;
+    msg.bus = busId;
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::READ_BY_ID;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0xF180;
+
+    udsHandler->setFlowCtrl(true); //we need to generate flow control messages for this read request.
+    udsHandler->sendUDSFrame(msg);
+    setState(STATE_WAIT_BUILD_ID_RESP);
+    timeoutTimer->start();
+}
+
 void UDSFirmwareUploaderWindow::handleNRC(int nrc)
 {
     QString desc = udsHandler->getNegativeResponseLong(nrc);
@@ -454,6 +492,28 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
         stopUpload();
         logMessage("*** Firmware upload complete! ***");
         ui->progressBar->setValue(100);
+        break;
+    }
+
+    case STATE_WAIT_BUILD_ID_RESP:
+    {
+        // READ_BY_ID (0x22) positive response (0x62): service byte stripped by UDS handler.
+        // msg.payload() = [0xF1, 0x80, ..., buildId at indices 6-9]
+        // This corresponds to bytes 6-10 of the raw ISOTP assembled frame.
+        if (dataLen >= 10)
+        {
+            quint32 buildId = (data[6] << 24) + (data[7] << 16) + (data[8] << 8) + data[9];
+            QString buildIdStr = QString::number(buildId);
+            logMessage("Build ID: " + buildIdStr);
+            ui->lblBuildID->setText(buildIdStr);
+        }
+        else
+        {
+            logMessage(QString("Build ID response too short (%1 bytes in payload)").arg(dataLen));
+        }
+        udsHandler->clearAllFilters();
+        udsHandler->setReception(false);
+        setState(STATE_IDLE);
         break;
     }
 
