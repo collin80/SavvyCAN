@@ -1,12 +1,16 @@
 # Changes in this fork (`fork-ci`)
 
-`fork-ci` is [collin80/SavvyCAN](https://github.com/collin80/SavvyCAN) `QT6WIP` (at `8675061`) with:
+`fork-ci` follows [collin80/SavvyCAN](https://github.com/collin80/SavvyCAN) `QT6WIP` (synced at `3288f1f`,
+2026-10-14). Since 2026-10-13, upstream includes this fork's CAN FD series (collin80/SavvyCAN#1134 to
+collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 
-- CAN FD support across the interfaces and log formats;
-- bug fixes;
-- 11 open upstream pull requests merged in.
+`fork-ci` only adds what isn't upstream yet:
 
-Each change is also kept on its own branch, offered upstream as a separate pull request (see [Branches](#branches)).
+| Change | Branch | Upstream |
+|---|---|---|
+| Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | not yet |
+| ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | not yet |
+| Fork CI (Linux AppImage and Windows package on every push), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
 *Fork Build (Linux + Windows)* runs under **Actions**.
@@ -23,6 +27,8 @@ Every fix or new feature that lands on `fork-ci` gets:
 
 ## CAN FD support
 
+Everything here is in upstream `QT6WIP` except the rows marked "fork only".
+
 | Interface or file | Receive FD | Send FD | FD setup (data rate, on/off) | Branch |
 |---|---|---|---|---|
 | GVRET (serial, TCP), e.g. ESP32RET on a LilyGO T-2CAN-FD | ✅ | ✅ opcode 20 | ✅ `GET_FD`/`SETUP_FD` from the bus settings panel, firmware permitting | `fix-gvret-qt6`, `fd-send`, `fd-gvret` |
@@ -34,13 +40,13 @@ Every fix or new feature that lands on `fork-ci` gets:
 | CANserver | ❌ fixed 16-byte Panda records, classic only | | | |
 | Native CSV | ✅ | ✅ (save) | | `fd-logs` |
 | candump | ✅ `##<flags>` | ✅ | | `fd-logs` |
-| Vector ASC | ✅ `CANFD` lines, and `d` lines over 8 bytes (CANalyzer 8.x) | ✅ | | `fd-logs` |
+| Vector ASC | ✅ `CANFD` lines, and `d` lines over 8 bytes (CANalyzer 8.x, fork only) | ✅ | | `fd-logs` |
 | Vector BLF | ✅ objects 100 and 101 | (no BLF saver) | | `fd-logs` |
 | PCAN TRC 2.0/2.1 | ✅ `FD/FB/FE/BI` | (no TRC saver) | | `fd-logs` |
 | Wireshark SocketCAN pcap | ✅ | (no pcap saver) | | `fd-logs` |
 | DBC files | ✅ `VFrameFormat`, `CANFD_BRS`, signals past byte 8 | ✅ saved back | FD and BRS check boxes in the message editor | `fd-dbc` |
 | Send Frames window and scripts | n/a | ✅ FD/BRS columns, `can.sendFDFrame()` | DBC CAN FD messages tick FD/BRS | `fd-send`, `fd-dbc` |
-| Playback window | n/a | ✅ as loaded, or **Send all frames as CAN FD** (with or without BRS) | n/a | `fd-playback` |
+| Playback window | n/a | ✅ as loaded, or **Send all frames as CAN FD** (with or without BRS, fork only) | n/a | `fd-playback` |
 
 **Frame list:** the frame type column shows `D` for CAN FD frames, with `B` for BRS and `E` for ESI.
 
@@ -50,41 +56,30 @@ Every fix or new feature that lands on `fork-ci` gets:
 
 | Branch | Based on | Contents | Upstream PR |
 |---|---|---|---|
-| `fix-gvret-qt6` | `QT6WIP` | GVRET crash when saving bus settings (collin80/SavvyCAN#910); zero-length and CAN FD frame parsing (collin80/SavvyCAN#1121) | in [#1135](https://github.com/collin80/SavvyCAN/pull/1135) |
-| `fd-send` | `fix-gvret-qt6` | Sending CAN FD: GVRET opcode 20, LAWICEL DLC and IDs, Send Frames FD/BRS columns, `can.sendFDFrame()` | [#1135](https://github.com/collin80/SavvyCAN/pull/1135) |
-| `fd-core` | `QT6WIP` | One CAN FD representation: frame type and FD flag kept in step; `isDataFrame()` | [#1134](https://github.com/collin80/SavvyCAN/pull/1134) |
-| `fd-serialbus` | `fd-core` | QtSerialBus CAN FD | [#1136](https://github.com/collin80/SavvyCAN/pull/1136) |
-| `fd-lawicel` | `fd-core` | LAWICEL CAN FD receive fixes and data rate | [#1137](https://github.com/collin80/SavvyCAN/pull/1137) |
-| `fd-logs` | `fd-core` | CAN FD in log files | [#1138](https://github.com/collin80/SavvyCAN/pull/1138) |
-| `fd-network` | `fd-core` | MQTT and CANlogserver CAN FD | [#1139](https://github.com/collin80/SavvyCAN/pull/1139) |
+| `fix-gvret-qt6` | `QT6WIP` | GVRET crash when saving bus settings (collin80/SavvyCAN#910); zero-length and CAN FD frame parsing (collin80/SavvyCAN#1121) | merged in [#1135](https://github.com/collin80/SavvyCAN/pull/1135) |
+| `fd-send` | `fix-gvret-qt6` | Sending CAN FD: GVRET opcode 20, LAWICEL DLC and IDs, Send Frames FD/BRS columns, `can.sendFDFrame()` | merged: [#1135](https://github.com/collin80/SavvyCAN/pull/1135) |
+| `fd-core` | `QT6WIP` | One CAN FD representation: frame type and FD flag kept in step; `isDataFrame()` | merged: [#1134](https://github.com/collin80/SavvyCAN/pull/1134) |
+| `fd-serialbus` | `fd-core` | QtSerialBus CAN FD | merged: [#1136](https://github.com/collin80/SavvyCAN/pull/1136) |
+| `fd-lawicel` | `fd-core` | LAWICEL CAN FD receive fixes and data rate | merged: [#1137](https://github.com/collin80/SavvyCAN/pull/1137) |
+| `fd-logs` | `fd-core` | CAN FD in log files | merged: [#1138](https://github.com/collin80/SavvyCAN/pull/1138); `ba3d4ee` (ASC `d` lines, CRTD check) not yet |
+| `fd-network` | `fd-core` | MQTT and CANlogserver CAN FD | merged: [#1139](https://github.com/collin80/SavvyCAN/pull/1139) |
 | `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` | [#1140](https://github.com/collin80/SavvyCAN/pull/1140) (draft: protocol proposal) |
-| `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
+| `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | merged: [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
 | `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | not yet |
-| `fork-ci` | all of the above | Everything, plus the upstream PRs below and the fork's CI | - |
+| `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
-## Upstream pull requests merged into `fork-ci`
+## Other pull requests `fork-ci` carried
 
-| PR | Author | Title |
-|---|---|---|
-| [#1081](https://github.com/collin80/SavvyCAN/pull/1081) | @minoseigenheer | Scripting window: resizable panes, crash fix on delete, system font |
-| [#1082](https://github.com/collin80/SavvyCAN/pull/1082) | @minoseigenheer | Fix missing and mislabeled received CAN frames |
-| [#1083](https://github.com/collin80/SavvyCAN/pull/1083) | @minoseigenheer | Save/restore main window UI state across sessions |
-| [#1085](https://github.com/collin80/SavvyCAN/pull/1085) | @minoseigenheer | Fix app icon not showing on macOS and Windows |
-| [#1086](https://github.com/collin80/SavvyCAN/pull/1086) | @minoseigenheer | Fix Cmd+W closing the active window on macOS |
-| [#1087](https://github.com/collin80/SavvyCAN/pull/1087) | @minoseigenheer | Correct PCAN timestamps (uptime-based backends) |
-| [#1093](https://github.com/collin80/SavvyCAN/pull/1093) | @minoseigenheer | Hex/decimal display toggle for the signal value table |
-| [#1094](https://github.com/collin80/SavvyCAN/pull/1094) | @minoseigenheer | Explicit extended frame flag in the DBC message editor |
-| [#1095](https://github.com/collin80/SavvyCAN/pull/1095) | @minoseigenheer | Fix duplicate matchingcriteria/filterlabeling `BA_DEF_DEF_` output |
-| [#1099](https://github.com/collin80/SavvyCAN/pull/1099) | @dry-75 | serialbus: create the connection timer in the worker thread |
-| [#1101](https://github.com/collin80/SavvyCAN/pull/1101) | @dry-75 | serialbusconnection.cpp: restore `setLocalEcho()` |
-
-collin80/SavvyCAN#1087 brought in a call to a `deviceStateChanged()` that doesn't exist on `QT6WIP`; `fork-ci` drops it (`2a3a57b`).
+Until they were merged upstream (all of them are now in `QT6WIP`), `fork-ci` also carried these open pull requests:
+collin80/SavvyCAN#1081, collin80/SavvyCAN#1082, collin80/SavvyCAN#1083, collin80/SavvyCAN#1085,
+collin80/SavvyCAN#1086, collin80/SavvyCAN#1087, collin80/SavvyCAN#1093, collin80/SavvyCAN#1094,
+collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
 
 ## Known issues
 
-- **GVRET FD layout:** `GET_FD`/`SETUP_FD` use a byte layout this fork proposed. It still needs agreeing with
-  collin80, since it's his protocol. It's proposed in the draft PR [#1140](https://github.com/collin80/SavvyCAN/pull/1140). The matching firmware is ESP32RET branch `t2canfd-board` in
-  `Tom-evnut/ESP32RET`.
+- **GVRET FD layout:** the `GET_FD`/`SETUP_FD` byte layout proposed in
+  [#1140](https://github.com/collin80/SavvyCAN/pull/1140) was merged upstream as proposed. ESP32RET's `t2canfd-board`
+  branch in `Tom-evnut/ESP32RET` implements it; upstream ESP32RET doesn't yet.
 - **socketcand and CANserver:** classic CAN only (see the CAN FD table).
 
 ## Testing
@@ -102,6 +97,22 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-14: synced with upstream `QT6WIP`
+
+- **Merged upstream:** collin80 merged the CAN FD series (collin80/SavvyCAN#1134 to collin80/SavvyCAN#1141) on
+  2026-10-13, along with the other pull requests `fork-ci` carried.
+- **New baseline:** `fork-ci` now follows `QT6WIP` (`3288f1f`) and keeps only `fd-playback`, the newer `fd-logs`
+  fix and the fork's CI.
+- **Checked:** the automated tests pass on upstream `QT6WIP` itself, apart from the two not-yet-merged `fd-logs`
+  fixes. None of the merged changes was lost in collin80's merges with `master`.
+- **New from upstream:** `fork-ci` picks up collin80's own work, including:
+  - a search window and a UDS firmware uploader;
+  - translations;
+  - PCAN TRC export (collin80/SavvyCAN#1142);
+  - graphing fixes (collin80/SavvyCAN#1143);
+  - QtSerialBus on macOS (collin80/SavvyCAN#1145).
+- **Fork CI:** `fork-build.yml` has upstream's current Linux and Windows jobs.
 
 ### 2026-10-14: ASC files from CANalyzer 8.x; crash in the CRTD check (`fd-logs`)
 

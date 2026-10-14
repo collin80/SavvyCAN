@@ -20,7 +20,6 @@
 #include "re/filecomparatorwindow.h"
 #include "dbc/dbcmaineditor.h"
 #include "mainsettingsdialog.h"
-#include "firmwareuploaderwindow.h"
 #include "re/discretestatewindow.h"
 #include "scriptingwindow.h"
 #include "re/rangestatewindow.h"
@@ -33,7 +32,10 @@
 #include "signalviewerwindow.h"
 #include "re/temporalgraphwindow.h"
 #include "re/dbccomparatorwindow.h"
+#include "re/udsfirmwareuploaderwindow.h"
 #include "canbridgewindow.h"
+#include "re/searchwindow.h"
+#include "croplogdialog.h"
 
 class CANConnection;
 class ConnectionWindow;
@@ -89,7 +91,7 @@ private slots:
     void showFuzzyScopeWindow();
     void showComparisonWindow();
     void showSettingsDialog();
-    void showFirmwareUploaderWindow();
+    void showUDSFirmwareUploaderWindow();
     void showConnectionSettingsWindow();
     void showScriptingWindow();
     void showDBCFileWindow();
@@ -103,6 +105,8 @@ private slots:
     void showTemporalGraphWindow();
     void showDBCComparisonWindow();
     void showCANBridgeWindow();
+    void showSearchWindow();
+    void jumpToSearchFrame(int frameIndex);
     void exitApp();
     void handleSaveDecoded();
     void handleSaveDecodedCsv();
@@ -116,19 +120,24 @@ private slots:
     void interpretAutoScroll(bool);
     void interpretToggled(bool);
     void overwriteToggled(bool);
+    void changingOnlyToggled(bool);
     void presistentFiltersToggled(bool state);
     void logReceivedFrame(CANConnection*, QVector<CommFrame>);
     void tickGUIUpdate();
     void toggleCapture();
     void normalizeTiming();
+    void handleCropLog();
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
     void busFilterListItemChanged(QListWidgetItem *item);
+    void dirFilterListItemChanged(QListWidgetItem *item);
+    void lengthFilterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
     void headerClicked (int logicalIndex);
     void DBCSettingsUpdated();
     void onSenderCellChanged(int, int);
+    void onSearchFilterChanged(const QString &text);
 
 public slots:
     void gotFrames(int);
@@ -188,7 +197,7 @@ private:
     FileComparatorWindow *comparatorWindow;
     MainSettingsDialog *settingsDialog;
     DiscreteStateWindow *discreteStateWindow;
-    FirmwareUploaderWindow *firmwareUploaderWindow;
+    UDSFirmwareUploaderWindow *udsFirmwareUploaderWindow;
     ConnectionWindow *connectionWindow;
     ScriptingWindow *scriptingWindow;
     RangeStateWindow *rangeWindow;
@@ -203,6 +212,7 @@ private:
     TemporalGraphWindow *temporalGraphWindow;
     DBCComparatorWindow *dbcComparatorWindow;
     CANBridgeWindow *canBridgeWindow;
+    SearchWindow *searchWindow;
 
     //various private storage
     QLabel lbStatusConnected;

@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QHash>
 #include <QMutex>
 
 #include "canconnection.h"
@@ -70,6 +71,7 @@ signals:
 
 private slots:
     void refreshCanList();
+    void autoReconnectCheck(); // fires every 5 s from main thread; triggers autoReconnect() on stale connections
 
 private:
     explicit CANConManager(QObject *parent = 0);
@@ -78,6 +80,7 @@ private:
     static CANConManager*  mInstance;
     QList<CANConnection*>  mConns;
     QTimer                 mTimer;
+    QTimer                 mAutoReconnectTimer;   // separate 5-second main-thread timer
     QElapsedTimer          mElapsedTimer;
     uint64_t               mTimestampBasis;
     uint32_t               mNumActiveBuses;
@@ -85,6 +88,9 @@ private:
     QVector<CommFrame>      buslessFrames;
     QVector<CommFrame>      tempFrames;
     QMutex                 mutex;
+    QHash<CANConnection*, int>  mConnFrameCount;  // frames received in current 5-s window
+    QHash<CANConnection*, bool> mConnHadFrames;   // true once a frame was seen since last connect
+    int                         mAutoReconnectTick = 0;
 };
 
 #endif // CANCONNECTIONMODEL_H

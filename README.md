@@ -1,5 +1,5 @@
 # SavvyCAN
-> **This is a fork:** the `fork-ci` branch of [Tom-evnut/SavvyCAN](https://github.com/Tom-evnut/SavvyCAN) adds CAN FD support across the interfaces and log formats, bug fixes, and open upstream pull requests on top of [collin80/SavvyCAN](https://github.com/collin80/SavvyCAN) `QT6WIP`. **[FORK-CHANGES.md](FORK-CHANGES.md)** lists everything that differs from upstream and records each new fix and feature as it's added. Linux and Windows builds are under *Actions* (*Fork Build*).
+> **This is a fork:** the `fork-ci` branch of [Tom-evnut/SavvyCAN](https://github.com/Tom-evnut/SavvyCAN) follows [collin80/SavvyCAN](https://github.com/collin80/SavvyCAN) `QT6WIP`, plus changes not merged upstream yet. **[FORK-CHANGES.md](FORK-CHANGES.md)** lists everything that differs from upstream and records each new fix and feature as it's added. Linux and Windows builds are under *Actions* (*Fork Build*).
 
 Qt based cross platform canbus tool
 (C) 2015-2024 Collin Kidder

@@ -112,6 +112,8 @@ GraphingWindow::GraphingWindow(const QVector<CommFrame> *frames, QWidget *parent
 
     needScaleSetup = true;
     followGraphEnd = false;
+
+    setupMenuBar();
 }
 
 GraphingWindow::~GraphingWindow()
@@ -221,7 +223,7 @@ void GraphingWindow::updatedFrames(int numFrames)
             for (int i = modelFrames->count() - numFrames; i < modelFrames->count(); i++)
             {
                 thisFrame = modelFrames->at(i);
-                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) )
+                if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) && ( (graphParams[j].frameLen == -1) || (graphParams[j].frameLen == thisFrame.payload().length()) ) )
                 {
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
@@ -357,7 +359,9 @@ void GraphingWindow::legendSingleClick(QCPLegend *legend, QCPAbstractLegendItem 
    if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
    {
       QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
+      if (!plItem) return;
       QCPGraph *pGraph = qobject_cast<QCPGraph *>(plItem->plottable());
+      if (!pGraph) return;
       QCPDataSelection sel;
       QCPDataRange rang;
       rang.setBegin(0);
@@ -375,7 +379,9 @@ void GraphingWindow::legendDoubleClick(QCPLegend *legend, QCPAbstractLegendItem 
    if (item) // only react if item was clicked (user could have clicked on border padding of legend where there is no item, then item is 0)
    {
       QCPPlottableLegendItem *plItem = qobject_cast<QCPPlottableLegendItem*>(item);
+      if (!plItem) return;
       QCPGraph *pGraph = qobject_cast<QCPGraph *>(plItem->plottable());
+      if (!pGraph) return;
       QCPDataSelection sel;
       QCPDataRange rang;
       rang.setBegin(0);
@@ -423,7 +429,7 @@ void GraphingWindow::selectionChanged()
   {
     QCPGraph *graph = ui->graphingView->graph(i);
     QCPPlottableLegendItem *item = ui->graphingView->legend->itemWithPlottable(graph);
-    if (item->selected() || graph->selected())
+    if (item && (item->selected() || graph->selected()))
     {
       item->setSelected(true);
       //select graph too.
@@ -435,6 +441,10 @@ void GraphingWindow::selectionChanged()
       graph->setSelection(sel);
     }
   }
+
+  bool hasSelection = ui->graphingView->selectedGraphs().size() > 0;
+  actEditSelected->setEnabled(hasSelection);
+  actRemoveSelected->setEnabled(hasSelection);
 }
 
 void GraphingWindow::mousePress()
@@ -595,6 +605,12 @@ void GraphingWindow::removeSelectedGraph()
         if (graphParams.count() == 0) needScaleSetup = true;
 
         ui->graphingView->replot();
+
+        bool hasGraphs = ui->graphingView->graphCount() > 0;
+        actRemoveAll->setEnabled(hasGraphs);
+        actRescale->setEnabled(hasGraphs);
+        actEditSelected->setEnabled(false);
+        actRemoveSelected->setEnabled(false);
     }
 }
 
@@ -632,6 +648,10 @@ void GraphingWindow::removeAllGraphs()
         graphParams.clear();
         needScaleSetup = true;
         ui->graphingView->replot();
+        actRemoveAll->setEnabled(false);
+        actRescale->setEnabled(false);
+        actEditSelected->setEnabled(false);
+        actRemoveSelected->setEnabled(false);
     }
 }
 
@@ -650,6 +670,53 @@ void GraphingWindow::rescaleToData()
 void GraphingWindow::toggleFollowMode()
 {
     followGraphEnd = !followGraphEnd;
+    actFollowEnd->setChecked(followGraphEnd);
+}
+
+void GraphingWindow::setupMenuBar()
+{
+    QMenuBar *menuBar = new QMenuBar(this);
+    menuBar->setNativeMenuBar(false);
+    menuBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    menuBar->setMaximumHeight(20);
+
+    // Graph menu
+    QMenu *graphMenu = menuBar->addMenu(tr("Graph"));
+    graphMenu->addAction(tr("Add New Graph"), this, SLOT(addNewGraph()));
+    actEditSelected = graphMenu->addAction(tr("Edit Selected Graph"), this, SLOT(editSelectedGraph()));
+    actEditSelected->setEnabled(false);
+    actRemoveSelected = graphMenu->addAction(tr("Remove Selected Graph"), this, SLOT(removeSelectedGraph()));
+    actRemoveSelected->setEnabled(false);
+    actRemoveAll = graphMenu->addAction(tr("Remove All Graphs"), this, SLOT(removeAllGraphs()));
+    actRemoveAll->setEnabled(false);
+    graphMenu->addSeparator();
+    graphMenu->addAction(tr("Save Graph Image"), this, SLOT(saveGraphs()));
+    graphMenu->addAction(tr("Save Graph Definitions"), this, SLOT(saveDefinitions()));
+    graphMenu->addAction(tr("Load Graph Definitions"), this, SLOT(loadDefinitions()));
+    graphMenu->addAction(tr("Save Spreadsheet"), this, SLOT(saveSpreadsheet()));
+
+    // View menu
+    QMenu *viewMenu = menuBar->addMenu(tr("View"));
+    actFollowEnd = viewMenu->addAction(tr("Follow End of Graph"), this, SLOT(toggleFollowMode()));
+    actFollowEnd->setCheckable(true);
+    actFollowEnd->setChecked(followGraphEnd);
+    viewMenu->addSeparator();
+    viewMenu->addAction(tr("Reset View"), this, SLOT(resetView()));
+    actRescale = viewMenu->addAction(tr("Rescale to Data"), this, SLOT(rescaleToData()));
+    actRescale->setEnabled(false);
+    viewMenu->addAction(tr("Zoom In"), this, SLOT(zoomIn()));
+    viewMenu->addAction(tr("Zoom Out"), this, SLOT(zoomOut()));
+
+    // Legend menu
+    QMenu *legendMenu = menuBar->addMenu(tr("Legend"));
+    legendMenu->addAction(tr("Move to Top Left"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignLeft));
+    legendMenu->addAction(tr("Move to Top Center"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignHCenter));
+    legendMenu->addAction(tr("Move to Top Right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignTop|Qt::AlignRight));
+    legendMenu->addAction(tr("Move to Bottom Right"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignRight));
+    legendMenu->addAction(tr("Move to Bottom Left"), this, SLOT(moveLegend()))->setData((int)(Qt::AlignBottom|Qt::AlignLeft));
+
+    ui->verticalLayout->insertWidget(0, menuBar, 0);
+    ui->verticalLayout->setStretchFactor(ui->graphingView, 1);
 }
 
 void GraphingWindow::contextMenuRequest(QPoint pos)
@@ -774,7 +841,6 @@ void GraphingWindow::saveSpreadsheet()
          * and a reference for which graph it came from. This is better than nothing.
         */
 
-        QList<GraphParams>::iterator iter;
         double xMin = std::numeric_limits<double>::max(),
                xMax = std::numeric_limits<double>::min();
         int maxCount = 0;
@@ -942,6 +1008,8 @@ void GraphingWindow::saveDefinitions()
                 outFile.putChar(',');
                 outFile.write(iter->associatedSignal->name.toUtf8());
             }
+            outFile.putChar(',');
+            outFile.write(QString::number(iter->frameLen).toUtf8());
 
             outFile.write("\n");
         }
@@ -1031,6 +1099,11 @@ void GraphingWindow::loadDefinitions()
                             gp.associatedSignal = msg->sigHandler->findSignalByName(tokens[22]);
                        }
                        else qDebug() << "Couldn't find the message by name! " << tokens[21] << "  " << tokens[22];
+                       if (tokens.length() > 23) gp.frameLen = tokens[23].toInt();
+                   }
+                   else if (tokens.length() > 21)
+                   {
+                       gp.frameLen = tokens[21].toInt();
                    }
 
                    createGraph(gp, true);
@@ -1343,7 +1416,8 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     {
         CommFrame thisFrame = modelFrames->at(i);
         if ( (thisFrame.frameId() == params.ID) && thisFrame.isDataFrame()
-            &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.getBus()) ) ) frameCache.append(thisFrame);
+            &&  ( ( params.bus == -1) ||  (params.bus == thisFrame.getBus()) )
+            &&  ( ( params.frameLen == -1) ||  (params.frameLen == thisFrame.payload().length()) ) ) frameCache.append(thisFrame);
     }
 
     //to fix weirdness where a graph that has no data won't be able to be edited, selected, or deleted properly
@@ -1565,6 +1639,9 @@ void GraphingWindow::createGraph(GraphParams &params, bool createGraphParam)
     ui->graphingView->yAxis->setRange(yminval, ymaxval);
 
     ui->graphingView->replot();
+
+    actRemoveAll->setEnabled(ui->graphingView->graphCount() > 0);
+    actRescale->setEnabled(ui->graphingView->graphCount() > 0);
 }
 
 void GraphingWindow::moveLegend()
@@ -1595,6 +1672,7 @@ GraphParams::GraphParams()
     stride = 1;
     strideSoFar = 1;
     bus = -1;
+    frameLen = -1;
     lineColor = QColor(0,0,0);
     fillColor = QColor(255,255,255,0);
     lineWidth = 1;

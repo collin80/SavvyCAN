@@ -69,7 +69,6 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             dbcMessage->len = newLen;
             if (newLen > 8) dbcMessage->canFD = true; //only CAN FD carries more than 8 bytes
             refreshView();
-            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->checkCanFD, &QCheckBox::toggled,
@@ -81,7 +80,6 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             dbcMessage->canFD = checked;
             if (!checked && dbcMessage->len > 8) dbcMessage->len = 8; //classic CAN carries at most 8 bytes
             refreshView();
-            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->checkBRS, &QCheckBox::toggled,
@@ -91,16 +89,6 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if (suppressEditCallbacks) return;
             if (dbcMessage->bitRateSwitch != checked) dbcFile->setDirtyFlag();
             dbcMessage->bitRateSwitch = checked;
-        });
-
-    connect(ui->checkExtended, &QCheckBox::toggled,
-        [=](bool checked)
-        {
-            if (dbcMessage == nullptr) return;
-            if (suppressEditCallbacks) return;
-            if (dbcMessage->extendedID != checked) dbcFile->setDirtyFlag();
-            dbcMessage->extendedID = checked;
-            emit updatedTreeInfo(dbcMessage, origID);
         });
 
     connect(ui->comboSender, &QComboBox::currentTextChanged,
@@ -273,11 +261,11 @@ void DBCMessageEditor::refreshView()
     ui->lineFrameID->setText(Utility::formatCANID(dbcMessage->ID & 0x1FFFFFFFul));
     ui->lineMsgName->setText(dbcMessage->name);
     ui->lineFrameLen->setText(QString::number(dbcMessage->len));
-    if (ui->checkExtended)
-        ui->checkExtended->setChecked(dbcMessage->extendedID);
     ui->checkCanFD->setChecked(dbcMessage->canFD);
     ui->checkBRS->setChecked(dbcMessage->canFD && dbcMessage->bitRateSwitch);
-    ui->checkBRS->setEnabled(dbcMessage->canFD);
+    ui->checkBRS->setEnabled(dbcMessage->canFD);    
+    if (ui->checkExtended)
+        ui->checkExtended->setChecked(dbcMessage->extendedID);
 
     for (int i = 0; i < ui->comboSender->count(); i++)
     {

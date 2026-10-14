@@ -37,7 +37,9 @@ protected:
                   int pDataRate,
                   int pNumBuses,
                   int pQueueLen,
-                  bool pUseThread);
+                  bool pUseThread,
+                  bool pListenOnly = false,
+                  bool pActive = true);
 
 public:
 
@@ -138,6 +140,13 @@ public slots:
      * @note if a working thread is used, piStop is called before exiting the working thread
      */
     void stop();
+
+    /**
+     * @brief Trigger a reconnect using the stored bus configuration.
+     * Runs in the worker thread (posted via QueuedConnection from main thread).
+     * Override in subclasses; default is a no-op.
+     */
+    virtual void autoReconnect() {}
 
     /**
      * @brief setBusSettings

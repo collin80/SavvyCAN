@@ -22,6 +22,14 @@ CANConManager::CANConManager(QObject *parent): QObject(parent)
     mTimer.setSingleShot(false);
     mTimer.start();
 
+    /* Separate main-thread timer: fires every 5 s to reconnect stale SERIALBUS connections.
+     * Uses Qt::QueuedConnection so the work runs in the connection's worker thread without
+     * blocking the UI — and fires even when the worker-thread timer is stalled on a PCAN call. */
+    connect(&mAutoReconnectTimer, &QTimer::timeout, this, &CANConManager::autoReconnectCheck);
+    mAutoReconnectTimer.setInterval(1000);  // 1 s: NOT_CONNECTED retries every tick; 0fps check every 5th tick
+    mAutoReconnectTimer.setSingleShot(false);
+    mAutoReconnectTimer.start();
+
     mNumActiveBuses = 0;
 
     resetTimeBasis();
@@ -63,6 +71,8 @@ void CANConManager::stopAllConnections()
 void CANConManager::add(CANConnection* pConn_p)
 {
     mConns.append(pConn_p);
+    mConnFrameCount[pConn_p] = 0;
+    mConnHadFrames[pConn_p]  = false;
 }
 
 
@@ -70,12 +80,18 @@ void CANConManager::remove(CANConnection* pConn_p)
 {
     //disconnect(pConn_p, 0, this, 0);
     mConns.removeOne(pConn_p);
+    mConnFrameCount.remove(pConn_p);
+    mConnHadFrames.remove(pConn_p);
 }
 
 void CANConManager::replace(int idx, CANConnection* pConn_p)
 {
     CANConnection *original = mConns[idx];
     mConns.replace(idx, pConn_p);
+    mConnFrameCount.remove(original);
+    mConnHadFrames.remove(original);
+    mConnFrameCount[pConn_p] = 0;
+    mConnHadFrames[pConn_p]  = false;
     delete original; original = NULL;
 }
 
@@ -200,8 +216,12 @@ void CANConManager::refreshConnection(CANConnection* pConn_p)
         pConn_p->getQueue().dequeue();
     }
 
-    if(frames.size())
+    if(frames.size()) {
+        mConnFrameCount[pConn_p] += frames.size();
+        if (!mConnHadFrames.value(pConn_p, false))
+            mConnHadFrames[pConn_p] = true;
         emit framesReceived(pConn_p, frames);
+    }
 }
 
 /*
@@ -312,4 +332,31 @@ bool CANConManager::removeAllTargettedFrames(QObject *receiver)
     }
 
     return true;
+}
+
+/* Fires every 5 s in the MAIN thread.
+ * For each SERIALBUS connection that is NOT_CONNECTED, or that is CONNECTED but
+ * received 0 frames during the last 5-second window while it had previously been
+ * active, post autoReconnect() to the connection's worker thread via QueuedConnection.
+ * This mechanism works even when the worker-thread timer is stalled inside PCAN's
+ * blocking CAN_Initialize() call, because the event is queued and handled as soon as
+ * the blocking call returns. */
+void CANConManager::autoReconnectCheck()
+{
+    ++mAutoReconnectTick;
+    const bool fiveSecTick = (mAutoReconnectTick % 5) == 0;
+
+    foreach (CANConnection* conn_p, mConns) {
+        const CANCon::status st = conn_p->getStatus();
+
+        if (st == CANCon::NOT_CONNECTED) {
+            // Retry every second — worker-thread timer may be stalled inside PCAN's blocking call.
+            QMetaObject::invokeMethod(conn_p, "autoReconnect", Qt::QueuedConnection);
+        } else if (st == CANCon::CONNECTED && fiveSecTick) {
+            // Check for 0 fps over the last 5 s (silent USB unplug on PCAN/macOS).
+            if (mConnFrameCount.value(conn_p, 0) == 0 && mConnHadFrames.value(conn_p, false))
+                QMetaObject::invokeMethod(conn_p, "autoReconnect", Qt::QueuedConnection);
+            mConnFrameCount[conn_p] = 0;
+        }
+    }
 }
