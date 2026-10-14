@@ -80,7 +80,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     dbc/dbcnoderebaseeditor.cpp dbc/dbcnoderebaseeditor.h
     dbc/dbcsignaleditor.cpp dbc/dbcsignaleditor.h
     filterutility.cpp filterutility.h
-    firmwareuploaderwindow.cpp firmwareuploaderwindow.h
+    re/udsfirmwareuploaderwindow.cpp re/udsfirmwareuploaderwindow.h
     framefileio.cpp framefileio.h
     frameplaybackobject.cpp frameplaybackobject.h
     frameplaybackwindow.cpp frameplaybackwindow.h
@@ -138,6 +138,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     utils/HexSpinBox.h
     utils/lfqueue.h
     images.qrc icons.qrc
+    ui/bisectwindow.ui ui/canbridgewindow.ui ui/candatagrid.ui ui/connectionwindow.ui ui/dbccomparatorwindow.ui ui/dbcloadsavewindow.ui ui/dbcmaineditor.ui ui/dbcmessageeditor.ui ui/dbcnodeduplicateeditor.ui ui/dbcnodeeditor.ui ui/dbcnoderebaseeditor.ui ui/dbcsignaleditor.ui ui/discretestatewindow.ui ui/filecomparatorwindow.ui ui/udsfirmwareuploaderwindow.ui ui/flowviewwindow.ui ui/frameinfowindow.ui ui/frameplaybackwindow.ui ui/framesenderwindow.ui ui/fuzzingwindow.ui ui/graphingwindow.ui ui/helpwindow.ui ui/isotp_interpreterwindow.ui ui/mainsettingsdialog.ui ui/mainwindow.ui ui/motorcontrollerconfigwindow.ui ui/newconnectiondialog.ui ui/newgraphdialog.ui ui/rangestatewindow.ui ui/scriptingwindow.ui ui/searchwindow.ui ui/signalviewerwindow.ui ui/snifferwindow.ui ui/temporalgraphwindow.ui ui/udsscanwindow.ui
 )
 
 if(APPLE)

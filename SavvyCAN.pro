@@ -56,7 +56,6 @@ SOURCES += main.cpp\
     framesenderwindow.cpp \
     framefileio.cpp \
     mainsettingsdialog.cpp \
-    firmwareuploaderwindow.cpp \
     scriptingwindow.cpp \
     scriptcontainer.cpp \
     canfilter.cpp \
@@ -104,6 +103,7 @@ SOURCES += main.cpp\
     re/sniffer/SnifferDelegate.cpp \
     connections/newconnectiondialog.cpp \
     re/temporalgraphwindow.cpp \
+    re/udsfirmwareuploaderwindow.cpp \
     filterutility.cpp \
     pcaplite.cpp
 
@@ -151,7 +151,6 @@ HEADERS  += mainwindow.h \
     framefileio.h \
     config.h \
     mainsettingsdialog.h \
-    firmwareuploaderwindow.h \
     scriptingwindow.h \
     scriptcontainer.h \
     canfilter.h \
@@ -200,6 +199,7 @@ HEADERS  += mainwindow.h \
     re/sniffer/SnifferDelegate.h \
     connections/newconnectiondialog.h \
     re/temporalgraphwindow.h \
+    re/udsfirmwareuploaderwindow.h \
     filterutility.h \
     pcaplite.h
 
@@ -217,7 +217,6 @@ FORMS    += ui/candatagrid.ui \
     ui/dbcnodeeditor.ui \
     ui/discretestatewindow.ui \
     ui/filecomparatorwindow.ui \
-    ui/firmwareuploaderwindow.ui \
     ui/flowviewwindow.ui \
     ui/frameinfowindow.ui \
     ui/frameplaybackwindow.ui \
@@ -237,7 +236,8 @@ FORMS    += ui/candatagrid.ui \
     ui/signalviewerwindow.ui \
     ui/helpwindow.ui \
     ui/newconnectiondialog.ui \
-    ui/temporalgraphwindow.ui
+    ui/temporalgraphwindow.ui \
+    ui/udsfirmwareuploaderwindow.ui
     
 RESOURCES += \
     icons.qrc \

@@ -482,7 +482,7 @@
     <addaction name="actionScripting_INterface"/>
     <addaction name="actionFuzzing"/>
     <addaction name="actionUDS_Scanner"/>
-    <addaction name="actionFirmware_Update"/>
+    <addaction name="actionUDS_Firmware_Update"/>
     <addaction name="actionMotorControlConfig"/>
     <addaction name="actionCAN_Bridge"/>
    </widget>
@@ -722,6 +722,11 @@
   <action name="actionFrame_Search">
    <property name="text">
     <string>Frame Search</string>
+   </property>
+  </action>
+  <action name="actionUDS_Firmware_Update">
+   <property name="text">
+    <string>UDS Firmware Update</string>
    </property>
   </action>
  </widget>

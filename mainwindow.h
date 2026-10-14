@@ -20,7 +20,6 @@
 #include "re/filecomparatorwindow.h"
 #include "dbc/dbcmaineditor.h"
 #include "mainsettingsdialog.h"
-#include "firmwareuploaderwindow.h"
 #include "re/discretestatewindow.h"
 #include "scriptingwindow.h"
 #include "re/rangestatewindow.h"
@@ -33,6 +32,7 @@
 #include "signalviewerwindow.h"
 #include "re/temporalgraphwindow.h"
 #include "re/dbccomparatorwindow.h"
+#include "re/udsfirmwareuploaderwindow.h"
 #include "canbridgewindow.h"
 #include "re/searchwindow.h"
 #include "croplogdialog.h"
@@ -91,7 +91,7 @@ private slots:
     void showFuzzyScopeWindow();
     void showComparisonWindow();
     void showSettingsDialog();
-    void showFirmwareUploaderWindow();
+    void showUDSFirmwareUploaderWindow();
     void showConnectionSettingsWindow();
     void showScriptingWindow();
     void showDBCFileWindow();
@@ -197,7 +197,7 @@ private:
     FileComparatorWindow *comparatorWindow;
     MainSettingsDialog *settingsDialog;
     DiscreteStateWindow *discreteStateWindow;
-    FirmwareUploaderWindow *firmwareUploaderWindow;
+    UDSFirmwareUploaderWindow *udsFirmwareUploaderWindow;
     ConnectionWindow *connectionWindow;
     ScriptingWindow *scriptingWindow;
     RangeStateWindow *rangeWindow;

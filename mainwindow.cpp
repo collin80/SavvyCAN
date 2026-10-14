@@ -82,7 +82,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcMainEditor = nullptr;
     comparatorWindow = nullptr;
     settingsDialog = nullptr;
-    firmwareUploaderWindow = nullptr;
+    udsFirmwareUploaderWindow = nullptr;
     discreteStateWindow = nullptr;
     connectionWindow = nullptr;
     scriptingWindow = nullptr;
@@ -130,7 +130,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionDBC_Comparison, &QAction::triggered, this, &MainWindow::showDBCComparisonWindow);
     connect(ui->actionScripting_INterface, &QAction::triggered, this, &MainWindow::showScriptingWindow);
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::showSettingsDialog);
-    connect(ui->actionFirmware_Update, &QAction::triggered, this, &MainWindow::showFirmwareUploaderWindow);
+    connect(ui->actionUDS_Firmware_Update, &QAction::triggered, this, &MainWindow::showUDSFirmwareUploaderWindow);
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
@@ -277,7 +277,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //these either are unfinished/not working or are not for general use. But,they exist
     //so if you want to enable them and play with them then go for it.
-    ui->actionFirmware_Update->setVisible(false);
+    //ui->actionFirmware_Update->setVisible(false);
     ui->actionMotorControlConfig->setVisible(false);
     ui->actionSingle_Multi_State_2->setVisible(false);
 
@@ -340,7 +340,7 @@ void MainWindow::killEmAll()
     killWindow(isoWindow);
     killWindow(snifferWindow);
     killWindow(bisectWindow);
-    killWindow(firmwareUploaderWindow);
+    killWindow(udsFirmwareUploaderWindow);
     killWindow(motorctrlConfigWindow);
     killWindow(signalViewerWindow);
     killWindow(temporalGraphWindow);
@@ -2113,13 +2113,13 @@ void MainWindow::showPlaybackWindow()
     playbackWindow->show();
 }
 
-void MainWindow::showFirmwareUploaderWindow()
+void MainWindow::showUDSFirmwareUploaderWindow()
 {
-    if (!firmwareUploaderWindow)
+    if (!udsFirmwareUploaderWindow)
     {
-        firmwareUploaderWindow = new FirmwareUploaderWindow(model->getListReference());
+        udsFirmwareUploaderWindow = new UDSFirmwareUploaderWindow(model->getListReference());
     }
-    firmwareUploaderWindow->show();
+    udsFirmwareUploaderWindow->show();
 }
 
 void MainWindow::showComparisonWindow()
