@@ -58,6 +58,7 @@ jobs:
         run: |
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`sysctl kern.aioprocmax | awk '{print $2}'`
+          lrelease translations/*.ts
           mv ${{github.workspace}}/build/SavvyCAN.app ${{github.workspace}}
 
       - name: Package
@@ -94,6 +95,7 @@ jobs:
         run: |
           cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
           cmake --build ${{github.workspace}}/build --config Release -j`sysctl kern.aioprocmax | awk '{print $2}'`
+          lrelease translations/*.ts
 
       - name: Package
         run: |
