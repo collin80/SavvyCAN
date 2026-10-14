@@ -23,6 +23,7 @@ UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *f
     modelFrames = frames;
     currentState = STATE_IDLE;
     firmwareSize = 0;
+    firmwareSize2 = 0;
     blockSequenceCounter = 0;
     maxBlockLength = 0;
     currentDataPos = 0;
@@ -32,7 +33,9 @@ UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *f
     sessionType = 0x02;
     securityLevel = 1;
     flashAddr = 0x08000000;
+    flashAddr2 = 0x08000000;
     useSecurity = true;
+    uploadingSecondCpu = false;
 
     udsHandler = HandlerFactory::createUDSHandler();
     udsHandler->setReception(true);
@@ -155,6 +158,7 @@ void UDSFirmwareUploaderWindow::startUpload()
 
     blockSequenceCounter = 0;
     currentDataPos = 0;
+    uploadingSecondCpu = false;
 
     ui->progressBar->setValue(0);
     ui->btnStartStop->setEnabled(false);
@@ -482,8 +486,22 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
 
     case STATE_WAIT_EXIT_RESP:
     {
-        logMessage("Transfer exit confirmed");
-        sendECUReset();
+        if (!uploadingSecondCpu && !firmwareData2.isEmpty())
+        {
+            logMessage("CPU1 transfer complete, starting CPU2 upload...");
+            firmwareData = firmwareData2;
+            firmwareSize = firmwareSize2;
+            flashAddr = flashAddr2;
+            blockSequenceCounter = 0;
+            currentDataPos = 0;
+            uploadingSecondCpu = true;
+            sendRequestDownload();
+        }
+        else
+        {
+            logMessage("Transfer exit confirmed");
+            sendECUReset();
+        }
         break;
     }
 
@@ -767,25 +785,67 @@ void UDSFirmwareUploaderWindow::lookupVersionMap()
     logMessage(QString("Version lookup: ECU='%1' build='%2'").arg(ecuName).arg(lastBuildId));
     QString searchTerm = ecuName + ":" + lastBuildId.trimmed();
 
+    //the 4th column has the firmware type. if it ends in bu it's a bootloader updater.
+    //If it ends in bl it's the bootloader itself. Otherwise it is likely the main firmware
+    //but pcs and some others have two cpus so then you get cpu2 at the end for the second processor
+    QString tsvDir = QFileInfo(tsvPath).absolutePath();
     int matchCount = 0;
+    bool cpu1Loaded = false;
+    bool cpu2Loaded = false;
     QTextStream in(&f);
     while (!in.atEnd())
     {
         QString line = in.readLine();
         QStringList cols = line.split('\t');
-        if (cols.size() < 2) continue;
-        if (cols[0] == searchTerm)
+        if (cols.size() < 4) continue;
+        if (cols[0] != searchTerm) continue;
+
+        QString fwType = cols[3];
+        if (fwType.endsWith("bu") || fwType.endsWith("bl"))
+            continue;
+
+        bool isCpu2 = fwType.contains("cpu2");
+        matchCount++;
+        logMessage(QString("Match (%1): %2").arg(isCpu2 ? "cpu2" : "cpu1").arg(line));
+
+        if (isCpu2 && !cpu2Loaded)
         {
-            logMessage("Match: " + line);
-            matchCount++;
+            QString fwPath = tsvDir + "/" + cols[1];
+            QFile fwFile(fwPath);
+            if (!fwFile.open(QIODevice::ReadOnly))
+            {
+                logMessage("ERROR: Could not open CPU2 firmware file: " + fwPath);
+                continue;
+            }
+            firmwareData2 = fwFile.readAll();
+            firmwareSize2 = firmwareData2.length();
+            fwFile.close();
+            logMessage("Loaded CPU2 firmware: " + fwPath + " (" + QString::number(firmwareSize2) + " bytes)");
+            cpu2Loaded = true;
+        }
+        else if (!isCpu2 && !cpu1Loaded)
+        {
+            QString fwPath = tsvDir + "/" + cols[1];
+            QFile fwFile(fwPath);
+            if (!fwFile.open(QIODevice::ReadOnly))
+            {
+                logMessage("ERROR: Could not open firmware file: " + fwPath);
+                continue;
+            }
+            firmwareData = fwFile.readAll();
+            firmwareSize = firmwareData.length();
+            fwFile.close();
+            ui->lblFilename->setText(fwPath + QString(" (%1 bytes)").arg(firmwareSize));
+            logMessage("Loaded firmware: " + fwPath + " (" + QString::number(firmwareSize) + " bytes)");
+            cpu1Loaded = true;
         }
     }
     f.close();
 
     if (matchCount == 0)
-        logMessage("Version lookup: no matches found");
+        logMessage("Version lookup: no main firmware matches found");
     else
-        logMessage(QString("Version lookup: %1 match(es) found").arg(matchCount));
+        logMessage(QString("Version lookup: %1 main firmware match(es) found").arg(matchCount));
 }
 
 void UDSFirmwareUploaderWindow::advanceState()

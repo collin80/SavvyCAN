@@ -101,17 +101,21 @@ private:
     QElapsedTimer *progressTimer;
 
     QByteArray firmwareData;
+    QByteArray firmwareData2;
     int firmwareSize;
+    int firmwareSize2;
     int busId;
     uint32_t targetId;
     uint32_t responseId;
     int sessionType;
     int securityLevel;
     uint32_t flashAddr;
+    uint32_t flashAddr2;
     int blockSequenceCounter;
     int maxBlockLength;
     int currentDataPos;
     bool useSecurity;
+    bool uploadingSecondCpu;
 
     QString teslaDir;
     QString lastBuildId;
