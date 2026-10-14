@@ -75,6 +75,8 @@ FramePlaybackWindow::FramePlaybackWindow(const QVector<CommFrame> *frames, QWidg
     connect(ui->btnLoadFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::loadFilters);
     connect(ui->btnSaveFilters, &QAbstractButton::clicked, this, &FramePlaybackWindow::saveFilters);
     connect(ui->cbOriginalTiming, &QCheckBox::toggled, this, &FramePlaybackWindow::useOrigTimingClicked);
+    connect(ui->cbForceCanFD, &QCheckBox::toggled, this, &FramePlaybackWindow::forceCanFDClicked);
+    connect(ui->cbForceBRS, &QCheckBox::toggled, this, &FramePlaybackWindow::forceCanFDClicked);
     connect(MainWindow::getReference(), SIGNAL(framesUpdated(int)), this, SLOT(updatedFrames(int)));
 
     connect(&playbackObject, &FramePlaybackObject::EndOfFrameCache, this, &FramePlaybackWindow::EndOfFrameCache);
@@ -157,6 +159,9 @@ void FramePlaybackWindow::readSettings()
     }
     ui->spinPlaySpeed->setValue(settings.value("Playback/DefSpeed", 5).toInt());
     ui->comboCANBus->setCurrentIndex(settings.value("Playback/SendingBus", 0).toInt());
+    ui->cbForceBRS->setChecked(settings.value("Playback/ForceBRS", true).toBool());
+    ui->cbForceCanFD->setChecked(settings.value("Playback/ForceCanFD", false).toBool());
+    forceCanFDClicked();
 
     calculateWhichBus();
 }
@@ -471,6 +476,15 @@ void FramePlaybackWindow::fillIDHash(SequenceItem &item)
             item.idFilters.insert(id, true);
         }
     }
+}
+
+void FramePlaybackWindow::forceCanFDClicked()
+{
+    ui->cbForceBRS->setEnabled(ui->cbForceCanFD->isChecked());
+    playbackObject.setForceCanFD(ui->cbForceCanFD->isChecked(), ui->cbForceBRS->isChecked());
+    QSettings settings;
+    settings.setValue("Playback/ForceCanFD", ui->cbForceCanFD->isChecked());
+    settings.setValue("Playback/ForceBRS", ui->cbForceBRS->isChecked());
 }
 
 void FramePlaybackWindow::useOrigTimingClicked()

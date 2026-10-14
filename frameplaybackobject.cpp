@@ -12,8 +12,23 @@ FramePlaybackObject::FramePlaybackObject()
     playbackActive = false;
     playbackForward = true;
     useOrigTiming = false;
+    forceCanFD = false;
+    forceBRS = true;
     whichBusSend = 0;
     currentSeqItem = nullptr;
+}
+
+//Adds a frame to the batch to send. With "send all frames as CAN FD" on, data frames go out as CAN FD (classic
+//lengths 0-8 are valid CAN FD lengths too), for logs that don't record which frames were CAN FD, e.g. candump's
+//screen format. Remote frames are left alone: CAN FD has no remote frames.
+void FramePlaybackObject::queueFrame(CommFrame frame)
+{
+    if (forceCanFD && frame.isDataFrame())
+    {
+        frame.setFlexibleDataRateFormat(true);
+        frame.setBitrateSwitch(forceBRS);
+    }
+    sendingBuffer.append(frame);
 }
 
 FramePlaybackObject::~FramePlaybackObject()
@@ -41,19 +56,19 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
         if (whichBusSend > -1)
         {
             thisFrame->setBus(whichBusSend);
-            sendingBuffer.append(*thisFrame);
+            queueFrame(*thisFrame);
         }
         else if (whichBusSend == -1)
         {
             for (int c = 0; c < numBuses; c++)
             {
                 thisFrame->setBus(c);
-                sendingBuffer.append(*thisFrame);
+                queueFrame(*thisFrame);
             }
         }
         else //from file so retain original bus and send as-is
         {
-            sendingBuffer.append(*thisFrame);
+            queueFrame(*thisFrame);
         }
 
         thisFrame->setBus(originalBus);
@@ -295,6 +310,12 @@ void FramePlaybackObject::setSequenceObject(SequenceItem *item)
     currentSeqItem = item;
 }
 
+void FramePlaybackObject::setForceCanFD(bool fd, bool brs)
+{
+    forceCanFD = fd;
+    forceBRS = brs;
+}
+
 void FramePlaybackObject::setUseOriginalTiming(bool state)
 {
     useOrigTiming = state;
@@ -380,8 +401,10 @@ void FramePlaybackObject::timerTriggered()
         {
             if (!playbackActive)
             {
+                //the end of the log was reached during this burst: still send the frames already queued below (this
+                //returned instead, so with a burst over 1 the last frames of the log were never sent)
                 playbackTimer->stop();
-                return;
+                break;
             }
             if (playbackForward)
             {
