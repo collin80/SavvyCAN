@@ -21,6 +21,7 @@ enum class Column {
     Length    = 6, ///< The frames payload data length
     ASCII     = 7, ///< The payload interpreted as ASCII characters
     Data      = 8, ///< The frames payload data
+    DataDec   = 9,
     NUM_COLUMN
 };
 
@@ -48,6 +49,7 @@ public:
     void setOverwriteMode(bool);
     void setHexMode(bool);
     void setUseColorsByCanId(bool);
+    void setHexAndDecMode(bool);
     void setClearMode(bool mode);
     void setTimeStyle(TimeStyle newStyle);
     void setIgnoreDBCColors(bool mode);
