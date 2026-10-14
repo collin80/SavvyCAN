@@ -665,6 +665,12 @@ bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CommFrame> 
     return true;
 }
 
+//first character of a token, or 0 if it's empty (indexing an empty QByteArray reads out of bounds)
+static char firstCharOf(const QByteArray &token)
+{
+    return token.isEmpty() ? 0 : token.at(0);
+}
+
 bool FrameFileIO::isCRTDFile(QString filename)
 {
     QFile inFile(filename);
@@ -688,11 +694,12 @@ bool FrameFileIO::isCRTDFile(QString filename)
                 QList<QByteArray> tokens = line.split(' ');
                 if (tokens.length() > 2)
                 {
-                    char firstChar = tokens[1].left(1)[0];
+                    //e.g. an ASC line "0.000 1 c0 Rx ..." leaves an empty token here once the bus digit is removed
+                    char firstChar = firstCharOf(tokens[1]);
                     if (firstChar >= '1' && firstChar <= '9')
                     {
                         tokens[1].remove(0,1); // Remove leading digit (bus number)
-                        firstChar = tokens[1].left(1)[0];
+                        firstChar = firstCharOf(tokens[1]);
                     }
                     if (firstChar == 'R' || firstChar == 'T')
                     {
@@ -781,12 +788,12 @@ bool FrameFileIO::loadCRTDFile(QString filename, QVector<CommFrame>* frames)
                 //qDebug() << "decimal places " << decimalPlaces;
                 thisFrame.setTimeStamp(CommFrame::TimeStamp(0, static_cast<int64_t>((tokens[0].toDouble() * multiplier))));
                 thisFrame.setBus(0);
-                char firstChar = tokens[1].left(1)[0];
+                char firstChar = firstCharOf(tokens[1]);
                 if (firstChar >= '1' && firstChar <= '9')
                 {
-                    thisFrame.setBus(tokens[1].left(1)[0] - '1');
+                    thisFrame.setBus(firstChar - '1');
                     tokens[1].remove(0,1); // Remove leading digit (bus number)
-                    firstChar = tokens[1].left(1)[0];
+                    firstChar = firstCharOf(tokens[1]);
                 }
                 if (firstChar == 'R' || firstChar == 'T')
                 {
@@ -1885,7 +1892,10 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                         }
                         QByteArray bytes(payloadLen, 0);
 
-                        if (payloadLen > 8)
+                        //Some tools (e.g. CANalyzer 8.x, older log2asc) write CAN FD frames as ordinary "d" lines with
+                        //their full length ("d 32 ..."). Only CAN FD carries more than 8 bytes, so load those as CAN FD
+                        //(the line doesn't say whether BRS was used). They used to fail the whole file.
+                        if (payloadLen > 64 || (payloadLen > 8 && tokens[4] == "r"))
                         {
                             qDebug() << "Payload length too long. Original line: " << line;
                             return false;
@@ -1915,6 +1925,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CommFrame>* frames)
                             }
                         }
                         thisFrame.setPayload(bytes);
+                        if (payloadLen > 8) thisFrame.setFlexibleDataRateFormat(true);
                     }
                     frames->append(thisFrame);
                 }
