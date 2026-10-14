@@ -119,6 +119,13 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="btnLookupVersion">
+         <property name="text">
+          <string>Lookup Version</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item row="8" column="0">

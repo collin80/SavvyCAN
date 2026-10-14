@@ -6,6 +6,7 @@
 
 #include <QFile>
 #include <QFileDialog>
+#include <QTextStream>
 #include <QDateTime>
 #include <QCoreApplication>
 #include <QDir>
@@ -49,6 +50,7 @@ UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *f
     connect(ui->btnStartStop, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleStartStop);
     connect(ui->btnAbort, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleAbort);
     connect(ui->btnReadBuildID, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleReadBuildID);
+    connect(ui->btnLookupVersion, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleLookupVersion);
     connect(ui->btnBrowseTeslaDir, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleBrowseTeslaDir);
     connect(ui->btnReloadNodes, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleReloadNodes);
     connect(udsHandler, &UDS_HANDLER::newUDSMessage, this, &UDSFirmwareUploaderWindow::gotUDSReply);
@@ -504,6 +506,7 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
         {
             quint32 buildId = (data[6] << 24) + (data[7] << 16) + (data[8] << 8) + data[9];
             QString buildIdStr = QString::number(buildId);
+            lastBuildId = buildIdStr;
             logMessage("Build ID: " + buildIdStr);
             ui->lblBuildID->setText(buildIdStr);
         }
@@ -713,6 +716,76 @@ void UDSFirmwareUploaderWindow::testerPresentTick()
 {
     sendTesterPresent();
     logMessage("Tester Present keep-alive sent");
+}
+
+void UDSFirmwareUploaderWindow::handleLookupVersion()
+{
+    lookupVersionMap();
+}
+
+void UDSFirmwareUploaderWindow::lookupVersionMap()
+{
+    int nodeIdx = ui->cmbTeslaNode->currentIndex();
+    if (nodeIdx <= 0)
+    {
+        logMessage("Version lookup: select a target ECU node first");
+        return;
+    }
+    if (lastBuildId.isEmpty())
+    {
+        logMessage("Version lookup: read the build ID first");
+        return;
+    }
+
+    QString ecuName = ui->cmbTeslaNode->currentText().toLower();
+
+    QStringList searchPaths;
+    if (!teslaDir.isEmpty()) searchPaths.append(teslaDir + "/deploy/seed_artifacts_v2");
+    searchPaths.append(QCoreApplication::applicationDirPath());
+    searchPaths.append(QDir::currentPath());
+
+    QString tsvPath;
+    for (const QString &path : searchPaths)
+    {
+        QString candidate = path + "/version_map2.tsv";
+        if (QFile::exists(candidate)) { tsvPath = candidate; break; }
+    }
+
+    if (tsvPath.isEmpty())
+    {
+        logMessage("Version lookup: version_map2.tsv not found");
+        return;
+    }
+
+    QFile f(tsvPath);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+    {
+        logMessage("Version lookup: could not open " + tsvPath);
+        return;
+    }
+
+    logMessage(QString("Version lookup: ECU='%1' build='%2'").arg(ecuName).arg(lastBuildId));
+    QString searchTerm = ecuName + ":" + lastBuildId.trimmed();
+
+    int matchCount = 0;
+    QTextStream in(&f);
+    while (!in.atEnd())
+    {
+        QString line = in.readLine();
+        QStringList cols = line.split('\t');
+        if (cols.size() < 2) continue;
+        if (cols[0] == searchTerm)
+        {
+            logMessage("Match: " + line);
+            matchCount++;
+        }
+    }
+    f.close();
+
+    if (matchCount == 0)
+        logMessage("Version lookup: no matches found");
+    else
+        logMessage(QString("Version lookup: %1 match(es) found").arg(matchCount));
 }
 
 void UDSFirmwareUploaderWindow::advanceState()
