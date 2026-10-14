@@ -36,6 +36,7 @@ UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *f
     flashAddr2 = 0x08000000;
     useSecurity = true;
     uploadingSecondCpu = false;
+    numFastTP = 0;
 
     udsHandler = HandlerFactory::createUDSHandler();
     udsHandler->setReception(true);
@@ -168,6 +169,7 @@ void UDSFirmwareUploaderWindow::startUpload()
 
     udsHandler->setReception(true);
     udsHandler->addFilter(busId, responseId, 0x7FF);
+    udsHandler->setFlowCtrl(true);;
 
     logMessage("Starting UDS firmware upload...");
     logMessage(QString("Target: 0x%1, Response: 0x%2, Bus: %3")
@@ -175,7 +177,7 @@ void UDSFirmwareUploaderWindow::startUpload()
     logMessage(QString("Flash Address: 0x%1, Size: %2 bytes")
                .arg(flashAddr, 0, 16).arg(firmwareSize));
 
-    sendDiagSession();
+    sendPreReset();
 }
 
 void UDSFirmwareUploaderWindow::stopUpload(bool resetState)
@@ -196,6 +198,119 @@ void UDSFirmwareUploaderWindow::stopUpload(bool resetState)
     }
 }
 
+void UDSFirmwareUploaderWindow::sendPreReset()
+{
+    UDS_MESSAGE msg;
+    msg.setBus(busId);
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::ECU_RESET;
+    msg.subFuncLen = 1;
+    msg.subFunc = 0x81; //soft reset with no reply
+
+    logMessage("Sending ECU Reset - Sub: 0x" + QString::number(sessionType, 16));
+    udsHandler->sendUDSFrame(msg);
+
+    //on tesla you need to start sending TP very quickly after sending the ecu reset. So, do it right away
+    msg.service = UDS_SERVICES::TESTER_PRESENT;
+    msg.subFuncLen = 1;
+    msg.subFunc = 0x80; //don't reply back to me
+    udsHandler->sendUDSFrame(msg);
+
+    //then set the TP timer to 10ms and let 'er fly!
+    testerTimer->stop();
+    testerTimer->setInterval(10);
+    testerTimer->start();
+    numFastTP = 0;
+    setState(STATE_SEND_TP_AVALANCHE); //about to spam the bus!
+}
+
+void UDSFirmwareUploaderWindow::sendRead0101()
+{
+    UDS_MESSAGE msg;
+    msg.setBus(busId);
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::READ_BY_ID;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0x0101;
+
+    logMessage("Requesting running app type from 0x0101");
+    udsHandler->sendUDSFrame(msg);
+    setState(STATE_WAIT_CONFIRM_BOOTLOADER);
+    timeoutTimer->start();
+}
+
+void UDSFirmwareUploaderWindow::sendErase()
+{
+    QByteArray payload;
+    UDS_MESSAGE msg;
+    msg.setBus(busId);
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::ROUTINE_CTRL;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0x01FF;
+    payload.append((char)0x00);
+    msg.setPayload(payload);
+
+    logMessage("Initializing download and erasing flash");
+    udsHandler->sendUDSFrame(msg);
+    setState(STATE_WAIT_ERASE_ROUTINE);
+    timeoutTimer->start();
+}
+
+void UDSFirmwareUploaderWindow::sendModuleToProgram(uint8_t module)
+{
+    QByteArray payload;
+    UDS_MESSAGE msg;
+    msg.setBus(busId);
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::WRITE_BY_ID;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0x0102;
+    payload.append(module);
+    msg.setPayload(payload);
+
+    logMessage("Writing the module program: " + QString::number(module));
+    udsHandler->sendUDSFrame(msg);
+    setState(STATE_WAIT_MODULE_PRGM);
+    timeoutTimer->start();
+}
+
+void UDSFirmwareUploaderWindow::sendRoutine0201()
+{
+    QByteArray payload;
+    UDS_MESSAGE msg;
+    msg.setBus(busId);
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::ROUTINE_CTRL;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0x0102; //1 = start the routine
+    payload.append(0x01);
+    msg.setPayload(payload);
+
+    logMessage("Running routine 0x0201");
+    udsHandler->sendUDSFrame(msg);
+    setState(STATE_WAIT_ROUTINE_201);
+    timeoutTimer->start();
+}
+
+void UDSFirmwareUploaderWindow::sendRoutine0202()
+{
+    QByteArray payload;
+    UDS_MESSAGE msg;
+    msg.setBus(busId);
+    msg.setFrameId(targetId);
+    msg.service = UDS_SERVICES::ROUTINE_CTRL;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0x0102; //1 = start the routine
+    payload.append(0x02);
+    msg.setPayload(payload);
+
+    logMessage("Running routine 0x0202");
+    udsHandler->sendUDSFrame(msg);
+    setState(STATE_WAIT_ROUTINE_201);
+    timeoutTimer->start();
+}
+
 void UDSFirmwareUploaderWindow::sendDiagSession()
 {
     UDS_MESSAGE msg;
@@ -203,9 +318,9 @@ void UDSFirmwareUploaderWindow::sendDiagSession()
     msg.setFrameId(targetId);
     msg.service = UDS_SERVICES::DIAG_CONTROL;
     msg.subFuncLen = 1;
-    msg.subFunc = sessionType;
+    msg.subFunc = 2;
 
-    logMessage("Sending Diagnostic Session Control (0x10) - Sub: 0x" + QString::number(sessionType, 16));
+    logMessage("Sending Diagnostic Session Control (0x10) - Sub: 0x2");
     udsHandler->sendUDSFrame(msg);
     setState(STATE_WAIT_DIAG_RESP);
     timeoutTimer->start();
@@ -218,7 +333,7 @@ void UDSFirmwareUploaderWindow::sendSecuritySeed()
     msg.setFrameId(targetId);
     msg.service = UDS_SERVICES::SECURITY_ACCESS;
     msg.subFuncLen = 1;
-    msg.subFunc = (securityLevel * 2) - 1;
+    msg.subFunc = 5;
 
     logMessage("Requesting Security Seed (0x27) - Level: " + QString::number(securityLevel));
     udsHandler->sendUDSFrame(msg);
@@ -226,17 +341,17 @@ void UDSFirmwareUploaderWindow::sendSecuritySeed()
     timeoutTimer->start();
 }
 
-void UDSFirmwareUploaderWindow::sendSecurityKey(const QByteArray &seed)
+void UDSFirmwareUploaderWindow::sendSecurityKey(const QByteArray &key)
 {
     UDS_MESSAGE msg;
     msg.setBus(busId);
     msg.setFrameId(targetId);
     msg.service = UDS_SERVICES::SECURITY_ACCESS;
     msg.subFuncLen = 1;
-    msg.subFunc = securityLevel * 2;
-    msg.payload() = seed;
+    msg.subFunc = 6;
+    msg.setPayload(key);
 
-    logMessage("Sending Security Key (0x27) - " + seed.toHex(' '));
+    logMessage("Sending Security Key (0x27) - " + key.toHex(' '));
     udsHandler->sendUDSFrame(msg);
     setState(STATE_WAIT_KEY_RESP);
     timeoutTimer->start();
@@ -253,19 +368,20 @@ void UDSFirmwareUploaderWindow::sendRequestDownload()
 
     QByteArray data;
     data.append(static_cast<char>(0x00));
+    data.append(static_cast<char>(0x00));
     uint32_t addr = flashAddr;
     uint32_t size = firmwareSize;
 
     int addrLen = 4;
     int sizeLen = 4;
-    data[0] = (addrLen << 4) | sizeLen;
+    data[1] = (addrLen << 4) | sizeLen;
 
     for (int i = addrLen - 1; i >= 0; i--)
         data.append((addr >> (i * 8)) & 0xFF);
     for (int i = sizeLen - 1; i >= 0; i--)
         data.append((size >> (i * 8)) & 0xFF);
 
-    msg.payload() = data;
+    msg.setPayload(data);
 
     logMessage(QString("Sending Request Download (0x34) - Addr: 0x%1, Size: %2")
                .arg(addr, 0, 16).arg(size));
@@ -291,7 +407,7 @@ void UDSFirmwareUploaderWindow::sendDataBlock()
         bytesToSend = maxBlockLength;
 
     data.append(firmwareData.constData() + currentDataPos, bytesToSend);
-    msg.payload() = data;
+    msg.setPayload(data);
 
     udsHandler->sendUDSFrame(msg);
     setState(STATE_WAIT_DATA_RESP);
@@ -330,7 +446,7 @@ void UDSFirmwareUploaderWindow::sendECUReset()
 
 void UDSFirmwareUploaderWindow::sendTesterPresent()
 {
-    if (currentState != STATE_WAIT_DATA_RESP && currentState != STATE_WAIT_DOWNLOAD_RESP)
+    if ( (currentState != STATE_WAIT_DATA_RESP) && (currentState != STATE_WAIT_DOWNLOAD_RESP) && (currentState != STATE_SEND_TP_AVALANCHE) )
         return;
 
     UDS_MESSAGE msg;
@@ -341,6 +457,17 @@ void UDSFirmwareUploaderWindow::sendTesterPresent()
     msg.subFunc = 0x80;
 
     udsHandler->sendUDSFrame(msg);
+
+    if (currentState == STATE_SEND_TP_AVALANCHE)
+    {
+        numFastTP++;
+        if (numFastTP > 200)
+        {
+            testerTimer->stop();
+            testerTimer->setInterval(2000);
+            sendDiagSession();
+        }
+    }
 }
 
 void UDSFirmwareUploaderWindow::handleReadBuildID()
@@ -366,7 +493,7 @@ void UDSFirmwareUploaderWindow::handleReadBuildID()
 void UDSFirmwareUploaderWindow::sendReadBuildID()
 {
     UDS_MESSAGE msg;
-    msg.bus = busId;
+    msg.setBus(busId);
     msg.setFrameId(targetId);
     msg.service = UDS_SERVICES::READ_BY_ID;
     msg.subFuncLen = 2;
@@ -393,6 +520,7 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
 
     const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
     int dataLen = msg.payload().size();
+    uint8_t firmwareType;
 
     if (msg.isErrorReply)
     {
@@ -408,14 +536,7 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
     case STATE_WAIT_DIAG_RESP:
     {
         logMessage("Diagnostic Session Control response received");
-        if (useSecurity)
-        {
-            sendSecuritySeed();
-        }
-        else
-        {
-            sendRequestDownload();
-        }
+        sendRead0101();
         break;
     }
 
@@ -423,10 +544,10 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
     {
         logMessage("Security seed received (" + QString::number(dataLen) + " bytes)");
         QByteArray seed;
-        seed.append(reinterpret_cast<const char *>(data), dataLen);
+        seed.append(reinterpret_cast<const char *>(&data[2]), dataLen - 2);
         QByteArray key = seed;
         for (int i = 0; i < key.size(); i++)
-            key[i] = ~key[i];
+            key[i] = 0x35 ^ key[i];
         sendSecurityKey(key);
         break;
     }
@@ -434,7 +555,7 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
     case STATE_WAIT_KEY_RESP:
     {
         logMessage("Security access granted");
-        sendRequestDownload();
+        sendModuleToProgram(0); //most all of them write to module 0, dual CPU needs either 4 or C as well.
         break;
     }
 
@@ -495,12 +616,12 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
             blockSequenceCounter = 0;
             currentDataPos = 0;
             uploadingSecondCpu = true;
-            sendRequestDownload();
+            sendModuleToProgram(0x04); //maybe 0x0C sometimes? When?
         }
         else
         {
             logMessage("Transfer exit confirmed");
-            sendECUReset();
+            sendRoutine0201();
         }
         break;
     }
@@ -538,6 +659,35 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
         break;
     }
 
+    case STATE_WAIT_CONFIRM_BOOTLOADER:
+        firmwareType = data[4];
+        if (firmwareType == 1)
+        {
+            logMessage("We are in the bootloader!");
+            sendSecuritySeed();
+        }
+        else
+        {
+            setState(STATE_IDLE);
+            logMessage("Failed to enter bootloader!");
+        }
+        break;
+    case STATE_WAIT_MODULE_PRGM:
+        logMessage("Module to program was accepted.");
+        sendErase();
+        break;
+    case STATE_WAIT_ERASE_ROUTINE:
+        logMessage("Module ready for firmware! Starting the upload.");
+        sendRequestDownload();
+        break;
+    case STATE_WAIT_ROUTINE_201:
+        logMessage("Routine 0x0201 accepted.");
+        sendRoutine0202();
+        break;
+    case STATE_WAIT_ROUTINE_202:
+        break;
+        logMessage("Routine 0x0202 accepted. Rebooting the ECU.");
+        sendECUReset();
     default:
         break;
     }

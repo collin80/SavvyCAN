@@ -31,18 +31,30 @@ class UDSFirmwareUploaderWindow;
 enum UPLOAD_STATE
 {
     STATE_IDLE,
+    STATE_SEND_PRE_ECU_RESET,
+    STATE_SEND_TP_AVALANCHE,
     STATE_SEND_DIAG_SESSION,
     STATE_WAIT_DIAG_RESP,
+    STATE_CONFIRM_BOOTLOADER,
+    STATE_WAIT_CONFIRM_BOOTLOADER,
     STATE_SEND_SECURITY_SEED,
     STATE_WAIT_SEED,
     STATE_SEND_SECURITY_KEY,
     STATE_WAIT_KEY_RESP,
+    STATE_SEND_MODULE_PRGM,
+    STATE_WAIT_MODULE_PRGM,
+    STATE_SEND_ERASE_ROUTINE,
+    STATE_WAIT_ERASE_ROUTINE,
     STATE_SEND_REQUEST_DOWNLOAD,
     STATE_WAIT_DOWNLOAD_RESP,
     STATE_SEND_DATA,
     STATE_WAIT_DATA_RESP,
     STATE_SEND_TRANSFER_EXIT,
     STATE_WAIT_EXIT_RESP,
+    STATE_SEND_ROUTINE_201,
+    STATE_WAIT_ROUTINE_201,
+    STATE_SEND_ROUTINE_202,
+    STATE_WAIT_ROUTINE_202,
     STATE_SEND_ECU_RESET,
     STATE_WAIT_RESET_RESP,
     STATE_WAIT_BUILD_ID_RESP,
@@ -88,6 +100,13 @@ private:
     void sendECUReset();
     void sendTesterPresent();
     void sendReadBuildID();
+    void sendPreReset();
+    void sendRead0101();
+    void sendErase();
+    void sendModuleToProgram(uint8_t module);
+    void sendRoutine0201();
+    void sendRoutine0202();
+
     void lookupVersionMap();
     bool loadBhxFile(const QString &path, QByteArray &outData, uint32_t &outAddr);
     void handleNRC(int nrc);
@@ -117,6 +136,7 @@ private:
     int currentDataPos;
     bool useSecurity;
     bool uploadingSecondCpu;
+    uint32_t numFastTP;
 
     QString teslaDir;
     QString lastBuildId;
