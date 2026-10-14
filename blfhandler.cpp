@@ -3,6 +3,7 @@
 #include <QFile>
 #include <QString>
 #include <QtEndian>
+#include <cstring>
 
 #define BLF_REMOTE_FLAG 0x80
 
@@ -19,205 +20,237 @@ https://bitbucket.org/tobylorenz/vector_blf/
 All the code actually below is freshly written but heavily based upon things seen in those
 two source repos.
 */
+namespace
+{
+const quint32 BLF_FILE_SIGNATURE = 0x47474F4C;
+const quint32 BLF_OBJECT_SIGNATURE = 0x4A424F4C;
+const qint64 BLF_BASE_HEADER_SIZE = 16;
+const qint64 BLF_V1_HEADER_SIZE = 32;
+const qint64 BLF_V2_HEADER_SIZE = 40;
+
+quint16 readU16(const quint8 *data)
+{
+    return quint16(data[0]) | (quint16(data[1]) << 8);
+}
+
+quint32 readU32(const quint8 *data)
+{
+    return quint32(data[0]) |
+           (quint32(data[1]) << 8) |
+           (quint32(data[2]) << 16) |
+           (quint32(data[3]) << 24);
+}
+
+quint64 readU64(const quint8 *data)
+{
+    return quint64(readU32(data)) | (quint64(readU32(data + 4)) << 32);
+}
+
+bool hasSignature(const QByteArray &data, qint64 pos)
+{
+    return pos >= 0 && pos + 4 <= data.size() &&
+           memcmp(data.constData() + pos, "LOBJ", 4) == 0;
+}
+
+qint64 findSignature(const QByteArray &data, qint64 start, qint64 end)
+{
+    if (data.size() < 4) return -1;
+    end = qMin(end, qint64(data.size()) - 4);
+    for (qint64 pos = qMax<qint64>(start, 0); pos <= end; pos++) {
+        if (hasSignature(data, pos)) return pos;
+    }
+    return -1;
+}
+
+qint64 timestampMicroseconds(const quint8 *data, quint16 headerVersion)
+{
+    if (headerVersion != 1 && headerVersion != 2) return 0;
+    quint32 flags = readU32(data + 16);
+    quint64 timestamp = readU64(data + 24);
+    if (flags == 1) return static_cast<qint64>(timestamp / 100ULL);
+    return static_cast<qint64>(timestamp / 1000ULL);
+}
+
+void setFrame(CommFrame &frame, quint32 id, bool extended, bool remote, quint8 bus,
+              const QByteArray &payload, qint64 timestamp, bool received)
+{
+    frame.setBus(bus);
+    frame.setExtendedFrameFormat(extended);
+    frame.setFrameId(id & 0x1FFFFFFFull);
+    frame.setReceived(received);
+    frame.setFrameType(remote ? CommFrame::RemoteRequestFrame : CommFrame::CANDataFrame);
+    frame.setPayload(remote ? QByteArray() : payload);
+    frame.setTimeStamp(CommFrame::TimeStamp(0, timestamp));
+}
+
+bool parseContainer(const QByteArray &data, QVector<CommFrame> *frames, QByteArray *tail)
+{
+    if (!frames || !tail) return false;
+
+    QByteArray currentData;
+    currentData.reserve(tail->size() + data.size());
+    currentData.append(*tail);
+    currentData.append(data);
+    tail->clear();
+
+    const quint8 *bytes = reinterpret_cast<const quint8 *>(currentData.constData());
+    qint64 pos = findSignature(currentData, 0, currentData.size());
+    while (pos >= 0)
+    {
+        if (pos + BLF_BASE_HEADER_SIZE > currentData.size()) {
+            *tail = currentData.mid(pos);
+            return true;
+        }
+
+        quint16 headerSize = readU16(bytes + pos + 4);
+        quint16 headerVersion = readU16(bytes + pos + 6);
+        quint32 objectSize = readU32(bytes + pos + 8);
+        quint32 objectType = readU32(bytes + pos + 12);
+
+        if (headerSize < BLF_BASE_HEADER_SIZE || objectSize < headerSize) return false;
+        if (headerVersion == 1 && headerSize < BLF_V1_HEADER_SIZE) return false;
+        if (headerVersion == 2 && headerSize < BLF_V2_HEADER_SIZE) return false;
+        if (pos + objectSize > currentData.size()) {
+            *tail = currentData.mid(pos);
+            return true;
+        }
+
+        qint64 payloadOffset = pos + headerSize;
+        qint64 payloadSize = objectSize - headerSize;
+        qint64 timestamp = headerSize >= BLF_V1_HEADER_SIZE
+                               ? timestampMicroseconds(bytes + pos, headerVersion)
+                               : 0;
+
+        if (objectType == BLF_CAN_MSG)
+        {
+            if (payloadSize < qint64(sizeof(BLF_CAN_OBJ))) return false;
+            BLF_CAN_OBJ canObject;
+            memcpy(&canObject, bytes + payloadOffset, sizeof(canObject));
+            int payloadLength = qMin<int>(canObject.dlc, sizeof(canObject.data));
+            QByteArray payload(reinterpret_cast<const char *>(canObject.data), payloadLength);
+            CommFrame frame;
+            setFrame(frame, canObject.id, (canObject.id & 0x80000000ull) != 0,
+                     (canObject.flags & BLF_REMOTE_FLAG) != 0, canObject.channel,
+                     payload, timestamp, true);
+            frames->append(frame);
+        }
+        else if (objectType == BLF_CAN_MSG2)
+        {
+            if (payloadSize < qint64(sizeof(BLF_CAN_OBJ2))) return false;
+            BLF_CAN_OBJ2 canObject;
+            memcpy(&canObject, bytes + payloadOffset, sizeof(canObject));
+            int payloadLength = qMin<int>(canObject.dlc, sizeof(canObject.data));
+            QByteArray payload(reinterpret_cast<const char *>(canObject.data), payloadLength);
+            CommFrame frame;
+            setFrame(frame, canObject.id, (canObject.id & 0x80000000ull) != 0,
+                     (canObject.flags & BLF_REMOTE_FLAG) != 0, canObject.channel,
+                     payload, timestamp, true);
+            frames->append(frame);
+        }
+        else if (objectType == BLF_CAN_FD_MSG)
+        {
+            if (payloadSize < qint64(sizeof(BLF_CANFD_OBJ))) return false;
+            BLF_CANFD_OBJ canObject;
+            memcpy(&canObject, bytes + payloadOffset, sizeof(canObject));
+            int payloadLength = qMin<int>(canObject.validDataBytes, sizeof(canObject.data));
+            QByteArray payload(reinterpret_cast<const char *>(canObject.data), payloadLength);
+            CommFrame frame;
+            setFrame(frame, canObject.id, (canObject.id & 0x80000000ull) != 0,
+                     (canObject.flags & BLF_REMOTE_FLAG) != 0, canObject.channel,
+                     payload, timestamp, true);
+            frames->append(frame);
+        }
+        else if (objectType == BLF_CAN_FD_MSG64)
+        {
+            if (payloadSize < qint64(sizeof(BLF_CANFD64_OBJ))) return false;
+            BLF_CANFD64_OBJ canObject;
+            memcpy(&canObject, bytes + payloadOffset, sizeof(canObject));
+            int payloadLength = qMin<int>(canObject.validDataBytes,
+                                          payloadSize - qint64(sizeof(BLF_CANFD64_OBJ)));
+            QByteArray payload(reinterpret_cast<const char *>(bytes + payloadOffset + sizeof(BLF_CANFD64_OBJ)), payloadLength);
+            CommFrame frame;
+            setFrame(frame, canObject.frameId,
+                     (canObject.frameId & 0x80000000ull) != 0,
+                     (canObject.flags & 0x10) != 0, canObject.channel,
+                     payload, timestamp, canObject.dir == 0);
+            frames->append(frame);
+        }
+
+        qint64 nextPos = pos + objectSize;
+        pos = findSignature(currentData, nextPos, nextPos + 8);
+        if (pos < 0) {
+            *tail = currentData.mid(nextPos);
+            return true;
+        }
+    }
+
+    if (!currentData.isEmpty()) *tail = currentData;
+    return true;
+}
+}
+
 bool BLFHandler::loadBLF(QString filename, QVector<CommFrame>* frames)
 {
-    BLF_OBJ_HEADER objHeader;
-    QByteArray fileData;
-    QByteArray uncompressedData;
-    QByteArray junk;
-    BLF_OBJECT obj;
-    uint32_t pos;
-    BLF_CAN_OBJ canObject;
-    BLF_CAN_OBJ2 canObject2;
+    if (!frames) return false;
 
-    QFile *inFile = new QFile(filename);
+    QFile inFile(filename);
+    if (!inFile.open(QIODevice::ReadOnly)) return false;
 
-    if (!inFile->open(QIODevice::ReadOnly))
-    {
-        delete inFile;
+    BLF_FILE_HEADER fileHeader;
+    if (inFile.read(reinterpret_cast<char *>(&fileHeader), sizeof(fileHeader)) != sizeof(fileHeader))
         return false;
-    }
-    inFile->read((char *)&header, sizeof(header));
-    if (qFromLittleEndian(header.sig) == 0x47474F4C)
-    {
-        qDebug() << "Proper BLF file header token";
-    }
-    else return false;
+    if (qFromLittleEndian(fileHeader.sig) != BLF_FILE_SIGNATURE) return false;
 
-    while (!inFile->atEnd())
+    QByteArray containerTail;
+    while (true)
     {
-        qDebug() << "Position within file: " << inFile->pos();
-        inFile->read((char *)&objHeader.base, sizeof(BLF_OBJ_HEADER_BASE));
-        if (qFromLittleEndian(objHeader.base.sig) == 0x4A424F4C)
+        BLF_OBJ_HEADER_BASE base;
+        qint64 readSize = inFile.read(reinterpret_cast<char *>(&base), sizeof(base));
+        if (readSize == 0) break;
+        if (readSize != sizeof(base)) return false;
+        if (qFromLittleEndian(base.sig) != BLF_OBJECT_SIGNATURE) return false;
+
+        quint32 objectSize = qFromLittleEndian(base.objSize);
+        quint32 objectType = qFromLittleEndian(base.objType);
+        if (objectSize < BLF_BASE_HEADER_SIZE) return false;
+
+        qint64 dataSize = objectSize - BLF_BASE_HEADER_SIZE;
+        if (dataSize > inFile.size() - inFile.pos()) return false;
+        QByteArray objectData = inFile.read(dataSize);
+        if (objectData.size() != dataSize) return false;
+
+        quint32 paddingSize = objectSize % 4;
+        if (paddingSize > 0 && inFile.read(paddingSize).size() != qint64(paddingSize))
+            return false;
+
+        if (objectType != BLF_CONTAINER) continue;
+        if (objectData.size() < qint64(sizeof(BLF_OBJ_HEADER_CONTAINER))) return false;
+
+        BLF_OBJ_HEADER_CONTAINER container;
+        memcpy(&container, objectData.constData(), sizeof(container));
+        quint16 compressionMethod = qFromLittleEndian(container.compressionMethod);
+        quint32 uncompressedSize = qFromLittleEndian(container.uncompressedSize);
+        QByteArray uncompressedData = objectData.mid(sizeof(BLF_OBJ_HEADER_CONTAINER));
+        if (compressionMethod == BLF_CONT_ZLIB_COMPRESSION)
         {
-            int readSize = objHeader.base.objSize - sizeof(BLF_OBJ_HEADER_BASE);
-            qDebug() << "Proper object header token. Read Size: " << readSize;
-            fileData = inFile->read(readSize);
-            junk = inFile->read(readSize % 4); //file is padded so sizes must always end up on even multiple of 4
-            //qDebug() << "Fudge bytes in readSize: " << (readSize % 4);
-
-            switch (objHeader.base.objType)
-            {
-                case BLF_CONTAINER:
-                qDebug() << "Object is a container.";
-                memcpy(&objHeader.containerObj, fileData.constData(), sizeof(BLF_OBJ_HEADER_CONTAINER));
-                fileData.remove(0, sizeof(BLF_OBJ_HEADER_CONTAINER));
-                if (objHeader.containerObj.compressionMethod == BLF_CONT_NO_COMPRESSION)
-                {
-                    qDebug() << "Container is not compressed";
-                    uncompressedData = fileData;
-                }
-                else if (objHeader.containerObj.compressionMethod == BLF_CONT_ZLIB_COMPRESSION)
-                {
-                    qDebug() << "Compressed container. Unpacking it.";
-                    fileData.prepend(objHeader.containerObj.uncompressedSize & 0xFF);
-                    fileData.prepend((objHeader.containerObj.uncompressedSize >> 8) & 0xFF);
-                    fileData.prepend((objHeader.containerObj.uncompressedSize >> 16) & 0xFF);
-                    fileData.prepend((objHeader.containerObj.uncompressedSize >> 24) & 0xFF);
-                    uncompressedData += qUncompress(fileData);
-                }
-                else
-                {
-                    qDebug() << "Dunno what this is... " << objHeader.containerObj.compressionMethod;
-                }
-                qDebug() << "Uncompressed size: " << uncompressedData.length();
-                qDebug() << "Currently loaded frames at this point: " << frames->count();
-                pos = 0;
-                //bool foundHeader = false;
-                //first skip forward to find a header signature - usually not necessary
-                while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.length())
-                {
-                    int32_t *headerSig = (int32_t *)(uncompressedData.constData() + pos);
-                    if (*headerSig == 0x4A424F4C) break;
-                    pos += 4;
-                }
-                //then process all the objects
-                while ( (int)(pos + sizeof(BLF_OBJ_HEADER)) < uncompressedData.length())
-                {
-                    memcpy(&obj.header.base, (uncompressedData.constData() + pos), sizeof(BLF_OBJ_HEADER_BASE));
-                    memcpy(&obj.header.v1Obj, (uncompressedData.constData() + pos) + sizeof(BLF_OBJ_HEADER_BASE), sizeof(BLF_OBJ_HEADER_V1));
-                    //if (obj.header.base.objType != 1)
-                        //qDebug() << "Pos: " << pos << " Type: " << obj.header.base.objType << "Obj Size: " << obj.header.base.objSize;
-                    if (qFromLittleEndian(objHeader.base.sig) == 0x4A424F4C)
-                    {
-                        fileData = uncompressedData.mid(pos + sizeof(BLF_OBJ_HEADER_BASE) + sizeof(BLF_OBJ_HEADER_V1), obj.header.base.objSize - sizeof(BLF_OBJ_HEADER_BASE) - sizeof(BLF_OBJ_HEADER_V1));
-                        if (obj.header.base.objType == BLF_CAN_MSG)
-                        {
-                            memcpy(&canObject, fileData.constData(), sizeof(BLF_CAN_OBJ));
-                            CommFrame frame;
-                            frame.setBus(canObject.channel);
-                            frame.setExtendedFrameFormat((canObject.id & 0x80000000ull)?true:false);
-                            frame.setFrameId(canObject.id & 0x1FFFFFFFull);
-                            frame.setReceived(true);
-                            QByteArray bytes(canObject.dlc, 0);
-
-                            if (canObject.flags & BLF_REMOTE_FLAG) {
-                                frame.setFrameType(CommFrame::RemoteRequestFrame);
-                            } else {
-                                frame.setFrameType(CommFrame::CANDataFrame);
-                                for (int i = 0; i < canObject.dlc; i++) bytes[i] = canObject.data[i];
-                            }
-                            frame.setPayload(bytes);
-                            //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
-                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
-                            frames->append(frame);
-                        }
-                        else if (obj.header.base.objType == BLF_CAN_MSG2)
-                        {
-                            memcpy(&canObject2, fileData.constData(), sizeof(BLF_CAN_OBJ2));
-                            CommFrame frame;
-                            frame.setBus(canObject2.channel);
-                            frame.setExtendedFrameFormat((canObject2.id & 0x80000000ull)?true:false);
-                            frame.setFrameId(canObject2.id & 0x1FFFFFFFull);
-                            frame.setReceived(true);
-                            QByteArray bytes(canObject2.dlc, 0);
-
-                            if (canObject2.flags & BLF_REMOTE_FLAG) {
-                                frame.setFrameType(CommFrame::RemoteRequestFrame);
-                            } else {
-                                frame.setFrameType(CommFrame::CANDataFrame);
-                                for (int i = 0; i < canObject2.dlc; i++) bytes[i] = canObject2.data[i];
-                            }
-                            frame.setPayload(bytes);
-                            //Should we divide by a thousand or a million? Unsure here. It appears some logs are stamped in microseconds and some in milliseconds?
-                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0)); //uncompsize field also used for timestamp oddly enough
-                            frames->append(frame);
-                        }
-                        else if (obj.header.base.objType == BLF_CAN_FD_MSG && fileData.length() >= (int)sizeof(BLF_CANFD_OBJ))
-                        {
-                            BLF_CANFD_OBJ fdObject;
-                            memcpy(&fdObject, fileData.constData(), sizeof(BLF_CANFD_OBJ));
-                            CommFrame frame;
-                            frame.setBus(fdObject.channel);
-                            frame.setExtendedFrameFormat((fdObject.id & 0x80000000ull)?true:false);
-                            frame.setFrameId(fdObject.id & 0x1FFFFFFFull);
-                            frame.setReceived(true);
-                            int len = qMin((int)fdObject.validDataBytes, 64);
-                            if (fdObject.flags & BLF_REMOTE_FLAG) {
-                                frame.setFrameType(CommFrame::RemoteRequestFrame);
-                                frame.setPayload(QByteArray(qMin((int)fdObject.dlc, 8), 0)); //no data: the DLC is the length
-                            } else {
-                                frame.setPayload(QByteArray(reinterpret_cast<const char *>(fdObject.data), len));
-                                //classic frames on a CAN FD channel are logged with this object type too
-                                if (fdObject.fdFlags & 0x01)
-                                {
-                                    frame.setFlexibleDataRateFormat(true);
-                                    frame.setBitrateSwitch(fdObject.fdFlags & 0x02);
-                                    frame.setErrorStateIndicator(fdObject.fdFlags & 0x04);
-                                }
-                            }
-                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0));
-                            frames->append(frame);
-                        }
-                        else if (obj.header.base.objType == BLF_CAN_FD_MSG64 && fileData.length() >= (int)sizeof(BLF_CANFD64_OBJ))
-                        {
-                            BLF_CANFD64_OBJ fdObject;
-                            memcpy(&fdObject, fileData.constData(), sizeof(BLF_CANFD64_OBJ));
-                            CommFrame frame;
-                            frame.setBus(fdObject.channel);
-                            frame.setExtendedFrameFormat((fdObject.id & 0x80000000ull)?true:false);
-                            frame.setFrameId(fdObject.id & 0x1FFFFFFFull);
-                            frame.setReceived(true);
-                            int len = qMin((int)fdObject.validDataBytes, 64);
-                            len = qMin(len, (int)(fileData.length() - sizeof(BLF_CANFD64_OBJ))); //data follows the structure
-                            if (len < 0) len = 0;
-                            if (fdObject.flags & 0x0010) {
-                                frame.setFrameType(CommFrame::RemoteRequestFrame);
-                                frame.setPayload(QByteArray(qMin((int)fdObject.dlc, 8), 0)); //no data: the DLC is the length
-                            } else {
-                                frame.setPayload(fileData.mid(sizeof(BLF_CANFD64_OBJ), len));
-                                if (fdObject.flags & 0x1000) //EDL; classic frames on a CAN FD channel don't have it
-                                {
-                                    frame.setFlexibleDataRateFormat(true);
-                                    frame.setBitrateSwitch(fdObject.flags & 0x2000);
-                                    frame.setErrorStateIndicator(fdObject.flags & 0x4000);
-                                }
-                            }
-                            frame.setTimeStamp(CommFrame::TimeStamp(0, obj.header.v1Obj.uncompSize / 1000.0));
-                            frames->append(frame);
-                        }
-                        else
-                        {
-                            qDebug() << "Not a can frame! ObjType: " << obj.header.base.objType;
-                            if (obj.header.base.objType > 0xFFFF)
-                                return false;
-                        }
-                        pos += obj.header.base.objSize + (obj.header.base.objSize % 4);
-                    }
-                    else
-                    {
-                        qDebug() << "Unexpected object header signature, aborting";
-                        return false;
-                    }
-                }
-                uncompressedData.remove(0, pos);
-                qDebug() << "After removing used data uncompressedData is now this big: " << uncompressedData.length();
-
-                break;
-            }
+            QByteArray compressedData;
+            compressedData.append(char((uncompressedSize >> 24) & 0xFF));
+            compressedData.append(char((uncompressedSize >> 16) & 0xFF));
+            compressedData.append(char((uncompressedSize >> 8) & 0xFF));
+            compressedData.append(char(uncompressedSize & 0xFF));
+            compressedData.append(uncompressedData);
+            uncompressedData = qUncompress(compressedData);
         }
-        else return false;
+        else if (compressionMethod != BLF_CONT_NO_COMPRESSION)
+        {
+            return false;
+        }
+
+        if (uncompressedSize != 0 && uncompressedData.size() != qint64(uncompressedSize))
+            return false;
+        if (!parseContainer(uncompressedData, frames, &containerTail)) return false;
     }
+
     return true;
 }
 

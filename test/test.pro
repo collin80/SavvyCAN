@@ -7,8 +7,11 @@ INCLUDEPATH += ../ ../connections
 
 SOURCES += \
     tst_lfqueue.cpp \
+    tst_blf.cpp \
     main.cpp \
     tst_cancon.cpp \
+    ../blfhandler.cpp \
+    ../can_structs.cpp \
     ../connections/canconfactory.cpp \
     ../connections/canconnection.cpp \
     ../connections/gvretserial.cpp \
@@ -24,7 +27,10 @@ INSTALLS += target
 
 HEADERS += \
     tst_lfqueue.h \
+    tst_blf.h \
     tst_cancon.h \
+    ../blfhandler.h \
+    ../can_structs.h \
     ../connections/canconconst.h \
     ../connections/canconfactory.h \
     ../connections/canconnection.h \

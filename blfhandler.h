@@ -147,16 +147,16 @@ struct BLF_CANFD_OBJ
     uint8_t data[64];
 }; //84 bytes
 
-//CAN_FD_MESSAGE_64 (object type 101). The data (validDataBytes long) follows this structure.
+#pragma pack(push, 1)
 struct BLF_CANFD64_OBJ
 {
     uint8_t channel;
     uint8_t dlc;
     uint8_t validDataBytes;
     uint8_t txCount;
-    uint32_t id;
+    uint32_t frameId;
     uint32_t frameLength;
-    uint32_t flags;         //0x0010 = remote frame, 0x1000 = EDL (CAN FD frame), 0x2000 = BRS, 0x4000 = ESI
+    uint32_t flags;
     uint32_t btrCfgArb;
     uint32_t btrCfgData;
     uint32_t timeOffsetBrsNs;
@@ -165,7 +165,8 @@ struct BLF_CANFD64_OBJ
     uint8_t dir;
     uint8_t extDataOffset;
     uint32_t crc;
-}; //40 bytes
+};
+#pragma pack(pop)
 
 struct BLF_ERROR_EXT
 {
