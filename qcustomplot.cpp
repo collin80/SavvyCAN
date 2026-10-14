@@ -904,6 +904,24 @@ void QCPPaintBufferGlFbo::draw(QCPPainter *painter) const
     qDebug() << Q_FUNC_INFO << "OpenGL frame buffer object doesn't exist, reallocateBuffer was not called?";
     return;
   }
+  QSharedPointer<QOpenGLPaintDevice> paintDevice = mGlPaintDevice.toStrongRef();
+  QSharedPointer<QOpenGLContext> context = mGlContext.toStrongRef();
+  if (!paintDevice)
+  {
+    qDebug() << Q_FUNC_INFO << "OpenGL paint device doesn't exist";
+    return;
+  }
+  if (!context)
+  {
+    qDebug() << Q_FUNC_INFO << "OpenGL context doesn't exist";
+    return;
+  }
+  /* toImage() binds our frame buffer name and reads it back through whichever OpenGL context
+     happens to be current. Every QCustomPlot creates its own context, and a replot leaves that
+     plot's context current, so without this the name may resolve against a different plot's
+     context and we would blit that plot's contents instead of our own. */
+  if (QOpenGLContext::currentContext() != context.data())
+    context->makeCurrent(context->surface());
   painter->drawImage(0, 0, mGlFrameBuffer->toImage());
 }
 
