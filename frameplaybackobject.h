@@ -57,6 +57,7 @@ public slots:
 
     void setSequenceObject(SequenceItem *item);
     void setUseOriginalTiming(bool state);
+    void setForceCanFD(bool fd, bool brs);
     void setSendingBus(int bus);
     void setPlaybackInterval(int interval);
     void setPlaybackBurst(int burst);
@@ -83,10 +84,13 @@ private:
      bool playbackActive;
      bool playbackForward;
      bool useOrigTiming;
+     bool forceCanFD; //send every data frame as CAN FD, whatever the log says
+     bool forceBRS;   //with bit rate switch, when forceCanFD is set
      int whichBusSend;
      QThread*            mThread_p;
 
      quint64 updatePosition(bool forward);
+     void queueFrame(CommFrame frame);
      quint64 peekPosition(bool forward);
      /**
       * @brief starts the device

@@ -115,6 +115,36 @@
     </widget>
    </item>
    <item>
+    <layout class="QHBoxLayout" name="layoutForceCanFD">
+     <item>
+      <widget class="QCheckBox" name="cbForceCanFD">
+       <property name="toolTip">
+        <string>Send every data frame as a CAN FD frame, whatever the log says. Useful for logs that don't record which frames were CAN FD. Remote frames are sent as they are: CAN FD has no remote frames.</string>
+       </property>
+       <property name="text">
+        <string>Send all frames as CAN FD</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="cbForceBRS">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>Bit rate switch: send the data phase at the faster CAN FD data rate</string>
+       </property>
+       <property name="text">
+        <string>with bit rate switch (BRS)</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <layout class="QVBoxLayout" name="verticalLayout_3">
