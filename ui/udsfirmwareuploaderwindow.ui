@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>520</width>
+    <width>624</width>
     <height>520</height>
    </rect>
   </property>
@@ -27,41 +27,69 @@
       <widget class="QSpinBox" name="spinBus"/>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="labelTargetID">
+      <widget class="QLabel" name="labelTeslaDir">
        <property name="text">
-        <string>Target Request ID:</string>
+        <string>Tesla Data Dir:</string>
        </property>
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QLineEdit" name="txtTargetID">
+      <layout class="QHBoxLayout" name="horizontalLayoutTeslaDir">
+       <item>
+        <widget class="QLineEdit" name="txtTeslaDir">
+         <property name="placeholderText">
+          <string>Path to Tesla firmware root directory</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="labelNode">
        <property name="text">
-        <string>0x7E0</string>
+        <string>Target ECU:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="0">
+     <item row="5" column="1">
+      <widget class="QComboBox" name="cmbTeslaNode"/>
+     </item>
+     <item row="6" column="0">
       <widget class="QLabel" name="labelRespID">
        <property name="text">
         <string>Target Response ID:</string>
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="6" column="1">
       <widget class="QLineEdit" name="txtResponseID">
        <property name="text">
         <string>0x7E8</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
+     <item row="7" column="0">
+      <widget class="QLabel" name="labelTargetID">
+       <property name="text">
+        <string>Target Request ID:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QLineEdit" name="txtTargetID">
+       <property name="text">
+        <string>0x7E0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="8" column="0">
       <widget class="QLabel" name="labelSession">
        <property name="text">
         <string>Session Type:</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
+     <item row="8" column="1">
       <widget class="QComboBox" name="cbSessionType">
        <item>
         <property name="text">
@@ -75,14 +103,28 @@
        </item>
       </widget>
      </item>
-     <item row="4" column="0">
+     <item row="9" column="0">
       <widget class="QLabel" name="labelSecurity">
        <property name="text">
         <string>Security Level:</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="10" column="0">
+      <widget class="QLabel" name="labelAddr">
+       <property name="text">
+        <string>Flash Address:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="10" column="1">
+      <widget class="QLineEdit" name="txtFlashAddr">
+       <property name="text">
+        <string>0x08000000</string>
+       </property>
+      </widget>
+     </item>
+     <item row="9" column="1">
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QSpinBox" name="spinSecurityLevel">
@@ -109,17 +151,17 @@
        </item>
       </layout>
      </item>
-     <item row="5" column="0">
-      <widget class="QLabel" name="labelAddr">
+     <item row="3" column="1">
+      <widget class="QPushButton" name="btnReloadNodes">
        <property name="text">
-        <string>Flash Address:</string>
+        <string>Reload</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QLineEdit" name="txtFlashAddr">
+     <item row="2" column="1">
+      <widget class="QPushButton" name="btnBrowseTeslaDir">
        <property name="text">
-        <string>0x08000000</string>
+        <string>Browse...</string>
        </property>
       </widget>
      </item>
@@ -164,11 +206,11 @@
      </item>
      <item>
       <widget class="QPushButton" name="btnAbort">
-       <property name="text">
-        <string>Abort</string>
-       </property>
        <property name="enabled">
         <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Abort</string>
        </property>
       </widget>
      </item>

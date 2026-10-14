@@ -7,6 +7,10 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QDateTime>
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QJsonArray>
 
 UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -44,9 +48,15 @@ UDSFirmwareUploaderWindow::UDSFirmwareUploaderWindow(const QVector<CommFrame> *f
     connect(ui->btnLoadFile, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleLoadFile);
     connect(ui->btnStartStop, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleStartStop);
     connect(ui->btnAbort, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleAbort);
+    connect(ui->btnBrowseTeslaDir, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleBrowseTeslaDir);
+    connect(ui->btnReloadNodes, &QPushButton::clicked, this, &UDSFirmwareUploaderWindow::handleReloadNodes);
     connect(udsHandler, &UDS_HANDLER::newUDSMessage, this, &UDSFirmwareUploaderWindow::gotUDSReply);
     connect(timeoutTimer, &QTimer::timeout, this, &UDSFirmwareUploaderWindow::timeoutTriggered);
     connect(testerTimer, &QTimer::timeout, this, &UDSFirmwareUploaderWindow::testerPresentTick);
+    connect(ui->cmbTeslaNode, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &UDSFirmwareUploaderWindow::handleNodeChanged);
+
+    loadTeslaNodes();
 }
 
 UDSFirmwareUploaderWindow::~UDSFirmwareUploaderWindow()
@@ -450,6 +460,187 @@ void UDSFirmwareUploaderWindow::gotUDSReply(UDS_MESSAGE msg)
     default:
         break;
     }
+}
+
+void UDSFirmwareUploaderWindow::loadTeslaNodes()
+{
+    messageIdMap.clear();
+    teslaNodes.clear();
+
+    QStringList searchPaths;
+
+    if (!teslaDir.isEmpty())
+    {
+        searchPaths.append(teslaDir + "/opt/odin/data/Model3/dej");
+        searchPaths.append(teslaDir + "/opt/odin/data/Model3");
+    }
+
+    searchPaths.append(QCoreApplication::applicationDirPath());
+    searchPaths.append(QDir::currentPath());
+    searchPaths.append(QCoreApplication::applicationDirPath() + "/../");
+    searchPaths.append(QDir::currentPath() + "/../");
+
+    QString compactPath;
+    QString nodesPath;
+    for (const QString &path : searchPaths)
+    {
+        if (compactPath.isEmpty())
+        {
+            QString test = path + "/Model3_ETH.compact.json";
+            if (QFile::exists(test)) compactPath = test;
+        }
+        if (nodesPath.isEmpty())
+        {
+            QString test = path + "/nodes.json";
+            if (QFile::exists(test)) nodesPath = test;
+        }
+    }
+
+    // Load Model3_ETH.compact.json first to build message name -> ID map
+    if (!compactPath.isEmpty())
+    {
+        QFile compactFile(compactPath);
+        if (compactFile.open(QIODevice::ReadOnly))
+        {
+            QByteArray data = compactFile.readAll();
+            compactFile.close();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (!doc.isNull())
+            {
+                QJsonObject root = doc.object();
+                QJsonObject messages = root["messages"].toObject();
+                for (auto it = messages.begin(); it != messages.end(); it++)
+                {
+                    QJsonObject msgObj = it->toObject();
+                    int msgId = msgObj["message_id"].toInt(-1);
+                    if (msgId >= 0)
+                        messageIdMap[it.key()] = static_cast<uint32_t>(msgId);
+                }
+                logMessage("Loaded " + QString::number(messageIdMap.size()) +
+                           " message IDs from Model3_ETH.compact.json");
+            }
+            else
+                logMessage("ERROR: Failed to parse Model3_ETH.compact.json");
+        }
+        else
+            logMessage("ERROR: Could not open Model3_ETH.compact.json");
+    }
+    else
+        logMessage("WARNING: Model3_ETH.compact.json not found");
+
+    // Load nodes.json
+    if (!nodesPath.isEmpty())
+    {
+        QFile nodesFile(nodesPath);
+        if (nodesFile.open(QIODevice::ReadOnly))
+        {
+            QByteArray data = nodesFile.readAll();
+            nodesFile.close();
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (!doc.isNull())
+            {
+                QJsonObject root = doc.object();
+                for (auto it = root.begin(); it != root.end(); it++)
+                {
+                    TeslaNodeInfo node;
+                    node.name = it.key();
+                    QJsonObject obj = it->toObject();
+
+                    QString reqName = obj["request_message_name"].toString();
+                    QString respName = obj["response_message_name"].toString();
+
+                    node.requestId = messageIdMap.value(reqName, 0x7E0);
+                    node.responseId = messageIdMap.value(respName, 0x7E8);
+                    node.securityLevel = 1;
+                    node.useSecurity = true;
+
+                    QJsonObject sec = obj["security"].toObject();
+                    if (!sec.isEmpty())
+                    {
+                        node.securityAlgorithm = sec["algorithm"].toString();
+                        node.securityBufferSize = sec["buffer_size"].toInt();
+                    }
+
+                    node.dataUpload = obj["data_upload"].toString();
+
+                    teslaNodes.append(node);
+                }
+                logMessage("Loaded " + QString::number(teslaNodes.size()) +
+                           " Tesla nodes from nodes.json");
+                populateNodeCombo();
+            }
+            else
+                logMessage("ERROR: Failed to parse nodes.json");
+        }
+        else
+            logMessage("ERROR: Could not open nodes.json");
+    }
+    else
+        logMessage("WARNING: nodes.json not found");
+
+    if (!teslaDir.isEmpty())
+        ui->txtTeslaDir->setText(teslaDir);
+    else if (!nodesPath.isEmpty())
+    {
+        QFileInfo info(nodesPath);
+        teslaDir = info.absolutePath();
+        ui->txtTeslaDir->setText(teslaDir);
+    }
+}
+
+void UDSFirmwareUploaderWindow::populateNodeCombo()
+{
+    ui->cmbTeslaNode->clear();
+    ui->cmbTeslaNode->addItem("-- Manual --");
+    for (const TeslaNodeInfo &node : teslaNodes)
+        ui->cmbTeslaNode->addItem(node.name);
+}
+
+void UDSFirmwareUploaderWindow::handleBrowseTeslaDir()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, "Select Tesla Data Directory", teslaDir);
+    if (!dir.isEmpty())
+    {
+        teslaDir = dir;
+        ui->txtTeslaDir->setText(teslaDir);
+        handleReloadNodes();
+    }
+}
+
+void UDSFirmwareUploaderWindow::handleReloadNodes()
+{
+    teslaDir = ui->txtTeslaDir->text().trimmed();
+    loadTeslaNodes();
+}
+
+void UDSFirmwareUploaderWindow::handleNodeChanged(int index)
+{
+    if (index <= 0)
+        return;
+    autoFillFromNode(index - 1);
+}
+
+void UDSFirmwareUploaderWindow::autoFillFromNode(int idx)
+{
+    if (idx < 0 || idx >= teslaNodes.size())
+        return;
+
+    const TeslaNodeInfo &node = teslaNodes[idx];
+    ui->txtTargetID->setText("0x" + QString::number(node.requestId, 16).toUpper());
+    ui->txtResponseID->setText("0x" + QString::number(node.responseId, 16).toUpper());
+    if (!node.securityAlgorithm.isEmpty() && node.securityAlgorithm != "tesla_hash")
+    {
+        ui->ckUseSecurity->setChecked(false);
+        logMessage("Node " + node.name + " uses " + node.securityAlgorithm +
+                   " security; security disabled (unsupported)");
+    }
+    else
+    {
+        ui->ckUseSecurity->setChecked(node.useSecurity);
+    }
+    logMessage("Selected node: " + node.name +
+               " (Req: 0x" + QString::number(node.requestId, 16) +
+               ", Resp: 0x" + QString::number(node.responseId, 16) + ")");
 }
 
 void UDSFirmwareUploaderWindow::timeoutTriggered()
