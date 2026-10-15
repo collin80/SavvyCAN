@@ -35,6 +35,34 @@ public:
     static bool isAvailable(); //built with libusb
     static QStringList availableDevices(); //serial numbers of the connected pico-flexray devices
 
+    //Vendor bulk-OUT ops the firmware understands (see pico-flexray src/panda_usb.c handle_vendor_out_payload).
+    static constexpr unsigned char VENDOR_OUT_OVERRIDE = 0x90; //submit a replacement slice for an injection rule
+    static constexpr unsigned char VENDOR_OUT_ENABLE = 0x91;   //turn the injector on or off globally
+
+    /*
+     * Builds the op-0x90 bulk-OUT payload that submits frame as a replacement slice, or an empty array (with the
+     * reason in error, if given) when the frame can't be injected. This is exactly what piSendFrame writes to the
+     * device, so it is what the tests check.
+     *
+     * The frame's slot ID becomes the rule target_id, payload byte 0 (the cycle count on capture) becomes the
+     * rule cycle_base the firmware matches on, and the rest of the payload (payload[1..]) is the replacement data:
+     * it maps onto the slot's payload bytes, and the firmware splices the rule's replace window out of it into the
+     * slot's cached frame. The firmware expects the slice to start with an AUTOSAR E2E CRC-8 (init 0xf1) over that
+     * data as a transport check, which we prepend here (it is a separate byte, not a slot byte).
+     *
+     * SavvyCAN has no copy of the firmware's rule table, so it cannot validate the length: payload[1..] must be
+     * replace_offset + replace_len bytes for the target rule, and only the replace_len bytes inside the window are
+     * actually transmitted (the rest are positional padding the firmware ignores). A wrong length, slot ID or
+     * cycle base is silently dropped by the device.
+     */
+    static QByteArray overridePayloadFor(const CommFrame &frame, QString *error = nullptr);
+
+    //op-0x91 payload: [0x91][enabled]
+    static QByteArray injectorEnablePayload(bool enabled);
+
+    //AUTOSAR E2E Profile CRC-8 (polynomial 0x1D, MSB-first, no final XOR), matching the device firmware.
+    static quint8 e2eCrc8(const unsigned char *data, int len, quint8 init);
+
 protected:
     virtual void piStarted();
     virtual void piStop();
@@ -51,6 +79,8 @@ private:
     bool openDevice();
     void closeDevice();
     void reportStatus();
+    bool vendorWrite(const QByteArray &data, const char *what); //bulk-OUT write to the injector endpoint
+    void applyInjectorEnable(); //sync the injector on/off state to the bus listen-only settings
 
     PicoFlexRayParser mParser;
     QTimer *mReadTimer = nullptr;
@@ -60,6 +90,7 @@ private:
     QByteArray mReadBuffer;
     QList<CommFrame> mFrames;
     QString mLastError;
+    bool mInjectorEnabled = false; //true once a bus is taken out of listen-only; sent to the device as op 0x91
 };
 
 #endif // PICOFLEXRAY_H
