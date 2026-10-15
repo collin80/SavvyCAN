@@ -71,15 +71,38 @@ qint64 timestampMicroseconds(const quint8 *data, quint16 headerVersion)
     return static_cast<qint64>(timestamp / 1000ULL);
 }
 
+//CAN FD details of a frame, from the flags of the CAN FD object types (100 and 101)
+struct FdFlags
+{
+    bool fd = false;  //EDL: a CAN FD frame (classic frames on a CAN FD channel are logged with these types too)
+    bool brs = false; //bit rate switch
+    bool esi = false; //error state indicator
+};
+
+//A remote frame has no data; its length is its DLC (0-8).
 void setFrame(CommFrame &frame, quint32 id, bool extended, bool remote, quint8 bus,
-              const QByteArray &payload, qint64 timestamp, bool received)
+              const QByteArray &payload, qint64 timestamp, bool received, quint8 dlc,
+              FdFlags fdFlags = FdFlags())
 {
     frame.setBus(bus);
     frame.setExtendedFrameFormat(extended);
     frame.setFrameId(id & 0x1FFFFFFFull);
     frame.setReceived(received);
-    frame.setFrameType(remote ? CommFrame::RemoteRequestFrame : CommFrame::CANDataFrame);
-    frame.setPayload(remote ? QByteArray() : payload);
+    if (remote)
+    {
+        frame.setFrameType(CommFrame::RemoteRequestFrame);
+        frame.setPayload(QByteArray(qMin<int>(dlc, 8), 0));
+    }
+    else
+    {
+        frame.setFrameType(fdFlags.fd ? CommFrame::CANFDDataFrame : CommFrame::CANDataFrame);
+        frame.setPayload(payload);
+        if (fdFlags.fd)
+        {
+            frame.setBitrateSwitch(fdFlags.brs);
+            frame.setErrorStateIndicator(fdFlags.esi);
+        }
+    }
     frame.setTimeStamp(CommFrame::TimeStamp(0, timestamp));
 }
 
@@ -131,7 +154,7 @@ bool parseContainer(const QByteArray &data, QVector<CommFrame> *frames, QByteArr
             CommFrame frame;
             setFrame(frame, canObject.id, (canObject.id & 0x80000000ull) != 0,
                      (canObject.flags & BLF_REMOTE_FLAG) != 0, canObject.channel,
-                     payload, timestamp, true);
+                     payload, timestamp, true, canObject.dlc);
             frames->append(frame);
         }
         else if (objectType == BLF_CAN_MSG2)
@@ -144,7 +167,7 @@ bool parseContainer(const QByteArray &data, QVector<CommFrame> *frames, QByteArr
             CommFrame frame;
             setFrame(frame, canObject.id, (canObject.id & 0x80000000ull) != 0,
                      (canObject.flags & BLF_REMOTE_FLAG) != 0, canObject.channel,
-                     payload, timestamp, true);
+                     payload, timestamp, true, canObject.dlc);
             frames->append(frame);
         }
         else if (objectType == BLF_CAN_FD_MSG)
@@ -154,10 +177,14 @@ bool parseContainer(const QByteArray &data, QVector<CommFrame> *frames, QByteArr
             memcpy(&canObject, bytes + payloadOffset, sizeof(canObject));
             int payloadLength = qMin<int>(canObject.validDataBytes, sizeof(canObject.data));
             QByteArray payload(reinterpret_cast<const char *>(canObject.data), payloadLength);
+            FdFlags fdFlags;
+            fdFlags.fd = (canObject.fdFlags & 0x01) != 0;
+            fdFlags.brs = (canObject.fdFlags & 0x02) != 0;
+            fdFlags.esi = (canObject.fdFlags & 0x04) != 0;
             CommFrame frame;
             setFrame(frame, canObject.id, (canObject.id & 0x80000000ull) != 0,
                      (canObject.flags & BLF_REMOTE_FLAG) != 0, canObject.channel,
-                     payload, timestamp, true);
+                     payload, timestamp, true, canObject.dlc, fdFlags);
             frames->append(frame);
         }
         else if (objectType == BLF_CAN_FD_MSG64)
@@ -168,11 +195,15 @@ bool parseContainer(const QByteArray &data, QVector<CommFrame> *frames, QByteArr
             int payloadLength = qMin<int>(canObject.validDataBytes,
                                           payloadSize - qint64(sizeof(BLF_CANFD64_OBJ)));
             QByteArray payload(reinterpret_cast<const char *>(bytes + payloadOffset + sizeof(BLF_CANFD64_OBJ)), payloadLength);
+            FdFlags fdFlags;
+            fdFlags.fd = (canObject.flags & 0x1000) != 0;
+            fdFlags.brs = (canObject.flags & 0x2000) != 0;
+            fdFlags.esi = (canObject.flags & 0x4000) != 0;
             CommFrame frame;
             setFrame(frame, canObject.frameId,
                      (canObject.frameId & 0x80000000ull) != 0,
                      (canObject.flags & 0x10) != 0, canObject.channel,
-                     payload, timestamp, canObject.dir == 0);
+                     payload, timestamp, canObject.dir == 0, canObject.dlc, fdFlags);
             frames->append(frame);
         }
 
