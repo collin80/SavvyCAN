@@ -8,8 +8,8 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 
 | Change | Branch | Upstream |
 |---|---|---|
-| Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | open: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
-| ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | open: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
+| Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
+| ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | Fork CI (Linux AppImage and Windows package on every push), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
@@ -61,11 +61,11 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fd-core` | `QT6WIP` | One CAN FD representation: frame type and FD flag kept in step; `isDataFrame()` | merged: [#1134](https://github.com/collin80/SavvyCAN/pull/1134) |
 | `fd-serialbus` | `fd-core` | QtSerialBus CAN FD | merged: [#1136](https://github.com/collin80/SavvyCAN/pull/1136) |
 | `fd-lawicel` | `fd-core` | LAWICEL CAN FD receive fixes and data rate | merged: [#1137](https://github.com/collin80/SavvyCAN/pull/1137) |
-| `fd-logs` | `fd-core` | CAN FD in log files | merged: [#1138](https://github.com/collin80/SavvyCAN/pull/1138); `ba3d4ee` (ASC `d` lines, CRTD check) open: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
+| `fd-logs` | `fd-core` | CAN FD in log files | merged: [#1138](https://github.com/collin80/SavvyCAN/pull/1138); `ba3d4ee` (ASC `d` lines, CRTD check) merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | `fd-network` | `fd-core` | MQTT and CANlogserver CAN FD | merged: [#1139](https://github.com/collin80/SavvyCAN/pull/1139) |
 | `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` | [#1140](https://github.com/collin80/SavvyCAN/pull/1140) (draft: protocol proposal) |
 | `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | merged: [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
-| `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | open: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
+| `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -97,6 +97,19 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-15: BLF CAN FD regression upstream (collin80/SavvyCAN#1151)
+
+- **Merged upstream:** collin80/SavvyCAN#1149 and collin80/SavvyCAN#1150, on 2026-10-14.
+- **New regression upstream:** `QT6WIP` 1321d96 has a new streaming BLF parser (collin80/SavvyCAN#1116, large-file
+  loading) that dropped the CAN FD handling from collin80/SavvyCAN#1138. CAN FD BLF objects (100 and 101) load as
+  classic frames, without BRS or ESI, and remote frames lose their DLC.
+- **Fix:** collin80/SavvyCAN#1151 (branch `fix-blf-canfd`).
+  - It restores CAN FD handling inside the new parser.
+  - It makes upstream's BLF test build on Qt 6 again.
+  - It adds CAN FD checks to that test.
+- **`fork-ci` not affected:** it predates the new parser. It will be synced with `QT6WIP` once collin80/SavvyCAN#1151
+  is merged, so the regression doesn't come in.
 
 ### 2026-10-14: remaining changes offered upstream
 
