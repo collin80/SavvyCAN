@@ -77,12 +77,23 @@ CANDataGrid::CANDataGrid(QWidget *parent) :
             heatData[y * 8 + x] = 0;
         }
 
+    QLinearGradient gradient(0,0, 1,1);
+    gradient.setColorAt(0.0, QColor(0, 200, 0));
+    gradient.setColorAt(1.0, QColor(0, 40, 0));
+    gradient.setCoordinateMode(QGradient::ObjectMode);
+
+    QLinearGradient gradient2(0,0, 1,1);
+    gradient2.setColorAt(0.0, QColor(140, 140, 140));
+    gradient2.setColorAt(1.0, QColor(25, 25, 25));
+    gradient2.setCoordinateMode(QGradient::ObjectMode);
+
+
     blackBrush = QBrush(Qt::black);
     whiteBrush = QBrush(Qt::white);
     redBrush = QBrush(Qt::red);
     greenBrush = QBrush(Qt::green);
-    greenHashBrush = QBrush(QColor(0, 0xB6, 0), Qt::BDiagPattern);
-    blackHashBrush = QBrush(QColor(0, 0, 0), Qt::FDiagPattern);
+    greenHashBrush = QBrush(gradient); //now the active bits are fancy pants gradient green
+    blackHashBrush = QBrush(gradient2); //and gray
     grayBrush = QBrush(QColor(230,230,230));
     xOffset = 0;
     yOffset = 0;
