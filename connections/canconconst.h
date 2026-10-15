@@ -24,6 +24,7 @@ namespace CANCon {
         LAWICEL,
         CANSERVER,
         CANLOGSERVER,
+        PICOFLEXRAY,
         NONE
     };
 }

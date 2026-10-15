@@ -1,5 +1,6 @@
 # Fork-only workflow: builds the Linux x64 AppImage and the Windows x64 package for this fork's branches.
-# Both jobs are copied unchanged from upstream's build.yml (as of QT6WIP 3288f1f).
+# Both jobs are copied from upstream's build.yml (as of QT6WIP 3288f1f), plus libusb-1.0 for the pico-flexray
+# connection (flexray-pico): apt on Linux, vcpkg on Windows, with libusb-1.0.dll in the Windows package.
 # Upstream's build.yml only runs on QT6WIP and also publishes a release and notifies Discord.
 name: Fork Build (Linux + Windows)
 
@@ -17,7 +18,7 @@ jobs:
     steps:
       - name: Prepare Environment
         run: |
-            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-cursor0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0 libfuse2
+            sudo apt-get install libxcb-icccm4 libxcb-image0 libxcb-cursor0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxkbcommon-x11-0 libfuse2 libusb-1.0-0-dev pkg-config
 
       - name: Prepare Qt Libraries
         uses: jurplel/install-qt-action@v4
@@ -59,11 +60,15 @@ jobs:
       - name: Clone
         uses: actions/checkout@v3
 
+      - name: Prepare libusb
+        shell: cmd
+        run: '"%VCPKG_INSTALLATION_ROOT%\vcpkg" install libusb:x64-windows'
+
       - name: Compile
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-          cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release
+          cmake -B ${{github.workspace}}/build -S ${{github.workspace}} -DCMAKE_BUILD_TYPE=Release -DLIBUSB_INCLUDE_DIR="%VCPKG_INSTALLATION_ROOT%/installed/x64-windows/include/libusb-1.0" -DLIBUSB_LIBRARY="%VCPKG_INSTALLATION_ROOT%/installed/x64-windows/lib/libusb-1.0.lib"
           cmake --build ${{github.workspace}}/build --config Release -j 2
 
       - name: Package
@@ -85,6 +90,7 @@ jobs:
           copy "${Env:QT_ROOT_DIR}/bin/Qt6SerialBus.dll" package/
           copy "${Env:QT_ROOT_DIR}/bin/Qt6SerialPort.dll" package/
           copy "${Env:QT_ROOT_DIR}/bin/Qt6Widgets.dll" package/
+          copy "${Env:VCPKG_INSTALLATION_ROOT}/installed/x64-windows/bin/libusb-1.0.dll" package/
           copy "${Env:QT_ROOT_DIR}/bin/Qt6OpenGL.dll" package/
           mkdir package/imageformats
           copy "${Env:QT_ROOT_DIR}/plugins/imageformats/*.*" package/imageformats/
