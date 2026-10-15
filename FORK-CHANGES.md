@@ -119,7 +119,7 @@ LilyGO T-2CAN-FD hardware.
 
 Phase 1 of `docs/flexray-re-roadmap.md` (C1, C3 and C4).
 
-- **Firmware (pico-flexray, branch `savvycan-records`, local for now):** a new USB record format 2 that a host asks for
+- **Firmware ([Tom-evnut/pico-flexray](https://github.com/Tom-evnut/pico-flexray), branch `savvycan-records`):** a new USB record format 2 that a host asks for
   with vendor request `0xa0`. Every USB mount starts in the original format 1, so other tools (Cabana, the Python
   recorder) are unaffected.
   - Format 2 sets bit 15 of the record length (format 1 lengths are at most 263), then adds a version byte, a flags
