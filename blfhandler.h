@@ -156,7 +156,7 @@ struct BLF_CANFD64_OBJ
     uint8_t txCount;
     uint32_t frameId;
     uint32_t frameLength;
-    uint32_t flags;
+    uint32_t flags;         //0x0010 = remote frame, 0x1000 = EDL (CAN FD frame), 0x2000 = BRS, 0x4000 = ESI
     uint32_t btrCfgArb;
     uint32_t btrCfgData;
     uint32_t timeOffsetBrsNs;

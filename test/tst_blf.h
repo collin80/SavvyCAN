@@ -10,6 +10,8 @@ private slots:
     void loadObjectBoundary();
     void loadSplitObject();
     void loadCanFd64();
+    void loadCanFdMessage();
+    void loadClassicOnCanFdChannel();
 };
 
 #endif // TST_BLF_H
