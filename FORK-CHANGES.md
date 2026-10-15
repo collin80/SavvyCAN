@@ -10,6 +10,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 |---|---|---|
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
+| FlexRay capture from a [pico-flexray](https://github.com/dynm/pico-flexray) over USB (libusb); FlexRay frames up to 255 bytes in the frame list, DBC decoding and native CSV | `flexray-pico` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
@@ -52,6 +53,18 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 
 **Frame model:** a frame's type and its FD flag always agree (`fd-core`).
 
+## FlexRay support (`flexray-pico`, fork only)
+
+| Area | What works |
+|---|---|
+| pico-flexray connection | "pico-flexray (FlexRay, USB)" in the new-connection dialog. Receive only: FR1 is bus 0, FR2 is bus 1, 10 Mbit/s, listen-only. Lists boards by serial number (`picoflex...`), reconnects when the board is plugged back in. Null frames are dropped. Needs libusb-1.0 at build time and, on Windows, the WinUSB driver (Zadig) |
+| Frame representation | `CommFrame::FLEXRAYDataFrame`: ID = 11-bit slot ID, payload = cycle count byte + up to 254 bytes, never CAN FD. The cycle count byte is what pico-flexray's and openpilot cabana's FlexRay DBC files multiplex on |
+| Frame list | Type `F`; DBC interpretation, overwrite mode and graphing include FlexRay frames |
+| DBC decoding | Signals anywhere in a 255-byte message (was 64) |
+| Native CSV | `FR` in the flags column; rows up to 255 bytes; old files load unchanged |
+| Frame Info, Flow View, signal editor | Frames over 64 bytes no longer overflow their fixed buffers: per-byte statistics cover the first 8 bytes (Frame Info), the first 64 bytes are shown (Flow View, bit grids) |
+| Not done | Injection (pico-flexray's override slots), device timestamps (the firmware sends none; frames get the PC's time per USB transfer), other log formats, a DBC `VFrameFormat` for FlexRay (FlexRay messages over 8 bytes load as CAN FD messages, which only matters for Send Frames and saving) |
+
 ## Branches
 
 | Branch | Based on | Contents | Upstream PR |
@@ -66,6 +79,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` | [#1140](https://github.com/collin80/SavvyCAN/pull/1140) (draft: protocol proposal) |
 | `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | merged: [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
 | `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
+| `flexray-pico` | `fork-ci` | FlexRay frames and the pico-flexray connection | not offered yet |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -97,6 +111,42 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-15: FlexRay capture with pico-flexray (`flexray-pico`)
+
+- **New connection:** pico-flexray, a Raspberry Pi Pico FlexRay capture/man-in-the-middle board
+  (https://github.com/dynm/pico-flexray). SavvyCAN reads its USB record stream with libusb in the connection's thread;
+  the record parser (`connections/picoflexrayparser.*`) has no USB code, so it's tested with simulated streams.
+- **FlexRay frames:** `CommFrame` already had a FlexRay type but nothing used it.
+  - FlexRay frames are now valid with up to 255 bytes (cycle count + 254) and an 11-bit slot ID.
+  - `setPayload()` no longer marks FlexRay (or any non-CAN) frames as CAN FD. On a CAN frame it now sets the type and
+    the flag together, as `fd-core` intends; before it set only the flag.
+  - `isDataFrame()` includes FlexRay, so the frame list's DBC interpretation, overwrite mode and graphing see them.
+- **DBC:** signal extraction stopped at bit 511 (64 bytes); it now covers 256 bytes.
+- **Native CSV:** FlexRay rows have `FR` in the flags column after the data, like CAN FD's `FD`.
+- **Fixed (already in SavvyCAN, reachable with CAN FD too):**
+  - **Frame Info:** wrote past its 8-byte per-byte arrays for any frame over 8 bytes. The per-byte statistics now
+    cover the first 8 bytes; the data length range is reported correctly for frames over 8 bytes.
+  - **Flow View:** copied frames into 64-byte buffers without a length check. Its trigger check mixed byte and bit
+    offsets, so it read past its buffer for frames over 64 bytes and, for CAN FD, ignored triggers after byte 8.
+  - **DBC signal editor:** a message or signal past byte 64 wrote past its 64-byte bit grids.
+- **Build:** libusb-1.0 is optional (CMake `USE_LIBUSB`, on by default; pkg-config or `LIBUSB_INCLUDE_DIR`/
+  `LIBUSB_LIBRARY`; qmake via pkg-config). Without it the connection is greyed out. `fork-build.yml` installs it
+  (apt, vcpkg) and the Windows package includes `libusb-1.0.dll`. Upstream's `build.yml` is unchanged and builds
+  without pico-flexray support.
+- **Docs:** `help/newconnection.md` covers the connection, Zadig/WinUSB on Windows and a udev rule on Linux.
+- **Timestamps:** the board sends none, so frames get the time of their USB transfer, on the same clocks as
+  QtSerialBus devices without hardware timestamps (the session's elapsed time, or the system time when chosen).
+- **Tested** (no pico-flexray hardware yet):
+  - **Two new suites** in the test bench harness, under AddressSanitizer and UndefinedBehaviorSanitizer:
+    - `flexray` (17 checks): frame rules; the record parser fed pico-flexray's record format split at every byte,
+      with junk and null frames; native CSV round trips; pico-flexray's own `dbc/lateral.dbc` decoding parsed frames
+      (multiplexed on the cycle count); the frame list's `F` type, interpretation and overwrite mode; Frame Info and
+      Flow View with 255-byte frames (this found the Flow View trigger bug).
+    - `picoflexray` (3 checks): the connection with libusb and no board attached starts, reports once that no
+      board was found, keeps looking, and stops cleanly.
+  - **All existing CAN FD suites** still pass on this branch.
+  - **Windows:** builds with MinGW 13.1 and Qt 6.10.3, with libusb 1.0.30, without warnings in the changed files.
 
 ### 2026-10-15: BLF CAN FD regression upstream (collin80/SavvyCAN#1151)
 
