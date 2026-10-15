@@ -173,8 +173,16 @@ public:
         }
     }
 
-    //A frame carrying data: classic CAN or CAN FD (as opposed to remote, error, LIN, ...)
-    constexpr bool isDataFrame() const noexcept { return format == 0x0 || format == 0x1; }
+    //A frame carrying data: classic CAN, CAN FD or FlexRay (as opposed to remote, error, LIN, ...)
+    constexpr bool isDataFrame() const noexcept { return format == 0x0 || format == 0x1 || format == 0x2; }
+
+    /*
+     * FlexRay frames: the frame ID is the 11-bit slot ID, byte 0 of the payload is the cycle count (0-63) and the
+     * FlexRay payload (0-254 bytes) follows. Keeping the cycle count in the payload lets DBC files multiplex on it,
+     * as pico-flexray's and openpilot cabana's FlexRay DBC files do.
+     */
+    static constexpr int FLEXRAY_MAX_PAYLOAD = 254;
+    constexpr bool isFlexRay() const noexcept { return format == 0x2; }
 
     constexpr QCanBusFrame::FrameType toQCanBusFrameType() noexcept
     {
@@ -285,11 +293,12 @@ public:
         isLocalEcho = !(received & 0x1);
     }
 
+    //more than 8 bytes makes a CAN frame CAN FD; other frame types (FlexRay, LIN, ...) keep their type
     void setPayload(const QByteArray &data)
     {
         dataBytes = data;
         if (data.size() > 8)
-            isFlexibleDataRate = 0x1;
+            setFlexibleDataRateFormat(true);
     }
 
     QByteArray payload() const { return dataBytes; }
@@ -327,6 +336,9 @@ public:
 
         // maximum permitted payload size in CAN or CAN FD
         const qsizetype length = dataBytes.size();
+        if (format == FLEXRAYDataFrame) // 11-bit slot ID, cycle count byte + up to 254 bytes
+            return !isExtendedFrame && msgId <= 0x7FFU && length >= 1 && length <= 1 + FLEXRAY_MAX_PAYLOAD;
+
         if (isFlexibleDataRate) {
             if (format == RemoteRequestFrame)
                 return false;

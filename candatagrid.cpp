@@ -126,7 +126,7 @@ void CANDataGrid::setMode(GridMode mode)
 
 void CANDataGrid::setBytesToDraw(int num)
 {
-    bytesToDraw = num;
+    bytesToDraw = qBound(0, num, 64); //the grid holds 64 bytes; FlexRay frames can be longer
     //this->update();
 }
 

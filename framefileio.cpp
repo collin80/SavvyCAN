@@ -2210,7 +2210,8 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
                     }
                     else if (fileVersion == 2)
                     {
-                        if ( tokens[5].toUInt() > 64) isMatch = false; //CAN FD frames carry up to 64 bytes
+                        //CAN FD frames carry up to 64 bytes, FlexRay frames the cycle count and up to 254 bytes
+                        if ( tokens[5].toUInt() > 1 + CommFrame::FLEXRAY_MAX_PAYLOAD) isMatch = false;
                     }
                 }
                 else isMatch = false;
@@ -2232,6 +2233,9 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
 //(error state indicator). Classic CAN rows are unchanged and have nothing in that column. Readers that
 //don't know about it still get the first 8 data bytes.
 //39747828,000001A0,false,Rx,1,12,00,01,02,03,04,05,06,07,08,09,0A,0B,FD+BRS,
+//FlexRay frames are written the same way with "FR" in the flags column. The ID is the slot ID and the first data
+//byte is the cycle count (see CommFrame::isFlexRay()), so LEN goes up to 255.
+//39747828,00000048,false,Rx,0,17,01,D6,...,FR,
 
 //one row of the native CSV format (see above), including the line end
 static QByteArray nativeCSVRow(const CommFrame &frame)
@@ -2250,7 +2254,8 @@ static QByteArray nativeCSVRow(const CommFrame &frame)
     row.append(QString::number(dataLen).toUtf8());
     row.append(',');
     const bool fd = frame.hasFlexibleDataRateFormat();
-    const int columns = fd ? qMax(8, dataLen) : 8; //classic rows always have exactly 8 data columns
+    const bool flexRay = frame.isFlexRay();
+    const int columns = (fd || flexRay) ? qMax(8, dataLen) : 8; //classic rows always have exactly 8 data columns
     for (int temp = 0; temp < columns; temp++)
     {
         if (temp < dataLen)
@@ -2266,6 +2271,8 @@ static QByteArray nativeCSVRow(const CommFrame &frame)
         if (frame.hasErrorStateIndicator()) row.append("+ESI");
         row.append(',');
     }
+    else if (flexRay)
+        row.append("FR,");
     row.append('\n');
     return row;
 }
@@ -2343,19 +2350,22 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
                     else thisFrame.setReceived(false);
                     thisFrame.setBus(tokens[4].toInt());
                     int lng = tokens[5].toInt();
-                    if (lng > 64) lng = 64; //CAN FD frames carry up to 64 bytes
+                    if (lng > 1 + CommFrame::FLEXRAY_MAX_PAYLOAD) lng = 1 + CommFrame::FLEXRAY_MAX_PAYLOAD;
                     if (lng < 0) lng = 0;
                     if (lng + 6 > tokens.length()) lng = tokens.length() - 6;
+                    //flags column after the max(8, LEN) data columns: "FD", "FD+BRS", ... or "FR" for FlexRay
+                    //(empty for classic CAN). More than 8 bytes is CAN FD unless the row says FlexRay.
+                    int flagsIdx = 6 + qMax(8, lng);
+                    QByteArray flags = (flagsIdx < tokens.length()) ? tokens[flagsIdx].trimmed().toUpper() : QByteArray();
+                    const bool flexRay = (flags == "FR");
+                    if (flexRay) thisFrame.setFrameType(CommFrame::FLEXRAYDataFrame);
+                    else if (lng > 64) lng = 64; //CAN FD frames carry up to 64 bytes
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < lng; c++) bytes[c] = 0;
                     for (int d = 0; d < lng; d++)
                         bytes[d] = static_cast<char>(tokens[6 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
-                    //flags column after the max(8, LEN) data columns: "FD", "FD+BRS", ... (empty for classic CAN).
-                    //More than 8 bytes can only be CAN FD, even if a file has no flags column.
-                    int flagsIdx = 6 + qMax(8, lng);
-                    QByteArray flags = (flagsIdx < tokens.length()) ? tokens[flagsIdx].trimmed().toUpper() : QByteArray();
-                    if (flags.startsWith("FD") || lng > 8)
+                    if (!flexRay && (flags.startsWith("FD") || lng > 8))
                     {
                         thisFrame.setFlexibleDataRateFormat(true);
                         thisFrame.setBitrateSwitch(flags.contains("BRS"));

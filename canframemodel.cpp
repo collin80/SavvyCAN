@@ -393,7 +393,7 @@ void CommFrameModel::recalcOverwrite()
     uint64_t idAugmented; //id in lower 29 bits, bus number shifted up 29 bits
     foreach(CommFrame frame, frames)
     {
-        if (!frame.isDataFrame()) continue; //CAN and CAN FD data frames
+        if (!frame.isDataFrame()) continue; //CAN, CAN FD and FlexRay data frames
 
         idAugmented = frame.frameId();
         idAugmented = idAugmented + (frame.getBus() << 29ull);
@@ -580,7 +580,7 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 tempString.append(QString::number(thisFrame.frameId() & 0x7));
                 return tempString;
             }
-            if (thisFrame.isDataFrame()) { //CAN and CAN FD data frames
+            if (thisFrame.isDataFrame()) { //CAN, CAN FD and FlexRay data frames
                 if (dataLen < 0) dataLen = 0;
                 //if (dLen > 8) dLen = 8;
                 for (int i = 0; i < dataLen; i++)
