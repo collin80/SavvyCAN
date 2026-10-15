@@ -17,6 +17,9 @@ constexpr unsigned int WRITE_TIMEOUT_MS = 500; //injector writes are tiny; this 
 constexpr int NUM_BUSES = 2;            //FR1, FR2
 constexpr int FLEXRAY_BITRATE = 10000000;
 constexpr uint8_t PANDA_RESET_CAN_COMMS = 0xc0; //pico-flexray: clears its frame FIFO
+constexpr uint8_t PICOFLEX_SET_RECORD_FORMAT = 0xa0; //wValue = record format (1 stock, 2 with device timestamps)
+constexpr uint16_t RECORD_FORMAT_STOCK = 1;
+constexpr uint16_t RECORD_FORMAT_V2 = 2;
 
 #ifdef HAVE_LIBUSB
 QString serialNumberOf(libusb_device_handle *handle, const libusb_device_descriptor &desc)
@@ -185,9 +188,16 @@ bool PicoFlexRay::openDevice()
         return false;
     }
 
+    //ask for record format 2 (device timestamps, CRC flags, CRC-failed frames). Stock firmware stalls the request
+    //and keeps sending format 1, which the parser reads too.
+    const uint8_t vendorOut = LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE;
+    rc = libusb_control_transfer(mHandle, vendorOut, PICOFLEX_SET_RECORD_FORMAT, RECORD_FORMAT_V2, 0, nullptr, 0, 500);
+    mRecordFormat2 = (rc >= 0);
+    emit debugOutput(mRecordFormat2 ? "pico-flexray: firmware sends record format 2 (device timestamps)"
+                                    : "pico-flexray: stock firmware (record format 1): frames get host timestamps");
+
     //clear frames the device queued before we connected; firmware that doesn't know the request just stalls it
-    libusb_control_transfer(mHandle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
-                            PANDA_RESET_CAN_COMMS, 0, 0, nullptr, 0, 500);
+    libusb_control_transfer(mHandle, vendorOut, PANDA_RESET_CAN_COMMS, 0, 0, nullptr, 0, 500);
     mParser.reset();
     mReadBuffer.resize(READ_SIZE);
     applyInjectorEnable(); //the device powers up with the injector on; put it in the state the bus settings ask for
@@ -202,11 +212,18 @@ void PicoFlexRay::closeDevice()
 {
 #ifdef HAVE_LIBUSB
     if (mHandle) {
+        //leave the device in the original record format for other tools (it also goes back on its own when unplugged)
+        if (mRecordFormat2)
+            libusb_control_transfer(mHandle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+                                    PICOFLEX_SET_RECORD_FORMAT, RECORD_FORMAT_STOCK, 0, nullptr, 0, 200);
         libusb_release_interface(mHandle, 0);
         libusb_close(mHandle);
-        emit debugOutput(QString("pico-flexray: closed. %1 frames, %2 null frames dropped, %3 bytes skipped resyncing")
-                             .arg(mParser.framesParsed()).arg(mParser.nullFrames()).arg(mParser.bytesSkipped()));
+        emit debugOutput(QString("pico-flexray: closed. %1 frames (%2 null, %3 CRC errors, %4 with device time), "
+                                 "%5 bytes skipped resyncing")
+                             .arg(mParser.framesParsed()).arg(mParser.nullFrames()).arg(mParser.crcErrorFrames())
+                             .arg(mParser.format2Records()).arg(mParser.bytesSkipped()));
     }
+    mRecordFormat2 = false;
 #endif
     mHandle = nullptr;
 }
@@ -229,8 +246,8 @@ void PicoFlexRay::readDevice()
     }
     if (transferred <= 0 || isCapSuspended()) return;
 
-    //the device sends no timestamps: use the time of this transfer, on the same clocks as QtSerialBus devices
-    //without hardware timestamps (the session's elapsed time, or the system time if that's chosen)
+    //when this transfer arrived, on the same clocks as QtSerialBus devices (the session's elapsed time, or the system
+    //time if that's chosen): the timestamp of record format 1 frames, and what format 2 device times are mapped onto
     CommFrame::TimeStamp ts = useSystemTime
         ? CommFrame::TimeStamp::fromMicroSeconds(QDateTime::currentMSecsSinceEpoch() * 1000ll)
         : CommFrame::TimeStamp(0, CANConManager::getInstance()->getElapsedUs());

@@ -2233,8 +2233,9 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
 //(error state indicator). Classic CAN rows are unchanged and have nothing in that column. Readers that
 //don't know about it still get the first 8 data bytes.
 //39747828,000001A0,false,Rx,1,12,00,01,02,03,04,05,06,07,08,09,0A,0B,FD+BRS,
-//FlexRay frames are written the same way with "FR" in the flags column. The ID is the slot ID and the first data
-//byte is the cycle count (see CommFrame::isFlexRay()), so LEN goes up to 255.
+//FlexRay frames are written the same way with "FR" in the flags column, plus "+NULL" for null frames and "+CRCERR"
+//for frames the capture device found a CRC error in. The ID is the slot ID and the first data byte is the cycle
+//count (see CommFrame::isFlexRay()), so LEN goes up to 255.
 //39747828,00000048,false,Rx,0,17,01,D6,...,FR,
 
 //one row of the native CSV format (see above), including the line end
@@ -2272,7 +2273,12 @@ static QByteArray nativeCSVRow(const CommFrame &frame)
         row.append(',');
     }
     else if (flexRay)
-        row.append("FR,");
+    {
+        row.append("FR");
+        if (frame.isFlexRayNullFrame()) row.append("+NULL");
+        if (frame.hasFlexRayCrcError()) row.append("+CRCERR");
+        row.append(',');
+    }
     row.append('\n');
     return row;
 }
@@ -2357,8 +2363,14 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
                     //(empty for classic CAN). More than 8 bytes is CAN FD unless the row says FlexRay.
                     int flagsIdx = 6 + qMax(8, lng);
                     QByteArray flags = (flagsIdx < tokens.length()) ? tokens[flagsIdx].trimmed().toUpper() : QByteArray();
-                    const bool flexRay = (flags == "FR");
-                    if (flexRay) thisFrame.setFrameType(CommFrame::FLEXRAYDataFrame);
+                    const bool flexRay = (flags == "FR" || flags.startsWith("FR+"));
+                    thisFrame.clearFlexRayInfo();
+                    if (flexRay)
+                    {
+                        thisFrame.setFrameType(CommFrame::FLEXRAYDataFrame);
+                        if (flags.contains("+NULL")) thisFrame.setFlexRayNullFrame(true);
+                        if (flags.contains("+CRCERR")) thisFrame.setFlexRayCrcStatus(true, false);
+                    }
                     else if (lng > 64) lng = 64; //CAN FD frames carry up to 64 bytes
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < lng; c++) bytes[c] = 0;

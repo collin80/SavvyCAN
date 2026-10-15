@@ -12,8 +12,9 @@ struct libusb_device_handle;
 /*
  * FlexRay capture from a pico-flexray device (https://github.com/dynm/pico-flexray) over USB (libusb).
  * The device enumerates as a Panda (VID 0x3801, PID 0xddcc) with a serial number starting "picoflex" and streams
- * the FlexRay frames it captures on bulk endpoint 0x81: see PicoFlexRayParser for the record format and how frames
- * are represented. Bus 0 is FR1, bus 1 is FR2. Receive only.
+ * the FlexRay frames it captures on bulk endpoint 0x81: see PicoFlexRayParser for the record formats and how frames
+ * are represented. On connecting it asks for record format 2 (device timestamps, CRC flags, CRC-failed frames);
+ * stock firmware refuses and keeps sending format 1. Bus 0 is FR1, bus 1 is FR2. Sending: see piSendFrame().
  *
  * On Windows the device needs the WinUSB driver (install it once with Zadig). Built only when SavvyCAN is built
  * with libusb (HAVE_LIBUSB); otherwise the connection reports that it isn't available.
@@ -90,6 +91,7 @@ private:
     QByteArray mReadBuffer;
     QList<CommFrame> mFrames;
     QString mLastError;
+    bool mRecordFormat2 = false; //the firmware accepted record format 2
     bool mInjectorEnabled = false; //true once a bus is taken out of listen-only; sent to the device as op 0x91
 };
 

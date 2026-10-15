@@ -393,7 +393,8 @@ void CommFrameModel::recalcOverwrite()
     uint64_t idAugmented; //id in lower 29 bits, bus number shifted up 29 bits
     foreach(CommFrame frame, frames)
     {
-        if (!frame.isDataFrame()) continue; //CAN, CAN FD and FlexRay data frames
+        //CAN, CAN FD and FlexRay frames (FlexRay null frames too: a slot that only sends null frames still exists)
+        if (!frame.isDataFrame() && !frame.isFlexRay()) continue;
 
         idAugmented = frame.frameId();
         idAugmented = idAugmented + (frame.getBus() << 29ull);
@@ -548,6 +549,8 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
                 break;
             case CommFrame::FrameType::FLEXRAYDataFrame:
                 tempString = "F";
+                if (thisFrame.isFlexRayNullFrame()) tempString.append("N");  //null frame: no valid data
+                if (thisFrame.hasFlexRayCrcError()) tempString.append("!");  //the device found a CRC error
                 break;
             case CommFrame::FrameType::LINDataFrame:
                 tempString = "L";
