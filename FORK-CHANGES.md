@@ -11,6 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | FlexRay capture from a [pico-flexray](https://github.com/dynm/pico-flexray) over USB (libusb); FlexRay frames up to 255 bytes in the frame list, DBC decoding and native CSV | `flexray-pico` | not offered yet |
+| FlexRay capture, phase 1: device timestamps (with pico-flexray record format 2 firmware), null frames kept, header indicators and CRCs kept with each frame | `flexray-phase1-capture` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
@@ -57,13 +58,14 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 
 | Area | What works |
 |---|---|
-| pico-flexray connection | "pico-flexray (FlexRay, USB)" in the new-connection dialog. Receive only: FR1 is bus 0, FR2 is bus 1, 10 Mbit/s, listen-only. Lists boards by serial number (`picoflex...`), reconnects when the board is plugged back in. Null frames are dropped. Needs libusb-1.0 at build time and, on Windows, the WinUSB driver (Zadig) |
+| pico-flexray connection | "pico-flexray (FlexRay, USB)" in the new-connection dialog. Receive only: FR1 is bus 0, FR2 is bus 1, 10 Mbit/s, listen-only. Lists boards by serial number (`picoflex...`), reconnects when the board is plugged back in. Null frames are kept (type `FN`), payload CRC errors are marked (`F!`, record format 2 only). With record format 2 firmware, frames carry the board's frame-end timestamps. Needs libusb-1.0 at build time and, on Windows, the WinUSB driver (Zadig) |
 | Frame representation | `CommFrame::FLEXRAYDataFrame`: ID = 11-bit slot ID, payload = cycle count byte + up to 254 bytes, never CAN FD. The cycle count byte is what pico-flexray's and openpilot cabana's FlexRay DBC files multiplex on |
-| Frame list | Type `F`; DBC interpretation, overwrite mode and graphing include FlexRay frames |
+| Frame list | Type `F` (`FN` null frame, `F!` CRC error); DBC interpretation and graphing include FlexRay data frames, overwrite mode also null-only slots |
+| FlexRay header details | Indicators, header CRC, frame CRC, the device's CRC check and whether the time is the device's are kept with each frame (`CommFrame::setFlexRayHeader()` and friends). Not shown or saved yet, apart from null/CRC error |
 | DBC decoding | Signals anywhere in a 255-byte message (was 64) |
 | Native CSV | `FR` in the flags column; rows up to 255 bytes; old files load unchanged |
 | Frame Info, Flow View, signal editor | Frames over 64 bytes no longer overflow their fixed buffers: per-byte statistics cover the first 8 bytes (Frame Info), the first 64 bytes are shown (Flow View, bit grids) |
-| Not done | Injection (pico-flexray's override slots), device timestamps (the firmware sends none; frames get the PC's time per USB transfer), other log formats, a DBC `VFrameFormat` for FlexRay (FlexRay messages over 8 bytes load as CAN FD messages, which only matters for Send Frames and saving) |
+| Not done | Stock firmware sends no timestamps (frames get the PC's time per USB transfer); slot/cycle columns and saving the header details (roadmap phase 2); other log formats, a DBC `VFrameFormat` for FlexRay (FlexRay messages over 8 bytes load as CAN FD messages, which only matters for Send Frames and saving) |
 
 ## Branches
 
@@ -80,6 +82,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | merged: [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
 | `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | `flexray-pico` | `fork-ci` | FlexRay frames and the pico-flexray connection | not offered yet |
+| `flexray-phase1-capture` | `flexray-pico` | Device timestamps, null frames, FlexRay header details (roadmap phase 1) | not offered yet |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -111,6 +114,44 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-15: FlexRay capture, phase 1: device time, null frames, header details (`flexray-phase1-capture`)
+
+Phase 1 of `docs/flexray-re-roadmap.md` (C1, C3 and C4).
+
+- **Firmware (pico-flexray, branch `savvycan-records`, local for now):** a new USB record format 2 that a host asks for
+  with vendor request `0xa0`. Every USB mount starts in the original format 1, so other tools (Cabana, the Python
+  recorder) are unaffected.
+  - Format 2 sets bit 15 of the record length (format 1 lengths are at most 263), then adds a version byte, a flags
+    byte (header CRC ok, frame CRC ok) and a `u32` microsecond timestamp taken at the start of the frame-end
+    interrupt.
+  - It also reports frames whose payload CRC failed (header CRC good), flagged. Format 1 still drops them.
+  - Null frames were never dropped by the firmware; SavvyCAN dropped them.
+- **Parser:** reads both formats in one stream.
+  - **Timestamps:** format 2 frames get the device time, unwrapped (the counter wraps every ~71.6 minutes) and
+    mapped onto SavvyCAN's clock. The last frame of each USB transfer is anchored just before the transfer arrived,
+    the offset follows the lowest latency seen, and the mapping starts again if the clocks drift more than 1 s apart.
+    Format 1 frames are host-stamped as before.
+  - **Null frames** are kept. They aren't data frames, so DBC interpretation and graphing skip them.
+  - **Header details:** indicators, header CRC, frame CRC and the device's CRC result go into a packed 64-bit
+    `CommFrame` field with accessors. It's the stopgap the roadmap asks for until phase 2's `CommFrame` FlexRay
+    metadata; the payload is unchanged (cycle count byte + data), so `lateral.dbc` and the injection mapping still
+    work.
+- **Connection:** asks for format 2 on connecting (stock firmware stalls the request and stays on format 1) and puts
+  the board back to format 1 on disconnecting. The debug console says which format the firmware sends.
+- **Frame list:** type `FN` for null frames and `F!` for CRC errors; overwrite mode keeps slots that only send null
+  frames.
+- **Native CSV:** FlexRay flags `FR+NULL` and `FR+CRCERR`. The other header details aren't saved yet (phase 2).
+- **Tested** (no board):
+  - **Test bench harness:** all 13 suites pass under ASan/UBSan with libusb. `flexray` now has 21 checks, adding
+    null frames, header details from both formats, device time mapping (transfer latency, the counter wrap,
+    re-anchoring, the system-time clock), both formats mixed and split at every byte, and format 2 resync after
+    false starts. `picoflexray` and `picoflexrayinject` still pass.
+  - **Windows (MinGW, Qt 6.10.3):** builds with libusb and with `-DUSE_LIBUSB=OFF`.
+  - **Firmware:** builds for `pico2` with Pico SDK 2.1.1 and Arm GNU Toolchain 14.2, without warnings in its sources.
+- **Needs a real board:** that the format switch and the timestamps work on hardware; timestamp precision under bus
+  load; that CRC-failed frames show up on a disturbed bus; that Cabana and the Python recorder still work against
+  the new firmware (format 1).
 
 ### 2026-10-15: FlexRay capture with pico-flexray (`flexray-pico`)
 
