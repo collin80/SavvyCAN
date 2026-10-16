@@ -239,7 +239,38 @@ MainWindow::MainWindow(QWidget *parent) :
     });
 
     ui->leSearchFilter->setClearButtonEnabled(true);
+
+    connect(model, &CommFrameModel::highlightChanged, this, [this]() {
+        ui->listFilters->viewport()->update();
+    });
+
+    // Highlight item delegate — shows clickable indicator in the filter list
+    m_highlightDelegate = new HighlightItemDelegate(model, this);
+    ui->listFilters->setItemDelegate(m_highlightDelegate);
+
+    // Highlight overview bar next to the frame table only (not the sender panel).
+    m_overviewBar = new HighlightOverviewBar(this);
+    m_overviewBar->setup(model, ui->canFramesView);
+    {
+        // canFramesView lives directly in splitterLeft, so wrap it together with
+        // the overview bar in a container widget and put that back in its place.
+        QSplitter *left = ui->splitterLeft;
+        int idx = left ? left->indexOf(ui->canFramesView) : -1;
+        if (idx >= 0) {
+            QWidget *wrapperWidget = new QWidget(left);
+            QHBoxLayout *wrapper = new QHBoxLayout(wrapperWidget);
+            wrapper->setContentsMargins(0, 0, 0, 0);
+            wrapper->setSpacing(2);
+            ui->canFramesView->setParent(wrapperWidget);
+            m_overviewBar->setParent(wrapperWidget);
+            wrapper->addWidget(ui->canFramesView, 1);
+            wrapper->addWidget(m_overviewBar, 0);
+            left->insertWidget(idx, wrapperWidget);
+        }
+    }
+
     connect(ui->leSearchFilter, &QLineEdit::textChanged, this, &MainWindow::onSearchFilterChanged);
+    connect(ui->btnClearHighlights, &QPushButton::clicked, this, &MainWindow::clearAllHighlights);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
@@ -596,6 +627,11 @@ void MainWindow::readUpdateableSettings()
     bool showSendPanel = settings.value("Main/ShowSendPanel", true).toBool();
     ui->tableSimpleSender->setVisible(showSendPanel);
 
+    bool highlightEnabled = settings.value("Main/EnableFrameHighlight", true).toBool();
+    model->setHighlightEnabled(highlightEnabled);
+    if (m_highlightDelegate) m_highlightDelegate->setEnabled(highlightEnabled);
+    if (m_overviewBar) m_overviewBar->setVisible(highlightEnabled);
+    ui->btnClearHighlights->setVisible(highlightEnabled);
     updateFilterList();    
 }    
 
@@ -658,6 +694,12 @@ void MainWindow::onSearchFilterChanged(const QString &text)
             item->setHidden(!idStr.contains(stripped, Qt::CaseInsensitive));
         }
     }
+}
+
+void MainWindow::clearAllHighlights()
+{
+    model->clearAllHighlights();
+    // highlightChanged signal will trigger viewport()->update() via the connection above
 }
 
 void MainWindow::processSenderCellChange(int line, int col)
@@ -1333,6 +1375,8 @@ void MainWindow::tickGUIUpdate()
             bDirty = true;
             emit framesUpdated(rxFrames); //anyone care that frames were updated?
             manageRowExpansion();
+            // Repaint filter list so per-ID counts stay current
+            ui->listFilters->viewport()->update();
         }
 
         if (model->needsFilterRefresh()) updateFilterList();

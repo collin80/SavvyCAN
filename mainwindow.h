@@ -11,6 +11,8 @@
 #include "dbc/dbchandler.h"
 #include "bus_protocols/isotp_handler.h"
 #include "framesenderobject.h"
+#include "highlightitemdelegate.h"
+#include "highlightoverviewbar.h"
 #include "re/graphingwindow.h"
 #include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"
@@ -139,6 +141,7 @@ private slots:
     void DBCSettingsUpdated();
     void onSenderCellChanged(int, int);
     void onSearchFilterChanged(const QString &text);
+    void clearAllHighlights();
 
 public slots:
     void gotFrames(int);
@@ -226,6 +229,8 @@ private:
     bool isConnected;
     QPoint contextMenuPosition;
     bool rowExpansionActive = false;
+    HighlightItemDelegate *m_highlightDelegate = nullptr;
+    HighlightOverviewBar *m_overviewBar = nullptr;
 
     //private methods
     QString getSignalNameFromPosition(QPoint pos);
