@@ -197,7 +197,6 @@ QString DBC_SIGNAL::processSignalTree(const CANFrame &frame)
 
 void DBC_SIGNAL::processAvailableSignals(const CANFrame &frame, std::map<DBC_SIGNAL, QString> &displayValues)
 {
-    std::map<DBC_SIGNAL, QString> out;
     int val;
     if (!this->processAsInt(frame, val))
     {
@@ -208,7 +207,7 @@ void DBC_SIGNAL::processAvailableSignals(const CANFrame &frame, std::map<DBC_SIG
 
     foreach (DBC_SIGNAL *sig, multiplexedChildren)
     {
-        if ( (val >= sig->multiplexLowValue) && (val <= sig->multiplexHighValue) )
+        if (sig->isValueMatchingMultiplex(val))
         {
             qDebug() << "Found match for multiplex value range - " << sig->name;
             QString sigString;
@@ -219,12 +218,11 @@ void DBC_SIGNAL::processAvailableSignals(const CANFrame &frame, std::map<DBC_SIG
                 if (sig->isMultiplexor)
                 {
                     qDebug() << "Spelunkin!";
-                    sig->processSignalTree(frame);
+                    sig->processAvailableSignals(frame, displayValues);
                 }
             }
         }
     }
-    return;
 }
 
 /*
