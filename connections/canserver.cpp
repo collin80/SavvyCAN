@@ -16,7 +16,7 @@
 #include "canserver.h"
 
 CANserver::CANserver(QString serverAddressString) :
-    CANConnection(serverAddressString, "CANserver", CANCon::CANSERVER, 0, 0, false, 0, 3, 4000, true),
+    CANConnection(serverAddressString, "CANserver", CANCon::CANSERVER, 0, 0, 0, false, 0, 3, 4000, true),
     _udpClient(new QUdpSocket(this)),
     _heartbeatTimer(new QTimer(this))
 {

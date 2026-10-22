@@ -9,7 +9,7 @@
 #include "mqtt_bus.h"
 
 MQTT_BUS::MQTT_BUS(QString topicName) :
-    CANConnection(topicName, "mqtt_client", CANCon::MQTT, 0, 0, false, 0, 1, 4000, true),
+    CANConnection(topicName, "mqtt_client", CANCon::MQTT, 0, 0, 0, false, 0, 1, 4000, true),
     mTimer(this) /*NB: set this as parent of timer to manage it from working thread */
 {
 
