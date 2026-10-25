@@ -73,6 +73,23 @@ target_link_libraries(TestObd2Pids
     Qt6::Test
 )
 
+###### OBD-II poll engine ######
+add_executable(TestObd2Poller
+    test_obd2_poller.cpp
+    ../bus_protocols/obd2_poller.cpp  # the class under test
+    ../bus_protocols/obd2_pids.cpp
+    ../bus_protocols/isotp_handler.cpp
+    ../canfilter.cpp
+)
+
+target_include_directories(TestObd2Poller PRIVATE ${SAVVYCAN_INCLUDE_DIRS})
+
+target_link_libraries(TestObd2Poller
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+)
+
 ###### log and DBC loading/saving without the file dialogs ######
 set(TEST_SOURCES_FILE_DIALOG_SPLIT
     test_file_dialog_split.cpp
@@ -150,6 +167,7 @@ enable_testing()
 add_test(NAME TestIsoTpHandler COMMAND TestIsoTpHandler)
 add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
 add_test(NAME TestObd2Pids COMMAND TestObd2Pids)
+add_test(NAME TestObd2Poller COMMAND TestObd2Poller)
 add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
 add_test(NAME TestGitHub COMMAND TestGitHub)
 add_test(NAME TestLogNotes COMMAND TestLogNotes)

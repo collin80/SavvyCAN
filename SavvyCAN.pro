@@ -103,6 +103,7 @@ SOURCES += main.cpp\
     bus_protocols/isotp_handler.cpp \
     bus_protocols/j1939_handler.cpp \
     bus_protocols/obd2_pids.cpp \
+    bus_protocols/obd2_poller.cpp \
     bus_protocols/uds_handler.cpp \
     jsedit.cpp \
     frameplaybackobject.cpp \
@@ -206,6 +207,7 @@ HEADERS  += mainwindow.h \
     bus_protocols/isotp_handler.h \
     bus_protocols/j1939_handler.h \
     bus_protocols/obd2_pids.h \
+    bus_protocols/obd2_poller.h \
     bus_protocols/uds_handler.h \
     bus_protocols/isotp_message.h \
     jsedit.h \
