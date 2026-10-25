@@ -16,21 +16,23 @@ private slots:
     void testLogSaveAndLoad();
     void testLogAutodetect();
     void testLogBadIndex();
+    void testCANDOFile();
     void testDbcFilterLists();
     void testDbcSaveAndLoad();
     void testDbcBadIndex();
 };
 
-//8 data bytes each: some formats don't keep shorter frames as they are, which isn't what's tested here
-static QVector<CommFrame> sampleFrames()
+//8 data bytes, then shorter frames down to the shortest given (none by default)
+static QVector<CommFrame> sampleFrames(int shortest = 0)
 {
     QVector<CommFrame> frames;
-    for (int i = 0; i < 4; i++)
+    const int lengths[] = {8, 8, 8, 8, 7, 3, 1, 0};
+    for (int i = 0; i < int(std::size(lengths)); i++)
     {
+        if (lengths[i] < shortest) continue;
         CommFrame frame;
         frame.setFrameId(0x100 + quint32(i));
-        frame.setPayload(QByteArray::fromHex("0102030405060708") + char(i));
-        frame.setPayload(frame.payload().right(8));
+        frame.setPayload((QByteArray::fromHex("0102030405060708") + char(i)).right(8).left(lengths[i]));
         frame.setTimeStamp(CommFrame::TimeStamp(0, 1000 * (i + 1)));
         frames.append(frame);
     }
@@ -42,32 +44,40 @@ void TestFileDialogSplit::testLogFilterLists()
     const QStringList load = FrameFileIO::loadFilters();
     const QStringList save = FrameFileIO::saveFilters();
     QCOMPARE(load.count(), 28);
-    QCOMPARE(save.count(), 14);
+    QCOMPARE(save.count(), 13);
     QVERIFY(load.first().startsWith("Autodetect"));
     QVERIFY(save.first().startsWith("GVRET"));
+    // Vehicle Spy files can be loaded but not saved
+    QVERIFY(load.filter("Vehicle Spy").count() == 1);
+    QVERIFY(save.filter("Vehicle Spy").isEmpty());
 }
 
-// Each save type, the extension it adds, and the load type that reads it back
+// Each save type, the extension it adds, the load type that reads it back, and the shortest frame that comes back
+// as it was. Below 1 or 8 is a known issue in that format (see FORK-CHANGES.md):
+// - Vector trace: loading a frame with no data crashes;
+// - IXXAT MiniLog: a frame with no data loads back with one byte;
+// - Cabana: shorter frames load back padded to 8 bytes;
+// - PCAN: a frame with no data isn't loaded.
 void TestFileDialogSplit::testLogSaveAndLoad_data()
 {
     QTest::addColumn<int>("saveIndex");
     QTest::addColumn<QString>("extension");
     QTest::addColumn<int>("loadIndex");
+    QTest::addColumn<int>("shortest");
 
-    QTest::newRow("GVRET") << 0 << ".csv" << 1;
-    QTest::newRow("CRTD") << 1 << ".txt" << 2;
-    QTest::newRow("Generic CSV") << 2 << ".csv" << 18;
-    QTest::newRow("BusMaster") << 3 << ".log" << 3;
-    QTest::newRow("Microchip") << 4 << ".log" << 4;
-    QTest::newRow("Vector trace") << 5 << ".trace" << 5;
-    QTest::newRow("IXXAT MiniLog") << 6 << ".csv" << 6;
-    QTest::newRow("CAN-DO") << 7 << ".can" << 7;
-    QTest::newRow("Vehicle Spy") << 8 << ".csv" << 8;
-    QTest::newRow("Candump") << 9 << ".log" << 9;
-    QTest::newRow("Cabana") << 10 << ".csv" << 19;
-    QTest::newRow("CANalyzer ASC") << 11 << ".asc" << 14;
-    QTest::newRow("CARBUS") << 12 << ".trc" << 16;
-    QTest::newRow("PCAN") << 13 << ".trc" << 11;
+    QTest::newRow("GVRET") << 0 << ".csv" << 1 << 0;
+    QTest::newRow("CRTD") << 1 << ".txt" << 2 << 0;
+    QTest::newRow("Generic CSV") << 2 << ".csv" << 18 << 0;
+    QTest::newRow("BusMaster") << 3 << ".log" << 3 << 0;
+    QTest::newRow("Microchip") << 4 << ".log" << 4 << 0;
+    QTest::newRow("Vector trace") << 5 << ".trace" << 5 << 1;
+    QTest::newRow("IXXAT MiniLog") << 6 << ".csv" << 6 << 1;
+    QTest::newRow("CAN-DO") << 7 << ".can" << 7 << 0;
+    QTest::newRow("Candump") << 8 << ".log" << 9 << 0;
+    QTest::newRow("Cabana") << 9 << ".csv" << 19 << 8;
+    QTest::newRow("CANalyzer ASC") << 10 << ".asc" << 14 << 0;
+    QTest::newRow("CARBUS") << 11 << ".trc" << 16 << 0;
+    QTest::newRow("PCAN") << 12 << ".trc" << 11 << 1;
 }
 
 void TestFileDialogSplit::testLogSaveAndLoad()
@@ -75,13 +85,11 @@ void TestFileDialogSplit::testLogSaveAndLoad()
     QFETCH(int, saveIndex);
     QFETCH(QString, extension);
     QFETCH(int, loadIndex);
-
-    if (saveIndex == 7) QSKIP("saveCANDOFile writes into an empty QByteArray, which Qt 6 doesn't allow: a separate fix");
-    if (saveIndex == 8) QSKIP("saveVehicleSpyFile isn't written yet: it returns true without saving anything");
+    QFETCH(int, shortest);
 
     QTemporaryDir dir;
     QVERIFY(dir.isValid());
-    const QVector<CommFrame> frames = sampleFrames();
+    const QVector<CommFrame> frames = sampleFrames(shortest);
 
     QString filename = dir.filePath("log");
     QVERIFY(FrameFileIO::saveFrameFileAs(filename, saveIndex, &frames));
@@ -135,6 +143,58 @@ void TestFileDialogSplit::testLogBadIndex()
     QVERIFY(!FrameFileIO::loadFrameFileAs(filename, -1, &loaded));
     QVERIFY(!FrameFileIO::loadFrameFileAs(filename, int(FrameFileIO::loadFilters().count()), &loaded));
     QVERIFY(loaded.isEmpty());
+}
+
+// What the round trip above doesn't cover for CAN-DO: the record it starts with, frames it can't hold, and its time
+// stamp, which counts up to a minute then starts again
+void TestFileDialogSplit::testCANDOFile()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QVector<CommFrame> frames;
+    const qint64 times[] = {59500000, 59999000, 60250000, 61000000}; // microseconds
+    for (int i = 0; i < 4; i++)
+    {
+        CommFrame frame;
+        frame.setFrameId(0x7F0 + quint32(i));
+        frame.setPayload(QByteArray(i + 1, char(0x80 + i))); // bytes and lengths that are negative as a signed char
+        frame.setTimeStamp(CommFrame::TimeStamp(0, times[i]));
+        frames.append(frame);
+    }
+    CommFrame extended = frames[1];
+    extended.setExtendedFrameFormat(true);
+    extended.setFrameId(0x12345678);
+    frames.insert(2, extended);
+
+    const QString filename = dir.filePath("log.can");
+    QVERIFY(FrameFileIO::saveCANDOFile(filename, &frames));
+    QCOMPARE(QFileInfo(filename).size(), qint64(12 * 5)); // the initial record, then each 11 bit frame
+    QVERIFY(FrameFileIO::isCANDOFile(filename));
+
+    QVector<CommFrame> loaded;
+    QVERIFY(FrameFileIO::loadCANDOFile(filename, &loaded));
+    frames.remove(2);
+    QCOMPARE(loaded.count(), frames.count());
+    for (int i = 0; i < frames.count(); i++)
+    {
+        QCOMPARE(loaded[i].frameId(), frames[i].frameId());
+        QCOMPARE(loaded[i].payload(), frames[i].payload());
+        // to the millisecond, and counted on past the minute
+        QCOMPARE(loaded[i].timeStamp().microSeconds(), times[i]);
+    }
+
+    // a file whose length isn't a whole number of records
+    QFile file(filename);
+    QVERIFY(file.open(QIODevice::Append));
+    file.write("abc");
+    file.close();
+    QVERIFY(!FrameFileIO::isCANDOFile(filename));
+    loaded.clear();
+    QVERIFY(!FrameFileIO::loadCANDOFile(filename, &loaded));
+    QCOMPARE(loaded.count(), frames.count());
+
+    // Vehicle Spy files can't be saved
+    QVERIFY(!FrameFileIO::saveVehicleSpyFile(dir.filePath("spy.csv"), &frames));
 }
 
 void TestFileDialogSplit::testDbcFilterLists()

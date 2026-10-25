@@ -12,6 +12,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load log files and DBC files from GitHub (File > Load Log File from GitHub, DBC File Manager > Load from GitHub), signed in with GitHub or a token | `github-phase1-load` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
+| Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
@@ -86,11 +87,12 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   [#1140](https://github.com/collin80/SavvyCAN/pull/1140) was merged upstream as proposed. ESP32RET's `t2canfd-board`
   branch in `Tom-evnut/ESP32RET` implements it; upstream ESP32RET doesn't yet.
 - **socketcand and CANserver:** classic CAN only (see the CAN FD table).
-- **Log savers found broken by the GitHub phase 0 tests** (upstream too, not fixed yet):
-  - CAN-DO: `saveCANDOFile` writes into an empty `QByteArray`, which Qt 6 doesn't allow (an assertion in debug
-    builds, undefined behaviour in release builds).
-  - Vehicle Spy: `saveVehicleSpyFile` isn't written; it reports success without saving anything.
-  - Generic ID/Data CSV: frames shorter than 8 bytes load back padded to 8 bytes.
+- **Vehicle Spy:** logs load but can't be saved; the saver was never written (see `fix-log-savers`).
+- **Short frames in other logs** (found by the `fix-log-savers` tests; upstream too, not fixed yet):
+  - Vector trace: loading a frame with no data crashes (a list index out of range).
+  - IXXAT MiniLog: a frame with no data loads back with one byte.
+  - Cabana: frames shorter than 8 bytes load back padded to 8 bytes.
+  - PCAN Viewer: a frame with no data isn't loaded.
 - **Old unit tests:** `unit_tests/test_isotp_handler.cpp` and `test_uds_handler.cpp` predate `CommFrame` and don't
   compile; build the other tests by name.
 - **GitHub sign-in:** "Sign in with GitHub" needs an OAuth App client ID (none is built in yet), and its token
@@ -111,6 +113,24 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: CAN-DO, Vehicle Spy and Generic CSV savers (`fix-log-savers`)
+
+Three savers found broken by the phase 0 tests (upstream too).
+
+- **CAN-DO:** saving wrote into an empty `QByteArray`, which Qt 6 doesn't allow (an assertion in debug builds,
+  undefined behaviour in release builds). Records are now 12 bytes from the start, and an empty log no longer crashes.
+  - The milliseconds were written wrong.
+  - The loader and the format check now skip the record a CAN-DO file starts with, instead of failing on it.
+  - They no longer read past a short last record or misread bytes of 0x80 and above.
+  - A frame stamped just after the minute wraps now gets the right time.
+- **Vehicle Spy:** saving reported success without writing anything. The layout of a real Vehicle Spy export isn't
+  known well enough to write one, so it's no longer offered for saving (save type indexes after CAN-DO move down by
+  one); loading is unchanged.
+- **Generic ID/Data CSV:** frames shorter than 8 bytes loaded back with an extra zero byte (the loader counted the
+  line end as a byte).
+- **Tests:** `TestFileDialogSplit` round-trips CAN-DO and frames of 7, 3, 1 and 0 bytes, and checks the CAN-DO
+  details. The short frames found the four other formats listed under [Known issues](#known-issues).
 
 ### 2026-10-25: one GitHub repo list for logs and DBC files (`github-shared-repos`)
 
