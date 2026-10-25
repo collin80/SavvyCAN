@@ -2,6 +2,7 @@
 #define GITHUBBROWSERDIALOG_H
 
 #include <QDialog>
+#include <QHash>
 #include <QMap>
 #include <QMessageBox>
 #include <functional>
@@ -76,6 +77,13 @@ private:
     SaveWriter writer;
     GitHubOrigin suggestion;
 
+    //Save, signed in through a GitHub App: whether it's installed where the file goes (saving fails otherwise).
+    //Answers are kept for the dialog's life, and asked again before each save.
+    enum class AppAccess { Unknown, Installed, NotInstalled };
+    QHash<QString, AppAccess> appAccess;    //by "owner/name", lower case
+    QList<GitHubInstallation> installations;
+    bool installationsRead = false;
+
     QLabel *lblAccount;
     QPushButton *btnAccount;
     QComboBox *comboRepo;
@@ -93,6 +101,7 @@ private:
     QWidget *newBranchBox;
     QLineEdit *editBranchName;
     QLineEdit *editPrTitle;
+    QLabel *lblAppHint;
     QLabel *lblStatus;
     QPushButton *btnOpen;
 
@@ -115,6 +124,12 @@ private:
     void selectTypeFor(const QString &fileName);
     void rememberBranch(const QString &branch);
     QString freeName(const QString &folder, const QString &name) const;
+    bool checksAppInstall() const;
+    bool readInstallations();
+    AppAccess appAccessTo(const QString &owner, const QString &name);
+    void forgetAppAccess();
+    void updateAppHint();
+    void openInstallPage();
     QMessageBox::StandardButton askUser(QMessageBox::Icon icon, const QString &text,
                                         QMessageBox::StandardButtons buttons,
                                         const QMap<QMessageBox::StandardButton, QString> &labels = {});

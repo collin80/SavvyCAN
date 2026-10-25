@@ -31,8 +31,11 @@ Saving, and loading from **private** repos, need two things:
    GitHub may ask the account's owner to accept new permissions when the SavvyCAN app is updated: accept them on the
    app's installation page (GitHub > Settings > Applications > Installed GitHub Apps > SavvyCAN > Configure).
 
-**Without the install, saving fails** even though you're signed in and the repo shows up. If a repo you expect isn't
-listed, or saving is refused, this is the first thing to check.
+**Without the install, saving fails** even though you're signed in and the repo shows up. SavvyCAN checks this for
+you: the Save to GitHub window says so under the file list as soon as you pick a repo the SavvyCAN app isn't
+installed on, and asks before saving there (**Choose Repos...** opens GitHub's page; **Save Anyway** tries anyway).
+New Repo... asks the same way when the app isn't installed on all the owner's repos. (Signed in with a token, there's
+nothing to check: the token's own repos apply.)
 
 **Other ways to sign in:** a fine-grained personal access token (GitHub > Settings > Developer settings > Personal
 access tokens), made for the repos you choose with Contents: read and write (and Pull requests: read and write for

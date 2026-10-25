@@ -334,3 +334,48 @@ void GitHubClient::createRepo(const QString &org, const QString &name, const QSt
              QString(), status);
     });
 }
+
+void GitHubClient::listInstallations(std::function<void(const QList<GitHubInstallation> &installations,
+                                                        const QString &error)> done)
+{
+    get("/user/installations?per_page=100", [done](QNetworkReply *, const QByteArray &body, const QString &error)
+    {
+        if (!error.isEmpty()) return done(QList<GitHubInstallation>(), error);
+        QList<GitHubInstallation> installations;
+        const QJsonArray array = QJsonDocument::fromJson(body).object().value("installations").toArray();
+        for (const QJsonValue &value : array)
+        {
+            const QJsonObject obj = value.toObject();
+            GitHubInstallation installation;
+            installation.id = qint64(obj.value("id").toDouble());
+            installation.account = obj.value("account").toObject().value("login").toString();
+            installation.allRepos = obj.value("repository_selection").toString() == "all";
+            installations.append(installation);
+        }
+        done(installations, QString());
+    });
+}
+
+void GitHubClient::listInstallationRepos(qint64 installationId,
+                                         std::function<void(const QStringList &repos, const QString &error)> done)
+{
+    listInstallationReposFrom(installationId, 1, QStringList(), done);
+}
+
+//100 a page, like the branches
+void GitHubClient::listInstallationReposFrom(qint64 installationId, int page, QStringList repos,
+                                             std::function<void(const QStringList &repos, const QString &error)> done)
+{
+    get("/user/installations/" + QString::number(installationId) + "/repositories?per_page=100&page=" +
+        QString::number(page),
+        [this, installationId, page, repos, done](QNetworkReply *reply, const QByteArray &body,
+                                                  const QString &error) mutable
+    {
+        if (!error.isEmpty()) return done(QStringList(), error);
+        const QJsonArray array = QJsonDocument::fromJson(body).object().value("repositories").toArray();
+        for (const QJsonValue &value : array) repos.append(value.toObject().value("full_name").toString());
+        if (reply->rawHeader("Link").contains("rel=\"next\"") && page < 50)
+            listInstallationReposFrom(installationId, page + 1, repos, done);
+        else done(repos, QString());
+    });
+}

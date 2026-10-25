@@ -23,6 +23,14 @@ struct GitHubSaveResult
     QString commitUrl;  //the commit on github.com
 };
 
+//where a GitHub App is installed: an account or organisation, on all its repos or selected ones
+struct GitHubInstallation
+{
+    qint64 id = 0;
+    QString account;
+    bool allRepos = false;
+};
+
 //one file or folder in a repo's tree
 struct GitHubEntry
 {
@@ -84,6 +92,13 @@ public:
                     std::function<void(const QString &owner, const QString &defaultBranch, const QString &error,
                                        int status)> done);
 
+    //With a GitHub App's sign-in: where that app is installed that the user can reach, and the repos one
+    //installation covers ("owner/name")
+    void listInstallations(std::function<void(const QList<GitHubInstallation> &installations,
+                                              const QString &error)> done);
+    void listInstallationRepos(qint64 installationId,
+                               std::function<void(const QStringList &repos, const QString &error)> done);
+
     //A message for a failed reply, in plain words
     static QString errorText(QNetworkReply *reply, const QByteArray &body);
     static QString notFoundText(); //what errorText gives for a 404
@@ -98,6 +113,8 @@ private:
     QNetworkRequest request(const QString &apiPath) const;
     QNetworkReply *get(const QString &apiPath, ReplyCallback done, bool raw = false);
     QNetworkReply *send(const QByteArray &verb, const QString &apiPath, const QByteArray &json, ReplyCallback done);
+    void listInstallationReposFrom(qint64 installationId, int page, QStringList repos,
+                                   std::function<void(const QStringList &repos, const QString &error)> done);
     void listBranchesFrom(const QString &owner, const QString &repo, int page, QList<GitHubBranch> branches,
                           std::function<void(const QList<GitHubBranch> &branches, const QString &error)> done);
 };
