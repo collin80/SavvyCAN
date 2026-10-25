@@ -17,6 +17,7 @@
 #include "lognotespanel.h"
 
 #include <QClipboard>
+#include <QInputDialog>
 #include <QTimer>
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
@@ -112,6 +113,9 @@ MainWindow::MainWindow(QWidget *parent) :
     framesPerSec = 0;
     continuousLogging = false;
     continuousLogFlushCounter = 0;
+    continuousFrameCount = 0;
+    continuousFirstUs = continuousLastUs = 0;
+    connectedBusCount = 0;
 
     //handlers for all menu entries
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
@@ -125,6 +129,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
     connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
     connect(ui->actionLog_Notes, &QAction::triggered, this, &MainWindow::editLogNotes);
+    connect(ui->actionAdd_Marker, &QAction::triggered, this, &MainWindow::addLogMarker);
+    connect(ui->btnAddMarker, &QAbstractButton::clicked, this, &MainWindow::addLogMarker);
     connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
     connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
@@ -255,6 +261,8 @@ MainWindow::MainWindow(QWidget *parent) :
     addDockWidget(Qt::RightDockWidgetArea, logNotesPanel);
     logNotesPanel->setVisible(QSettings().value("LogNotes/PanelVisible", false).toBool());
     connect(logNotesPanel, &LogNotesPanel::editRequested, this, &MainWindow::editLogNotes);
+    connect(logNotesPanel, &LogNotesPanel::addMarkerRequested, this, &MainWindow::addLogMarker);
+    connect(logNotesPanel, &LogNotesPanel::markerActivated, this, &MainWindow::goToLogTime);
     QAction *showNotesAction = logNotesPanel->toggleViewAction();
     showNotesAction->setText(tr("Show Log Notes Panel"));
     const QList<QAction *> fileActions = ui->menuFile->actions();
@@ -1310,6 +1318,14 @@ void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CommFrame> frames
     if (continuousLogging)
     {
         FrameFileIO::writeContinuousNative(&frames, 0);
+        //for the continuous log's notes
+        for (const CommFrame &frame : frames)
+        {
+            const qint64 us = frame.timeStamp().seconds() * 1000000 + frame.timeStamp().microSeconds();
+            if (continuousFrameCount == 0 || us < continuousFirstUs) continuousFirstUs = us;
+            if (continuousFrameCount == 0 || us > continuousLastUs) continuousLastUs = us;
+            continuousFrameCount++;
+        }
     }
 }
 
@@ -1745,9 +1761,110 @@ void MainWindow::loadNotesOfLog(const QString &filename, const QString &displayN
     if (found) logNotesPanel->show();
 }
 
+//shows the current notes in the panel, and their markers in the graphs
 void MainWindow::updateLogNotesPanel()
 {
     logNotesPanel->setNotes(logNotes, logNotesSource);
+    for (GraphingWindow *win : graphWindows) win->setLogMarkers(logNotes.markers);
+}
+
+bool MainWindow::anyBusConnected() const
+{
+    for (CANConnection *conn : CANConManager::getInstance()->getConnections())
+        if (conn->getStatus() == CANCon::CONNECTED) return true;
+    return false;
+}
+
+//Ctrl+M, the Add Marker buttons: marks a point of the log. While capturing that's the newest frame; on a log that
+//isn't being captured, the selected frame (or the last one).
+void MainWindow::addLogMarker()
+{
+    const QVector<CommFrame> *frames = model->getFilteredListReference();
+    if (frames->isEmpty())
+    {
+        QMessageBox::information(this, tr("Add Marker"), tr("There are no frames to mark yet."));
+        return;
+    }
+    auto timeOf = [](const CommFrame &frame)
+    {
+        return frame.timeStamp().seconds() * 1000000 + frame.timeStamp().microSeconds();
+    };
+    LogMarker marker;
+    const QModelIndexList selected = ui->canFramesView->selectionModel()->selectedRows();
+    if (!anyBusConnected() && !selected.isEmpty() && selected.first().row() < frames->count())
+        marker.timeUs = timeOf(frames->at(selected.first().row()));
+    else
+    {
+        //the newest frame: not always the last row (overwrite mode orders the list by ID)
+        const QVector<CommFrame> *all = model->getListReference();
+        marker.timeUs = timeOf(all->isEmpty() ? frames->last() : all->first());
+        for (const CommFrame &frame : *all) marker.timeUs = qMax(marker.timeUs, timeOf(frame));
+    }
+
+    bool ok = false;
+    marker.text = QInputDialog::getText(this, tr("Add Marker"),
+                                        tr("Marker at %1 s:").arg(LogNotes::formatSeconds(marker.timeUs)),
+                                        QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok) return;
+    if (marker.text.isEmpty()) marker.text = tr("Marker %1").arg(logNotes.markers.count() + 1);
+    logNotes.addMarker(marker);
+
+    //a loaded log's markers are saved back at once, as File > Log Notes... does
+    if (!logNotesFile.isEmpty() && QFile::exists(logNotesFile))
+    {
+        if (logNotes.logFile.isEmpty()) logNotes.logFile = QFileInfo(logNotesFile).fileName();
+        const bool saved = FrameFileIO::isNativeCSVFile(logNotesFile) ? logNotes.writeToNativeCSV(logNotesFile)
+                                                                      : logNotes.writeSidecar(logNotesFile);
+        if (!saved) QMessageBox::warning(this, tr("Add Marker"), tr("The marker couldn't be saved with %1.")
+                                                                   .arg(QFileInfo(logNotesFile).fileName()));
+    }
+    updateLogNotesPanel();
+    updateFileStatus();
+}
+
+//a marker double-clicked in the Log Notes panel: select the frame closest to its time
+void MainWindow::goToLogTime(qint64 timeUs)
+{
+    const QVector<CommFrame> *frames = model->getFilteredListReference();
+    int best = -1;
+    qint64 bestDistance = 0;
+    for (int i = 0; i < frames->count(); i++)
+    {
+        const CommFrame::TimeStamp stamp = frames->at(i).timeStamp();
+        const qint64 distance = qAbs(stamp.seconds() * 1000000 + stamp.microSeconds() - timeUs);
+        if (best < 0 || distance < bestDistance)
+        {
+            best = i;
+            bestDistance = distance;
+        }
+    }
+    if (best < 0) return;
+    ui->cbAutoScroll->setChecked(false); //or the next frames would scroll it away
+    ui->canFramesView->selectRow(best);
+    ui->canFramesView->scrollTo(model->index(best, 0), QAbstractItemView::PositionAtCenter);
+}
+
+//When capture starts (the first bus connects with no frames, or continuous logging starts): ask for the setup and
+//scenario now, so they're written down before the test rather than after
+void MainWindow::askCaptureNotes()
+{
+    LogNotes notes = notesForSaving(model->getListReference(), false);
+    notes.frameCount = -1; //nothing captured yet
+    notes.hasSpan = false;
+    notes.saved = QDateTime();
+
+    LogNotesDialog dialog(LogNotesDialog::Starting, this);
+    dialog.setNotes(notes);
+    dialog.setTarget(continuousLogging ? QFileInfo(FrameFileIO::continuousFileName()).fileName() : QString(), true);
+    dialog.exec();
+    if (dialog.choice() != LogNotesDialog::WithNotes) return;
+
+    logNotes = dialog.notes();
+    if (logNotes.hasUserFields()) LogNotesDialog::setLastNotes(logNotes);
+    //these notes are for the capture, not for a log file that was open
+    logNotesFile.clear();
+    logNotesSource.clear();
+    updateLogNotesPanel();
 }
 
 //File > Log Notes...: the notes of the loaded log, saved back into it (or next to it) straight away; with no log
@@ -1781,19 +1898,56 @@ void MainWindow::editLogNotes()
 
 void MainWindow::handleContinousLogging()
 {
-    continuousLogging = !continuousLogging;
-
-    if (continuousLogging)
+    if (!continuousLogging)
     {
+        //only logging once a file was picked and opened (cancelling the file dialog used to leave it "logging")
+        if (!FrameFileIO::openContinuousNative()) return;
+        continuousLogging = true;
+        continuousFrameCount = 0;
         ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
-        FrameFileIO::openContinuousNative();
+        if (LogNotesDialog::askOnCapture()) askCaptureNotes();
     }
     else
     {
+        continuousLogging = false;
         ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
         ui->lblContMsg->setText("");
         FrameFileIO::closeContinuousNative();
+        finishContinuousLogNotes();
     }
+}
+
+//Continuous logging stopped: the notes go at the end of the log it wrote, after asking for what was seen
+void MainWindow::finishContinuousLogNotes()
+{
+    const QString path = FrameFileIO::continuousFileName();
+    LogNotes notes = notesForSaving(model->getListReference(), false);
+    notes.frameCount = continuousFrameCount;
+    notes.unfilteredCount = -1;
+    notes.hasSpan = continuousFrameCount > 0;
+    notes.firstUs = continuousFirstUs;
+    notes.lastUs = continuousLastUs;
+    notes.logFile = QFileInfo(path).fileName();
+
+    bool withNotes = notes.hasUserFields() || !notes.markers.isEmpty();
+    if (LogNotesDialog::askOnSave())
+    {
+        LogNotesDialog dialog(LogNotesDialog::Finishing, this);
+        dialog.setNotes(notes);
+        dialog.setTarget(notes.logFile, true);
+        dialog.exec();
+        withNotes = dialog.choice() == LogNotesDialog::WithNotes;
+        if (withNotes) notes = dialog.notes();
+    }
+    if (!withNotes) return;
+
+    if (!notes.writeToNativeCSV(path))
+        QMessageBox::warning(this, tr("Log Notes"), tr("The notes couldn't be saved in %1.").arg(notes.logFile));
+    LogNotesDialog::setLastNotes(notes);
+    //the frames on screen are still the capture's, so the notes (and markers) stay with them
+    logNotes = notes;
+    logNotes.logFile.clear();
+    updateLogNotesPanel();
 }
 
 void MainWindow::handleSaveFilteredFile()
@@ -2147,6 +2301,12 @@ void MainWindow::toggleCapture()
 void MainWindow::connectionStatusUpdated(int conns)
 {
     lbStatusConnected.setText(tr("Connected to ") + QString::number(conns) + tr(" buses"));
+
+    //capture starts: the first bus connected with nothing captured yet (continuous logging asks on its own)
+    const bool firstConnection = connectedBusCount == 0 && conns > 0;
+    connectedBusCount = conns;
+    if (firstConnection && model->rowCount() == 0 && !continuousLogging && LogNotesDialog::askOnCapture())
+        QTimer::singleShot(0, this, &MainWindow::askCaptureNotes); //not from inside the connection manager's signal
 }
 
 void MainWindow::updateFileStatus()
@@ -2219,6 +2379,7 @@ void MainWindow::showGraphingWindow()
         frames = model->getFilteredListReference();
     lastGraphingWindow = new GraphingWindow(frames);
     graphWindows.append(lastGraphingWindow);
+    lastGraphingWindow->setLogMarkers(logNotes.markers);
 
     connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(uint32_t,double)));
     connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(uint32_t,double)));

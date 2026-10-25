@@ -127,6 +127,8 @@ public:
     static bool closeContinuousNative();
     static bool writeContinuousNative(const QVector<CommFrame>*, int);
     static bool flushContinuousNative();
+    //the file continuous logging writes to (or last wrote to)
+    static QString continuousFileName() { return continuousFile.fileName(); }
 
 private:
     static QFile continuousFile;

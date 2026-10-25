@@ -11,15 +11,16 @@ class QLineEdit;
 class QPlainTextEdit;
 class QPushButton;
 
-//Asks for a log's notes (see lognotes.h): when a log is saved (Saving: Save, Save Without Notes or Cancel) or from
-//File > Log Notes... (Editing: OK or Cancel). The fields SavvyCAN fills in can be edited too. Templates, kept in the
-//settings, fill in the typed fields, e.g. one per test bench.
+//Asks for a log's notes (see lognotes.h): when a log is saved (Saving: Save with Notes, Save without Notes or Cancel),
+//from File > Log Notes... (Editing: OK or Cancel), when capture starts (Starting: Keep Notes or Later) and when
+//continuous logging stops (Finishing: Save with Notes or Save without Notes; the log is already written). The fields
+//SavvyCAN fills in can be edited too. Templates, kept in the settings, fill in the typed fields, e.g. one per bench.
 class LogNotesDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    enum Mode { Saving, Editing };
+    enum Mode { Saving, Editing, Starting, Finishing };
     enum Choice { Cancelled, WithNotes, WithoutNotes };
 
     explicit LogNotesDialog(Mode mode, QWidget *parent = nullptr);
@@ -28,12 +29,15 @@ public:
     LogNotes notes() const;
     //Saving: the log's file name, and whether the notes go inside it (GVRET CSV) or in a .notes.md file next to it.
     //Editing: the log the notes are saved back to, or an empty name if they're only kept for the next save.
+    //Starting: the continuous log being written, or an empty name. Finishing: the continuous log just written.
     void setTarget(const QString &fileName, bool insideLog);
     Choice choice() const { return chosen; }
 
     //settings
     static bool askOnSave();
     static void setAskOnSave(bool ask);
+    static bool askOnCapture();
+    static void setAskOnCapture(bool ask);
     //the typed fields of the last notes saved, to start the next ones from
     static LogNotes lastNotes();
     static void setLastNotes(const LogNotes &notes);
@@ -61,7 +65,7 @@ private:
     QPlainTextEdit *editDbcFiles;
     QPlainTextEdit *editMarkers;
     QLabel *lblFilledIn;
-    QCheckBox *cbAskOnSave;
+    QCheckBox *cbAsk; //"ask when saving" (Saving, Finishing) or "ask when capture starts" (Starting)
 
     QPlainTextEdit *textBox(int lines, const QString &placeholder);
     void showUserFields(const LogNotes &notes);

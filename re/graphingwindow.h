@@ -4,6 +4,7 @@
 #include "qcustomplot.h"
 #include "can_structs.h"
 #include "dbc/dbchandler.h"
+#include "lognotes.h"
 
 #include <QAction>
 #include <QDialog>
@@ -58,6 +59,8 @@ public:
     explicit GraphingWindow(const QVector<CommFrame> *, QWidget *parent = 0);
     ~GraphingWindow();
     void showEvent(QShowEvent*);
+    //the log notes' markers, drawn as labelled vertical lines (View > Show Log Markers)
+    void setLogMarkers(const QVector<LogMarker> &markers);
 
 public slots:
     void createGraph(GraphParams &params, bool createGraphParam = true);
@@ -114,8 +117,12 @@ private:
     QAction *actRemoveAll;
     QAction *actRescale;
     QAction *actFollowEnd;
+    QAction *actShowMarkers;
+    QVector<LogMarker> logMarkers;
+    QList<QCPAbstractItem *> markerItems;
 
     void setupMenuBar();
+    void drawLogMarkers();
     void showParamsDialog(int idx);
     void closeEvent(QCloseEvent *event);
     void readSettings();

@@ -16,13 +16,16 @@
 #include <QVBoxLayout>
 
 static const char *askOnSaveKey = "LogNotes/AskOnSave";
+static const char *askOnCaptureKey = "LogNotes/AskOnCapture";
 static const char *lastNotesKey = "LogNotes/Last";
 static const char *templatesKey = "LogNotes/Templates";
 
 LogNotesDialog::LogNotesDialog(Mode mode, QWidget *parent)
     : QDialog(parent), mode(mode), chosen(Cancelled)
 {
-    setWindowTitle(mode == Saving ? tr("Log Notes for This Log") : tr("Log Notes"));
+    if (mode == Starting) setWindowTitle(tr("Log Notes for This Capture"));
+    else if (mode == Editing) setWindowTitle(tr("Log Notes"));
+    else setWindowTitle(tr("Log Notes for This Log"));
     QVBoxLayout *layout = new QVBoxLayout(this);
 
     lblTarget = new QLabel(this);
@@ -76,22 +79,48 @@ LogNotesDialog::LogNotesDialog(Mode mode, QWidget *parent)
     filledForm->addRow(lblFilledIn);
     layout->addWidget(filledIn);
 
-    cbAskOnSave = new QCheckBox(tr("Ask for notes when saving logs (also in Preferences)"), this);
-    cbAskOnSave->setChecked(askOnSave());
-    cbAskOnSave->setVisible(mode == Saving);
-    layout->addWidget(cbAskOnSave);
+    if (mode == Starting)
+    {
+        cbAsk = new QCheckBox(tr("Ask for notes when capture starts (also in Preferences)"), this);
+        cbAsk->setChecked(askOnCapture());
+    }
+    else
+    {
+        cbAsk = new QCheckBox(tr("Ask for notes when saving logs (also in Preferences)"), this);
+        cbAsk->setChecked(askOnSave());
+    }
+    cbAsk->setVisible(mode != Editing);
+    layout->addWidget(cbAsk);
 
     QDialogButtonBox *buttons = new QDialogButtonBox(this);
-    if (mode == Saving)
+    if (mode == Saving || mode == Finishing)
     {
         QPushButton *btnSave = buttons->addButton(tr("Save with Notes"), QDialogButtonBox::AcceptRole);
         btnSave->setDefault(true);
         connect(btnSave, &QPushButton::clicked, this, [this]() { finish(WithNotes); });
         QPushButton *btnSkip = buttons->addButton(tr("Save without Notes"), QDialogButtonBox::DestructiveRole);
         connect(btnSkip, &QPushButton::clicked, this, [this]() { finish(WithoutNotes); });
-        QPushButton *btnCancel = buttons->addButton(QDialogButtonBox::Cancel);
-        btnCancel->setToolTip(tr("Don't save the log"));
-        connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
+        if (mode == Saving)
+        {
+            QPushButton *btnCancel = buttons->addButton(QDialogButtonBox::Cancel);
+            btnCancel->setToolTip(tr("Don't save the log"));
+            connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
+        }
+        else
+        {
+            //the log is already written: closing the dialog is the same as saving it without notes
+            connect(this, &QDialog::rejected, this, [this]() { chosen = WithoutNotes; });
+        }
+    }
+    else if (mode == Starting)
+    {
+        QPushButton *btnKeep = buttons->addButton(tr("Keep Notes"), QDialogButtonBox::AcceptRole);
+        btnKeep->setDefault(true);
+        btnKeep->setToolTip(tr("Keep these notes for when the log is saved"));
+        connect(btnKeep, &QPushButton::clicked, this, [this]() { finish(WithNotes); });
+        QPushButton *btnLater = buttons->addButton(tr("Later"), QDialogButtonBox::RejectRole);
+        btnLater->setToolTip(tr("Write the notes when the log is saved (or with File > Log Notes...)"));
+        connect(btnLater, &QPushButton::clicked, this, [this]() { finish(WithoutNotes); });
     }
     else
     {
@@ -118,7 +147,7 @@ LogNotesDialog::LogNotesDialog(Mode mode, QWidget *parent)
     editTags->setObjectName("tags");
     editScenario->setObjectName("scenario");
     editMarkers->setObjectName("markers");
-    cbAskOnSave->setObjectName("askOnSave");
+    cbAsk->setObjectName("ask");
 
     resize(640, sizeHint().height());
     editTitle->setFocus();
@@ -209,7 +238,19 @@ LogNotes LogNotesDialog::notes() const
 void LogNotesDialog::setTarget(const QString &fileName, bool insideLog)
 {
     const QString name = fileName.toHtmlEscaped();
-    if (mode == Saving)
+    if (mode == Starting)
+    {
+        if (fileName.isEmpty()) lblTarget->setText(tr("Capture is starting. Note the setup and what this log should "
+                                                      "capture; the notes are saved with the log."));
+        else lblTarget->setText(tr("Logging to <b>%1</b>. Note the setup and what this log should capture; the notes "
+                                   "are saved inside it when logging stops.").arg(name));
+    }
+    else if (mode == Finishing)
+    {
+        lblTarget->setText(tr("Logging to <b>%1</b> has stopped. Add what was seen; the notes are saved inside the "
+                              "log.").arg(name));
+    }
+    else if (mode == Saving)
     {
         if (insideLog) lblTarget->setText(tr("Saving <b>%1</b>. The notes are saved inside the log.").arg(name));
         else lblTarget->setText(tr("Saving <b>%1</b>. This file type can't hold notes, so they're saved in "
@@ -273,7 +314,8 @@ void LogNotesDialog::removeTemplate()
 void LogNotesDialog::finish(Choice choice)
 {
     chosen = choice;
-    if (mode == Saving) setAskOnSave(cbAskOnSave->isChecked());
+    if (mode == Saving || mode == Finishing) setAskOnSave(cbAsk->isChecked());
+    else if (mode == Starting) setAskOnCapture(cbAsk->isChecked());
     accept();
 }
 
@@ -285,6 +327,16 @@ bool LogNotesDialog::askOnSave()
 void LogNotesDialog::setAskOnSave(bool ask)
 {
     QSettings().setValue(askOnSaveKey, ask);
+}
+
+bool LogNotesDialog::askOnCapture()
+{
+    return QSettings().value(askOnCaptureKey, true).toBool();
+}
+
+void LogNotesDialog::setAskOnCapture(bool ask)
+{
+    QSettings().setValue(askOnCaptureKey, ask);
 }
 
 LogNotes LogNotesDialog::lastNotes()

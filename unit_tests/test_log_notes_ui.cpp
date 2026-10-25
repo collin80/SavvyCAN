@@ -2,6 +2,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTemporaryDir>
@@ -25,6 +26,8 @@ private slots:
     void testTemplates();
     void testLastNotes();
     void testPanel();
+    void testStartingChoices();
+    void testFinishingChoices();
 
 private:
     QTemporaryDir settingsDir;
@@ -142,7 +145,7 @@ void TestLogNotesUi::testSavingChoices()
     LogNotesDialog::setAskOnSave(true);
     LogNotesDialog dialog(LogNotesDialog::Saving);
     dialog.setNotes(sampleNotes());
-    QCheckBox *ask = dialog.findChild<QCheckBox *>("askOnSave");
+    QCheckBox *ask = dialog.findChild<QCheckBox *>("ask");
     QVERIFY(ask && ask->isChecked());
     ask->setChecked(false);
 
@@ -161,7 +164,7 @@ void TestLogNotesUi::testEditingHasNoSkip()
     dialog.setNotes(sampleNotes());
     dialog.setTarget(QString(), false);
     QVERIFY(!buttonWithText(&dialog, "Save without Notes"));
-    QVERIFY(!dialog.findChild<QCheckBox *>("askOnSave")->isVisibleTo(&dialog));
+    QVERIFY(!dialog.findChild<QCheckBox *>("ask")->isVisibleTo(&dialog));
     QPushButton *ok = buttonWithText(&dialog, "OK");
     QVERIFY(ok);
     ok->click();
@@ -234,10 +237,22 @@ void TestLogNotesUi::testPanel()
     QVERIFY(text.contains("4 (filtered from 10)"));
     QVERIFY(text.contains("0.001000 s to 0.004000 s"));
     QVERIFY(text.contains("1: peakcan usb0, 500 kbit/s, CAN FD data 2000 kbit/s"));
-    QVERIFY(text.contains("0.002000 s: AC on"));
+    QVERIFY(!text.contains("0.002000 s: AC on")); //the markers are in their own list
     QVERIFY(text.contains("rig 2"));
     QVERIFY(text.contains("pin 3: CAN-H"));
     QVERIFY(LogNotesPanel::toHtml(notes).contains("&lt;0x10 &amp; rising"));
+
+    QListWidget *markers = panel.findChild<QListWidget *>("markers");
+    QVERIFY(markers);
+    QCOMPARE(markers->count(), 2);
+    QCOMPARE(markers->item(0)->text(), QString("0.002000 s: AC on"));
+    QCOMPARE(markers->item(1)->text(), QString("0.003500 s:"));
+    QVERIFY(!markers->isHidden());
+
+    qint64 activated = -1;
+    connect(&panel, &LogNotesPanel::markerActivated, this, [&activated](qint64 timeUs) { activated = timeUs; });
+    emit markers->itemDoubleClicked(markers->item(1));
+    QCOMPARE(activated, qint64(3500));
 
     bool editRequested = false;
     connect(&panel, &LogNotesPanel::editRequested, this, [&editRequested]() { editRequested = true; });
@@ -246,8 +261,62 @@ void TestLogNotesUi::testPanel()
     edit->click();
     QVERIFY(editRequested);
 
+    bool markerRequested = false;
+    connect(&panel, &LogNotesPanel::addMarkerRequested, this, [&markerRequested]() { markerRequested = true; });
+    QPushButton *addMarker = buttonWithText(&panel, "Add Marker");
+    QVERIFY(addMarker);
+    addMarker->click();
+    QVERIFY(markerRequested);
+
     panel.resize(360, 640);
     screenshot(&panel, "log-notes-panel");
+
+    panel.setNotes(LogNotes(), QString());
+    QCOMPARE(markers->count(), 0);
+    QVERIFY(markers->isHidden());
+}
+
+//when capture starts: Keep Notes or Later, and the box is "ask when capture starts"
+void TestLogNotesUi::testStartingChoices()
+{
+    LogNotesDialog::setAskOnCapture(true);
+    LogNotesDialog::setAskOnSave(true);
+    {
+        LogNotesDialog dialog(LogNotesDialog::Starting);
+        dialog.setNotes(sampleNotes().userFields());
+        dialog.setTarget("continuous.csv", true);
+        QVERIFY(!buttonWithText(&dialog, "Cancel"));
+        QVERIFY(!buttonWithText(&dialog, "Save with Notes"));
+        QCheckBox *ask = dialog.findChild<QCheckBox *>("ask");
+        QVERIFY(ask->isVisibleTo(&dialog) && ask->isChecked());
+        ask->setChecked(false);
+        screenshot(&dialog, "log-notes-capture-start");
+        buttonWithText(&dialog, "Keep Notes")->click();
+        QCOMPARE(int(dialog.choice()), int(LogNotesDialog::WithNotes));
+        QVERIFY(!LogNotesDialog::askOnCapture());
+        QVERIFY(LogNotesDialog::askOnSave()); //the other setting isn't touched
+    }
+    {
+        LogNotesDialog dialog(LogNotesDialog::Starting);
+        dialog.setNotes(LogNotes());
+        dialog.findChild<QCheckBox *>("ask")->setChecked(true);
+        buttonWithText(&dialog, "Later")->click();
+        QCOMPARE(int(dialog.choice()), int(LogNotesDialog::WithoutNotes));
+        QVERIFY(LogNotesDialog::askOnCapture());
+    }
+}
+
+//when continuous logging stops the log is already written: no Cancel, and closing the dialog means no notes
+void TestLogNotesUi::testFinishingChoices()
+{
+    LogNotesDialog dialog(LogNotesDialog::Finishing);
+    dialog.setNotes(sampleNotes());
+    dialog.setTarget("continuous.csv", true);
+    QVERIFY(buttonWithText(&dialog, "Save with Notes"));
+    QVERIFY(buttonWithText(&dialog, "Save without Notes"));
+    QVERIFY(!buttonWithText(&dialog, "Cancel"));
+    dialog.reject();
+    QCOMPARE(int(dialog.choice()), int(LogNotesDialog::WithoutNotes));
 }
 
 QTEST_MAIN(TestLogNotesUi)

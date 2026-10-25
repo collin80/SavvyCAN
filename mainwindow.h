@@ -82,6 +82,9 @@ private slots:
     void handleSaveFile();
     void handleSaveFilteredFile();
     void editLogNotes();
+    void addLogMarker();
+    void goToLogTime(qint64 timeUs);
+    void askCaptureNotes();
     void handleSaveFilters();
     void handleLoadFilters();
     void handleContinousLogging();
@@ -189,6 +192,10 @@ private:
 
     bool continuousLogging;
     int continuousLogFlushCounter;
+    qint64 continuousFrameCount; //what the continuous log has, for its notes
+    qint64 continuousFirstUs;
+    qint64 continuousLastUs;
+    int connectedBusCount; //to notice the first bus connecting
 
     //Log notes (see lognotes.h): those of the loaded or last saved log, or typed for a capture not saved yet
     LogNotes logNotes;
@@ -253,6 +260,8 @@ private:
     LogNotes notesForSaving(const QVector<CommFrame> *frames, bool filtered) const;
     void loadNotesOfLog(const QString &filename, const QString &displayName, bool writable);
     void updateLogNotesPanel();
+    bool anyBusConnected() const;
+    void finishContinuousLogNotes();
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);

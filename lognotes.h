@@ -59,6 +59,8 @@ public:
     LogNotes userFields() const;
     void setUserFields(const LogNotes &from);
     bool hasUserFields() const { return !userFields().isEmpty(); }
+    //adds a marker, keeping them in time order (after any others at the same time)
+    void addMarker(const LogMarker &marker);
     //frame count and time span of the frames being saved; unfilteredCount is the count before filtering, or -1
     void setFrames(const QVector<CommFrame> &frames, qint64 unfilteredCount = -1);
 

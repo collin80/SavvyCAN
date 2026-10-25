@@ -2,6 +2,7 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QListWidget>
 #include <QLocale>
 #include <QPushButton>
 #include <QTextBrowser>
@@ -17,12 +18,26 @@ LogNotesPanel::LogNotesPanel(QWidget *parent)
 
     browser = new QTextBrowser(body);
     browser->setOpenExternalLinks(false);
-    layout->addWidget(browser);
+    layout->addWidget(browser, 3);
+
+    lblMarkers = new QLabel(tr("Markers (double-click one to go to it):"), body);
+    layout->addWidget(lblMarkers);
+    listMarkers = new QListWidget(body);
+    listMarkers->setObjectName("markers");
+    layout->addWidget(listMarkers, 1);
+    connect(listMarkers, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item)
+    {
+        emit markerActivated(item->data(Qt::UserRole).toLongLong());
+    });
 
     QHBoxLayout *row = new QHBoxLayout();
     lblSource = new QLabel(body);
     lblSource->setWordWrap(true);
     row->addWidget(lblSource, 1);
+    QPushButton *btnMarker = new QPushButton(tr("Add Marker"), body);
+    btnMarker->setToolTip(tr("Mark this point of the log (Ctrl+M)"));
+    connect(btnMarker, &QPushButton::clicked, this, &LogNotesPanel::addMarkerRequested);
+    row->addWidget(btnMarker);
     QPushButton *btnEdit = new QPushButton(tr("Edit..."), body);
     connect(btnEdit, &QPushButton::clicked, this, &LogNotesPanel::editRequested);
     row->addWidget(btnEdit);
@@ -32,12 +47,26 @@ LogNotesPanel::LogNotesPanel(QWidget *parent)
     setNotes(LogNotes(), QString());
 }
 
+QString LogNotesPanel::markerText(const LogMarker &marker)
+{
+    return QString("%1 s: %2").arg(LogNotes::formatSeconds(marker.timeUs), marker.text).trimmed();
+}
+
 void LogNotesPanel::setNotes(const LogNotes &notes, const QString &source)
 {
     if (notes.isEmpty())
         browser->setHtml(tr("<p><i>No notes for this log.</i></p><p>Edit... adds notes on its setup and scenario; "
                             "they're saved with the log.</p>"));
     else browser->setHtml(toHtml(notes));
+
+    listMarkers->clear();
+    for (const LogMarker &marker : notes.markers)
+    {
+        QListWidgetItem *item = new QListWidgetItem(markerText(marker), listMarkers);
+        item->setData(Qt::UserRole, marker.timeUs);
+    }
+    lblMarkers->setVisible(!notes.markers.isEmpty());
+    listMarkers->setVisible(!notes.markers.isEmpty());
 
     if (source.isEmpty()) lblSource->setText(notes.isEmpty() ? QString() : tr("Not saved with a log yet"));
     else lblSource->setText(tr("From %1").arg(source));
@@ -91,12 +120,5 @@ QString LogNotesPanel::toHtml(const LogNotes &notes)
     for (const auto &other : notes.otherSections) section(other.first, other.second);
     if (!notes.buses.isEmpty()) html += "<h4>" + tr("Buses") + "</h4>" + listHtml(notes.buses);
     if (!notes.dbcFiles.isEmpty()) html += "<h4>" + tr("DBC files") + "</h4>" + listHtml(notes.dbcFiles);
-    if (!notes.markers.isEmpty())
-    {
-        QStringList markers;
-        for (const LogMarker &marker : notes.markers)
-            markers.append(QString("%1 s: %2").arg(LogNotes::formatSeconds(marker.timeUs), marker.text).trimmed());
-        html += "<h4>" + tr("Markers") + "</h4>" + listHtml(markers);
-    }
     return html;
 }

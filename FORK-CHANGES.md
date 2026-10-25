@@ -14,7 +14,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
-| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving, shown in a Log Notes panel when loading | `log-notes`, `log-notes-ui` | fork only for now |
+| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving and when capture starts, shown in a Log Notes panel when loading; markers (Ctrl+M) in the panel and graphs | `log-notes`, `log-notes-ui`, `log-notes-capture` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
 | Wireshark loaders: pcap and pcapng records over 256 bytes are skipped instead of overflowing a buffer; a broken block size no longer hangs the load | `fix-pcaplite-bounds` | not offered yet |
@@ -90,6 +90,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fix-loader-bounds` | `fork-ci` | Microchip and Wireshark loaders limit the byte count to the data given | - |
 | `fix-pcaplite-bounds` | `fork-ci` | pcaplite skips records over 256 bytes and stops at broken block sizes | - |
 | `log-notes-ui` | `fork-ci` | Log notes dialog on save, templates, Log Notes panel, File > Log Notes... | - |
+| `log-notes-capture` | `fork-ci` | Log notes when capture starts, in continuous logs; markers in the panel and graphs | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -127,6 +128,20 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-26: log notes when capture starts, continuous logs, markers (`log-notes-capture`)
+
+Phase 3 of the [log notes roadmap](docs/log-notes-roadmap.md).
+
+- **Capture starts:** when the first bus connects with no frames, or continuous logging starts, SavvyCAN asks for the
+  setup and scenario (Keep Notes or Later), so they're written before the test. Preferences: "Ask for notes when
+  capture starts".
+- **Continuous logging:** when it stops, the notes (with what was seen) go at the end of the log it wrote. Cancelling
+  its file dialog no longer leaves it showing "Cease Continuous Logging" with no file.
+- **Markers:** Ctrl+M (File > Add Marker...) or the Add Marker buttons mark the newest frame while capturing, or the
+  selected one. They're listed in the Log Notes panel (double-click to go to the frame), drawn as dashed lines in
+  graphs (View > Show Log Markers), and saved with the notes.
+- **Tests:** `TestLogNotesUi` and `TestLogNotes` cover the new dialogs, the markers list and marker order.
 
 ### 2026-10-26: log notes asked for when saving, shown when loading (`log-notes-ui`)
 

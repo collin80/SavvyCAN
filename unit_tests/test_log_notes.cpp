@@ -18,6 +18,8 @@ private slots:
     void testNotNotes();
     void testSeconds_data();
     void testSeconds();
+    void testAddMarker();
+    void testSetFrames();
     void testNativeCSVRoundTrip();
     void testNativeCSVReplace();
     void testNativeCSVLongNotes();
@@ -232,6 +234,39 @@ void TestLogNotes::testSeconds()
     if (!valid) return;
     QCOMPARE(parsed, us);
     QCOMPARE(LogNotes::formatSeconds(us), formatted);
+}
+
+//markers stay in time order, a new one going after any others at the same time
+void TestLogNotes::testAddMarker()
+{
+    LogNotes notes;
+    notes.addMarker({5000, "c"});
+    notes.addMarker({1000, "a"});
+    notes.addMarker({5000, "d"});
+    notes.addMarker({3000, "b"});
+    notes.addMarker({-200, "before"});
+    QStringList order;
+    for (const LogMarker &marker : notes.markers) order.append(marker.text);
+    QCOMPARE(order, (QStringList{"before", "a", "b", "c", "d"}));
+}
+
+//frame count and time span from the frames, whatever their order
+void TestLogNotes::testSetFrames()
+{
+    QVector<CommFrame> frames = sampleFrames();
+    std::swap(frames[0], frames[3]);
+    LogNotes notes;
+    notes.setFrames(frames, 10);
+    QCOMPARE(notes.frameCount, qint64(4));
+    QCOMPARE(notes.unfilteredCount, qint64(10));
+    QVERIFY(notes.hasSpan);
+    QCOMPARE(notes.firstUs, qint64(1000));
+    QCOMPARE(notes.lastUs, qint64(4000));
+
+    notes.setFrames(QVector<CommFrame>());
+    QCOMPARE(notes.frameCount, qint64(0));
+    QCOMPARE(notes.unfilteredCount, qint64(-1));
+    QVERIFY(!notes.hasSpan);
 }
 
 void TestLogNotes::testNativeCSVRoundTrip()
