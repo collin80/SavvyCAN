@@ -163,6 +163,7 @@ HEADERS  += mainwindow.h \
     github/githubcache.h \
     github/githubclient.h \
     github/githubdeviceflow.h \
+    github/githubhelp.h \
     github/githubsettings.h \
     config.h \
     mainsettingsdialog.h \

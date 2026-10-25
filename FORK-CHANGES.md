@@ -82,6 +82,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
 | `obd2-phase1-pids` | `fork-ci` | OBD-II PID table and decoder, `TestObd2Pids` | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
+| `github-help` | `fork-ci` | Help page for the GitHub windows, F1 and Help buttons | - |
 | `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
 | `fix-loader-bounds` | `fork-ci` | Microchip and Wireshark loaders limit the byte count to the data given | - |
 | `fix-pcaplite-bounds` | `fork-ci` | pcaplite skips records over 256 bytes and stops at broken block sizes | - |
@@ -122,6 +123,15 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: help for the GitHub windows (`github-help`)
+
+- **New help page** `help/github.md` ("Logs and DBC Files on GitHub"): signing in, and installing the SavvyCAN app on
+  the repos SavvyCAN may use (saving fails without it; New Repo... works best with All repositories), loading,
+  saving (the save window's fields, conflicts, new branch and pull request), creating repos, and what the error
+  messages mean.
+- **Opened by** F1 and a new Help button in the GitHub load/save window, the GitHub Account window and the New Repo
+  window. The DBC File Manager and main screen help pages link to it.
 
 ### 2026-10-25: OBD-II PID table and decoder (`obd2-phase1-pids`)
 

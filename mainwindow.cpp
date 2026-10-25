@@ -12,6 +12,7 @@
 #include "filterutility.h"
 #include "github/githubaccountdialog.h"
 #include "github/githubbrowserdialog.h"
+#include "github/githubhelp.h"
 
 #include <QClipboard>
 #include <QTimer>
@@ -116,6 +117,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionLoad_Log_File_from_GitHub, &QAction::triggered, this, &MainWindow::handleLoadFromGitHub);
     connect(ui->actionGitHub_Account, &QAction::triggered, this, &MainWindow::showGitHubAccount);
     connect(ui->actionSave_Log_File_to_GitHub, &QAction::triggered, this, &MainWindow::handleSaveToGitHub);
+    gitHubHelp() = [](const QString &page) { HelpWindow::getRef()->showHelp(page); };
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
