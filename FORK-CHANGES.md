@@ -113,7 +113,7 @@ LilyGO T-2CAN-FD hardware.
 
 ### 2026-10-25: load logs and DBC files from GitHub (`github-phase1-load`)
 
-Phase 1 of the [GitHub repos roadmap](https://github.com/Tom-evnut/SavvyCAN/blob/github-repos-roadmap/docs/github-repos-roadmap.md):
+Phase 1 of the [GitHub repos roadmap](docs/github-repos-roadmap.md):
 logs and DBC files kept in GitHub repos load straight into SavvyCAN.
 
 - **Where:** File > Load Log File from GitHub..., and Load from GitHub in the DBC File Manager. File > GitHub
