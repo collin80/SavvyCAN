@@ -11,6 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load and save log files and DBC files in GitHub repos (File menu, DBC File Manager), signed in with the SavvyCAN GitHub App or a token | `github-phase1-load`, `github-phase2-save` | fork only for now |
+| OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
 | Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
@@ -80,6 +81,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
+| `obd2-phase2-poller` | `fork-ci` | OBD-II poll engine `Obd2Poller`, `TestObd2Poller` | - |
 | `obd2-phase1-pids` | `fork-ci` | OBD-II PID table and decoder, `TestObd2Pids` | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
 | `github-help` | `fork-ci` | Help page for the GitHub windows, F1 and Help buttons | - |
@@ -123,6 +125,22 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: OBD-II poll engine (`obd2-phase2-poller`)
+
+Phase 2 of the [OBD-II poller roadmap](docs/obd2-roadmap.md); the window that uses it is phase 3.
+
+- **Discovery:** asks all ECUs for PID 0x00, then follows each answering ECU's supported-PID bitmaps with requests
+  to that ECU alone.
+- **Polling:** a list of PIDs, each for one ECU or for all, with an interval; one request outstanding at a time,
+  taken in turn, at most 20 requests a second by default. 11-bit and 29-bit addressing.
+- **Timing:** a request times out after 50 ms (P2), or 5 s after a "response pending" reply. A PID an ECU refuses
+  as unsupported isn't asked for again.
+- **Safety:** only Mode 01 and Mode 09 can be sent; clearing DTCs and every other service is refused in the engine.
+- **Tests:** `TestObd2Poller` (19 tests) runs the engine against the real ISO-TP handler with a fake clock:
+  discovery with one, several or no ECUs, 29-bit IDs, timeouts, response pending, negative replies, the rate limit,
+  intervals, a VIN over three frames with flow control, and the safety list; also with AddressSanitizer and
+  UndefinedBehaviorSanitizer.
 
 ### 2026-10-25: help for the GitHub windows (`github-help`)
 

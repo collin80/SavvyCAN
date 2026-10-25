@@ -12,8 +12,8 @@ timeline (Tom-evnut fork). Written against `fork-ci` (2026-10-25). Each phase br
 |---|---|
 | 0: ISO-TP and UDS unit tests building again | Done (`obd2-phase0-tests`): both pass, also under ASan/UBSan; UDS payload rule written down; UDS Scanner negative reply code fixed |
 | 1: PID table and decoder | Done (`obd2-phase1-pids`): 101 Mode 01 PIDs (8 of them supported-PID bitmaps), supported-PID bitmaps, replies with several PIDs, Mode 09 VIN and ECU name; `TestObd2Pids` |
-| 2: poll engine | Next |
-| 3: OBD-II window | Not started |
+| 2: poll engine | Done (`obd2-phase2-poller`): `Obd2Poller` with discovery, polling, timeouts, response pending, rate limit, VIN; `TestObd2Poller` |
+| 3: OBD-II window | Next |
 | 4: generated OBD DBC, graphing and comparison | Not started |
 | 5: scripting, Mode 22 DID lists, docs | Not started |
 
@@ -28,6 +28,7 @@ timeline (Tom-evnut fork). Written against `fork-ci` (2026-10-25). Each phase br
 | What gets sent | Read-only services only: Mode 01, Mode 09 and (phase 5) Mode 22. Mode 04 (clear DTCs) and every writing or control service are never sent by the poller |
 | One PID per request | Yes by default, so every Mode 01 reply fits in one frame and the DBC can decode it. Several PIDs per request (allowed up to 6) is an option for later |
 | Open (needed from the user, section 8) | One adapter with two buses or two adapters; 11-bit or 29-bit OBD on the target cars; whether manufacturer Mode 22 DIDs are needed; the polling rate wanted |
+| Defaults until the user answers (phase 2) | 11-bit addressing (29-bit is a setting); 50 ms reply wait, 5 s after "response pending"; at most 20 requests a second; Mode 01 and 09 only. One adapter or two both work; with two, phase 4's clock warning applies |
 
 ---
 
@@ -117,6 +118,14 @@ arrive whole) and runs the polling. No UI in it, so the window and scripts can s
 - **Signals out:** `valueUpdated(ecu, pid, values, timestamp)`, `pidUnsupported(ecu, pid)`, `statsUpdated(...)`
   (achieved rate, timeouts, negative replies).
 
+**As built (phase 2):** `Obd2Poller` (`bus_protocols/obd2_poller.{h,cpp}`) takes an `ISOTP_HANDLER` of its own (it sets
+the handler's reply filter, flow control and reception) and a clock, so `TestObd2Poller` drives the timing without
+waiting; an internal timer calls `service()` in the app. A poll item for ECU 0 is sent to all ECUs and waits the
+whole reply time for every answer. A negative reply 0x11, 0x12 or 0x31 marks that PID unsupported for that ECU and
+it isn't polled again; other negative replies (0x22 conditions not correct, for example) don't. A reply arriving
+after its request timed out is still reported as a value. VIN requests go to one ECU only, since flow control goes
+to the ID last sent to.
+
 ### 4.3 OBD-II window (`re/obd2window.{h,cpp}`, `ui/obd2window.ui`)
 
 Under **Send Frames**, next to the UDS Scanner.
@@ -164,7 +173,7 @@ lists it in the DBC File Manager, where it can also be saved as a `.dbc` file:
 |---|---|---|
 | 0 (done) | Get `TestIsoTpHandler` and `TestUdsHandler` building and passing on `fork-ci` again, since everything below uses those handlers | `obd2-phase0-tests` |
 | 1 (done) | `obd2_pids`: Mode 01 table, decoding, supported-PID bitmaps, Mode 09 VIN; `TestObd2Pids` | `obd2-phase1-pids` |
-| 2 | `Obd2Poller`: addressing, discovery, scheduling, timeouts and response pending, the service safety list, stats; `TestObd2Poller` | `obd2-phase2-poller` |
+| 2 (done) | `Obd2Poller`: addressing, discovery, scheduling, timeouts and response pending, the service safety list, stats; `TestObd2Poller` | `obd2-phase2-poller` |
 | 3 | OBD-II window, poll sets, VIN, help page, menu entry | `obd2-phase3-window` |
 | 4 | Generated OBD DBC, attached to the OBD bus; Graph selected PIDs; clock warning | `obd2-phase4-dbc` |
 | 5 | `obd` scripting object; Mode 22 DIDs from a user file per car (JSON, same fields as the PID table); several PIDs per request; FORK-CHANGES entry | `obd2-phase5-extras` |

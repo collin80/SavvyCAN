@@ -48,6 +48,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     bus_protocols/isotp_message.h
     bus_protocols/j1939_handler.cpp bus_protocols/j1939_handler.h
     bus_protocols/obd2_pids.cpp bus_protocols/obd2_pids.h
+    bus_protocols/obd2_poller.cpp bus_protocols/obd2_poller.h
     bus_protocols/uds_handler.cpp bus_protocols/uds_handler.h
     can_structs.cpp can_structs.h
     can_trigger_structs.h
