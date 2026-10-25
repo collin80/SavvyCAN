@@ -16,6 +16,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
 | Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
+| Short frames in logs: Vector trace no longer crashes on a frame with no data; IXXAT MiniLog, Cabana and PCAN TRC keep frames shorter than 8 bytes as they were | `fix-short-frame-loaders` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
@@ -96,11 +97,6 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   branch in `Tom-evnut/ESP32RET` implements it; upstream ESP32RET doesn't yet.
 - **socketcand and CANserver:** classic CAN only (see the CAN FD table).
 - **Vehicle Spy:** logs load but can't be saved; the saver was never written (see `fix-log-savers`).
-- **Short frames in other logs** (found by the `fix-log-savers` tests; upstream too, not fixed yet):
-  - Vector trace: loading a frame with no data crashes (a list index out of range).
-  - IXXAT MiniLog: a frame with no data loads back with one byte.
-  - Cabana: frames shorter than 8 bytes load back padded to 8 bytes.
-  - PCAN Viewer: a frame with no data isn't loaded.
 - **pcap records over 256 bytes** (found in `fix-loader-bounds`, upstream too, not fixed yet): `pcaplite.cpp` reads
   each record into a 256 byte buffer without checking its length, so a pcap or pcapng file with a longer record
   writes past the buffer. CAN records are much shorter, but any pcap file can reach the Wireshark loaders.
@@ -122,6 +118,24 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: Short frames in Vector, IXXAT, Cabana and PCAN logs (`fix-short-frame-loaders`)
+
+Found by the `fix-log-savers` round trips; upstream has them too.
+
+- **Vector trace:** loading a frame with no data crashed (a list index out of range): once the line is trimmed it
+  has no data column. The loader and the format check now take that as no data, and a line with fewer data bytes
+  than its length gets the bytes it has.
+- **IXXAT MiniLog:** a frame with no data loaded back with one byte (splitting an empty data column gave one empty
+  token).
+- **Cabana:** the saver padded every frame to 8 bytes with `00`. It now writes the frame's own bytes, as Cabana does;
+  the loader already took the length from the data column.
+- **PCAN TRC:** lines of 41 characters or fewer were skipped, which dropped frames with no data (1.1, 1.3, 2.0 and
+  2.1). Lines are now checked by their token count only, and 1.1 and 1.3 lines with fewer data bytes than their
+  length get the bytes they have, as 2.0 and 2.1 already did.
+- **Tests:** `TestFileDialogSplit` round-trips frames of 8 down to 0 bytes in every format, and loads lines laid out
+  as Vector, IXXAT, Cabana and PCAN (1.1, 1.3, 2.0) write them, with and without data. The new checks fail on the
+  old code.
 
 ### 2026-10-25: Microchip and Wireshark loaders limit the byte count (`fix-loader-bounds`)
 

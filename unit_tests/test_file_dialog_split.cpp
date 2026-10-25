@@ -14,6 +14,8 @@ private slots:
     void testLogFilterLists();
     void testLogSaveAndLoad_data();
     void testLogSaveAndLoad();
+    void testOtherToolLogs_data();
+    void testOtherToolLogs();
     void testLogAutodetect();
     void testLogBadIndex();
     void testCANDOFile();
@@ -24,14 +26,13 @@ private slots:
     void testDbcBadIndex();
 };
 
-//8 data bytes, then shorter frames down to the shortest given (none by default)
-static QVector<CommFrame> sampleFrames(int shortest = 0)
+//8 data bytes, then shorter frames down to one with no data
+static QVector<CommFrame> sampleFrames()
 {
     QVector<CommFrame> frames;
     const int lengths[] = {8, 8, 8, 8, 7, 3, 1, 0};
     for (int i = 0; i < int(std::size(lengths)); i++)
     {
-        if (lengths[i] < shortest) continue;
         CommFrame frame;
         frame.setFrameId(0x100 + quint32(i));
         frame.setPayload((QByteArray::fromHex("0102030405060708") + char(i)).right(8).left(lengths[i]));
@@ -54,32 +55,26 @@ void TestFileDialogSplit::testLogFilterLists()
     QVERIFY(save.filter("Vehicle Spy").isEmpty());
 }
 
-// Each save type, the extension it adds, the load type that reads it back, and the shortest frame that comes back
-// as it was. Below 1 or 8 is a known issue in that format (see FORK-CHANGES.md):
-// - Vector trace: loading a frame with no data crashes;
-// - IXXAT MiniLog: a frame with no data loads back with one byte;
-// - Cabana: shorter frames load back padded to 8 bytes;
-// - PCAN: a frame with no data isn't loaded.
+// Each save type, the extension it adds, and the load type that reads it back
 void TestFileDialogSplit::testLogSaveAndLoad_data()
 {
     QTest::addColumn<int>("saveIndex");
     QTest::addColumn<QString>("extension");
     QTest::addColumn<int>("loadIndex");
-    QTest::addColumn<int>("shortest");
 
-    QTest::newRow("GVRET") << 0 << ".csv" << 1 << 0;
-    QTest::newRow("CRTD") << 1 << ".txt" << 2 << 0;
-    QTest::newRow("Generic CSV") << 2 << ".csv" << 18 << 0;
-    QTest::newRow("BusMaster") << 3 << ".log" << 3 << 0;
-    QTest::newRow("Microchip") << 4 << ".log" << 4 << 0;
-    QTest::newRow("Vector trace") << 5 << ".trace" << 5 << 1;
-    QTest::newRow("IXXAT MiniLog") << 6 << ".csv" << 6 << 1;
-    QTest::newRow("CAN-DO") << 7 << ".can" << 7 << 0;
-    QTest::newRow("Candump") << 8 << ".log" << 9 << 0;
-    QTest::newRow("Cabana") << 9 << ".csv" << 19 << 8;
-    QTest::newRow("CANalyzer ASC") << 10 << ".asc" << 14 << 0;
-    QTest::newRow("CARBUS") << 11 << ".trc" << 16 << 0;
-    QTest::newRow("PCAN") << 12 << ".trc" << 11 << 1;
+    QTest::newRow("GVRET") << 0 << ".csv" << 1;
+    QTest::newRow("CRTD") << 1 << ".txt" << 2;
+    QTest::newRow("Generic CSV") << 2 << ".csv" << 18;
+    QTest::newRow("BusMaster") << 3 << ".log" << 3;
+    QTest::newRow("Microchip") << 4 << ".log" << 4;
+    QTest::newRow("Vector trace") << 5 << ".trace" << 5;
+    QTest::newRow("IXXAT MiniLog") << 6 << ".csv" << 6;
+    QTest::newRow("CAN-DO") << 7 << ".can" << 7;
+    QTest::newRow("Candump") << 8 << ".log" << 9;
+    QTest::newRow("Cabana") << 9 << ".csv" << 19;
+    QTest::newRow("CANalyzer ASC") << 10 << ".asc" << 14;
+    QTest::newRow("CARBUS") << 11 << ".trc" << 16;
+    QTest::newRow("PCAN") << 12 << ".trc" << 11;
 }
 
 void TestFileDialogSplit::testLogSaveAndLoad()
@@ -87,11 +82,10 @@ void TestFileDialogSplit::testLogSaveAndLoad()
     QFETCH(int, saveIndex);
     QFETCH(QString, extension);
     QFETCH(int, loadIndex);
-    QFETCH(int, shortest);
 
     QTemporaryDir dir;
     QVERIFY(dir.isValid());
-    const QVector<CommFrame> frames = sampleFrames(shortest);
+    const QVector<CommFrame> frames = sampleFrames();
 
     QString filename = dir.filePath("log");
     QVERIFY(FrameFileIO::saveFrameFileAs(filename, saveIndex, &frames));
@@ -111,6 +105,79 @@ void TestFileDialogSplit::testLogSaveAndLoad()
         QCOMPARE(loaded[i].frameId(), frames[i].frameId());
         QCOMPARE(loaded[i].payload(), frames[i].payload());
     }
+}
+
+// Lines laid out as the other tools write them (from the comments in framefileio.cpp), with and without data. Each
+// frame is checked as "ID payload", both in hex.
+void TestFileDialogSplit::testOtherToolLogs_data()
+{
+    QTest::addColumn<int>("loadIndex");
+    QTest::addColumn<QByteArray>("contents");
+    QTest::addColumn<QStringList>("expected");
+
+    QTest::newRow("Vector trace") << 5
+        << QByteArray(";  CAN Logger trace file\n"
+                      ";---+-----\t-----+------\t----+---\t+\t-+ -- -- -- -- -- -- --\n"
+                      "         0\t00:00:00:0008\t00000268\t8\t55 00 84 03 A8 0D 38 00\n"
+                      "         1\t00:00:00:0021\t0000000E\t0\t\n"
+                      "         2\t00:00:00:0030\t00000100\t2\t01 02 \n")
+        << QStringList{"268 55008403a80d3800", "e ", "100 0102"};
+    QTest::newRow("IXXAT MiniLog") << 6
+        << QByteArray("ASCII Trace IXXAT minilog\nDate: 1:1:2020\nStart time: 0:0:0\nStop time: 0:0:1\n"
+                      "Overruns: 0\nBaudrate: 500 kbit/s\n"
+                      "\"Time\",\"Identifier (hex)\",\"Format\",\"Flags\",\"Data (hex)\"\n"
+                      "\"00:01:03.03\",\"223\",\"Std\",\"\",\"00 00 00 00 49 00 00 01 \"\n"
+                      "\"00:01:03.04\",\"224\",\"Std\",\"\",\"\"\n"
+                      "\"00:01:03.05\",\"225\",\"Std\",\"\",\"AB \"\n")
+        << QStringList{"223 0000000049000001", "224 ", "225 ab"};
+    QTest::newRow("Cabana") << 19
+        << QByteArray("time,addr,bus,data\n"
+                      "\n"
+                      "1.000000,513,0,0102\n"
+                      "1.001000,514,1,0102030405060708\n"
+                      "1.002000,515,0,\n")
+        << QStringList{"201 0102", "202 0102030405060708", "203 "};
+    QTest::newRow("PCAN 1.1") << 11
+        << QByteArray(";$FILEVERSION=1.1\n"
+                      ";---+--   ----+----  --+--  ----+---  +  -+ -- -- -- -- -- -- --\n"
+                      "     1)      1004.9  Rx         079B  8  02 21 04 00 00 00 00 00\n"
+                      "     2)      1005.0  Rx         0100  0\n"
+                      "     3)      1006.0  Rx         0101  1  AA\n")
+        << QStringList{"79b 0221040000000000", "100 ", "101 aa"};
+    QTest::newRow("PCAN 1.3") << 11
+        << QByteArray(";$FILEVERSION=1.3\n"
+                      ";---+-- ------+------ +- --+-- ---+---- +- -+-- -+ -- -- -- -- -- -- --\n"
+                      "     1)      1004.898 1  Tx        079B -  8    02 21 04 00 00 00 00 00\n"
+                      "     2)      1005.000 1  Rx        0100 -  0\n")
+        << QStringList{"79b 0221040000000000", "100 "};
+    QTest::newRow("PCAN 2.0") << 11
+        << QByteArray(";$FILEVERSION=2.0\n"
+                      ";---+-- ------+------ +- --+----- +- +- +- +- -- -- -- -- -- -- --\n"
+                      "     1)      1004.898 DT     079B Rx 8 02 21 04 00 00 00 00 00\n"
+                      "     2)      1005.000 DT     0100 Rx 0\n")
+        << QStringList{"79b 0221040000000000", "100 "};
+}
+
+void TestFileDialogSplit::testOtherToolLogs()
+{
+    QFETCH(int, loadIndex);
+    QFETCH(QByteArray, contents);
+    QFETCH(QStringList, expected);
+
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString filename = dir.filePath("log");
+    QFile file(filename);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(contents);
+    file.close();
+
+    QVector<CommFrame> loaded;
+    QVERIFY(FrameFileIO::loadFrameFileAs(filename, loadIndex, &loaded));
+    QStringList frames;
+    for (const CommFrame &frame : loaded)
+        frames << QString::number(frame.frameId(), 16) + " " + QString::fromLatin1(frame.payload().toHex());
+    QCOMPARE(frames, expected);
 }
 
 void TestFileDialogSplit::testLogAutodetect()
