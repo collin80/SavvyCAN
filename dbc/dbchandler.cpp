@@ -2040,13 +2040,11 @@ DBCFile* DBCHandler::loadDBCFile(QString filename)
     if (newFile->loadFile(filename))
     {
         loadedFiles.append(newFile);
+        return newFile;
     }
-    else
-    {
-        //createBlankFile();
-    }
-    if (loadedFiles.count()> 0) return loadedFiles.last();
-    else return nullptr;
+    //not the last file loaded: callers would show it twice, or give it this file's settings
+    delete newFile;
+    return nullptr;
 }
 
 //These came from the DBC window's load dialog: keep its translation context so existing translations still apply
