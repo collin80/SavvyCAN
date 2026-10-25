@@ -3,6 +3,7 @@
 #include "can_structs.h"
 #include <QDateTime>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
 #include "connections/connectionwindow.h"
@@ -114,6 +115,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
     connect(ui->actionLoad_Log_File_from_GitHub, &QAction::triggered, this, &MainWindow::handleLoadFromGitHub);
     connect(ui->actionGitHub_Account, &QAction::triggered, this, &MainWindow::showGitHubAccount);
+    connect(ui->actionSave_Log_File_to_GitHub, &QAction::triggered, this, &MainWindow::handleSaveToGitHub);
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
@@ -1475,9 +1477,42 @@ void MainWindow::handleDroppedFile(const QString &filename)
 
 void MainWindow::handleLoadFromGitHub()
 {
-    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, FrameFileIO::loadFilters(), this);
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, FrameFileIO::loadFilters(), this);
     if (dialog.exec() != QDialog::Accepted) return;
-    loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true);
+    if (loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true))
+        gitHubLogOrigin = dialog.origin();
+}
+
+void MainWindow::handleSaveToGitHub()
+{
+    const QVector<CommFrame> *frames = model->getListReference();
+    if (frames->isEmpty())
+    {
+        QMessageBox::information(this, tr("Save Log File to GitHub"), tr("There are no frames to save."));
+        return;
+    }
+
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, FrameFileIO::saveFilters(), this);
+    dialog.setSaveWriter([frames](const QString &localFile, int fileType, QString &error)
+    {
+        QString name = localFile;
+        if (FrameFileIO::saveFrameFileAs(name, fileType, frames)) return true;
+        error = tr("The log couldn't be written as that file type.");
+        return false;
+    });
+    //back where it came from, if it came from GitHub; otherwise under its own name
+    if (gitHubLogOrigin.isValid() && loadedFileName == gitHubLogOrigin.displayName())
+        dialog.setSuggestion(gitHubLogOrigin, QString());
+    else
+    {
+        const QString name = QFileInfo(loadedFileName).fileName();
+        dialog.setSuggestion(GitHubOrigin(), name.isEmpty() || loadedFileName.startsWith("github:") ? "log" : name);
+    }
+    if (dialog.exec() != QDialog::Accepted) return;
+
+    gitHubLogOrigin = dialog.origin();
+    loadedFileName = gitHubLogOrigin.displayName();
+    updateFileStatus();
 }
 
 void MainWindow::showGitHubAccount()

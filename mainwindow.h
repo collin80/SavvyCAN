@@ -9,6 +9,7 @@
 #include "can_structs.h"
 #include "framefileio.h"
 #include "dbc/dbchandler.h"
+#include "github/githubcache.h"
 #include "bus_protocols/isotp_handler.h"
 #include "framesenderobject.h"
 #include "re/graphingwindow.h"
@@ -74,6 +75,7 @@ public:
 private slots:
     void handleLoadFile();
     void handleLoadFromGitHub();
+    void handleSaveToGitHub();
     void showGitHubAccount();
     void handleSaveFile();
     void handleSaveFilteredFile();
@@ -236,6 +238,7 @@ private:
     void addFrameToDisplay(CommFrame &, bool);
     void updateFileStatus();
     bool loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure);
+    GitHubOrigin gitHubLogOrigin; //where the log shown came from or went to on GitHub, if it did
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);

@@ -9,6 +9,11 @@
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QUrlQuery>
+#include <QMap>
+#include <QSet>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include "github/githubaccountdialog.h"
 #include "github/githubbrowserdialog.h"
 #include "github/githubcache.h"
@@ -134,6 +139,13 @@ private slots:
     void testBrowserDialog();
     void testBrowserNotFoundHints();
     void testAccountDialog();
+    void testExtensionFor();
+    void testClientSave();
+    void testSaveNewFile();
+    void testSaveBackAndConflicts();
+    void testSaveNewBranchAndPullRequest();
+    void testCreateRepo();
+    void testSaveNameFollowsType();
 
 private:
     QTemporaryDir settingsDir;
@@ -713,7 +725,7 @@ void TestGitHub::testBrowserDialog()
     other.branch = "main";
     GitHubSettings::setRepos({ repo, other });
 
-    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)", "GVRET Logs (*.csv *.CSV)" });
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, { "Autodetect File Type (*.*)", "GVRET Logs (*.csv *.CSV)" });
     dialog.show();
     QTreeWidget *tree = dialog.findChild<QTreeWidget *>("tree");
     QComboBox *comboRepo = dialog.findChild<QComboBox *>("comboRepo");
@@ -766,7 +778,7 @@ void TestGitHub::testBrowserDialog()
     QVERIFY(github.requests.last().headers.value("authorization") == "Bearer gho_token");
 
     //loading DBC files lists the same repos
-    GitHubBrowserDialog dbcDialog(GitHubBrowserDialog::DBCs, { "DBC File (*.dbc)" });
+    GitHubBrowserDialog dbcDialog(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Open, { "DBC File (*.dbc)" });
     QComboBox *dbcRepos = dbcDialog.findChild<QComboBox *>("comboRepo");
     QVERIFY(dbcRepos);
     QCOMPARE(dbcRepos->count(), 2);
@@ -792,14 +804,14 @@ void TestGitHub::testBrowserNotFoundHints()
 
     {
         GitHubSettings::clearToken();
-        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)" });
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, { "Autodetect File Type (*.*)" });
         QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
         QCOMPARE(dialog.findChild<QPushButton *>("btnAccount")->text(), QString("Sign In..."));
         QTRY_VERIFY(lblStatus->text().contains("sign in first"));
     }
     {
         GitHubSettings::setToken("gho_token", true);
-        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)" });
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, { "Autodetect File Type (*.*)" });
         QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
         QCOMPARE(dialog.findChild<QPushButton *>("btnAccount")->text(), QString("GitHub Account..."));
         QTRY_VERIFY(lblStatus->text().contains("https://github.com/apps/savvycan/installations/new"));
@@ -807,7 +819,7 @@ void TestGitHub::testBrowserNotFoundHints()
     }
     {
         GitHubSettings::setToken("github_pat_token", false); //a token's repos are chosen on GitHub: no app link
-        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)" });
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, { "Autodetect File Type (*.*)" });
         QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
         QTRY_VERIFY(lblStatus->text().contains("no access"));
         QVERIFY(!lblStatus->text().contains("installations"));
@@ -858,6 +870,550 @@ void TestGitHub::testAccountDialog()
 
     GitHubSettings::clearToken();
     QSettings().remove("GitHub");
+}
+
+//A GitHub that remembers: repos with branches, each branch with its files and a commit SHA that changes on every save.
+//Enough of the REST API for saving, conflicts, branches, pull requests and creating repos.
+class FakeRepos
+{
+public:
+    struct Branch { QString commit; QMap<QString, QPair<QString, QByteArray>> files; }; //path: (blob sha, content)
+    QMap<QString, QMap<QString, Branch>> repos; //"owner/name": branch name: branch
+    QList<QJsonObject> pulls;
+    int counter = 0;
+
+    void addFile(const QString &repo, const QString &branch, const QString &path, const QByteArray &content)
+    {
+        Branch &b = repos[repo][branch];
+        b.files[path] = qMakePair(QString("blob%1").arg(++counter), content);
+        b.commit = QString("commit%1").arg(++counter);
+    }
+
+    FakeResponse handle(const FakeRequest &request)
+    {
+        const QString target = QString::fromUtf8(request.target);
+        const QString path = QUrl::fromPercentEncoding(target.section('?', 0, 0).toUtf8());
+        const QUrlQuery query(target.section('?', 1));
+        const QJsonObject body = QJsonDocument::fromJson(request.body).object();
+
+        if (path == "/user") return json(R"({"login":"tester"})");
+        if (path == "/user/orgs") return json(R"([{"login":"org1"}])");
+        if (request.method == "POST" && (path == "/user/repos" || path == "/orgs/org1/repos"))
+        {
+            const QString name = body.value("name").toString();
+            if (name == "taken")
+                return json(R"({"message":"Repository creation failed.","errors":[{"resource":"Repository","code":"custom","field":"name","message":"name already exists on this account"}]})", 422);
+            if (name == "forbidden") return json(R"({"message":"Resource not accessible by integration"})", 403);
+            const QString owner = path == "/user/repos" ? "tester" : "org1";
+            addFile(owner + "/" + name, "main", "README.md", "# " + name.toUtf8());
+            lastCreated = body;
+            return json(QString(R"({"owner":{"login":"%1"},"name":"%2","default_branch":"main"})").arg(owner, name).toUtf8(), 201);
+        }
+
+        //repo calls: /repos/<owner>/<name>/...
+        const QStringList parts = path.split('/');
+        if (parts.count() < 4 || parts[1] != "repos") return json(R"({"message":"Not Found"})", 404);
+        const QString repoName = parts[2] + "/" + parts[3];
+        if (!repos.contains(repoName)) return json(R"({"message":"Not Found"})", 404);
+        QMap<QString, Branch> &branches = repos[repoName];
+        const QString rest = parts.mid(4).join('/');
+
+        if (rest == "branches")
+        {
+            QJsonArray array;
+            for (auto it = branches.constBegin(); it != branches.constEnd(); ++it)
+                array.append(QJsonObject { { "name", it.key() }, { "commit", QJsonObject { { "sha", it.value().commit } } } });
+            return json(QJsonDocument(array).toJson());
+        }
+        if (rest.startsWith("git/trees/"))
+        {
+            const QString commit = rest.mid(10);
+            for (const Branch &b : std::as_const(branches))
+            {
+                if (b.commit != commit) continue;
+                QJsonArray tree;
+                QSet<QString> folders;
+                for (auto it = b.files.constBegin(); it != b.files.constEnd(); ++it)
+                {
+                    tree.append(QJsonObject { { "path", it.key() }, { "type", "blob" }, { "sha", it.value().first },
+                                              { "size", int(it.value().second.size()) } });
+                    QString folder = it.key().section('/', 0, -2);
+                    while (!folder.isEmpty() && !folders.contains(folder))
+                    {
+                        folders.insert(folder);
+                        tree.append(QJsonObject { { "path", folder }, { "type", "tree" }, { "sha", "t" + folder } });
+                        folder = folder.section('/', 0, -2);
+                    }
+                }
+                return json(QJsonDocument(QJsonObject { { "tree", tree }, { "truncated", false } }).toJson());
+            }
+            return json(R"({"message":"Not Found"})", 404);
+        }
+        if (rest.startsWith("contents/"))
+        {
+            const QString file = rest.mid(9);
+            if (request.method == "GET")
+            {
+                const QString ref = query.queryItemValue("ref", QUrl::FullyDecoded);
+                for (auto it = branches.constBegin(); it != branches.constEnd(); ++it)
+                {
+                    if (it.key() != ref && it.value().commit != ref) continue;
+                    if (!it.value().files.contains(file)) break;
+                    const auto &f = it.value().files[file];
+                    if (request.headers.value("accept") == "application/vnd.github.raw") return FakeResponse { 200, f.second, {}, false };
+                    return json(QJsonDocument(QJsonObject { { "sha", f.first }, { "path", file } }).toJson());
+                }
+                return json(R"({"message":"Not Found"})", 404);
+            }
+            if (request.method == "PUT")
+            {
+                const QString branchName = body.value("branch").toString();
+                if (!branches.contains(branchName)) return json(R"({"message":"Branch not found"})", 404);
+                if (file.contains("fail-me")) return json(R"({"message":"Server Error"})", 500);
+                Branch &b = branches[branchName];
+                const QString sha = body.value("sha").toString();
+                if (b.files.contains(file) && sha.isEmpty())
+                    return json(R"({"message":"Invalid request.\n\n\"sha\" wasn't supplied."})", 422);
+                if (b.files.contains(file) && sha != b.files[file].first)
+                    return json(QString(R"({"message":"%1 does not match %2"})").arg(file, sha).toUtf8(), 409);
+                if (!b.files.contains(file) && !sha.isEmpty())
+                    return json(QString(R"({"message":"%1 does not match"})").arg(file).toUtf8(), 409);
+                const bool created = !b.files.contains(file);
+                addFile(repoName, branchName, file, QByteArray::fromBase64(body.value("content").toString().toLatin1()));
+                lastMessage = body.value("message").toString();
+                return json(QJsonDocument(QJsonObject {
+                    { "content", QJsonObject { { "sha", b.files[file].first } } },
+                    { "commit", QJsonObject { { "html_url", "https://github.com/" + repoName + "/commit/" + b.commit } } }
+                }).toJson(), created ? 201 : 200);
+            }
+        }
+        if (rest == "git/refs" && request.method == "POST")
+        {
+            const QString name = body.value("ref").toString().mid(11);
+            if (branches.contains(name)) return json(R"({"message":"Reference already exists"})", 422);
+            for (const Branch &b : std::as_const(branches))
+            {
+                if (b.commit != body.value("sha").toString()) continue;
+                branches[name] = b;
+                return json(R"({"ref":"refs/heads/x"})", 201);
+            }
+            return json(R"({"message":"Object does not exist"})", 422);
+        }
+        if (rest.startsWith("git/refs/heads/") && request.method == "DELETE")
+        {
+            branches.remove(rest.mid(15));
+            return FakeResponse { 204, QByteArray(), {}, false };
+        }
+        if (rest == "pulls" && request.method == "POST")
+        {
+            pulls.append(body);
+            return json(QString(R"({"html_url":"https://github.com/%1/pull/%2"})").arg(repoName).arg(pulls.count()).toUtf8(), 201);
+        }
+        return json(R"({"message":"Not Found"})", 404);
+    }
+
+    QJsonObject lastCreated;
+    QString lastMessage;
+};
+
+//a GitHub with o/r: main has logs/run.csv and dbc/car.dbc
+struct SaveFixture
+{
+    FakeGitHub github;
+    FakeRepos repos;
+    QTemporaryDir cache;
+    QStringList asked; //what the dialog asked, in order
+    QList<QMessageBox::StandardButton> answers; //what to answer, in order (Ok when they run out)
+
+    SaveFixture()
+    {
+        repos.addFile("o/r", "main", "logs/run.csv", "old log");
+        repos.addFile("o/r", "main", "dbc/car.dbc", "VERSION \"\"");
+        github.handler = [this](const FakeRequest &request) { return repos.handle(request); };
+        GitHubCache::setRootDir(cache.path());
+        QSettings().setValue("GitHub/ApiUrl", github.url());
+        GitHubSettings::setToken("gho_token", true);
+        GitHubRepo repo;
+        repo.owner = "o";
+        repo.name = "r";
+        repo.branch = "main";
+        GitHubSettings::setRepos({ repo });
+    }
+    ~SaveFixture()
+    {
+        GitHubSettings::clearToken();
+        QSettings().remove("GitHub");
+    }
+
+    void prepare(GitHubBrowserDialog &dialog, const QByteArray &content)
+    {
+        dialog.ask = [this](QMessageBox::Icon, const QString &text, QMessageBox::StandardButtons,
+                            const QMap<QMessageBox::StandardButton, QString> &)
+        {
+            asked.append(text);
+            return answers.isEmpty() ? QMessageBox::Ok : answers.takeFirst();
+        };
+        dialog.setSaveWriter([content](const QString &localFile, int, QString &)
+        {
+            QFile file(localFile);
+            return file.open(QIODevice::WriteOnly) && file.write(content) == content.size();
+        });
+    }
+};
+
+static const QStringList saveTypes { "GVRET Logs (*.csv *.CSV)", "Candump/Kayak (*.log)" };
+
+void TestGitHub::testExtensionFor()
+{
+    QCOMPARE(GitHubBrowserDialog::extensionFor("GVRET Logs (*.csv *.CSV)"), QString(".csv"));
+    QCOMPARE(GitHubBrowserDialog::extensionFor("DBC File (*.dbc)"), QString(".dbc"));
+    QCOMPARE(GitHubBrowserDialog::extensionFor("Autodetect File Type (*.*)"), QString());
+    QCOMPARE(GitHubBrowserDialog::extensionFor("No patterns"), QString());
+}
+
+void TestGitHub::testClientSave()
+{
+    FakeGitHub github;
+    FakeRepos repos;
+    repos.addFile("o/r", "main", "logs/run.csv", "old");
+    github.handler = [&repos](const FakeRequest &request) { return repos.handle(request); };
+    GitHubClient client;
+    client.setApiUrl(github.url());
+    client.setToken("gho_token");
+
+    auto put = [&](const QString &path, const QByteArray &content, const QString &sha, bool &conflict, QString &error)
+    {
+        GitHubSaveResult result;
+        bool done = false;
+        client.putFile("o", "r", "main", path, content, "a message", sha,
+                       [&](const GitHubSaveResult &r, bool c, const QString &e) { result = r; conflict = c; error = e; done = true; });
+        QTest::qWaitFor([&done]() { return done; }, 5000);
+        return result;
+    };
+
+    //a new file
+    bool conflict = false;
+    QString error;
+    GitHubSaveResult result = put("logs/new run.csv", "new content", QString(), conflict, error);
+    QCOMPARE(error, QString());
+    QVERIFY(!conflict);
+    QCOMPARE(result.sha, repos.repos["o/r"]["main"].files["logs/new run.csv"].first);
+    QVERIFY(result.commitUrl.startsWith("https://github.com/o/r/commit/"));
+    QCOMPARE(repos.repos["o/r"]["main"].files["logs/new run.csv"].second, QByteArray("new content"));
+    const QJsonObject sent = QJsonDocument::fromJson(github.requests.last().body).object();
+    QCOMPARE(github.requests.last().method, QByteArray("PUT"));
+    QCOMPARE(github.requests.last().target, QByteArray("/repos/o/r/contents/logs/new%20run.csv"));
+    QCOMPARE(sent.value("message").toString(), QString("a message"));
+    QCOMPARE(sent.value("branch").toString(), QString("main"));
+    QVERIFY(!sent.contains("sha"));
+    QCOMPARE(github.requests.last().headers.value("content-type"), QByteArray("application/json"));
+
+    //an existing file: without its SHA, with a wrong one, then with the right one
+    put("logs/run.csv", "x", QString(), conflict, error);
+    QVERIFY(conflict);
+    put("logs/run.csv", "x", "not-the-sha", conflict, error);
+    QVERIFY(conflict);
+    QVERIFY(!error.isEmpty());
+    const QString current = repos.repos["o/r"]["main"].files["logs/run.csv"].first;
+    result = put("logs/run.csv", "replaced", current, conflict, error);
+    QVERIFY(!conflict);
+    QCOMPARE(error, QString());
+    QCOMPARE(repos.repos["o/r"]["main"].files["logs/run.csv"].second, QByteArray("replaced"));
+
+    //an error that isn't a conflict
+    put("fail-me.csv", "x", QString(), conflict, error);
+    QVERIFY(!conflict);
+    QVERIFY(error.contains("500"));
+
+    //the current SHA, or none for a missing file
+    QString sha;
+    bool done = false;
+    client.getFileSha("o", "r", "main", "logs/run.csv", [&](const QString &s, const QString &e) { sha = s; error = e; done = true; });
+    QTRY_VERIFY(done);
+    QCOMPARE(sha, repos.repos["o/r"]["main"].files["logs/run.csv"].first);
+    done = false;
+    client.getFileSha("o", "r", "main", "nothing.csv", [&](const QString &s, const QString &e) { sha = s; error = e; done = true; });
+    QTRY_VERIFY(done);
+    QVERIFY(sha.isEmpty());
+    QVERIFY(error.isEmpty());
+
+    //branches and pull requests
+    done = false;
+    client.createBranch("o", "r", "feature/x", repos.repos["o/r"]["main"].commit, [&](const QString &e) { error = e; done = true; });
+    QTRY_VERIFY(done);
+    QCOMPARE(error, QString());
+    QVERIFY(repos.repos["o/r"].contains("feature/x"));
+    QCOMPARE(QJsonDocument::fromJson(github.requests.last().body).object().value("ref").toString(), QString("refs/heads/feature/x"));
+    QString url;
+    done = false;
+    client.createPullRequest("o", "r", "feature/x", "main", "A title", "A body",
+                             [&](const QString &u, const QString &e) { url = u; error = e; done = true; });
+    QTRY_VERIFY(done);
+    QCOMPARE(url, QString("https://github.com/o/r/pull/1"));
+    QCOMPARE(repos.pulls[0].value("head").toString(), QString("feature/x"));
+    QCOMPARE(repos.pulls[0].value("base").toString(), QString("main"));
+    QCOMPARE(repos.pulls[0].value("title").toString(), QString("A title"));
+    done = false;
+    client.deleteBranch("o", "r", "feature/x", [&](const QString &e) { error = e; done = true; });
+    QTRY_VERIFY(done);
+    QCOMPARE(error, QString());
+    QVERIFY(!repos.repos["o/r"].contains("feature/x"));
+    QCOMPARE(github.requests.last().target, QByteArray("/repos/o/r/git/refs/heads/feature/x"));
+
+    //organisations and new repos
+    QStringList orgs;
+    done = false;
+    client.listOrgs([&](const QStringList &o, const QString &e) { orgs = o; error = e; done = true; });
+    QTRY_VERIFY(done);
+    QCOMPARE(orgs, QStringList { "org1" });
+
+    QString owner, defaultBranch;
+    int status = 0;
+    done = false;
+    client.createRepo(QString(), "logs2", "Some logs", true, [&](const QString &o, const QString &b, const QString &e, int s)
+    {
+        owner = o; defaultBranch = b; error = e; status = s; done = true;
+    });
+    QTRY_VERIFY(done);
+    QCOMPARE(error, QString());
+    QCOMPARE(owner, QString("tester"));
+    QCOMPARE(defaultBranch, QString("main"));
+    QCOMPARE(github.requests.last().target, QByteArray("/user/repos"));
+    QVERIFY(repos.lastCreated.value("private").toBool());
+    QVERIFY(repos.lastCreated.value("auto_init").toBool());
+    QCOMPARE(repos.lastCreated.value("description").toString(), QString("Some logs"));
+
+    done = false;
+    client.createRepo("org1", "shared", QString(), false, [&](const QString &o, const QString &, const QString &e, int)
+    {
+        owner = o; error = e; done = true;
+    });
+    QTRY_VERIFY(done);
+    QCOMPARE(owner, QString("org1"));
+    QCOMPARE(github.requests.last().target, QByteArray("/orgs/org1/repos"));
+    QVERIFY(!repos.lastCreated.value("private").toBool());
+
+    done = false;
+    client.createRepo(QString(), "taken", QString(), true, [&](const QString &, const QString &, const QString &e, int s)
+    {
+        error = e; status = s; done = true;
+    });
+    QTRY_VERIFY(done);
+    QCOMPARE(status, 422);
+    QVERIFY2(error.contains("name already exists on this account"), qPrintable(error));
+
+    done = false;
+    client.createRepo(QString(), "forbidden", QString(), true, [&](const QString &, const QString &, const QString &e, int s)
+    {
+        error = e; status = s; done = true;
+    });
+    QTRY_VERIFY(done);
+    QCOMPARE(status, 403);
+}
+
+void TestGitHub::testSaveNewFile()
+{
+    SaveFixture f;
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+    f.prepare(dialog, "Time Stamp,ID\n1,0x100\n");
+    dialog.setSuggestion(GitHubOrigin(), "bench run");
+    dialog.show();
+
+    QTreeWidget *tree = dialog.findChild<QTreeWidget *>("tree");
+    QLineEdit *editFolder = dialog.findChild<QLineEdit *>("editFolder");
+    QLineEdit *editName = dialog.findChild<QLineEdit *>("editName");
+    QPushButton *btnSave = dialog.findChild<QPushButton *>("btnOpen");
+    QTRY_VERIFY(findItem(tree, "logs"));
+    QVERIFY(findItem(tree, "dbc")); //every folder, even without files of this type
+    QVERIFY(!findItem(tree, "car.dbc"));
+    screenshot(&dialog, "github-save");
+
+    tree->setCurrentItem(findItem(tree, "logs"));
+    emit tree->itemClicked(findItem(tree, "logs"), 0);
+    QCOMPARE(editFolder->text(), QString("logs"));
+    QCOMPARE(editName->text(), QString("bench run.csv")); //the file type's extension added
+    QVERIFY(btnSave->isEnabled());
+    btnSave->click();
+
+    QCOMPARE(dialog.result(), int(QDialog::Accepted));
+    const auto &files = f.repos.repos["o/r"]["main"].files;
+    QVERIFY(files.contains("logs/bench run.csv")); //the file type's extension added
+    QCOMPARE(files["logs/bench run.csv"].second, QByteArray("Time Stamp,ID\n1,0x100\n"));
+    QCOMPARE(f.repos.lastMessage, QString("Add bench run.csv from SavvyCAN"));
+    QCOMPARE(dialog.origin().path, QString("logs/bench run.csv"));
+    QCOMPARE(dialog.origin().sha, files["logs/bench run.csv"].first);
+    QVERIFY(dialog.resultUrl().contains("/commit/"));
+    QCOMPARE(GitHubCache::originOf(dialog.localFile()).sha, dialog.origin().sha); //cached as saved
+    QCOMPARE(f.asked.count(), 1);
+    QVERIFY(f.asked[0].startsWith("Saved logs/bench run.csv to o/r on main."));
+}
+
+void TestGitHub::testSaveBackAndConflicts()
+{
+    SaveFixture f;
+    const QString loadedSha = f.repos.repos["o/r"]["main"].files["logs/run.csv"].first;
+    const GitHubOrigin loaded { "o", "r", "main", "logs/run.csv", loadedSha };
+
+    //saving back what was loaded: no questions, an "Update" commit
+    {
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "version 2");
+        dialog.setSuggestion(loaded, QString());
+        QCOMPARE(dialog.findChild<QLineEdit *>("editFolder")->text(), QString("logs"));
+        QCOMPARE(dialog.findChild<QLineEdit *>("editName")->text(), QString("run.csv"));
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "run.csv"));
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QCOMPARE(f.repos.repos["o/r"]["main"].files["logs/run.csv"].second, QByteArray("version 2"));
+        QCOMPARE(f.repos.lastMessage, QString("Update run.csv from SavvyCAN"));
+        QCOMPARE(f.asked.count(), 1); //only "Saved"
+    }
+
+    //saving the old version again: GitHub has a newer one. "Save Under a New Name" saves nothing yet.
+    f.asked.clear();
+    {
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "version 3");
+        f.answers = { QMessageBox::No };
+        dialog.setSuggestion(loaded, QString());
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "run.csv"));
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(f.asked.count(), 1);
+        QVERIFY(f.asked[0].contains("isn't the version this one replaces"));
+        QVERIFY(dialog.result() != int(QDialog::Accepted));
+        QCOMPARE(dialog.findChild<QLineEdit *>("editName")->text(), QString("run (2).csv"));
+        QCOMPARE(f.repos.repos["o/r"]["main"].files["logs/run.csv"].second, QByteArray("version 2"));
+
+        //...then saved under that name
+        f.asked.clear();
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QCOMPARE(f.repos.repos["o/r"]["main"].files["logs/run (2).csv"].second, QByteArray("version 3"));
+    }
+
+    //"Overwrite" replaces whatever is there now
+    f.asked.clear();
+    {
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "version 4");
+        f.answers = { QMessageBox::Yes };
+        dialog.setSuggestion(loaded, QString());
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "run.csv"));
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QCOMPARE(f.repos.repos["o/r"]["main"].files["logs/run.csv"].second, QByteArray("version 4"));
+        QCOMPARE(f.asked.count(), 2); //the conflict, then "Saved"
+    }
+
+    //another file of that name, not the one loaded: asked first; Cancel saves nothing
+    f.asked.clear();
+    {
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "other");
+        f.answers = { QMessageBox::Cancel };
+        dialog.setSuggestion(GitHubOrigin(), "run.csv");
+        dialog.findChild<QLineEdit *>("editFolder")->setText("logs");
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "run.csv"));
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(f.asked.count(), 1);
+        QVERIFY(f.asked[0].contains("is already in o/r on main. Replace it?"));
+        QVERIFY(dialog.result() != int(QDialog::Accepted));
+        QCOMPARE(f.repos.repos["o/r"]["main"].files["logs/run.csv"].second, QByteArray("version 4"));
+    }
+}
+
+void TestGitHub::testSaveNewBranchAndPullRequest()
+{
+    SaveFixture f;
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Save, { "DBC File (*.dbc)" });
+    f.prepare(dialog, "VERSION \"2\"");
+    dialog.setSuggestion(GitHubOrigin { "o", "r", "main", "dbc/car.dbc",
+                                        f.repos.repos["o/r"]["main"].files["dbc/car.dbc"].first }, QString());
+    QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "car.dbc"));
+
+    QCheckBox *cbNewBranch = dialog.findChild<QCheckBox *>("cbNewBranch");
+    cbNewBranch->setChecked(true);
+    QLineEdit *editBranchName = dialog.findChild<QLineEdit *>("editBranchName");
+    QVERIFY(editBranchName->text().startsWith("savvycan/car-"));
+    editBranchName->setText("savvycan/car-update");
+    dialog.findChild<QLineEdit *>("editPrTitle")->setText("New signals for the car");
+    dialog.findChild<QLineEdit *>("editMessage")->setText("Add the charger messages");
+    dialog.findChild<QPushButton *>("btnOpen")->click();
+
+    QCOMPARE(dialog.result(), int(QDialog::Accepted));
+    QCOMPARE(f.repos.repos["o/r"]["savvycan/car-update"].files["dbc/car.dbc"].second, QByteArray("VERSION \"2\""));
+    QCOMPARE(f.repos.repos["o/r"]["main"].files["dbc/car.dbc"].second, QByteArray("VERSION \"\"")); //main untouched
+    QCOMPARE(f.repos.lastMessage, QString("Add the charger messages"));
+    QCOMPARE(f.repos.pulls.count(), 1);
+    QCOMPARE(f.repos.pulls[0].value("head").toString(), QString("savvycan/car-update"));
+    QCOMPARE(f.repos.pulls[0].value("base").toString(), QString("main"));
+    QCOMPARE(f.repos.pulls[0].value("title").toString(), QString("New signals for the car"));
+    QCOMPARE(dialog.resultUrl(), QString("https://github.com/o/r/pull/1"));
+    QCOMPARE(dialog.origin().branch, QString("savvycan/car-update"));
+    QVERIFY(f.asked.last().contains("opened a pull request into main"));
+
+    //a save that fails takes its new branch away again
+    f.asked.clear();
+    GitHubBrowserDialog failing(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Save, { "DBC File (*.dbc)" });
+    f.prepare(failing, "x");
+    failing.setSuggestion(GitHubOrigin(), "fail-me.dbc");
+    QTRY_VERIFY(findItem(failing.findChild<QTreeWidget *>("tree"), "dbc"));
+    failing.findChild<QCheckBox *>("cbNewBranch")->setChecked(true);
+    failing.findChild<QLineEdit *>("editBranchName")->setText("savvycan/doomed");
+    failing.findChild<QPushButton *>("btnOpen")->click();
+    QVERIFY(failing.result() != int(QDialog::Accepted));
+    QVERIFY(f.asked.last().contains("couldn't be saved"));
+    QVERIFY(!f.repos.repos["o/r"].contains("savvycan/doomed"));
+}
+
+void TestGitHub::testCreateRepo()
+{
+    SaveFixture f;
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+    f.prepare(dialog, "x");
+    QPushButton *btnNewRepo = dialog.findChild<QPushButton *>("btnNewRepo");
+    QTRY_VERIFY(btnNewRepo->isEnabled()); //once the account is known
+
+    QVERIFY(dialog.createRepoNow("tester", "bench-logs", "Logs from the bench", true));
+    QComboBox *comboRepo = dialog.findChild<QComboBox *>("comboRepo");
+    QCOMPARE(comboRepo->currentText(), QString("tester/bench-logs"));
+    QCOMPARE(GitHubSettings::repos().last().fullName(), QString("tester/bench-logs"));
+    QCOMPARE(GitHubSettings::repos().last().branch, QString("main"));
+    QTRY_COMPARE(dialog.findChild<QComboBox *>("comboBranch")->currentText(), QString("main"));
+    QVERIFY(f.repos.lastCreated.value("private").toBool());
+
+    QVERIFY(dialog.createRepoNow("org1", "team-logs", QString(), true));
+    QCOMPARE(comboRepo->currentText(), QString("org1/team-logs"));
+
+    QVERIFY(!dialog.createRepoNow("tester", "taken", QString(), true));
+    QVERIFY(f.asked.last().contains("name already exists on this account"));
+    QVERIFY(!dialog.createRepoNow("tester", "forbidden", QString(), true));
+    QVERIFY(f.asked.last().contains("Administration: read and write"));
+    QCOMPARE(GitHubSettings::repos().count(), 3);
+}
+
+void TestGitHub::testSaveNameFollowsType()
+{
+    SaveFixture f;
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+    f.prepare(dialog, "x");
+    QComboBox *comboType = dialog.findChild<QComboBox *>("comboType");
+    QLineEdit *editName = dialog.findChild<QLineEdit *>("editName");
+
+    dialog.setSuggestion(GitHubOrigin(), "capture.log"); //picks the type that fits the name
+    QCOMPARE(comboType->currentIndex(), 1);
+    comboType->setCurrentIndex(0);
+    QCOMPARE(editName->text(), QString("capture.csv"));
+    dialog.setSuggestion(GitHubOrigin(), "capture.blf"); //no type fits: the name gets the type's extension
+    QCOMPARE(editName->text(), QString("capture.csv"));
+
+    //signed out, nothing can be saved
+    GitHubSettings::clearToken();
+    GitHubBrowserDialog signedOut(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+    f.prepare(signedOut, "x");
+    signedOut.setSuggestion(GitHubOrigin(), "a.csv");
+    QVERIFY(!signedOut.findChild<QPushButton *>("btnOpen")->isEnabled());
+    QCOMPARE(signedOut.findChild<QPushButton *>("btnAccount")->text(), QString("Sign In..."));
 }
 
 QTEST_MAIN(TestGitHub)

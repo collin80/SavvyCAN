@@ -66,6 +66,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnSaveGitHub">
+       <property name="text">
+        <string>Save to GitHub</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnEdit">
        <property name="text">
         <string>Edit</string>

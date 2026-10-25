@@ -63,6 +63,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *
     connect(ui->btnEdit, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::editFile);
     connect(ui->btnLoad, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFile);
     connect(ui->btnLoadGitHub, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFromGitHub);
+    connect(ui->btnSaveGitHub, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::saveToGitHub);
     connect(ui->btnMoveDown, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveDown);
     connect(ui->btnMoveUp, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveUp);
     connect(ui->btnRemove, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::removeFile);
@@ -181,7 +182,7 @@ void DBCLoadSaveWindow::loadFile()
 
 void DBCLoadSaveWindow::loadFromGitHub()
 {
-    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, DBCHandler::loadFilters(), this);
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Open, DBCHandler::loadFilters(), this);
     if (dialog.exec() != QDialog::Accepted) return;
 
     DBCFile *file = dbcHandler->loadFileAs(dialog.localFile(), dialog.fileTypeIndex());
@@ -192,6 +193,45 @@ void DBCLoadSaveWindow::loadFromGitHub()
         return;
     }
     addFileRow(file);
+}
+
+void DBCLoadSaveWindow::saveToGitHub()
+{
+    const int idx = ui->tableFiles->currentRow();
+    DBCFile *file = dbcHandler->getFileByIdx(idx);
+    if (idx < 0 || !file)
+    {
+        QMessageBox::information(this, tr("Save to GitHub"), tr("Pick a DBC file in the list first."));
+        return;
+    }
+
+    //the saver renames the file to wherever it writes, so its name and dirty flag are put back if nothing's saved
+    const QString oldName = file->getFullFilename();
+    const bool wasDirty = file->getDirtyFlag();
+
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Save, DBCHandler::saveFilters(), this);
+    dialog.setSaveWriter([this, idx](const QString &localFile, int, QString &error)
+    {
+        QString name = localFile;
+        if (dbcHandler->saveDBCFileAs(idx, name)) return true;
+        error = tr("The DBC file couldn't be written.");
+        return false;
+    });
+    QString name = file->getFilename();
+    if (name.endsWith(".ldf", Qt::CaseInsensitive)) name = name.left(name.length() - 4) + ".dbc"; //saved as DBC
+    const GitHubOrigin from = GitHubCache::originOf(oldName);
+    dialog.setSuggestion(from.isValid() && from.path.endsWith(".dbc", Qt::CaseInsensitive) ? from : GitHubOrigin(), name);
+
+    if (dialog.exec() == QDialog::Accepted && !dialog.localFile().isEmpty())
+    {
+        file->saveFile(dialog.localFile()); //the same text the dialog saved: the file now goes by its GitHub copy
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFilename()));
+        updateSettings();
+        return;
+    }
+    file->setFullFilename(oldName);
+    if (wasDirty) file->setDirtyFlag();
+    else file->clearDirtyFlag();
 }
 
 //a row in the table for a file just loaded

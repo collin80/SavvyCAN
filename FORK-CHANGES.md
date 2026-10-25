@@ -10,7 +10,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 |---|---|---|
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
-| GitHub repos: load log files and DBC files from GitHub (File > Load Log File from GitHub, DBC File Manager > Load from GitHub), signed in with GitHub or a token | `github-phase1-load` | fork only for now |
+| GitHub repos: load and save log files and DBC files in GitHub repos (File menu, DBC File Manager), signed in with the SavvyCAN GitHub App or a token | `github-phase1-load`, `github-phase2-save` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
 | Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
@@ -77,6 +77,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
+| `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -119,6 +120,26 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: save logs and DBC files to GitHub (`github-phase2-save`)
+
+Phase 2 of the [GitHub repos roadmap](docs/github-repos-roadmap.md).
+
+- **Where:** File > Save Log File to GitHub..., and Save to GitHub in the DBC File Manager (for the DBC picked).
+- **The dialog:** the GitHub browser in save mode: repo, branch, file type, a folder (click one in the tree) and a
+  file name (click a file to replace it), and an optional commit message. The file is written by SavvyCAN's own
+  saver, uploaded as one commit, and then kept in the cache like a loaded file.
+- **Saving back:** a log or DBC loaded from GitHub suggests its own place. If the file changed on GitHub since, the
+  user picks Overwrite, Save Under a New Name, or Cancel. Replacing a different existing file asks first.
+- **Pull requests:** "Save to a new branch and open a pull request" makes the branch, saves there, and opens a pull
+  request into the branch picked (the branch goes again if the save fails).
+- **New Repo...:** creates a repo, private by default, under the account or one of its organisations, with a README
+  so it has a branch. Needs Administration: read and write (added to the SavvyCAN app).
+- **Sizes:** over 50 MB asks first; over 100 MB is refused, as GitHub would.
+- **DBC files:** after saving, a DBC goes by its GitHub copy (and reloads from it at the next start); when nothing's
+  saved, it keeps its old name and unsaved-changes flag (`DBCFile::setFullFilename`).
+- **Tests:** `TestGitHub` (43) adds a fake GitHub that keeps repos, branches and file versions, and covers saving,
+  conflicts, pull requests and creating repos.
 
 ### 2026-10-25: ISO-TP and UDS unit tests working again (`obd2-phase0-tests`)
 
