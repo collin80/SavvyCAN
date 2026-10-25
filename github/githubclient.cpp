@@ -83,6 +83,23 @@ QNetworkReply *GitHubClient::get(const QString &apiPath, ReplyCallback done, boo
     return reply;
 }
 
+QNetworkReply *GitHubClient::send(const QByteArray &verb, const QString &apiPath, const QByteArray &json,
+                                  ReplyCallback done)
+{
+    QNetworkRequest req = request(apiPath);
+    if (!json.isEmpty()) req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QNetworkReply *reply = manager->sendCustomRequest(req, verb, json);
+    connect(reply, &QNetworkReply::finished, this, [reply, done]()
+    {
+        reply->deleteLater();
+        const QByteArray body = reply->readAll();
+        if (reply->error() != QNetworkReply::NoError) done(reply, body, errorText(reply, body));
+        else done(reply, body, QString());
+    });
+    return reply;
+}
+
 QString GitHubClient::notFoundText()
 {
     return tr("Not found on GitHub, or this account has no access to it.");
@@ -95,7 +112,15 @@ QString GitHubClient::errorText(QNetworkReply *reply, const QByteArray &body)
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     if (status == 0) return tr("Couldn't reach GitHub: %1").arg(reply->errorString());
 
-    const QString message = QJsonDocument::fromJson(body).object().value("message").toString();
+    const QJsonObject json = QJsonDocument::fromJson(body).object();
+    QString message = json.value("message").toString();
+    //422s say what was wrong in "errors" ("name already exists on this account")
+    const QJsonArray details = json.value("errors").toArray();
+    for (const QJsonValue &detail : details)
+    {
+        const QString text = detail.isString() ? detail.toString() : detail.toObject().value("message").toString();
+        if (!text.isEmpty()) message += (message.isEmpty() ? "" : ": ") + text;
+    }
 
     if ((status == 403 || status == 429) && reply->rawHeader("X-RateLimit-Remaining") == "0")
     {
@@ -195,4 +220,117 @@ QNetworkReply *GitHubClient::download(const QString &owner, const QString &repo,
 {
     return get(repoPath(owner, repo) + "/contents/" + encodedPath(path) + "?ref=" + encoded(ref),
                [done](QNetworkReply *, const QByteArray &body, const QString &error) { done(body, error); }, true);
+}
+
+void GitHubClient::getFileSha(const QString &owner, const QString &repo, const QString &ref, const QString &path,
+                              std::function<void(const QString &sha, const QString &error)> done)
+{
+    get(repoPath(owner, repo) + "/contents/" + encodedPath(path) + "?ref=" + encoded(ref),
+        [done](QNetworkReply *reply, const QByteArray &body, const QString &error)
+    {
+        if (reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt() == 404) return done(QString(), QString());
+        if (!error.isEmpty()) return done(QString(), error);
+        const QJsonDocument doc = QJsonDocument::fromJson(body);
+        if (doc.isArray()) return done(QString(), tr("That's a folder in the repo, not a file."));
+        done(doc.object().value("sha").toString(), QString());
+    });
+}
+
+QNetworkReply *GitHubClient::putFile(const QString &owner, const QString &repo, const QString &branch,
+                                     const QString &path, const QByteArray &content, const QString &message,
+                                     const QString &sha,
+                                     std::function<void(const GitHubSaveResult &result, bool conflict,
+                                                        const QString &error)> done)
+{
+    QJsonObject json;
+    json["message"] = message;
+    json["content"] = QString::fromLatin1(content.toBase64());
+    json["branch"] = branch;
+    if (!sha.isEmpty()) json["sha"] = sha;
+
+    return send("PUT", repoPath(owner, repo) + "/contents/" + encodedPath(path),
+                QJsonDocument(json).toJson(QJsonDocument::Compact),
+                [done](QNetworkReply *reply, const QByteArray &body, const QString &error)
+    {
+        GitHubSaveResult result;
+        if (!error.isEmpty())
+        {
+            //409: the file isn't the version given; 422 about "sha": it exists but no version was given
+            const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            const QString message = QJsonDocument::fromJson(body).object().value("message").toString();
+            const bool conflict = status == 409 || (status == 422 && message.contains("sha"));
+            return done(result, conflict, error);
+        }
+        const QJsonObject obj = QJsonDocument::fromJson(body).object();
+        result.sha = obj.value("content").toObject().value("sha").toString();
+        result.commitUrl = obj.value("commit").toObject().value("html_url").toString();
+        done(result, false, QString());
+    });
+}
+
+void GitHubClient::createBranch(const QString &owner, const QString &repo, const QString &name,
+                                const QString &fromSha, std::function<void(const QString &error)> done)
+{
+    QJsonObject json;
+    json["ref"] = "refs/heads/" + name;
+    json["sha"] = fromSha;
+    send("POST", repoPath(owner, repo) + "/git/refs", QJsonDocument(json).toJson(QJsonDocument::Compact),
+         [done](QNetworkReply *, const QByteArray &, const QString &error) { done(error); });
+}
+
+void GitHubClient::deleteBranch(const QString &owner, const QString &repo, const QString &name,
+                                std::function<void(const QString &error)> done)
+{
+    send("DELETE", repoPath(owner, repo) + "/git/refs/heads/" + encodedPath(name), QByteArray(),
+         [done](QNetworkReply *, const QByteArray &, const QString &error) { done(error); });
+}
+
+void GitHubClient::createPullRequest(const QString &owner, const QString &repo, const QString &head,
+                                     const QString &base, const QString &title, const QString &body,
+                                     std::function<void(const QString &url, const QString &error)> done)
+{
+    QJsonObject json;
+    json["title"] = title;
+    json["head"] = head;
+    json["base"] = base;
+    json["body"] = body;
+    send("POST", repoPath(owner, repo) + "/pulls", QJsonDocument(json).toJson(QJsonDocument::Compact),
+         [done](QNetworkReply *, const QByteArray &reply, const QString &error)
+    {
+        if (!error.isEmpty()) return done(QString(), error);
+        done(QJsonDocument::fromJson(reply).object().value("html_url").toString(), QString());
+    });
+}
+
+void GitHubClient::listOrgs(std::function<void(const QStringList &orgs, const QString &error)> done)
+{
+    get("/user/orgs?per_page=100", [done](QNetworkReply *, const QByteArray &body, const QString &error)
+    {
+        if (!error.isEmpty()) return done(QStringList(), error);
+        QStringList orgs;
+        const QJsonArray array = QJsonDocument::fromJson(body).array();
+        for (const QJsonValue &value : array) orgs.append(value.toObject().value("login").toString());
+        done(orgs, QString());
+    });
+}
+
+void GitHubClient::createRepo(const QString &org, const QString &name, const QString &description, bool isPrivate,
+                              std::function<void(const QString &owner, const QString &defaultBranch,
+                                                 const QString &error, int status)> done)
+{
+    QJsonObject json;
+    json["name"] = name;
+    if (!description.isEmpty()) json["description"] = description;
+    json["private"] = isPrivate;
+    json["auto_init"] = true;
+    const QString path = org.isEmpty() ? QString("/user/repos") : "/orgs/" + encoded(org) + "/repos";
+    send("POST", path, QJsonDocument(json).toJson(QJsonDocument::Compact),
+         [done](QNetworkReply *reply, const QByteArray &body, const QString &error)
+    {
+        const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (!error.isEmpty()) return done(QString(), QString(), error, status);
+        const QJsonObject obj = QJsonDocument::fromJson(body).object();
+        done(obj.value("owner").toObject().value("login").toString(), obj.value("default_branch").toString(),
+             QString(), status);
+    });
 }
