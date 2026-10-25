@@ -12,7 +12,7 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | 0: file dialogs split from loading and saving | Done, merged into `fork-ci` (`8e00c02`) |
 | 1: load logs and DBC files from GitHub | Done, merged into `fork-ci` (`ecda015`); CI packages carry the TLS plugins. Tested against a fake GitHub only |
 | 1b: sign-in for everyone (the SavvyCAN GitHub App built in), shared repo list, EV-CANlogs preloaded | Done, merged into `fork-ci`; signing in and loading from `Tom-evnut/EV-CANlogs` confirmed by the user on Windows |
-| 2: save logs and DBC files, create repos | Next |
+| 2: save logs and DBC files, create repos | Done, merged into `fork-ci`. Tested against a fake GitHub; the real round trip on `Tom-evnut/SavvyCan_LogTest` is next |
 | 3, 4 | Not started |
 
 ---
@@ -125,9 +125,22 @@ One dialog for logs and DBCs:
   remembered separately for each.
 - **Open mode (phase 1):** pick a file; it's downloaded with a progress dialog that can be cancelled. Files over
   100 MB and Git LFS pointer files are refused with a message.
-- **Save mode (phase 2):** pick a folder, file name, format (logs), commit message, and a "Commit to a new branch and
-  open a pull request" checkbox with branch name and PR title; a **New Repo...** button next to the repo picker
-  (section 4.7). After saving, the commit or pull request link is shown.
+- **Save mode (phase 2):** the tree shows every folder; clicking a folder picks it, clicking a file picks its folder
+  and name (to replace it). Then the file type, folder, file name (it follows the file type: "run.csv" becomes
+  "run.asc"), an optional commit message ("Add/Update <file> from SavvyCAN" otherwise), and "Save to a new branch and
+  open a pull request" with the branch name (`savvycan/<file>-<date>-<time>` suggested) and pull request title.
+  **New Repo...** sits next to the repo picker (section 4.7). Saving needs a sign-in.
+  - **How it saves:** SavvyCAN's own saver (a writer the caller hands over) writes the file into a temporary folder;
+    it's uploaded with `PUT contents`, and only then stored in the cache with its new blob SHA.
+  - **Which version it replaces:** the one loaded, when saving back to the same repo, branch and path; otherwise
+    the one in the file list, after asking "Replace it?"; none for a new file.
+  - **Conflicts:** when GitHub has another version (409, or 422 "sha wasn't supplied"), the user picks
+    **Overwrite** (replaces whatever is there now), **Save Under a New Name** ("run (2).csv", nothing saved yet) or
+    Cancel.
+  - **New branch:** made from the branch picked, then the file is saved there and a pull request opened into the
+    branch picked. If the save fails, the new branch is deleted again.
+  - **Sizes:** over 50 MB the user is asked first; over 100 MB GitHub refuses, so SavvyCAN does too.
+  - Afterwards a message gives the link to the commit or the pull request.
 
 ### 4.6 Refactor first (phase 0, done)
 
@@ -142,16 +155,15 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 - **New Repo...** opens a small dialog: owner (the signed-in account, or one of their organisations from
   `GET /user/orgs`), name, optional description, and **Private** (ticked by default).
 - SavvyCAN creates it with `auto_init: true`, so it starts with a README and a default branch to commit to, adds it
-  to the saved repos, selects it with its default branch, and carries on with the
-  save.
+  to the saved repos and selects it with its default branch; the user then saves into it.
 - Errors in plain words:
   - 422 "name already exists on this account": pick another name, or add the existing repo instead;
   - 403/404: the sign-in can't create repos. The message names what's missing: *Administration: read and write*
     for a GitHub App or fine-grained token, the `repo` scope (or `public_repo` for a public repo) for an OAuth App;
   - an organisation can also forbid its members from creating repos.
-- **GitHub App installed on selected repos only:** check whether GitHub adds a repo the app creates to that
-  installation. If it doesn't, SavvyCAN can't commit to it until the user adds it to the installation; the dialog then
-  says so and links to the installation's settings.
+- **GitHub App installed on selected repos only:** still to check on real GitHub whether a repo the app creates is
+  added to that installation. If it isn't, reading its branches fails with "not found", and the browser's hint links
+  to the installation page.
 - **Signed out:** the button is disabled (creating needs an account).
 
 ---
@@ -161,10 +173,11 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 - **File menu:** "Load Log File from GitHub..." (phase 1) and "Save Log File to GitHub..." (phase 2).
 - **Load:** pick a file, download it, load it as the chosen file type (autodetect by default), with the same
   "salvage what could be loaded?" question as other loads. The file status shows `github:owner/repo/path`.
-- **Save:** the chosen saver writes into the cache, then it's uploaded. A log that came from GitHub suggests its own
-  path and passes its SHA, so the conflict check works.
-- **Size:** above about 50 MB the save dialog warns (GitHub warns at 50 MB and refuses 100 MB without LFS) and
-  suggests BLF or pcapng, which are much smaller than CSV.
+- **Save:** the chosen saver writes the frames, then they're uploaded. A log that came from GitHub (and is still the
+  one shown) suggests its own repo, branch and path and passes its SHA, so the conflict check works; any other log
+  suggests its own file name. Afterwards the file status shows the GitHub path.
+- **Size:** above 50 MB the save dialog asks first (GitHub warns at 50 MB and refuses 100 MB without LFS) and
+  suggests a more compact file type.
 
 ---
 
@@ -173,8 +186,9 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 - **DBC File Manager (`DBCLoadSaveWindow`):** "Load from GitHub" (phase 1) and "Save to GitHub" (phase 2).
 - **Load:** download, then `DBCHandler::loadFileAs(path, type)`. The cached file's `.origin.json` says where it
   came from. DBC files loaded from GitHub reload from the cache at the next start.
-- **Save:** a DBC from GitHub commits back to its own path after asking for a commit message, with the conflict
-  check. LDF files are saved as `.dbc`, as the local save does.
+- **Save:** the DBC picked in the list. One loaded from GitHub suggests its own path, with the conflict check. LDF
+  files are saved as `.dbc`, as the local save does. Afterwards the DBC goes by its cached copy (so it reloads from
+  there at the next start); if nothing was saved, it keeps its old name and unsaved-changes flag.
 - **Startup (phase 3):** at startup the cached copy loads at once; a quiet check against GitHub then offers to reload
   if the file changed there. Nothing is replaced without asking.
 - **Later, optional:** load every `.dbc` in a repo folder, with buses assigned from a small `savvycan.json` in the
@@ -188,7 +202,7 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 |---|---|---|
 | 0 (done) | Split the file dialogs from the load/save code in `FrameFileIO` and `DBCHandler`; Candump save result fixed; `TestFileDialogSplit` | `github-phase0-refactor` |
 | 1 (done) | `GitHubClient` read side, device flow and token sign-in, cache, browser and account dialogs; **load** logs and DBCs; TLS plugins in the fork CI packages; `TestGitHub` | `github-phase1-load` |
-| 2 | **Save** logs and DBCs through the Contents API, 409 conflict handling, new branch and pull request option, **creating a repo** (private by default) | `github-phase2-save` |
+| 2 (done) | **Save** logs and DBCs through the Contents API, conflict handling, new branch and pull request option, **creating a repo** (private by default) | `github-phase2-save` |
 | 3 | DBC files from GitHub checked against GitHub at startup, recent GitHub files, cache size limit | `github-phase3-dbc-sync` |
 | 4 | Git Data API for large files, LFS, expiring GitHub App tokens (refresh), OS keychain storage, Enterprise | later |
 
@@ -201,8 +215,11 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
   unreachable server, a client deleted mid-request, the device flow (`authorization_pending`, `slow_down`,
   `access_denied`, `expired_token`, device flow disabled), the cache, settings, and both dialogs. With
   `SAVVYCAN_SCREENSHOTS` set it saves pictures of the dialogs.
-- Phase 2 adds: save (201/200), 409 conflict, new branch and pull request, repo creation (201, 422 name taken, 403
-  missing permission, organisation owner).
+- Phase 2 adds a fake GitHub that keeps state (repos, branches, files, commit SHAs) and covers: the client's save,
+  file SHA, branch, pull request, organisation and repo calls; saving a new file; saving back, the conflict choices
+  (Overwrite, Save Under a New Name) and replacing another file; a new branch with a pull request, and its removal
+  when the save fails; creating repos (account, organisation, name taken, no permission); the name following the
+  file type; no saving signed out.
 - `unit_tests/test_file_dialog_split.cpp` (`TestFileDialogSplit`) saves and reloads each log type and a DBC file.
 - Round trip against the scratch repo: load a log and a DBC, save them back, compare byte for byte; edit the file on
   github.com in between to check the conflict prompt. Repo creation is tried with a throwaway name under the user's
@@ -226,5 +243,6 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 ## 10. Needed from the user
 
 - Done: the SavvyCAN GitHub App is registered (2026-10-25) and signing in works.
-- Create the private scratch repo for the phase 2 save tests, and install the SavvyCAN app on it.
-- For repo creation (phase 2): add *Administration: read and write* to the SavvyCAN app, if wanted.
+- Done: the scratch repo is `Tom-evnut/SavvyCan_LogTest` (2026-10-25); the save tests only ever write there.
+- Done: *Administration: read and write* added to the SavvyCAN app (2026-10-25); installation owners accept it.
+- Next: try saving on real GitHub (a log, a DBC, a conflict, a new branch with a pull request, New Repo...).
