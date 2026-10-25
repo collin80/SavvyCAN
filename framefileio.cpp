@@ -96,7 +96,7 @@ bool FrameFileIO::saveFrameFileAs(QString &filename, int filterIndex, const QVec
         break;
     case 9:
         if (!filename.contains('.')) filename += ".log";
-        saveCanDumpFile(filename,frameCache);
+        result = saveCanDumpFile(filename,frameCache);
         break;
     case 10:
         if (!filename.contains('.')) filename += ".csv";
