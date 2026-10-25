@@ -16,6 +16,8 @@
 #include <QJsonObject>
 #include "github/githubaccountdialog.h"
 #include "github/githubbrowserdialog.h"
+#include "github/githubhelp.h"
+#include <QDialogButtonBox>
 #include "github/githubcache.h"
 #include "github/githubclient.h"
 #include "github/githubdeviceflow.h"
@@ -146,6 +148,7 @@ private slots:
     void testSaveNewBranchAndPullRequest();
     void testCreateRepo();
     void testSaveNameFollowsType();
+    void testHelp();
 
 private:
     QTemporaryDir settingsDir;
@@ -1414,6 +1417,23 @@ void TestGitHub::testSaveNameFollowsType()
     signedOut.setSuggestion(GitHubOrigin(), "a.csv");
     QVERIFY(!signedOut.findChild<QPushButton *>("btnOpen")->isEnabled());
     QCOMPARE(signedOut.findChild<QPushButton *>("btnAccount")->text(), QString("Sign In..."));
+}
+
+//the Help buttons (and F1) open help/github.md through the hook MainWindow sets
+void TestGitHub::testHelp()
+{
+    QStringList shown;
+    gitHubHelp() = [&shown](const QString &page) { shown.append(page); };
+
+    GitHubBrowserDialog browser(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+    browser.findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Help)->click();
+    GitHubAccountDialog account;
+    account.findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Help)->click();
+    QCOMPARE(shown, QStringList({ "github.md", "github.md" }));
+
+    gitHubHelp() = nullptr;
+    showGitHubHelp(); //no hook: nothing happens
+    QSettings().remove("GitHub");
 }
 
 QTEST_MAIN(TestGitHub)

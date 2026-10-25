@@ -102,4 +102,5 @@ I'm glad you asked. DBC is a file format used to specify how "signals" are store
 How DBC interacts with the main screen?
 =======================================
 	
-First of all, one can load and save DBC files from the "DBC File Manager" found in the File menu. Also in the File menu it is possible to save the currently loaded frames but with DBC decoding. This is somewhat like the normal saving functionality with a two differences: there is only one output format and that format has all signals contained in each message listed and decoded.
+First of all, one can load and save DBC files from the "DBC File Manager" found in the File menu (from GitHub repos
+too: see [Logs and DBC Files on GitHub](github.md)). Also in the File menu it is possible to save the currently loaded frames but with DBC decoding. This is somewhat like the normal saving functionality with a two differences: there is only one output format and that format has all signals contained in each message listed and decoded.

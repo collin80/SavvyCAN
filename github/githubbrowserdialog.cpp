@@ -26,7 +26,9 @@
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QVBoxLayout>
+#include <QShortcut>
 #include "githubaccountdialog.h"
+#include "githubhelp.h"
 
 //GitHub's API sends and takes files up to 100 MB; bigger ones need Git LFS, which isn't supported yet.
 //It warns about files over 50 MB.
@@ -141,7 +143,7 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, Mode mode, const QStringList
     lblStatus->setWordWrap(true);
     layout->addWidget(lblStatus);
 
-    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel);
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Help);
     btnOpen = buttons->addButton(mode == Open ? tr("Open") : tr("Save"), QDialogButtonBox::AcceptRole);
     layout->addWidget(buttons);
 
@@ -192,6 +194,8 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, Mode mode, const QStringList
         else saveSelected();
     });
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::helpRequested, this, &showGitHubHelp);
+    new QShortcut(QKeySequence::HelpContents, this, &showGitHubHelp);
 
     comboRepo->setObjectName("comboRepo");
     comboBranch->setObjectName("comboBranch");
@@ -636,7 +640,7 @@ void GitHubBrowserDialog::newRepo()
     QLineEdit *editDescription = new QLineEdit;
     QCheckBox *cbPrivate = new QCheckBox(tr("Private: only you, and the people you choose, can see it"));
     cbPrivate->setChecked(true);
-    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel);
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Help);
     QPushButton *btnCreate = buttons->addButton(tr("Create"), QDialogButtonBox::AcceptRole);
     btnCreate->setEnabled(false);
     form->addRow(tr("Owner:"), comboOwner);
@@ -650,6 +654,7 @@ void GitHubBrowserDialog::newRepo()
     });
     connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::helpRequested, &dialog, &showGitHubHelp);
     //the account's organisations, when GitHub says (a GitHub App only sees those it's installed on)
     QPointer<QComboBox> owners(comboOwner);
     client->listOrgs([owners](const QStringList &orgs, const QString &)

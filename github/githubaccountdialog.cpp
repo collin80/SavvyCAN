@@ -18,6 +18,8 @@
 #include "githubclient.h"
 #include "githubdeviceflow.h"
 #include "githubsettings.h"
+#include "githubhelp.h"
+#include <QShortcut>
 
 GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
     : QDialog(parent),
@@ -117,11 +119,13 @@ GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
     storageNote->setWordWrap(true);
     layout->addWidget(storageNote);
 
-    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close);
+    QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Close | QDialogButtonBox::Help);
     QPushButton *btnClearCache = buttons->addButton(tr("Clear Downloaded Files"), QDialogButtonBox::ResetRole);
     layout->addWidget(buttons);
 
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+    connect(buttons, &QDialogButtonBox::helpRequested, this, &showGitHubHelp);
+    new QShortcut(QKeySequence::HelpContents, this, &showGitHubHelp);
     connect(btnClearCache, &QPushButton::clicked, this, &GitHubAccountDialog::clearCache);
     connect(btnSignOut, &QPushButton::clicked, this, &GitHubAccountDialog::signOut);
     connect(btnInstall, &QPushButton::clicked, this, []()
