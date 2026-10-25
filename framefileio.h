@@ -29,6 +29,14 @@ public:
     static bool loadFrameFile(QString &, QVector<CommFrame>*);
     static bool saveFrameFile(QString &, const QVector<CommFrame>*);
 
+    //The file types those dialogs offer. Index 0 of the load list is autodetect.
+    static QStringList loadFilters();
+    static QStringList saveFilters();
+    //Load or save as the file type at that index of loadFilters()/saveFilters(), without any GUI.
+    //saveFrameFileAs adds that type's extension to a file name without one, so the name may change.
+    static bool loadFrameFileAs(const QString &filename, int filterIndex, QVector<CommFrame>*);
+    static bool saveFrameFileAs(QString &filename, int filterIndex, const QVector<CommFrame>*);
+
     //These do the actual loading and saving and can be used directly if you'd prefer
     static bool autoDetectLoadFile(QString, QVector<CommFrame>*);
     static bool loadCRTDFile(QString, QVector<CommFrame>*);

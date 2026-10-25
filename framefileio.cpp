@@ -32,6 +32,93 @@ FrameFileIO::FrameFileIO()
 {
 }
 
+QStringList FrameFileIO::saveFilters()
+{
+    QStringList filters;
+    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));                // 0
+    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));   // 1
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));       // 2
+    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));             // 3
+    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)"))); // 4
+    filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));    // 5
+    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));             // 6
+    filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)"))); // 7
+    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));               // 8
+    filters.append(QString(tr("Candump/Kayak (*.log)")));                   // 9
+    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));                // 10
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));       // 11
+    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));           // 12
+    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));               // 13
+    return filters;
+}
+
+bool FrameFileIO::saveFrameFileAs(QString &filename, int filterIndex, const QVector<CommFrame>* frameCache)
+{
+    bool result = false;
+
+    switch (filterIndex)
+    {
+    case 0:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveNativeCSVFile(filename, frameCache);
+        break;
+    case 1:
+        if (!filename.contains('.')) filename += ".txt";
+        result = saveCRTDFile(filename, frameCache);
+        break;
+    case 2:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveGenericCSVFile(filename, frameCache);
+        break;
+    case 3:
+        if (!filename.contains('.')) filename += ".log";
+        result = saveLogFile(filename, frameCache);
+        break;
+    case 4:
+        if (!filename.contains('.')) filename += ".log";
+        result = saveMicrochipFile(filename, frameCache);
+        break;
+    case 5:
+        if (!filename.contains('.')) filename += ".trace";
+        result = saveTraceFile(filename, frameCache);
+        break;
+    case 6:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveIXXATFile(filename, frameCache);
+        break;
+    case 7:
+        if (!filename.contains('.')) filename += ".can";
+        result = saveCANDOFile(filename, frameCache);
+        break;
+    case 8:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveVehicleSpyFile(filename, frameCache);
+        break;
+    case 9:
+        if (!filename.contains('.')) filename += ".log";
+        result = saveCanDumpFile(filename,frameCache);
+        break;
+    case 10:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveCabanaFile(filename, frameCache);
+        break;
+    case 11:
+        if (!filename.contains('.')) filename += ".asc";
+        result = saveCanalyzerASC(filename, frameCache);
+        break;
+    case 12:
+        if (!filename.contains('.')) filename += ".trc";
+        result = saveCARBUSAnalzyer(filename, frameCache);
+        break;
+    case 13:
+        if (!filename.contains('.')) filename += ".trc";
+        result = savePCANFile(filename, frameCache);
+        break;
+    }
+
+    return result;
+}
+
 bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* frameCache)
 {
     QString filename;
@@ -39,21 +126,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
     QSettings settings;
     bool result = false;
 
-    QStringList filters;
-    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
-    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
-    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
-    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
-    filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
-    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
-    filters.append(QString(tr("Candump/Kayak (*.log)")));
-    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
-    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
-    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));
-    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
+    const QStringList filters = saveFilters();
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -75,80 +148,7 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
 
         qApp->processEvents();
 
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveNativeCSVFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".txt";
-            result = saveCRTDFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveGenericCSVFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[3])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = saveLogFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[4])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = saveMicrochipFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[5])
-        {
-            if (!filename.contains('.')) filename += ".trace";
-            result = saveTraceFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[6])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveIXXATFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[7])
-        {
-            if (!filename.contains('.')) filename += ".can";
-            result = saveCANDOFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[8])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveVehicleSpyFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[9])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            saveCanDumpFile(filename,frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[10])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveCabanaFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[11])
-        {
-            if (!filename.contains('.')) filename += ".asc";
-            result = saveCanalyzerASC(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[12])
-        {
-            if (!filename.contains('.')) filename += ".trc";
-            result = saveCARBUSAnalzyer(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[13])
-        {
-            if (!filename.contains('.')) filename += ".trc";
-            result = savePCANFile(filename, frameCache);
-        }
+        result = saveFrameFileAs(filename, int(filters.indexOf(dialog.selectedNameFilter())), frameCache);
 
         progress.cancel();
 
@@ -164,13 +164,8 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
     return false;
 }
 
-bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCache)
+QStringList FrameFileIO::loadFilters()
 {
-    QString filename;
-    QFileDialog dialog;
-    QSettings settings;
-    bool result = false;
-
     QStringList filters;
     filters.append(QString(tr("Autodetect File Type (*.*)")));              // 0
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));                // 1
@@ -200,6 +195,53 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
     filters.append(QString(tr("Wireshark SocketCAN (*.pcap *.PCAP")));      // 25
     filters.append(QString(tr("IXXAT CSV export (*.csv)")));                // 26
     filters.append(QString(tr("CANWise Log (*.log)")));                     // 27
+    return filters;
+}
+
+bool FrameFileIO::loadFrameFileAs(const QString &filename, int filterIndex, QVector<CommFrame>* frameCache)
+{
+    switch (filterIndex)
+    {
+    case 0: return autoDetectLoadFile(filename, frameCache);
+    case 1: return loadNativeCSVFile(filename, frameCache);
+    case 2: return loadCRTDFile(filename, frameCache);
+    case 3: return loadLogFile(filename, frameCache);
+    case 4: return loadMicrochipFile(filename, frameCache);
+    case 5: return loadTraceFile(filename, frameCache);
+    case 6: return loadIXXATFile(filename, frameCache);
+    case 7: return loadCANDOFile(filename, frameCache);
+    case 8: return loadVehicleSpyFile(filename, frameCache);
+    case 9: return loadCanDumpFile(filename, frameCache);
+    case 10: return loadLawicelFile(filename, frameCache);
+    case 11: return loadPCANFile(filename, frameCache);
+    case 12: return loadKvaserFile(filename, frameCache, false);
+    case 13: return loadKvaserFile(filename, frameCache, true);
+    case 14: return loadCanalyzerASC(filename, frameCache);
+    case 15: return loadCanalyzerBLF(filename, frameCache);
+    case 16: return loadCARBUSAnalyzerFile(filename, frameCache);
+    case 17: return loadCANHackerFile(filename, frameCache);
+    case 18: return loadGenericCSVFile(filename, frameCache);
+    case 19: return loadCabanaFile(filename, frameCache);
+    case 20: return loadCANOpenFile(filename, frameCache);
+    case 21: return loadTeslaAPFile(filename, frameCache);
+    case 22: return loadCLX000File(filename, frameCache);
+    case 23: return loadCANServerFile(filename, frameCache);
+    case 24: return loadWiresharkFile(filename, frameCache);
+    case 25: return loadWiresharkSocketCANFile(filename, frameCache);
+    case 26: return loadIXXATCsvFile(filename, frameCache);
+    case 27: return loadCanWise(filename, frameCache);
+    }
+    return false;
+}
+
+bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCache)
+{
+    QString filename;
+    QFileDialog dialog;
+    QSettings settings;
+    bool result = false;
+
+    const QStringList filters = loadFilters();
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -209,7 +251,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
-        QString selectedNameFilter = dialog.selectedNameFilter();
+        const int filterIndex = int(filters.indexOf(dialog.selectedNameFilter()));
 
         QProgressDialog progress(qApp->activeWindow());
         progress.setWindowModality(Qt::WindowModal);
@@ -221,35 +263,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
 
         qApp->processEvents();
 
-        if (selectedNameFilter == filters[0]) result = autoDetectLoadFile(filename, frameCache);
-        if (selectedNameFilter == filters[1]) result = loadNativeCSVFile(filename, frameCache);
-        if (selectedNameFilter == filters[2]) result = loadCRTDFile(filename, frameCache);
-        if (selectedNameFilter == filters[3]) result = loadLogFile(filename, frameCache);
-        if (selectedNameFilter == filters[4]) result = loadMicrochipFile(filename, frameCache);
-        if (selectedNameFilter == filters[5]) result = loadTraceFile(filename, frameCache);
-        if (selectedNameFilter == filters[6]) result = loadIXXATFile(filename, frameCache);
-        if (selectedNameFilter == filters[7]) result = loadCANDOFile(filename, frameCache);
-        if (selectedNameFilter == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
-        if (selectedNameFilter == filters[9]) result = loadCanDumpFile(filename, frameCache);
-        if (selectedNameFilter == filters[10]) result = loadLawicelFile(filename, frameCache);
-        if (selectedNameFilter == filters[11]) result = loadPCANFile(filename, frameCache);
-        if (selectedNameFilter == filters[12]) result = loadKvaserFile(filename, frameCache, false);
-        if (selectedNameFilter == filters[13]) result = loadKvaserFile(filename, frameCache, true);
-        if (selectedNameFilter == filters[14]) result = loadCanalyzerASC(filename, frameCache);
-        if (selectedNameFilter == filters[15]) result = loadCanalyzerBLF(filename, frameCache);
-        if (selectedNameFilter == filters[16]) result = loadCARBUSAnalyzerFile(filename, frameCache);
-        if (selectedNameFilter == filters[17]) result = loadCANHackerFile(filename, frameCache);
-        if (selectedNameFilter == filters[18]) result = loadGenericCSVFile(filename, frameCache);
-        if (selectedNameFilter == filters[19]) result = loadCabanaFile(filename, frameCache);
-        if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
-        if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
-        if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
-        if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
-        if (selectedNameFilter == filters[24]) result = loadWiresharkFile(filename, frameCache);
-        if (selectedNameFilter == filters[25]) result = loadWiresharkSocketCANFile(filename, frameCache);
-        if (selectedNameFilter == filters[26]) result = loadIXXATCsvFile(filename, frameCache);
-        if (selectedNameFilter == filters[27]) result = loadCanWise(filename, frameCache);
-
+        result = loadFrameFileAs(filename, filterIndex, frameCache);
 
         progress.cancel();
 
@@ -262,7 +276,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
         }
         else
         {
-            if (dialog.selectedNameFilter() != filters[0])
+            if (filterIndex != 0)
             {
                 QMessageBox msgBox;
                 msgBox.setText("File load completed with errors.\r\nPerhaps you selected the wrong file type?");

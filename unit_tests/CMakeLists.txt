@@ -60,8 +60,31 @@ target_link_libraries(TestUdsHandler
     Qt6::Widgets
 )
 
+###### log and DBC loading/saving without the file dialogs ######
+set(TEST_SOURCES_FILE_DIALOG_SPLIT
+    test_file_dialog_split.cpp
+    ../framefileio.cpp  # the code under test
+    ../dbc/dbchandler.cpp
+    ../dbc/dbc_classes.cpp
+    ../blfhandler.cpp
+    ../pcaplite.cpp
+    ../utility.cpp
+)
+
+add_executable(TestFileDialogSplit ${TEST_SOURCES_FILE_DIALOG_SPLIT})
+
+target_include_directories(TestFileDialogSplit PRIVATE ${SAVVYCAN_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../dbc)
+
+target_link_libraries(TestFileDialogSplit
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+    Qt6::Widgets
+)
+
 
 # Enable ctest integration
 enable_testing()
 add_test(NAME TestIsoTpHandler COMMAND TestIsoTpHandler)
 add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
+add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)

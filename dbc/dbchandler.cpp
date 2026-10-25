@@ -1942,6 +1942,19 @@ bool DBCFile::saveFile(QString fileName)
     return true;
 }
 
+QStringList DBCHandler::saveFilters()
+{
+    return { tr("DBC File (*.dbc)") };
+}
+
+bool DBCHandler::saveDBCFileAs(int idx, QString &filename)
+{
+    if (idx < 0 || idx >= loadedFiles.count()) return false;
+
+    if (!filename.contains('.')) filename += ".dbc";
+    return loadedFiles[idx]->saveFile(filename);
+}
+
 void DBCHandler::saveDBCFile(int idx)
 {
     QSettings settings;
@@ -1952,11 +1965,9 @@ void DBCHandler::saveDBCFile(int idx)
 
     QFileDialog dialog;
 
-    QStringList filters { tr("DBC File (*.dbc)") };
-
     dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
-    dialog.setNameFilters(filters);
+    dialog.setNameFilters(saveFilters());
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
     dialog.selectFile(loadedFiles[idx]->getFullFilename());
@@ -1964,8 +1975,7 @@ void DBCHandler::saveDBCFile(int idx)
     if (dialog.exec() == QDialog::Accepted)
     {
         QString filename = dialog.selectedFiles().constFirst();
-        if (!filename.contains('.')) filename += ".dbc";
-        loadedFiles[idx]->saveFile(filename);
+        saveDBCFileAs(idx, filename);
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
     }
 }
@@ -2037,6 +2047,33 @@ DBCFile* DBCHandler::loadDBCFile(QString filename)
     }
     if (loadedFiles.count()> 0) return loadedFiles.last();
     else return nullptr;
+}
+
+//These came from the DBC window's load dialog: keep its translation context so existing translations still apply
+QStringList DBCHandler::loadFilters()
+{
+    QStringList filters;
+    filters.append(QCoreApplication::translate("DBCLoadSaveWindow", "DBC File (*.dbc)"));               // 0
+    filters.append(QCoreApplication::translate("DBCLoadSaveWindow", "Tesla JSON File (*.json)"));       // 1
+    filters.append(QCoreApplication::translate("DBCLoadSaveWindow", "Secret CSV Signal Defs (*.csv)")); // 2
+    return filters;
+}
+
+DBCFile* DBCHandler::loadFileAs(QString filename, int filterIndex)
+{
+    switch (filterIndex)
+    {
+    case 0:
+        if (!filename.contains('.')) filename += ".dbc";
+        return loadDBCFile(filename);
+    case 1:
+        if (!filename.contains('.')) filename += ".json";
+        return loadJSONFile(filename);
+    case 2:
+        if (!filename.contains('.')) filename += ".csv";
+        return loadSecretCSVFile(filename);
+    }
+    return nullptr;
 }
 
 //the only reason to even bother sending the index is to see if
