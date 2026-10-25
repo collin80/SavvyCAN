@@ -78,6 +78,7 @@ public:
     bool saveFile(QString);
     bool loadFile(QString);
     QString getFullFilename();
+    void setFullFilename(const QString &fullName); //only the name it goes by: nothing is saved
     QString getFilename();
     QString getFilenameNoExt();
     QString getPath();

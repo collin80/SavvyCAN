@@ -22,6 +22,7 @@ public:
 private slots:
     void loadFile();
     void loadFromGitHub();
+    void saveToGitHub();
     void loadJSON();
     void saveFile();
     void removeFile();

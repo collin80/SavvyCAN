@@ -402,6 +402,12 @@ QString DBCFile::getFullFilename()
     return filePath + fileName;
 }
 
+void DBCFile::setFullFilename(const QString &fullName)
+{
+    fileName = fullName.split('/').last();
+    filePath = fullName.left(fullName.length() - fileName.length());
+}
+
 QString DBCFile::getFilename()
 {
     return fileName;

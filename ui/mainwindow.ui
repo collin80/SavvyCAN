@@ -494,6 +494,7 @@
     <addaction name="actionLoad_Log_File_from_GitHub"/>
     <addaction name="actionSave_Filtered_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="actionSave_Log_File_to_GitHub"/>
     <addaction name="actionSave_Continuous_Logfile"/>
     <addaction name="separator"/>
     <addaction name="separator"/>
@@ -559,6 +560,11 @@
   <action name="actionLoad_Log_File_from_GitHub">
    <property name="text">
     <string>Load Log File from GitHub...</string>
+   </property>
+  </action>
+  <action name="actionSave_Log_File_to_GitHub">
+   <property name="text">
+    <string>Save Log File to GitHub...</string>
    </property>
   </action>
   <action name="actionGitHub_Account">
