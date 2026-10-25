@@ -55,6 +55,7 @@ SOURCES += main.cpp\
     candatagrid.cpp \
     framesenderwindow.cpp \
     framefileio.cpp \
+    lognotes.cpp \
     github/githubaccountdialog.cpp \
     github/githubbrowserdialog.cpp \
     github/githubcache.cpp \
@@ -155,6 +156,7 @@ HEADERS  += mainwindow.h \
     framesenderwindow.h \
     can_trigger_structs.h \
     framefileio.h \
+    lognotes.h \
     github/githubaccountdialog.h \
     github/githubbrowserdialog.h \
     github/githubcache.h \

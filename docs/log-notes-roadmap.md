@@ -11,8 +11,9 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 
 | Phase | State |
 |---|---|
-| 1: notes format, native CSV block, sidecar file | In progress (`log-notes`) |
-| 2, 3, 4 | Not started |
+| 1: notes format, native CSV block, sidecar file | Done on `log-notes`, not merged yet; `TestLogNotes` passes, older loader checked |
+| 2: notes dialog on save, Log Notes panel | Next |
+| 3, 4 | Not started |
 
 ---
 
@@ -125,9 +126,13 @@ The same Markdown, after the last frame, each line starting with `# `:
   comma-separated fields of a frame line. The sidecar file keeps plain commas.
 - **New builds** skip `#` lines when loading frames, and read the notes from the end of the file without reading it
   all again.
-- **Older builds** (upstream SavvyCAN and this fork before the change) count each notes line as a bad line: the load
-  says it completed with errors and asks "Do you want to salvage what could be loaded?"; answering Yes loads every
-  frame. Checked against the `fork-ci` loader before this change (section 9).
+- **Older builds** (upstream SavvyCAN and this fork before the change) count each notes line as a bad line. Checked
+  against the `fork-ci` loader before this change (2026-10-25, section 9), with 100 frames and notes full of commas,
+  one of them a copy of a frame line:
+  - autodetect (the default, and dropped files) says "Could not autodetect the file type", then asks "Do you want
+    to salvage what could be loaded?";
+  - GVRET picked by hand says "File load completed with errors", then asks the same;
+  - answering Yes loads every frame, all of them right, and no extra frames from the notes.
 - Other tools reading GVRET CSV may need to skip `#` lines too.
 
 ### 4.4 Sidecar file
@@ -215,9 +220,10 @@ The same Markdown, after the last frame, each line starting with `# `:
     marker times parsed to the microsecond;
   - the native CSV block: frames load the same with and without notes, commas and `%` survive, notes longer than the
     tail read size, a log with notes and no frames still detected as native CSV, CRLF line ends;
-  - the sidecar file for another format (candump), the block preferred over a sidecar, no notes found;
-  - the `fork-ci` native CSV loader from before this change on a log with notes: every frame loads and the load
-    reports errors (the "salvage" question).
+  - the sidecar file for another format (candump), the block preferred over a sidecar, no notes found, `#` lines
+    that aren't SavvyCAN's notes kept.
+- Once, by hand: the `fork-ci` native CSV loader from before this change, built on its own, on a log with notes
+  written by the new code (section 4.3).
 - Phase 2 and 3: dialog and panel tests with `QTest`, as `TestGitHub` does for its dialogs, and screenshots with
   `SAVVYCAN_SCREENSHOTS`.
 - By hand: a capture on the bench with markers, saved as native CSV and BLF, reopened in a new SavvyCAN, opened in an
@@ -227,8 +233,9 @@ The same Markdown, after the last frame, each line starting with `# `:
 
 ## 10. Risks and open points
 
-- **Older builds and other tools** see notes lines in native CSV as bad lines (section 4.3). If that turns out to
-  bother people, a setting can put the notes in the sidecar file for native CSV too.
+- **Older builds and other tools** see notes lines in native CSV as bad lines (section 4.3): two messages before the
+  frames load. If that bothers people who share logs with others on older builds, a setting can put the notes in the
+  sidecar file for native CSV too (phase 2 could add it).
 - **Sidecar files get left behind** when only the log is copied. The dialog's help text says so; native CSV (notes inside
   the log) and GitHub saves (both files in one commit) keep them together.
 - **Markers on a loaded log** use the log's own time stamps; logs whose time stamps were rebased (playback, crop) keep

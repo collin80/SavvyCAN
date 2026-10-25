@@ -15,6 +15,8 @@
 #include "can_structs.h"
 #include "utility.h"
 
+class LogNotes;
+
 class FrameFileIO: public QObject
 {
     Q_OBJECT
@@ -36,6 +38,12 @@ public:
     //saveFrameFileAs adds that type's extension to a file name without one, so the name may change.
     static bool loadFrameFileAs(const QString &filename, int filterIndex, QVector<CommFrame>*);
     static bool saveFrameFileAs(QString &filename, int filterIndex, const QVector<CommFrame>*);
+
+    //Notes saved with a log (see lognotes.h): at the end of the log itself for GVRET (save type 0), in a
+    //<log file>.notes.md file next to it for the other types. Called after the log itself is saved or loaded.
+    static bool saveLogNotes(const QString &filename, int filterIndex, const LogNotes &notes);
+    //false if the log has no notes
+    static bool loadLogNotes(const QString &filename, LogNotes &notes);
 
     //These do the actual loading and saving and can be used directly if you'd prefer
     static bool autoDetectLoadFile(QString, QVector<CommFrame>*);
