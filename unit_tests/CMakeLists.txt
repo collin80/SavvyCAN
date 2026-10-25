@@ -60,6 +60,19 @@ target_link_libraries(TestUdsHandler
     Qt6::Widgets
 )
 
+###### OBD-II PID table and decoder ######
+add_executable(TestObd2Pids
+    test_obd2_pids.cpp
+    ../bus_protocols/obd2_pids.cpp  # the code under test
+)
+
+target_include_directories(TestObd2Pids PRIVATE ${SAVVYCAN_INCLUDE_DIRS})
+
+target_link_libraries(TestObd2Pids
+    Qt6::Core
+    Qt6::Test
+)
+
 ###### log and DBC loading/saving without the file dialogs ######
 set(TEST_SOURCES_FILE_DIALOG_SPLIT
     test_file_dialog_split.cpp
@@ -136,6 +149,7 @@ target_link_libraries(TestLogNotes
 enable_testing()
 add_test(NAME TestIsoTpHandler COMMAND TestIsoTpHandler)
 add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
+add_test(NAME TestObd2Pids COMMAND TestObd2Pids)
 add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
 add_test(NAME TestGitHub COMMAND TestGitHub)
 add_test(NAME TestLogNotes COMMAND TestLogNotes)

@@ -11,8 +11,8 @@ timeline (Tom-evnut fork). Written against `fork-ci` (2026-10-25). Each phase br
 | Phase | State |
 |---|---|
 | 0: ISO-TP and UDS unit tests building again | Done (`obd2-phase0-tests`): both pass, also under ASan/UBSan; UDS payload rule written down; UDS Scanner negative reply code fixed |
-| 1: PID table and decoder | Next |
-| 2: poll engine | Not started |
+| 1: PID table and decoder | Done (`obd2-phase1-pids`): 101 Mode 01 PIDs (8 of them supported-PID bitmaps), supported-PID bitmaps, replies with several PIDs, Mode 09 VIN and ECU name; `TestObd2Pids` |
+| 2: poll engine | Next |
 | 3: OBD-II window | Not started |
 | 4: generated OBD DBC, graphing and comparison | Not started |
 | 5: scripting, Mode 22 DID lists, docs | Not started |
@@ -79,6 +79,12 @@ window to drive it, and a generated OBD DBC.
   bit says whether the next bitmap PID is supported.
 - Mode 09: PID 0x02 (VIN, 17 characters, several frames) and 0x0A (ECU name), decoded as text.
 - The table is data in C++ to start with. A file format users can add to (needed for Mode 22) comes in phase 5.
+- **As built (phase 1):** `OBD2::Field` holds name, unit, start bit, bit length, scale, offset, signed and value
+  names; bit 0 is the top bit of data byte A, so `(256A + B) / 4` is bits 0–15 with scale 0.25. Field names are
+  unique across all PIDs and usable as DBC signal names. `parseMode01Reply` also splits replies holding several
+  PIDs, ready for phase 5. PIDs whose data needs more than a scale and offset (the monitor test bits after byte A
+  of 0x01 and 0x41, the multi-sensor PIDs from 0x65 on, maximum values in 0x4F/0x50) are left out or only partly
+  decoded for now.
 
 ### 4.2 Poll engine (`bus_protocols/obd2_poller.{h,cpp}`)
 
@@ -157,7 +163,7 @@ lists it in the DBC File Manager, where it can also be saved as a `.dbc` file:
 | Phase | Content | Branch |
 |---|---|---|
 | 0 (done) | Get `TestIsoTpHandler` and `TestUdsHandler` building and passing on `fork-ci` again, since everything below uses those handlers | `obd2-phase0-tests` |
-| 1 | `obd2_pids`: Mode 01 table, decoding, supported-PID bitmaps, Mode 09 VIN; `TestObd2Pids` | `obd2-phase1-pids` |
+| 1 (done) | `obd2_pids`: Mode 01 table, decoding, supported-PID bitmaps, Mode 09 VIN; `TestObd2Pids` | `obd2-phase1-pids` |
 | 2 | `Obd2Poller`: addressing, discovery, scheduling, timeouts and response pending, the service safety list, stats; `TestObd2Poller` | `obd2-phase2-poller` |
 | 3 | OBD-II window, poll sets, VIN, help page, menu entry | `obd2-phase3-window` |
 | 4 | Generated OBD DBC, attached to the OBD bus; Graph selected PIDs; clock warning | `obd2-phase4-dbc` |
