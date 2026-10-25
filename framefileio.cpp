@@ -43,12 +43,11 @@ QStringList FrameFileIO::saveFilters()
     filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));    // 5
     filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));             // 6
     filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)"))); // 7
-    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));               // 8
-    filters.append(QString(tr("Candump/Kayak (*.log)")));                   // 9
-    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));                // 10
-    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));       // 11
-    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));           // 12
-    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));               // 13
+    filters.append(QString(tr("Candump/Kayak (*.log)")));                   // 8
+    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));                // 9
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));       // 10
+    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));           // 11
+    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));               // 12
     return filters;
 }
 
@@ -91,26 +90,22 @@ bool FrameFileIO::saveFrameFileAs(QString &filename, int filterIndex, const QVec
         result = saveCANDOFile(filename, frameCache);
         break;
     case 8:
-        if (!filename.contains('.')) filename += ".csv";
-        result = saveVehicleSpyFile(filename, frameCache);
-        break;
-    case 9:
         if (!filename.contains('.')) filename += ".log";
         result = saveCanDumpFile(filename,frameCache);
         break;
-    case 10:
+    case 9:
         if (!filename.contains('.')) filename += ".csv";
         result = saveCabanaFile(filename, frameCache);
         break;
-    case 11:
+    case 10:
         if (!filename.contains('.')) filename += ".asc";
         result = saveCanalyzerASC(filename, frameCache);
         break;
-    case 12:
+    case 11:
         if (!filename.contains('.')) filename += ".trc";
         result = saveCARBUSAnalzyer(filename, frameCache);
         break;
-    case 13:
+    case 12:
         if (!filename.contains('.')) filename += ".trc";
         result = savePCANFile(filename, frameCache);
         break;
@@ -678,11 +673,12 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CommFrame> *frame
     return !foundErrors;
 }
 
+//Not written: the layout of a real Vehicle Spy export isn't known well enough to write one, so it isn't in saveFilters()
 bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CommFrame> *frames)
 {
     Q_UNUSED(filename);
     Q_UNUSED(frames);
-    return true;
+    return false;
 }
 
 //first character of a token, or 0 if it's empty (indexing an empty QByteArray reads out of bounds)
@@ -2558,11 +2554,15 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CommFrame>* frame
             thisFrame.setFrameType(CommFrame::CANDataFrame);
             if (tokens.length() > 1)
             {
-                QList<QByteArray> dataTok = tokens[1].split(' ');
-                int dLen = dataTok.length();
-                if (dLen > 8) dLen = 8;
-                QByteArray bytes(dLen, 0);
-                for (int d = 0; d < dLen; d++) bytes[d] = static_cast<char>(dataTok[d].toInt(nullptr, 16));
+                //simplified() drops the space saveGenericCSVFile writes after the last byte, and the line end,
+                //which would otherwise each count as a byte
+                QList<QByteArray> dataTok = tokens[1].simplified().split(' ');
+                QByteArray bytes;
+                for (const QByteArray &tok : dataTok)
+                {
+                    if (tok.isEmpty() || bytes.length() == 8) break; //an empty token: a frame with no data
+                    bytes.append(static_cast<char>(tok.toInt(nullptr, 16)));
+                }
                 thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
             }
@@ -3021,15 +3021,23 @@ bool FrameFileIO::isCANDOFile(QString filename)
             lineCounter++;
 
             QByteArray data = inFile.read(12);
+            if (data.length() < 12)
+            {
+                isMatch = false;
+                break;
+            }
+            const unsigned char *uData = reinterpret_cast<const unsigned char *>(data.constData());
 
-            int ID = ((data[3] & 0x0F) * 256 + data[2]);
-            int len = data[3] >> 4;
+            if (uData[2] == 0xFF && uData[3] == 0xFF) continue; //the initial record, see loadCANDOFile
+
+            int ID = ((uData[3] & 0x0F) * 256 + uData[2]);
+            int len = uData[3] >> 4;
 
             if (len <= 8 && ID <= 0x7FF)
             {
                 if (len < 8)
                 {
-                    if (data[4 + len] != static_cast<char>(0xFF)) isMatch = false;
+                    if (uData[4 + len] != 0xFF) isMatch = false;
                 }
             }
             else isMatch = false;
@@ -3072,7 +3080,15 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CommFrame>* frames)
         }
 
         QByteArray data = inFile.read(12);
+        if (data.length() < 12)
+        {
+            foundErrors = true;
+            break;
+        }
         const unsigned char *uData = reinterpret_cast<const unsigned char *>(data.constData());
+
+        //The initial record that sets the global time (see saveCANDOFile) has FF for the ID and length: not a frame
+        if (uData[2] == 0xFF && uData[3] == 0xFF) continue;
 
         thisFrame.setBus(0);
         thisFrame.setReceived(true);
@@ -3082,9 +3098,10 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CommFrame>* frames)
         tempStamp = 1000000ul * (uData[0] >> 2);
         tempStamp += (((uData[0] & 3) << 8) + uData[1]) * 1000;
         tempStamp += timeOffset;
-        if (tempStamp < lastTimeStamp)
+        if (tempStamp < lastTimeStamp) //the time stamp counts up to a minute then starts again
         {
             timeOffset += 60000000ul;
+            tempStamp += 60000000ul;
         }
         lastTimeStamp = tempStamp;
         thisFrame.setTimeStamp(CommFrame::TimeStamp(0, tempStamp));
@@ -3103,27 +3120,29 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CommFrame>* frames)
     return !foundErrors;
 }
 
+//Bytes 0 - 1 of a CAN-DO record: seconds within the minute (top 6 bits) then milliseconds (bottom 10 bits)
+static void setCANDOTime(QByteArray &data, qint64 ms)
+{
+    data[0] = static_cast<char>((((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8));
+    data[1] = static_cast<char>((ms % 1000) & 0xFF);
+}
+
 bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CommFrame>* frames)
 {
     QFile outFile(filename);
     int lineCounter = 0;
-    QByteArray data;
+    QByteArray data(12, 0); //every record is 12 bytes, see loadCANDOFile
 
     if (!outFile.open(QIODevice::WriteOnly))
     {
         return false;
     }
 
-    data.reserve(13);
-
-    //The initial frame in official files sets the global time but I don't care so it is set all zeros here.
-    CommFrame thisFrame = frames->at(0);
-    qint64 ms = (thisFrame.timeStamp().microSeconds() / 1000);
-    data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
-    data[1] = (char)(ms & 0xFF);
-    data[2] = (char)0xFF;
-    data[3] = (char)0xFF;
-    for (int l = 0; l < 8; l++) data[4 + l] = 0;
+    //The initial record in official files sets the global time; here it's the first frame's time.
+    //Its ID and length bytes are all FF, which is how loadCANDOFile tells it from a frame.
+    setCANDOTime(data, frames->isEmpty() ? 0 : frames->at(0).timeStamp().microSeconds() / 1000);
+    data[2] = static_cast<char>(0xFF);
+    data[3] = static_cast<char>(0xFF);
     outFile.write(data);
 
     for (int c = 0; c < frames->count(); c++)
@@ -3135,22 +3154,17 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CommFrame>* fram
             lineCounter = 0;
         }
         const CommFrame *frame = &frames->at(c);
-        const unsigned char *inData = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        int inDataLen = frame->payload().length();
+        const QByteArray payload = frame->payload(); //payload() returns a copy: keep it while its bytes are read
 
-        for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
+        //the format only has 11 bit IDs and up to 8 data bytes
+        if (frame->hasExtendedFrameFormat() || payload.length() > 8) continue;
 
-        if (!frame->hasExtendedFrameFormat())
-        {
-            ms = (frame->timeStamp().microSeconds() / 1000);
-            int id = frame->frameId() & 0x7FF;
-            data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
-            data[1] = (char)(ms & 0xFF);
-            data[2] = (char)(id & 0xFF);
-            data[3] = (char)((id >> 8) + (inDataLen << 4));
-            for (int d = 0; d < inDataLen; d++) data[4 + d] = (char)inData[d];
-            outFile.write(data);
-        }
+        int id = frame->frameId() & 0x7FF;
+        setCANDOTime(data, frame->timeStamp().microSeconds() / 1000);
+        data[2] = static_cast<char>(id & 0xFF);
+        data[3] = static_cast<char>((id >> 8) + (payload.length() << 4));
+        for (int j = 0; j < 8; j++) data[4 + j] = static_cast<char>(j < payload.length() ? payload[j] : 0xFF);
+        outFile.write(data);
     }
     return true;
 }
