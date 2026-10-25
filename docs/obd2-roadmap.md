@@ -10,8 +10,8 @@ timeline (Tom-evnut fork). Written against `fork-ci` (2026-10-25). Each phase br
 
 | Phase | State |
 |---|---|
-| 0: ISO-TP and UDS unit tests building again | Next |
-| 1: PID table and decoder | Not started |
+| 0: ISO-TP and UDS unit tests building again | Done (`obd2-phase0-tests`): both pass, also under ASan/UBSan; UDS payload rule written down; UDS Scanner negative reply code fixed |
+| 1: PID table and decoder | Next |
 | 2: poll engine | Not started |
 | 3: OBD-II window | Not started |
 | 4: generated OBD DBC, graphing and comparison | Not started |
@@ -81,6 +81,9 @@ window to drive it, and a generated OBD DBC.
 - The table is data in C++ to start with. A file format users can add to (needed for Mode 22) comes in phase 5.
 
 ### 4.2 Poll engine (`bus_protocols/obd2_poller.{h,cpp}`)
+
+A received `UDS_MESSAGE` keeps the whole ISO-TP payload, service byte first (`41 0C 1A F8` for an engine speed
+reply), as written in `uds_handler.h` since phase 0. The poll engine reads replies that way.
 
 A `QObject` that owns an `ISOTP_HANDLER` (flow control on, so Mode 09 and Mode 22 replies of several frames
 arrive whole) and runs the polling. No UI in it, so the window and scripts can share it.
@@ -153,7 +156,7 @@ lists it in the DBC File Manager, where it can also be saved as a `.dbc` file:
 
 | Phase | Content | Branch |
 |---|---|---|
-| 0 | Get `TestIsoTpHandler` and `TestUdsHandler` building and passing on `fork-ci` again (noted as not compiling there), since everything below uses those handlers | `obd2-phase0-tests` |
+| 0 (done) | Get `TestIsoTpHandler` and `TestUdsHandler` building and passing on `fork-ci` again, since everything below uses those handlers | `obd2-phase0-tests` |
 | 1 | `obd2_pids`: Mode 01 table, decoding, supported-PID bitmaps, Mode 09 VIN; `TestObd2Pids` | `obd2-phase1-pids` |
 | 2 | `Obd2Poller`: addressing, discovery, scheduling, timeouts and response pending, the service safety list, stats; `TestObd2Poller` | `obd2-phase2-poller` |
 | 3 | OBD-II window, poll sets, VIN, help page, menu entry | `obd2-phase3-window` |

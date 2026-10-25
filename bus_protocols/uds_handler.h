@@ -70,6 +70,9 @@ struct CODE_STRUCT
     QString longDesc;
 };
 
+//On a received message the payload is the whole ISO-TP payload: service byte first (0x7F, service, NRC for a
+//negative reply), then the sub function and data. When sending, the payload is only the data after the
+//sub function: sendUDSFrame() puts service and sub function in front of it.
 class UDS_MESSAGE: public ISOTP_MESSAGE
 {
 public:

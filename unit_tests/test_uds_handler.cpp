@@ -12,21 +12,22 @@ private slots:
     void testReadDataByIdentifier();
     void testMultiFrameResponse();
     void testNegativeResponse();
+    void testSendUDSFrame();
 signals:
-    void framesReceived(void*, const QVector<CANFrame>& frames);
+    void framesReceived(void*, const QVector<CommFrame>& frames);
     void forwardedISOTPMessage(const ISOTP_MESSAGE& msg);
 private:
-    void sendCanFramesToHandler(void*, const QVector<CANFrame>& frames);
+    void sendCanFramesToHandler(void*, const QVector<CommFrame>& frames);
     void sendIsoTpFramesToHandler(const ISOTP_MESSAGE& msg);
     ISOTP_HANDLER* initAndGetIsoTpHandler();
     std::vector<ISOTP_MESSAGE> capturedIsoTpMessages;
     std::vector<UDS_MESSAGE> capturedUDSMessages;
-    std::vector<CANFrame> sentFrames;
-    QVector<CANFrame> dummyFrames;
+    std::vector<CommFrame> sentFrames;
+    QVector<CommFrame> dummyFrames;
     UDS_HANDLER* uds_handler;
 };
 
-void TestUdsHandler::sendCanFramesToHandler(void*, const QVector<CANFrame>& frames)
+void TestUdsHandler::sendCanFramesToHandler(void*, const QVector<CommFrame>& frames)
 {
     emit framesReceived(nullptr, frames);
 }
@@ -47,7 +48,7 @@ ISOTP_HANDLER* TestUdsHandler::initAndGetIsoTpHandler()
             this,
             &TestUdsHandler::framesReceived,
             handler,
-            [handler](void*, const QVector<CANFrame>& frames){
+            [handler](void*, const QVector<CommFrame>& frames){
                 handler->rapidFrames(frames);
             }
         );
@@ -56,7 +57,7 @@ ISOTP_HANDLER* TestUdsHandler::initAndGetIsoTpHandler()
     // Construct ISOTP_HANDLER with proper callbacks
     isotp_handler = new ISOTP_HANDLER(
         dummyFrames,
-        [this](const CANFrame& frame) { sentFrames.push_back(frame); },
+        [this](const CommFrame& frame) { sentFrames.push_back(frame); },
         []() -> int { return 1; }, // getNoOfBuses callback
         pendingConn
     );
@@ -120,7 +121,7 @@ void TestUdsHandler::testReadDataByIdentifier()
 {
     ISOTP_MESSAGE msg;
 
-    msg.setFrameType(QCanBusFrame::FrameType::DataFrame);
+    msg.setFrameType(CommFrame::CANDataFrame);
     msg.setExtendedFrameFormat(false);
     msg.setFrameId(0x7E0);
     msg.reportedLength = 3;
@@ -134,7 +135,8 @@ void TestUdsHandler::testReadDataByIdentifier()
     const UDS_MESSAGE& uds = capturedUDSMessages[0];
     qDebug() << uds_handler->getDetailedMessageAnalysis(uds);
     QCOMPARE(uds.service, 0x22);
-    QCOMPARE(uds.payload(), QByteArray::fromHex("F190"));
+    QCOMPARE(uds.subFunc, 0xF1);   // first byte after the service
+    QCOMPARE(uds.payload(), QByteArray::fromHex("22F190")); // the whole ISO-TP payload, service included
 }
 
 void TestUdsHandler::testMultiFrameResponse()
@@ -154,7 +156,7 @@ void TestUdsHandler::testMultiFrameResponse()
     const UDS_MESSAGE& uds = capturedUDSMessages[0];
     qDebug() << uds_handler->getDetailedMessageAnalysis(uds);
     QCOMPARE(uds.service, 0x62);                         // service byte
-    QVERIFY(uds.payload().startsWith(QByteArray::fromHex("F190"))); // DID should be first bytes
+    QVERIFY(uds.payload().startsWith(QByteArray::fromHex("62F190"))); // service byte, then the DID
     QVERIFY(uds.payload().contains("WVW"));             // VIN prefix check
 }
 
@@ -162,7 +164,7 @@ void TestUdsHandler::testNegativeResponse()
 {
     // ISO-TP negative response: service 0x7F, original service 0x22, NRC = 0x13
     ISOTP_MESSAGE msg;
-    msg.setFrameType(QCanBusFrame::FrameType::DataFrame);
+    msg.setFrameType(CommFrame::CANDataFrame);
     msg.setExtendedFrameFormat(false);
     msg.setFrameId(0x7E8);
     msg.reportedLength = 3;
@@ -177,7 +179,35 @@ void TestUdsHandler::testNegativeResponse()
     QCOMPARE(uds.service, 0x22);      // original requested service
     QVERIFY(uds.isErrorReply);        // should be flagged as negative response
     QCOMPARE(uds.subFunc, 0x13);      // NRC
-    QCOMPARE(uds.payload(), QByteArray()); // payload should be empty after removing 2 bytes
+    QCOMPARE(uds.payload(), QByteArray::fromHex("7F2213")); // the whole ISO-TP payload
+}
+
+void TestUdsHandler::testSendUDSFrame()
+{
+    // OBD-II Mode 01 PID 0x0C (engine speed) to all ECUs: service, then the one byte sub function, no data
+    UDS_MESSAGE msg;
+    msg.setBus(0);
+    msg.setFrameId(0x7DF);
+    msg.service = 0x01;
+    msg.subFuncLen = 1;
+    msg.subFunc = 0x0C;
+
+    uds_handler->sendUDSFrame(msg);
+
+    QCOMPARE(sentFrames.size(), 1u);
+    QCOMPARE(sentFrames[0].frameId(), 0x7DFu);
+    QVERIFY(!sentFrames[0].hasExtendedFrameFormat());
+    QCOMPARE(sentFrames[0].payload(), QByteArray::fromHex("02010CAAAAAAAAAA")); // single frame, padded
+
+    // a two byte sub function (UDS ReadDataByIdentifier F190) goes out high byte first
+    msg.setFrameId(0x7E0);
+    msg.service = 0x22;
+    msg.subFuncLen = 2;
+    msg.subFunc = 0xF190;
+    uds_handler->sendUDSFrame(msg);
+
+    QCOMPARE(sentFrames.size(), 2u);
+    QCOMPARE(sentFrames[1].payload(), QByteArray::fromHex("0322F190AAAAAAAA"));
 }
 QTEST_MAIN(TestUdsHandler)
 #include "test_uds_handler.moc"
