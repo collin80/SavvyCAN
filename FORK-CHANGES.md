@@ -11,6 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load and save log files and DBC files in GitHub repos (File menu, DBC File Manager), signed in with the SavvyCAN GitHub App or a token | `github-phase1-load`, `github-phase2-save` | fork only for now |
+| OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
 | Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
@@ -76,6 +77,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
+| `obd2-phase1-pids` | `fork-ci` | OBD-II PID table and decoder, `TestObd2Pids` | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
 | `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
@@ -120,6 +122,18 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: OBD-II PID table and decoder (`obd2-phase1-pids`)
+
+Phase 1 of the [OBD-II poller roadmap](docs/obd2-roadmap.md); nothing uses it yet (the poll engine is phase 2).
+
+- **Table:** `bus_protocols/obd2_pids.{h,cpp}` lists the SAE J1979 Mode 01 PIDs (engine speed, vehicle speed,
+  temperatures, fuel trims, oxygen sensors, control module voltage, odometer and more): name, unit, data bytes and
+  each value's bits, scale and offset, with names for states such as fuel system status and fuel type.
+- **Decoding:** values from a PID's data bytes; supported-PID bitmaps (0x00, 0x20 ... 0xE0); Mode 01 replies,
+  including replies to a request for several PIDs; Mode 09 VIN and ECU name text.
+- **Tests:** `TestObd2Pids` checks the table (order, field sizes, names unique and usable in a DBC) and decodes
+  worked examples for 27 values, also with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ### 2026-10-25: save logs and DBC files to GitHub (`github-phase2-save`)
 
