@@ -1,0 +1,136 @@
+#include "githubsettings.h"
+
+#include <QSettings>
+#include <QRegularExpression>
+#include <QUrl>
+#include "simplecrypt.h"
+
+//the OAuth App for "Sign in with GitHub": built in here, or set in the GitHub Account dialog
+#ifndef GITHUB_OAUTH_CLIENT_ID
+#define GITHUB_OAUTH_CLIENT_ID ""
+#endif
+
+//same key as the remote password (MainSettingsDialog): this only keeps the token from being plain text
+static SimpleCrypt tokenCrypto(Q_UINT64_C(0xdeadbeefface6285));
+
+QString GitHubSettings::token()
+{
+    QSettings settings;
+    const QByteArray enc = settings.value("GitHub/Token").toByteArray();
+    if (enc.isEmpty()) return QString();
+    return tokenCrypto.decryptToString(enc);
+}
+
+bool GitHubSettings::tokenFromDeviceFlow()
+{
+    QSettings settings;
+    return settings.value("GitHub/TokenFromDeviceFlow", false).toBool();
+}
+
+void GitHubSettings::setToken(const QString &token, bool fromDeviceFlow)
+{
+    QSettings settings;
+    settings.setValue("GitHub/Token", tokenCrypto.encryptToByteArray(token));
+    settings.setValue("GitHub/TokenFromDeviceFlow", fromDeviceFlow);
+}
+
+void GitHubSettings::clearToken()
+{
+    QSettings settings;
+    settings.remove("GitHub/Token");
+    settings.remove("GitHub/TokenFromDeviceFlow");
+}
+
+QString GitHubSettings::clientId()
+{
+    QSettings settings;
+    return settings.value("GitHub/ClientId", QString(GITHUB_OAUTH_CLIENT_ID)).toString().trimmed();
+}
+
+void GitHubSettings::setClientId(const QString &id)
+{
+    QSettings settings;
+    if (id.trimmed().isEmpty()) settings.remove("GitHub/ClientId");
+    else settings.setValue("GitHub/ClientId", id.trimmed());
+}
+
+QString GitHubSettings::apiUrl()
+{
+    QSettings settings;
+    return settings.value("GitHub/ApiUrl", "https://api.github.com").toString();
+}
+
+QString GitHubSettings::webUrl()
+{
+    QSettings settings;
+    return settings.value("GitHub/WebUrl", "https://github.com").toString();
+}
+
+QList<GitHubRepo> GitHubSettings::repos()
+{
+    QSettings settings;
+    QList<GitHubRepo> list;
+    const int count = settings.beginReadArray("GitHub/Repos");
+    for (int i = 0; i < count; i++)
+    {
+        settings.setArrayIndex(i);
+        GitHubRepo repo;
+        repo.owner = settings.value("Owner").toString();
+        repo.name = settings.value("Name").toString();
+        repo.branch = settings.value("Branch").toString();
+        repo.logs = settings.value("Logs", true).toBool();
+        repo.dbcs = settings.value("DBCs", true).toBool();
+        if (!repo.owner.isEmpty() && !repo.name.isEmpty()) list.append(repo);
+    }
+    settings.endArray();
+    return list;
+}
+
+void GitHubSettings::setRepos(const QList<GitHubRepo> &repos)
+{
+    QSettings settings;
+    settings.remove("GitHub/Repos");
+    settings.beginWriteArray("GitHub/Repos", int(repos.count()));
+    for (int i = 0; i < repos.count(); i++)
+    {
+        settings.setArrayIndex(i);
+        settings.setValue("Owner", repos[i].owner);
+        settings.setValue("Name", repos[i].name);
+        settings.setValue("Branch", repos[i].branch);
+        settings.setValue("Logs", repos[i].logs);
+        settings.setValue("DBCs", repos[i].dbcs);
+    }
+    settings.endArray();
+}
+
+bool GitHubSettings::parseRepo(const QString &text, QString &owner, QString &name)
+{
+    QString path = text.trimmed();
+    bool isLink = true; //a link can go on past the repo name (a branch, a file); a plain "owner/repo" can't
+
+    if (path.startsWith("http://", Qt::CaseInsensitive) || path.startsWith("https://", Qt::CaseInsensitive))
+    {
+        const QUrl url(path);
+        if (url.host().compare("github.com", Qt::CaseInsensitive) != 0 &&
+            url.host().compare("www.github.com", Qt::CaseInsensitive) != 0) return false;
+        path = url.path();
+    }
+    else if (path.startsWith("github.com/", Qt::CaseInsensitive)) path = path.mid(11);
+    else isLink = false;
+
+    const QStringList parts = path.split('/', Qt::SkipEmptyParts);
+    if (parts.count() < 2 || (!isLink && parts.count() != 2)) return false;
+
+    QString repoName = parts[1];
+    if (repoName.endsWith(".git", Qt::CaseInsensitive)) repoName.chop(4);
+
+    //GitHub's rules: owners are letters, digits and single hyphens; repo names letters, digits, '.', '-' and '_'
+    static const QRegularExpression ownerRx("^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$");
+    static const QRegularExpression nameRx("^[A-Za-z0-9._-]{1,100}$");
+    if (!ownerRx.match(parts[0]).hasMatch() || !nameRx.match(repoName).hasMatch()) return false;
+    if (repoName == "." || repoName == "..") return false;
+
+    owner = parts[0];
+    name = repoName;
+    return true;
+}

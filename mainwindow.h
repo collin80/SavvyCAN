@@ -73,6 +73,8 @@ public:
 
 private slots:
     void handleLoadFile();
+    void handleLoadFromGitHub();
+    void showGitHubAccount();
     void handleSaveFile();
     void handleSaveFilteredFile();
     void handleSaveFilters();
@@ -233,6 +235,7 @@ private:
     void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CommFrame &, bool);
     void updateFileStatus();
+    bool loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure);
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);

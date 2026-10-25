@@ -21,6 +21,7 @@ public:
 
 private slots:
     void loadFile();
+    void loadFromGitHub();
     void loadJSON();
     void saveFile();
     void removeFile();
@@ -49,6 +50,7 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void updateSettings();
     QComboBox * addMatchingCriteriaCombobox(int row);
+    void addFileRow(DBCFile *file);
 };
 
 #endif // DBCLOADSAVEWINDOW_H

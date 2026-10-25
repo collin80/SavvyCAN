@@ -86,6 +86,12 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     frameplaybackwindow.cpp frameplaybackwindow.h
     framesenderobject.cpp framesenderobject.h
     framesenderwindow.cpp framesenderwindow.h
+    github/githubaccountdialog.cpp github/githubaccountdialog.h
+    github/githubbrowserdialog.cpp github/githubbrowserdialog.h
+    github/githubcache.cpp github/githubcache.h
+    github/githubclient.cpp github/githubclient.h
+    github/githubdeviceflow.cpp github/githubdeviceflow.h
+    github/githubsettings.cpp github/githubsettings.h
     helpwindow.cpp helpwindow.h
     jsedit.cpp jsedit.h
     main.cpp
