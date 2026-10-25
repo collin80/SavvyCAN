@@ -64,6 +64,7 @@ target_link_libraries(TestUdsHandler
 set(TEST_SOURCES_FILE_DIALOG_SPLIT
     test_file_dialog_split.cpp
     ../framefileio.cpp  # the code under test
+    ../lognotes.cpp
     ../dbc/dbchandler.cpp
     ../dbc/dbc_classes.cpp
     ../blfhandler.cpp
@@ -107,6 +108,29 @@ target_link_libraries(TestGitHub
     Qt6::Widgets
 )
 
+###### log notes test ######
+set(TEST_SOURCES_LOG_NOTES
+    test_log_notes.cpp
+    ../lognotes.cpp  # the code under test
+    ../framefileio.cpp
+    ../dbc/dbchandler.cpp
+    ../dbc/dbc_classes.cpp
+    ../blfhandler.cpp
+    ../pcaplite.cpp
+    ../utility.cpp
+)
+
+add_executable(TestLogNotes ${TEST_SOURCES_LOG_NOTES})
+
+target_include_directories(TestLogNotes PRIVATE ${SAVVYCAN_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../dbc)
+
+target_link_libraries(TestLogNotes
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+    Qt6::Widgets
+)
+
 
 # Enable ctest integration
 enable_testing()
@@ -114,3 +138,4 @@ add_test(NAME TestIsoTpHandler COMMAND TestIsoTpHandler)
 add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
 add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
 add_test(NAME TestGitHub COMMAND TestGitHub)
+add_test(NAME TestLogNotes COMMAND TestLogNotes)

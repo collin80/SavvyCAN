@@ -12,6 +12,7 @@
 
 #include "utility.h"
 #include "blfhandler.h"
+#include "lognotes.h"
 
 QFile FrameFileIO::continuousFile;
 
@@ -112,6 +113,19 @@ bool FrameFileIO::saveFrameFileAs(QString &filename, int filterIndex, const QVec
     }
 
     return result;
+}
+
+bool FrameFileIO::saveLogNotes(const QString &filename, int filterIndex, const LogNotes &notes)
+{
+    if (filterIndex == 0) return notes.writeToNativeCSV(filename); //replaces any notes already in the log
+    if (notes.isEmpty()) return true;
+    return notes.writeSidecar(filename);
+}
+
+bool FrameFileIO::loadLogNotes(const QString &filename, LogNotes &notes)
+{
+    if (isNativeCSVFile(filename) && LogNotes::readFromNativeCSV(filename, notes)) return true;
+    return LogNotes::readSidecar(filename, notes);
 }
 
 bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* frameCache)
@@ -2209,7 +2223,7 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
 
         if (!inFile.atEnd()) {
             line = inFile.readLine().simplified();
-            if (line.length() > 2)
+            if (line.length() > 2 && !LogNotes::isNotesLine(line)) //notes and no frames: still a native CSV log
             {
                 QList<QByteArray> tokens = line.split(',');
                 if (tokens.length() >= 5)
@@ -2307,6 +2321,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
         }
 
         line = inFile.readLine().simplified();
+        if (LogNotes::isNotesLine(line)) continue; //the notes at the end of the log (see loadLogNotes)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');

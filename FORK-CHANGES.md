@@ -11,6 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load log files and DBC files from GitHub (File > Load Log File from GitHub, DBC File Manager > Load from GitHub), signed in with GitHub or a token | `github-phase1-load` | fork only for now |
+| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
@@ -73,6 +74,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-phase1-load` | `fork-ci` | GitHub repos: loading logs and DBC files, sign-in, download cache | - |
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
+| `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -114,6 +116,18 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: notes saved with logs, format and files (`log-notes`)
+
+Phase 1 of the [log notes roadmap](docs/log-notes-roadmap.md): notes on a log's setup, scenario and markers are
+saved with the log, so the log needs no separate engineering notes. No UI yet; phase 2 adds the dialog and panel.
+
+- **Format:** Markdown with a `key: value` header (`LogNotes`, `lognotes.{h,cpp}`).
+- **Native CSV:** the notes go at the end of the log, each line starting with `# `, commas written as `%2C`. The
+  native CSV loader skips those lines. Older builds load such a log only after "salvage what could be loaded?"
+  (every frame loads right).
+- **Other formats:** a `<log file>.notes.md` file next to the log.
+- **Code:** `FrameFileIO::saveLogNotes`/`loadLogNotes`; `TestLogNotes`.
 
 ### 2026-10-25: GitHub sign-in for everyone (`github-polish`)
 
