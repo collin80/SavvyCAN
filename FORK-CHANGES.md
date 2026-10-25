@@ -11,6 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load log files and DBC files from GitHub (File > Load Log File from GitHub, DBC File Manager > Load from GitHub), signed in with GitHub or a token | `github-phase1-load` | fork only for now |
+| ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
 | Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
@@ -75,6 +76,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
+| `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -96,8 +98,9 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   - IXXAT MiniLog: a frame with no data loads back with one byte.
   - Cabana: frames shorter than 8 bytes load back padded to 8 bytes.
   - PCAN Viewer: a frame with no data isn't loaded.
-- **Old unit tests:** `unit_tests/test_isotp_handler.cpp` and `test_uds_handler.cpp` predate `CommFrame` and don't
-  compile; build the other tests by name.
+- **Log loaders with checks that do nothing** (found in `obd2-phase0-tests`, upstream too, not fixed yet):
+  `loadMicrochipFile` and `loadWiresharkFile` call `payload().resize()` on a copy of the payload, so their limits
+  on the byte count have no effect and a malformed file can make them read past the end of a line or packet.
 - **GitHub sign-in:** the token is stored scrambled, not encrypted. Private repos need the SavvyCAN GitHub App
   installed on them (Choose Repos... in File > GitHub Account...).
 
@@ -116,6 +119,22 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: ISO-TP and UDS unit tests working again (`obd2-phase0-tests`)
+
+Phase 0 of the [OBD-II poller roadmap](docs/obd2-roadmap.md):
+
+- **Tests:** `TestIsoTpHandler` and `TestUdsHandler` were written before `CommFrame` replaced `CANFrame` and didn't
+  compile. Ported; both pass, also with AddressSanitizer and UndefinedBehaviorSanitizer. `TestUdsHandler` gains a
+  send test (an OBD-II Mode 01 request and a UDS ReadDataByIdentifier request, padded single frames).
+- **UDS payload:** `tryISOtoUDS` tried to remove the service bytes from a received message's payload, but called
+  `remove()` on a copy, so nothing was removed. The decoder, the firmware uploader and the script callback all read
+  the payload with the service byte first (upstream adjusted the decoder to that in January), so that stays the rule:
+  the no-op calls are gone, the rule is written in `uds_handler.h`, and the tests check it.
+- **ISO-TP messages:** `ISOTP_MESSAGE` left `reportedLength`, `lastSequence` and `isMultiframe` uninitialised, so
+  copying a message read an undefined bool (found by UndefinedBehaviorSanitizer); they now start at 0 and false.
+- **UDS Scanner:** a negative reply showed the meaning of 0x7F (the first payload byte) instead of the reply's
+  negative response code; it now uses the code.
 
 ### 2026-10-25: notes saved with logs, format and files (`log-notes`)
 

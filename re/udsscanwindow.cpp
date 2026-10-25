@@ -830,7 +830,7 @@ void UDSScanWindow::gotUDSReply(UDS_MESSAGE msg)
                 setupNodes(id);
                 QTreeWidgetItem *nodeNegative = new QTreeWidgetItem();
                 qDebug() << ui->spinNumBytes->value();
-                nodeNegative->setText(0, "NEGATIVE - " + udsHandler->getNegativeResponseShort(data[0]));
+                nodeNegative->setText(0, "NEGATIVE - " + udsHandler->getNegativeResponseShort(msg.subFunc)); //the NRC
                 nodeNegative->setForeground(0, QBrush(Qt::darkRed));
                 nodeSubFunc->addChild(nodeNegative);
                 nodeSubFunc->setForeground(0, QBrush(Qt::darkRed));

@@ -222,14 +222,13 @@ UDS_MESSAGE UDS_HANDLER::tryISOtoUDS(const ISOTP_MESSAGE& msg, bool *result)
                 *result = false;
                 return udsMsg;
             };
-            udsMsg.payload().remove(0, 2);
         }
         else
         {
             udsMsg.isErrorReply = false;
             if (dataLen > 1) udsMsg.subFunc = data[1];
-            udsMsg.payload().remove(0, 1);
         }
+        //the payload keeps the whole ISO-TP payload, service byte(s) included (see UDS_MESSAGE)
     }
     else
     {

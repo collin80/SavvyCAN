@@ -17,18 +17,18 @@ private slots:
     void testFirstAndConsecutiveFramesAndExtedingAddressingNoCf();
     void testFirstAndConsecutiveFramesAndExtedingAddressingWithCf();
 signals:
-    void framesReceived(void*, const QVector<CANFrame>& frames);
+    void framesReceived(void*, const QVector<CommFrame>& frames);
 private:
-    void sendCanFramesToHandler(void*, const QVector<CANFrame>& frames);
+    void sendCanFramesToHandler(void*, const QVector<CommFrame>& frames);
     void helperFirstAndConsecutiveFrames(bool sendCF);
     void helperFirstAndConsecutiveFramesAndExtedingAddressing(bool sendCF);
     std::vector<ISOTP_MESSAGE> capturedIsoTpMessages;
-    std::vector<CANFrame> sentFrames;
-    QVector<CANFrame> dummyFrames;
+    std::vector<CommFrame> sentFrames;
+    QVector<CommFrame> dummyFrames;
     std::unique_ptr<ISOTP_HANDLER> isotp_handler;
 };
 
-void TestIsoTpHandler::sendCanFramesToHandler(void*, const QVector<CANFrame>& frames)
+void TestIsoTpHandler::sendCanFramesToHandler(void*, const QVector<CommFrame>& frames)
 {
     emit framesReceived(nullptr, frames);
 }
@@ -45,7 +45,7 @@ void TestIsoTpHandler::init()
             this,
             &TestIsoTpHandler::framesReceived,
             handler,
-            [handler](void*, const QVector<CANFrame>& frames){
+            [handler](void*, const QVector<CommFrame>& frames){
                 handler->rapidFrames(frames);
             }
         );
@@ -54,7 +54,7 @@ void TestIsoTpHandler::init()
     // Construct ISOTP_HANDLER with proper callbacks
     isotp_handler = std::make_unique<ISOTP_HANDLER>(
         dummyFrames,
-        [this](const CANFrame& frame) { sentFrames.push_back(frame); },
+        [this](const CommFrame& frame) { sentFrames.push_back(frame); },
         []() -> int { return 1; }, // getNoOfBuses callback
         pendingConn
     );
@@ -81,8 +81,8 @@ void TestIsoTpHandler::cleanup()
 // --- Test Single Frame (SF) ---
 void TestIsoTpHandler::testSingleFrame()
 {
-    CANFrame frame;
-    frame.bus = 0;
+    CommFrame frame;
+    frame.setBus(0);
     frame.setFrameId(0x123);
     frame.setExtendedFrameFormat(false);
 
@@ -122,8 +122,8 @@ void TestIsoTpHandler::helperFirstAndConsecutiveFrames(bool sendCF)
     }
 
     // FF – total length = 8 bytes
-    CANFrame ff;
-    ff.bus = 0;
+    CommFrame ff;
+    ff.setBus(0);
     ff.setFrameId(receiverId);
     ff.setExtendedFrameFormat(false);
     QByteArray ffData(8, 0);
@@ -154,8 +154,8 @@ void TestIsoTpHandler::helperFirstAndConsecutiveFrames(bool sendCF)
     }
 
     // CF – remaining 2 bytes
-    CANFrame cf;
-    cf.bus = 0;
+    CommFrame cf;
+    cf.setBus(0);
     cf.setFrameId(receiverId);
     cf.setExtendedFrameFormat(false);
     QByteArray cfData(8, 0);
@@ -205,8 +205,8 @@ void TestIsoTpHandler::helperFirstAndConsecutiveFramesAndExtedingAddressing(bool
     }
 
     // FF – total length = 8 bytes
-    CANFrame ff;
-    ff.bus = 0;
+    CommFrame ff;
+    ff.setBus(0);
     ff.setFrameId(receiverId);
     ff.setExtendedFrameFormat(false);
     QByteArray ffData(8, 0);
@@ -237,8 +237,8 @@ void TestIsoTpHandler::helperFirstAndConsecutiveFramesAndExtedingAddressing(bool
     }
 
     // CF – remaining 2 bytes
-    CANFrame cf;
-    cf.bus = 0;
+    CommFrame cf;
+    cf.setBus(0);
     cf.setFrameId(receiverId);
     cf.setExtendedFrameFormat(false);
     QByteArray cfData(8, 0);
@@ -265,8 +265,8 @@ void TestIsoTpHandler::helperFirstAndConsecutiveFramesAndExtedingAddressing(bool
 // --- Test Flow Control Frame (FC) ---
 void TestIsoTpHandler::testFlowControlFrame()
 {
-    CANFrame fc;
-    fc.bus = 0;
+    CommFrame fc;
+    fc.setBus(0);
     fc.setFrameId(0x321);
     fc.setExtendedFrameFormat(false);
     QByteArray fcData(8, 0);
@@ -288,8 +288,8 @@ void TestIsoTpHandler::testExtendedAddressing()
     isotp_handler->setExtendedAddressing(true);
     int receiverId = 0x200;
 
-    CANFrame frame;
-    frame.bus = 0;
+    CommFrame frame;
+    frame.setBus(0);
     frame.setFrameId(receiverId);
     frame.setExtendedFrameFormat(false);
     QByteArray data(8, 0);
