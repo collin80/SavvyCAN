@@ -1473,9 +1473,10 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
             if (line.contains("$FILEVERSION=1.1")) fileVersion = 11;
             continue;
         }
-        if (line.length() > 41)
+        //lines are checked by their token count below: a frame with no data is shorter than one with data
+        line = line.simplified();
+        if (!line.isEmpty())
         {
-            line = line.simplified();
             QList<QByteArray> tokens = line.split(' ');
             if (fileVersion == 11)
             {
@@ -1486,6 +1487,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[4].toInt();
+                        if (tokens.value(5) != "R" && tokens.length() - 5 < numBytes) numBytes = qMax(0, (int)tokens.length() - 5);
                         QByteArray bytes(numBytes, 0);
                         thisFrame.setReceived(true);
                         thisFrame.setBus(0);
@@ -1537,6 +1539,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[6].toInt();
+                        if (tokens.value(7) != "R" && tokens.length() - 7 < numBytes) numBytes = qMax(0, (int)tokens.length() - 7);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -2931,7 +2934,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CommFrame>* frames)
                 thisFrame.setBus(0);
                 thisFrame.setFrameType(CommFrame::CANDataFrame);
 
-                QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
+                QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ', Qt::SkipEmptyParts);
                 int numBytes = dataToks.length();
                 QByteArray bytes(numBytes, 0);
                 if (numBytes > 8) return false;
@@ -3394,7 +3397,9 @@ bool FrameFileIO::isTraceFile(QString filename)
                         if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
                         int len = tokens[3].toInt();
                         if (len > 8 || len < 0) isMatch = false;
-                        QList<QByteArray> dataToks = tokens[4].split(' ');
+                        //a frame with no data has no data column once the line is trimmed
+                        QList<QByteArray> dataToks;
+                        if (tokens.length() > 4) dataToks = tokens[4].split(' ');
                         if (len > dataToks.length()) isMatch = false;
                     }
                     else isMatch = false;
@@ -3489,9 +3494,11 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setFrameType(CommFrame::CANDataFrame);
                     int numBytes = tokens[3].toInt();
                     if (numBytes > 8) numBytes = 8;
+                    //a frame with no data has no data column once the line is trimmed
+                    QList<QByteArray> dataToks;
+                    if (tokens.length() > 4) dataToks = tokens[4].split(' ');
+                    if (numBytes > dataToks.length()) numBytes = dataToks.length();
                     QByteArray bytes(numBytes, 0);
-                    QList<QByteArray> dataToks = tokens[4].split(' ');
-                    //if (numBytes > dataToks.length()) thisFrame.payload().resize(dataToks.length());
                     for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                     frames->append(thisFrame);
@@ -4286,12 +4293,10 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CommFrame>* fra
         outFile.write(QString::number(frame->getBus()).toUtf8());
         outFile.putChar(44);
 
-        for (int temp = 0; temp < 8; temp++)
+        //only the bytes the frame has: the loader takes the frame length from the length of the data column
+        for (int temp = 0; temp < dataLen && temp < 8; temp++)
         {
-            if (temp < dataLen)
-                outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
-            else
-                outFile.write("00");
+            outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
         }
 
         outFile.write("\n");
