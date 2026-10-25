@@ -491,6 +491,7 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_Log_File"/>
+    <addaction name="actionLoad_Log_File_from_GitHub"/>
     <addaction name="actionSave_Filtered_Log_File"/>
     <addaction name="actionSave_Log_File"/>
     <addaction name="actionSave_Continuous_Logfile"/>
@@ -505,6 +506,7 @@
     <addaction name="separator"/>
     <addaction name="actionCrop_Log"/>
     <addaction name="separator"/>
+    <addaction name="actionGitHub_Account"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
     <addaction name="actionExit_Application"/>
@@ -552,6 +554,16 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionLoad_Log_File_from_GitHub">
+   <property name="text">
+    <string>Load Log File from GitHub...</string>
+   </property>
+  </action>
+  <action name="actionGitHub_Account">
+   <property name="text">
+    <string>GitHub Account...</string>
    </property>
   </action>
   <action name="actionSave_Log_File">

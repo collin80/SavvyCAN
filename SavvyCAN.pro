@@ -55,6 +55,12 @@ SOURCES += main.cpp\
     candatagrid.cpp \
     framesenderwindow.cpp \
     framefileio.cpp \
+    github/githubaccountdialog.cpp \
+    github/githubbrowserdialog.cpp \
+    github/githubcache.cpp \
+    github/githubclient.cpp \
+    github/githubdeviceflow.cpp \
+    github/githubsettings.cpp \
     mainsettingsdialog.cpp \
     scriptingwindow.cpp \
     scriptcontainer.cpp \
@@ -149,6 +155,12 @@ HEADERS  += mainwindow.h \
     framesenderwindow.h \
     can_trigger_structs.h \
     framefileio.h \
+    github/githubaccountdialog.h \
+    github/githubbrowserdialog.h \
+    github/githubcache.h \
+    github/githubclient.h \
+    github/githubdeviceflow.h \
+    github/githubsettings.h \
     config.h \
     mainsettingsdialog.h \
     scriptingwindow.h \

@@ -34,6 +34,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="btnLoadGitHub">
+       <property name="text">
+        <string>Load from GitHub</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="btnRemove">
        <property name="text">
         <string>Remove</string>

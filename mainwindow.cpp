@@ -9,6 +9,8 @@
 #include "helpwindow.h"
 #include "utility.h"
 #include "filterutility.h"
+#include "github/githubaccountdialog.h"
+#include "github/githubbrowserdialog.h"
 
 #include <QClipboard>
 #include <QTimer>
@@ -110,6 +112,8 @@ MainWindow::MainWindow(QWidget *parent) :
     //handlers for all menu entries
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
+    connect(ui->actionLoad_Log_File_from_GitHub, &QAction::triggered, this, &MainWindow::handleLoadFromGitHub);
+    connect(ui->actionGitHub_Account, &QAction::triggered, this, &MainWindow::showGitHubAccount);
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
@@ -1466,6 +1470,26 @@ void MainWindow::handleLoadFile()
 
 void MainWindow::handleDroppedFile(const QString &filename)
 {
+    loadLogFile(filename, 0, filename, false);
+}
+
+void MainWindow::handleLoadFromGitHub()
+{
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, FrameFileIO::loadFilters(), this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true);
+}
+
+void MainWindow::showGitHubAccount()
+{
+    GitHubAccountDialog dialog(this);
+    dialog.exec();
+}
+
+//Loads a log file into the frame list as the file type at that index of FrameFileIO::loadFilters() (0 autodetects),
+//showing it as displayName. reportFailure: say so when nothing at all could be loaded.
+bool MainWindow::loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure)
+{
     QProgressDialog progress(qApp->activeWindow());
     progress.setWindowModality(Qt::WindowModal);
     progress.setLabelText("Loading file...");
@@ -1475,10 +1499,16 @@ void MainWindow::handleDroppedFile(const QString &filename)
     progress.show();
     
     QVector<CommFrame> loadedFrames;
-    bool loadResult = FrameFileIO::autoDetectLoadFile(filename, &loadedFrames);
+    bool loadResult = FrameFileIO::loadFrameFileAs(filename, fileType, &loadedFrames);
     
     progress.cancel();
     
+    if (!loadResult && reportFailure && loadedFrames.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Error Loading"), tr("No frames could be loaded from %1. Perhaps it isn't "
+                                                           "that type of file?").arg(displayName));
+    }
+
     if (!loadResult)
     {
         if (loadedFrames.count() > 0) //only ask if at least one frame was decoded.
@@ -1498,7 +1528,7 @@ void MainWindow::handleDroppedFile(const QString &filename)
         ui->canFramesView->scrollToTop();
         model->clearFrames();
         model->insertFrames(loadedFrames);
-        loadedFileName = filename;
+        loadedFileName = displayName;
         model->recalcOverwrite();
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
@@ -1506,6 +1536,7 @@ void MainWindow::handleDroppedFile(const QString &filename)
         updateFileStatus();
         emit framesUpdated(-1);
     }
+    return loadResult;
 }
 
 

@@ -10,7 +10,9 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 |---|---|---|
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
-| Fork CI (Linux AppImage and Windows package on every push), this file, the README notice | `fork-ci` only | n/a |
+| GitHub repos: load log files and DBC files from GitHub (File > Load Log File from GitHub, DBC File Manager > Load from GitHub), signed in with GitHub or a token | `github-phase1-load` | fork only for now |
+| Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
+| Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
 
 **Builds:** every push to `fork-ci` builds a Linux x64 AppImage and a Windows x64 package. Download them from the
 *Fork Build (Linux + Windows)* runs under **Actions**.
@@ -66,6 +68,8 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fd-gvret` | `fd-send` + `fd-serialbus` | GVRET `GET_FD`/`SETUP_FD` | [#1140](https://github.com/collin80/SavvyCAN/pull/1140) (draft: protocol proposal) |
 | `fd-dbc` | `fd-send` + `fd-core` | DBC CAN FD messages | merged: [#1141](https://github.com/collin80/SavvyCAN/pull/1141) |
 | `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
+| `github-phase0-refactor` | `fork-ci` | File dialogs split from loading and saving logs and DBC files; Candump save result | - |
+| `github-phase1-load` | `fork-ci` | GitHub repos: loading logs and DBC files, sign-in, download cache | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -81,6 +85,15 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   [#1140](https://github.com/collin80/SavvyCAN/pull/1140) was merged upstream as proposed. ESP32RET's `t2canfd-board`
   branch in `Tom-evnut/ESP32RET` implements it; upstream ESP32RET doesn't yet.
 - **socketcand and CANserver:** classic CAN only (see the CAN FD table).
+- **Log savers found broken by the GitHub phase 0 tests** (upstream too, not fixed yet):
+  - CAN-DO: `saveCANDOFile` writes into an empty `QByteArray`, which Qt 6 doesn't allow (an assertion in debug
+    builds, undefined behaviour in release builds).
+  - Vehicle Spy: `saveVehicleSpyFile` isn't written; it reports success without saving anything.
+  - Generic ID/Data CSV: frames shorter than 8 bytes load back padded to 8 bytes.
+- **Old unit tests:** `unit_tests/test_isotp_handler.cpp` and `test_uds_handler.cpp` predate `CommFrame` and don't
+  compile; build the other tests by name.
+- **GitHub sign-in:** "Sign in with GitHub" needs an OAuth App client ID (none is built in yet), and its token
+  reaches all of the account's private repos. The token is stored scrambled, not encrypted.
 
 ## Testing
 
@@ -97,6 +110,39 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: load logs and DBC files from GitHub (`github-phase1-load`)
+
+Phase 1 of the [GitHub repos roadmap](https://github.com/Tom-evnut/SavvyCAN/blob/github-repos-roadmap/docs/github-repos-roadmap.md):
+logs and DBC files kept in GitHub repos load straight into SavvyCAN.
+
+- **Where:** File > Load Log File from GitHub..., and Load from GitHub in the DBC File Manager. File > GitHub
+  Account... signs in.
+- **Sign-in:** either "Sign in with GitHub" (OAuth device flow: SavvyCAN shows a code to enter on github.com; needs an
+  OAuth App's client ID, entered in the GitHub Account dialog) or a pasted personal access token. Public repos work
+  without signing in.
+- **Browsing:** saved repos per kind (logs or DBC files), branches, the file tree filtered by file type and by name.
+- **How files load:** the file is downloaded into a cache folder, keeping its name, with a `.origin.json` beside it
+  recording the repo, branch, path and blob SHA (which saving back will need). The existing loaders then load it, so
+  every log format and autodetect work. DBC files loaded from GitHub reload from the cache at the next start.
+- **Limits:** files up to 100 MB (GitHub's API); Git LFS files are recognised but not loaded yet.
+- **Fixes on the way:** a DBC file that fails to load no longer shows the previously loaded file a second time (or,
+  at startup, gives it the failed file's bus and settings).
+- **CI:** the Windows package now includes Qt's `tls` plugins and the Linux AppImage the `tls` plugins, without which
+  no HTTPS request works.
+- **Tests:** `TestGitHub` runs the API client and the device flow against a fake GitHub on a local port (paging,
+  errors, rate limit, cancelled sign-ins, a client deleted mid-request), plus the cache, settings, and both dialogs.
+
+### 2026-10-25: log and DBC loading/saving without the file dialogs (`github-phase0-refactor`)
+
+Phase 0 of the GitHub repos roadmap: groundwork, no visible change apart from the Candump fix.
+
+- **Split:** `FrameFileIO::loadFilters()`/`saveFilters()` with `loadFrameFileAs()`/`saveFrameFileAs()`, and
+  `DBCHandler::loadFilters()`/`saveFilters()` with `loadFileAs()`/`saveDBCFileAs()`, load or save by file type
+  without a file dialog. The dialogs use them; the DBC window's file types keep their translations.
+- **Fix:** saving as Candump/Kayak reported failure even when it worked, so the main window kept the old file name.
+- **Tests:** `TestFileDialogSplit` saves and reloads each log type and a DBC file. It found the broken CAN-DO and
+  Vehicle Spy savers listed under [Known issues](#known-issues).
 
 ### 2026-10-15: BLF CAN FD regression upstream (collin80/SavvyCAN#1151)
 

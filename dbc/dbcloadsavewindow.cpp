@@ -6,6 +6,7 @@
 #include <qevent.h>
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
+#include "github/githubbrowserdialog.h"
 
 DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -61,6 +62,7 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *
 
     connect(ui->btnEdit, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::editFile);
     connect(ui->btnLoad, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFile);
+    connect(ui->btnLoadGitHub, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFromGitHub);
     connect(ui->btnMoveDown, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveDown);
     connect(ui->btnMoveUp, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveUp);
     connect(ui->btnRemove, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::removeFile);
@@ -174,6 +176,27 @@ void DBCLoadSaveWindow::loadFile()
         file = dbcHandler->loadFileAs(filename, int(filters.indexOf(dialog.selectedNameFilter())));
     }
 
+    addFileRow(file);
+}
+
+void DBCLoadSaveWindow::loadFromGitHub()
+{
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, DBCHandler::loadFilters(), this);
+    if (dialog.exec() != QDialog::Accepted) return;
+
+    DBCFile *file = dbcHandler->loadFileAs(dialog.localFile(), dialog.fileTypeIndex());
+    if (!file)
+    {
+        QMessageBox::warning(this, tr("Load from GitHub"), tr("%1 couldn't be loaded as that type of file.")
+                             .arg(dialog.origin().displayName()));
+        return;
+    }
+    addFileRow(file);
+}
+
+//a row in the table for a file just loaded
+void DBCLoadSaveWindow::addFileRow(DBCFile *file)
+{
     if(file) {
         inhibitCellProcessing=true;
         int idx = ui->tableFiles->rowCount();

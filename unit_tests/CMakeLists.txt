@@ -82,9 +82,35 @@ target_link_libraries(TestFileDialogSplit
     Qt6::Widgets
 )
 
+###### GitHub repos test ######
+find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS Network)
+
+set(TEST_SOURCES_GITHUB
+    test_github.cpp
+    ../github/githubclient.cpp  # the code under test
+    ../github/githubdeviceflow.cpp
+    ../github/githubcache.cpp
+    ../github/githubsettings.cpp
+    ../github/githubbrowserdialog.cpp
+    ../github/githubaccountdialog.cpp
+    ../simplecrypt.cpp
+)
+
+add_executable(TestGitHub ${TEST_SOURCES_GITHUB})
+
+target_include_directories(TestGitHub PRIVATE ${SAVVYCAN_INCLUDE_DIRS})
+
+target_link_libraries(TestGitHub
+    Qt6::Core
+    Qt6::Test
+    Qt6::Network
+    Qt6::Widgets
+)
+
 
 # Enable ctest integration
 enable_testing()
 add_test(NAME TestIsoTpHandler COMMAND TestIsoTpHandler)
 add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
 add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
+add_test(NAME TestGitHub COMMAND TestGitHub)
