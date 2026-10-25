@@ -70,6 +70,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fd-playback` | `fd-core` | Playback: send all frames as CAN FD; last frames of a burst no longer dropped | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | `github-phase0-refactor` | `fork-ci` | File dialogs split from loading and saving logs and DBC files; Candump save result | - |
 | `github-phase1-load` | `fork-ci` | GitHub repos: loading logs and DBC files, sign-in, download cache | - |
+| `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -111,6 +112,12 @@ LilyGO T-2CAN-FD hardware.
 
 ## Change log
 
+### 2026-10-25: one GitHub repo list for logs and DBC files (`github-shared-repos`)
+
+- **Change:** the repos added in the GitHub browser are one list, shown when loading logs and DBC files alike; most
+  repos hold both. Before, each repo was listed for logs, DBC files or both.
+- **Removing** a repo now asks first, since it leaves both lists. Repos saved before are all in the one list.
+
 ### 2026-10-25: load logs and DBC files from GitHub (`github-phase1-load`)
 
 Phase 1 of the [GitHub repos roadmap](docs/github-repos-roadmap.md):
@@ -121,7 +128,8 @@ logs and DBC files kept in GitHub repos load straight into SavvyCAN.
 - **Sign-in:** either "Sign in with GitHub" (OAuth device flow: SavvyCAN shows a code to enter on github.com; needs an
   OAuth App's client ID, entered in the GitHub Account dialog) or a pasted personal access token. Public repos work
   without signing in.
-- **Browsing:** saved repos per kind (logs or DBC files), branches, the file tree filtered by file type and by name.
+- **Browsing:** saved repos (one list for logs and DBC files), branches, the file tree filtered by file type and by
+  name.
 - **How files load:** the file is downloaded into a cache folder, keeping its name, with a `.origin.json` beside it
   recording the repo, branch, path and blob SHA (which saving back will need). The existing loaders then load it, so
   every log format and autodetect work. DBC files loaded from GitHub reload from the cache at the next start.

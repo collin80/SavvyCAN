@@ -24,6 +24,7 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | Hosts | github.com only. The API base URL is a hidden setting so GitHub Enterprise can come later, untested |
 | Log sizes | Mostly under 50 MB: the Contents API is enough; the Git Data API and LFS wait for phase 4 |
 | Committing | Straight to the selected branch by default; "new branch and open a pull request" is an option when saving |
+| Saved repos | One list for logs and DBC files: most repos hold both |
 | New repos | Can be created from the save dialog (phase 2), private by default |
 | Test repo | A new private scratch repo (e.g. `tomdebree/savvycan-github-test`) with copies of `test/lin-data` files |
 
@@ -93,9 +94,10 @@ sends it as `Authorization: Bearer`.
 
 ### 4.3 Saved repos
 
-A list in `QSettings` (`GitHub/Repos`): owner/repo, the branch picked last, and what it holds (logs, DBC files or
-both). Added in the browser dialog from `owner/repo` or a github.com link, after `GET /repos/{owner}/{repo}` checks it.
-Removing a repo only takes it off the list.
+One list in `QSettings` (`GitHub/Repos`), shared by logs and DBC files since most repos hold both: owner/repo and the
+branch picked last. Added in the browser dialog from `owner/repo` or a github.com link, after
+`GET /repos/{owner}/{repo}` checks it. Removing a repo (after a question) takes it off the list for both; nothing
+changes on GitHub. Repos the first version saved for logs or DBC files only are in the one list now.
 
 ### 4.4 Local cache
 
@@ -110,7 +112,8 @@ Removing a repo only takes it off the list.
 One dialog for logs and DBCs:
 
 - Account line, repo picker (Add..., Remove), branch picker, file type, search box, and the file tree (folders, file
-  sizes). The last repo and file type are remembered per kind.
+  sizes). The repos and their branches are the same for logs and DBC files; the last repo and file type picked are
+  remembered separately for each.
 - **Open mode (phase 1):** pick a file; it's downloaded with a progress dialog that can be cancelled. Files over
   100 MB and Git LFS pointer files are refused with a message.
 - **Save mode (phase 2):** pick a folder, file name, format (logs), commit message, and a "Commit to a new branch and
@@ -130,7 +133,7 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 - **New Repo...** opens a small dialog: owner (the signed-in account, or one of their organisations from
   `GET /user/orgs`), name, optional description, and **Private** (ticked by default).
 - SavvyCAN creates it with `auto_init: true`, so it starts with a README and a default branch to commit to, adds it
-  to the saved repos for this kind (logs or DBC files), selects it with its default branch, and carries on with the
+  to the saved repos, selects it with its default branch, and carries on with the
   save.
 - Errors in plain words:
   - 422 "name already exists on this account": pick another name, or add the existing repo instead;
