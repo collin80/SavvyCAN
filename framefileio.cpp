@@ -3277,7 +3277,8 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CommFrame>* frames
             {
                 if (!inComment)
                 {
-                    QList<QByteArray> tokens = line.split(';');
+                    QList<QByteArray> tokens = line.trimmed().split(';');
+                    if (!tokens.isEmpty() && tokens.last().isEmpty()) tokens.removeLast(); //the ; after the last byte
                     if (tokens.length() >= 4)
                     {
                         long long timeStamp = tokens[0].toInt() * 1000;
@@ -3289,10 +3290,9 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CommFrame>* frames
                         if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
                             else thisFrame.setExtendedFrameFormat(true);
                         thisFrame.setBus(0);
-                        int numBytes = tokens[3].toInt();
+                        //no more than 8 bytes, and no more than the line gives
+                        int numBytes = qBound(0, tokens[3].toInt(), qMin(8, int(tokens.length()) - 4));
                         QByteArray bytes(numBytes, 0);
-                        if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
-                        if (thisFrame.payload().length() + 4 > tokens.length()) thisFrame.payload().resize( tokens.length() - 4 );
                         for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>( Utility::ParseStringToNum(tokens[4 + d]) );
                         thisFrame.setPayload(bytes);
                         frames->append(thisFrame);
@@ -5092,7 +5092,15 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CommFrame>* frames
 
         thisFrame.setTimeStamp(CommFrame::TimeStamp(0, timeStamp));
         thisFrame.setReceived(true); // TODO: check if tx detection is possible
-            
+
+        //a record too short for the CAN header (16 bytes before it, then 8 bytes of ID, length and padding)
+        if (packetHeader.caplen < 24)
+        {
+            foundErrors = true;
+            packetData = (const char*)pcap_next(pcap_data_file, &packetHeader);
+            continue;
+        }
+
         thisFrame.setFrameType(CommFrame::CANDataFrame);
         if ((0x80 & *(packetData+19)))  {
             thisFrame.setExtendedFrameFormat(true);
@@ -5102,9 +5110,9 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CommFrame>* frames
             thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
         }
         thisFrame.setBus(0);
-        int numBytes = *(packetData+20);
+        //classic CAN, so no more than 8 bytes, and no more than the record has
+        int numBytes = qMin(int(0xff & *(packetData+20)), qMin(8, int(packetHeader.caplen) - 24));
         QByteArray bytes(numBytes, 0);
-        if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
         for (int d = 0; d < numBytes; d++) 
         { 
             bytes[d] = *(packetData + 24 + d);
