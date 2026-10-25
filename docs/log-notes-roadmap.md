@@ -12,8 +12,9 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | Phase | State |
 |---|---|
 | 1: notes format, native CSV block, sidecar file | Done, merged into `fork-ci` (`d7049fa`); older loader checked |
-| 2: notes dialog on save, Log Notes panel | Done on `log-notes-ui`, not merged yet; `TestLogNotesUi` passes, not tried in the app by hand yet |
-| 3, 4 | Not started |
+| 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci`; tried by the user on Windows (open a log, edit its notes, save, reopen) |
+| 3: notes when capture starts, continuous logging, markers | In progress (`log-notes-capture`) |
+| 4 | Not started |
 
 ---
 
