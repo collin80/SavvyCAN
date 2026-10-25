@@ -40,7 +40,7 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, const QStringList &fileTypes
 
     QHBoxLayout *accountRow = new QHBoxLayout;
     lblAccount = new QLabel;
-    QPushButton *btnAccount = new QPushButton(tr("GitHub Account..."));
+    btnAccount = new QPushButton;
     accountRow->addWidget(lblAccount, 1);
     accountRow->addWidget(btnAccount);
     layout->addLayout(accountRow);
@@ -75,6 +75,7 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, const QStringList &fileTypes
     layout->addWidget(tree, 1);
 
     lblStatus = new QLabel;
+    lblStatus->setOpenExternalLinks(true); //the link to install the SavvyCAN app (showError)
     lblStatus->setWordWrap(true);
     layout->addWidget(lblStatus);
 
@@ -108,6 +109,7 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, const QStringList &fileTypes
     tree->setObjectName("tree");
     lblStatus->setObjectName("lblStatus");
     btnOpen->setObjectName("btnOpen");
+    btnAccount->setObjectName("btnAccount");
 
     resize(640, 560);
     updateOpenButton();
@@ -157,13 +159,37 @@ void GitHubBrowserDialog::refreshAccount()
     if (GitHubSettings::token().isEmpty())
     {
         lblAccount->setText(tr("Not signed in: public repos only."));
+        btnAccount->setText(tr("Sign In..."));
         return;
     }
+    btnAccount->setText(tr("GitHub Account..."));
     lblAccount->setText(tr("Checking the sign-in..."));
     client->getUser([this](const QString &login, const QString &error)
     {
         lblAccount->setText(error.isEmpty() ? tr("Signed in as %1.").arg(login) : error);
     });
+}
+
+//an error in the status line; a repo GitHub won't show may only need signing in, or the SavvyCAN app installing
+void GitHubBrowserDialog::showError(const QString &error)
+{
+    QString text = error.toHtmlEscaped();
+    if (error.endsWith(GitHubClient::notFoundText()))
+    {
+        if (GitHubSettings::token().isEmpty())
+            text += " " + tr("If it's a private repo, sign in first.").toHtmlEscaped();
+        else if (GitHubSettings::tokenFromDeviceFlow() && !GitHubSettings::appInstallUrl().isEmpty())
+            text += " " + tr("If it's a private repo, <a href=\"%1\">install the SavvyCAN app on it</a>.")
+                    .arg(GitHubSettings::appInstallUrl());
+    }
+    lblStatus->setTextFormat(Qt::RichText);
+    lblStatus->setText(text);
+}
+
+void GitHubBrowserDialog::setStatus(const QString &text)
+{
+    lblStatus->setTextFormat(Qt::PlainText);
+    lblStatus->setText(text);
 }
 
 void GitHubBrowserDialog::fillRepos(const QString &select)
@@ -197,24 +223,24 @@ void GitHubBrowserDialog::repoChanged()
     const int idx = comboRepo->currentIndex();
     if (idx < 0 || idx >= savedRepos.count())
     {
-        lblStatus->setText(tr("Add a repo with Add... (\"owner/repo\" or a github.com link)."));
+        setStatus(tr("Add a repo with Add... (\"owner/repo\" or a github.com link)."));
         return;
     }
     const GitHubRepo repo = savedRepos[idx];
     QSettings().setValue(settingsKey() + "Repo", repo.fullName());
 
-    lblStatus->setText(tr("Reading the branches of %1...").arg(repo.fullName()));
+    setStatus(tr("Reading the branches of %1...").arg(repo.fullName()));
     client->listBranches(repo.owner, repo.name, [this, gen, repo](const QList<GitHubBranch> &list, const QString &error)
     {
         if (gen != generation) return;
         if (!error.isEmpty())
         {
-            lblStatus->setText(error);
+            showError(error);
             return;
         }
         if (list.isEmpty())
         {
-            lblStatus->setText(tr("%1 has no branches yet.").arg(repo.fullName()));
+            setStatus(tr("%1 has no branches yet.").arg(repo.fullName()));
             return;
         }
         branches = list;
@@ -244,21 +270,21 @@ void GitHubBrowserDialog::branchChanged()
     const GitHubBranch branch = branches[branchIdx];
     rememberBranch(branch.name);
 
-    lblStatus->setText(tr("Reading the files in %1...").arg(branch.name));
+    setStatus(tr("Reading the files in %1...").arg(branch.name));
     client->getTree(repo.owner, repo.name, branch.commitSha,
                     [this, gen](const QList<GitHubEntry> &list, bool truncated, const QString &error)
     {
         if (gen != generation) return;
         if (!error.isEmpty())
         {
-            lblStatus->setText(error);
+            showError(error);
             return;
         }
         entries = list;
         fillTree();
-        if (entries.isEmpty()) lblStatus->setText(tr("This branch has no files."));
+        if (entries.isEmpty()) setStatus(tr("This branch has no files."));
         if (truncated)
-            lblStatus->setText(lblStatus->text() + " " + tr("GitHub sent only part of this repo's file list: "
+            setStatus(lblStatus->text() + " " + tr("GitHub sent only part of this repo's file list: "
                                                             "it's too large to list completely."));
     });
 }
@@ -322,9 +348,9 @@ void GitHubBrowserDialog::fillTree()
 
     if (comboBranch->count() > 0 && !entries.isEmpty())
     {
-        if (shown == 0) lblStatus->setText(tr("No matching files."));
-        else if (shown == 1) lblStatus->setText(tr("1 matching file."));
-        else lblStatus->setText(tr("%1 matching files.").arg(shown));
+        if (shown == 0) setStatus(tr("No matching files."));
+        else if (shown == 1) setStatus(tr("1 matching file."));
+        else setStatus(tr("%1 matching files.").arg(shown));
     }
     updateOpenButton();
 }
@@ -351,13 +377,13 @@ void GitHubBrowserDialog::addRepo()
     }
 
     btnAddRepo->setEnabled(false);
-    lblStatus->setText(tr("Checking %1/%2...").arg(owner, name));
+    setStatus(tr("Checking %1/%2...").arg(owner, name));
     client->getRepo(owner, name, [this, owner, name](const QString &defaultBranch, const QString &error)
     {
         btnAddRepo->setEnabled(true);
         if (!error.isEmpty())
         {
-            lblStatus->setText(tr("%1/%2: %3").arg(owner, name, error));
+            showError(owner + "/" + name + ": " + error);
             return;
         }
 

@@ -83,6 +83,11 @@ QNetworkReply *GitHubClient::get(const QString &apiPath, ReplyCallback done, boo
     return reply;
 }
 
+QString GitHubClient::notFoundText()
+{
+    return tr("Not found on GitHub, or this account has no access to it.");
+}
+
 QString GitHubClient::errorText(QNetworkReply *reply, const QByteArray &body)
 {
     if (reply->error() == QNetworkReply::OperationCanceledError) return tr("Cancelled.");
@@ -101,7 +106,7 @@ QString GitHubClient::errorText(QNetworkReply *reply, const QByteArray &body)
     if (status == 401)
         return tr("GitHub didn't accept the sign-in (it may have expired or been withdrawn): sign in again under "
                   "GitHub Account.");
-    if (status == 404) return tr("Not found on GitHub, or this account has no access to it.");
+    if (status == 404) return notFoundText();
     if (message.isEmpty()) return tr("GitHub answered %1 %2.").arg(status)
             .arg(reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString());
     return tr("GitHub answered %1: %2").arg(status).arg(message);

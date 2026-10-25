@@ -26,12 +26,18 @@ public:
     static void setToken(const QString &token, bool fromDeviceFlow);
     static void clearToken();
 
-    static QString clientId();      //the OAuth App's client ID ("Sign in with GitHub" is off without one)
-    static void setClientId(const QString &id);
+    //"Sign in with GitHub" uses the SavvyCAN GitHub App unless the user names another app (an OAuth App or a
+    //GitHub App with Device Flow turned on, for forks or organisations that want their own)
+    static QString clientId();      //the app in use
+    static QString ownClientId();   //the user's own app, empty for the SavvyCAN app
+    static void setOwnClientId(const QString &id); //empty: back to the SavvyCAN app
+    static bool isGitHubAppClientId(const QString &id);
+    //where the SavvyCAN app is installed on repos; empty when the user named another app
+    static QString appInstallUrl();
     static QString apiUrl();        //https://api.github.com
     static QString webUrl();        //https://github.com, for the device flow
 
-    static QList<GitHubRepo> repos();
+    static QList<GitHubRepo> repos(); //Tom-evnut/EV-CANlogs until the list is first saved
     static void setRepos(const QList<GitHubRepo> &repos);
 
     //"owner/repo", or a github.com link to the repo or anything in it; false if it's neither

@@ -1,6 +1,7 @@
 #include <QtTest/QtTest>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -131,6 +132,7 @@ private slots:
     void testDeviceFlowRefused_data();
     void testDeviceFlowRefused();
     void testBrowserDialog();
+    void testBrowserNotFoundHints();
     void testAccountDialog();
 
 private:
@@ -187,6 +189,13 @@ void TestGitHub::testParseRepo()
 
 void TestGitHub::testSettings()
 {
+    //a new user starts with Tom-evnut's public EV CAN logs repo
+    QSettings().remove("GitHub");
+    QList<GitHubRepo> defaults = GitHubSettings::repos();
+    QCOMPARE(defaults.count(), 1);
+    QCOMPARE(defaults[0].fullName(), QString("Tom-evnut/EV-CANlogs"));
+    QCOMPARE(defaults[0].branch, QString("main"));
+
     GitHubSettings::clearToken();
     QVERIFY(GitHubSettings::token().isEmpty());
     GitHubSettings::setToken("github_pat_abc123", false);
@@ -200,10 +209,22 @@ void TestGitHub::testSettings()
 
     QCOMPARE(GitHubSettings::apiUrl(), QString("https://api.github.com"));
     QCOMPARE(GitHubSettings::webUrl(), QString("https://github.com"));
-    GitHubSettings::setClientId("  Iv1.abc ");
-    QCOMPARE(GitHubSettings::clientId(), QString("Iv1.abc"));
-    GitHubSettings::setClientId("");
-    QCOMPARE(GitHubSettings::clientId(), QString());
+    //the SavvyCAN GitHub App unless the user names their own
+    QCOMPARE(GitHubSettings::clientId(), QString("Iv23lihZx7wcgpoRCn04"));
+    QVERIFY(GitHubSettings::ownClientId().isEmpty());
+    QCOMPARE(GitHubSettings::appInstallUrl(), QString("https://github.com/apps/savvycan/installations/new"));
+    GitHubSettings::setOwnClientId("  Ov23liOwnApp ");
+    QCOMPARE(GitHubSettings::clientId(), QString("Ov23liOwnApp"));
+    QCOMPARE(GitHubSettings::ownClientId(), QString("Ov23liOwnApp"));
+    QVERIFY(GitHubSettings::appInstallUrl().isEmpty());
+    GitHubSettings::setOwnClientId("Iv23lihZx7wcgpoRCn04"); //the SavvyCAN app typed in: not "own"
+    QVERIFY(GitHubSettings::ownClientId().isEmpty());
+    QVERIFY(!QSettings().contains("GitHub/ClientId"));
+    GitHubSettings::setOwnClientId("");
+    QCOMPARE(GitHubSettings::clientId(), QString("Iv23lihZx7wcgpoRCn04"));
+    QVERIFY(GitHubSettings::isGitHubAppClientId("Iv1.abc"));
+    QVERIFY(GitHubSettings::isGitHubAppClientId("Iv23lihZx7wcgpoRCn04"));
+    QVERIFY(!GitHubSettings::isGitHubAppClientId("Ov23liOwnApp"));
 
     GitHubRepo first;
     first.owner = "a";
@@ -222,9 +243,11 @@ void TestGitHub::testSettings()
     GitHubSettings::setRepos({ second });
     QCOMPARE(GitHubSettings::repos().count(), 1);
     GitHubSettings::setRepos({});
-    QVERIFY(GitHubSettings::repos().isEmpty());
+    QVERIFY(GitHubSettings::repos().isEmpty()); //emptied by the user: stays empty
 
-    //the first version kept a repo for logs, DBC files or both: such repos are now in the one list
+    //the first version kept a repo for logs, DBC files or both: such repos are now in the one list, and a list
+    //saved before the default repo existed is kept as it is
+    QSettings().remove("GitHub");
     {
         QSettings settings;
         settings.beginWriteArray("GitHub/Repos", 1);
@@ -756,6 +779,44 @@ void TestGitHub::testBrowserDialog()
     QSettings().remove("GitHub");
 }
 
+void TestGitHub::testBrowserNotFoundHints()
+{
+    FakeGitHub github;
+    github.handler = [](const FakeRequest &) { return json(R"({"message":"Not Found"})", 404); };
+    QSettings().setValue("GitHub/ApiUrl", github.url());
+    GitHubRepo repo;
+    repo.owner = "o";
+    repo.name = "private";
+    repo.branch = "main";
+    GitHubSettings::setRepos({ repo });
+
+    {
+        GitHubSettings::clearToken();
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)" });
+        QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
+        QCOMPARE(dialog.findChild<QPushButton *>("btnAccount")->text(), QString("Sign In..."));
+        QTRY_VERIFY(lblStatus->text().contains("sign in first"));
+    }
+    {
+        GitHubSettings::setToken("gho_token", true);
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)" });
+        QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
+        QCOMPARE(dialog.findChild<QPushButton *>("btnAccount")->text(), QString("GitHub Account..."));
+        QTRY_VERIFY(lblStatus->text().contains("https://github.com/apps/savvycan/installations/new"));
+        QCOMPARE(lblStatus->textFormat(), Qt::RichText);
+    }
+    {
+        GitHubSettings::setToken("github_pat_token", false); //a token's repos are chosen on GitHub: no app link
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)" });
+        QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
+        QTRY_VERIFY(lblStatus->text().contains("no access"));
+        QVERIFY(!lblStatus->text().contains("installations"));
+    }
+
+    GitHubSettings::clearToken();
+    QSettings().remove("GitHub");
+}
+
 void TestGitHub::testAccountDialog()
 {
     FakeGitHub github;
@@ -769,6 +830,31 @@ void TestGitHub::testAccountDialog()
     QVERIFY(lblStatus);
     QTRY_COMPARE(lblStatus->text(), QString("Signed in as tester (Sign in with GitHub)."));
     screenshot(&dialog, "github-account");
+
+    //the SavvyCAN app: no client ID to enter, a button to choose its repos
+    QWidget *installRow = dialog.findChild<QWidget *>("installRow");
+    QCheckBox *cbOwnApp = dialog.findChild<QCheckBox *>("cbOwnApp");
+    QWidget *ownAppBox = dialog.findChild<QWidget *>("ownAppBox");
+    QLineEdit *editClientId = dialog.findChild<QLineEdit *>("editClientId");
+    QCheckBox *cbPrivateRepos = dialog.findChild<QCheckBox *>("cbPrivateRepos");
+    QVERIFY(installRow && cbOwnApp && ownAppBox && editClientId && cbPrivateRepos);
+    QVERIFY(installRow->isVisible());
+    QVERIFY(!cbOwnApp->isChecked());
+    QVERIFY(!ownAppBox->isVisible());
+
+    //one's own OAuth App: client ID and the private repos choice; a GitHub App has no scopes to choose
+    cbOwnApp->setChecked(true);
+    QVERIFY(ownAppBox->isVisible());
+    editClientId->setText("Ov23liOwnApp");
+    QCOMPARE(GitHubSettings::clientId(), QString("Ov23liOwnApp"));
+    QVERIFY(cbPrivateRepos->isVisible());
+    QVERIFY(!installRow->isVisible());
+    screenshot(&dialog, "github-account-own-app");
+    editClientId->setText("Iv23liOwnGitHubApp");
+    QVERIFY(!cbPrivateRepos->isVisible());
+    cbOwnApp->setChecked(false);
+    QCOMPARE(GitHubSettings::clientId(), QString("Iv23lihZx7wcgpoRCn04"));
+    QVERIFY(installRow->isVisible());
 
     GitHubSettings::clearToken();
     QSettings().remove("GitHub");

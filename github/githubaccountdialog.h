@@ -25,6 +25,10 @@ private:
     GitHubDeviceFlow *deviceFlow;
     QLabel *lblStatus;
     QPushButton *btnSignOut;
+    QLabel *lblDeviceHelp;
+    QWidget *installRow;
+    QCheckBox *cbOwnApp;
+    QWidget *ownAppBox;
     QLineEdit *editClientId;
     QCheckBox *cbPrivateRepos;
     QPushButton *btnDeviceSignIn;
@@ -36,6 +40,7 @@ private:
     QString verificationUrl;
 
     void refreshStatus();
+    void updateAppWidgets();
     void startDeviceSignIn();
     void useToken(const QString &token, bool fromDeviceFlow);
     void signOut();

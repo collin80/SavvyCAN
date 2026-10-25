@@ -54,6 +54,7 @@ public:
 
     //A message for a failed reply, in plain words
     static QString errorText(QNetworkReply *reply, const QByteArray &body);
+    static QString notFoundText(); //what errorText gives for a 404
 
 private:
     QNetworkAccessManager *manager;
