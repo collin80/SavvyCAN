@@ -4,14 +4,12 @@
 #include <QString>
 #include <QList>
 
-//A GitHub repo the user added, for logs, DBC files or both
+//A GitHub repo the user added. One list for logs and DBC files: most repos hold both.
 struct GitHubRepo
 {
     QString owner;
     QString name;
     QString branch;     //the branch picked last (the repo's default branch when it was added)
-    bool logs = true;
-    bool dbcs = true;
 
     QString fullName() const { return owner + "/" + name; }
 };

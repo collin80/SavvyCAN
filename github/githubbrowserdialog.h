@@ -20,7 +20,7 @@ class GitHubBrowserDialog : public QDialog
     Q_OBJECT
 
 public:
-    enum Kind { Logs, DBCs }; //which repos are listed, and what's remembered
+    enum Kind { Logs, DBCs }; //the window title, and the last repo and file type remembered for each
 
     //fileTypes are file dialog name filters ("GVRET Logs (*.csv *.CSV)"); the one picked is fileTypeIndex()
     GitHubBrowserDialog(Kind kind, const QStringList &fileTypes, QWidget *parent = nullptr);
@@ -36,7 +36,7 @@ public:
 private:
     Kind kind;
     GitHubClient *client;
-    QList<GitHubRepo> shownRepos;   //the repos in comboRepo, in its order
+    QList<GitHubRepo> savedRepos;   //the repos in comboRepo, in its order (shared by logs and DBC files)
     QList<GitHubBranch> branches;   //the branches in comboBranch, in its order
     QList<GitHubEntry> entries;     //the files and folders of the branch shown
     int generation;                 //bumped on every repo/branch change, so late answers are ignored
