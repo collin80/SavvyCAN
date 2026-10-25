@@ -11,6 +11,7 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 |---|---|
 | 0: file dialogs split from loading and saving | Done, merged into `fork-ci` (`8e00c02`) |
 | 1: load logs and DBC files from GitHub | Done, merged into `fork-ci` (`ecda015`); CI packages carry the TLS plugins. Tested against a fake GitHub only |
+| 1b: sign-in for everyone (the SavvyCAN GitHub App built in), shared repo list, EV-CANlogs preloaded | Done, merged into `fork-ci`; signing in and loading from `Tom-evnut/EV-CANlogs` confirmed by the user on Windows |
 | 2: save logs and DBC files, create repos | Next |
 | 3, 4 | Not started |
 
@@ -20,7 +21,8 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 
 | Question | Decision |
 |---|---|
-| Sign-in | Both from the first version: "Sign in with GitHub" (device flow, through an OAuth App or a GitHub App) and a pasted personal access token |
+| Sign-in | "Sign in with GitHub" through the SavvyCAN GitHub App ([github.com/apps/savvycan](https://github.com/apps/savvycan), Tom-evnut's), built in so users register nothing; a pasted personal access token, or the user's own app, as alternatives |
+| Starting repo | `Tom-evnut/EV-CANlogs` (public) is in every new user's repo list |
 | Hosts | github.com only. The API base URL is a hidden setting so GitHub Enterprise can come later, untested |
 | Log sizes | Mostly under 50 MB: the Contents API is enough; the Git Data API and LFS wait for phase 4 |
 | Committing | Straight to the selected branch by default; "new branch and open a pull request" is an option when saving |
@@ -75,16 +77,21 @@ marked otherwise:
 **File > GitHub Account...** (also reachable from the browser dialog) signs in. `GitHubClient` only sees a token and
 sends it as `Authorization: Bearer`.
 
-- **Sign in with GitHub (device flow):** SavvyCAN asks `https://github.com/login/device/code` for a code, shows it
-  with a button that copies it and opens `https://github.com/login/device`, and polls
-  `https://github.com/login/oauth/access_token` at the interval GitHub gives until the user approves. Only the app's
-  client ID is needed, entered in the dialog (no client secret). Either kind of app works:
-  - **OAuth App:** "Enable Device Flow" ticked. Scope `repo` reaches all of the user's private repos; `public_repo`
-    (the dialog's "Include private repos" unticked) only public ones.
-  - **GitHub App:** reaches only the repos it's installed on. Settings: "Enable Device Flow" ticked, "Expire user
-    authorization tokens" unticked (SavvyCAN doesn't refresh tokens yet), webhook off; repository permissions
+- **Sign in with GitHub (device flow):** one click. SavvyCAN asks `https://github.com/login/device/code` for a code,
+  copies it to the clipboard and opens `https://github.com/login/device`, where the user pastes it and approves; it
+  polls `https://github.com/login/oauth/access_token` at the interval GitHub gives until then. Only a client ID is
+  needed, never a client secret.
+  - **The SavvyCAN GitHub App** is built in (`GITHUB_APP_CLIENT_ID`, `GITHUB_APP_SLUG` in `githubsettings.cpp`), so
+    nobody else registers anything. Its user tokens reach public repos and the repos it's installed on: **Choose
+    Repos...** in the dialog opens `https://github.com/apps/savvycan/installations/new`, and a repo GitHub won't
+    show links there too. App settings: "Enable Device Flow" ticked, "Expire user authorization tokens" unticked
+    (SavvyCAN doesn't refresh tokens yet), webhook off, installable on any account; repository permissions
     *Contents: read and write*, *Pull requests: read and write* (phase 2's pull request option), *Metadata:
-    read-only*, and *Administration: read and write* only if repos are to be created from SavvyCAN (section 4.7).
+    read-only*, and *Administration: read and write* only once repos are to be created from SavvyCAN (section 4.7;
+    everyone who installed the app is then asked to accept the new permission).
+  - **The user's own app** ("Use my own GitHub App or OAuth App"), for forks or organisations: its client ID is
+    entered there. An OAuth App goes by scope: `repo` reaches all of the user's private repos, `public_repo` (the
+    "Include private repos" box unticked) only public ones; the box is hidden for GitHub Apps, which ignore scopes.
 - **Personal access token:** pasted in, for users who want access limited to chosen repos (a fine-grained token with
   *Contents: read and write* and, for pull requests, *Pull requests: read and write*; *Administration: read and
   write* for creating repos). A token is kept only once `GET /user` accepts it.
@@ -97,7 +104,9 @@ sends it as `Authorization: Bearer`.
 One list in `QSettings` (`GitHub/Repos`), shared by logs and DBC files since most repos hold both: owner/repo and the
 branch picked last. Added in the browser dialog from `owner/repo` or a github.com link, after
 `GET /repos/{owner}/{repo}` checks it. Removing a repo (after a question) takes it off the list for both; nothing
-changes on GitHub. Repos the first version saved for logs or DBC files only are in the one list now.
+changes on GitHub. Repos the first version saved for logs or DBC files only are in the one list now. Until the list
+is first saved it holds `Tom-evnut/EV-CANlogs`, so new users have logs and DBC files to load straight away; a list
+the user empties stays empty.
 
 ### 4.4 Local cache
 
@@ -216,7 +225,6 @@ From the save dialog, so a log or DBC file can go into a repo that doesn't exist
 
 ## 10. Needed from the user
 
-- Before testing on real GitHub: register an app with Device Flow enabled (an OAuth App, or a GitHub App with the
-  settings in section 4.2) and enter its client ID in File > GitHub Account..., or paste a fine-grained token.
-- Create the private scratch repo and add copies of logs and DBC/LDF files from `test/lin-data`.
-- For repo creation (phase 2): give the app or token *Administration: read and write*, if wanted.
+- Done: the SavvyCAN GitHub App is registered (2026-10-25) and signing in works.
+- Create the private scratch repo for the phase 2 save tests, and install the SavvyCAN app on it.
+- For repo creation (phase 2): add *Administration: read and write* to the SavvyCAN app, if wanted.

@@ -71,6 +71,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-phase0-refactor` | `fork-ci` | File dialogs split from loading and saving logs and DBC files; Candump save result | - |
 | `github-phase1-load` | `fork-ci` | GitHub repos: loading logs and DBC files, sign-in, download cache | - |
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
+| `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -93,8 +94,8 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   - Generic ID/Data CSV: frames shorter than 8 bytes load back padded to 8 bytes.
 - **Old unit tests:** `unit_tests/test_isotp_handler.cpp` and `test_uds_handler.cpp` predate `CommFrame` and don't
   compile; build the other tests by name.
-- **GitHub sign-in:** "Sign in with GitHub" needs an OAuth App client ID (none is built in yet), and its token
-  reaches all of the account's private repos. The token is stored scrambled, not encrypted.
+- **GitHub sign-in:** the token is stored scrambled, not encrypted. Private repos need the SavvyCAN GitHub App
+  installed on them (Choose Repos... in File > GitHub Account...).
 
 ## Testing
 
@@ -111,6 +112,19 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: GitHub sign-in for everyone (`github-polish`)
+
+- **SavvyCAN GitHub App built in:** "Sign in with GitHub" uses [github.com/apps/savvycan](https://github.com/apps/savvycan),
+  so users register nothing and enter no client ID. Clicking it copies the code and opens GitHub's page; the user
+  pastes it and approves.
+- **Private repos:** Choose Repos... in the GitHub Account dialog installs the app on the user's (or their
+  organisations') repos. A repo GitHub won't show gets a hint in the browser: sign in, or install the app on it.
+- **Own app:** "Use my own GitHub App or OAuth App" keeps the client ID field for forks and organisations; the
+  private-repos choice only shows for OAuth Apps.
+- **Starting repo:** new users' repo list starts with the public `Tom-evnut/EV-CANlogs`.
+- **Confirmed** by the user on Windows before this change: signing in with the app and loading logs and DBC files
+  from `Tom-evnut/EV-CANlogs`.
 
 ### 2026-10-25: one GitHub repo list for logs and DBC files (`github-shared-repos`)
 
