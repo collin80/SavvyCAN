@@ -14,6 +14,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
 | Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
+| Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
 | Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
 
@@ -78,6 +79,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
 | `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
+| `fix-loader-bounds` | `fork-ci` | Microchip and Wireshark loaders limit the byte count to the data given | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -99,9 +101,9 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   - IXXAT MiniLog: a frame with no data loads back with one byte.
   - Cabana: frames shorter than 8 bytes load back padded to 8 bytes.
   - PCAN Viewer: a frame with no data isn't loaded.
-- **Log loaders with checks that do nothing** (found in `obd2-phase0-tests`, upstream too, not fixed yet):
-  `loadMicrochipFile` and `loadWiresharkFile` call `payload().resize()` on a copy of the payload, so their limits
-  on the byte count have no effect and a malformed file can make them read past the end of a line or packet.
+- **pcap records over 256 bytes** (found in `fix-loader-bounds`, upstream too, not fixed yet): `pcaplite.cpp` reads
+  each record into a 256 byte buffer without checking its length, so a pcap or pcapng file with a longer record
+  writes past the buffer. CAN records are much shorter, but any pcap file can reach the Wireshark loaders.
 - **GitHub sign-in:** the token is stored scrambled, not encrypted. Private repos need the SavvyCAN GitHub App
   installed on them (Choose Repos... in File > GitHub Account...).
 
@@ -120,6 +122,20 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: Microchip and Wireshark loaders limit the byte count (`fix-loader-bounds`)
+
+Both loaders called `payload().resize()` to limit a frame's byte count, but `CommFrame::payload()` returns a copy, so
+the limits did nothing (found in `obd2-phase0-tests`; upstream too).
+
+- **Microchip:** a line claiming more bytes than it gives read past the end of the line's fields. The count is now
+  limited to 8 and to the bytes on the line, and a negative count gives no bytes. The `;` the saver writes after the
+  last byte is no longer counted as a byte.
+- **Wireshark:** the byte count came from the record without a check, so a record claiming more bytes than it has
+  read past the record. The count is now limited to 8 (the format is classic CAN) and to the bytes in the record.
+  A record too short for the CAN header is skipped, and the load reports errors.
+- **Tests:** `TestFileDialogSplit` loads malformed Microchip and Wireshark files (counts too large, over 8,
+  negative, with no bytes, a cut-off record); also with AddressSanitizer and UndefinedBehaviorSanitizer.
 
 ### 2026-10-25: save logs and DBC files to GitHub (`github-phase2-save`)
 

@@ -17,6 +17,8 @@ private slots:
     void testLogAutodetect();
     void testLogBadIndex();
     void testCANDOFile();
+    void testMicrochipBadLengths();
+    void testWiresharkBadLengths();
     void testDbcFilterLists();
     void testDbcSaveAndLoad();
     void testDbcBadIndex();
@@ -195,6 +197,99 @@ void TestFileDialogSplit::testCANDOFile()
 
     // Vehicle Spy files can't be saved
     QVERIFY(!FrameFileIO::saveVehicleSpyFile(dir.filePath("spy.csv"), &frames));
+}
+
+// Microchip lines whose byte count doesn't match the bytes given: no more than 8, and no more than the line has
+void TestFileDialogSplit::testMicrochipBadLengths()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString filename = dir.filePath("bad.log");
+    QFile file(filename);
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+    file.write("//---------------------------------\n"
+               "Microchip Technology Inc.\n"
+               "//---------------------------------\n"
+               "1000;RX;0x100;8;0x01;0x02;0x03;\n"     // 8 bytes claimed, 3 given
+               "2000;RX;0x101;8;0x04;0x05\n"           // the same without the ; at the end
+               "3000;RX;0x102;12;0x01;0x02;0x03;0x04;0x05;0x06;0x07;0x08;0x09;0x0A;0x0B;0x0C;\n" // more than 8
+               "4000;RX;0x103;-1;0x01;\n"              // a negative count
+               "5000;RX;0x104;5;\n");                  // a count and no bytes
+    file.close();
+
+    QVector<CommFrame> loaded;
+    QVERIFY(FrameFileIO::loadMicrochipFile(filename, &loaded));
+    QCOMPARE(loaded.count(), 5);
+    QCOMPARE(loaded[0].payload(), QByteArray::fromHex("010203"));
+    QCOMPARE(loaded[1].payload(), QByteArray::fromHex("0405"));
+    QCOMPARE(loaded[2].payload(), QByteArray::fromHex("0102030405060708"));
+    QCOMPARE(loaded[3].payload(), QByteArray());
+    QCOMPARE(loaded[4].payload(), QByteArray());
+    for (int i = 0; i < loaded.count(); i++) QCOMPARE(loaded[i].frameId(), 0x100u + quint32(i));
+}
+
+// A pcap file of Linux cooked capture records: 16 bytes, then the SocketCAN header (ID, length, 3 bytes of padding)
+// and the data. Each record is the byte count it claims and the data it has.
+static void writeWiresharkFile(const QString &filename, const QList<QPair<int, QByteArray>> &records,
+                               int shortRecordAt = -1)
+{
+    QByteArray out;
+    QDataStream stream(&out, QIODevice::WriteOnly);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    stream << quint32(0xA1B2C3D4) << quint16(2) << quint16(4) << qint32(0) << quint32(0) << quint32(65535)
+           << quint32(113);
+    for (int i = 0; i < records.count(); i++)
+    {
+        QByteArray packet(16, 0);
+        QDataStream ps(&packet, QIODevice::WriteOnly | QIODevice::Append);
+        ps.setByteOrder(QDataStream::LittleEndian);
+        ps << quint32(0x200 + i) << quint8(records[i].first) << quint8(0) << quint8(0) << quint8(0);
+        packet += records[i].second;
+        if (i == shortRecordAt) packet = packet.left(20); // cut off in the middle of the CAN header
+        stream << quint32(1) << quint32(1000 * i) << quint32(packet.length()) << quint32(packet.length());
+        stream.writeRawData(packet.constData(), int(packet.length()));
+    }
+    QFile file(filename);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write(out);
+}
+
+// Wireshark records whose byte count doesn't match the data: classic CAN, so no more than 8, and no more than the
+// record has
+void TestFileDialogSplit::testWiresharkBadLengths()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QByteArray sixtyFour(64, char(0x55));
+    const QList<QPair<int, QByteArray>> records = {
+        {2, QByteArray::fromHex("AABB")},            // as it should be
+        {8, QByteArray::fromHex("010203")},          // 8 bytes claimed, 3 given
+        {64, sixtyFour},                             // more than 8
+        {0xF0, QByteArray::fromHex("0102030405060708")}, // negative as a signed char
+        {5, QByteArray()},                           // a count and no bytes
+    };
+    const QString filename = dir.filePath("bad.pcap");
+    writeWiresharkFile(filename, records);
+    QVERIFY(FrameFileIO::isWiresharkFile(filename));
+
+    QVector<CommFrame> loaded;
+    QVERIFY(FrameFileIO::loadWiresharkFile(filename, &loaded));
+    QCOMPARE(loaded.count(), records.count());
+    QCOMPARE(loaded[0].payload(), QByteArray::fromHex("AABB"));
+    QCOMPARE(loaded[1].payload(), QByteArray::fromHex("010203"));
+    QCOMPARE(loaded[2].payload(), sixtyFour.left(8));
+    QCOMPARE(loaded[3].payload(), QByteArray::fromHex("0102030405060708"));
+    QCOMPARE(loaded[4].payload(), QByteArray());
+    for (int i = 0; i < loaded.count(); i++) QCOMPARE(loaded[i].frameId(), 0x200u + quint32(i));
+
+    // a record too short for the CAN header is skipped, and the file counts as having errors
+    const QString shortName = dir.filePath("short.pcap");
+    writeWiresharkFile(shortName, records, 1);
+    loaded.clear();
+    QVERIFY(!FrameFileIO::loadWiresharkFile(shortName, &loaded));
+    QCOMPARE(loaded.count(), records.count() - 1);
+    QCOMPARE(loaded[1].frameId(), 0x202u);
+    QCOMPARE(loaded[1].payload(), sixtyFour.left(8));
 }
 
 void TestFileDialogSplit::testDbcFilterLists()
