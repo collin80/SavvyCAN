@@ -11,7 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load log files and DBC files from GitHub (File > Load Log File from GitHub, DBC File Manager > Load from GitHub), signed in with GitHub or a token | `github-phase1-load` | fork only for now |
-| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
+| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving, shown in a Log Notes panel when loading | `log-notes`, `log-notes-ui` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
@@ -75,6 +75,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
+| `log-notes-ui` | `fork-ci` | Log notes dialog on save, templates, Log Notes panel, File > Log Notes... | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -116,6 +117,19 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: log notes asked for when saving, shown when loading (`log-notes-ui`)
+
+Phase 2 of the [log notes roadmap](docs/log-notes-roadmap.md).
+
+- **Saving a log** (Save Log File, Save Filtered Log File) asks for its notes after the file name is picked: title,
+  author, tags, system, setup, scenario, observations, and the buses, DBC files and markers SavvyCAN fills in. Save with
+  Notes, Save without Notes, or Cancel. Starts from the loaded log's notes or the last ones saved.
+- **Templates** in the dialog fill in the typed fields (e.g. one per test bench).
+- **Loading a log** with notes opens the **Log Notes** panel. **File > Log Notes...** edits them and saves them back
+  into the log (or its `.notes.md` file); **File > Show Log Notes Panel** shows or hides the panel.
+- **Preferences:** "Ask for notes (setup, scenario) when saving logs".
+- **Code:** `LogNotesDialog`, `LogNotesPanel`; `FrameFileIO::pickSaveFile`/`saveFrameFileWithProgress`; `TestLogNotesUi`.
 
 ### 2026-10-25: notes saved with logs, format and files (`log-notes`)
 

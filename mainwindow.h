@@ -36,8 +36,10 @@
 #include "canbridgewindow.h"
 #include "re/searchwindow.h"
 #include "croplogdialog.h"
+#include "lognotes.h"
 
 class CANConnection;
+class LogNotesPanel;
 class ConnectionWindow;
 class ISOTP_InterpreterWindow;
 class ScriptingWindow;
@@ -77,6 +79,7 @@ private slots:
     void showGitHubAccount();
     void handleSaveFile();
     void handleSaveFilteredFile();
+    void editLogNotes();
     void handleSaveFilters();
     void handleLoadFilters();
     void handleContinousLogging();
@@ -185,6 +188,12 @@ private:
     bool continuousLogging;
     int continuousLogFlushCounter;
 
+    //Log notes (see lognotes.h): those of the loaded or last saved log, or typed for a capture not saved yet
+    LogNotes logNotes;
+    QString logNotesFile;   //the log file they're saved back to by File > Log Notes...; empty if none (or GitHub's)
+    QString logNotesSource; //the log they're from, as shown; empty if they aren't from a log file
+    LogNotesPanel *logNotesPanel;
+
     //References to other windows we can display
 
     //Graph window is allowed to instantiate more than once. All the rest are not (yet).
@@ -235,7 +244,12 @@ private:
     void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CommFrame &, bool);
     void updateFileStatus();
-    bool loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure);
+    bool loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure,
+                     bool notesWritable = true);
+    void saveLog(const QVector<CommFrame> *frames, bool filtered);
+    LogNotes notesForSaving(const QVector<CommFrame> *frames, bool filtered) const;
+    void loadNotesOfLog(const QString &filename, const QString &displayName, bool writable);
+    void updateLogNotesPanel();
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);

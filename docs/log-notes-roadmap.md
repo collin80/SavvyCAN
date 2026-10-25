@@ -11,8 +11,8 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 
 | Phase | State |
 |---|---|
-| 1: notes format, native CSV block, sidecar file | Done on `log-notes`, not merged yet; `TestLogNotes` passes, older loader checked |
-| 2: notes dialog on save, Log Notes panel | Next |
+| 1: notes format, native CSV block, sidecar file | Done, merged into `fork-ci` (`d7049fa`); older loader checked |
+| 2: notes dialog on save, Log Notes panel | Done on `log-notes-ui`, not merged yet; `TestLogNotesUi` passes, not tried in the app by hand yet |
 | 3, 4 | Not started |
 
 ---
@@ -150,12 +150,18 @@ The same Markdown, after the last frame, each line starting with `# `:
 
 - Opens after the file name is picked in **Save Log File** and **Save Filtered Log File**, and from the GitHub save
   (GitHub phase 2).
-- Filled in with the current session's notes (section 5.3), or else the last notes saved. The fields SavvyCAN knows
-  (buses, DBC files, frames, span, version, date) are filled in fresh each time and can be edited.
+- Filled in with the current notes (those of the loaded log, or typed for the capture), or else the typed fields of
+  the last notes saved; the author defaults to the computer's user name. Frames, span, version and date are filled in
+  fresh each time. Buses and DBC files come from the current connections and DBC File Manager, except for notes
+  loaded from a log: those keep the buses and DBC files of that log's capture (filled in only where it had none).
+  All of them can be edited.
 - **Templates:** a picker with **Save as Template...** and **Delete**, stored in `QSettings` (`LogNotes/Templates`).
   A template holds the user's fields only, not markers or the filled-in ones. One per test bench is the idea.
-- **Save** writes the log and the notes; **Skip** writes the log without notes; **Cancel** saves nothing.
-- A "Don't ask when saving logs" box, also in Preferences (`LogNotes/AskOnSave`).
+- **Save with Notes** writes the log and the notes; **Save without Notes** writes the log only; **Cancel** saves
+  nothing.
+- An "Ask for notes when saving logs" box, also in Preferences (`LogNotes/AskOnSave`). Without asking, notes are
+  saved only when the user has typed some (from File > Log Notes..., or a capture-start prompt in phase 3).
+- The typed fields of the notes saved are kept (`LogNotes/Last`) to start the next ones from.
 - **An old sidecar file** with the same name as a log saved without notes is removed, after asking, so it can't
   describe the wrong log.
 
@@ -164,7 +170,10 @@ The same Markdown, after the last frame, each line starting with `# `:
 - A dock panel in the main window shows the notes of the loaded log: title and header, the sections, buses, DBC files,
   and markers. It opens by itself when a loaded log has notes, and is empty otherwise.
 - **File > Log Notes...** opens the notes dialog for the loaded log. Saving there rewrites the notes only: the
-  block at the end of a native CSV log, or the sidecar file.
+  block at the end of a native CSV log, or the sidecar file. With no log file open (a capture), or a log opened from
+  GitHub, the notes are only kept for the next save.
+- **File > Show Log Notes Panel** shows or hides the panel; whether it's shown is remembered.
+- **Clear frames** keeps the typed fields for the next capture and drops what described the old log.
 - The file status line shows that the log has notes.
 
 ### 5.3 When capture starts (phase 3)
@@ -224,8 +233,11 @@ The same Markdown, after the last frame, each line starting with `# `:
     that aren't SavvyCAN's notes kept.
 - Once, by hand: the `fork-ci` native CSV loader from before this change, built on its own, on a log with notes
   written by the new code (section 4.3).
-- Phase 2 and 3: dialog and panel tests with `QTest`, as `TestGitHub` does for its dialogs, and screenshots with
-  `SAVVYCAN_SCREENSHOTS`.
+- `unit_tests/test_log_notes_ui.cpp` (`TestLogNotesUi`), phase 2: the dialog shows and returns every field
+  (including the ones it doesn't show), typed fields and markers, Save with/without Notes and Cancel, the "ask" box,
+  OK/Cancel when editing, templates (save, list, use, delete), the last notes, and the panel (escaping, sections,
+  Edit...). With `SAVVYCAN_SCREENSHOTS` set it saves pictures of the dialog and panel.
+- Phase 3: the same for the capture prompt and markers.
 - By hand: a capture on the bench with markers, saved as native CSV and BLF, reopened in a new SavvyCAN, opened in an
   older build, and opened in a text editor and on GitHub.
 

@@ -11,6 +11,8 @@
 #include "filterutility.h"
 #include "github/githubaccountdialog.h"
 #include "github/githubbrowserdialog.h"
+#include "lognotesdialog.h"
+#include "lognotespanel.h"
 
 #include <QClipboard>
 #include <QTimer>
@@ -118,6 +120,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
     connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
+    connect(ui->actionLog_Notes, &QAction::triggered, this, &MainWindow::editLogNotes);
     connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
     connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
@@ -242,6 +245,16 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->leSearchFilter->setClearButtonEnabled(true);
     connect(ui->leSearchFilter, &QLineEdit::textChanged, this, &MainWindow::onSearchFilterChanged);
+
+    //Log Notes panel, hidden until a log with notes is loaded or it's turned on in the File menu
+    logNotesPanel = new LogNotesPanel(this);
+    addDockWidget(Qt::RightDockWidgetArea, logNotesPanel);
+    logNotesPanel->setVisible(QSettings().value("LogNotes/PanelVisible", false).toBool());
+    connect(logNotesPanel, &LogNotesPanel::editRequested, this, &MainWindow::editLogNotes);
+    QAction *showNotesAction = logNotesPanel->toggleViewAction();
+    showNotesAction->setText(tr("Show Log Notes Panel"));
+    const QList<QAction *> fileActions = ui->menuFile->actions();
+    ui->menuFile->insertAction(fileActions.value(int(fileActions.indexOf(ui->actionLog_Notes)) + 1), showNotesAction);
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
@@ -619,6 +632,7 @@ void MainWindow::writeSettings()
     }
     // Always save splitterLeft so send-panel height is restored on next launch
     settings.setValue("Main/SplitterLeft", ui->splitterLeft->saveState());
+    settings.setValue("LogNotes/PanelVisible", logNotesPanel->isVisible());
 }
 
 void MainWindow::onSenderCellChanged(int row, int col)
@@ -1396,6 +1410,11 @@ void MainWindow::clearFrames()
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     bDirty = false;
     loadedFileName = "";
+    //a new capture: what the user typed carries over, what described the old log doesn't
+    logNotes = logNotes.userFields();
+    logNotesFile.clear();
+    logNotesSource.clear();
+    updateLogNotesPanel();
     updateFileStatus();
     emit framesUpdated(-1);
 }
@@ -1434,11 +1453,12 @@ void MainWindow::handleCropLog()
 void MainWindow::handleLoadFile()
 {
     QString filename;
+    QString fullPath;
     QVector<CommFrame> tempFrames;
 
     QMessageBox::StandardButton confirmDialog;
 
-    bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames);
+    bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames, &fullPath);
 
     if (!loadResult)
     {
@@ -1463,6 +1483,7 @@ void MainWindow::handleLoadFile()
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
+        loadNotesOfLog(fullPath, QFileInfo(fullPath).fileName(), true);
         updateFileStatus();
         emit framesUpdated(-1);
     }
@@ -1477,7 +1498,8 @@ void MainWindow::handleLoadFromGitHub()
 {
     GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, FrameFileIO::loadFilters(), this);
     if (dialog.exec() != QDialog::Accepted) return;
-    loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true);
+    //notes are read from the downloaded copy, but not written back to it
+    loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true, false);
 }
 
 void MainWindow::showGitHubAccount()
@@ -1487,8 +1509,10 @@ void MainWindow::showGitHubAccount()
 }
 
 //Loads a log file into the frame list as the file type at that index of FrameFileIO::loadFilters() (0 autodetects),
-//showing it as displayName. reportFailure: say so when nothing at all could be loaded.
-bool MainWindow::loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure)
+//showing it as displayName. reportFailure: say so when nothing at all could be loaded. notesWritable: File > Log
+//Notes... may save the log's notes back into the file (or next to it).
+bool MainWindow::loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure,
+                             bool notesWritable)
 {
     QProgressDialog progress(qApp->activeWindow());
     progress.setWindowModality(Qt::WindowModal);
@@ -1533,6 +1557,7 @@ bool MainWindow::loadLogFile(const QString &filename, int fileType, const QStrin
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
+        loadNotesOfLog(filename, displayName, notesWritable);
         updateFileStatus();
         emit framesUpdated(-1);
     }
@@ -1542,13 +1567,179 @@ bool MainWindow::loadLogFile(const QString &filename, int fileType, const QStrin
 
 void MainWindow::handleSaveFile()
 {
-    QString filename;
+    saveLog(model->getListReference(), false);
+}
 
-    if (FrameFileIO::saveFrameFile(filename, model->getListReference()))
+//One line per bus of the current connections, for the log notes: "0: GVRET COM11, 500 kbit/s"
+static QStringList connectedBuses()
+{
+    auto rate = [](int bitsPerSecond)
     {
-        loadedFileName = filename;
-        updateFileStatus();
+        if (bitsPerSecond % 1000 == 0) return QString("%1 kbit/s").arg(bitsPerSecond / 1000);
+        return QString("%1 bit/s").arg(bitsPerSecond);
+    };
+    QStringList buses;
+    CANConManager *manager = CANConManager::getInstance();
+    for (CANConnection *conn : manager->getConnections())
+    {
+        QString type;
+        switch (conn->getType())
+        {
+        case CANCon::KVASER: type = "KVASER"; break;
+        case CANCon::SERIALBUS: type = conn->getDriver(); break;
+        case CANCon::GVRET_SERIAL: type = "GVRET"; break;
+        case CANCon::REMOTE: type = "Remote"; break;
+        case CANCon::KAYAK: type = "socketcand"; break;
+        case CANCon::MQTT: type = "MQTT"; break;
+        case CANCon::LAWICEL: type = "LAWICEL"; break;
+        case CANCon::CANSERVER: type = "CANserver"; break;
+        case CANCon::CANLOGSERVER: type = "CanLogServer"; break;
+        default: type = "?"; break;
+        }
+        const int base = manager->getBusBase(conn);
+        for (int i = 0; i < conn->getNumBuses(); i++)
+        {
+            CANBus bus;
+            if (!conn->getBusSettings(i, bus) || !bus.isActive()) continue;
+            QString line = QString("%1: %2 %3, %4").arg(base + i).arg(type, conn->getPort(), rate(bus.getSpeed()));
+            if (bus.isCanFD()) line += QString(", CAN FD data %1").arg(rate(bus.getDataRate()));
+            if (bus.isListenOnly()) line += ", listen only";
+            if (conn->getStatus() != CANCon::CONNECTED) line += ", not connected";
+            buses.append(line);
+        }
     }
+    return buses;
+}
+
+//One line per loaded DBC or LDF file: "bmw_e90.dbc (bus 0)"
+static QStringList loadedDbcFiles()
+{
+    QStringList files;
+    DBCHandler *handler = DBCHandler::getReference();
+    for (int i = 0; i < handler->getFileCount(); i++)
+    {
+        DBCFile *file = handler->getFileByIdx(i);
+        if (!file) continue;
+        if (file->getAssocBus() < 0) files.append(QString("%1 (all buses)").arg(file->getFilename()));
+        else files.append(QString("%1 (bus %2)").arg(file->getFilename()).arg(file->getAssocBus()));
+    }
+    return files;
+}
+
+//The notes to save with these frames: the current ones (or the typed fields of the last ones saved), with the fields
+//SavvyCAN knows filled in. Buses and DBC files describe the current setup, unless the notes came from a log file:
+//then they describe that log's capture, and are only filled in where it had none.
+LogNotes MainWindow::notesForSaving(const QVector<CommFrame> *frames, bool filtered) const
+{
+    LogNotes notes = logNotes;
+    if (!notes.hasUserFields()) notes.setUserFields(LogNotesDialog::lastNotes());
+    if (notes.author.isEmpty()) notes.author = qEnvironmentVariable("USERNAME", qEnvironmentVariable("USER"));
+
+    const qint64 total = model->getListReference()->count();
+    notes.setFrames(*frames, (filtered && frames->count() != total) ? total : -1);
+    notes.saved = QDateTime::currentDateTime();
+    notes.savvycanVersion = QString::number(VERSION);
+
+    const bool fromLog = !logNotesSource.isEmpty();
+    const QStringList buses = connectedBuses();
+    if (!buses.isEmpty() && (!fromLog || notes.buses.isEmpty())) notes.buses = buses;
+    const QStringList dbcFiles = loadedDbcFiles();
+    if (!dbcFiles.isEmpty() && (!fromLog || notes.dbcFiles.isEmpty())) notes.dbcFiles = dbcFiles;
+    return notes;
+}
+
+//Save Log File and Save Filtered Log File: pick the file, ask for the notes, save both
+void MainWindow::saveLog(const QVector<CommFrame> *frames, bool filtered)
+{
+    QString path;
+    int filterIndex;
+    if (!FrameFileIO::pickSaveFile(path, filterIndex)) return;
+
+    LogNotes notes = notesForSaving(frames, filtered);
+    //without asking, the notes are saved if the user has typed any
+    bool withNotes = notes.hasUserFields() || !notes.markers.isEmpty();
+    if (LogNotesDialog::askOnSave())
+    {
+        LogNotesDialog dialog(LogNotesDialog::Saving, this);
+        dialog.setNotes(notes);
+        dialog.setTarget(QFileInfo(path).fileName(), filterIndex == 0);
+        dialog.exec();
+        if (dialog.choice() == LogNotesDialog::Cancelled) return;
+        withNotes = dialog.choice() == LogNotesDialog::WithNotes;
+        if (withNotes) notes = dialog.notes();
+    }
+
+    if (!FrameFileIO::saveFrameFileWithProgress(path, filterIndex, frames)) return;
+    loadedFileName = QFileInfo(path).fileName();
+
+    notes.logFile = QFileInfo(path).fileName();
+    if (withNotes)
+    {
+        if (!FrameFileIO::saveLogNotes(path, filterIndex, notes))
+            QMessageBox::warning(this, tr("Log Notes"), tr("The log was saved, but its notes couldn't be saved."));
+        LogNotesDialog::setLastNotes(notes);
+    }
+
+    //a notes file next to the log is from an earlier log of that name: it would be read as this log's notes
+    if ((!withNotes || filterIndex == 0) && QFile::exists(LogNotes::sidecarPath(path)))
+    {
+        if (QMessageBox::question(this, tr("Log Notes"),
+                tr("There is a notes file %1 from an earlier log with this name, which would be shown as this log's "
+                   "notes. Delete it?").arg(QFileInfo(LogNotes::sidecarPath(path)).fileName())) == QMessageBox::Yes)
+            LogNotes::removeSidecar(path);
+    }
+
+    logNotes = withNotes ? notes : LogNotes();
+    logNotesFile = path;
+    logNotesSource = loadedFileName;
+    updateLogNotesPanel();
+    updateFileStatus();
+}
+
+//Reads the notes of a log just loaded (the empty notes if it has none)
+void MainWindow::loadNotesOfLog(const QString &filename, const QString &displayName, bool writable)
+{
+    LogNotes notes;
+    const bool found = !filename.isEmpty() && FrameFileIO::loadLogNotes(filename, notes);
+    logNotes = found ? notes : LogNotes();
+    logNotesFile = writable ? filename : QString();
+    logNotesSource = displayName;
+    updateLogNotesPanel();
+    if (found) logNotesPanel->show();
+}
+
+void MainWindow::updateLogNotesPanel()
+{
+    logNotesPanel->setNotes(logNotes, logNotesSource);
+}
+
+//File > Log Notes...: the notes of the loaded log, saved back into it (or next to it) straight away; with no log
+//file, they're kept for the next save
+void MainWindow::editLogNotes()
+{
+    LogNotes notes = logNotes.isEmpty() ? notesForSaving(model->getListReference(), false) : logNotes;
+    const bool hasFile = !logNotesFile.isEmpty() && QFile::exists(logNotesFile);
+    const bool insideLog = hasFile && FrameFileIO::isNativeCSVFile(logNotesFile);
+    if (hasFile && notes.logFile.isEmpty()) notes.logFile = QFileInfo(logNotesFile).fileName();
+
+    LogNotesDialog dialog(LogNotesDialog::Editing, this);
+    dialog.setNotes(notes);
+    dialog.setTarget(hasFile ? QFileInfo(logNotesFile).fileName() : QString(), insideLog);
+    if (dialog.exec() != QDialog::Accepted) return;
+    notes = dialog.notes();
+
+    if (hasFile)
+    {
+        bool saved;
+        if (insideLog) saved = notes.writeToNativeCSV(logNotesFile);
+        else if (notes.isEmpty()) saved = LogNotes::removeSidecar(logNotesFile);
+        else saved = notes.writeSidecar(logNotesFile);
+        if (!saved) QMessageBox::warning(this, tr("Log Notes"), tr("The notes couldn't be saved with %1.")
+                                                                  .arg(QFileInfo(logNotesFile).fileName()));
+    }
+    if (notes.hasUserFields()) LogNotesDialog::setLastNotes(notes);
+    logNotes = notes;
+    updateLogNotesPanel();
 }
 
 void MainWindow::handleContinousLogging()
@@ -1570,13 +1761,7 @@ void MainWindow::handleContinousLogging()
 
 void MainWindow::handleSaveFilteredFile()
 {
-    QString filename;
-
-    if (FrameFileIO::saveFrameFile(filename, model->getFilteredListReference()))
-    {
-        loadedFileName = filename;
-        updateFileStatus();
-    }
+    saveLog(model->getFilteredListReference(), true);
 }
 
 void MainWindow::handleSaveFilters()
@@ -1939,6 +2124,7 @@ void MainWindow::updateFileStatus()
         if (loadedFileName.length() > 2)
         {
             output = loadedFileName + " loaded";
+            if (!logNotesSource.isEmpty() && !logNotes.isEmpty()) output += tr(", with notes");
         }
         else
         {

@@ -56,6 +56,8 @@ SOURCES += main.cpp\
     framesenderwindow.cpp \
     framefileio.cpp \
     lognotes.cpp \
+    lognotesdialog.cpp \
+    lognotespanel.cpp \
     github/githubaccountdialog.cpp \
     github/githubbrowserdialog.cpp \
     github/githubcache.cpp \
@@ -157,6 +159,8 @@ HEADERS  += mainwindow.h \
     can_trigger_structs.h \
     framefileio.h \
     lognotes.h \
+    lognotesdialog.h \
+    lognotespanel.h \
     github/githubaccountdialog.h \
     github/githubbrowserdialog.h \
     github/githubcache.h \
