@@ -21,6 +21,7 @@ private slots:
     void testCANDOFile();
     void testMicrochipBadLengths();
     void testWiresharkBadLengths();
+    void testWiresharkLongRecords();
     void testDbcFilterLists();
     void testDbcSaveAndLoad();
     void testDbcBadIndex();
@@ -295,16 +296,44 @@ void TestFileDialogSplit::testMicrochipBadLengths()
     for (int i = 0; i < loaded.count(); i++) QCOMPARE(loaded[i].frameId(), 0x100u + quint32(i));
 }
 
-// A pcap file of Linux cooked capture records: 16 bytes, then the SocketCAN header (ID, length, 3 bytes of padding)
-// and the data. Each record is the byte count it claims and the data it has.
+// pcapng blocks are padded to 4 bytes
+static QByteArray padded4(QByteArray data)
+{
+    while (data.length() % 4) data += char(0);
+    return data;
+}
+
+// A pcap (or pcapng) file of Linux cooked capture records: 16 bytes, then the SocketCAN header (ID, length, 3 bytes
+// of padding) and the data. Each record is the byte count it claims and the data it has. The record at longRecordAt
+// is padded to 300 bytes, more than pcaplite's 256 byte buffer.
 static void writeWiresharkFile(const QString &filename, const QList<QPair<int, QByteArray>> &records,
-                               int shortRecordAt = -1)
+                               int shortRecordAt = -1, bool ng = false, int longRecordAt = -1)
 {
     QByteArray out;
     QDataStream stream(&out, QIODevice::WriteOnly);
     stream.setByteOrder(QDataStream::LittleEndian);
-    stream << quint32(0xA1B2C3D4) << quint16(2) << quint16(4) << qint32(0) << quint32(0) << quint32(65535)
-           << quint32(113);
+    if (ng)
+    {
+        // section header block, then an interface description block with microsecond timestamps, a 300 byte
+        // comment and the end of the options
+        stream << quint32(0x0A0D0D0A) << quint32(28) << quint32(0x1A2B3C4D) << quint16(1) << quint16(0)
+               << qint64(-1) << quint32(28);
+        QByteArray options;
+        QDataStream os(&options, QIODevice::WriteOnly);
+        os.setByteOrder(QDataStream::LittleEndian);
+        os << quint16(9) << quint16(1) << quint8(6) << quint8(0) << quint16(0);
+        os << quint16(1) << quint16(300);
+        os.writeRawData(QByteArray(300, 'x').constData(), 300);
+        os << quint16(0) << quint16(0);
+        stream << quint32(1) << quint32(20 + options.length()) << quint16(113) << quint16(0) << quint32(65535);
+        stream.writeRawData(options.constData(), int(options.length()));
+        stream << quint32(20 + options.length());
+    }
+    else
+    {
+        stream << quint32(0xA1B2C3D4) << quint16(2) << quint16(4) << qint32(0) << quint32(0) << quint32(65535)
+               << quint32(113);
+    }
     for (int i = 0; i < records.count(); i++)
     {
         QByteArray packet(16, 0);
@@ -313,8 +342,21 @@ static void writeWiresharkFile(const QString &filename, const QList<QPair<int, Q
         ps << quint32(0x200 + i) << quint8(records[i].first) << quint8(0) << quint8(0) << quint8(0);
         packet += records[i].second;
         if (i == shortRecordAt) packet = packet.left(20); // cut off in the middle of the CAN header
-        stream << quint32(1) << quint32(1000 * i) << quint32(packet.length()) << quint32(packet.length());
-        stream.writeRawData(packet.constData(), int(packet.length()));
+        if (i == longRecordAt) packet = packet.leftJustified(300, char(0));
+        if (ng)
+        {
+            // enhanced packet block
+            const QByteArray data = padded4(packet);
+            stream << quint32(6) << quint32(32 + data.length()) << quint32(0) << quint32(0) << quint32(1000 * i)
+                   << quint32(packet.length()) << quint32(packet.length());
+            stream.writeRawData(data.constData(), int(data.length()));
+            stream << quint32(32 + data.length());
+        }
+        else
+        {
+            stream << quint32(1) << quint32(1000 * i) << quint32(packet.length()) << quint32(packet.length());
+            stream.writeRawData(packet.constData(), int(packet.length()));
+        }
     }
     QFile file(filename);
     QVERIFY(file.open(QIODevice::WriteOnly));
@@ -357,6 +399,55 @@ void TestFileDialogSplit::testWiresharkBadLengths()
     QCOMPARE(loaded.count(), records.count() - 1);
     QCOMPARE(loaded[1].frameId(), 0x202u);
     QCOMPARE(loaded[1].payload(), sixtyFour.left(8));
+}
+
+// Wireshark records longer than pcaplite's 256 byte buffer are skipped, in pcap and pcapng files; a record or block
+// with an impossible length ends the file
+void TestFileDialogSplit::testWiresharkLongRecords()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QList<QPair<int, QByteArray>> records = {
+        {2, QByteArray::fromHex("AABB")},
+        {8, QByteArray::fromHex("0102030405060708")},
+        {3, QByteArray::fromHex("CCDDEE")},
+    };
+    for (const bool ng : {false, true})
+    {
+        const QString filename = dir.filePath(ng ? "long.pcapng" : "long.pcap");
+        writeWiresharkFile(filename, records, -1, ng, 1);
+        QVERIFY(FrameFileIO::isWiresharkFile(filename));
+
+        QVector<CommFrame> loaded;
+        QVERIFY(FrameFileIO::loadWiresharkFile(filename, &loaded));
+        QCOMPARE(loaded.count(), 2);
+        QCOMPARE(loaded[0].frameId(), 0x200u);
+        QCOMPARE(loaded[0].payload(), QByteArray::fromHex("AABB"));
+        QCOMPARE(loaded[1].frameId(), 0x202u);
+        QCOMPARE(loaded[1].payload(), QByteArray::fromHex("CCDDEE"));
+
+        // then a record (pcap) or block (pcapng) with an impossible length: the good records after it aren't loaded
+        QFile file(filename);
+        QVERIFY(file.open(QIODevice::Append));
+        QDataStream stream(&file);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        if (ng) stream << quint32(3) << quint32(0) << quint32(0);       // block of 0 bytes
+        else stream << quint32(1) << quint32(0) << quint32(0xFFFFFFF0) << quint32(0xFFFFFFF0); // 4 GB record
+        file.close();
+        QFile header(dir.filePath("header"));
+        writeWiresharkFile(header.fileName(), {}, -1, ng);
+        QFile good(dir.filePath("good"));
+        writeWiresharkFile(good.fileName(), records, -1, ng);
+        QVERIFY(good.open(QIODevice::ReadOnly));
+        QVERIFY(file.open(QIODevice::Append));
+        file.write(good.readAll().mid(header.size()));
+        file.close();
+
+        loaded.clear();
+        QVERIFY(FrameFileIO::loadWiresharkFile(filename, &loaded));
+        QCOMPARE(loaded.count(), 2);
+        QCOMPARE(loaded[1].frameId(), 0x202u);
+    }
 }
 
 void TestFileDialogSplit::testDbcFilterLists()

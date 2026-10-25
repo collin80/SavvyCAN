@@ -1,10 +1,13 @@
 #include <math.h>
+#include <limits.h>
 #include "pcaplite.h"
 
 #define MAGIC_NG 0x0A0D0D0A
 #define MACIG 0xA1B2C3D4  
 
 #define MAX_CAN_PACKET_SIZE 256
+// libpcap's largest snapshot length: a longer record means the file is broken
+#define MAX_RECORD_LENGTH 262144
 
 // some pcap format constants
 #define PCAP_FILE_HEADER_LENGTH 24
@@ -15,6 +18,7 @@
 // some pcapng format constants
 #define INTERFACE_DESCRITION_BLOCK 0x01
 #define ENCHANCED_PACKET_BLOCK 0x06
+#define MIN_BLOCK_SIZE 12 // block type, block size, block size again
 
 static unsigned char pcap_buffer[MAX_CAN_PACKET_SIZE];
 static pcap_t p;
@@ -109,66 +113,74 @@ const unsigned char *pcap_next_ng(pcap_t *p, struct pcap_pkthdr *h) {
     static double timestamp_multiplier = 0.000001; //microseconds resolution
 
     long fpos = ftell(p->file);
-    
-    do {
+    long next_block;
+
+    for (;;) {
+        if (fpos < 0) {
+            return (NULL);
+        }
         bytes_read = fread(&bh, 1, sizeof(bh), p->file);
         if (bytes_read != sizeof(bh)) {
             //probably EOF
             return (NULL);
         }
 
-        if (bh.block_type != ENCHANCED_PACKET_BLOCK) {
-            if (INTERFACE_DESCRITION_BLOCK == bh.block_type) {
-                // Seek to start of options part in the header
-                fseek(p->file, fpos + 16, SEEK_SET);
-                do {
-                    bytes_read = fread(&oh, 1, sizeof(oh), p->file);
-                    if (bytes_read != sizeof(oh)) {
+        // a block shorter than its type and sizes (a size of 0 would read the same block forever), or one ending
+        // past where fseek can go, means the file is broken
+        if (bh.block_size < MIN_BLOCK_SIZE || bh.block_size > (unsigned long)(LONG_MAX - fpos)) {
+            return (NULL);
+        }
+        next_block = fpos + (long)bh.block_size;
+
+        // a packet longer than the buffer isn't a CAN frame, so it's skipped
+        if (ENCHANCED_PACKET_BLOCK == bh.block_type && bh.cap_len <= sizeof(pcap_buffer)) {
+            break;
+        }
+
+        if (INTERFACE_DESCRITION_BLOCK == bh.block_type) {
+            // Seek to start of options part in the header
+            fseek(p->file, fpos + 16, SEEK_SET);
+            do {
+                bytes_read = fread(&oh, 1, sizeof(oh), p->file);
+                if (bytes_read != sizeof(oh)) {
+                    //probably EOF
+                    return (NULL);
+                }
+
+                // calculate option length aligned on 4 byte boundary
+                unsigned int option_file_length = 4*(oh.option_length/4) + ((oh.option_length%4) ? 4:0);
+
+                // read in the buffer if it's large enough or skip
+                if (option_file_length <= sizeof(pcap_buffer)) {
+                    bytes_read = fread(pcap_buffer, 1, option_file_length, p->file);
+                    if (bytes_read != option_file_length) {
                         //probably EOF
                         return (NULL);
                     }
-                    
-                    // calculate option length aligned on 4 byte boundary
-                    unsigned int option_file_length = 4*(oh.option_length/4) + ((oh.option_length%4) ? 4:0);
-
-                    
-                    // read in the buffer if it's large enough or skip
-                    if (option_file_length <= sizeof(pcap_buffer)) {
-                        bytes_read = fread(pcap_buffer, 1, option_file_length, p->file);
-                        if (bytes_read != option_file_length) {
-                            //probably EOF
-		                    return (NULL);
-	                    }
-                        //check if time resolution option
-                        if (0x09 == oh.option_type) {
-                            unsigned int res = *(unsigned int*)pcap_buffer;
-                            if ((0x80000000 & res) == 0) {
-                                timestamp_multiplier = 1/pow(10, res); 
-                            } else {
-                               timestamp_multiplier = 1/pow(2, (res & 0x7fffffff));  
-                            }
+                    //check if time resolution option (one byte: the top bit picks base 2 or 10)
+                    if (0x09 == oh.option_type && oh.option_length >= 1) {
+                        unsigned char res = pcap_buffer[0];
+                        if ((0x80 & res) == 0) {
+                            timestamp_multiplier = 1/pow(10, res);
+                        } else {
+                            timestamp_multiplier = 1/pow(2, (res & 0x7f));
                         }
-                    } else if (fseek(p->file, option_file_length, SEEK_CUR)) {
-                        //probably EOF
-		                return (NULL);
                     }
-
-                } while(ftell(p->file) < fpos + bh.block_size - sizeof(bh.block_size));
-
-                if (fseek(p->file, sizeof(bh.block_size), SEEK_CUR)) {
-                        //probably EOF
-		                return (NULL);
+                } else if (fseek(p->file, option_file_length, SEEK_CUR)) {
+                    //probably EOF
+                    return (NULL);
                 }
-            }
 
-            // skip to the next block
-            if (fseek(p->file, fpos + bh.block_size, SEEK_SET)) {
-                //probably EOF
-		        return (NULL);
-            }
-            fpos = ftell(p->file);
+            } while(ftell(p->file) < next_block - (long)sizeof(bh.block_size));
         }
-    } while (bh.block_type != ENCHANCED_PACKET_BLOCK);
+
+        // skip to the next block
+        if (fseek(p->file, next_block, SEEK_SET)) {
+            //probably EOF
+            return (NULL);
+        }
+        fpos = next_block;
+    }
 
     h->caplen = bh.cap_len;
     
@@ -185,8 +197,8 @@ const unsigned char *pcap_next_ng(pcap_t *p, struct pcap_pkthdr *h) {
 		return (NULL);
 	}
    
-    //seek to the next block (go back with bytes read of the block and seek fwd with the block size)
-    if (fseek(p->file, fpos + bh.block_size, SEEK_SET)) {
+    //seek to the next block
+    if (fseek(p->file, next_block, SEEK_SET)) {
         //probably EOF
 		return (NULL);
     }
@@ -203,17 +215,29 @@ const unsigned char *pcap_next(pcap_t *p, struct pcap_pkthdr *h)
 
 	size_t bytes_read;
 
-	bytes_read = fread(pcap_buffer, 1, PCAP_FRAME_HEADER_LENGTH, p->file);
-    if (bytes_read != PCAP_FRAME_HEADER_LENGTH) {
-        //probably EOF
-		return (NULL);
-	}
+    do {
+        bytes_read = fread(pcap_buffer, 1, PCAP_FRAME_HEADER_LENGTH, p->file);
+        if (bytes_read != PCAP_FRAME_HEADER_LENGTH) {
+            //probably EOF
+            return (NULL);
+        }
 
-    h->ts.tv_sec = *(unsigned int*)(pcap_buffer);
-    h->ts.tv_usec = *(unsigned int*)(pcap_buffer + 4);
+        h->ts.tv_sec = *(unsigned int*)(pcap_buffer);
+        h->ts.tv_usec = *(unsigned int*)(pcap_buffer + 4);
 
-    h->caplen = *(unsigned int*)(pcap_buffer + PCAP_CAP_FRAME_LENGTH_OFFSET);
-    h->len = *(unsigned int*)(pcap_buffer + PCAP_FRAME_LENGTH_OFFSET);
+        h->caplen = *(unsigned int*)(pcap_buffer + PCAP_CAP_FRAME_LENGTH_OFFSET);
+        h->len = *(unsigned int*)(pcap_buffer + PCAP_FRAME_LENGTH_OFFSET);
+
+        // a record longer than any capture means the file is broken; one longer than the buffer isn't a CAN
+        // frame, so it's skipped
+        if (h->caplen > MAX_RECORD_LENGTH) {
+            return (NULL);
+        }
+        if (h->caplen > sizeof(pcap_buffer) && fseek(p->file, (long)h->caplen, SEEK_CUR)) {
+            //probably EOF
+            return (NULL);
+        }
+    } while (h->caplen > sizeof(pcap_buffer));
 
     bytes_read = fread(pcap_buffer, 1, h->caplen, p->file);
     if (bytes_read != h->caplen) {

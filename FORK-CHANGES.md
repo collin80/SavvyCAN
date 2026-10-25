@@ -15,6 +15,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
+| Wireshark loaders: pcap and pcapng records over 256 bytes are skipped instead of overflowing a buffer; a broken block size no longer hangs the load | `fix-pcaplite-bounds` | not offered yet |
 | Log savers: CAN-DO saves work on Qt 6, Generic ID/Data CSV keeps frames shorter than 8 bytes, Vehicle Spy (never written) no longer offered for saving | `fix-log-savers` | not offered yet |
 | Short frames in logs: Vector trace no longer crashes on a frame with no data; IXXAT MiniLog, Cabana and PCAN TRC keep frames shorter than 8 bytes as they were | `fix-short-frame-loaders` | not offered yet |
 | Fork CI (Linux AppImage and Windows package on every push, with Qt's TLS plugins), this file, the README notice | `fork-ci` only | n/a |
@@ -81,6 +82,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
 | `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
 | `fix-loader-bounds` | `fork-ci` | Microchip and Wireshark loaders limit the byte count to the data given | - |
+| `fix-pcaplite-bounds` | `fork-ci` | pcaplite skips records over 256 bytes and stops at broken block sizes | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -97,9 +99,9 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
   branch in `Tom-evnut/ESP32RET` implements it; upstream ESP32RET doesn't yet.
 - **socketcand and CANserver:** classic CAN only (see the CAN FD table).
 - **Vehicle Spy:** logs load but can't be saved; the saver was never written (see `fix-log-savers`).
-- **pcap records over 256 bytes** (found in `fix-loader-bounds`, upstream too, not fixed yet): `pcaplite.cpp` reads
-  each record into a 256 byte buffer without checking its length, so a pcap or pcapng file with a longer record
-  writes past the buffer. CAN records are much shorter, but any pcap file can reach the Wireshark loaders.
+- **pcapng timestamp resolution** (found in `fix-pcaplite-bounds`, upstream too, not fixed yet): `pcaplite.cpp`
+  keeps the last file's resolution, so a pcapng file without the option loaded after one with it gets the wrong
+  timestamps.
 - **GitHub sign-in:** the token is stored scrambled, not encrypted. Private repos need the SavvyCAN GitHub App
   installed on them (Choose Repos... in File > GitHub Account...).
 
@@ -118,6 +120,22 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: pcap records over 256 bytes skipped (`fix-pcaplite-bounds`)
+
+`pcaplite.cpp` read each pcap and pcapng record into a 256 byte buffer without checking its length, so any file
+with a longer record wrote past the buffer (found in `fix-loader-bounds`; upstream too). Any pcap file can reach the
+Wireshark loaders, and other traffic in a capture can be longer than a CAN frame.
+
+- **pcap:** a record over 256 bytes is skipped. A record over 256 KB (libpcap's largest) means the file is broken,
+  so the load stops there.
+- **pcapng:** an enhanced packet block over 256 bytes is skipped. A block size of 0 made the loader read the same
+  block forever; a block size under 12 bytes, or one that would seek past what `fseek` can reach, now stops the load.
+  Interface options over 256 bytes were already skipped. The timestamp resolution option is read as the one byte it
+  is, so base 2 resolutions now work.
+- **Tests:** `TestFileDialogSplit` loads pcap and pcapng files with a 300 byte record (and, for pcapng, a 300 byte
+  interface option), then with a 4 GB record or a 0 byte block; also with AddressSanitizer and
+  UndefinedBehaviorSanitizer (the old code overflows the buffer).
 
 ### 2026-10-25: Short frames in Vector, IXXAT, Cabana and PCAN logs (`fix-short-frame-loaders`)
 
