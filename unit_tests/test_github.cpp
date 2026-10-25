@@ -205,28 +205,43 @@ void TestGitHub::testSettings()
     GitHubSettings::setClientId("");
     QCOMPARE(GitHubSettings::clientId(), QString());
 
-    GitHubRepo logs;
-    logs.owner = "a";
-    logs.name = "logs";
-    logs.branch = "main";
-    logs.dbcs = false;
-    GitHubRepo dbcs;
-    dbcs.owner = "b";
-    dbcs.name = "dbcs";
-    dbcs.branch = "feature/x";
-    dbcs.logs = false;
-    GitHubSettings::setRepos({ logs, dbcs });
+    GitHubRepo first;
+    first.owner = "a";
+    first.name = "car-data";
+    first.branch = "main";
+    GitHubRepo second;
+    second.owner = "b";
+    second.name = "bench";
+    second.branch = "feature/x";
+    GitHubSettings::setRepos({ first, second });
     QList<GitHubRepo> read = GitHubSettings::repos();
     QCOMPARE(read.count(), 2);
-    QCOMPARE(read[0].fullName(), QString("a/logs"));
-    QVERIFY(read[0].logs && !read[0].dbcs);
+    QCOMPARE(read[0].fullName(), QString("a/car-data"));
     QCOMPARE(read[1].branch, QString("feature/x"));
-    QVERIFY(!read[1].logs && read[1].dbcs);
 
-    GitHubSettings::setRepos({ dbcs });
+    GitHubSettings::setRepos({ second });
     QCOMPARE(GitHubSettings::repos().count(), 1);
     GitHubSettings::setRepos({});
     QVERIFY(GitHubSettings::repos().isEmpty());
+
+    //the first version kept a repo for logs, DBC files or both: such repos are now in the one list
+    {
+        QSettings settings;
+        settings.beginWriteArray("GitHub/Repos", 1);
+        settings.setArrayIndex(0);
+        settings.setValue("Owner", "c");
+        settings.setValue("Name", "dbc-only");
+        settings.setValue("Branch", "main");
+        settings.setValue("Logs", false);
+        settings.setValue("DBCs", true);
+        settings.endArray();
+    }
+    read = GitHubSettings::repos();
+    QCOMPARE(read.count(), 1);
+    QCOMPARE(read[0].fullName(), QString("c/dbc-only"));
+    GitHubSettings::setRepos(read);
+    QVERIFY(!QSettings().contains("GitHub/Repos/1/Logs")); //not written back
+    GitHubSettings::setRepos({});
 }
 
 void TestGitHub::testCachePaths()
@@ -669,12 +684,11 @@ void TestGitHub::testBrowserDialog()
     repo.owner = "o";
     repo.name = "r";
     repo.branch = "main";
-    repo.dbcs = false;
-    GitHubRepo dbcOnly;
-    dbcOnly.owner = "o";
-    dbcOnly.name = "dbc-only";
-    dbcOnly.logs = false;
-    GitHubSettings::setRepos({ repo, dbcOnly });
+    GitHubRepo other;
+    other.owner = "o";
+    other.name = "other";
+    other.branch = "main";
+    GitHubSettings::setRepos({ repo, other });
 
     GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, { "Autodetect File Type (*.*)", "GVRET Logs (*.csv *.CSV)" });
     dialog.show();
@@ -687,7 +701,8 @@ void TestGitHub::testBrowserDialog()
     QLabel *lblStatus = dialog.findChild<QLabel *>("lblStatus");
     QVERIFY(tree && comboRepo && comboBranch && comboType && editSearch && btnOpen && lblStatus);
 
-    QCOMPARE(comboRepo->count(), 1); //only the logs repo
+    QCOMPARE(comboRepo->count(), 2);
+    QCOMPARE(comboRepo->currentText(), QString("o/r"));
     QTRY_COMPARE(shownFiles(tree), QStringList({ "car.dbc", "notes.txt", "run.csv" }));
     QCOMPARE(comboBranch->count(), 2);
     QCOMPARE(comboBranch->currentText(), QString("main"));
@@ -726,6 +741,15 @@ void TestGitHub::testBrowserDialog()
     QVERIFY(file.open(QIODevice::ReadOnly));
     QCOMPARE(file.readAll(), QByteArray("Time Stamp,ID,Extended,Dir,Bus,LEN,D1\n"));
     QVERIFY(github.requests.last().headers.value("authorization") == "Bearer gho_token");
+
+    //loading DBC files lists the same repos
+    GitHubBrowserDialog dbcDialog(GitHubBrowserDialog::DBCs, { "DBC File (*.dbc)" });
+    QComboBox *dbcRepos = dbcDialog.findChild<QComboBox *>("comboRepo");
+    QVERIFY(dbcRepos);
+    QCOMPARE(dbcRepos->count(), 2);
+    QCOMPARE(dbcRepos->itemText(0), QString("o/r"));
+    QCOMPARE(dbcRepos->itemText(1), QString("o/other"));
+    QTRY_COMPARE(shownFiles(dbcDialog.findChild<QTreeWidget *>("tree")), QStringList({ "car.dbc" }));
 
     GitHubSettings::clearToken();
     GitHubSettings::setRepos({});

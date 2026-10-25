@@ -168,21 +168,18 @@ void GitHubBrowserDialog::refreshAccount()
 
 void GitHubBrowserDialog::fillRepos(const QString &select)
 {
-    shownRepos.clear();
-    const QList<GitHubRepo> all = GitHubSettings::repos();
-    for (const GitHubRepo &repo : all)
-        if ((kind == Logs && repo.logs) || (kind == DBCs && repo.dbcs)) shownRepos.append(repo);
+    savedRepos = GitHubSettings::repos();
 
     QSignalBlocker block(comboRepo);
     comboRepo->clear();
     int selected = 0;
-    for (int i = 0; i < shownRepos.count(); i++)
+    for (int i = 0; i < savedRepos.count(); i++)
     {
-        comboRepo->addItem(shownRepos[i].fullName());
-        if (shownRepos[i].fullName().compare(select, Qt::CaseInsensitive) == 0) selected = i;
+        comboRepo->addItem(savedRepos[i].fullName());
+        if (savedRepos[i].fullName().compare(select, Qt::CaseInsensitive) == 0) selected = i;
     }
-    comboRepo->setCurrentIndex(shownRepos.isEmpty() ? -1 : selected);
-    btnRemoveRepo->setEnabled(!shownRepos.isEmpty());
+    comboRepo->setCurrentIndex(savedRepos.isEmpty() ? -1 : selected);
+    btnRemoveRepo->setEnabled(!savedRepos.isEmpty());
     repoChanged();
 }
 
@@ -198,12 +195,12 @@ void GitHubBrowserDialog::repoChanged()
     fillTree();
 
     const int idx = comboRepo->currentIndex();
-    if (idx < 0 || idx >= shownRepos.count())
+    if (idx < 0 || idx >= savedRepos.count())
     {
         lblStatus->setText(tr("Add a repo with Add... (\"owner/repo\" or a github.com link)."));
         return;
     }
-    const GitHubRepo repo = shownRepos[idx];
+    const GitHubRepo repo = savedRepos[idx];
     QSettings().setValue(settingsKey() + "Repo", repo.fullName());
 
     lblStatus->setText(tr("Reading the branches of %1...").arg(repo.fullName()));
@@ -242,8 +239,8 @@ void GitHubBrowserDialog::branchChanged()
 
     const int repoIdx = comboRepo->currentIndex();
     const int branchIdx = comboBranch->currentIndex();
-    if (repoIdx < 0 || repoIdx >= shownRepos.count() || branchIdx < 0 || branchIdx >= branches.count()) return;
-    const GitHubRepo repo = shownRepos[repoIdx];
+    if (repoIdx < 0 || repoIdx >= savedRepos.count() || branchIdx < 0 || branchIdx >= branches.count()) return;
+    const GitHubRepo repo = savedRepos[repoIdx];
     const GitHubBranch branch = branches[branchIdx];
     rememberBranch(branch.name);
 
@@ -269,12 +266,12 @@ void GitHubBrowserDialog::branchChanged()
 void GitHubBrowserDialog::rememberBranch(const QString &branch)
 {
     const int idx = comboRepo->currentIndex();
-    if (idx < 0 || idx >= shownRepos.count() || shownRepos[idx].branch == branch) return;
-    shownRepos[idx].branch = branch;
+    if (idx < 0 || idx >= savedRepos.count() || savedRepos[idx].branch == branch) return;
+    savedRepos[idx].branch = branch;
 
     QList<GitHubRepo> all = GitHubSettings::repos();
     for (GitHubRepo &repo : all)
-        if (repo.fullName().compare(shownRepos[idx].fullName(), Qt::CaseInsensitive) == 0) repo.branch = branch;
+        if (repo.fullName().compare(savedRepos[idx].fullName(), Qt::CaseInsensitive) == 0) repo.branch = branch;
     GitHubSettings::setRepos(all);
 }
 
@@ -366,43 +363,35 @@ void GitHubBrowserDialog::addRepo()
 
         QList<GitHubRepo> all = GitHubSettings::repos();
         bool found = false;
-        for (GitHubRepo &repo : all)
-        {
-            if (repo.fullName().compare(owner + "/" + name, Qt::CaseInsensitive) != 0) continue;
-            if (kind == Logs) repo.logs = true;
-            else repo.dbcs = true;
-            found = true;
-        }
+        for (const GitHubRepo &repo : std::as_const(all))
+            if (repo.fullName().compare(owner + "/" + name, Qt::CaseInsensitive) == 0) found = true;
         if (!found)
         {
             GitHubRepo repo;
             repo.owner = owner;
             repo.name = name;
             repo.branch = defaultBranch;
-            repo.logs = (kind == Logs);
-            repo.dbcs = (kind == DBCs);
             all.append(repo);
+            GitHubSettings::setRepos(all);
         }
-        GitHubSettings::setRepos(all);
         fillRepos(owner + "/" + name);
     });
 }
 
-//only from this list (logs or DBCs): nothing changes on GitHub
+//only from the list (for logs and DBC files alike): nothing changes on GitHub
 void GitHubBrowserDialog::removeRepo()
 {
     const int idx = comboRepo->currentIndex();
-    if (idx < 0 || idx >= shownRepos.count()) return;
-    const QString fullName = shownRepos[idx].fullName();
+    if (idx < 0 || idx >= savedRepos.count()) return;
+    const QString fullName = savedRepos[idx].fullName();
+
+    if (QMessageBox::question(this, tr("Remove GitHub Repo"),
+                              tr("Take %1 off the list of repos, for logs and DBC files? Nothing changes on GitHub.")
+                              .arg(fullName)) != QMessageBox::Yes) return;
 
     QList<GitHubRepo> all = GitHubSettings::repos();
     for (int i = int(all.count()) - 1; i >= 0; i--)
-    {
-        if (all[i].fullName().compare(fullName, Qt::CaseInsensitive) != 0) continue;
-        if (kind == Logs) all[i].logs = false;
-        else all[i].dbcs = false;
-        if (!all[i].logs && !all[i].dbcs) all.removeAt(i);
-    }
+        if (all[i].fullName().compare(fullName, Qt::CaseInsensitive) == 0) all.removeAt(i);
     GitHubSettings::setRepos(all);
     fillRepos(QString());
 }
@@ -425,7 +414,7 @@ void GitHubBrowserDialog::openSelected()
     if (idx < 0 || idx >= entries.count() || repoIdx < 0 || branchIdx < 0 || branchIdx >= branches.count()) return;
 
     const GitHubEntry entry = entries[idx];
-    const GitHubRepo repo = shownRepos[repoIdx];
+    const GitHubRepo repo = savedRepos[repoIdx];
     const GitHubBranch branch = branches[branchIdx];
     const QString name = QFileInfo(entry.path).fileName();
 

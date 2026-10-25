@@ -78,8 +78,6 @@ QList<GitHubRepo> GitHubSettings::repos()
         repo.owner = settings.value("Owner").toString();
         repo.name = settings.value("Name").toString();
         repo.branch = settings.value("Branch").toString();
-        repo.logs = settings.value("Logs", true).toBool();
-        repo.dbcs = settings.value("DBCs", true).toBool();
         if (!repo.owner.isEmpty() && !repo.name.isEmpty()) list.append(repo);
     }
     settings.endArray();
@@ -97,8 +95,6 @@ void GitHubSettings::setRepos(const QList<GitHubRepo> &repos)
         settings.setValue("Owner", repos[i].owner);
         settings.setValue("Name", repos[i].name);
         settings.setValue("Branch", repos[i].branch);
-        settings.setValue("Logs", repos[i].logs);
-        settings.setValue("DBCs", repos[i].dbcs);
     }
     settings.endArray();
 }
