@@ -5,9 +5,13 @@
 #include <QUrl>
 #include "simplecrypt.h"
 
-//the OAuth App for "Sign in with GitHub": built in here, or set in the GitHub Account dialog
-#ifndef GITHUB_OAUTH_CLIENT_ID
-#define GITHUB_OAUTH_CLIENT_ID ""
+//"Sign in with GitHub" uses the SavvyCAN GitHub App (https://github.com/apps/savvycan, Tom-evnut's) unless the
+//GitHub Account dialog names another app. A client ID isn't secret: no client secret is ever needed.
+#ifndef GITHUB_APP_CLIENT_ID
+#define GITHUB_APP_CLIENT_ID "Iv23lihZx7wcgpoRCn04"
+#endif
+#ifndef GITHUB_APP_SLUG
+#define GITHUB_APP_SLUG "savvycan"
 #endif
 
 //same key as the remote password (MainSettingsDialog): this only keeps the token from being plain text
@@ -43,15 +47,33 @@ void GitHubSettings::clearToken()
 
 QString GitHubSettings::clientId()
 {
-    QSettings settings;
-    return settings.value("GitHub/ClientId", QString(GITHUB_OAUTH_CLIENT_ID)).toString().trimmed();
+    const QString own = ownClientId();
+    return own.isEmpty() ? QString(GITHUB_APP_CLIENT_ID) : own;
 }
 
-void GitHubSettings::setClientId(const QString &id)
+QString GitHubSettings::ownClientId()
 {
     QSettings settings;
-    if (id.trimmed().isEmpty()) settings.remove("GitHub/ClientId");
+    const QString id = settings.value("GitHub/ClientId").toString().trimmed();
+    return id == GITHUB_APP_CLIENT_ID ? QString() : id;
+}
+
+void GitHubSettings::setOwnClientId(const QString &id)
+{
+    QSettings settings;
+    if (id.trimmed().isEmpty() || id.trimmed() == GITHUB_APP_CLIENT_ID) settings.remove("GitHub/ClientId");
     else settings.setValue("GitHub/ClientId", id.trimmed());
+}
+
+bool GitHubSettings::isGitHubAppClientId(const QString &id)
+{
+    return id.startsWith("Iv"); //GitHub Apps' client IDs start "Iv1." or "Iv23", OAuth Apps' don't
+}
+
+QString GitHubSettings::appInstallUrl()
+{
+    if (!ownClientId().isEmpty()) return QString(); //another app: its page isn't known
+    return webUrl() + "/apps/" + GITHUB_APP_SLUG + "/installations/new";
 }
 
 QString GitHubSettings::apiUrl()
@@ -70,6 +92,18 @@ QList<GitHubRepo> GitHubSettings::repos()
 {
     QSettings settings;
     QList<GitHubRepo> list;
+
+    //until the list is first saved, it holds Tom-evnut's public collection of EV CAN logs and DBC files
+    if (!settings.contains("GitHub/Repos/size") && !settings.value("GitHub/ReposSaved", false).toBool())
+    {
+        GitHubRepo repo;
+        repo.owner = "Tom-evnut";
+        repo.name = "EV-CANlogs";
+        repo.branch = "main";
+        list.append(repo);
+        return list;
+    }
+
     const int count = settings.beginReadArray("GitHub/Repos");
     for (int i = 0; i < count; i++)
     {
@@ -88,6 +122,7 @@ void GitHubSettings::setRepos(const QList<GitHubRepo> &repos)
 {
     QSettings settings;
     settings.remove("GitHub/Repos");
+    settings.setValue("GitHub/ReposSaved", true); //an empty list stays empty
     settings.beginWriteArray("GitHub/Repos", int(repos.count()));
     for (int i = 0; i < repos.count(); i++)
     {

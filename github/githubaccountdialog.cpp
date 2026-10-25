@@ -41,27 +41,19 @@ GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
     //Sign in with GitHub
     QGroupBox *deviceBox = new QGroupBox(tr("Sign in with GitHub"));
     QVBoxLayout *deviceLayout = new QVBoxLayout(deviceBox);
-    QLabel *deviceHelp = new QLabel(tr("SavvyCAN shows a code; enter it on GitHub's page to let SavvyCAN read and "
-                                       "write your repos. This needs the client ID of an OAuth App with Device "
-                                       "Flow turned on (GitHub > Settings > Developer settings > OAuth Apps)."));
-    deviceHelp->setWordWrap(true);
-    deviceLayout->addWidget(deviceHelp);
-    QFormLayout *deviceForm = new QFormLayout;
-    editClientId = new QLineEdit(GitHubSettings::clientId());
-    deviceForm->addRow(tr("OAuth App client ID:"), editClientId);
-    deviceLayout->addLayout(deviceForm);
-    cbPrivateRepos = new QCheckBox(tr("Include private repos (this gives access to all of them)"));
-    cbPrivateRepos->setChecked(true);
-    deviceLayout->addWidget(cbPrivateRepos);
+    lblDeviceHelp = new QLabel;
+    lblDeviceHelp->setWordWrap(true);
+    deviceLayout->addWidget(lblDeviceHelp);
     QHBoxLayout *deviceRow = new QHBoxLayout;
     btnDeviceSignIn = new QPushButton(tr("Sign in with GitHub"));
+    btnDeviceSignIn->setDefault(true);
     lblCode = new QLabel;
     QFont codeFont = lblCode->font();
     codeFont.setPointSize(codeFont.pointSize() * 2);
     codeFont.setBold(true);
     lblCode->setFont(codeFont);
     lblCode->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    btnOpenPage = new QPushButton(tr("Copy Code and Open GitHub"));
+    btnOpenPage = new QPushButton(tr("Open GitHub Again"));
     btnOpenPage->setVisible(false);
     deviceRow->addWidget(btnDeviceSignIn);
     deviceRow->addWidget(lblCode);
@@ -71,14 +63,43 @@ GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
     lblDeviceStatus = new QLabel;
     lblDeviceStatus->setWordWrap(true);
     deviceLayout->addWidget(lblDeviceStatus);
+
+    //private repos: the SavvyCAN app only reaches the repos it's installed on
+    installRow = new QWidget;
+    QHBoxLayout *installLayout = new QHBoxLayout(installRow);
+    installLayout->setContentsMargins(0, 0, 0, 0);
+    QPushButton *btnInstall = new QPushButton(tr("Choose Repos..."));
+    QLabel *installHelp = new QLabel(tr("Private repos, yours or your organisations', need the SavvyCAN app "
+                                        "installed on them: choose which on GitHub."));
+    installHelp->setWordWrap(true);
+    installLayout->addWidget(btnInstall);
+    installLayout->addWidget(installHelp, 1);
+    deviceLayout->addWidget(installRow);
+
+    //another app, for forks or organisations that register their own
+    cbOwnApp = new QCheckBox(tr("Use my own GitHub App or OAuth App"));
+    cbOwnApp->setChecked(!GitHubSettings::ownClientId().isEmpty());
+    deviceLayout->addWidget(cbOwnApp);
+    ownAppBox = new QWidget;
+    QVBoxLayout *ownAppLayout = new QVBoxLayout(ownAppBox);
+    ownAppLayout->setContentsMargins(20, 0, 0, 0);
+    QFormLayout *ownAppForm = new QFormLayout;
+    editClientId = new QLineEdit(GitHubSettings::ownClientId());
+    editClientId->setPlaceholderText(tr("The app's client ID (its Device Flow must be turned on)"));
+    ownAppForm->addRow(tr("Client ID:"), editClientId);
+    ownAppLayout->addLayout(ownAppForm);
+    cbPrivateRepos = new QCheckBox(tr("Include private repos (an OAuth App then reaches all of them)"));
+    cbPrivateRepos->setChecked(true);
+    ownAppLayout->addWidget(cbPrivateRepos);
+    deviceLayout->addWidget(ownAppBox);
     layout->addWidget(deviceBox);
 
     //Personal access token
-    QGroupBox *tokenBox = new QGroupBox(tr("Personal access token"));
+    QGroupBox *tokenBox = new QGroupBox(tr("Or use a personal access token"));
     QVBoxLayout *tokenLayout = new QVBoxLayout(tokenBox);
-    QLabel *tokenHelp = new QLabel(tr("To give access to chosen repos only, make a fine-grained token on GitHub "
-                                      "(Settings > Developer settings > Personal access tokens) with Contents: "
-                                      "read and write, and paste it here."));
+    QLabel *tokenHelp = new QLabel(tr("Make a fine-grained token on GitHub (Settings > Developer settings > Personal "
+                                      "access tokens) for the repos you choose, with Contents: read and write, and "
+                                      "paste it here."));
     tokenHelp->setWordWrap(true);
     tokenLayout->addWidget(tokenHelp);
     QHBoxLayout *tokenRow = new QHBoxLayout;
@@ -103,7 +124,20 @@ GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(btnClearCache, &QPushButton::clicked, this, &GitHubAccountDialog::clearCache);
     connect(btnSignOut, &QPushButton::clicked, this, &GitHubAccountDialog::signOut);
-    connect(editClientId, &QLineEdit::editingFinished, this, [this]() { GitHubSettings::setClientId(editClientId->text()); });
+    connect(btnInstall, &QPushButton::clicked, this, []()
+    {
+        QDesktopServices::openUrl(QUrl(GitHubSettings::appInstallUrl()));
+    });
+    connect(cbOwnApp, &QCheckBox::toggled, this, [this](bool own)
+    {
+        GitHubSettings::setOwnClientId(own ? editClientId->text() : QString());
+        updateAppWidgets();
+    });
+    connect(editClientId, &QLineEdit::textChanged, this, [this]()
+    {
+        GitHubSettings::setOwnClientId(editClientId->text());
+        updateAppWidgets();
+    });
     connect(btnDeviceSignIn, &QPushButton::clicked, this, &GitHubAccountDialog::startDeviceSignIn);
     connect(btnUseToken, &QPushButton::clicked, this, [this]() { useToken(editToken->text(), false); });
     connect(btnOpenPage, &QPushButton::clicked, this, [this]()
@@ -114,10 +148,14 @@ GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
 
     connect(deviceFlow, &GitHubDeviceFlow::codeReady, this, [this](const QString &code, const QString &url)
     {
+        //the code goes on the clipboard and GitHub's page opens: the user only pastes and approves
         verificationUrl = url;
         lblCode->setText(code);
         btnOpenPage->setVisible(true);
-        lblDeviceStatus->setText(tr("Enter this code at %1, then approve SavvyCAN. Waiting for GitHub...").arg(url));
+        QApplication::clipboard()->setText(code);
+        QDesktopServices::openUrl(QUrl(url));
+        lblDeviceStatus->setText(tr("The code is copied: paste it on the GitHub page that opened (%1) and approve "
+                                    "SavvyCAN. Waiting for GitHub...").arg(url));
     });
     connect(deviceFlow, &GitHubDeviceFlow::signedIn, this, [this](const QString &token)
     {
@@ -135,7 +173,13 @@ GitHubAccountDialog::GitHubAccountDialog(QWidget *parent)
         lblDeviceStatus->setText(error);
     });
 
+    updateAppWidgets();
     lblStatus->setObjectName("lblStatus");
+    installRow->setObjectName("installRow");
+    cbOwnApp->setObjectName("cbOwnApp");
+    ownAppBox->setObjectName("ownAppBox");
+    editClientId->setObjectName("editClientId");
+    cbPrivateRepos->setObjectName("cbPrivateRepos");
 
     resize(560, sizeHint().height());
     refreshStatus();
@@ -169,15 +213,32 @@ void GitHubAccountDialog::refreshStatus()
     });
 }
 
+//what the sign-in reaches depends on the app: the SavvyCAN app, or the user's own
+void GitHubAccountDialog::updateAppWidgets()
+{
+    const bool own = cbOwnApp->isChecked();
+    ownAppBox->setVisible(own);
+    //GitHub Apps reach the repos they're installed on and ignore scopes; OAuth Apps go by scope
+    cbPrivateRepos->setVisible(own && !GitHubSettings::isGitHubAppClientId(editClientId->text().trimmed()));
+    installRow->setVisible(!GitHubSettings::appInstallUrl().isEmpty());
+
+    if (GitHubSettings::ownClientId().isEmpty())
+        lblDeviceHelp->setText(tr("Click Sign in with GitHub: SavvyCAN copies a code and opens GitHub, where you paste "
+                                  "it and approve. SavvyCAN can then use public repos and the repos the SavvyCAN "
+                                  "app is installed on."));
+    else
+        lblDeviceHelp->setText(tr("Click Sign in with GitHub: SavvyCAN copies a code and opens GitHub, where you paste "
+                                  "it and approve. SavvyCAN can then use the repos your app allows."));
+}
+
 void GitHubAccountDialog::startDeviceSignIn()
 {
-    GitHubSettings::setClientId(editClientId->text());
-    const QString clientId = GitHubSettings::clientId();
-    if (clientId.isEmpty())
+    if (cbOwnApp->isChecked() && editClientId->text().trimmed().isEmpty())
     {
-        lblDeviceStatus->setText(tr("Enter the OAuth App's client ID first."));
+        lblDeviceStatus->setText(tr("Enter your app's client ID, or untick \"Use my own GitHub App or OAuth App\"."));
         return;
     }
+    const QString clientId = GitHubSettings::clientId();
     btnDeviceSignIn->setEnabled(false);
     lblDeviceStatus->setText(tr("Asking GitHub for a code..."));
     deviceFlow->start(clientId, cbPrivateRepos->isChecked() ? "repo" : "public_repo");

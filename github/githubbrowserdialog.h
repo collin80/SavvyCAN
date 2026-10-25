@@ -44,6 +44,7 @@ private:
     GitHubOrigin downloadedOrigin;
 
     QLabel *lblAccount;
+    QPushButton *btnAccount;
     QComboBox *comboRepo;
     QPushButton *btnAddRepo;
     QPushButton *btnRemoveRepo;
@@ -56,6 +57,8 @@ private:
 
     QString settingsKey() const;
     void refreshAccount();
+    void showError(const QString &error);
+    void setStatus(const QString &text);
     void fillRepos(const QString &select);
     void repoChanged();
     void branchChanged();
