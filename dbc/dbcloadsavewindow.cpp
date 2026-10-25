@@ -158,10 +158,7 @@ void DBCLoadSaveWindow::loadFile()
     QFileDialog dialog;
     QSettings settings;
 
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
-    filters.append(QString(tr("Tesla JSON File (*.json)")));
-    filters.append(QString(tr("Secret CSV Signal Defs (*.csv)")));
+    const QStringList filters = DBCHandler::loadFilters();
 
     dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -174,21 +171,7 @@ void DBCLoadSaveWindow::loadFile()
         //right now there is only one file type that can be loaded here so just do it.
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
 
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".dbc";
-            file = dbcHandler->loadDBCFile(filename);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".json";
-            file = dbcHandler->loadJSONFile(filename);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            file = dbcHandler->loadSecretCSVFile(filename);
-        }
+        file = dbcHandler->loadFileAs(filename, int(filters.indexOf(dialog.selectedNameFilter())));
     }
 
     if(file) {
