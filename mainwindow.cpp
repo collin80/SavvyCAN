@@ -1521,6 +1521,7 @@ void MainWindow::handleDroppedFile(const QString &filename)
 void MainWindow::handleLoadFromGitHub()
 {
     GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, FrameFileIO::loadFilters(), this);
+    dialog.setCompanionSuffixes({ LogNotes::sidecarSuffix() }); //a log's notes file is downloaded with it
     if (dialog.exec() != QDialog::Accepted) return;
     //notes are read from the downloaded copy, but not written back to it
     if (loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true, false))
@@ -1537,12 +1538,37 @@ void MainWindow::handleSaveToGitHub()
     }
 
     GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, FrameFileIO::saveFilters(), this);
-    dialog.setSaveWriter([frames](const QString &localFile, int fileType, QString &error)
+    //the log's notes: asked when Save is pressed (the file type is known then), inside a GVRET log or in a notes file
+    //committed with it. Saving again (after a conflict) starts from what was typed the first time.
+    dialog.setCompanionSuffixes({ LogNotes::sidecarSuffix() });
+    LogNotes notes = notesForSaving(frames, false);
+    bool withNotes = false;
+    dialog.setSaveWriter([this, frames, &notes, &withNotes, &dialog](const QString &localFile, int fileType, QString &error)
     {
+        withNotes = notes.hasUserFields() || !notes.markers.isEmpty();
+        if (LogNotesDialog::askOnSave())
+        {
+            LogNotesDialog notesDialog(LogNotesDialog::Saving, &dialog);
+            notesDialog.setNotes(notes);
+            notesDialog.setTarget(QFileInfo(localFile).fileName(), fileType == 0);
+            notesDialog.exec();
+            if (notesDialog.choice() == LogNotesDialog::Cancelled) return false; //no error: nothing is saved
+            withNotes = notesDialog.choice() == LogNotesDialog::WithNotes;
+            if (withNotes) notes = notesDialog.notes();
+        }
         QString name = localFile;
-        if (FrameFileIO::saveFrameFileAs(name, fileType, frames)) return true;
-        error = tr("The log couldn't be written as that file type.");
-        return false;
+        if (!FrameFileIO::saveFrameFileAs(name, fileType, frames))
+        {
+            error = tr("The log couldn't be written as that file type.");
+            return false;
+        }
+        notes.logFile = QFileInfo(name).fileName();
+        if (withNotes && !FrameFileIO::saveLogNotes(name, fileType, notes))
+        {
+            error = tr("The log's notes couldn't be written.");
+            return false;
+        }
+        return true;
     });
     //back where it came from, if it came from GitHub; otherwise under its own name
     if (gitHubLogOrigin.isValid() && loadedFileName == gitHubLogOrigin.displayName())
@@ -1556,6 +1582,11 @@ void MainWindow::handleSaveToGitHub()
 
     gitHubLogOrigin = dialog.origin();
     loadedFileName = gitHubLogOrigin.displayName();
+    if (withNotes) LogNotesDialog::setLastNotes(notes);
+    logNotes = withNotes ? notes : LogNotes();
+    logNotesFile.clear(); //the cached copy isn't written back to
+    logNotesSource = loadedFileName;
+    updateLogNotesPanel();
     updateFileStatus();
 }
 

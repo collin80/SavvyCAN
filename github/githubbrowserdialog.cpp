@@ -22,6 +22,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
+#include <QSet>
 #include <QSettings>
 #include <QStyle>
 #include <QTemporaryDir>
@@ -443,6 +444,19 @@ void GitHubBrowserDialog::rememberBranch(const QString &branch)
     GitHubSettings::setRepos(all);
 }
 
+void GitHubBrowserDialog::setCompanionSuffixes(const QStringList &suffixes)
+{
+    companions = suffixes;
+    fillTree();
+}
+
+int GitHubBrowserDialog::entryIndexOf(const QString &path) const
+{
+    for (int i = 0; i < entries.count(); i++)
+        if (!entries[i].isFolder && entries[i].path == path) return i;
+    return -1;
+}
+
 void GitHubBrowserDialog::fillTree()
 {
     QSettings().setValue(settingsKey() + "Type", comboType->currentIndex());
@@ -468,6 +482,10 @@ void GitHubBrowserDialog::fillTree()
         return item;
     };
 
+    QSet<QString> files;
+    for (const GitHubEntry &entry : std::as_const(entries))
+        if (!entry.isFolder) files.insert(entry.path);
+
     int shown = 0;
     for (int i = 0; i < entries.count(); i++)
     {
@@ -479,6 +497,15 @@ void GitHubBrowserDialog::fillTree()
             if (mode == Save) folderItem(entry.path);
             continue;
         }
+        //a companion file goes with its file, so it isn't listed on its own (unless that file isn't there)
+        bool isCompanion = false;
+        QStringList withIt;
+        for (const QString &suffix : std::as_const(companions))
+        {
+            if (entry.path.endsWith(suffix) && files.contains(entry.path.chopped(suffix.length()))) isCompanion = true;
+            if (files.contains(entry.path + suffix)) withIt.append(QFileInfo(entry.path + suffix).fileName());
+        }
+        if (isCompanion) continue;
         const int slash = int(entry.path.lastIndexOf('/'));
         const QString name = entry.path.mid(slash + 1);
         if (!matchesFileType(name, type)) continue;
@@ -488,7 +515,13 @@ void GitHubBrowserDialog::fillTree()
         item->setData(0, Qt::UserRole, i);
         item->setData(0, Qt::UserRole + 1, entry.path);
         item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
-        item->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        if (withIt.isEmpty()) item->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        else
+        {
+            item->setIcon(0, style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+            item->setToolTip(0, tr("With %1").arg(withIt.join(", ")));
+            item->setData(0, Qt::UserRole + 2, withIt);
+        }
         shown++;
     }
 
@@ -837,6 +870,43 @@ void GitHubBrowserDialog::openSelected()
         return;
     }
 
+    //the files that go with it, from the same commit; a cached one it doesn't have any more would be taken for its
+    QStringList companionErrors;
+    for (const QString &suffix : std::as_const(companions))
+    {
+        const int companionIdx = entryIndexOf(entry.path + suffix);
+        if (companionIdx < 0)
+        {
+            GitHubCache::remove(localFile + suffix);
+            continue;
+        }
+        GitHubOrigin companionOrigin = origin;
+        companionOrigin.path = entries[companionIdx].path;
+        companionOrigin.sha = entries[companionIdx].sha;
+        QByteArray companionData;
+        QString companionError;
+        waitFor([&](std::function<void()> quit)
+        {
+            client->download(repo.owner, repo.name, branch.commitSha, companionOrigin.path,
+                             [&, quit](const QByteArray &body, const QString &e)
+            {
+                companionData = body;
+                companionError = e;
+                quit();
+            });
+        });
+        QString companionFile;
+        if (companionError.isEmpty()) GitHubCache::store(companionOrigin, companionData, companionFile, companionError);
+        if (!companionError.isEmpty())
+        {
+            GitHubCache::remove(localFile + suffix);
+            companionErrors.append(QString("%1: %2").arg(QFileInfo(companionOrigin.path).fileName(), companionError));
+        }
+    }
+    if (!companionErrors.isEmpty())
+        askUser(QMessageBox::Warning, tr("%1 was downloaded, but not everything that goes with it:\n%2")
+                .arg(name, companionErrors.join('\n')), QMessageBox::Ok);
+
     resultFile = localFile;
     resultOrigin = origin;
     accept();
@@ -952,10 +1022,14 @@ void GitHubBrowserDialog::saveSelected()
     QTemporaryDir tmp;
     QString error;
     const QString localFile = tmp.filePath(name);
-    if (!tmp.isValid() || !writer(localFile, comboType->currentIndex(), error))
+    if (!tmp.isValid())
     {
-        askUser(QMessageBox::Warning, error.isEmpty() ? tr("%1 couldn't be written.").arg(name) : error,
-                QMessageBox::Ok);
+        askUser(QMessageBox::Warning, tr("%1 couldn't be written.").arg(name), QMessageBox::Ok);
+        return;
+    }
+    if (!writer(localFile, comboType->currentIndex(), error))
+    {
+        if (!error.isEmpty()) askUser(QMessageBox::Warning, error, QMessageBox::Ok); //no error: the user cancelled
         return;
     }
     QFile file(localFile);
@@ -1078,6 +1152,74 @@ void GitHubBrowserDialog::saveSelected()
         return;
     }
 
+    //the files that go with it, if the writer wrote them: each replaces whatever is there now, as the file did
+    struct SavedCompanion { GitHubOrigin origin; QByteArray data; };
+    QList<SavedCompanion> savedCompanions;
+    QStringList companionErrors, oldCompanions;
+    for (const QString &suffix : std::as_const(companions))
+    {
+        const QString companionPath = path + suffix;
+        const QString companionName = QFileInfo(companionPath).fileName();
+        QString currentSha, shaError;
+        waitFor([&](std::function<void()> quit)
+        {
+            client->getFileSha(repo.owner, repo.name, targetBranch, companionPath,
+                               [&, quit](const QString &sha, const QString &e) { currentSha = sha; shaError = e; quit(); });
+        });
+        QFile companionFile(localFile + suffix);
+        if (!companionFile.exists())
+        {
+            //left as it is: it may be from an earlier version of the file
+            if (!currentSha.isEmpty()) oldCompanions.append(companionName);
+            continue;
+        }
+        if (!companionFile.open(QIODevice::ReadOnly))
+        {
+            companionErrors.append(QString("%1: %2").arg(companionName, companionFile.errorString()));
+            continue;
+        }
+        const QByteArray companionData = companionFile.readAll();
+        GitHubSaveResult companionResult;
+        QString companionError = shaError;
+        for (int attempt = 0; attempt < 2 && companionError.isEmpty(); attempt++)
+        {
+            bool conflict = false;
+            waitFor([&](std::function<void()> quit)
+            {
+                client->putFile(repo.owner, repo.name, targetBranch, companionPath, companionData,
+                                tr("%1 (%2)").arg(message, companionName), currentSha,
+                                [&, quit](const GitHubSaveResult &r, bool c, const QString &e)
+                {
+                    companionResult = r;
+                    conflict = c;
+                    companionError = e;
+                    quit();
+                });
+            });
+            if (!conflict) break;
+            //changed on GitHub just now: replace that version too
+            companionError.clear();
+            waitFor([&](std::function<void()> quit)
+            {
+                client->getFileSha(repo.owner, repo.name, targetBranch, companionPath,
+                                   [&, quit](const QString &sha, const QString &e) { currentSha = sha; companionError = e; quit(); });
+            });
+            if (attempt == 1 && companionError.isEmpty()) companionError = tr("it keeps changing on GitHub");
+        }
+        if (!companionError.isEmpty())
+        {
+            companionErrors.append(QString("%1: %2").arg(companionName, companionError));
+            continue;
+        }
+        SavedCompanion saved;
+        saved.origin = target;
+        saved.origin.branch = targetBranch;
+        saved.origin.path = companionPath;
+        saved.origin.sha = companionResult.sha;
+        saved.data = companionData;
+        savedCompanions.append(saved);
+    }
+
     QString prUrl, prError;
     if (newBranch)
     {
@@ -1097,6 +1239,13 @@ void GitHubBrowserDialog::saveSelected()
     saved.sha = result.sha;
     QString cached;
     if (!GitHubCache::store(saved, data, cached, error)) cached.clear();
+    for (const QString &suffix : std::as_const(companions))
+        if (!cached.isEmpty()) GitHubCache::remove(cached + suffix);
+    for (const SavedCompanion &companion : std::as_const(savedCompanions))
+    {
+        QString companionCached, companionError;
+        GitHubCache::store(companion.origin, companion.data, companionCached, companionError);
+    }
 
     resultFile = cached;
     resultOrigin = saved;
@@ -1110,6 +1259,17 @@ void GitHubBrowserDialog::saveSelected()
     else
         text = tr("Saved %1 to the new branch %2, but the pull request couldn't be opened: %3")
                .arg(path, targetBranch, prError).toHtmlEscaped();
+    QStringList savedNames;
+    for (const SavedCompanion &companion : std::as_const(savedCompanions))
+        savedNames.append(QFileInfo(companion.origin.path).fileName());
+    if (!savedNames.isEmpty())
+        text += "<br>" + tr("With %1.").arg(savedNames.join(", ")).toHtmlEscaped();
+    if (!companionErrors.isEmpty())
+        text += "<br><br>" + tr("Not saved with it:").toHtmlEscaped() + "<br>" + companionErrors.join("\n").toHtmlEscaped()
+                                                                                  .replace("\n", "<br>");
+    if (!oldCompanions.isEmpty())
+        text += "<br><br>" + tr("%1 on GitHub is from an earlier save and wasn't changed; delete it there if it doesn't "
+                                "go with this file any more.").arg(oldCompanions.join(", ")).toHtmlEscaped();
     if (!resultLink.isEmpty())
         text += QString("<br><br><a href=\"%1\">%2</a>").arg(resultLink.toHtmlEscaped(),
                                                              prUrl.isEmpty() ? tr("See the commit on GitHub")

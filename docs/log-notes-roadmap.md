@@ -14,7 +14,7 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | 1: notes format, native CSV block, sidecar file | Done, merged into `fork-ci` (`d7049fa`); older loader checked |
 | 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci` (`bb54d73`); tried by the user on Windows (open a log, edit its notes, save, reopen) |
 | 3: notes when capture starts, continuous logging, markers | Done, merged into `fork-ci`. Tried by the user on Windows: the capture-start prompt, markers on a loaded log (kept through save and reload), marker lines in graphs. Continuous logging's notes not tried by hand yet |
-| 4: notes with GitHub load and save | In progress (`log-notes-github`) |
+| 4: notes with GitHub load and save | Done on `log-notes-github`, not merged; `TestGitHub` covers it against its fake GitHub, not tried against GitHub by hand yet |
 
 ---
 
@@ -215,12 +215,25 @@ The same Markdown, after the last frame, each line starting with `# `:
 
 ## 7. GitHub (phase 4, and GitHub phase 2)
 
-- **Load:** when a log is opened from GitHub, the browser also downloads `<file>.notes.md` from the same folder if it
-  exists, into the cache next to the log, so the normal sidecar lookup finds it.
-- **Browser:** files with a notes file show a notes mark; the notes' title and tags are shown for the selected log.
-- **Save (GitHub phase 2):** saving a log to GitHub commits the sidecar file in the same commit (Git Data API for two
-  files, or two Contents API commits until then). The notes' title is suggested as the commit message.
-- The sidecar file doesn't show up as a separate log in the file tree's log filter.
+The GitHub window knows of "companion files" (`GitHubBrowserDialog::setCompanionSuffixes`): files named
+`<file><suffix>` that go with a file. The log windows set `.notes.md`; the GitHub code itself knows nothing of notes.
+
+- **Load:** opening a log from GitHub also downloads `<file>.notes.md` from the same commit, if there is one, into the
+  cache next to the log (with its own `.origin.json`), so the normal sidecar lookup finds it. A notes file cached
+  earlier that GitHub no longer has is removed, so it can't be shown as the log's. Notes inside a GVRET log need
+  nothing extra. If the notes can't be downloaded, the log still opens and the user is told.
+- **Browser:** a log with a notes file has a different icon and the tooltip "With run.csv.notes.md"; the notes file
+  isn't listed on its own. A notes file whose log isn't there is listed as a file.
+- **Save:** pressing Save in the GitHub window opens the notes dialog (the file type is known then): Save with Notes,
+  Save without Notes, or Cancel (back to the GitHub window, nothing saved). Notes go inside a GVRET log; for other
+  types the writer puts `<file>.notes.md` next to the log, and the window commits it after the log, as a second
+  commit ("<message> (bench.csv.notes.md)") on the same branch, before any pull request. It replaces the notes file
+  there, whatever its version: the log's own conflict check has already been answered. Saving again after a conflict
+  starts from what was typed.
+- **Saved without notes:** a notes file already on GitHub next to the log is left alone, and the result message says
+  it's from an earlier save. (Deleting files on GitHub isn't in `GitHubClient` yet.)
+- **Not done:** the notes' title and tags in the browser (they'd need every notes file downloaded), the notes' title
+  as the commit message, one commit for both files (Git Data API, GitHub phase 4).
 
 ---
 
@@ -254,6 +267,10 @@ The same Markdown, after the last frame, each line starting with `# `:
   continuous logging stops (no Cancel; closing it means no notes) and the panel's markers list; `TestLogNotes` adds
   marker ordering and the frame span. The main window parts (when the prompts open, the marker time, going to a
   marker, the graph lines) are built and the app starts, but are checked by hand.
+- Phase 4: `TestGitHub` adds `testCompanionOpen` (the log listed with its notes, a lone notes file listed on its own,
+  the notes downloaded into the cache with their origin, an old cached notes file dropped) and `testCompanionSave`
+  (log and notes committed, saved again over both, saved without notes leaving GitHub's alone with a message, a
+  writer that cancels saving nothing and saying nothing). The notes dialog in the GitHub save is checked by hand.
 - By hand: a capture on the bench with markers, saved as native CSV and BLF, reopened in a new SavvyCAN, opened in an
   older build, and opened in a text editor and on GitHub.
 

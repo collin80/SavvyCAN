@@ -151,6 +151,8 @@ private slots:
     void testHelp();
     void testAppInstallCheck();
     void testAppInstallCheckNewRepo();
+    void testCompanionOpen();
+    void testCompanionSave();
 
 private:
     QTemporaryDir settingsDir;
@@ -1559,6 +1561,148 @@ void TestGitHub::testHelp()
     gitHubHelp() = nullptr;
     showGitHubHelp(); //no hook: nothing happens
     QSettings().remove("GitHub");
+}
+
+static QByteArray fileContents(const QString &path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+//files that go with a log (its notes, <log>.notes.md): listed with it, downloaded with it, and an old cached one dropped
+void TestGitHub::testCompanionOpen()
+{
+    SaveFixture f;
+    f.repos.addFile("o/r", "main", "logs/run.csv.notes.md", "# SavvyCAN log notes v1\ntitle: bench\n");
+    f.repos.addFile("o/r", "main", "logs/other.csv", "other log");
+    f.repos.addFile("o/r", "main", "logs/lone.csv.notes.md", "notes of a log that isn't there");
+    //a notes file cached for other.csv earlier, which GitHub doesn't have any more
+    QVERIFY(QDir().mkpath(f.cache.path() + "/o/r/main/logs"));
+    const QString oldNotes = f.cache.path() + "/o/r/main/logs/other.csv.notes.md";
+    {
+        QFile old(oldNotes);
+        QVERIFY(old.open(QIODevice::WriteOnly));
+        old.write("old notes");
+    }
+
+    const QStringList openTypes { "Autodetect File Type (*.*)", "GVRET Logs (*.csv *.CSV)" };
+    auto openFile = [&](const QString &name, QString &localFile)
+    {
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, openTypes);
+        dialog.setCompanionSuffixes({ ".notes.md" });
+        dialog.ask = [&f](QMessageBox::Icon, const QString &text, QMessageBox::StandardButtons,
+                          const QMap<QMessageBox::StandardButton, QString> &)
+        {
+            f.asked.append(text);
+            return QMessageBox::Ok;
+        };
+        dialog.show();
+        QTreeWidget *tree = dialog.findChild<QTreeWidget *>("tree");
+        QTRY_VERIFY(findItem(tree, "run.csv"));
+        //the notes file goes with its log; one without its log is listed on its own
+        QCOMPARE(shownFiles(tree), QStringList({ "car.dbc", "lone.csv.notes.md", "other.csv", "run.csv" }));
+        QCOMPARE(findItem(tree, "run.csv")->toolTip(0), QString("With run.csv.notes.md"));
+        QVERIFY(findItem(tree, "other.csv")->toolTip(0).isEmpty());
+        findItem(tree, name)->setSelected(true);
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        localFile = dialog.localFile();
+    };
+
+    QString localFile;
+    openFile("run.csv", localFile);
+    QCOMPARE(fileContents(localFile + ".notes.md"), QByteArray("# SavvyCAN log notes v1\ntitle: bench\n"));
+    QCOMPARE(GitHubCache::originOf(localFile + ".notes.md").path, QString("logs/run.csv.notes.md"));
+    QCOMPARE(GitHubCache::originOf(localFile + ".notes.md").sha, f.repos.repos["o/r"]["main"].files["logs/run.csv.notes.md"].first);
+
+    openFile("other.csv", localFile);
+    QCOMPARE(localFile + ".notes.md", oldNotes);
+    QVERIFY(!QFile::exists(oldNotes)); //not other.csv's notes any more
+    QVERIFY(f.asked.isEmpty());
+}
+
+//saving: a notes file the writer wrote next to the log is committed after it, replacing the one there; one it didn't
+//write is left on GitHub (and the user told); a writer that returns false without an error saves nothing quietly
+void TestGitHub::testCompanionSave()
+{
+    SaveFixture f;
+    int writes = 0;
+    bool writeNotes = true;
+    bool cancel = false;
+    //localFile: the cached copy saved, empty if nothing was
+    auto save = [&](bool replaceAnswer, QString &localFile)
+    {
+        localFile.clear();
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, QByteArray());
+        dialog.setCompanionSuffixes({ ".notes.md" });
+        dialog.setSaveWriter([&](const QString &localFile, int, QString &)
+        {
+            if (cancel) return false;
+            writes++;
+            QFile log(localFile);
+            if (!log.open(QIODevice::WriteOnly)) return false;
+            log.write("log v" + QByteArray::number(writes));
+            if (writeNotes)
+            {
+                QFile notes(localFile + ".notes.md");
+                if (!notes.open(QIODevice::WriteOnly)) return false;
+                notes.write("notes v" + QByteArray::number(writes));
+            }
+            return true;
+        });
+        dialog.setSuggestion(GitHubOrigin(), "bench.csv");
+        dialog.show();
+        QTreeWidget *tree = dialog.findChild<QTreeWidget *>("tree");
+        QTRY_VERIFY(findItem(tree, "logs"));
+        emit tree->itemClicked(findItem(tree, "logs"), 0);
+        if (replaceAnswer) f.answers = { QMessageBox::Yes }; //"already in o/r. Replace it?"
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        if (dialog.result() == QDialog::Accepted) localFile = dialog.localFile();
+    };
+    const auto &files = f.repos.repos["o/r"]["main"].files;
+
+    //new log and notes
+    QString localFile;
+    save(false, localFile);
+    QVERIFY(!localFile.isEmpty());
+    QCOMPARE(files["logs/bench.csv"].second, QByteArray("log v1"));
+    QCOMPARE(files["logs/bench.csv.notes.md"].second, QByteArray("notes v1"));
+    QCOMPARE(f.repos.lastMessage, QString("Add bench.csv from SavvyCAN (bench.csv.notes.md)"));
+    QCOMPARE(f.asked.count(), 1);
+    QVERIFY(f.asked[0].contains("With bench.csv.notes.md."));
+    QCOMPARE(fileContents(localFile + ".notes.md"), QByteArray("notes v1")); //cached as saved
+    QCOMPARE(GitHubCache::originOf(localFile + ".notes.md").sha, files["logs/bench.csv.notes.md"].first);
+
+    //saved again over both
+    f.asked.clear();
+    save(true, localFile);
+    QVERIFY(!localFile.isEmpty());
+    QCOMPARE(files["logs/bench.csv"].second, QByteArray("log v2"));
+    QCOMPARE(files["logs/bench.csv.notes.md"].second, QByteArray("notes v2"));
+    QVERIFY(f.asked.last().contains("With bench.csv.notes.md."));
+
+    //saved without notes: the notes file on GitHub stays, and the user is told
+    f.asked.clear();
+    writeNotes = false;
+    save(true, localFile);
+    QVERIFY(!localFile.isEmpty());
+    QCOMPARE(files["logs/bench.csv"].second, QByteArray("log v3"));
+    QCOMPARE(files["logs/bench.csv.notes.md"].second, QByteArray("notes v2"));
+    QVERIFY(f.asked.last().contains("bench.csv.notes.md on GitHub is from an earlier save"));
+    QVERIFY(!QFile::exists(localFile + ".notes.md")); //not cached as this log's
+
+    //the writer cancelled: nothing saved, nothing said
+    f.asked.clear();
+    cancel = true;
+    const int requests = int(f.github.requests.count());
+    save(true, localFile);
+    QVERIFY(localFile.isEmpty());
+    QCOMPARE(files["logs/bench.csv"].second, QByteArray("log v3"));
+    QCOMPARE(f.asked.count(), 1); //only "Replace it?", asked before writing
+    QVERIFY(f.asked[0].contains("Replace it?"));
+    for (int i = requests; i < f.github.requests.count(); i++)
+        QVERIFY(f.github.requests[i].method != "PUT");
 }
 
 QTEST_MAIN(TestGitHub)

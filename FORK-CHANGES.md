@@ -17,7 +17,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
-| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving and when capture starts, shown in a Log Notes panel when loading; markers (Ctrl+M) in the panel and graphs | `log-notes`, `log-notes-ui`, `log-notes-capture` | fork only for now |
+| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving and when capture starts, shown in a Log Notes panel when loading; markers (Ctrl+M) in the panel and graphs; loaded and saved with logs on GitHub | `log-notes`, `log-notes-ui`, `log-notes-capture`, `log-notes-github` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
 | Wireshark loaders: pcap and pcapng records over 256 bytes are skipped instead of overflowing a buffer; a broken block size no longer hangs the load | `fix-pcaplite-bounds` | not offered yet |
@@ -96,6 +96,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `fix-pcaplite-bounds` | `fork-ci` | pcaplite skips records over 256 bytes and stops at broken block sizes | - |
 | `log-notes-ui` | `fork-ci` | Log notes dialog on save, templates, Log Notes panel, File > Log Notes... | - |
 | `log-notes-capture` | `fork-ci` | Log notes when capture starts, in continuous logs; markers in the panel and graphs | - |
+| `log-notes-github` | `fork-ci` | Log notes with GitHub: `.notes.md` downloaded with a log and committed with GitHub saves | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -136,6 +137,21 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-26: log notes with GitHub logs (`log-notes-github`)
+
+Phase 4 of the [log notes roadmap](docs/log-notes-roadmap.md).
+
+- **Opening a log from GitHub** also downloads its `<log>.notes.md`, so the Log Notes panel shows its notes; a notes
+  file cached earlier that GitHub no longer has is dropped. Notes inside a GVRET log already came with it.
+- **Saving a log to GitHub** asks for its notes when Save is pressed (Cancel goes back to the GitHub window). They go
+  inside a GVRET log, or into `<log>.notes.md`, committed right after the log on the same branch (before any pull
+  request). A notes file already there is replaced; saving without notes leaves it and says so.
+- **The GitHub window** lists a log with a notes file with its own icon and a "With ..." tooltip, and doesn't list
+  the notes file on its own.
+- **Code:** "companion files" in `GitHubBrowserDialog` (`setCompanionSuffixes`), `GitHubCache::remove`; a save writer
+  returning false with no error now cancels quietly.
+- **Tests:** `TestGitHub` adds `testCompanionOpen` and `testCompanionSave` (48 tests).
 
 ### 2026-10-26: log notes when capture starts, continuous logs, markers (`log-notes-capture`)
 
