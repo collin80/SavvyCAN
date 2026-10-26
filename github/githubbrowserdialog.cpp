@@ -3,6 +3,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QEventLoop>
 #include <QFile>
@@ -24,6 +25,7 @@
 #include <QSettings>
 #include <QStyle>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QShortcut>
@@ -138,6 +140,14 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, Mode mode, const QStringList
     saveBox->setVisible(mode == Save);
     layout->addWidget(saveBox);
 
+    //Save: a warning when the GitHub App signed in with isn't installed on the repo picked
+    lblAppHint = new QLabel;
+    lblAppHint->setWordWrap(true);
+    lblAppHint->setTextFormat(Qt::RichText);
+    lblAppHint->setVisible(false);
+    layout->addWidget(lblAppHint);
+    connect(lblAppHint, &QLabel::linkActivated, this, &GitHubBrowserDialog::openInstallPage);
+
     lblStatus = new QLabel;
     lblStatus->setOpenExternalLinks(true); //the link to install the SavvyCAN app (showError)
     lblStatus->setWordWrap(true);
@@ -212,6 +222,7 @@ GitHubBrowserDialog::GitHubBrowserDialog(Kind kind, Mode mode, const QStringList
     btnOpen->setObjectName("btnOpen");
     btnAccount->setObjectName("btnAccount");
     btnNewRepo->setObjectName("btnNewRepo");
+    lblAppHint->setObjectName("lblAppHint");
 
     resize(640, mode == Open ? 560 : 680);
     updateOpenButton();
@@ -350,11 +361,13 @@ void GitHubBrowserDialog::repoChanged()
     const int idx = comboRepo->currentIndex();
     if (idx < 0 || idx >= savedRepos.count())
     {
+        lblAppHint->setVisible(false);
         setStatus(tr("Add a repo with Add... (\"owner/repo\" or a github.com link)."));
         return;
     }
     const GitHubRepo repo = savedRepos[idx];
     QSettings().setValue(settingsKey() + "Repo", repo.fullName());
+    if (mode == Save) QTimer::singleShot(0, this, &GitHubBrowserDialog::updateAppHint);
 
     setStatus(tr("Reading the branches of %1...").arg(repo.fullName()));
     client->listBranches(repo.owner, repo.name, [this, gen, repo](const QList<GitHubBranch> &list, const QString &error)
@@ -671,6 +684,32 @@ void GitHubBrowserDialog::newRepo()
 bool GitHubBrowserDialog::createRepoNow(const QString &owner, const QString &name, const QString &description,
                                         bool isPrivate)
 {
+    //signed in through a GitHub App, it creates repos where it's installed on all the owner's repos
+    if (checksAppInstall())
+    {
+        forgetAppAccess();
+        if (readInstallations())
+        {
+            bool allRepos = false;
+            for (const GitHubInstallation &installation : std::as_const(installations))
+                if (installation.account.compare(owner, Qt::CaseInsensitive) == 0 && installation.allRepos) allRepos = true;
+            if (!allRepos)
+            {
+                const bool canInstall = !GitHubSettings::appInstallUrl().isEmpty();
+                const QMessageBox::StandardButton choice = askUser(QMessageBox::Warning,
+                    tr("The %1 isn't installed on all of %2's repos, so GitHub may refuse to create the repo, or "
+                       "SavvyCAN may not be able to save into it.\n\nChoose Repos... opens GitHub's page, where "
+                       "\"All repositories\" lets it create repos.")
+                    .arg(canInstall ? tr("SavvyCAN app") : tr("app you signed in with"), owner),
+                    canInstall ? QMessageBox::Yes | QMessageBox::Ignore | QMessageBox::Cancel
+                               : QMessageBox::Ignore | QMessageBox::Cancel,
+                    { { QMessageBox::Yes, tr("Choose Repos...") }, { QMessageBox::Ignore, tr("Create Anyway") } });
+                if (choice == QMessageBox::Yes) openInstallPage();
+                if (choice != QMessageBox::Ignore) return false;
+            }
+        }
+    }
+
     QString createdOwner, defaultBranch, error;
     int status = 0;
     setStatus(tr("Creating %1/%2...").arg(owner, name));
@@ -717,6 +756,7 @@ void GitHubBrowserDialog::showAccount()
 {
     GitHubAccountDialog dialog(this);
     dialog.exec();
+    forgetAppAccess(); //another sign-in, or the app installed meanwhile
     refreshAccount();
     repoChanged(); //a different account can see different repos and branches
     updateOpenButton();
@@ -864,6 +904,24 @@ void GitHubBrowserDialog::saveSelected()
                     QMessageBox::Ok);
             return;
         }
+    }
+
+    //signed in through a GitHub App, saving needs it installed on the repo: asked afresh, it may have just been installed
+    forgetAppAccess();
+    if (appAccessTo(repo.owner, repo.name) == AppAccess::NotInstalled)
+    {
+        const bool canInstall = !GitHubSettings::appInstallUrl().isEmpty();
+        const QMessageBox::StandardButton choice = askUser(QMessageBox::Warning,
+            canInstall ? tr("The SavvyCAN app isn't installed on %1, so GitHub won't let SavvyCAN save there.\n\n"
+                            "Choose Repos... opens GitHub's page to install it on that repo (or on all your repos); "
+                            "then save again.").arg(repo.fullName())
+                       : tr("The app you signed in with isn't installed on %1, so GitHub won't let SavvyCAN save "
+                            "there. Install it on that repo on GitHub, then save again.").arg(repo.fullName()),
+            canInstall ? QMessageBox::Yes | QMessageBox::Ignore | QMessageBox::Cancel
+                       : QMessageBox::Ignore | QMessageBox::Cancel,
+            { { QMessageBox::Yes, tr("Choose Repos...") }, { QMessageBox::Ignore, tr("Save Anyway") } });
+        if (choice == QMessageBox::Yes) openInstallPage();
+        if (choice != QMessageBox::Ignore) return;
     }
 
     //the version being replaced: the one loaded, or else the one in the file list (after asking)
@@ -1058,4 +1116,102 @@ void GitHubBrowserDialog::saveSelected()
                                                                              : tr("See the pull request on GitHub"));
     askUser(QMessageBox::Information, text, QMessageBox::Ok);
     accept();
+}
+
+//Signed in through a GitHub App, GitHub says where it's installed. A token, or an OAuth App, reaches what it reaches.
+bool GitHubBrowserDialog::checksAppInstall() const
+{
+    return !GitHubSettings::token().isEmpty() && GitHubSettings::tokenFromDeviceFlow() &&
+           GitHubSettings::isGitHubAppClientId(GitHubSettings::clientId());
+}
+
+bool GitHubBrowserDialog::readInstallations()
+{
+    if (installationsRead) return true;
+    QString error;
+    waitFor([&](std::function<void()> quit)
+    {
+        client->listInstallations([&, quit](const QList<GitHubInstallation> &list, const QString &e)
+        {
+            installations = list;
+            error = e;
+            quit();
+        });
+    });
+    installationsRead = error.isEmpty();
+    return installationsRead;
+}
+
+//Unknown when it can't be said (another kind of sign-in, or GitHub didn't answer): saving then just goes ahead
+GitHubBrowserDialog::AppAccess GitHubBrowserDialog::appAccessTo(const QString &owner, const QString &name)
+{
+    const QString key = (owner + "/" + name).toLower();
+    if (appAccess.contains(key)) return appAccess[key];
+    if (!checksAppInstall() || !readInstallations()) return AppAccess::Unknown;
+
+    AppAccess access = AppAccess::NotInstalled;
+    for (const GitHubInstallation &installation : std::as_const(installations))
+    {
+        if (installation.account.compare(owner, Qt::CaseInsensitive) != 0) continue;
+        if (installation.allRepos)
+        {
+            access = AppAccess::Installed;
+            break;
+        }
+        QStringList repos;
+        QString error;
+        waitFor([&](std::function<void()> quit)
+        {
+            client->listInstallationRepos(installation.id, [&, quit](const QStringList &list, const QString &e)
+            {
+                repos = list;
+                error = e;
+                quit();
+            });
+        });
+        if (!error.isEmpty()) return AppAccess::Unknown;
+        for (const QString &repo : std::as_const(repos))
+            if (repo.compare(owner + "/" + name, Qt::CaseInsensitive) == 0) access = AppAccess::Installed;
+    }
+    appAccess[key] = access;
+    return access;
+}
+
+void GitHubBrowserDialog::forgetAppAccess()
+{
+    appAccess.clear();
+    installations.clear();
+    installationsRead = false;
+}
+
+//Save: says so as soon as a repo is picked that the app isn't installed on
+void GitHubBrowserDialog::updateAppHint()
+{
+    const int idx = comboRepo->currentIndex();
+    if (mode != Save || idx < 0 || idx >= savedRepos.count() || !checksAppInstall())
+    {
+        lblAppHint->setVisible(false);
+        return;
+    }
+    const QString fullName = savedRepos[idx].fullName();
+    const AppAccess access = appAccessTo(savedRepos[idx].owner, savedRepos[idx].name);
+    if (comboRepo->currentIndex() != idx) return; //another repo was picked meanwhile: its own check follows
+    if (access != AppAccess::NotInstalled)
+    {
+        lblAppHint->setVisible(false);
+        return;
+    }
+    if (GitHubSettings::appInstallUrl().isEmpty())
+        lblAppHint->setText(tr("The app you signed in with isn't installed on %1, so saving there will fail: install "
+                               "it on that repo on GitHub.").arg(fullName).toHtmlEscaped());
+    else
+        lblAppHint->setText(tr("The SavvyCAN app isn't installed on %1, so saving there will fail.")
+                            .arg(fullName).toHtmlEscaped() + " <a href=\"install\">" + tr("Choose Repos...") + "</a>");
+    lblAppHint->setVisible(true);
+}
+
+void GitHubBrowserDialog::openInstallPage()
+{
+    if (!GitHubSettings::appInstallUrl().isEmpty()) QDesktopServices::openUrl(QUrl(GitHubSettings::appInstallUrl()));
+    forgetAppAccess(); //asked again next time: it's probably being installed now
 }

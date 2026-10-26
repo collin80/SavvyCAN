@@ -149,6 +149,8 @@ private slots:
     void testCreateRepo();
     void testSaveNameFollowsType();
     void testHelp();
+    void testAppInstallCheck();
+    void testAppInstallCheckNewRepo();
 
 private:
     QTemporaryDir settingsDir;
@@ -884,6 +886,17 @@ public:
     QMap<QString, QMap<QString, Branch>> repos; //"owner/name": branch name: branch
     QList<QJsonObject> pulls;
     int counter = 0;
+    bool hasInstallations = false;                  //without: /user/installations is "not found"
+    QJsonArray installations;
+    QMap<qint64, QStringList> installationRepos;
+
+    void install(qint64 id, const QString &account, bool allRepos, const QStringList &repos = QStringList())
+    {
+        hasInstallations = true;
+        installations.append(QJsonObject { { "id", double(id) }, { "account", QJsonObject { { "login", account } } },
+                                           { "repository_selection", allRepos ? "all" : "selected" } });
+        installationRepos[id] = repos;
+    }
 
     void addFile(const QString &repo, const QString &branch, const QString &path, const QByteArray &content)
     {
@@ -901,6 +914,19 @@ public:
 
         if (path == "/user") return json(R"({"login":"tester"})");
         if (path == "/user/orgs") return json(R"([{"login":"org1"}])");
+        if (path == "/user/installations")
+        {
+            if (!hasInstallations) return json(R"({"message":"Not Found"})", 404);
+            return json(QJsonDocument(QJsonObject { { "total_count", installations.count() },
+                                                    { "installations", installations } }).toJson());
+        }
+        if (path.startsWith("/user/installations/") && path.endsWith("/repositories"))
+        {
+            QJsonArray list;
+            for (const QString &repo : installationRepos.value(path.section('/', 3, 3).toLongLong()))
+                list.append(QJsonObject { { "full_name", repo } });
+            return json(QJsonDocument(QJsonObject { { "total_count", list.count() }, { "repositories", list } }).toJson());
+        }
         if (request.method == "POST" && (path == "/user/repos" || path == "/orgs/org1/repos"))
         {
             const QString name = body.value("name").toString();
@@ -1417,6 +1443,105 @@ void TestGitHub::testSaveNameFollowsType()
     signedOut.setSuggestion(GitHubOrigin(), "a.csv");
     QVERIFY(!signedOut.findChild<QPushButton *>("btnOpen")->isEnabled());
     QCOMPARE(signedOut.findChild<QPushButton *>("btnAccount")->text(), QString("Sign In..."));
+}
+
+static int requestsTo(const FakeGitHub &github, const QByteArray &prefix)
+{
+    int count = 0;
+    for (const FakeRequest &request : github.requests)
+        if (request.target.startsWith(prefix)) count++;
+    return count;
+}
+
+//signed in through the SavvyCAN app, saving warns, and asks first, when the app isn't installed on the repo
+void TestGitHub::testAppInstallCheck()
+{
+    //installed on selected repos of o, but not on o/r
+    {
+        SaveFixture f;
+        f.repos.install(7, "o", false, { "o/other" });
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "x");
+        dialog.setSuggestion(GitHubOrigin(), "run.csv");
+        QLabel *hint = dialog.findChild<QLabel *>("lblAppHint");
+        QTRY_VERIFY(!hint->isHidden());
+        QVERIFY(hint->text().contains("isn't installed on o/r"));
+        QVERIFY(hint->text().contains("Choose Repos..."));
+        screenshot(&dialog, "github-save-not-installed");
+
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "logs"));
+        f.answers = { QMessageBox::Cancel };
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(f.asked.count(), 1);
+        QVERIFY(f.asked[0].contains("The SavvyCAN app isn't installed on o/r"));
+        QVERIFY(!f.repos.repos["o/r"]["main"].files.contains("run.csv"));
+
+        //"Save Anyway" goes ahead (the fake GitHub lets it)
+        f.asked.clear();
+        f.answers = { QMessageBox::Ignore };
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QVERIFY(f.repos.repos["o/r"]["main"].files.contains("run.csv"));
+    }
+
+    //installed on o/r itself, or on all of o's repos: nothing said
+    for (bool all : { false, true })
+    {
+        SaveFixture f;
+        f.repos.install(7, "someone-else", true);
+        f.repos.install(8, "o", all, { "o/r" });
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "x");
+        dialog.setSuggestion(GitHubOrigin(), "run.csv");
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "logs"));
+        QTRY_VERIFY(requestsTo(f.github, "/user/installations") > 0);
+        QTest::qWait(100);
+        QVERIFY(dialog.findChild<QLabel *>("lblAppHint")->isHidden());
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QCOMPARE(f.asked.count(), 1); //only "Saved"
+        QCOMPARE(requestsTo(f.github, "/user/installations/7/"), 0); //all repos: no list needed
+    }
+
+    //a pasted token chooses its repos on GitHub: no check
+    {
+        SaveFixture f;
+        f.repos.install(7, "o", false);
+        GitHubSettings::setToken("github_pat_x", false);
+        GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+        f.prepare(dialog, "x");
+        dialog.setSuggestion(GitHubOrigin(), "run.csv");
+        QTRY_VERIFY(findItem(dialog.findChild<QTreeWidget *>("tree"), "logs"));
+        dialog.findChild<QPushButton *>("btnOpen")->click();
+        QCOMPARE(dialog.result(), int(QDialog::Accepted));
+        QCOMPARE(requestsTo(f.github, "/user/installations"), 0);
+        QVERIFY(dialog.findChild<QLabel *>("lblAppHint")->isHidden());
+    }
+}
+
+//New Repo... with the SavvyCAN app needs it on all the owner's repos
+void TestGitHub::testAppInstallCheckNewRepo()
+{
+    SaveFixture f;
+    f.repos.install(7, "tester", false, { "tester/old" });
+    f.repos.install(8, "org1", true);
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, saveTypes);
+    f.prepare(dialog, "x");
+    QTRY_VERIFY(dialog.findChild<QPushButton *>("btnNewRepo")->isEnabled());
+
+    f.answers = { QMessageBox::Cancel };
+    QVERIFY(!dialog.createRepoNow("tester", "first", QString(), true));
+    QCOMPARE(f.asked.count(), 1);
+    QVERIFY(f.asked[0].contains("isn't installed on all of tester's repos"));
+    QVERIFY(!f.repos.repos.contains("tester/first"));
+
+    f.answers = { QMessageBox::Ignore };
+    QVERIFY(dialog.createRepoNow("tester", "second", QString(), true)); //"Create Anyway"
+    QVERIFY(f.repos.repos.contains("tester/second"));
+
+    f.asked.clear();
+    QVERIFY(dialog.createRepoNow("org1", "third", QString(), true)); //all of org1's repos: no question
+    QVERIFY(f.asked.isEmpty());
 }
 
 //the Help buttons (and F1) open help/github.md through the hook MainWindow sets

@@ -84,6 +84,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `obd2-phase2-poller` | `fork-ci` | OBD-II poll engine `Obd2Poller`, `TestObd2Poller` | - |
 | `obd2-phase1-pids` | `fork-ci` | OBD-II PID table and decoder, `TestObd2Pids` | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
+| `github-install-check` | `fork-ci` | The save window checks the SavvyCAN app is installed on the repo | - |
 | `github-help` | `fork-ci` | Help page for the GitHub windows, F1 and Help buttons | - |
 | `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
 | `fix-loader-bounds` | `fork-ci` | Microchip and Wireshark loaders limit the byte count to the data given | - |
@@ -125,6 +126,18 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-25: the save window checks the SavvyCAN app is installed (`github-install-check`)
+
+- **Why:** signed in with GitHub, saving only works on repos the SavvyCAN app is installed on; without it, GitHub
+  refused the save (an error 400) and New Repo... failed, with nothing saying why. Found when the user first tried
+  saving; installing the app on the account fixed it.
+- **Now:** picking a repo in the Save to GitHub window shows a warning with a Choose Repos... link when the app isn't
+  installed on it, and Save asks first (Choose Repos..., Save Anyway, Cancel). New Repo... asks when the app isn't
+  installed on all the owner's repos. Asked afresh before each save, so a new install counts straight away.
+- **How:** `GitHubClient::listInstallations` and `listInstallationRepos` (`GET /user/installations`, and the repos of
+  one); only with a GitHub App's sign-in. If GitHub doesn't say, saving goes ahead as before.
+- **Help:** `help/github.md` describes the warning. `TestGitHub` (46) covers the warning and the questions.
 
 ### 2026-10-25: OBD-II poll engine (`obd2-phase2-poller`)
 
