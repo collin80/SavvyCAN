@@ -14,7 +14,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
-| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others); no UI yet | `log-notes` | fork only for now |
+| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving, shown in a Log Notes panel when loading | `log-notes`, `log-notes-ui` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
 | Wireshark loaders: pcap and pcapng records over 256 bytes are skipped instead of overflowing a buffer; a broken block size no longer hangs the load | `fix-pcaplite-bounds` | not offered yet |
@@ -89,6 +89,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-phase2-save` | `fork-ci` | Saving logs and DBC files to GitHub: conflicts, new branch and pull request, New Repo... | - |
 | `fix-loader-bounds` | `fork-ci` | Microchip and Wireshark loaders limit the byte count to the data given | - |
 | `fix-pcaplite-bounds` | `fork-ci` | pcaplite skips records over 256 bytes and stops at broken block sizes | - |
+| `log-notes-ui` | `fork-ci` | Log notes dialog on save, templates, Log Notes panel, File > Log Notes... | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -126,6 +127,22 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-26: log notes asked for when saving, shown when loading (`log-notes-ui`)
+
+Phase 2 of the [log notes roadmap](docs/log-notes-roadmap.md).
+
+- **Saving a log** (Save Log File, Save Filtered Log File) asks for its notes after the file name is picked: title,
+  author, tags, system, setup, scenario, observations, and the buses, DBC files and markers SavvyCAN fills in. Save with
+  Notes, Save without Notes, or Cancel. Starts from the loaded log's notes or the last ones saved.
+- **Templates** in the dialog fill in the typed fields (e.g. one per test bench).
+- **Loading a log** with notes opens the **Log Notes** panel. **File > Log Notes...** edits them and saves them back
+  into the log (or its `.notes.md` file); **File > Show Log Notes Panel** shows or hides the panel.
+- **Preferences:** "Ask for notes (setup, scenario) when saving logs".
+- **GitHub:** a log opened from GitHub shows its notes if they're inside it (native CSV); saving to GitHub doesn't
+  ask for notes yet (log notes phase 4).
+- **Code:** `LogNotesDialog`, `LogNotesPanel`; `FrameFileIO::pickSaveFile`/`saveFrameFileWithProgress`; `TestLogNotesUi`.
+- **Tried** by the user on Windows: open a log, edit its notes, save, reopen.
 
 ### 2026-10-25: the save window checks the SavvyCAN app is installed (`github-install-check`)
 

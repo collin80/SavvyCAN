@@ -11,6 +11,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include "can_structs.h"
 
 //A point in a log the user marked ("AC on"), on the same clock as the frames' time stamps
 struct LogMarker
@@ -53,6 +54,14 @@ public:
     bool isEmpty() const;
     bool operator==(const LogNotes &other) const;
 
+    //The fields the user types (title to observations, and the keys and sections this version doesn't know), as kept
+    //for the next log and in templates: no markers and none of the fields SavvyCAN fills in
+    LogNotes userFields() const;
+    void setUserFields(const LogNotes &from);
+    bool hasUserFields() const { return !userFields().isEmpty(); }
+    //frame count and time span of the frames being saved; unfilteredCount is the count before filtering, or -1
+    void setFrames(const QVector<CommFrame> &frames, qint64 unfilteredCount = -1);
+
     QString toMarkdown() const;
     //false if the text has nothing that could be notes
     static bool fromMarkdown(const QString &markdown, LogNotes &notes);
@@ -61,6 +70,7 @@ public:
     static QString sidecarPath(const QString &logPath);
     bool writeSidecar(const QString &logPath) const;
     static bool readSidecar(const QString &logPath, LogNotes &notes);
+    static bool removeSidecar(const QString &logPath);
 
     //Replace the notes block at the end of a native CSV log with these notes (or just remove it if they're empty).
     //Only the block is rewritten; the frames are left as they are.

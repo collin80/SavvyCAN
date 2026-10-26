@@ -28,8 +28,13 @@ public:
     //The QString returns the filename that was selected and so is really a sort of return value
     //The QVector is used as either the target for loading or the source for saving.
     //These routines call the below loading/saving functions so no need to use them directly if you don't want.
-    static bool loadFrameFile(QString &, QVector<CommFrame>*);
+    //fullPath, if given, gets the whole path of the file picked, even when loading it fails
+    static bool loadFrameFile(QString &, QVector<CommFrame>*, QString *fullPath = nullptr);
     static bool saveFrameFile(QString &, const QVector<CommFrame>*);
+    //saveFrameFile in two steps, so something can come between picking the file and saving it (the log notes):
+    //the save dialog (false if cancelled), then saving with a progress dialog. The second may add an extension.
+    static bool pickSaveFile(QString &filename, int &filterIndex);
+    static bool saveFrameFileWithProgress(QString &filename, int filterIndex, const QVector<CommFrame>*);
 
     //The file types those dialogs offer. Index 0 of the load list is autodetect.
     static QStringList loadFilters();

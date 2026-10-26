@@ -161,6 +161,25 @@ target_link_libraries(TestLogNotes
     Qt6::Widgets
 )
 
+###### log notes dialog and panel test ######
+set(TEST_SOURCES_LOG_NOTES_UI
+    test_log_notes_ui.cpp
+    ../lognotesdialog.cpp  # the code under test
+    ../lognotespanel.cpp
+    ../lognotes.cpp
+)
+
+add_executable(TestLogNotesUi ${TEST_SOURCES_LOG_NOTES_UI})
+
+target_include_directories(TestLogNotesUi PRIVATE ${SAVVYCAN_INCLUDE_DIRS})
+
+target_link_libraries(TestLogNotesUi
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+    Qt6::Widgets
+)
+
 
 # Enable ctest integration
 enable_testing()
@@ -171,3 +190,4 @@ add_test(NAME TestObd2Poller COMMAND TestObd2Poller)
 add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
 add_test(NAME TestGitHub COMMAND TestGitHub)
 add_test(NAME TestLogNotes COMMAND TestLogNotes)
+add_test(NAME TestLogNotesUi COMMAND TestLogNotesUi)

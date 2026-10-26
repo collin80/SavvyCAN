@@ -131,9 +131,18 @@ bool FrameFileIO::loadLogNotes(const QString &filename, LogNotes &notes)
 bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* frameCache)
 {
     QString filename;
+    int filterIndex;
+    if (!pickSaveFile(filename, filterIndex)) return false;
+    if (!saveFrameFileWithProgress(filename, filterIndex, frameCache)) return false;
+    QStringList fileList = filename.split('/');
+    fileName = fileList[fileList.length() - 1];
+    return true;
+}
+
+bool FrameFileIO::pickSaveFile(QString &filename, int &filterIndex)
+{
     QFileDialog dialog(qApp->activeWindow());
     QSettings settings;
-    bool result = false;
 
     const QStringList filters = saveFilters();
 
@@ -143,34 +152,29 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
 
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        filename = dialog.selectedFiles()[0];
+    if (dialog.exec() != QDialog::Accepted) return false;
+    filename = dialog.selectedFiles()[0];
+    filterIndex = int(filters.indexOf(dialog.selectedNameFilter()));
+    settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
+    return true;
+}
 
-        QProgressDialog progress(qApp->activeWindow());
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Saving file...");
-        progress.setCancelButton(nullptr);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
+bool FrameFileIO::saveFrameFileWithProgress(QString &filename, int filterIndex, const QVector<CommFrame>* frameCache)
+{
+    QProgressDialog progress(qApp->activeWindow());
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Saving file...");
+    progress.setCancelButton(nullptr);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
 
-        qApp->processEvents();
+    qApp->processEvents();
 
-        result = saveFrameFileAs(filename, int(filters.indexOf(dialog.selectedNameFilter())), frameCache);
+    const bool result = saveFrameFileAs(filename, filterIndex, frameCache);
 
-        progress.cancel();
-
-        if (result)
-        {
-            QStringList fileList = filename.split('/');
-            fileName = fileList[fileList.length() - 1];
-            settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
-            return true;
-        }
-        return false;
-    }
-    return false;
+    progress.cancel();
+    return result;
 }
 
 QStringList FrameFileIO::loadFilters()
@@ -243,7 +247,7 @@ bool FrameFileIO::loadFrameFileAs(const QString &filename, int filterIndex, QVec
     return false;
 }
 
-bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCache)
+bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCache, QString *fullPath)
 {
     QString filename;
     QFileDialog dialog;
@@ -261,6 +265,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
     {
         filename = dialog.selectedFiles()[0];
         const int filterIndex = int(filters.indexOf(dialog.selectedNameFilter()));
+        if (fullPath) *fullPath = filename;
 
         QProgressDialog progress(qApp->activeWindow());
         progress.setWindowModality(Qt::WindowModal);

@@ -497,6 +497,7 @@
     <addaction name="actionSave_Log_File_to_GitHub"/>
     <addaction name="actionSave_Continuous_Logfile"/>
     <addaction name="separator"/>
+    <addaction name="actionLog_Notes"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
@@ -730,6 +731,14 @@
   <action name="actionCAN_Bridge">
    <property name="text">
     <string>CAN Bridge</string>
+   </property>
+  </action>
+  <action name="actionLog_Notes">
+   <property name="text">
+    <string>Log Notes...</string>
+   </property>
+   <property name="toolTip">
+    <string>The notes of this log: setup, scenario, observations</string>
    </property>
   </action>
   <action name="actionCrop_Log">

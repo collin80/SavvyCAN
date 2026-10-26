@@ -56,6 +56,41 @@ bool LogNotes::operator==(const LogNotes &other) const
         && otherSections == other.otherSections;
 }
 
+LogNotes LogNotes::userFields() const
+{
+    LogNotes fields;
+    fields.setUserFields(*this);
+    return fields;
+}
+
+void LogNotes::setUserFields(const LogNotes &from)
+{
+    title = from.title;
+    author = from.author;
+    tags = from.tags;
+    system = from.system;
+    setup = from.setup;
+    scenario = from.scenario;
+    observations = from.observations;
+    otherFields = from.otherFields;
+    otherSections = from.otherSections;
+}
+
+void LogNotes::setFrames(const QVector<CommFrame> &frames, qint64 unfilteredCount)
+{
+    frameCount = frames.count();
+    this->unfilteredCount = unfilteredCount;
+    hasSpan = !frames.isEmpty();
+    for (int i = 0; i < frames.count(); i++)
+    {
+        const CommFrame::TimeStamp stamp = frames.at(i).timeStamp();
+        const qint64 us = stamp.seconds() * 1000000 + stamp.microSeconds();
+        if (i == 0 || us < firstUs) firstUs = us;
+        if (i == 0 || us > lastUs) lastUs = us;
+    }
+    if (!hasSpan) firstUs = lastUs = 0;
+}
+
 QString LogNotes::formatSeconds(qint64 us)
 {
     const quint64 magnitude = us < 0 ? quint64(-(us + 1)) + 1 : quint64(us);
@@ -132,7 +167,8 @@ bool LogNotes::fromMarkdown(const QString &markdown, LogNotes &notes)
     static const QRegularExpression fieldRe(QStringLiteral("^([A-Za-z][A-Za-z0-9 _-]*):\\s*(.*)$"));
     static const QRegularExpression framesRe(QStringLiteral("^(\\d+)(?:\\s*\\(filtered from (\\d+)\\))?$"));
     static const QRegularExpression spanRe(QStringLiteral("^(\\S+)\\s*s\\s+to\\s+(\\S+)\\s*s$"));
-    static const QRegularExpression markerRe(QStringLiteral("^[-*]\\s*(-?[0-9.]+)\\s*s:?\\s*(.*)$"));
+    //a list dash needs a space after it, so "-0.5 s" isn't read as a list item at 0.5 s
+    static const QRegularExpression markerRe(QStringLiteral("^[-*]\\s+(-?[0-9.]+)\\s*s:?\\s*(.*)$"));
 
     LogNotes result;
     bool found = false;
@@ -267,6 +303,11 @@ bool LogNotes::readSidecar(const QString &logPath, LogNotes &notes)
     QFile file(sidecarPath(logPath));
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) return false;
     return fromMarkdown(QString::fromUtf8(file.readAll()), notes);
+}
+
+bool LogNotes::removeSidecar(const QString &logPath)
+{
+    return !QFile::exists(sidecarPath(logPath)) || QFile::remove(sidecarPath(logPath));
 }
 
 //Inside a native CSV log, commas are written as %2C (and % as %25) so that no notes line looks like a frame line to a

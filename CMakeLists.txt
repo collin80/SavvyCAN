@@ -85,6 +85,8 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     re/udsfirmwareuploaderwindow.cpp re/udsfirmwareuploaderwindow.h
     framefileio.cpp framefileio.h
     lognotes.cpp lognotes.h
+    lognotesdialog.cpp lognotesdialog.h
+    lognotespanel.cpp lognotespanel.h
     frameplaybackobject.cpp frameplaybackobject.h
     frameplaybackwindow.cpp frameplaybackwindow.h
     framesenderobject.cpp framesenderobject.h
