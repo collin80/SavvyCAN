@@ -280,11 +280,15 @@ void LogNotesDialog::refreshTemplates(const QString &select)
 void LogNotesDialog::useTemplate()
 {
     LogNotes fields;
-    if (cbTemplates->currentIndex() > 0 && loadTemplate(cbTemplates->currentText(), fields))
+    MarkerPresets presets;
+    bool hasPresets = false;
+    if (cbTemplates->currentIndex() > 0 && loadTemplate(cbTemplates->currentText(), fields, &presets, &hasPresets))
     {
         base.otherFields = fields.otherFields;
         base.otherSections = fields.otherSections;
         showUserFields(fields);
+        //a template with marker presets brings them along (one saved without any leaves the current ones)
+        if (hasPresets) presets.save();
     }
 }
 
@@ -297,7 +301,7 @@ void LogNotesDialog::saveAsTemplate()
     if (!ok || name.isEmpty()) return;
     if (templateNames().contains(name) && QMessageBox::question(this, tr("Save as Template"),
             tr("Replace the template \"%1\"?").arg(name)) != QMessageBox::Yes) return;
-    saveTemplate(name, notes());
+    saveTemplate(name, notes(), MarkerPresets::load()); //with the marker presets in use
     refreshTemplates(name);
 }
 
@@ -358,21 +362,29 @@ QStringList LogNotesDialog::templateNames()
     return names;
 }
 
-bool LogNotesDialog::loadTemplate(const QString &name, LogNotes &notes)
+bool LogNotesDialog::loadTemplate(const QString &name, LogNotes &notes, MarkerPresets *presets, bool *hasPresets)
 {
     const QVariantMap templates = QSettings().value(templatesKey).toMap();
     if (!templates.contains(name)) return false;
+    const QString markdown = templates.value(name).toString();
+    //the marker presets are a section of their own, not one of the notes'
     LogNotes parsed;
-    LogNotes::fromMarkdown(templates.value(name).toString(), parsed);
+    LogNotes::fromMarkdown(MarkerPresets::withoutSection(markdown), parsed);
     notes = parsed.userFields();
+    MarkerPresets found;
+    const bool foundPresets = MarkerPresets::fromMarkdown(markdown, found);
+    if (presets && foundPresets) *presets = found;
+    if (hasPresets) *hasPresets = foundPresets;
     return true;
 }
 
-void LogNotesDialog::saveTemplate(const QString &name, const LogNotes &notes)
+void LogNotesDialog::saveTemplate(const QString &name, const LogNotes &notes, const MarkerPresets &presets)
 {
     QSettings settings;
     QVariantMap templates = settings.value(templatesKey).toMap();
-    templates.insert(name, notes.userFields().toMarkdown());
+    QString markdown = notes.userFields().toMarkdown();
+    if (!presets.isEmpty()) markdown += '\n' + presets.toMarkdown();
+    templates.insert(name, markdown);
     settings.setValue(templatesKey, templates);
 }
 

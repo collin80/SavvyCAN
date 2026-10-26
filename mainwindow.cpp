@@ -16,6 +16,7 @@
 #include "github/githubhelp.h"
 #include "lognotesdialog.h"
 #include "lognotespanel.h"
+#include "markerpresetsdialog.h"
 
 #include <QClipboard>
 #include <QInputDialog>
@@ -108,6 +109,8 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcComparatorWindow = nullptr;
     canBridgeWindow = nullptr;
     searchWindow = nullptr;
+    actNextPreset = nullptr; //made with the Log Notes panel, below
+    actUndoMarker = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -270,6 +273,26 @@ MainWindow::MainWindow(QWidget *parent) :
     showNotesAction->setText(tr("Show Log Notes Panel"));
     const QList<QAction *> fileActions = ui->menuFile->actions();
     ui->menuFile->insertAction(fileActions.value(int(fileActions.indexOf(ui->actionLog_Notes)) + 1), showNotesAction);
+
+    //marker presets: after Add Marker in the File menu. Their keys work in every SavvyCAN window (e.g. with a graph
+    //in front), so they're application shortcuts; MarkerPresetsDialog only lets keys nothing else uses be picked.
+    actNextPreset = new QAction(tr("Add Next Preset Marker"), this);
+    actNextPreset->setShortcutContext(Qt::ApplicationShortcut);
+    connect(actNextPreset, &QAction::triggered, this, &MainWindow::addNextPresetMarker);
+    actUndoMarker = new QAction(tr("Undo Last Marker"), this);
+    actUndoMarker->setShortcutContext(Qt::ApplicationShortcut);
+    connect(actUndoMarker, &QAction::triggered, this, &MainWindow::undoLastMarker);
+    QAction *actPresets = new QAction(tr("Marker Presets..."), this);
+    connect(actPresets, &QAction::triggered, this, &MainWindow::showMarkerPresets);
+    const QList<QAction *> menuActions = ui->menuFile->actions();
+    QAction *afterAddMarker = menuActions.value(int(menuActions.indexOf(ui->actionAdd_Marker)) + 1);
+    ui->menuFile->insertActions(afterAddMarker, { actNextPreset, actUndoMarker, actPresets });
+    connect(logNotesPanel, &LogNotesPanel::presetActivated, this, &MainWindow::addPresetMarker);
+    connect(logNotesPanel, &LogNotesPanel::undoMarkerRequested, this, &MainWindow::undoLastMarker);
+    connect(logNotesPanel, &LogNotesPanel::presetsRequested, this, &MainWindow::showMarkerPresets);
+    markerPresets = MarkerPresets::load();
+    applyMarkerPresets();
+    updateLogNotesPanel();
 
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
@@ -1438,6 +1461,8 @@ void MainWindow::clearFrames()
     logNotes = logNotes.userFields();
     logNotesFile.clear();
     logNotesSource.clear();
+    addedMarkers.clear();
+    markerPresets.reset(); //the Next key starts again
     updateLogNotesPanel();
     updateFileStatus();
     emit framesUpdated(-1);
@@ -1792,6 +1817,8 @@ void MainWindow::loadNotesOfLog(const QString &filename, const QString &displayN
     logNotes = found ? notes : LogNotes();
     logNotesFile = writable ? filename : QString();
     logNotesSource = displayName;
+    addedMarkers.clear(); //Undo doesn't reach into another log's markers
+    markerPresets.reset();
     updateLogNotesPanel();
     if (found) logNotesPanel->show();
 }
@@ -1799,7 +1826,9 @@ void MainWindow::loadNotesOfLog(const QString &filename, const QString &displayN
 //shows the current notes in the panel, and their markers in the graphs
 void MainWindow::updateLogNotesPanel()
 {
+    reloadMarkerPresets();
     logNotesPanel->setNotes(logNotes, logNotesSource);
+    logNotesPanel->setPresets(markerPresets);
     for (GraphingWindow *win : graphWindows) win->setLogMarkers(logNotes.markers);
 }
 
@@ -1810,54 +1839,171 @@ bool MainWindow::anyBusConnected() const
     return false;
 }
 
-//Ctrl+M, the Add Marker buttons: marks a point of the log. While capturing that's the newest frame; on a log that
-//isn't being captured (no bus connected, or capturing suspended), the frame clicked in the list (or the newest one).
-void MainWindow::addLogMarker()
+//Where a marker goes now. While capturing that's the newest frame; on a log that isn't being captured (no bus
+//connected, or capturing suspended), the frame clicked in the list (or the newest one). False if there are no frames.
+bool MainWindow::markerTime(qint64 &timeUs) const
 {
     const QVector<CommFrame> *frames = model->getFilteredListReference();
-    if (frames->isEmpty())
-    {
-        QMessageBox::information(this, tr("Add Marker"), tr("There are no frames to mark yet."));
-        return;
-    }
+    if (frames->isEmpty()) return false;
     auto timeOf = [](const CommFrame &frame)
     {
         return frame.timeStamp().seconds() * 1000000 + frame.timeStamp().microSeconds();
     };
-    LogMarker marker;
     //the frame list selects single cells, so the clicked frame is the current index's row (selectedRows() is empty)
     const QModelIndex current = ui->canFramesView->currentIndex();
     const bool capturing = anyBusConnected() && allowCapture;
     if (!capturing && current.isValid() && ui->canFramesView->selectionModel()->isSelected(current)
         && current.row() < frames->count())
-        marker.timeUs = timeOf(frames->at(current.row()));
+        timeUs = timeOf(frames->at(current.row()));
     else
     {
         //the newest frame: not always the last row (overwrite mode orders the list by ID)
         const QVector<CommFrame> *all = model->getListReference();
-        marker.timeUs = timeOf(all->isEmpty() ? frames->last() : all->first());
-        for (const CommFrame &frame : *all) marker.timeUs = qMax(marker.timeUs, timeOf(frame));
+        timeUs = timeOf(all->isEmpty() ? frames->last() : all->first());
+        for (const CommFrame &frame : *all) timeUs = qMax(timeUs, timeOf(frame));
     }
+    return true;
+}
 
-    bool ok = false;
-    marker.text = QInputDialog::getText(this, tr("Add Marker"),
-                                        tr("Marker at %1 s:").arg(LogNotes::formatSeconds(marker.timeUs)),
-                                        QLineEdit::Normal, QString(), &ok).trimmed();
-    if (!ok) return;
-    if (marker.text.isEmpty()) marker.text = tr("Marker %1").arg(logNotes.markers.count() + 1);
-    logNotes.addMarker(marker);
-
-    //a loaded log's markers are saved back at once, as File > Log Notes... does
-    if (!logNotesFile.isEmpty() && QFile::exists(logNotesFile))
+//Ctrl+M, the Add Marker buttons: a marker with typed text
+void MainWindow::addLogMarker()
+{
+    qint64 timeUs;
+    if (!markerTime(timeUs))
     {
-        if (logNotes.logFile.isEmpty()) logNotes.logFile = QFileInfo(logNotesFile).fileName();
-        const bool saved = FrameFileIO::isNativeCSVFile(logNotesFile) ? logNotes.writeToNativeCSV(logNotesFile)
-                                                                      : logNotes.writeSidecar(logNotesFile);
-        if (!saved) QMessageBox::warning(this, tr("Add Marker"), tr("The marker couldn't be saved with %1.")
-                                                                   .arg(QFileInfo(logNotesFile).fileName()));
+        QMessageBox::information(this, tr("Add Marker"), tr("There are no frames to mark yet."));
+        return;
     }
+    bool ok = false;
+    QString text = QInputDialog::getText(this, tr("Add Marker"),
+                                         tr("Marker at %1 s:").arg(LogNotes::formatSeconds(timeUs)),
+                                         QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok) return;
+    if (text.isEmpty()) text = tr("Marker %1").arg(logNotes.markers.count() + 1);
+    addMarkerAt(timeUs, text, false);
+}
+
+void MainWindow::addMarkerAt(qint64 timeUs, const QString &text, bool byNextKey)
+{
+    LogMarker marker;
+    marker.timeUs = timeUs;
+    marker.text = text;
+    logNotes.addMarker(marker);
+    addedMarkers.append({ marker, byNextKey });
+    saveMarkersBack();
     updateLogNotesPanel();
     updateFileStatus();
+}
+
+//a loaded log's markers are saved back at once, as File > Log Notes... does
+void MainWindow::saveMarkersBack()
+{
+    if (logNotesFile.isEmpty() || !QFile::exists(logNotesFile)) return;
+    if (logNotes.logFile.isEmpty()) logNotes.logFile = QFileInfo(logNotesFile).fileName();
+    const bool saved = FrameFileIO::isNativeCSVFile(logNotesFile) ? logNotes.writeToNativeCSV(logNotesFile)
+                                                                  : logNotes.writeSidecar(logNotesFile);
+    if (!saved) QMessageBox::warning(this, tr("Markers"), tr("The markers couldn't be saved with %1.")
+                                                            .arg(QFileInfo(logNotesFile).fileName()));
+}
+
+//a preset's key or button: its marker at once, no dialog
+void MainWindow::addPresetMarker(int index)
+{
+    if (QApplication::activeModalWidget()) return; //a dialog is open, maybe editing these notes
+    if (index < 0 || index >= markerPresets.presets.count()) return;
+    qint64 timeUs;
+    if (!markerTime(timeUs))
+    {
+        statusBar()->showMessage(tr("No frames to mark yet."), 4000);
+        return;
+    }
+    const QString text = markerPresets.presets[index].text;
+    addMarkerAt(timeUs, text, false);
+    statusBar()->showMessage(tr("Marker \"%1\" at %2 s").arg(text, LogNotes::formatSeconds(timeUs)), 4000);
+}
+
+//the Next preset key: the presets in order, one per press
+void MainWindow::addNextPresetMarker()
+{
+    if (QApplication::activeModalWidget()) return;
+    const int index = markerPresets.next();
+    if (index < 0)
+    {
+        statusBar()->showMessage(markerPresets.isEmpty() ? tr("No marker presets: set them up in File > Marker Presets...")
+                                                         : tr("All the presets have been added; Ctrl+M adds another marker."),
+                                 4000);
+        return;
+    }
+    qint64 timeUs;
+    if (!markerTime(timeUs))
+    {
+        statusBar()->showMessage(tr("No frames to mark yet."), 4000);
+        return;
+    }
+    const QString text = markerPresets.presets[index].text;
+    markerPresets.advance();
+    addMarkerAt(timeUs, text, true);
+    statusBar()->showMessage(tr("Marker \"%1\" at %2 s").arg(text, LogNotes::formatSeconds(timeUs)), 4000);
+}
+
+//removes the marker added last (by any key or button) since the log was loaded or the frames cleared
+void MainWindow::undoLastMarker()
+{
+    if (QApplication::activeModalWidget()) return;
+    if (addedMarkers.isEmpty())
+    {
+        statusBar()->showMessage(tr("No marker to undo."), 4000);
+        return;
+    }
+    const AddedMarker last = addedMarkers.takeLast();
+    for (int i = int(logNotes.markers.count()) - 1; i >= 0; i--)
+        if (logNotes.markers[i] == last.marker)
+        {
+            logNotes.markers.removeAt(i);
+            break;
+        }
+    if (last.byNextKey) markerPresets.stepBack();
+    saveMarkersBack();
+    updateLogNotesPanel();
+    updateFileStatus();
+    statusBar()->showMessage(tr("Removed the marker \"%1\"").arg(last.marker.text), 4000);
+}
+
+void MainWindow::showMarkerPresets()
+{
+    const QString scenario = logNotes.scenario.isEmpty() ? LogNotesDialog::lastNotes().scenario : logNotes.scenario;
+    MarkerPresetsDialog dialog(markerPresets, scenario, this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    markerPresets = dialog.presets();
+    markerPresets.save();
+    applyMarkerPresets();
+    updateLogNotesPanel();
+}
+
+//the presets' keys (in every SavvyCAN window), and the Next and Undo keys on their menu entries
+void MainWindow::applyMarkerPresets()
+{
+    qDeleteAll(presetShortcuts);
+    presetShortcuts.clear();
+    for (int i = 0; i < markerPresets.presets.count(); i++)
+    {
+        if (markerPresets.presets[i].key.isEmpty()) continue;
+        presetShortcuts.append(new QShortcut(markerPresets.presets[i].key, this, this, [this, i]() { addPresetMarker(i); },
+                                             Qt::ApplicationShortcut));
+    }
+    if (!actNextPreset || !actUndoMarker) return;
+    actNextPreset->setShortcut(markerPresets.nextKey);
+    actNextPreset->setEnabled(!markerPresets.isEmpty());
+    actUndoMarker->setShortcut(markerPresets.undoKey);
+}
+
+//presets a template brought in (LogNotesDialog's Use) replace the ones in use; unchanged ones keep their place
+void MainWindow::reloadMarkerPresets()
+{
+    const MarkerPresets saved = MarkerPresets::load();
+    if (saved == markerPresets) return;
+    markerPresets = saved;
+    applyMarkerPresets();
 }
 
 //a marker double-clicked in the Log Notes panel: select the frame closest to its time

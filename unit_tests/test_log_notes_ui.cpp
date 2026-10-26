@@ -8,8 +8,11 @@
 #include <QTemporaryDir>
 #include <QTextBrowser>
 #include <QTimeZone>
+#include <QLabel>
+#include <QTableWidget>
 #include "lognotesdialog.h"
 #include "lognotespanel.h"
+#include "markerpresetsdialog.h"
 
 // The log notes dialog (asked when saving a log, and File > Log Notes...) and the main window's Log Notes panel.
 class TestLogNotesUi : public QObject
@@ -28,6 +31,9 @@ private slots:
     void testPanel();
     void testStartingChoices();
     void testFinishingChoices();
+    void testPresetsDialog();
+    void testPresetsPanel();
+    void testTemplatesWithPresets();
 
 private:
     QTemporaryDir settingsDir;
@@ -317,6 +323,159 @@ void TestLogNotesUi::testFinishingChoices()
     QVERIFY(!buttonWithText(&dialog, "Cancel"));
     dialog.reject();
     QCOMPARE(int(dialog.choice()), int(LogNotesDialog::WithoutNotes));
+}
+
+//setting up marker presets: texts in order, keys refused when taken, warned when common elsewhere, From Scenario
+void TestLogNotesUi::testPresetsDialog()
+{
+    MarkerPresets start;
+    start.presets = { { "Ignition on", QKeySequence("Ctrl+1") } };
+    MarkerPresetsDialog dialog(start, "1. Ignition on\n   - wait\n2. AC on\n3. AC off");
+    QTableWidget *table = dialog.findChild<QTableWidget *>("presets");
+    QVERIFY(table);
+    QCOMPARE(table->rowCount(), 1);
+    QCOMPARE(table->item(0, 0)->text(), QString("Ignition on"));
+    QVERIFY(dialog.presets() == start);
+
+    //a key SavvyCAN uses is refused and the old one kept
+    QVERIFY(!dialog.setKey(0, QKeySequence("Ctrl+O")));
+    QVERIFY(dialog.lastKeyMessage().contains("Open Log File"));
+    QCOMPARE(dialog.presets().presets[0].key, QKeySequence("Ctrl+1"));
+
+    //a second preset can't share a key; a common one is warned about; a free one is quiet
+    buttonWithText(&dialog, "Add")->click();
+    QCOMPARE(table->rowCount(), 2);
+    table->item(1, 0)->setText("AC on");
+    QVERIFY(!dialog.setKey(1, QKeySequence("Ctrl+1")));
+    QVERIFY(dialog.lastKeyMessage().contains("Ignition on"));
+    QVERIFY(dialog.setKey(1, QKeySequence("Ctrl+S")));
+    QVERIFY(dialog.lastKeyMessage().contains("saving"));
+    QVERIFY(dialog.setKey(1, QKeySequence("Ctrl+2")));
+    QVERIFY(dialog.lastKeyMessage().isEmpty());
+
+    //the Next and Undo keys (-1, -2) are checked against the presets and each other
+    QVERIFY(!dialog.setKey(-1, QKeySequence("Ctrl+M")));
+    QVERIFY(dialog.setKey(-1, QKeySequence("F9")));
+    QVERIFY(!dialog.setKey(-2, QKeySequence("F9")));
+    QVERIFY(dialog.lastKeyMessage().contains("Next preset"));
+    QVERIFY(!dialog.setKey(0, QKeySequence("Ctrl+Shift+M"))); //the Undo key
+    QVERIFY(dialog.setKey(-2, QKeySequence())); //no Undo key
+    QVERIFY(dialog.setKey(0, QKeySequence("Ctrl+Shift+M"))); //free now
+
+    //the Scenario's steps, with the Ctrl+digits nothing has
+    buttonWithText(&dialog, "From Scenario")->click();
+    MarkerPresets result = dialog.presets();
+    QCOMPARE(result.presets.count(), 5);
+    QCOMPARE(result.presets[2], (MarkerPreset { "Ignition on", QKeySequence("Ctrl+1") }));
+    QCOMPARE(result.presets[3], (MarkerPreset { "AC on", QKeySequence("Ctrl+3") }));
+    QCOMPARE(result.presets[4], (MarkerPreset { "AC off", QKeySequence("Ctrl+4") }));
+    QCOMPARE(result.nextKey, QKeySequence("F9"));
+    QVERIFY(result.undoKey.isEmpty());
+    dialog.show();
+    screenshot(&dialog, "marker-presets");
+
+    //moving and removing; a preset with no text is dropped
+    table->selectRow(4);
+    buttonWithText(&dialog, "Move Up")->click();
+    QCOMPARE(dialog.presets().presets[3].text, QString("AC off"));
+    QCOMPARE(dialog.presets().presets[3].key, QKeySequence("Ctrl+4")); //the key moves with it
+    table->selectRow(0);
+    buttonWithText(&dialog, "Remove")->click();
+    QCOMPARE(dialog.presets().presets.count(), 4);
+    QCOMPARE(dialog.presets().presets[0].text, QString("AC on"));
+    table->item(0, 0)->setText("  ");
+    QCOMPARE(dialog.presets().presets.count(), 3);
+
+    //no Scenario: no From Scenario
+    MarkerPresetsDialog empty { MarkerPresets(), QString() };
+    QVERIFY(!buttonWithText(&empty, "From Scenario")->isEnabled());
+}
+
+void TestLogNotesUi::testPresetsPanel()
+{
+    LogNotesPanel panel;
+    QWidget *presetBox = panel.findChild<QWidget *>("presetBox");
+    QVERIFY(presetBox && presetBox->isHidden()); //no presets
+
+    MarkerPresets presets;
+    presets.presets = { { "Ignition on", QKeySequence("Ctrl+1") }, { "AC on", QKeySequence() }, { "AC off", QKeySequence("F8") } };
+    panel.setPresets(presets);
+    QVERIFY(!presetBox->isHidden());
+    QPushButton *first = panel.findChild<QPushButton *>("preset0");
+    QPushButton *second = panel.findChild<QPushButton *>("preset1");
+    QVERIFY(first && second && panel.findChild<QPushButton *>("preset2"));
+    QVERIFY(first->text().startsWith("Ignition on"));
+    QVERIFY(first->text().contains("Ctrl+1"));
+    QCOMPARE(second->text(), QString("AC on"));
+    QVERIFY(!first->font().bold()); //no Next key: nothing highlighted
+
+    int activated = -1;
+    connect(&panel, &LogNotesPanel::presetActivated, this, [&activated](int index) { activated = index; });
+    second->click();
+    QCOMPARE(activated, 1);
+
+    //with a Next key, the next one is bold and named
+    presets.nextKey = QKeySequence("F9");
+    presets.advance();
+    panel.setPresets(presets);
+    QVERIFY(panel.findChild<QPushButton *>("preset1")->font().bold());
+    QVERIFY(!panel.findChild<QPushButton *>("preset0")->font().bold());
+    QLabel *next = nullptr;
+    for (QLabel *label : panel.findChildren<QLabel *>())
+        if (label->text().startsWith("Next")) next = label;
+    QVERIFY(next);
+    QVERIFY(next->text().contains("AC on (2 of 3)"));
+    QCOMPARE(panel.findChildren<QPushButton *>(QRegularExpression("^preset\\d$")).count(), 3); //old buttons gone
+
+    bool undo = false, setup = false;
+    connect(&panel, &LogNotesPanel::undoMarkerRequested, this, [&undo]() { undo = true; });
+    connect(&panel, &LogNotesPanel::presetsRequested, this, [&setup]() { setup = true; });
+    buttonWithText(&panel, "Undo Last Marker")->click();
+    buttonWithText(&panel, "Presets...")->click();
+    QVERIFY(undo && setup);
+
+    panel.resize(360, 700);
+    panel.setNotes(sampleNotes(), "run1.csv");
+    screenshot(&panel, "log-notes-panel-presets");
+}
+
+//a template keeps the marker presets in use; using it brings them back
+void TestLogNotesUi::testTemplatesWithPresets()
+{
+    MarkerPresets presets;
+    presets.presets = { { "Ignition on", QKeySequence("Ctrl+1") } };
+    presets.nextKey = QKeySequence("F9");
+    LogNotesDialog::saveTemplate("with presets", sampleNotes(), presets);
+    LogNotesDialog::saveTemplate("without", sampleNotes());
+
+    LogNotes notes;
+    MarkerPresets loaded;
+    bool hasPresets = false;
+    QVERIFY(LogNotesDialog::loadTemplate("with presets", notes, &loaded, &hasPresets));
+    QVERIFY(hasPresets);
+    QVERIFY(loaded == presets);
+    QVERIFY(notes == sampleNotes().userFields()); //the presets aren't one of the notes' sections
+    QVERIFY(LogNotesDialog::loadTemplate("without", notes, &loaded, &hasPresets));
+    QVERIFY(!hasPresets);
+
+    //Use in the notes dialog: the template's presets become the ones in use; one without leaves them
+    MarkerPresets inUse;
+    inUse.presets = { { "something else", QKeySequence() } };
+    inUse.save();
+    LogNotesDialog dialog(LogNotesDialog::Editing);
+    dialog.setNotes(LogNotes());
+    QComboBox *templates = dialog.findChild<QComboBox *>("templates");
+    templates->setCurrentIndex(templates->findText("without"));
+    dialog.findChild<QPushButton *>("useTemplate")->click();
+    QVERIFY(MarkerPresets::load() == inUse);
+    templates->setCurrentIndex(templates->findText("with presets"));
+    dialog.findChild<QPushButton *>("useTemplate")->click();
+    QVERIFY(MarkerPresets::load() == presets);
+    QCOMPARE(dialog.notes().otherSections, sampleNotes().otherSections); //no "Marker presets" among the notes'
+
+    LogNotesDialog::deleteTemplate("with presets");
+    LogNotesDialog::deleteTemplate("without");
+    QSettings().remove("LogNotes/MarkerPresets");
 }
 
 QTEST_MAIN(TestLogNotesUi)

@@ -181,6 +181,8 @@ target_link_libraries(TestGitHub
 set(TEST_SOURCES_LOG_NOTES
     test_log_notes.cpp
     ../lognotes.cpp  # the code under test
+    ../markerpresets.cpp
+    ../shortcutcheck.cpp
     ../framefileio.cpp
     ../dbc/dbchandler.cpp
     ../dbc/dbc_classes.cpp
@@ -205,7 +207,10 @@ set(TEST_SOURCES_LOG_NOTES_UI
     test_log_notes_ui.cpp
     ../lognotesdialog.cpp  # the code under test
     ../lognotespanel.cpp
+    ../markerpresetsdialog.cpp
     ../lognotes.cpp
+    ../markerpresets.cpp
+    ../shortcutcheck.cpp
 )
 
 add_executable(TestLogNotesUi ${TEST_SOURCES_LOG_NOTES_UI})

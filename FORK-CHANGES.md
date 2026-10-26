@@ -17,7 +17,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
-| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving and when capture starts, shown in a Log Notes panel when loading; markers (Ctrl+M) in the panel and graphs; loaded and saved with logs on GitHub | `log-notes`, `log-notes-ui`, `log-notes-capture`, `log-notes-github` | fork only for now |
+| Log notes: setup, scenario and markers saved with a log (inside native CSV logs, a `.notes.md` file for the others), asked for when saving and when capture starts, shown in a Log Notes panel when loading; markers (Ctrl+M) in the panel and graphs, and marker presets with keys of their own; loaded and saved with logs on GitHub | `log-notes`, `log-notes-ui`, `log-notes-capture`, `log-notes-github`, `log-notes-presets` | fork only for now |
 | Log and DBC files loadable and savable without the file dialogs; Candump saves no longer reported as failed; a failed DBC load no longer shows another file | `github-phase0-refactor`, `github-phase1-load` | not offered yet |
 | Log loaders: Microchip and Wireshark files with a wrong byte count no longer read past the line or packet | `fix-loader-bounds` | not offered yet |
 | Wireshark loaders: pcap and pcapng records over 256 bytes are skipped instead of overflowing a buffer; a broken block size no longer hangs the load | `fix-pcaplite-bounds` | not offered yet |
@@ -97,6 +97,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `log-notes-ui` | `fork-ci` | Log notes dialog on save, templates, Log Notes panel, File > Log Notes... | - |
 | `log-notes-capture` | `fork-ci` | Log notes when capture starts, in continuous logs; markers in the panel and graphs | - |
 | `log-notes-github` | `fork-ci` | Log notes with GitHub: `.notes.md` downloaded with a log and committed with GitHub saves | - |
+| `log-notes-presets` | `fork-ci` | Marker presets: prepared marker texts with a key each, Next and Undo keys, panel buttons | - |
 | `fork-ci` | upstream `QT6WIP` | Upstream plus the changes that aren't merged yet and the fork's CI | - |
 
 ## Other pull requests `fork-ci` carried
@@ -137,6 +138,24 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-26: marker presets (`log-notes-presets`)
+
+Phase 5 of the [log notes roadmap](docs/log-notes-roadmap.md), asked for so markers go into running logs more
+easily.
+
+- **File > Marker Presets...** (or Presets... in the Log Notes panel): marker texts prepared before the test, in
+  order, each with a key picked by pressing it. **From Scenario** adds the notes' Scenario steps with Ctrl+1 to
+  Ctrl+9. An optional **Next preset** key adds them in order; **Undo Last Marker** (Ctrl+Shift+M, can be changed or
+  cleared) removes the marker added last.
+- **A preset's key or button** adds its marker at once, with no dialog, at the newest frame (or the clicked one when
+  not capturing). The keys work in every SavvyCAN window. **Ctrl+M** stays as it was: it asks for the text.
+- **Keys** SavvyCAN, Qt or the desktop already use are refused, with what uses them (Ctrl+M, Ctrl+O, Ctrl+C, Ctrl+W,
+  F1, the DBC editor's F3 to F7, undo/redo, typing keys, AltGr's Ctrl+Alt, ...); keys other programs often use
+  (Ctrl+S, Ctrl+Q, F11, ...) are allowed after a warning. The list is in the roadmap, section 8.3.
+- **Templates** keep their presets and keys.
+- **Tests:** `TestLogNotes` (65) checks 32 keys and the presets; `TestLogNotesUi` (16) the presets window, the
+  panel's buttons and templates with presets.
 
 ### 2026-10-26: log notes with GitHub logs (`log-notes-github`)
 

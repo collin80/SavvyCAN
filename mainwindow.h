@@ -39,6 +39,8 @@
 #include "re/searchwindow.h"
 #include "croplogdialog.h"
 #include "lognotes.h"
+#include "markerpresets.h"
+#include <QShortcut>
 
 class CANConnection;
 class LogNotesPanel;
@@ -84,6 +86,10 @@ private slots:
     void handleSaveFilteredFile();
     void editLogNotes();
     void addLogMarker();
+    void addPresetMarker(int index);
+    void addNextPresetMarker();
+    void undoLastMarker();
+    void showMarkerPresets();
     void goToLogTime(qint64 timeUs);
     void askCaptureNotes();
     void handleSaveFilters();
@@ -204,6 +210,17 @@ private:
     QString logNotesFile;   //the log file they're saved back to by File > Log Notes...; empty if none (or GitHub's)
     QString logNotesSource; //the log they're from, as shown; empty if they aren't from a log file
     LogNotesPanel *logNotesPanel;
+    //marker presets (markerpresets.h): their keys, and the markers added since the log was loaded, for Undo
+    MarkerPresets markerPresets;
+    QList<QShortcut *> presetShortcuts;
+    QAction *actNextPreset;
+    QAction *actUndoMarker;
+    struct AddedMarker
+    {
+        LogMarker marker;
+        bool byNextKey;
+    };
+    QVector<AddedMarker> addedMarkers;
 
     //References to other windows we can display
 
@@ -265,6 +282,11 @@ private:
     void updateLogNotesPanel();
     bool anyBusConnected() const;
     void finishContinuousLogNotes();
+    bool markerTime(qint64 &timeUs) const;
+    void addMarkerAt(qint64 timeUs, const QString &text, bool byNextKey);
+    void saveMarkersBack();
+    void applyMarkerPresets();
+    void reloadMarkerPresets();
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);

@@ -58,6 +58,9 @@ SOURCES += main.cpp\
     lognotes.cpp \
     lognotesdialog.cpp \
     lognotespanel.cpp \
+    markerpresets.cpp \
+    markerpresetsdialog.cpp \
+    shortcutcheck.cpp \
     github/githubaccountdialog.cpp \
     github/githubbrowserdialog.cpp \
     github/githubcache.cpp \
@@ -165,6 +168,9 @@ HEADERS  += mainwindow.h \
     lognotes.h \
     lognotesdialog.h \
     lognotespanel.h \
+    markerpresets.h \
+    markerpresetsdialog.h \
+    shortcutcheck.h \
     github/githubaccountdialog.h \
     github/githubbrowserdialog.h \
     github/githubcache.h \
