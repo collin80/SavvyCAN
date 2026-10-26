@@ -197,8 +197,10 @@ The same Markdown, after the last frame, each line starting with `# `:
 ## 6. Timeline markers (phase 3)
 
 - **Ctrl+M** (File > Add Marker...), the **Add Marker** button under Clear Frames, or the one in the Log Notes panel
-  adds a marker, with a short text box (empty text gives "Marker 3"). While a bus is connected it marks the newest
-  frame; otherwise the selected frame, or the last one.
+  adds a marker, with a short text box (empty text gives "Marker 3"). While capturing (a bus connected and capturing
+  not suspended) it marks the newest frame; otherwise the frame clicked in the frame list, or the newest one. (The
+  frame list selects single cells, so it's the current cell's row; the first build used whole selected rows and
+  always marked the newest frame, found by the user on Windows.)
 - Markers are kept in the current notes, in time order, and saved with them. On a loaded log whose notes can be
   written back, a marker is saved into the log (or its `.notes.md`) at once, as File > Log Notes... does.
 - **Log Notes panel:** a markers list under the notes; double-clicking one selects the nearest frame in the frame

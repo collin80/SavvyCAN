@@ -1776,7 +1776,7 @@ bool MainWindow::anyBusConnected() const
 }
 
 //Ctrl+M, the Add Marker buttons: marks a point of the log. While capturing that's the newest frame; on a log that
-//isn't being captured, the selected frame (or the last one).
+//isn't being captured (no bus connected, or capturing suspended), the frame clicked in the list (or the newest one).
 void MainWindow::addLogMarker()
 {
     const QVector<CommFrame> *frames = model->getFilteredListReference();
@@ -1790,9 +1790,12 @@ void MainWindow::addLogMarker()
         return frame.timeStamp().seconds() * 1000000 + frame.timeStamp().microSeconds();
     };
     LogMarker marker;
-    const QModelIndexList selected = ui->canFramesView->selectionModel()->selectedRows();
-    if (!anyBusConnected() && !selected.isEmpty() && selected.first().row() < frames->count())
-        marker.timeUs = timeOf(frames->at(selected.first().row()));
+    //the frame list selects single cells, so the clicked frame is the current index's row (selectedRows() is empty)
+    const QModelIndex current = ui->canFramesView->currentIndex();
+    const bool capturing = anyBusConnected() && allowCapture;
+    if (!capturing && current.isValid() && ui->canFramesView->selectionModel()->isSelected(current)
+        && current.row() < frames->count())
+        marker.timeUs = timeOf(frames->at(current.row()));
     else
     {
         //the newest frame: not always the last row (overwrite mode orders the list by ID)
