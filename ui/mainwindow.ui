@@ -482,6 +482,7 @@
     <addaction name="actionScripting_INterface"/>
     <addaction name="actionFuzzing"/>
     <addaction name="actionUDS_Scanner"/>
+    <addaction name="actionOBD2_Poller"/>
     <addaction name="actionUDS_Firmware_Update"/>
     <addaction name="actionMotorControlConfig"/>
     <addaction name="actionCAN_Bridge"/>
@@ -676,6 +677,11 @@
   <action name="actionUDS_Scanner">
    <property name="text">
     <string>UDS Scanner</string>
+   </property>
+  </action>
+  <action name="actionOBD2_Poller">
+   <property name="text">
+    <string>OBD-II Poller</string>
    </property>
   </action>
   <action name="actionISO_TP_Decoder">

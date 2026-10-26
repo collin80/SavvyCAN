@@ -6,6 +6,7 @@
 #include <QFileInfo>
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
+#include "bus_protocols/handler_factory.h"
 #include "connections/connectionwindow.h"
 #include "helpwindow.h"
 #include "utility.h"
@@ -96,6 +97,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcFileWindow = nullptr;
     fuzzingWindow = nullptr;
     udsScanWindow = nullptr;
+    obd2Window = nullptr;
     motorctrlConfigWindow = nullptr;
     isoWindow = nullptr;
     snifferWindow = nullptr;
@@ -145,6 +147,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
+    connect(ui->actionOBD2_Poller, &QAction::triggered, this, &MainWindow::showObd2Window);
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
     connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
@@ -358,6 +361,7 @@ void MainWindow::killEmAll()
     killWindow(dbcFileWindow);
     killWindow(fuzzingWindow);
     killWindow(udsScanWindow);
+    killWindow(obd2Window);
     killWindow(isoWindow);
     killWindow(snifferWindow);
     killWindow(bisectWindow);
@@ -2430,6 +2434,32 @@ void MainWindow::showUDSScanWindow()
         udsScanWindow = new UDSScanWindow(model->getListReference());
     }
     udsScanWindow->show();
+}
+
+void MainWindow::showObd2Window()
+{
+    if (!obd2Window)
+    {
+        ISOTP_HANDLER *isotp = HandlerFactory::createISOTPHandler();
+        obd2Window = new Obd2Window(new Obd2Poller(isotp), CANConManager::getInstance()->getNumBuses());
+        isotp->setParent(obd2Window); //deleted with the window, after the poller that uses it
+        obd2Window->setHelpCallback([]() { HelpWindow::getRef()->showHelp("obd2.md"); });
+        obd2Window->setListenOnlyCheck([](int bus) {
+            int busBase = 0;
+            for (CANConnection *conn : CANConManager::getInstance()->getConnections())
+            {
+                if (bus < busBase + conn->getNumBuses())
+                {
+                    CANBus settings;
+                    return conn->getBusSettings(bus - busBase, settings) && settings.isListenOnly();
+                }
+                busBase += conn->getNumBuses();
+            }
+            return false;
+        });
+    }
+    obd2Window->show();
+    obd2Window->raise();
 }
 
 void MainWindow::showScriptingWindow()
