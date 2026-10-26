@@ -2,6 +2,7 @@
 
 #include <QFile>
 #include <QRegularExpression>
+#include <algorithm>
 
 //First line of the notes. The version is for later formats; this one reads any version as best it can.
 static const QString notesHeading = QStringLiteral("# SavvyCAN log notes v1");
@@ -74,6 +75,13 @@ void LogNotes::setUserFields(const LogNotes &from)
     observations = from.observations;
     otherFields = from.otherFields;
     otherSections = from.otherSections;
+}
+
+void LogNotes::addMarker(const LogMarker &marker)
+{
+    auto position = std::upper_bound(markers.begin(), markers.end(), marker,
+                                     [](const LogMarker &a, const LogMarker &b) { return a.timeUs < b.timeUs; });
+    markers.insert(position, marker);
 }
 
 void LogNotes::setFrames(const QVector<CommFrame> &frames, qint64 unfilteredCount)

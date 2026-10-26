@@ -12,9 +12,9 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | Phase | State |
 |---|---|
 | 1: notes format, native CSV block, sidecar file | Done, merged into `fork-ci` (`d7049fa`); older loader checked |
-| 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci`; tried by the user on Windows (open a log, edit its notes, save, reopen) |
-| 3: notes when capture starts, continuous logging, markers | In progress (`log-notes-capture`) |
-| 4 | Not started |
+| 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci` (`bb54d73`); tried by the user on Windows (open a log, edit its notes, save, reopen) |
+| 3: notes when capture starts, continuous logging, markers | Done, merged into `fork-ci`. Tried by the user on Windows: the capture-start prompt, markers on a loaded log (kept through save and reload), marker lines in graphs. Continuous logging's notes not tried by hand yet |
+| 4: notes with GitHub load and save | In progress (`log-notes-github`) |
 
 ---
 
@@ -179,24 +179,36 @@ The same Markdown, after the last frame, each line starting with `# `:
 
 ### 5.3 When capture starts (phase 3)
 
-- The notes dialog (without Skip; with **Later**) opens when **Start Continuous Logging** is picked and when the first
-  bus connects with an empty frame list. The answers become the session's notes and fill in the save dialog later.
-- Continuous logging writes the block when it stops (**Cease Continuous Logging**), and the dialog is shown again
-  first so the observations can be added.
-- Turned off with `LogNotes/AskOnCapture`.
-- Clearing the frame list asks whether to keep the session's notes for the next capture.
+- The notes dialog (**Keep Notes** or **Later**) opens when **Start Continuous Logging** has opened its file, and
+  when the first bus connects with an empty frame list (also when connections are restored at startup). The notes
+  kept become the capture's notes and fill in the save dialog later; they start from the last notes saved, with the
+  buses and DBC files of the current setup.
+- Continuous logging writes the block at the end of its file when it stops (**Cease Continuous Logging**). The
+  dialog is shown first (**Save with Notes** or **Save without Notes**; the log is already written, so no Cancel) so
+  the observations can be added. The frame count and time span are those of the frames the continuous log got.
+- Picking Start Continuous Logging and then cancelling its file dialog no longer leaves the menu saying "Cease
+  Continuous Logging" with no file open.
+- Turned off with "Ask for notes when capture starts" in the dialog or Preferences (`LogNotes/AskOnCapture`).
+- Clearing the frame list keeps the typed fields for the next capture, without asking, and drops the markers and
+  what described the old log.
 
 ---
 
 ## 6. Timeline markers (phase 3)
 
-- **Ctrl+M** or the **Add Marker** button in the main window adds a marker at the time of the newest frame, with a
-  short text box (empty text is allowed: "Marker 3"). It works while capturing and on a loaded log (at the selected
-  frame).
-- Markers are kept in the session's notes and saved with them, in time order.
-- **Log Notes panel:** the markers list; double-clicking one selects the nearest frame in the frame list.
-- **Graphs:** each marker is a labelled vertical dashed line in the graphing window (a `QCPItemStraightLine` and
-  `QCPItemText` per marker), with a "Show markers" option.
+- **Ctrl+M** (File > Add Marker...), the **Add Marker** button under Clear Frames, or the one in the Log Notes panel
+  adds a marker, with a short text box (empty text gives "Marker 3"). While capturing (a bus connected and capturing
+  not suspended) it marks the newest frame; otherwise the frame clicked in the frame list, or the newest one. (The
+  frame list selects single cells, so it's the current cell's row; the first build used whole selected rows and
+  always marked the newest frame, found by the user on Windows.)
+- Markers are kept in the current notes, in time order, and saved with them. On a loaded log whose notes can be
+  written back, a marker is saved into the log (or its `.notes.md`) at once, as File > Log Notes... does.
+- **Log Notes panel:** a markers list under the notes; double-clicking one selects the nearest frame in the frame
+  list (and turns off auto scroll so it stays there).
+- **Graphs:** each marker is a labelled vertical dashed line (a `QCPItemStraightLine` and a `QCPItemText`) at the x
+  the graphs give a frame at that time, in every time display mode, with its text at the bottom of the plot (at the
+  top it ran into the X/Y readout; the user asked for it below). View > Show Log Markers turns them off
+  (`Graphing/ShowLogMarkers`). Remove All Graphs keeps them. Tried by the user on Windows.
 - **Frame list:** marker times are shown in the panel only; the frame list itself doesn't get extra rows.
 
 ---
@@ -238,7 +250,10 @@ The same Markdown, after the last frame, each line starting with `# `:
   (including the ones it doesn't show), typed fields and markers, Save with/without Notes and Cancel, the "ask" box,
   OK/Cancel when editing, templates (save, list, use, delete), the last notes, and the panel (escaping, sections,
   Edit...). With `SAVVYCAN_SCREENSHOTS` set it saves pictures of the dialog and panel.
-- Phase 3: the same for the capture prompt and markers.
+- Phase 3: `TestLogNotesUi` adds the capture-start dialog (Keep Notes, Later, its own "ask" setting), the dialog when
+  continuous logging stops (no Cancel; closing it means no notes) and the panel's markers list; `TestLogNotes` adds
+  marker ordering and the frame span. The main window parts (when the prompts open, the marker time, going to a
+  marker, the graph lines) are built and the app starts, but are checked by hand.
 - By hand: a capture on the bench with markers, saved as native CSV and BLF, reopened in a new SavvyCAN, opened in an
   older build, and opened in a text editor and on GitHub.
 

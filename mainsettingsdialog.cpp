@@ -132,6 +132,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->comboSendingBus->setCurrentIndex(settings.value("Playback/SendingBus", 4).toInt());
     ui->cbUseFiltered->setChecked(settings.value("Main/UseFiltered", false).toBool());
     ui->cbAskLogNotes->setChecked(settings.value("LogNotes/AskOnSave", true).toBool());
+    ui->cbAskCaptureNotes->setChecked(settings.value("LogNotes/AskOnCapture", true).toBool());
     ui->cbUseOpenGL->setChecked(settings.value("Main/UseOpenGL", false).toBool());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
     ui->cbFilterLabeling->setChecked(settings.value("Main/FilterLabeling", true).toBool());
@@ -181,6 +182,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->comboSendingBus, SIGNAL(currentIndexChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbUseFiltered, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->cbAskLogNotes, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbAskCaptureNotes, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineClockFormat, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
     connect(ui->cbUseOpenGL, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->lineRemoteHost, SIGNAL(editingFinished()), this, SLOT(updateSettings()));
@@ -255,6 +257,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/UseHex", ui->cbDisplayHex->isChecked());
     settings.setValue("Main/UseFiltered", ui->cbUseFiltered->isChecked());
     settings.setValue("LogNotes/AskOnSave", ui->cbAskLogNotes->isChecked());
+    settings.setValue("LogNotes/AskOnCapture", ui->cbAskCaptureNotes->isChecked());
     settings.setValue("Main/UseOpenGL", ui->cbUseOpenGL->isChecked());
     settings.setValue("Main/EqualDataSniff", ui->cbEqualSniffer->isChecked());
     settings.setValue("Main/TimeFormat", ui->lineClockFormat->text());

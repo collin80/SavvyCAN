@@ -243,6 +243,16 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btnAddMarker">
+          <property name="text">
+           <string>Add Marker</string>
+          </property>
+          <property name="toolTip">
+           <string>Mark this point of the log, e.g. &quot;AC on&quot; (Ctrl+M)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbPersistentFilters">
           <property name="text">
            <string>Keep Filters When Clearing</string>
@@ -499,6 +509,7 @@
     <addaction name="actionSave_Continuous_Logfile"/>
     <addaction name="separator"/>
     <addaction name="actionLog_Notes"/>
+    <addaction name="actionAdd_Marker"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
@@ -745,6 +756,17 @@
    </property>
    <property name="toolTip">
     <string>The notes of this log: setup, scenario, observations</string>
+   </property>
+  </action>
+  <action name="actionAdd_Marker">
+   <property name="text">
+    <string>Add Marker...</string>
+   </property>
+   <property name="toolTip">
+    <string>Mark this point of the log (the newest frame while capturing, else the selected one)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
    </property>
   </action>
   <action name="actionCrop_Log">
