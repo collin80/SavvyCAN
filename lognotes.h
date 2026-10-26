@@ -69,6 +69,7 @@ public:
     static bool fromMarkdown(const QString &markdown, LogNotes &notes);
 
     //<log file>.notes.md, keeping the log's extension so run1.csv and run1.blf don't share notes
+    static QString sidecarSuffix() { return QStringLiteral(".notes.md"); }
     static QString sidecarPath(const QString &logPath);
     bool writeSidecar(const QString &logPath) const;
     static bool readSidecar(const QString &logPath, LogNotes &notes);

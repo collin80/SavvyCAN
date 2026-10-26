@@ -39,7 +39,8 @@ public:
     GitHubOrigin origin() const { return resultOrigin; }
     int fileTypeIndex() const;
 
-    //Save: writes the file to save as that file type; false with error set if it couldn't
+    //Save: writes the file to save as that file type; false with error set if it couldn't, or false with no error
+    //if the user cancelled (nothing is saved and nothing more is said)
     using SaveWriter = std::function<bool(const QString &localFile, int fileType, QString &error)>;
     void setSaveWriter(SaveWriter saveWriter) { writer = saveWriter; updateOpenButton(); }
     //Save: where the file came from (repo, branch, path, and the version loaded, for the conflict check), or only a
@@ -47,6 +48,12 @@ public:
     void setSuggestion(const GitHubOrigin &from, const QString &fileName);
     //Save: the commit, or the pull request, on github.com
     QString resultUrl() const { return resultLink; }
+
+    //Files that go with the file picked, named <file><suffix> (".notes.md" for log notes). Open downloads them into
+    //the cache next to it (and drops an old cached one it no longer has). Save uploads those the save writer wrote
+    //next to its file, after the file itself and before any pull request. The file list doesn't show them on their
+    //own; the file they go with gets a mark instead.
+    void setCompanionSuffixes(const QStringList &suffixes);
 
     //creates a repo under the signed-in account or one of its organisations and selects it; false if GitHub refused
     bool createRepoNow(const QString &owner, const QString &name, const QString &description, bool isPrivate);
@@ -76,6 +83,9 @@ private:
     QString resultLink;
     SaveWriter writer;
     GitHubOrigin suggestion;
+    QStringList companions; //see setCompanionSuffixes
+
+    int entryIndexOf(const QString &path) const; //-1 if the branch shown has no file at that path
 
     //Save, signed in through a GitHub App: whether it's installed where the file goes (saving fails otherwise).
     //Answers are kept for the dialog's life, and asked again before each save.

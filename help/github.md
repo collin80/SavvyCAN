@@ -63,6 +63,10 @@ Downloaded Files** in File > GitHub Account... empties the cache.
 
 Files over 100 MB, and files stored with Git LFS, can't be loaded yet.
 
+**Log notes:** a log with a notes file next to it (run.csv.notes.md, its setup, scenario and markers) has its own
+icon, and the tooltip says so; the notes file isn't listed on its own. Opening the log downloads its notes too, and
+the Log Notes panel shows them. Notes saved inside a GVRET log come with the log itself.
+
 
 Saving a File
 =============
@@ -81,6 +85,12 @@ The Save to GitHub window is the same as the load window, with more at the botto
   the change before it's merged. If the save fails, the new branch is deleted again.
 
 Click **Save**. Afterwards a message links to the commit or the pull request on GitHub.
+
+**Log notes:** when saving a log, SavvyCAN first asks for its notes (setup, scenario, what was seen), as it does when
+saving to a file; **Cancel** there goes back to the Save to GitHub window. A GVRET log keeps its notes inside it. For
+other file types they're saved as a second file next to the log (run.asc.notes.md), committed straight after it to
+the same branch. A notes file already there is replaced; saving without notes leaves it as it is, and the message
+afterwards says so.
 
 **Saving back a file loaded from GitHub:** the window suggests where it came from. If the file has changed on GitHub
 since you loaded it (someone else saved a newer version), SavvyCAN asks what to do:

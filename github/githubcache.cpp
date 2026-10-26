@@ -101,6 +101,12 @@ GitHubOrigin GitHubCache::originOf(const QString &localFile)
     return origin;
 }
 
+void GitHubCache::remove(const QString &localFile)
+{
+    QFile::remove(localFile);
+    QFile::remove(localFile + ".origin.json");
+}
+
 bool GitHubCache::clear()
 {
     QDir dir(rootDir());

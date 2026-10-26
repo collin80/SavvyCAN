@@ -31,6 +31,8 @@ public:
     static bool store(const GitHubOrigin &origin, const QByteArray &data, QString &localFile, QString &error);
     //an invalid origin for a file that didn't come from GitHub
     static GitHubOrigin originOf(const QString &localFile);
+    //a cached file and what it says about where it came from
+    static void remove(const QString &localFile);
     static bool clear();
 };
 

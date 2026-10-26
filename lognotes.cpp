@@ -295,7 +295,7 @@ bool LogNotes::fromMarkdown(const QString &markdown, LogNotes &notes)
 
 QString LogNotes::sidecarPath(const QString &logPath)
 {
-    return logPath + ".notes.md";
+    return logPath + sidecarSuffix();
 }
 
 bool LogNotes::writeSidecar(const QString &logPath) const
