@@ -15,6 +15,7 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci` (`bb54d73`); tried by the user on Windows (open a log, edit its notes, save, reopen) |
 | 3: notes when capture starts, continuous logging, markers | Done, merged into `fork-ci`. Tried by the user on Windows: the capture-start prompt, markers on a loaded log (kept through save and reload), marker lines in graphs. Continuous logging's notes not tried by hand yet |
 | 4: notes with GitHub load and save | Done on `log-notes-github`, not merged; `TestGitHub` covers it against its fake GitHub, not tried against GitHub by hand yet |
+| 5: marker presets with their own keys | In progress (`log-notes-presets`, from `log-notes-github`) |
 
 ---
 
@@ -128,7 +129,7 @@ The same Markdown, after the last frame, each line starting with `# `:
 - **New builds** skip `#` lines when loading frames, and read the notes from the end of the file without reading it
   all again.
 - **Older builds** (upstream SavvyCAN and this fork before the change) count each notes line as a bad line. Checked
-  against the `fork-ci` loader before this change (2026-10-25, section 9), with 100 frames and notes full of commas,
+  against the `fork-ci` loader before this change (2026-10-25, section 10), with 100 frames and notes full of commas,
   one of them a copy of a frame line:
   - autodetect (the default, and dropped files) says "Could not autodetect the file type", then asks "Do you want
     to salvage what could be loaded?";
@@ -237,7 +238,89 @@ The GitHub window knows of "companion files" (`GitHubBrowserDialog::setCompanion
 
 ---
 
-## 8. Phases
+## 8. Marker presets (phase 5)
+
+Asked for after phase 3: dropping markers into a running log should be quicker. Marker texts are prepared before
+the test, each with a key of its own, so a marker goes in with one key press or click and no typing.
+
+### 8.1 What the user does
+
+- **Ctrl+M stays as it is:** the newest frame (or the clicked one), with a box to type the text. It's the general
+  key for anything unplanned.
+- **Marker Presets...** (File menu, and a button in the Log Notes panel) opens the presets window:
+  - a table of presets, in order: the marker text and its key, set by pressing it (`QKeySequenceEdit`), or none;
+  - **Add**, **Remove**, **Move Up**/**Move Down**;
+  - **From Scenario**: adds the current notes' Scenario steps (numbered or bulleted lines, without the number or
+    bullet) as presets, given the free keys Ctrl+1 to Ctrl+9 in order;
+  - an optional **Next preset** key (none at first) that adds the presets in order, one per press;
+  - the **Undo Last Marker** key (Ctrl+Shift+M at first; can be cleared).
+  - A key already used is refused with what uses it (section 8.3); one that's only commonly used elsewhere is
+    allowed after a warning.
+- **Adding a preset marker:** its key, or its button in the Log Notes panel, adds the marker at once: no dialog,
+  stamped with the newest frame (or the clicked one when not capturing, as Ctrl+M does). The keys work in every
+  SavvyCAN window, so they still work while a graph has the focus.
+- **Log Notes panel:** a row of preset buttons (text and key), the "next" preset highlighted when a Next key is set,
+  **Undo Last Marker**, and **Presets...**.
+- **Undo Last Marker** removes the marker added last in this session (Ctrl+M or preset); on a loaded log the notes
+  are saved back, as adding did.
+- **Templates** keep their presets and keys with them, so one per bench or procedure brings its own markers. The
+  presets in use are remembered between sessions (`LogNotes/MarkerPresets`).
+- **Not in the log:** the preset list isn't saved into logs; the Scenario says what was planned and the markers say
+  what happened when.
+- Clearing frames (a new capture) starts the Next key at the first preset again.
+
+### 8.2 Code
+
+- `markerpresets.{h,cpp}` (no GUI): `MarkerPreset` (text, `QKeySequence`), `MarkerPresets` (the list, the Next and
+  Undo keys, the next index; Markdown in and out for the settings and templates; `fromScenario()`).
+- `MarkerPresetsDialog`: the table and keys, with the key checks.
+- `shortcutcheck.{h,cpp}` (no GUI): what a key is already used for (section 8.3), as text, or empty when it's free;
+  and whether it's only a warning.
+- `LogNotesPanel`: the preset buttons, Undo and Presets...
+- `MainWindow`: a `QShortcut` per preset key (`Qt::ApplicationShortcut`), the Next and Undo shortcuts, rebuilt when
+  the presets change; `addLogMarker` split into "this text, now" and "ask for the text"; a list of the markers added
+  this session, for Undo.
+- Templates: the template's Markdown gains a `## Marker presets` section (`- Ctrl+1: AC on`), read back only by the
+  presets code.
+- Tests: `TestLogNotes` (presets Markdown, fromScenario, next/reset, the key check), `TestLogNotesUi` (the presets
+  window: adding, moving, keys refused and warned, From Scenario; the panel's buttons and signals).
+
+### 8.3 Keys already in use
+
+Checked 2026-10-26 in the code (`.ui` files, `setShortcut`, `QShortcut`, key handlers in `eventFilter`s).
+
+**Refused** (SavvyCAN uses them, or the system does):
+
+| Key | Used by |
+|---|---|
+| Ctrl+M | Add Marker (typed) |
+| Ctrl+O | Open Log File |
+| Ctrl+C | Copy frames (main window), copy in text fields |
+| Ctrl+W, Ctrl+F4 | Close the active window (every SavvyCAN window, `main.cpp`) |
+| F1 | Help in every SavvyCAN window |
+| F3, F4, F5, F6, F7, Delete | DBC editor |
+| Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z | Undo/redo: signal editor, text fields |
+| Ctrl+A, Ctrl+V, Ctrl+X | Text fields and tables |
+| Alt+F4, Alt+Tab, Alt+Esc, Ctrl+Esc, Ctrl+Shift+Esc, Ctrl+Tab, Ctrl+Shift+Tab | Windows and Qt (closing, switching windows and tabs, Start, Task Manager) |
+| F10 | Windows: the menu bar |
+| Keys without Ctrl or Alt (letters, digits, Space, +, −, Enter, arrows...) | Typing; also +, −, R in graphs, R/T/Y in the flow view, Space in the filter list |
+| Ctrl+Alt+anything | AltGr on many keyboards (typing characters such as @ and €); desktop shortcuts on Linux |
+| Any Meta/Windows-key combination | The desktop |
+
+F2, F8, F9, F11 and F12 alone are allowed (F2 to F12 have no Ctrl/Alt but don't type anything); F11 warns.
+
+**Allowed after a warning** (common in other programs, not used by SavvyCAN): Ctrl+S (save), Ctrl+N (new), Ctrl+P
+(print), Ctrl+F (find), Ctrl+Q (quit on Linux and macOS), Ctrl+H, Ctrl+R, F11 (full screen).
+
+**Free and suggested:** Ctrl+1 to Ctrl+9 and Ctrl+0, Ctrl+Shift+1..9, Alt+1..9, F2, F8, F9, F12.
+
+**macOS:** Qt maps Ctrl to Cmd there, so Ctrl+M (Add Marker, phase 3) is Cmd+M, which macOS uses to minimise a
+window. The fork's builds are Linux and Windows only; if SavvyCAN's macOS builds take this, Add Marker needs another
+key there (not changed in phase 5).
+
+---
+
+## 9. Phases
 
 | Phase | Content | Branch |
 |---|---|---|
@@ -245,10 +328,11 @@ The GitHub window knows of "companion files" (`GitHubBrowserDialog::setCompanion
 | 2 | Notes dialog on save (filled-in fields, templates, last notes), Log Notes panel on load, File > Log Notes..., preferences | `log-notes-ui` |
 | 3 | Notes when capture starts, continuous logging block, timeline markers (shortcut, panel, graphs) | `log-notes-capture` |
 | 4 | GitHub: download the notes with a log, notes in the browser, commit them with GitHub saves (with GitHub phase 2) | `log-notes-github` |
+| 5 | Marker presets: prepared texts with a key each, Next and Undo keys, panel buttons, templates, key checks | `log-notes-presets` |
 
 ---
 
-## 9. Testing
+## 10. Testing
 
 - `unit_tests/test_log_notes.cpp` (`TestLogNotes`), phase 1:
   - Markdown round trip with every field, empty notes, unknown keys and sections kept, multi-line sections,
@@ -276,7 +360,7 @@ The GitHub window knows of "companion files" (`GitHubBrowserDialog::setCompanion
 
 ---
 
-## 10. Risks and open points
+## 11. Risks and open points
 
 - **Older builds and other tools** see notes lines in native CSV as bad lines (section 4.3): two messages before the
   frames load. If that bothers people who share logs with others on older builds, a setting can put the notes in the
