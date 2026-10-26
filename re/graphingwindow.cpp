@@ -763,8 +763,9 @@ void GraphingWindow::drawLogMarkers()
             QCPItemText *label = new QCPItemText(ui->graphingView);
             label->position->setTypeX(QCPItemPosition::ptPlotCoords);
             label->position->setTypeY(QCPItemPosition::ptAxisRectRatio);
-            label->position->setCoords(x, 0.01);
-            label->setPositionAlignment(Qt::AlignLeft | Qt::AlignTop);
+            //at the bottom of the plot, clear of the X/Y readout and the legend at the top
+            label->position->setCoords(x, 0.99);
+            label->setPositionAlignment(Qt::AlignLeft | Qt::AlignBottom);
             label->setPadding(QMargins(3, 0, 0, 0));
             label->setColor(pen.color());
             label->setText(marker.text.isEmpty() ? LogNotes::formatSeconds(marker.timeUs) + " s" : marker.text);

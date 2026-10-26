@@ -206,8 +206,9 @@ The same Markdown, after the last frame, each line starting with `# `:
 - **Log Notes panel:** a markers list under the notes; double-clicking one selects the nearest frame in the frame
   list (and turns off auto scroll so it stays there).
 - **Graphs:** each marker is a labelled vertical dashed line (a `QCPItemStraightLine` and a `QCPItemText`) at the x
-  the graphs give a frame at that time, in every time display mode. View > Show Log Markers turns them off
-  (`Graphing/ShowLogMarkers`). Remove All Graphs keeps them.
+  the graphs give a frame at that time, in every time display mode, with its text at the bottom of the plot (at the
+  top it ran into the X/Y readout; the user asked for it below). View > Show Log Markers turns them off
+  (`Graphing/ShowLogMarkers`). Remove All Graphs keeps them. Tried by the user on Windows.
 - **Frame list:** marker times are shown in the panel only; the frame list itself doesn't get extra rows.
 
 ---
