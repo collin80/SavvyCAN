@@ -15,7 +15,7 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 | 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci` (`bb54d73`); tried by the user on Windows (open a log, edit its notes, save, reopen) |
 | 3: notes when capture starts, continuous logging, markers | Done, merged into `fork-ci`. Tried by the user on Windows: the capture-start prompt, markers on a loaded log (kept through save and reload), marker lines in graphs. Continuous logging's notes not tried by hand yet |
 | 4: notes with GitHub load and save | Done on `log-notes-github`, not merged; `TestGitHub` covers it against its fake GitHub, not tried against GitHub by hand yet |
-| 5: marker presets with their own keys | In progress (`log-notes-presets`, from `log-notes-github`) |
+| 5: marker presets with their own keys | Done on `log-notes-presets` (from `log-notes-github`), not merged; tests pass, not tried in the app by hand yet |
 
 ---
 
@@ -355,6 +355,12 @@ key there (not changed in phase 5).
   the notes downloaded into the cache with their origin, an old cached notes file dropped) and `testCompanionSave`
   (log and notes committed, saved again over both, saved without notes leaving GitHub's alone with a message, a
   writer that cancels saving nothing and saying nothing). The notes dialog in the GitHub save is checked by hand.
+- Phase 5: `TestLogNotes` checks 32 keys against section 8.3 (free, warned, refused, and why), the presets'
+  Markdown (with templates' notes not seeing it), Next/step back/reset, what already has a key, and Scenario steps
+  with their Ctrl+digits. `TestLogNotesUi` drives the presets window (keys refused for SavvyCAN's own use, for
+  another preset, for the Next/Undo keys; warned for Ctrl+S; From Scenario; moving keys with their presets; empty
+  texts dropped), the panel's preset buttons, Next highlight, Undo and Presets..., and templates with and without
+  presets. The keys themselves (application shortcuts) and Undo in the main window are checked by hand.
 - By hand: a capture on the bench with markers, saved as native CSV and BLF, reopened in a new SavvyCAN, opened in an
   older build, and opened in a text editor and on GitHub.
 

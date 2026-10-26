@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include "lognotes.h"
+#include "markerpresets.h"
 
 class QCheckBox;
 class QComboBox;
@@ -42,8 +43,11 @@ public:
     static LogNotes lastNotes();
     static void setLastNotes(const LogNotes &notes);
     static QStringList templateNames();
-    static bool loadTemplate(const QString &name, LogNotes &notes);
-    static void saveTemplate(const QString &name, const LogNotes &notes);
+    //A template keeps the typed fields and, if there were any, the marker presets (with their keys).
+    //hasPresets: whether the template has presets (presets is only set if it has)
+    static bool loadTemplate(const QString &name, LogNotes &notes, MarkerPresets *presets = nullptr,
+                             bool *hasPresets = nullptr);
+    static void saveTemplate(const QString &name, const LogNotes &notes, const MarkerPresets &presets = MarkerPresets());
     static void deleteTemplate(const QString &name);
 
 private:

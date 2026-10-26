@@ -88,6 +88,9 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     lognotes.cpp lognotes.h
     lognotesdialog.cpp lognotesdialog.h
     lognotespanel.cpp lognotespanel.h
+    markerpresets.cpp markerpresets.h
+    markerpresetsdialog.cpp markerpresetsdialog.h
+    shortcutcheck.cpp shortcutcheck.h
     frameplaybackobject.cpp frameplaybackobject.h
     frameplaybackwindow.cpp frameplaybackwindow.h
     framesenderobject.cpp framesenderobject.h

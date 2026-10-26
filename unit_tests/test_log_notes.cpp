@@ -3,6 +3,8 @@
 #include <QTimeZone>
 #include "framefileio.h"
 #include "lognotes.h"
+#include "markerpresets.h"
+#include "shortcutcheck.h"
 
 // Notes saved with a log (LogNotes): the Markdown they're written as, the block at the end of a native CSV log, the
 // <log>.notes.md file next to logs of other types, and FrameFileIO::saveLogNotes/loadLogNotes choosing between them.
@@ -20,6 +22,11 @@ private slots:
     void testSeconds();
     void testAddMarker();
     void testSetFrames();
+    void testShortcutCheck_data();
+    void testShortcutCheck();
+    void testPresetsMarkdown();
+    void testPresetsNext();
+    void testScenarioSteps();
     void testNativeCSVRoundTrip();
     void testNativeCSVReplace();
     void testNativeCSVLongNotes();
@@ -267,6 +274,154 @@ void TestLogNotes::testSetFrames()
     QCOMPARE(notes.frameCount, qint64(0));
     QCOMPARE(notes.unfilteredCount, qint64(-1));
     QVERIFY(!notes.hasSpan);
+}
+
+//what keys marker presets may have (docs/log-notes-roadmap.md section 8.3)
+void TestLogNotes::testShortcutCheck_data()
+{
+    QTest::addColumn<QString>("key");
+    QTest::addColumn<int>("verdict");
+    QTest::addColumn<QString>("reasonPart");
+
+    const int free = ShortcutCheck::Free, warn = ShortcutCheck::Warn, refused = ShortcutCheck::Refused;
+    QTest::newRow("none") << "" << free << "";
+    QTest::newRow("Ctrl+1") << "Ctrl+1" << free << "";
+    QTest::newRow("Ctrl+0") << "Ctrl+0" << free << "";
+    QTest::newRow("Ctrl+Shift+5") << "Ctrl+Shift+5" << free << "";
+    QTest::newRow("Alt+3") << "Alt+3" << free << "";
+    QTest::newRow("Ctrl+Shift+M") << "Ctrl+Shift+M" << free << "";
+    QTest::newRow("F2") << "F2" << free << "";
+    QTest::newRow("F9") << "F9" << free << "";
+    QTest::newRow("F12") << "F12" << free << "";
+    QTest::newRow("Ctrl+M") << "Ctrl+M" << refused << "Add Marker";
+    QTest::newRow("Ctrl+O") << "Ctrl+O" << refused << "Open Log File";
+    QTest::newRow("Ctrl+C") << "Ctrl+C" << refused << "copying";
+    QTest::newRow("Ctrl+W") << "Ctrl+W" << refused << "closing";
+    QTest::newRow("Ctrl+F4") << "Ctrl+F4" << refused << "closing";
+    QTest::newRow("Ctrl+Z") << "Ctrl+Z" << refused << "undo";
+    QTest::newRow("Ctrl+A") << "Ctrl+A" << refused << "selecting";
+    QTest::newRow("Ctrl+Tab") << "Ctrl+Tab" << refused << "tabs";
+    QTest::newRow("Alt+F4") << "Alt+F4" << refused << "closing";
+    QTest::newRow("Alt+Tab") << "Alt+Tab" << refused << "switching";
+    QTest::newRow("F1") << "F1" << refused << "Help";
+    QTest::newRow("F5") << "F5" << refused << "DBC editor";
+    QTest::newRow("F10") << "F10" << refused << "menu bar";
+    QTest::newRow("letter") << "A" << refused << "typing";
+    QTest::newRow("shifted letter") << "Shift+A" << refused << "typing";
+    QTest::newRow("Space") << "Space" << refused << "typing";
+    QTest::newRow("plus") << "+" << refused << "typing";
+    QTest::newRow("Ctrl+Alt+1") << "Ctrl+Alt+1" << refused << "AltGr";
+    QTest::newRow("Meta+1") << "Meta+1" << refused << "desktop";
+    QTest::newRow("two presses") << "Ctrl+K, Ctrl+1" << refused << "several presses";
+    QTest::newRow("Ctrl+S") << "Ctrl+S" << warn << "saving";
+    QTest::newRow("Ctrl+Q") << "Ctrl+Q" << warn << "quitting";
+    QTest::newRow("F11") << "F11" << warn << "full screen";
+}
+
+void TestLogNotes::testShortcutCheck()
+{
+    QFETCH(QString, key);
+    QFETCH(int, verdict);
+    QFETCH(QString, reasonPart);
+
+    const QKeySequence sequence = QKeySequence::fromString(key, QKeySequence::PortableText);
+    QVERIFY(key.isEmpty() || !sequence.isEmpty());
+    QString reason;
+    QCOMPARE(int(ShortcutCheck::check(sequence, reason)), verdict);
+    if (reasonPart.isEmpty()) QVERIFY2(reason.isEmpty(), qPrintable(reason));
+    else QVERIFY2(reason.contains(reasonPart), qPrintable(reason));
+}
+
+static MarkerPresets samplePresets()
+{
+    MarkerPresets presets;
+    presets.presets = { { "Ignition on", QKeySequence("Ctrl+1") }, { "AC on", QKeySequence() },
+                        { "AC off: fan max", QKeySequence("Ctrl+Shift+3") } };
+    presets.nextKey = QKeySequence("F9");
+    return presets;
+}
+
+void TestLogNotes::testPresetsMarkdown()
+{
+    const MarkerPresets presets = samplePresets();
+    QCOMPARE(presets.toMarkdown(), QString("## Marker presets\nNext key: F9\nUndo key: Ctrl+Shift+M\n"
+                                           "- [Ctrl+1] Ignition on\n- AC on\n- [Ctrl+Shift+3] AC off: fan max\n"));
+    MarkerPresets loaded;
+    QVERIFY(MarkerPresets::fromMarkdown(presets.toMarkdown(), loaded));
+    QVERIFY(loaded == presets);
+
+    //inside a template, after the notes' own sections; the notes don't see it
+    LogNotes notes;
+    notes.title = "bench";
+    notes.scenario = "1. Ignition on";
+    const QString markdown = notes.toMarkdown() + "\n" + presets.toMarkdown();
+    QVERIFY(MarkerPresets::fromMarkdown(markdown, loaded));
+    QVERIFY(loaded == presets);
+    LogNotes parsed;
+    QVERIFY(LogNotes::fromMarkdown(MarkerPresets::withoutSection(markdown), parsed));
+    QVERIFY(parsed.otherSections.isEmpty());
+    QCOMPARE(parsed.scenario, QString("1. Ignition on"));
+
+    //no section: left as it was; keys cleared to none
+    loaded = presets;
+    QVERIFY(!MarkerPresets::fromMarkdown(notes.toMarkdown(), loaded));
+    QVERIFY(loaded == presets);
+    MarkerPresets none;
+    none.undoKey = QKeySequence();
+    QVERIFY(MarkerPresets::fromMarkdown(none.toMarkdown(), loaded));
+    QVERIFY(loaded.isEmpty() && loaded.nextKey.isEmpty() && loaded.undoKey.isEmpty());
+    QVERIFY(MarkerPresets().undoKey == QKeySequence("Ctrl+Shift+M")); //the default
+}
+
+void TestLogNotes::testPresetsNext()
+{
+    MarkerPresets presets = samplePresets();
+    QCOMPARE(presets.next(), 0);
+    presets.advance();
+    presets.advance();
+    QCOMPARE(presets.next(), 2);
+    presets.stepBack();
+    QCOMPARE(presets.next(), 1);
+    presets.advance();
+    presets.advance();
+    QCOMPARE(presets.next(), -1); //all added
+    presets.advance();
+    QCOMPARE(presets.next(), -1);
+    presets.reset();
+    QCOMPARE(presets.next(), 0);
+    QVERIFY(MarkerPresets().next() < 0);
+
+    //what already has a key
+    QVERIFY(presets.keyUser(QKeySequence("Ctrl+1")).contains("Ignition on"));
+    QVERIFY(presets.keyUser(QKeySequence("Ctrl+1"), 0).isEmpty()); //the preset itself
+    QCOMPARE(presets.keyUser(QKeySequence("F9")), QString("Next preset"));
+    QVERIFY(presets.keyUser(QKeySequence("F9"), -1, true).isEmpty());
+    QCOMPARE(presets.keyUser(QKeySequence("Ctrl+Shift+M")), QString("Undo Last Marker"));
+    QVERIFY(presets.keyUser(QKeySequence("Ctrl+2")).isEmpty());
+    QVERIFY(presets.keyUser(QKeySequence()).isEmpty());
+}
+
+void TestLogNotes::testScenarioSteps()
+{
+    QCOMPARE(MarkerPresets::scenarioSteps("1. Ignition on\n   - wait 5 s\n2) AC on\n\n- AC off\n* Fan max\nnote"),
+             QStringList({ "Ignition on", "AC on", "AC off", "Fan max" }));
+    QCOMPARE(MarkerPresets::scenarioSteps("Start the engine\n  Then idle\n"), QStringList({ "Start the engine", "Then idle" }));
+    QVERIFY(MarkerPresets::scenarioSteps("").isEmpty());
+
+    //added with the Ctrl+digits nothing has yet
+    MarkerPresets presets = samplePresets(); //Ctrl+1 is taken
+    presets.addScenarioSteps("1. a\n2. b\n3. c");
+    QCOMPARE(presets.presets.count(), 6);
+    QCOMPARE(presets.presets[3].text, QString("a"));
+    QCOMPARE(presets.presets[3].key, QKeySequence("Ctrl+2"));
+    QCOMPARE(presets.presets[4].key, QKeySequence("Ctrl+3"));
+    QCOMPARE(presets.presets[5].key, QKeySequence("Ctrl+4"));
+    presets.addScenarioSteps("1\n2\n3\n4\n5\n6\n7"); //Ctrl+5 to Ctrl+9, then two past Ctrl+9 with no key
+    QCOMPARE(presets.presets.count(), 13);
+    QCOMPARE(presets.presets[6].key, QKeySequence("Ctrl+5"));
+    QCOMPARE(presets.presets[10].key, QKeySequence("Ctrl+9"));
+    QCOMPARE(presets.presets[11].key, QKeySequence());
+    QCOMPARE(presets.presets[12].key, QKeySequence());
 }
 
 void TestLogNotes::testNativeCSVRoundTrip()

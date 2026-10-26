@@ -1,5 +1,6 @@
 #include "lognotespanel.h"
 
+#include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
@@ -30,6 +31,30 @@ LogNotesPanel::LogNotesPanel(QWidget *parent)
         emit markerActivated(item->data(Qt::UserRole).toLongLong());
     });
 
+    //marker presets: a button each (filled in by setPresets)
+    presetBox = new QWidget(body);
+    presetBox->setObjectName("presetBox");
+    QVBoxLayout *presetLayout = new QVBoxLayout(presetBox);
+    presetLayout->setContentsMargins(0, 0, 0, 0);
+    presetGrid = new QGridLayout();
+    presetGrid->setSpacing(4);
+    presetLayout->addLayout(presetGrid);
+    lblNext = new QLabel(presetBox);
+    presetLayout->addWidget(lblNext);
+    layout->addWidget(presetBox);
+
+    QHBoxLayout *presetRow = new QHBoxLayout();
+    QPushButton *btnUndo = new QPushButton(tr("Undo Last Marker"), body);
+    btnUndo->setToolTip(tr("Remove the marker added last"));
+    connect(btnUndo, &QPushButton::clicked, this, &LogNotesPanel::undoMarkerRequested);
+    presetRow->addWidget(btnUndo);
+    QPushButton *btnPresets = new QPushButton(tr("Presets..."), body);
+    btnPresets->setToolTip(tr("Marker texts prepared before the test, each with a key"));
+    connect(btnPresets, &QPushButton::clicked, this, &LogNotesPanel::presetsRequested);
+    presetRow->addWidget(btnPresets);
+    presetRow->addStretch(1);
+    layout->addLayout(presetRow);
+
     QHBoxLayout *row = new QHBoxLayout();
     lblSource = new QLabel(body);
     lblSource->setWordWrap(true);
@@ -45,6 +70,50 @@ LogNotesPanel::LogNotesPanel(QWidget *parent)
 
     setWidget(body);
     setNotes(LogNotes(), QString());
+    setPresets(MarkerPresets());
+}
+
+void LogNotesPanel::setPresets(const MarkerPresets &presets)
+{
+    //a button may be the one being clicked (adding its marker refreshes the panel): detached now, deleted later
+    while (QLayoutItem *item = presetGrid->takeAt(0))
+    {
+        if (QWidget *widget = item->widget())
+        {
+            widget->hide();
+            widget->setParent(nullptr);
+            widget->deleteLater();
+        }
+        delete item;
+    }
+    const int next = presets.nextKey.isEmpty() ? -1 : presets.next();
+    for (int i = 0; i < presets.presets.count(); i++)
+    {
+        const MarkerPreset &preset = presets.presets[i];
+        QString text = preset.text;
+        if (!preset.key.isEmpty()) text += "  (" + preset.key.toString(QKeySequence::NativeText) + ")";
+        QPushButton *button = new QPushButton(text, presetBox);
+        button->setObjectName(QString("preset%1").arg(i));
+        button->setToolTip(tr("Add the marker \"%1\" now").arg(preset.text));
+        if (i == next)
+        {
+            QFont bold = button->font();
+            bold.setBold(true);
+            button->setFont(bold);
+        }
+        connect(button, &QPushButton::clicked, this, [this, i]() { emit presetActivated(i); });
+        presetGrid->addWidget(button, i / 2, i % 2);
+    }
+    if (presets.nextKey.isEmpty() || presets.isEmpty()) lblNext->clear();
+    else if (next < 0)
+        lblNext->setText(tr("All %1 presets added (%2 starts again after Clear Frames)")
+                         .arg(presets.presets.count()).arg(presets.nextKey.toString(QKeySequence::NativeText)));
+    else
+        lblNext->setText(tr("Next (%1): %2 (%3 of %4)").arg(presets.nextKey.toString(QKeySequence::NativeText),
+                                                           presets.presets[next].text).arg(next + 1)
+                                                      .arg(presets.presets.count()));
+    lblNext->setVisible(!lblNext->text().isEmpty());
+    presetBox->setVisible(!presets.isEmpty());
 }
 
 QString LogNotesPanel::markerText(const LogMarker &marker)
