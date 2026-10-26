@@ -13,8 +13,8 @@ Written against `fork-ci` (2026-10-25). Each phase branches from and merges into
 |---|---|
 | 1: notes format, native CSV block, sidecar file | Done, merged into `fork-ci` (`d7049fa`); older loader checked |
 | 2: notes dialog on save, Log Notes panel | Done, merged into `fork-ci` (`bb54d73`); tried by the user on Windows (open a log, edit its notes, save, reopen) |
-| 3: notes when capture starts, continuous logging, markers | Done on `log-notes-capture` (from `bb54d73`), not merged; tests pass, not tried in the app by hand yet |
-| 4 | Not started |
+| 3: notes when capture starts, continuous logging, markers | Done, merged into `fork-ci`. Tried by the user on Windows: the capture-start prompt, markers on a loaded log (kept through save and reload), marker lines in graphs. Continuous logging's notes not tried by hand yet |
+| 4: notes with GitHub load and save | In progress (`log-notes-github`) |
 
 ---
 
