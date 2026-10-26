@@ -27,6 +27,7 @@
 #include "dbc/dbcloadsavewindow.h"
 #include "re/fuzzingwindow.h"
 #include "re/udsscanwindow.h"
+#include "re/obd2window.h"
 #include "re/sniffer/snifferwindow.h"
 #include "re/isotp_interpreterwindow.h"
 #include "motorcontrollerconfigwindow.h"
@@ -102,6 +103,7 @@ private slots:
     void showFuzzingWindow();
     void showMCConfigWindow();
     void showUDSScanWindow();
+    void showObd2Window();
     void showISOInterpreterWindow();
     void showSnifferWindow();
     void showBisectWindow();
@@ -208,6 +210,7 @@ private:
     DBCLoadSaveWindow *dbcFileWindow;
     FuzzingWindow *fuzzingWindow;
     UDSScanWindow *udsScanWindow;
+    Obd2Window *obd2Window;
     ISOTP_InterpreterWindow *isoWindow;
     SnifferWindow* snifferWindow;
     MotorControllerConfigWindow *motorctrlConfigWindow;

@@ -139,6 +139,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     re/sniffer/snifferwindow.cpp re/sniffer/snifferwindow.h
     re/temporalgraphwindow.cpp re/temporalgraphwindow.h
     re/udsscanwindow.cpp re/udsscanwindow.h
+    re/obd2window.cpp re/obd2window.h
     scriptcontainer.cpp scriptcontainer.h
     scriptingwindow.cpp scriptingwindow.h
     signalviewerwindow.cpp signalviewerwindow.h

@@ -93,6 +93,7 @@ SOURCES += main.cpp\
     re/isotp_interpreterwindow.cpp \
     re/rangestatewindow.cpp \
     re/udsscanwindow.cpp \
+    re/obd2window.cpp \
     connections/canbus.cpp \
     connections/canconnectionmodel.cpp \
     connections/connectionwindow.cpp \
@@ -198,6 +199,7 @@ HEADERS  += mainwindow.h \
     re/isotp_interpreterwindow.h \
     re/rangestatewindow.h \
     re/udsscanwindow.h \
+    re/obd2window.h \
     connections/canbus.h \
     connections/canconnectionmodel.h \
     connections/connectionwindow.h \

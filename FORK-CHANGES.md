@@ -11,6 +11,7 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load and save log files and DBC files in GitHub repos (File menu, DBC File Manager), signed in with the SavvyCAN GitHub App or a token | `github-phase1-load`, `github-phase2-save` | fork only for now |
+| OBD-II Poller window (Send Frames > OBD-II Poller): discover ECUs, tick PIDs to poll, live values, VIN, poll sets | `obd2-phase3-window` | fork only for now |
 | OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
 | ISO-TP and UDS unit tests build and pass again; UDS Scanner shows the right negative response code | `obd2-phase0-tests` | not offered yet |
@@ -81,6 +82,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
+| `obd2-phase3-window` | `fork-ci` | OBD-II Poller window, help page, `TestObd2Window` | - |
 | `obd2-phase2-poller` | `fork-ci` | OBD-II poll engine `Obd2Poller`, `TestObd2Poller` | - |
 | `obd2-phase1-pids` | `fork-ci` | OBD-II PID table and decoder, `TestObd2Pids` | - |
 | `obd2-phase0-tests` | `fork-ci` | ISO-TP and UDS unit tests ported to `CommFrame`; UDS payload contract; UDS Scanner NRC | - |
@@ -125,6 +127,23 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-26: OBD-II Poller window (`obd2-phase3-window`)
+
+Phase 3 of the [OBD-II poller roadmap](docs/obd2-roadmap.md): the poll engine gets its window.
+
+- **Send Frames > OBD-II Poller:** pick the bus and 11-bit or 29-bit addressing, Discover ECUs, tick the PIDs to
+  poll (each with an interval) and Start Polling. The table shows each PID's latest value with its unit, and counts
+  answers and timeouts; a line below counts requests, answers, timeouts and refusals. Read VIN reads the VIN from
+  one ECU. The requests and answers are captured like other traffic, so a saved log holds them.
+- **Poll sets:** Save Poll Set... and Load Poll Set... keep the bus, addressing, rate limit and ticked PIDs in an
+  `.obd` (JSON) file.
+- **Warnings:** when the bus is listen-only (nothing can be sent), or no bus is open. Closing the window stops
+  polling.
+- **Help:** `help/obd2.md` (F1 or the Help button), linked from the UDS Scanner page.
+- **Tests:** `TestObd2Window` (16 tests) drives the window with a fake clock: the table before and after discovery,
+  polling, values, timeouts and refusals, VIN, warnings, poll sets (round trip, files, bad files), closing and
+  help. With `SAVVYCAN_SCREENSHOTS` set it saves a picture of the window.
 
 ### 2026-10-25: OBD-II poll engine (`obd2-phase2-poller`)
 

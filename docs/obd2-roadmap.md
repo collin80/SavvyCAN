@@ -13,8 +13,8 @@ timeline (Tom-evnut fork). Written against `fork-ci` (2026-10-25). Each phase br
 | 0: ISO-TP and UDS unit tests building again | Done (`obd2-phase0-tests`): both pass, also under ASan/UBSan; UDS payload rule written down; UDS Scanner negative reply code fixed |
 | 1: PID table and decoder | Done (`obd2-phase1-pids`): 101 Mode 01 PIDs (8 of them supported-PID bitmaps), supported-PID bitmaps, replies with several PIDs, Mode 09 VIN and ECU name; `TestObd2Pids` |
 | 2: poll engine | Done (`obd2-phase2-poller`): `Obd2Poller` with discovery, polling, timeouts, response pending, rate limit, VIN; `TestObd2Poller` |
-| 3: OBD-II window | Next |
-| 4: generated OBD DBC, graphing and comparison | Not started |
+| 3: OBD-II window | Done (`obd2-phase3-window`): Send Frames > OBD-II Poller, poll sets (`.obd`), VIN, help page `help/obd2.md`; `TestObd2Window` |
+| 4: generated OBD DBC, graphing and comparison | Next |
 | 5: scripting, Mode 22 DID lists, docs | Not started |
 
 ---
@@ -140,6 +140,13 @@ Under **Send Frames**, next to the UDS Scanner.
 - A warning when the bus's connection is listen-only, since nothing can be sent then.
 - Help page `help/obd2.md`.
 
+**As built (phase 3):** `re/obd2window.{h,cpp}` builds its widgets in code (no `.ui` file), like the GitHub windows,
+and gets the bus count, the listen-only check and help from MainWindow through setters, so `TestObd2Window` builds
+it on its own. The table has one row per (ECU, PID): before discovery every PID for all ECUs, after it each ECU's
+supported PIDs (or all with "Show unsupported PIDs"); ticked rows and their intervals survive a rebuild. Closing the
+window stops polling. Poll sets are JSON (`format` "SavvyCAN OBD-II poll set", `version` 1, `bus`, `addressing`,
+`maxRequestRate`, `items` of `ecu` ("all" or a reply ID in hex), `pid`, `intervalMs`).
+
 ### 4.4 Generated OBD DBC (phase 4)
 
 **Make DBC** builds a DBC file in memory (`createBlankFile()`), attaches it to the OBD bus (`setAssocBus()`) and
@@ -174,7 +181,7 @@ lists it in the DBC File Manager, where it can also be saved as a `.dbc` file:
 | 0 (done) | Get `TestIsoTpHandler` and `TestUdsHandler` building and passing on `fork-ci` again, since everything below uses those handlers | `obd2-phase0-tests` |
 | 1 (done) | `obd2_pids`: Mode 01 table, decoding, supported-PID bitmaps, Mode 09 VIN; `TestObd2Pids` | `obd2-phase1-pids` |
 | 2 (done) | `Obd2Poller`: addressing, discovery, scheduling, timeouts and response pending, the service safety list, stats; `TestObd2Poller` | `obd2-phase2-poller` |
-| 3 | OBD-II window, poll sets, VIN, help page, menu entry | `obd2-phase3-window` |
+| 3 (done) | OBD-II window, poll sets, VIN, help page, menu entry | `obd2-phase3-window` |
 | 4 | Generated OBD DBC, attached to the OBD bus; Graph selected PIDs; clock warning | `obd2-phase4-dbc` |
 | 5 | `obd` scripting object; Mode 22 DIDs from a user file per car (JSON, same fields as the PID table); several PIDs per request; FORK-CHANGES entry | `obd2-phase5-extras` |
 
