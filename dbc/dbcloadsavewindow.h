@@ -18,6 +18,8 @@ class DBCLoadSaveWindow : public QDialog
 public:
     explicit DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~DBCLoadSaveWindow();
+    //Lists a file loaded somewhere else (the OBD-II Poller's DBC) with the bus it's attached to
+    void addLoadedFile(DBCFile *file);
 
 private slots:
     void loadFile();

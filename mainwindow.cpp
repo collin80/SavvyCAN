@@ -2457,9 +2457,122 @@ void MainWindow::showObd2Window()
             }
             return false;
         });
+        obd2Window->setClockCheck([]() {
+            //each adapter stamps its frames with its own clock unless the system clock is used for all of them
+            return CANConManager::getInstance()->getConnections().count() > 1
+                   && !QSettings().value("Main/TimeClock", false).toBool();
+        });
+        obd2Window->setDbcLoader([this](const QString &path, int bus, const QList<quint32> &ecus, QString *error) {
+            return attachObd2Dbc(path, bus, ecus, error);
+        });
+        obd2Window->setGraphOpener([this](int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error) {
+            return graphObd2Signals(bus, sigs, error);
+        });
     }
     obd2Window->show();
     obd2Window->raise();
+}
+
+//Loads the DBC file the OBD-II Poller wrote and attaches it to its bus. A copy already loaded from that file is used
+//as it is when it has every ECU, since graphs may point at its signals; otherwise it has to be removed first.
+bool MainWindow::attachObd2Dbc(const QString &path, int bus, const QList<quint32> &ecus, QString *error)
+{
+    DBCHandler *dbc = DBCHandler::getReference();
+    DBCFile *file = nullptr;
+    for (int i = 0; i < dbc->getFileCount(); i++)
+    {
+        if (QFileInfo(dbc->getFileByIdx(i)->getFullFilename()) == QFileInfo(path)) file = dbc->getFileByIdx(i);
+    }
+
+    bool loadedNow = false;
+    if (file)
+    {
+        for (quint32 ecu : ecus)
+        {
+            if (!file->messageHandler->findMsgByID(ecu))
+            {
+                *error = tr("%1 is already loaded, without ECU 0x%2. Remove it in the DBC File Manager first (close the "
+                            "graphs using it), or save the DBC under another name.").arg(file->getFilename()).arg(ecu, 0, 16);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        file = dbc->loadDBCFile(path);
+        if (!file)
+        {
+            *error = tr("%1 was written but couldn't be loaded.").arg(path);
+            return false;
+        }
+        loadedNow = true;
+    }
+    file->setAssocBus(bus);
+    if (loadedNow && dbcFileWindow) dbcFileWindow->addLoadedFile(file);
+    DBCSettingsUpdated();
+    return true;
+}
+
+//Opens a graph window with the OBD-II Poller's signals, decoded by the DBC on that bus. ECUs that haven't sent a
+//frame yet are left out, unless nothing has been captured at all.
+bool MainWindow::graphObd2Signals(int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error)
+{
+    QSet<quint32> idsSeen;
+    for (const CommFrame &frame : *model->getListReference())
+    {
+        if (frame.getBus() == bus) idsSeen.insert(frame.frameId());
+    }
+
+    DBCHandler *dbc = DBCHandler::getReference();
+    QList<DBC_SIGNAL *> found;
+    bool described = false;
+    for (const Obd2Window::GraphSignal &wanted : sigs)
+    {
+        DBC_SIGNAL *sig = nullptr;
+        for (int i = 0; i < dbc->getFileCount() && !sig; i++)
+        {
+            DBCFile *file = dbc->getFileByIdx(i);
+            if (file->getAssocBus() != -1 && file->getAssocBus() != bus) continue;
+            DBC_MESSAGE *msg = file->messageHandler->findMsgByID(wanted.first);
+            if (msg) sig = msg->sigHandler->findSignalByName(wanted.second);
+        }
+        if (!sig) continue;
+        described = true;
+        if (idsSeen.isEmpty() || idsSeen.contains(wanted.first)) found.append(sig);
+    }
+    if (!described)
+    {
+        *error = tr("No DBC file on bus %1 describes these PIDs. Click Make DBC... first.").arg(bus);
+        return false;
+    }
+    if (found.isEmpty())
+    {
+        *error = tr("None of these ECUs has answered on bus %1 yet.").arg(bus);
+        return false;
+    }
+
+    static const QColor colors[] = {QColor(31, 119, 180), QColor(214, 39, 40), QColor(44, 160, 44),
+                                    QColor(255, 127, 14), QColor(148, 103, 189), QColor(140, 86, 75),
+                                    QColor(227, 119, 194), QColor(23, 190, 207)};
+    showGraphingWindow();
+    int n = 0;
+    for (DBC_SIGNAL *sig : found)
+    {
+        GraphParams params;
+        params.ID = sig->parentMessage->ID;
+        params.bus = bus;
+        params.startBit = sig->startBit;
+        params.numBits = sig->signalSize;
+        params.intelFormat = sig->intelByteOrder;
+        params.isSigned = (sig->valType == SIGNED_INT);
+        params.scale = sig->factor;
+        params.bias = sig->bias;
+        params.associatedSignal = sig;
+        params.graphName = sig->name;
+        params.lineColor = colors[n++ % 8];
+        lastGraphingWindow->createGraph(params);
+    }
+    return true;
 }
 
 void MainWindow::showScriptingWindow()

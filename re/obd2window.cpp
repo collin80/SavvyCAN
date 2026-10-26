@@ -1,10 +1,12 @@
 #include "obd2window.h"
+#include "bus_protocols/obd2_dbc.h"
 
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -18,6 +20,7 @@
 #include <QSpinBox>
 #include <QTableWidget>
 #include <QVBoxLayout>
+#include <algorithm>
 #include <cmath>
 
 namespace
@@ -85,6 +88,7 @@ void Obd2Window::buildLayout(int numBuses)
     for (int b = 0; b < numBuses; b++) cbBus->addItem(QString::number(b));
 
     cbAddressing = new QComboBox;
+    cbAddressing->setObjectName("addressingCombo");
     cbAddressing->addItem(tr("11-bit (0x7DF, 0x7E0-0x7EF)"));
     cbAddressing->addItem(tr("29-bit (0x18DB33F1, 0x18DAxxF1)"));
 
@@ -147,10 +151,18 @@ void Obd2Window::buildLayout(int numBuses)
     btnSave = new QPushButton(tr("Save Poll Set..."));
     btnLoad = new QPushButton(tr("Load Poll Set..."));
     btnHelp = new QPushButton(tr("Help"));
+    btnMakeDbc = new QPushButton(tr("Make DBC..."));
+    btnMakeDbc->setToolTip(tr("Write a DBC file describing the answers and attach it to this bus, so graphs and the "
+                              "frame view decode them"));
+    btnGraph = new QPushButton(tr("Graph Polled PIDs"));
+    btnGraph->setToolTip(tr("Open a graph of the ticked PIDs (needs the DBC from Make DBC...)"));
 
     QHBoxLayout *buttons = new QHBoxLayout;
     buttons->addWidget(btnStart);
     buttons->addWidget(btnStop);
+    buttons->addSpacing(16);
+    buttons->addWidget(btnMakeDbc);
+    buttons->addWidget(btnGraph);
     buttons->addStretch(1);
     buttons->addWidget(btnLoad);
     buttons->addWidget(btnSave);
@@ -181,6 +193,8 @@ void Obd2Window::buildLayout(int numBuses)
     connect(btnSave, &QPushButton::clicked, this, &Obd2Window::savePollSetDialog);
     connect(btnLoad, &QPushButton::clicked, this, &Obd2Window::loadPollSetDialog);
     connect(btnHelp, &QPushButton::clicked, this, [this]() { if (helpCallback) helpCallback(); });
+    connect(btnMakeDbc, &QPushButton::clicked, this, &Obd2Window::makeDbcDialog);
+    connect(btnGraph, &QPushButton::clicked, this, &Obd2Window::graphPolledPids);
     connect(pidTable, &QTableWidget::itemChanged, this, &Obd2Window::tableChanged);
 }
 
@@ -193,6 +207,100 @@ void Obd2Window::setListenOnlyCheck(std::function<bool(int bus)> check)
 void Obd2Window::setHelpCallback(std::function<void()> callback)
 {
     helpCallback = callback;
+}
+
+void Obd2Window::setDbcLoader(DbcLoader loader)
+{
+    dbcLoader = loader;
+}
+
+void Obd2Window::setGraphOpener(GraphOpener opener)
+{
+    graphOpener = opener;
+}
+
+void Obd2Window::setClockCheck(std::function<bool()> check)
+{
+    clockCheck = check;
+    updateWarning();
+}
+
+QList<quint32> Obd2Window::dbcEcus() const
+{
+    QList<quint32> ecus;
+    for (const Obd2Poller::Ecu &ecu : poller->ecus()) ecus.append(ecu.replyId);
+    if (ecus.isEmpty()) //the usual reply IDs: 0x7E8-0x7EF, or source addresses 0x10-0x17
+    {
+        for (quint32 i = 0; i < 8; i++)
+            ecus.append(poller->addressing() == Obd2Poller::Addressing::Standard11Bit ? 0x7E8 + i : 0x18DAF110 + i);
+    }
+    std::sort(ecus.begin(), ecus.end());
+    return ecus;
+}
+
+bool Obd2Window::makeDbc(const QString &path, QString *error)
+{
+    QList<quint32> ecus = dbcEcus();
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        if (error) *error = file.errorString();
+        return false;
+    }
+    file.write(OBD2::makeDbc(ecus).toUtf8());
+    file.close();
+    if (dbcLoader && !dbcLoader(path, poller->bus(), ecus, error)) return false;
+    lblStatus->setText(tr("DBC written to %1 and attached to bus %2").arg(path).arg(poller->bus()));
+    return true;
+}
+
+QList<Obd2Window::GraphSignal> Obd2Window::polledSignals() const
+{
+    QList<GraphSignal> sigs;
+    for (int row = 0; row < pidTable->rowCount(); row++)
+    {
+        QTableWidgetItem *poll = pidTable->item(row, COL_POLL);
+        if (poll->checkState() != Qt::Checked) continue;
+        quint32 ecu = poll->data(ROLE_ECU).toUInt();
+        quint8 pid = static_cast<quint8>(poll->data(ROLE_PID).toUInt());
+        const OBD2::PidInfo *info = OBD2::findMode01Pid(pid);
+        if (!info) continue;
+        QList<quint32> ecus = ecu ? QList<quint32>{ecu} : dbcEcus();
+        for (quint32 e : ecus)
+        {
+            for (const OBD2::Field &field : info->fields) sigs.append({e, OBD2::dbcSignalName(pid, field)});
+        }
+    }
+    return sigs;
+}
+
+void Obd2Window::graphPolledPids()
+{
+    QList<GraphSignal> sigs = polledSignals();
+    if (sigs.isEmpty())
+    {
+        lblStatus->setText(tr("Tick the PIDs to graph first."));
+        return;
+    }
+    QString error;
+    if (!graphOpener || !graphOpener(poller->bus(), sigs, &error))
+        lblStatus->setText(error.isEmpty() ? tr("Graphs can't be opened here.") : error);
+}
+
+void Obd2Window::makeDbcDialog()
+{
+    QSettings settings;
+    QString folder = settings.value("OBD2/LastDbcFolder").toString();
+    QString suggested = QString("OBD2_bus%1%2.dbc").arg(poller->bus())
+                            .arg(poller->addressing() == Obd2Poller::Addressing::Extended29Bit ? "_29bit" : "");
+    QString filename = QFileDialog::getSaveFileName(this, tr("Make OBD-II DBC File"),
+                                                    folder.isEmpty() ? suggested : folder + "/" + suggested,
+                                                    tr("DBC files (*.dbc)"));
+    if (filename.isEmpty()) return;
+    if (!filename.endsWith(".dbc", Qt::CaseInsensitive)) filename += ".dbc";
+    settings.setValue("OBD2/LastDbcFolder", QFileInfo(filename).absolutePath());
+    QString error;
+    if (!makeDbc(filename, &error)) QMessageBox::warning(this, tr("Make DBC"), error);
 }
 
 QString Obd2Window::ecuText(quint32 ecuReplyId) const
@@ -351,6 +459,12 @@ void Obd2Window::updateWarning()
     else if (listenOnlyCheck && listenOnlyCheck(cbBus->currentIndex()))
         text = tr("Bus %1 is listen-only, so no requests can be sent. Turn listen-only off in the connection "
                   "settings.").arg(cbBus->currentIndex());
+    if (clockCheck && clockCheck())
+    {
+        if (!text.isEmpty()) text += "\n";
+        text += tr("More than one adapter is open and each stamps its frames with its own clock, so this bus won't "
+                   "line up with the others in a log. Pick \"Use system clock\" in the preferences.");
+    }
     lblWarning->setText(text);
     lblWarning->setVisible(!text.isEmpty());
 }
@@ -634,6 +748,12 @@ void Obd2Window::closeEvent(QCloseEvent *event)
 {
     stopPolling(); //nothing keeps asking the car once the window is gone
     event->accept();
+}
+
+void Obd2Window::showEvent(QShowEvent *event)
+{
+    updateWarning(); //connections or the clock setting may have changed while the window was closed
+    QDialog::showEvent(event);
 }
 
 void Obd2Window::keyPressEvent(QKeyEvent *event)

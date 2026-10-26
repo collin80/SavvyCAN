@@ -14,8 +14,8 @@ timeline (Tom-evnut fork). Written against `fork-ci` (2026-10-25). Each phase br
 | 1: PID table and decoder | Done (`obd2-phase1-pids`): 101 Mode 01 PIDs (8 of them supported-PID bitmaps), supported-PID bitmaps, replies with several PIDs, Mode 09 VIN and ECU name; `TestObd2Pids` |
 | 2: poll engine | Done (`obd2-phase2-poller`): `Obd2Poller` with discovery, polling, timeouts, response pending, rate limit, VIN; `TestObd2Poller` |
 | 3: OBD-II window | Done (`obd2-phase3-window`): Send Frames > OBD-II Poller, poll sets (`.obd`), VIN, help page `help/obd2.md`; `TestObd2Window` |
-| 4: generated OBD DBC, graphing and comparison | Next |
-| 5: scripting, Mode 22 DID lists, docs | Not started |
+| 4: generated OBD DBC, graphing and comparison | Done (`obd2-phase4-dbc`): Make DBC..., Graph Polled PIDs, clock warning; `TestObd2Dbc` (also checked with cantools); two graph/DBC bugs fixed |
+| 5: scripting, Mode 22 DID lists, docs | Next |
 
 ---
 
@@ -172,6 +172,15 @@ lists it in the DBC File Manager, where it can also be saved as a `.dbc` file:
 - A reply arrives a few milliseconds after the value was measured; for most comparisons that's small next to the
   poll interval, and the help page says so.
 
+**As built (phase 4):** `bus_protocols/obd2_dbc.{h,cpp}` writes the DBC as text, and SavvyCAN's own loader reads it,
+so its multiplex links are the ones any DBC file gets. Make DBC... asks where to save it (the file is kept, so a log
+can be decoded again later) and MainWindow loads it and attaches it to the bus. A DBC already loaded from the same
+file is reused when it has every ECU, and never replaced while loaded, since graphs may hold pointers to its
+signals. `TestObd2Dbc` decodes every field of every PID through the loaded DBC and compares with the PID table;
+cantools (strict) decodes the same file the same way. Two bugs turned up and were fixed (upstream has them too):
+`DBC_SIGNAL::processAsDouble` refused Motorola signals ending in a frame's last bytes, and live graph updates
+ignored multiplexing, so a multiplexed signal took values from every frame with its ID.
+
 ---
 
 ## 5. Phases
@@ -182,7 +191,7 @@ lists it in the DBC File Manager, where it can also be saved as a `.dbc` file:
 | 1 (done) | `obd2_pids`: Mode 01 table, decoding, supported-PID bitmaps, Mode 09 VIN; `TestObd2Pids` | `obd2-phase1-pids` |
 | 2 (done) | `Obd2Poller`: addressing, discovery, scheduling, timeouts and response pending, the service safety list, stats; `TestObd2Poller` | `obd2-phase2-poller` |
 | 3 (done) | OBD-II window, poll sets, VIN, help page, menu entry | `obd2-phase3-window` |
-| 4 | Generated OBD DBC, attached to the OBD bus; Graph selected PIDs; clock warning | `obd2-phase4-dbc` |
+| 4 (done) | Generated OBD DBC, attached to the OBD bus; Graph selected PIDs; clock warning | `obd2-phase4-dbc` |
 | 5 | `obd` scripting object; Mode 22 DIDs from a user file per car (JSON, same fields as the PID table); several PIDs per request; FORK-CHANGES entry | `obd2-phase5-extras` |
 
 ---

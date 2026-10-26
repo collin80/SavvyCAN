@@ -95,6 +95,7 @@ add_executable(TestObd2Window
     test_obd2_window.cpp
     ../re/obd2window.cpp  # the class under test
     ../bus_protocols/obd2_poller.cpp
+    ../bus_protocols/obd2_dbc.cpp
     ../bus_protocols/obd2_pids.cpp
     ../bus_protocols/isotp_handler.cpp
     ../canfilter.cpp
@@ -103,6 +104,25 @@ add_executable(TestObd2Window
 target_include_directories(TestObd2Window PRIVATE ${SAVVYCAN_INCLUDE_DIRS})
 
 target_link_libraries(TestObd2Window
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+    Qt6::Widgets
+)
+
+###### OBD-II DBC ######
+add_executable(TestObd2Dbc
+    test_obd2_dbc.cpp
+    ../bus_protocols/obd2_dbc.cpp  # the code under test
+    ../bus_protocols/obd2_pids.cpp
+    ../dbc/dbchandler.cpp
+    ../dbc/dbc_classes.cpp
+    ../utility.cpp
+)
+
+target_include_directories(TestObd2Dbc PRIVATE ${SAVVYCAN_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}/../dbc)
+
+target_link_libraries(TestObd2Dbc
     Qt6::Core
     Qt6::Test
     Qt6::SerialBus
@@ -207,6 +227,7 @@ add_test(NAME TestUdsHandler COMMAND TestUdsHandler)
 add_test(NAME TestObd2Pids COMMAND TestObd2Pids)
 add_test(NAME TestObd2Poller COMMAND TestObd2Poller)
 add_test(NAME TestObd2Window COMMAND TestObd2Window)
+add_test(NAME TestObd2Dbc COMMAND TestObd2Dbc)
 add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
 add_test(NAME TestGitHub COMMAND TestGitHub)
 add_test(NAME TestLogNotes COMMAND TestLogNotes)

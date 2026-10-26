@@ -20,7 +20,7 @@ Before You Start
 - **Listen-only must be off** for that bus, or no request can be sent. The window warns when it's on.
 - **Two adapters?** If the OBD bus and the other bus you're logging are on different adapters, each adapter stamps
   its own frames. Pick "Use system clock" in the preferences so both buses share one time base and their frames line
-  up in the log.
+  up in the log. The window warns while more than one adapter is open without it.
 
 
 Using the Window
@@ -60,8 +60,26 @@ addresses; PIDs a vehicle doesn't support are refused and then skipped.
 Graphing the Values
 ===================
 
-The answers are ordinary CAN frames in the capture (0x7E8 and so on), so the graph window can plot them once a DBC
-file describes them. Building that DBC file from the poller is the next step of this feature.
+The answers are ordinary CAN frames in the capture (0x7E8 and so on), so anything that decodes with a DBC file can
+show them once a DBC file describes them:
+
+1. **Make DBC...** writes a DBC file for the OBD-II answers and attaches it to the OBD bus. It has a message for
+   each ECU found by Discover ECUs (or, before discovery, for the usual addresses 0x7E8 to 0x7EF), with every
+   Mode 01 PID SavvyCAN knows as a signal: PID_0C_EngineSpeed, PID_0D_VehicleSpeed and so on. The frame view, the
+   signal viewer and the graph window then decode the answers.
+2. **Graph Polled PIDs** opens a graph window with a graph for each ticked PID (one per ECU that has answered, for a
+   PID asked of all ECUs). Graphs of the other bus can be added to the same window with its usual New Graph
+   button, so both are on one time line.
+
+The DBC file is a normal file: keep it, load it in the DBC File Manager later to decode a saved log again, or share
+it. It stays attached for this session; to have it loaded every time, add it in the DBC File Manager.
+
+If a DBC file of the same name is already loaded and has every ECU, Make DBC... just attaches it to the bus again.
+If it lacks one of the ECUs now found, remove it in the DBC File Manager first (closing graphs that use it), or save
+the new DBC under another name.
+
+Answers that span several frames (the VIN, for example) can't be described by a DBC file; they show in the poller
+window only.
 
 
 Things to Know

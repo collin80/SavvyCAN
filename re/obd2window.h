@@ -44,8 +44,26 @@ public:
     Obd2Window(Obd2Poller *poller, int numBuses, QWidget *parent = nullptr);
     ~Obd2Window();
 
+    //(ECU reply ID, DBC signal name) of one value to graph
+    using GraphSignal = QPair<quint32, QString>;
+    //Loads the DBC file just written and attaches it to the bus; false (with a reason) if it can't
+    using DbcLoader = std::function<bool(const QString &path, int bus, const QList<quint32> &ecus, QString *error)>;
+    //Opens a graph window with these signals of the OBD DBC on that bus; false (with a reason) if it can't
+    using GraphOpener = std::function<bool(int bus, const QList<GraphSignal> &sigs, QString *error)>;
+
     void setListenOnlyCheck(std::function<bool(int bus)> check);
     void setHelpCallback(std::function<void()> callback);
+    void setDbcLoader(DbcLoader loader);
+    void setGraphOpener(GraphOpener opener);
+    //True when the buses come from adapters with clocks of their own (more than one, and not the system clock)
+    void setClockCheck(std::function<bool()> check);
+
+    //The ECUs the OBD DBC gets a message for: those discovered, or the usual reply IDs before discovery
+    QList<quint32> dbcEcus() const;
+    //Writes the OBD DBC to path and hands it to the DBC loader
+    bool makeDbc(const QString &path, QString *error = nullptr);
+    //The signals for the ticked PIDs (a PID for all ECUs gives one per ECU in dbcEcus())
+    QList<GraphSignal> polledSignals() const;
 
     //Poll sets (.obd files): bus, addressing, rate and the ticked PIDs with their intervals
     QJsonObject pollSetToJson() const;
@@ -70,9 +88,11 @@ public slots:
     void startPolling();
     void stopPolling();
     void readVin();
+    void graphPolledPids();
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void showEvent(QShowEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
 
 private slots:
@@ -89,6 +109,7 @@ private slots:
     void tableChanged();
     void savePollSetDialog();
     void loadPollSetDialog();
+    void makeDbcDialog();
 
 private:
     struct RowKey
@@ -110,6 +131,9 @@ private:
     Obd2Poller *poller;
     std::function<bool(int)> listenOnlyCheck;
     std::function<void()> helpCallback;
+    DbcLoader dbcLoader;
+    GraphOpener graphOpener;
+    std::function<bool()> clockCheck;
     bool updatingTable = false;
 
     QComboBox *cbBus;
@@ -125,6 +149,8 @@ private:
     QPushButton *btnSave;
     QPushButton *btnLoad;
     QPushButton *btnHelp;
+    QPushButton *btnMakeDbc;
+    QPushButton *btnGraph;
     QLabel *lblWarning;
     QLabel *lblStatus;
     QLabel *lblVin;

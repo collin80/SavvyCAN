@@ -11,6 +11,8 @@ collin80/SavvyCAN#1141) and the other open pull requests `fork-ci` carried.
 | Playback: "Send all frames as CAN FD" (with or without BRS); the last frames of a burst are no longer dropped | `fd-playback` | merged: [#1149](https://github.com/collin80/SavvyCAN/pull/1149) |
 | ASC: CAN FD frames written as `d` lines (CANalyzer 8.x); CRTD format check no longer reads out of bounds | `fd-logs` (`ba3d4ee`) | merged: [#1150](https://github.com/collin80/SavvyCAN/pull/1150) |
 | GitHub repos: load and save log files and DBC files in GitHub repos (File menu, DBC File Manager), signed in with the SavvyCAN GitHub App or a token | `github-phase1-load`, `github-phase2-save` | fork only for now |
+| OBD-II answers graphed: Make DBC... writes and attaches a DBC for them, Graph Polled PIDs, a warning when adapters' clocks differ | `obd2-phase4-dbc` | fork only for now |
+| Graphs of multiplexed signals no longer take values from frames of other multiplexor values while capturing; big-endian signals in a frame's last bytes decode in graphs | `obd2-phase4-dbc` | not offered yet |
 | OBD-II Poller window (Send Frames > OBD-II Poller): discover ECUs, tick PIDs to poll, live values, VIN, poll sets | `obd2-phase3-window` | fork only for now |
 | OBD-II poll engine (no UI yet): ECU and PID discovery, polling with one request outstanding, timeouts, rate limit, Mode 01 and 09 only | `obd2-phase2-poller` | fork only for now |
 | OBD-II PID table and decoder (no UI yet): Mode 01 PIDs, supported-PID bitmaps, Mode 09 VIN | `obd2-phase1-pids` | fork only for now |
@@ -82,6 +84,7 @@ Everything here is in upstream `QT6WIP` except the rows marked "fork only".
 | `github-shared-repos` | `fork-ci` | One GitHub repo list for logs and DBC files | - |
 | `github-polish` | `fork-ci` | SavvyCAN GitHub App built in, Choose Repos..., EV-CANlogs preloaded | - |
 | `log-notes` | `fork-ci` | Log notes: format, native CSV block, `.notes.md` file | - |
+| `obd2-phase4-dbc` | `fork-ci` | OBD-II DBC, Graph Polled PIDs, clock warning; graph and DBC fixes; `TestObd2Dbc` | - |
 | `obd2-phase3-window` | `fork-ci` | OBD-II Poller window, help page, `TestObd2Window` | - |
 | `obd2-phase2-poller` | `fork-ci` | OBD-II poll engine `Obd2Poller`, `TestObd2Poller` | - |
 | `obd2-phase1-pids` | `fork-ci` | OBD-II PID table and decoder, `TestObd2Pids` | - |
@@ -103,6 +106,9 @@ collin80/SavvyCAN#1095, collin80/SavvyCAN#1099 and collin80/SavvyCAN#1101.
 
 ## Known issues
 
+- **DBC files leak when unloaded** (found by `TestObd2Dbc` under LeakSanitizer; upstream too, not fixed yet):
+  `DBCFile`'s destructor frees only its nodes, never its message handler, messages or signals, and
+  `DBCSignalHandler::removeAllSignals()` calls `free()` on signals made with `new`.
 - **GVRET FD layout:** the `GET_FD`/`SETUP_FD` byte layout proposed in
   [#1140](https://github.com/collin80/SavvyCAN/pull/1140) was merged upstream as proposed. ESP32RET's `t2canfd-board`
   branch in `Tom-evnut/ESP32RET` implements it; upstream ESP32RET doesn't yet.
@@ -129,6 +135,28 @@ LilyGO T-2CAN-FD hardware.
 ---
 
 ## Change log
+
+### 2026-10-26: OBD-II answers graphed next to other buses (`obd2-phase4-dbc`)
+
+Phase 4 of the [OBD-II poller roadmap](docs/obd2-roadmap.md).
+
+- **Make DBC...** in the OBD-II Poller writes a DBC file for the answers (a message for each ECU found, every Mode 01
+  PID as a signal, three-level multiplexing: service, PID, value) and attaches it to the OBD bus, so the frame view,
+  the signal viewer and graphs decode them. The file is kept to decode saved logs again.
+- **Graph Polled PIDs** opens a graph window with the ticked PIDs; graphs of the other bus go in the same window.
+- **Clock warning** while more than one adapter is open without "Use system clock", since the buses' timestamps
+  wouldn't line up.
+- **Fixed on the way (upstream too):**
+  - Graphs of multiplexed signals took a point from every frame with their ID while capturing (only redrawing from
+    captured frames checked the multiplexor), so the line mixed values of other multiplexor values.
+  - `DBC_SIGNAL::processAsDouble` refused big-endian signals ending in the last bytes of a frame (a 16-bit Motorola
+    signal in bytes 6 and 7, for example), as it checked them like little-endian ones. Graphs then fell back to
+    their own scaling, losing value tables and floats.
+- **Tests:** `TestObd2Dbc` decodes every field of every PID through the generated DBC and compares with the PID
+  table, checks the multiplexing, 29-bit IDs, value tables, a save and reload, and the big-endian bounds;
+  `TestObd2Window` gains Make DBC, Graph Polled PIDs and the clock warning. The DBC also decodes the same in
+  cantools (strict). All clean under AddressSanitizer and UndefinedBehaviorSanitizer, apart from the DBC loader's
+  leaks listed under Known issues.
 
 ### 2026-10-26: OBD-II Poller window (`obd2-phase3-window`)
 

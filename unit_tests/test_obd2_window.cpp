@@ -33,6 +33,12 @@ private slots:
     void testBadPollSets();
     void testCloseStopsPolling();
     void testHelp();
+    void testMakeDbc();
+    void testMakeDbcAfterDiscovery();
+    void testMakeDbcFails();
+    void testPolledSignals();
+    void testGraphPolledPids();
+    void testClockWarning();
     void testScreenshot();
 
 signals:
@@ -356,6 +362,125 @@ void TestObd2Window::testHelp()
         if (button->text() == "Help") button->click();
     }
     QCOMPARE(shown, 2);
+}
+
+void TestObd2Window::testMakeDbc()
+{
+    QString loadedPath;
+    int loadedBus = -1;
+    QList<quint32> loadedEcus;
+    window->setDbcLoader([&](const QString &path, int bus, const QList<quint32> &ecus, QString *) {
+        loadedPath = path;
+        loadedBus = bus;
+        loadedEcus = ecus;
+        return true;
+    });
+
+    QTemporaryDir dir;
+    QString path = dir.filePath("obd2.dbc");
+    QString error;
+    QVERIFY2(window->makeDbc(path, &error), qPrintable(error));
+    QCOMPARE(loadedPath, path);
+    QCOMPARE(loadedBus, 0);
+    QCOMPARE(loadedEcus.size(), 8); //nothing discovered: 0x7E8-0x7EF
+    QCOMPARE(loadedEcus.first(), 0x7E8u);
+    QCOMPARE(loadedEcus.last(), 0x7EFu);
+    QVERIFY(window->statusText().contains("attached to bus 0"));
+
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    QString text = QString::fromUtf8(file.readAll());
+    QVERIFY(text.startsWith("VERSION"));
+    QVERIFY(text.contains("BO_ 2024 OBD2_ECU_7E8: 8"));
+    QVERIFY(text.contains("BO_ 2031 OBD2_ECU_7EF: 8"));
+    QVERIFY(text.contains("SG_MUL_VAL_ 2024 PID_0C_EngineSpeed PID 12-12;"));
+
+    //29-bit: the usual source addresses 0x10-0x17
+    QComboBox *addressing = window->findChild<QComboBox *>("addressingCombo");
+    QVERIFY(addressing);
+    addressing->setCurrentIndex(1);
+    QCOMPARE(window->dbcEcus().first(), 0x18DAF110u);
+    QCOMPARE(window->dbcEcus().size(), 8);
+}
+
+void TestObd2Window::testMakeDbcAfterDiscovery()
+{
+    window->discover();
+    receive(0x7E9, "06410080000000");
+    receive(0x7E8, "06410080000000");
+    advance(50);
+    QCOMPARE(window->dbcEcus(), QList<quint32>({0x7E8, 0x7E9})); //only those found, in order
+}
+
+void TestObd2Window::testMakeDbcFails()
+{
+    window->setDbcLoader([](const QString &, int, const QList<quint32> &, QString *error) {
+        *error = "already loaded";
+        return false;
+    });
+    QTemporaryDir dir;
+    QString error;
+    QVERIFY(!window->makeDbc(dir.filePath("obd2.dbc"), &error));
+    QCOMPARE(error, QString("already loaded"));
+
+    QVERIFY(!window->makeDbc(dir.filePath("no/such/folder/obd2.dbc"), &error));
+    QVERIFY(!error.isEmpty());
+}
+
+void TestObd2Window::testPolledSignals()
+{
+    QVERIFY(window->polledSignals().isEmpty());
+    window->setPolled(0, 0x0C, true);        //all ECUs: one signal for each of the 8
+    window->setPolled(0x7E8, 0x14, true);    //an oxygen sensor: two values
+    QList<Obd2Window::GraphSignal> sigs = window->polledSignals();
+    QCOMPARE(sigs.size(), 10);
+    QVERIFY(sigs.contains({0x7E8, "PID_0C_EngineSpeed"}));
+    QVERIFY(sigs.contains({0x7EF, "PID_0C_EngineSpeed"}));
+    QVERIFY(sigs.contains({0x7E8, "PID_14_O2S1_Voltage"}));
+    QVERIFY(sigs.contains({0x7E8, "PID_14_O2S1_ShortTermFuelTrim"}));
+}
+
+void TestObd2Window::testGraphPolledPids()
+{
+    window->graphPolledPids();
+    QVERIFY(window->statusText().contains("Tick"));
+
+    int calls = 0;
+    QList<Obd2Window::GraphSignal> got;
+    window->setGraphOpener([&](int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error) {
+        calls++;
+        got = sigs;
+        if (bus != 0) return false;
+        *error = "No DBC file on bus 0";
+        return false;
+    });
+    window->setPolled(0x7E8, 0x0D, true);
+    window->graphPolledPids();
+    QCOMPARE(calls, 1);
+    QCOMPARE(got, QList<Obd2Window::GraphSignal>({{0x7E8, "PID_0D_VehicleSpeed"}}));
+    QVERIFY(window->statusText().contains("No DBC file"));
+
+    for (QPushButton *button : window->findChildren<QPushButton *>())
+    {
+        if (button->text() == "Graph Polled PIDs") button->click();
+    }
+    QCOMPARE(calls, 2);
+}
+
+void TestObd2Window::testClockWarning()
+{
+    bool separateClocks = true;
+    window->setClockCheck([&]() { return separateClocks; });
+    QVERIFY(window->warningText().contains("Use system clock"));
+
+    window->setListenOnlyCheck([](int) { return true; });
+    QVERIFY(window->warningText().contains("listen-only")); //both at once
+    QVERIFY(window->warningText().contains("Use system clock"));
+
+    window->setListenOnlyCheck([](int) { return false; });
+    separateClocks = false;
+    window->show(); //checked again when the window opens
+    QVERIFY(window->warningText().isEmpty());
 }
 
 //with SAVVYCAN_SCREENSHOTS set to a folder, the window is saved there as a picture

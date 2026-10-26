@@ -225,6 +225,8 @@ void GraphingWindow::updatedFrames(int numFrames)
                 thisFrame = modelFrames->at(i);
                 if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) && ( (graphParams[j].frameLen == -1) || (graphParams[j].frameLen == thisFrame.payload().length()) ) )
                 {
+                    //a multiplexed signal is only in the frames carrying its multiplexor value (as createGraph checks)
+                    if (graphParams[j].associatedSignal && !graphParams[j].associatedSignal->isSignalInMessage(thisFrame)) continue;
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
                 }
