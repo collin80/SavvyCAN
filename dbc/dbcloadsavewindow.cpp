@@ -268,6 +268,16 @@ void DBCLoadSaveWindow::addFileRow(DBCFile *file)
     }
 }
 
+void DBCLoadSaveWindow::addLoadedFile(DBCFile *file)
+{
+    if (!file) return;
+    int bus = file->getAssocBus();
+    addFileRow(file);
+    inhibitCellProcessing = true;
+    ui->tableFiles->item(ui->tableFiles->rowCount() - 1, 1)->setText(QString::number(bus));
+    inhibitCellProcessing = false;
+}
+
 void DBCLoadSaveWindow::loadJSON()
 {
 

@@ -259,6 +259,8 @@ private:
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);
+    bool attachObd2Dbc(const QString &path, int bus, const QList<quint32> &ecus, QString *error);
+    bool graphObd2Signals(int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error);
     void readSettings();
     void writeSettings();
     bool eventFilter(QObject *obj, QEvent *event);
