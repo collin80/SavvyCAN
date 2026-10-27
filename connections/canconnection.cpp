@@ -219,6 +219,24 @@ int CANConnection::getSerialSpeed() const{
   return mSerialSpeed;
 }
 
+bool CANConnection::getStoppedBusSettings(int bus, CANBus &settings) const
+{
+    if ((mThread_p && mThread_p->isRunning()) ||
+        (!mThread_p && thread() != QThread::currentThread()) ||
+        bus < 0 || bus >= mBusData.size()) return false;
+    settings = mBusData[bus].mBus;
+    return true;
+}
+
+bool CANConnection::setInitialBusSettings(int bus, CANBus settings)
+{
+    if ((mThread_p && mThread_p->isRunning()) ||
+        (!mThread_p && thread() != QThread::currentThread()) ||
+        mStarted || bus < 0 || bus >= mBusData.size()) return false;
+    mBusData[bus].mBus = settings;
+    return true;
+}
+
 
 bool CANConnection::isConfigured(int pBusId) {
     if( pBusId < 0 || pBusId >= getNumBuses())

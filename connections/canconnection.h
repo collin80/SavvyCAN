@@ -58,6 +58,18 @@ public:
      */
     int getSerialSpeed() const;
 
+    /** Cached configuration, including constructor values not yet configured by
+     * hardware. Call after stop(), with start/stop serialized by the controller.
+     * No worker may be running; threadless devices must be accessed by their owner.
+     * Unlike getBusSettings(), this never queues a call to a stopped worker.
+     */
+    Q_INVOKABLE bool getStoppedBusSettings(int bus, CANBus &settings) const;
+
+    /** Seed constructor configuration before the first start(). Does not mark
+     * hardware configured or call a backend. Runtime updates use setBusSettings().
+     */
+    Q_INVOKABLE bool setInitialBusSettings(int bus, CANBus settings);
+
     /**
      * @brief getPort
      * @return returns the port name of the device
