@@ -2092,9 +2092,11 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CANFrame>* frames)
             QList<QByteArray> tokens = line.split(',');
             if (tokens.length() >= 5)
             {
-                if (tokens[0].length() > 3)
+                bool hasTimestamp;
+                quint64 tstamp = tokens[0].toULongLong(&hasTimestamp);
+                // Native CSV timestamps are microseconds, including values below 1000.
+                if (hasTimestamp || tokens[0].length() > 3)
                 {
-                    quint64 tstamp = tokens[0].toULongLong();
                     if (tstamp == 0) tstamp = (quint64)(tokens[0].toLongLong());
                     thisFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tstamp));
                 }
