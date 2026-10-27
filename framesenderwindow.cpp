@@ -723,11 +723,11 @@ void FrameSenderWindow::processModifierText(int line)
 
     //yeah, lots of operations on this one line but it's for a good cause. Removes the convenience English versions of the
     //logical operators and replaces them with the math equivs. Also uppercases and removes all superfluous whitespace
-    modString = ui->tableSender->item(line, 8)->text().toUpper().trimmed().replace("AND", "&").replace("XOR", "^").replace("OR", "|").replace(" ", "");
+    modString = ui->tableSender->item(line, ST_COLS::SENDTAB_COL_MODS)->text().toUpper().trimmed().replace("AND", "&").replace("XOR", "^").replace("OR", "|").replace(" ", "");
+    sendingData[line].modifiers.clear();
     if (modString != "")
     {
         QStringList mods = modString.split(',');
-        sendingData[line].modifiers.clear();
         sendingData[line].modifiers.reserve(mods.length());
         for (int i = 0; i < mods.length(); i++)
         {
