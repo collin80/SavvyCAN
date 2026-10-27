@@ -50,6 +50,7 @@ private slots:
     void updatedFrames(int);
 
 private:
+    friend class TestFrameSender;
     Ui::FrameSenderWindow *ui;
     QList<FrameSendData> sendingData;
     QHash<int, CANFrame> frameCache; //hash with frame ID as the key and the most recent frame as the value
