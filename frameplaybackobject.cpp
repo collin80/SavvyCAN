@@ -35,6 +35,7 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
 
     //only send frame out if its ID is checked in the list. Otherwise discard it.
     CANFrame *thisFrame = &currentSeqItem->data[currentPosition];
+    const quint64 timestamp = thisFrame->timeStamp().microSeconds();
     uint32_t originalBus = thisFrame->bus;
     if (currentSeqItem->idFilters.find(thisFrame->frameId()).value())
     {
@@ -92,30 +93,13 @@ quint64 FramePlaybackObject::updatePosition(bool forward)
         }
     }
 
-    return thisFrame->timeStamp().microSeconds();
+    return timestamp;
 }
 
-quint64 FramePlaybackObject::peekPosition(bool forward)
+quint64 FramePlaybackObject::peekPosition()
 {
-    int peekCurrentPosition = currentPosition;
-    if (forward)
-    {
-        if (peekCurrentPosition < (currentSeqItem->data.count() - 1)) peekCurrentPosition++; //still in same file so keep going
-        else //hit the end of the current file
-        {
-            return 0xFFFFFFFFFFFFFFFFull;
-        }
-    }
-    else
-    {
-        if (peekCurrentPosition > 0) peekCurrentPosition--;
-        else //hit the beginning of the current sequence
-        {
-            return 0xFFFFFFFFFFFFFFFFull;
-        }
-    }
-    CANFrame *thisFrame = &currentSeqItem->data[peekCurrentPosition];
-    return thisFrame->timeStamp().microSeconds();
+    // currentPosition is the next row updatePosition will send.
+    return currentSeqItem->data[currentPosition].timeStamp().microSeconds();
 }
 
 void FramePlaybackObject::piStart()
@@ -331,6 +315,40 @@ void FramePlaybackObject::setPlaybackInterval(int interval)
     playbackTimer->setInterval(interval);
 }
 
+void FramePlaybackObject::processOriginalTiming(quint64 elapsed)
+{
+    if (!playbackActive) return;
+    if (!currentSeqItem || currentPosition < 0 || currentPosition >= currentSeqItem->data.count())
+    {
+        playbackActive = false;
+        playbackTimer->stop();
+        return;
+    }
+
+    if (playbackForward)
+    {
+        const quint64 maximum = 0xFFFFFFFFFFFFFFFFull;
+        playbackLastTimeStamp += qMin(elapsed, maximum - playbackLastTimeStamp);
+    }
+    else playbackLastTimeStamp -= qMin(elapsed, playbackLastTimeStamp);
+
+    while (playbackActive)
+    {
+        const quint64 timestamp = peekPosition();
+        if (playbackForward ? timestamp > playbackLastTimeStamp : timestamp < playbackLastTimeStamp) break;
+        const bool endOfPass = playbackForward ? currentPosition == currentSeqItem->data.count() - 1
+                                               : currentPosition == 0;
+        updatePosition(playbackForward);
+        if (endOfPass)
+        {
+            // Never catch up into another pass in this tick: equal timestamps could spin forever.
+            // A repeated pass starts at its first due row on the following tick.
+            if (playbackActive) playbackLastTimeStamp = peekPosition();
+            break;
+        }
+    }
+}
+
 void FramePlaybackObject::timerTriggered()
 {
     sendingBuffer.clear();
@@ -340,38 +358,7 @@ void FramePlaybackObject::timerTriggered()
         //get elapsed microseconds since last tick (in case timer skips or is otherwise inaccurate, though there are no guarantees about elapsed timer either)
         quint64 elapsed = playbackElapsed.nsecsElapsed() / 1000;
         playbackElapsed.start();
-        if (playbackForward)
-        {
-            playbackLastTimeStamp += elapsed;
-            //qDebug() << playbackLastTimeStamp;
-            //qDebug() << "El: " << elapsed;
-            while (peekPosition(true) <= playbackLastTimeStamp)
-            {
-                updatePosition(true);
-            }
-            if (peekPosition(true) == 0xFFFFFFFFFFFFFFFFull)
-            {
-                updatePosition(true); //this'll go to the next log (if there is one)
-                if (currentSeqItem->data[currentPosition].timeStamp().microSeconds() > 1000)
-                    playbackLastTimeStamp = currentSeqItem->data[currentPosition].timeStamp().microSeconds() - 1000;
-                else playbackLastTimeStamp = 0;
-            }
-        }
-        else
-        {
-            if (playbackLastTimeStamp > elapsed)
-                playbackLastTimeStamp -= elapsed;
-            else playbackLastTimeStamp = 0;
-            while (peekPosition(false) >= playbackLastTimeStamp && peekPosition(false) != 0xFFFFFFFFFFFFFFFFull)
-            {
-                updatePosition(false);
-            }
-            if (peekPosition(false) == 0xFFFFFFFFFFFFFFFFull)
-            {
-                updatePosition(false); //this'll go to the next log (if there is one)
-                playbackLastTimeStamp = currentSeqItem->data[currentPosition].timeStamp().microSeconds() + 1000;
-            }
-        }
+        processOriginalTiming(elapsed);
         statusCounter++;
     }
     else
