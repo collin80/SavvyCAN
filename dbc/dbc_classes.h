@@ -110,6 +110,7 @@ public: //TODO: Clean up this class so that not everything is public. There is o
     bool isMultiplexor = false;
     bool isMultiplexed = false;
     void addMultiplexRange(int min, int max);
+    void clearMultiplexRanges();
     bool hasExtendedMultiplexing = false;
     QList<DBC_SIGNAL *> multiplexedChildren;
     DBC_SIGNAL *multiplexParent = nullptr;

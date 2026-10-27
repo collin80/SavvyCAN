@@ -673,13 +673,12 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
     QRegularExpressionMatch match;
 
     qDebug() << "Found a multiplex definition line";
-    regex.setPattern("^SG\\_MUL\\_VAL\\_ (\\d+) ([-\\w]+) ([-\\w]+) ((?:\\d+\\-\\d+[\\s]*[\\,]?[\\s]*)*)");
+    regex.setPattern("^SG_MUL_VAL_ (\\d+) ([-\\w]+) ([-\\w]+) (\\d+-\\d+(?:\\s*,\\s*\\d+-\\d+)*)\\s*;$");
     match = regex.match(line);
     //captured 1 is message ID
     //Captured 2 is signal name
     //Captured 3 is parent multiplexor
-    //captured 4 is the lower bound
-    //captured 5 is the upper bound
+    //Captured 4 is the complete comma-separated range list.
     if (match.hasMatch())
     {
         DBC_MESSAGE *msg = messageHandler->findMsgByID(match.captured(1).toULong() & 0x1FFFFFFFUL);
@@ -691,21 +690,32 @@ bool DBCFile::parseSignalMultiplexValueLine(QString line)
                 DBC_SIGNAL *parentSignal = msg->sigHandler->findSignalByName(match.captured(3));
                 if (parentSignal != nullptr)
                 {
-                    const QStringList ranges = match.captured(4).split(QChar(','), Qt::SkipEmptyParts);
+                    if (thisSignal->multiplexParent && thisSignal->multiplexParent != parentSignal)
+                        return false;
+
+                    QList<QPair<int, int>> parsedRanges;
+                    const QStringList ranges = match.captured(4).split(QChar(','));
                     for (const QString &range : ranges) {
-                        //now need to add "thisSignal" to the children multiplexed signals of "parentSignal"
                         const QStringList rangeSides = range.trimmed().split(QChar('-'));
-                        if (rangeSides.count() != 2) {
-                            qDebug() << QString("Malformed range definition: '%2' found in the multiplexed signal: %1")
-                                            .arg(match.captured(1).arg(range.trimmed()));
+                        bool minOk, maxOk;
+                        const int rangeMin = rangeSides.at(0).toInt(&minOk);
+                        const int rangeMax = rangeSides.at(1).toInt(&maxOk);
+                        if (!minOk || !maxOk || rangeMin > rangeMax)
                             return false;
-                        }
-                        int rangeMin = rangeSides.at(0).toInt();
-                        int rangeMax = rangeSides.at(1).toInt();
-                        thisSignal->multiplexParent = parentSignal;
-                        thisSignal->addMultiplexRange(rangeMin, rangeMax);
+                        parsedRanges.append(qMakePair(rangeMin, rangeMax));
                     }
-                    parentSignal->multiplexedChildren.append(thisSignal);
+
+                    // The first explicit entry supersedes the SG_ mN fallback.
+                    // Validate everything before changing that fallback or the links.
+                    if (!thisSignal->multiplexParent)
+                        thisSignal->clearMultiplexRanges();
+                    for (const auto &range : parsedRanges)
+                        thisSignal->addMultiplexRange(range.first, range.second);
+                    thisSignal->multiplexParent = parentSignal;
+                    // Even a singleton must retain its explicitly specified parent.
+                    thisSignal->hasExtendedMultiplexing = true;
+                    if (!parentSignal->multiplexedChildren.contains(thisSignal))
+                        parentSignal->multiplexedChildren.append(thisSignal);
                     return true;
                 }
             }
