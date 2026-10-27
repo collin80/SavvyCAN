@@ -25,6 +25,7 @@ class ConnectionWindow;
 class ConnectionWindow : public QDialog
 {
     Q_OBJECT
+    friend class TestCapturePause;
 
 public:
     explicit ConnectionWindow(QWidget *parent = 0);
@@ -57,6 +58,7 @@ private slots:
     void readPendingDatagrams();
 
 private:
+    bool mCaptureSuspended;
     Ui::ConnectionWindow *ui;    
     QSettings *settings;
     CANConnectionModel *connModel;

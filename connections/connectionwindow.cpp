@@ -14,6 +14,7 @@
 
 ConnectionWindow::ConnectionWindow(QWidget *parent) :
     QDialog(parent),
+    mCaptureSuspended(false),
     ui(new Ui::ConnectionWindow)
 {
     ui->setupUi(this);
@@ -343,6 +344,7 @@ void ConnectionWindow::connectionStatus(CANConStatus pStatus)
 
 void ConnectionWindow::setSuspendAll(bool pSuspend)
 {
+    mCaptureSuspended = pSuspend;
     QList<CANConnection*>& conns = CANConManager::getInstance()->getConnections();
 
     foreach(CANConnection* conn_p, conns)
@@ -533,7 +535,7 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
             connect(conn_p, &CANConnection::debugOutput, this, &ConnectionWindow::getDebugText, Qt::UniqueConnection);
         }
         /*TODO add return value and checks */
-        conn_p->start();
+        conn_p->start(mCaptureSuspended);
     }
     return conn_p;
 }

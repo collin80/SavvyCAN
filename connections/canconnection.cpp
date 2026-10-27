@@ -69,6 +69,13 @@ CANConnection::~CANConnection()
 }
 
 
+void CANConnection::start(bool initiallySuspended)
+{
+    // Initialize before the worker can receive its first frame.
+    setCapSuspended(initiallySuspended);
+    start();
+}
+
 void CANConnection::start()
 {
     if( mThread_p && (mThread_p != QThread::currentThread()) )
