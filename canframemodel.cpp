@@ -220,6 +220,35 @@ void CANFrameModel::setFilterState(unsigned int ID, bool state)
     sendRefresh();
 }
 
+void CANFrameModel::setFilterRangeState(
+        unsigned int minimumID,
+        unsigned int maximumID,
+        bool state)
+{
+    if (minimumID > maximumID) return;
+
+    bool changed = false;
+
+    QMap<int, bool>::iterator it =
+            filters.lowerBound(static_cast<int>(minimumID));
+
+    const QMap<int, bool>::iterator end =
+            filters.upperBound(static_cast<int>(maximumID));
+
+    while (it != end)
+    {
+        if (it.value() != state)
+        {
+            it.value() = state;
+            changed = true;
+        }
+
+        ++it;
+    }
+
+    if (changed) sendRefresh();
+}
+
 void CANFrameModel::setBusFilterState(unsigned int BusID, bool state)
 {
     if (!busFilters.contains(BusID)) return;

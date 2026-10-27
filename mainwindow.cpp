@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "can_structs.h"
 #include <QDateTime>
+#include <QCheckBox>
 #include <QFileDialog>
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
@@ -160,6 +161,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->cbOverwrite, &QAbstractButton::toggled, this, &MainWindow::overwriteToggled);
     connect(ui->cbPersistentFilters, &QAbstractButton::toggled, this, &MainWindow::presistentFiltersToggled);
     connect(ui->listFilters, &QListWidget::itemChanged, this, &MainWindow::filterListItemChanged);
+    connect(ui->cbFilterStandardIds, &QAbstractButton::clicked, this, &MainWindow::filterStandardIdsClicked);
+    connect(ui->cbFilterExtendedIds, &QAbstractButton::clicked, this, &MainWindow::filterExtendedIdsClicked);
     connect(ui->listBusFilters, &QListWidget::itemChanged, this, &MainWindow::busFilterListItemChanged);
 
     connect(ui->btnCaptureToggle, &QAbstractButton::clicked, this, &MainWindow::toggleCapture);
@@ -937,8 +940,13 @@ void MainWindow::presistentFiltersToggled(bool state)
 void MainWindow::updateFilterList()
 {
     if (model == nullptr) return;
-    const QMap<int, bool> *filters = model->getFiltersReference();
-    const QMap<int, bool> *busFilters = model->getBusFiltersReference();
+
+    const QMap<int, bool> *filters =
+            model->getFiltersReference();
+
+    const QMap<int, bool> *busFilters =
+            model->getBusFiltersReference();
+
     if (filters == nullptr || busFilters == nullptr) return;
 
     qDebug() << "updateFilterList called on MainWindow";
@@ -948,36 +956,171 @@ void MainWindow::updateFilterList()
     ui->listFilters->clear();
     ui->listBusFilters->clear();
 
-    if (filters->isEmpty()) return;
-
     QMap<int, bool>::const_iterator filterIter;
-    for (filterIter = filters->begin(); filterIter != filters->end(); ++filterIter)
+
+    for (filterIter = filters->begin();
+         filterIter != filters->end();
+         ++filterIter)
     {
-        /*QListWidgetItem *thisItem = */FilterUtility::createCheckableFilterItem(filterIter.key(), filterIter.value(), ui->listFilters);
+        FilterUtility::createCheckableFilterItem(
+                    filterIter.key(),
+                    filterIter.value(),
+                    ui->listFilters);
     }
 
-    if (busFilters->isEmpty()) return;
-
-    for (filterIter = busFilters->begin(); filterIter != busFilters->end(); ++filterIter)
+    for (filterIter = busFilters->begin();
+         filterIter != busFilters->end();
+         ++filterIter)
     {
-        /*QListWidgetItem *thisItem = */ FilterUtility::createCheckableBusFilterItem(filterIter.key(), filterIter.value(), ui->listBusFilters);
+        FilterUtility::createCheckableBusFilterItem(
+                    filterIter.key(),
+                    filterIter.value(),
+                    ui->listBusFilters);
     }
+
     inhibitFilterUpdate = false;
+
+    updateFilterGroupCheckStates();
 }
 
-void MainWindow::filterListItemChanged(QListWidgetItem *item)
+void MainWindow::filterListItemChanged(
+        QListWidgetItem *item)
 {
     if (inhibitFilterUpdate) return;
-    //qDebug() << item->text();
 
-    // strip away possible filter label
     int ID = FilterUtility::getIdAsInt(item);
+
     bool isSet = false;
-    if (item->checkState() == Qt::Checked) isSet = true;
+
+    if (item->checkState() == Qt::Checked)
+        isSet = true;
 
     model->setFilterState(ID, isSet);
 
+    updateFilterGroupCheckStates();
     manageRowExpansion();
+}
+
+void MainWindow::filterStandardIdsClicked(bool checked)
+{
+    setFilterRange(0x000U, 0x7FFU, checked);
+}
+
+void MainWindow::filterExtendedIdsClicked(bool checked)
+{
+    setFilterRange(0x800U, 0x1FFFFFFFU, checked);
+}
+
+void MainWindow::setFilterRange(
+        unsigned int minimumID,
+        unsigned int maximumID,
+        bool state)
+{
+    if (model == nullptr) return;
+
+    inhibitFilterUpdate = true;
+
+    const Qt::CheckState checkState =
+            state ? Qt::Checked : Qt::Unchecked;
+
+    for (int i = 0;
+         i < ui->listFilters->count();
+         ++i)
+    {
+        QListWidgetItem *item =
+                ui->listFilters->item(i);
+
+        const unsigned int ID =
+                static_cast<unsigned int>(
+                    FilterUtility::getIdAsInt(item));
+
+        if (ID >= minimumID && ID <= maximumID)
+            item->setCheckState(checkState);
+    }
+
+    inhibitFilterUpdate = false;
+
+    model->setFilterRangeState(
+                minimumID,
+                maximumID,
+                state);
+
+    updateFilterGroupCheckStates();
+    manageRowExpansion();
+}
+
+void MainWindow::updateFilterGroupCheckStates()
+{
+    if (model == nullptr) return;
+
+    const QMap<int, bool> *filters =
+            model->getFiltersReference();
+
+    if (filters == nullptr) return;
+
+    int standardCount = 0;
+    int standardSelected = 0;
+
+    int extendedCount = 0;
+    int extendedSelected = 0;
+
+    for (QMap<int, bool>::const_iterator it =
+             filters->begin();
+         it != filters->end();
+         ++it)
+    {
+        if (it.key() >= 0 &&
+            it.key() <= 0x7FF)
+        {
+            ++standardCount;
+
+            if (it.value())
+                ++standardSelected;
+        }
+        else if (it.key() >= 0x800 &&
+                 it.key() <= 0x1FFFFFFF)
+        {
+            ++extendedCount;
+
+            if (it.value())
+                ++extendedSelected;
+        }
+    }
+
+    const auto setGroupState =
+            [](QCheckBox *checkBox,
+               int selectedCount,
+               int totalCount)
+    {
+        checkBox->setEnabled(totalCount > 0);
+
+        if (totalCount == 0 ||
+            selectedCount == 0)
+        {
+            checkBox->setCheckState(
+                        Qt::Unchecked);
+        }
+        else if (selectedCount == totalCount)
+        {
+            checkBox->setCheckState(
+                        Qt::Checked);
+        }
+        else
+        {
+            checkBox->setCheckState(
+                        Qt::PartiallyChecked);
+        }
+    };
+
+    setGroupState(
+                ui->cbFilterStandardIds,
+                standardSelected,
+                standardCount);
+
+    setGroupState(
+                ui->cbFilterExtendedIds,
+                extendedSelected,
+                extendedCount);
 }
 
 void MainWindow::busFilterListItemChanged(QListWidgetItem *item)
@@ -1004,6 +1147,7 @@ void MainWindow::filterSetAll()
     }
     inhibitFilterUpdate = false;
     model->setAllFilters(true);
+    updateFilterGroupCheckStates();
 
     manageRowExpansion();
 }
@@ -1017,6 +1161,7 @@ void MainWindow::filterClearAll()
     }
     inhibitFilterUpdate = false;
     model->setAllFilters(false);
+    updateFilterGroupCheckStates();
 }
 
 void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CANFrame> frames)
