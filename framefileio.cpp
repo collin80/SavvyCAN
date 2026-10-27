@@ -4041,6 +4041,25 @@ bool FrameFileIO::loadKvaserFile(QString filename, QVector<CANFrame> *frames, bo
     return !foundErrors;
 }
 
+static bool parseCabanaFields(const QList<QByteArray> &tokens, quint32 &id, QByteArray &payload)
+{
+    if (tokens.size() != 4) return false;
+
+    const QByteArray idText = tokens[1].trimmed();
+    const bool hexId = idText.startsWith("0x") || idText.startsWith("0X");
+    bool validId;
+    // Unprefixed identifiers remain decimal, including leading zeros.
+    id = idText.toUInt(&validId, hexId ? 16 : 10);
+    if (!validId || id > 0x1FFFFFFF) return false;
+
+    QByteArray data = tokens[3].trimmed();
+    if (data.startsWith("0x") || data.startsWith("0X")) data.remove(0, 2);
+    if (data.size() > 16 || data.size() % 2 != 0) return false;
+    payload = QByteArray::fromHex(data);
+    // This format's reader supports complete classical CAN byte sequences.
+    return payload.toHex().compare(data, Qt::CaseInsensitive) == 0;
+}
+
 bool FrameFileIO::isCabanaFile(QString filename)
 {
     QFile *inFile = new QFile(filename);
@@ -4066,12 +4085,9 @@ bool FrameFileIO::isCabanaFile(QString filename)
             if (line.length() > 2)
             {
                 QList<QByteArray> tokens = line.split(',');
-                if (tokens.length() >= 3 && tokens.length() < 5)
-                {
-                    int ID = tokens[1].toInt();
-                    if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
-                }
-                else isMatch = false;
+                quint32 id;
+                QByteArray payload;
+                if (!parseCabanaFields(tokens, id, payload)) isMatch = false;
             }
         }
     }
@@ -4088,7 +4104,7 @@ bool FrameFileIO::isCabanaFile(QString filename)
 //Cabana uses a CSV file with four columns
 //time,addr,bus,data
 //time is in seconds, with quite a bit of resolution after the decimal point. Does not start at 0, probably time-since-boot?
-//addr is the arbitrarion ID in decimal, not hex
+//addr is the arbitration ID in decimal or 0x-prefixed hexadecimal
 //bus is which CAN bus this was captured on
 //data is the data in hex
 //There also may or may not be some blank lines in between the csv column headers and the beginning of data.
@@ -4124,7 +4140,9 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
-            if (tokens.length() >= 3)
+            quint32 id;
+            QByteArray payload;
+            if (parseCabanaFields(tokens, id, payload))
             {
                 if (tokens[0].length() > 1)
                 {
@@ -4152,7 +4170,7 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
                     lastTimeStamp = thisFrame.timeStamp().microSeconds();
                 }
 
-                thisFrame.setFrameId(tokens[1].toInt());
+                thisFrame.setFrameId(id);
                 if (thisFrame.frameId() > 0x7ff) thisFrame.setExtendedFrameFormat(true);
                     else thisFrame.setExtendedFrameFormat(false);
 
@@ -4160,29 +4178,7 @@ bool FrameFileIO::loadCabanaFile(QString filename, QVector<CANFrame>* frames)
 
                 thisFrame.isReceived = true;
                 thisFrame.bus = tokens[2].toInt();
-                QByteArray bytes(8,0);
-                {
-                    unsigned long long int tempData = tokens[3].toULongLong(nullptr, 16);
-                    bytes[0] = ((tempData >> 56) & 0xFF);
-                    bytes[1] = ((tempData >> 48) & 0xFF);
-                    bytes[2] = ((tempData >> 40) & 0xFF);
-                    bytes[3] = ((tempData >> 32) & 0xFF);
-                    bytes[4] = ((tempData >> 24) & 0xFF);
-                    bytes[5] = ((tempData >> 16) & 0xFF);
-                    bytes[6] = ((tempData >> 8) & 0xFF);
-                    bytes[7] = (tempData & 0xFF);
-                }
-                
-                // Shift the bytes back correctly so we have a frame that is the proper length
-                unsigned int framelength = tokens[3].length() / 2;
-                QByteArray finalbytes(framelength,0);
-                uint8_t bytes_shifted_by = 8 - framelength;
-                for (unsigned int j = 0; j < framelength; j++)
-                {
-                    finalbytes[j] = bytes[j + bytes_shifted_by];
-                }
-                
-                thisFrame.setPayload(finalbytes);
+                thisFrame.setPayload(payload);
                 frames->append(thisFrame);
             }
             else foundErrors = true;
