@@ -179,7 +179,6 @@ void ISOTP_InterpreterWindow::clearList()
  */
 void ISOTP_InterpreterWindow::saveList()
 {
-    QString buildString;
     QString filename;
     QFileDialog dialog(this);
     QSettings settings;
@@ -211,6 +210,7 @@ void ISOTP_InterpreterWindow::saveList()
             int rows = messages.count();
             for (int r = 0 ; r < rows; r++)
             {
+                QString buildString;
                 ISOTP_MESSAGE msg = messages.at(r);
                 const unsigned char *data = reinterpret_cast<const unsigned char *>(msg.payload().constData());
                 int dataLen = msg.payload().length();
