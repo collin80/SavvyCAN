@@ -95,6 +95,12 @@ public:
      */
     void setConsoleOutput(bool state);
 
+    /**
+     * @brief start a new connection with its initial capture state
+     * @pre The connection has not been started yet.
+     */
+    void start(bool initiallySuspended);
+
 
 signals:
     /*not implemented yet */
