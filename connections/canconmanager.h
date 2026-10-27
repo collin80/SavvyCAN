@@ -17,6 +17,7 @@ public:
 
     void add(CANConnection* pConn_p);
     void remove(CANConnection* pConn_p);
+    // Changes registration only; the caller manages connection shutdown and deletion.
     void replace(int idx, CANConnection* pConn_p);
     QList<CANConnection*>& getConnections();
     void stopAllConnections();
