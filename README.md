@@ -2,6 +2,14 @@
 Qt based cross platform canbus tool
 (C) 2015-2024 Collin Kidder
 
+NOTE
+======================================= 
+
+The master branch is now considered legacy. 
+All new work should target QT6WIP. 
+There are many new features over there that are worth seeing.
+
+
 A Qt5 based cross platform tool which can be used to load, save, and capture canbus frames.
 This tool is designed to help with visualization, reverse engineering, debugging, and
 capturing of canbus frames.
