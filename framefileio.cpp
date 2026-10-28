@@ -1781,7 +1781,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                             return false;
                         }
                         thisFrame.isReceived = tokens[3].toUpper().contains("RX");
-                        thisFrame.bus = tokens[2].toInt();
+                        thisFrame.bus = qMax(1, tokens[2].toInt()) - 1; //ASC channels start at 1
 
                         if (tokens[5].at(0) >= '0' && tokens[5].at(0) <= '9')
                         {
@@ -1849,7 +1849,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
                             return false;
                         }
                         thisFrame.isReceived = tokens[3].toUpper().contains("RX");
-                        thisFrame.bus = tokens[1].toInt();
+                        thisFrame.bus = qMax(1, tokens[1].toInt()) - 1; //ASC channels start at 1
                         if (tokens[4] == "r") thisFrame.setFrameType(QCanBusFrame::RemoteRequestFrame);
                         for (int d = 6; d < (6 + payloadLen); d++)
                         {
