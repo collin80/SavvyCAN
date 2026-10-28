@@ -14,6 +14,21 @@ CONFIG(release, debug|release):DEFINES += QT_NO_DEBUG_OUTPUT
 
 CONFIG += c++17
 CONFIG += NO_UNIT_TESTS
+CONFIG += WITH_PANDA
+
+# Optional comma.ai Panda USB support.
+# Build with: qmake CONFIG+=WITH_PANDA
+# Requires libusb-1.0: sudo apt install libusb-1.0-0-dev  (Linux)
+#                      brew install libusb               (macOS)
+#                      vcpkg install libusb              (Windows)
+contains(CONFIG, WITH_PANDA) {
+    DEFINES += WITH_PANDA
+    SOURCES += connections/panda_usb.cpp
+    HEADERS += connections/panda_usb.h
+    CONFIG  += link_pkgconfig
+    unix:  PKGCONFIG += libusb-1.0
+    win32: LIBS      += -lusb-1.0
+}
 
 DEFINES += QCUSTOMPLOT_USE_OPENGL
 
