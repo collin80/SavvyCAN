@@ -23,6 +23,7 @@ namespace CANCon {
         LAWICEL,
         CANSERVER,
         CANLOGSERVER,
+        PANDA,
         NONE
     };
 }

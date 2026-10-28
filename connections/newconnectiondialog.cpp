@@ -1,6 +1,9 @@
 #include <QCanBus>
 #include "newconnectiondialog.h"
 #include "ui_newconnectiondialog.h"
+#ifdef WITH_PANDA
+#include "panda_usb.h"
+#endif
 
 NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QString>* kayakhosts, QWidget *parent) :
     QDialog(parent),
@@ -30,6 +33,11 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QSt
     connect(ui->rbLawicel, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbCANserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbCanlogserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+    connect(ui->rbPanda, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+
+#ifndef WITH_PANDA
+    ui->rbPanda->setVisible(false);
+#endif
 
     connect(ui->cbDeviceType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewConnectionDialog::handleDeviceTypeChanged);
     connect(ui->btnOK, &QPushButton::clicked, this, &NewConnectionDialog::handleCreateButton);
@@ -70,6 +78,7 @@ void NewConnectionDialog::handleConnTypeChanged()
     if (ui->rbMQTT->isChecked()) selectMQTT();
     if (ui->rbCANserver->isChecked()) selectCANserver();
     if (ui->rbCanlogserver->isChecked()) selectCANlogserver();
+    if (ui->rbPanda->isChecked()) selectPanda();
 }
 
 void NewConnectionDialog::handleDeviceTypeChanged()
@@ -299,6 +308,9 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
         case CANCon::CANLOGSERVER:
           ui->rbCanlogserver->setChecked(true);
           break;
+        case CANCon::PANDA:
+            ui->rbPanda->setChecked(true);
+            break;
         default: {}
     }
 
@@ -348,6 +360,13 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             ui->cbPort->setCurrentText(pPortName);
             break;
         }
+        case CANCon::PANDA:
+        {
+            int idx = ui->cbPort->findText(pPortName);
+            if (idx > -1) ui->cbPort->setCurrentIndex(idx);
+            else ui->cbPort->addItem(pPortName);
+            break;
+        }
         default: {}
     }
 }
@@ -365,6 +384,7 @@ QString NewConnectionDialog::getPortName()
         return ui->cbPort->currentText();
     case CANCon::CANSERVER:
     case CANCon::CANLOGSERVER:
+    case CANCon::PANDA:
         return ui->cbPort->currentText();
 
     default:
@@ -394,7 +414,8 @@ int NewConnectionDialog::getSerialSpeed()
 
 int NewConnectionDialog::getBusSpeed()
 {
-    if (getConnectionType() == CANCon::LAWICEL)
+    CANCon::type t = getConnectionType();
+    if (t == CANCon::LAWICEL || t == CANCon::PANDA)
     {
         return ui->cbCANSpeed->currentText().toInt();
     }
@@ -411,9 +432,43 @@ CANCon::type NewConnectionDialog::getConnectionType()
     if (ui->rbLawicel->isChecked()) return CANCon::LAWICEL;
     if (ui->rbCANserver->isChecked()) return CANCon::CANSERVER;
     if (ui->rbCanlogserver->isChecked()) return CANCon::CANLOGSERVER;
+    if (ui->rbPanda->isChecked()) return CANCon::PANDA;
     qDebug() << "getConnectionType: error";
 
     return CANCon::NONE;
+}
+
+void NewConnectionDialog::selectPanda()
+{
+    ui->lPort->setText("Panda Serial:");
+
+    ui->lblDeviceType->setHidden(true);
+    ui->cbDeviceType->setHidden(true);
+    ui->cbSerialSpeed->setHidden(true);
+    ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
+    ui->cbCANSpeed->setHidden(false);
+    ui->lblCANSpeed->setHidden(false);
+
+    if (ui->cbCANSpeed->count() == 0)
+    {
+        ui->cbCANSpeed->addItem("125000");
+        ui->cbCANSpeed->addItem("250000");
+        ui->cbCANSpeed->addItem("500000");
+        ui->cbCANSpeed->addItem("1000000");
+        ui->cbCANSpeed->setCurrentIndex(2); // default 500kbps
+    }
+
+    ui->cbPort->clear();
+    ui->cbPort->addItem("auto");
+
+#ifdef WITH_PANDA
+    QStringList pandas = PandaUSB::connected();
+    for (const QString& s : pandas)
+        ui->cbPort->addItem(s);
+#endif
 }
 
 bool NewConnectionDialog::isSerialBusAvailable()
