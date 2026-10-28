@@ -119,6 +119,20 @@
          </widget>
         </item>
         <item>
+         <widget class="QCheckBox" name="cbAskLogNotes">
+          <property name="text">
+           <string>Ask for notes (setup, scenario) when saving logs</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="cbAskCaptureNotes">
+          <property name="text">
+           <string>Ask for notes when capture starts (first bus connected, continuous logging)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbColorsByCanId">
           <property name="text">
            <string>Color rows by CAN ID</string>

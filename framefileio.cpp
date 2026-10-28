@@ -12,6 +12,7 @@
 
 #include "utility.h"
 #include "blfhandler.h"
+#include "lognotes.h"
 
 QFile FrameFileIO::continuousFile;
 
@@ -32,28 +33,118 @@ FrameFileIO::FrameFileIO()
 {
 }
 
+QStringList FrameFileIO::saveFilters()
+{
+    QStringList filters;
+    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));                // 0
+    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));   // 1
+    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));       // 2
+    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));             // 3
+    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)"))); // 4
+    filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));    // 5
+    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));             // 6
+    filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)"))); // 7
+    filters.append(QString(tr("Candump/Kayak (*.log)")));                   // 8
+    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));                // 9
+    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));       // 10
+    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));           // 11
+    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));               // 12
+    return filters;
+}
+
+bool FrameFileIO::saveFrameFileAs(QString &filename, int filterIndex, const QVector<CommFrame>* frameCache)
+{
+    bool result = false;
+
+    switch (filterIndex)
+    {
+    case 0:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveNativeCSVFile(filename, frameCache);
+        break;
+    case 1:
+        if (!filename.contains('.')) filename += ".txt";
+        result = saveCRTDFile(filename, frameCache);
+        break;
+    case 2:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveGenericCSVFile(filename, frameCache);
+        break;
+    case 3:
+        if (!filename.contains('.')) filename += ".log";
+        result = saveLogFile(filename, frameCache);
+        break;
+    case 4:
+        if (!filename.contains('.')) filename += ".log";
+        result = saveMicrochipFile(filename, frameCache);
+        break;
+    case 5:
+        if (!filename.contains('.')) filename += ".trace";
+        result = saveTraceFile(filename, frameCache);
+        break;
+    case 6:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveIXXATFile(filename, frameCache);
+        break;
+    case 7:
+        if (!filename.contains('.')) filename += ".can";
+        result = saveCANDOFile(filename, frameCache);
+        break;
+    case 8:
+        if (!filename.contains('.')) filename += ".log";
+        result = saveCanDumpFile(filename,frameCache);
+        break;
+    case 9:
+        if (!filename.contains('.')) filename += ".csv";
+        result = saveCabanaFile(filename, frameCache);
+        break;
+    case 10:
+        if (!filename.contains('.')) filename += ".asc";
+        result = saveCanalyzerASC(filename, frameCache);
+        break;
+    case 11:
+        if (!filename.contains('.')) filename += ".trc";
+        result = saveCARBUSAnalzyer(filename, frameCache);
+        break;
+    case 12:
+        if (!filename.contains('.')) filename += ".trc";
+        result = savePCANFile(filename, frameCache);
+        break;
+    }
+
+    return result;
+}
+
+bool FrameFileIO::saveLogNotes(const QString &filename, int filterIndex, const LogNotes &notes)
+{
+    if (filterIndex == 0) return notes.writeToNativeCSV(filename); //replaces any notes already in the log
+    if (notes.isEmpty()) return true;
+    return notes.writeSidecar(filename);
+}
+
+bool FrameFileIO::loadLogNotes(const QString &filename, LogNotes &notes)
+{
+    if (isNativeCSVFile(filename) && LogNotes::readFromNativeCSV(filename, notes)) return true;
+    return LogNotes::readSidecar(filename, notes);
+}
+
 bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* frameCache)
 {
     QString filename;
+    int filterIndex;
+    if (!pickSaveFile(filename, filterIndex)) return false;
+    if (!saveFrameFileWithProgress(filename, filterIndex, frameCache)) return false;
+    QStringList fileList = filename.split('/');
+    fileName = fileList[fileList.length() - 1];
+    return true;
+}
+
+bool FrameFileIO::pickSaveFile(QString &filename, int &filterIndex)
+{
     QFileDialog dialog(qApp->activeWindow());
     QSettings settings;
-    bool result = false;
 
-    QStringList filters;
-    filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));
-    filters.append(QString(tr("CRTD Logs (*.crt *.crtd *.CRT *.CRTD)")));
-    filters.append(QString(tr("Generic ID/Data CSV (*.csv *.CSV)")));
-    filters.append(QString(tr("BusMaster Log (*.log *.LOG)")));
-    filters.append(QString(tr("Microchip Log (*.can *.CAN *.log *.LOG)")));
-    filters.append(QString(tr("Vector Trace Files (*.trace *.TRACE)")));
-    filters.append(QString(tr("IXXAT MiniLog (*.csv *.CSV)")));
-    filters.append(QString(tr("CAN-DO Log (*.can *.avc *.evc *.qcc *.CAN *.AVC *.EVC *.QCC)")));
-    filters.append(QString(tr("Vehicle Spy (*.csv *.CSV)")));
-    filters.append(QString(tr("Candump/Kayak (*.log)")));
-    filters.append(QString(tr("Cabana Log (*.csv *.CSV)")));
-    filters.append(QString(tr("CANalyzer Ascii Log (*.asc *.ASC)")));
-    filters.append(QString(tr("CARBUS Analyzer (*.trc *.TRC)")));
-    filters.append(QString(tr("PCAN Viewer (*.trc *.TRC)")));
+    const QStringList filters = saveFilters();
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::AnyFile);
@@ -61,116 +152,33 @@ bool FrameFileIO::saveFrameFile(QString &fileName, const QVector<CommFrame>* fra
     dialog.setViewMode(QFileDialog::Detail);
     dialog.setAcceptMode(QFileDialog::AcceptSave);
 
-    if (dialog.exec() == QDialog::Accepted)
-    {
-        filename = dialog.selectedFiles()[0];
-
-        QProgressDialog progress(qApp->activeWindow());
-        progress.setWindowModality(Qt::WindowModal);
-        progress.setLabelText("Saving file...");
-        progress.setCancelButton(nullptr);
-        progress.setRange(0,0);
-        progress.setMinimumDuration(0);
-        progress.show();
-
-        qApp->processEvents();
-
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveNativeCSVFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".txt";
-            result = saveCRTDFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveGenericCSVFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[3])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = saveLogFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[4])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            result = saveMicrochipFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[5])
-        {
-            if (!filename.contains('.')) filename += ".trace";
-            result = saveTraceFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[6])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveIXXATFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[7])
-        {
-            if (!filename.contains('.')) filename += ".can";
-            result = saveCANDOFile(filename, frameCache);
-        }
-
-        if (dialog.selectedNameFilter() == filters[8])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveVehicleSpyFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[9])
-        {
-            if (!filename.contains('.')) filename += ".log";
-            saveCanDumpFile(filename,frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[10])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            result = saveCabanaFile(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[11])
-        {
-            if (!filename.contains('.')) filename += ".asc";
-            result = saveCanalyzerASC(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[12])
-        {
-            if (!filename.contains('.')) filename += ".trc";
-            result = saveCARBUSAnalzyer(filename, frameCache);
-        }
-        if (dialog.selectedNameFilter() == filters[13])
-        {
-            if (!filename.contains('.')) filename += ".trc";
-            result = savePCANFile(filename, frameCache);
-        }
-
-        progress.cancel();
-
-        if (result)
-        {
-            QStringList fileList = filename.split('/');
-            fileName = fileList[fileList.length() - 1];
-            settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
-            return true;
-        }
-        return false;
-    }
-    return false;
+    if (dialog.exec() != QDialog::Accepted) return false;
+    filename = dialog.selectedFiles()[0];
+    filterIndex = int(filters.indexOf(dialog.selectedNameFilter()));
+    settings.setValue("FileIO/LoadSaveDirectory", dialog.directory().path());
+    return true;
 }
 
-bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCache)
+bool FrameFileIO::saveFrameFileWithProgress(QString &filename, int filterIndex, const QVector<CommFrame>* frameCache)
 {
-    QString filename;
-    QFileDialog dialog;
-    QSettings settings;
-    bool result = false;
+    QProgressDialog progress(qApp->activeWindow());
+    progress.setWindowModality(Qt::WindowModal);
+    progress.setLabelText("Saving file...");
+    progress.setCancelButton(nullptr);
+    progress.setRange(0,0);
+    progress.setMinimumDuration(0);
+    progress.show();
 
+    qApp->processEvents();
+
+    const bool result = saveFrameFileAs(filename, filterIndex, frameCache);
+
+    progress.cancel();
+    return result;
+}
+
+QStringList FrameFileIO::loadFilters()
+{
     QStringList filters;
     filters.append(QString(tr("Autodetect File Type (*.*)")));              // 0
     filters.append(QString(tr("GVRET Logs (*.csv *.CSV)")));                // 1
@@ -200,6 +208,53 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
     filters.append(QString(tr("Wireshark SocketCAN (*.pcap *.PCAP")));      // 25
     filters.append(QString(tr("IXXAT CSV export (*.csv)")));                // 26
     filters.append(QString(tr("CANWise Log (*.log)")));                     // 27
+    return filters;
+}
+
+bool FrameFileIO::loadFrameFileAs(const QString &filename, int filterIndex, QVector<CommFrame>* frameCache)
+{
+    switch (filterIndex)
+    {
+    case 0: return autoDetectLoadFile(filename, frameCache);
+    case 1: return loadNativeCSVFile(filename, frameCache);
+    case 2: return loadCRTDFile(filename, frameCache);
+    case 3: return loadLogFile(filename, frameCache);
+    case 4: return loadMicrochipFile(filename, frameCache);
+    case 5: return loadTraceFile(filename, frameCache);
+    case 6: return loadIXXATFile(filename, frameCache);
+    case 7: return loadCANDOFile(filename, frameCache);
+    case 8: return loadVehicleSpyFile(filename, frameCache);
+    case 9: return loadCanDumpFile(filename, frameCache);
+    case 10: return loadLawicelFile(filename, frameCache);
+    case 11: return loadPCANFile(filename, frameCache);
+    case 12: return loadKvaserFile(filename, frameCache, false);
+    case 13: return loadKvaserFile(filename, frameCache, true);
+    case 14: return loadCanalyzerASC(filename, frameCache);
+    case 15: return loadCanalyzerBLF(filename, frameCache);
+    case 16: return loadCARBUSAnalyzerFile(filename, frameCache);
+    case 17: return loadCANHackerFile(filename, frameCache);
+    case 18: return loadGenericCSVFile(filename, frameCache);
+    case 19: return loadCabanaFile(filename, frameCache);
+    case 20: return loadCANOpenFile(filename, frameCache);
+    case 21: return loadTeslaAPFile(filename, frameCache);
+    case 22: return loadCLX000File(filename, frameCache);
+    case 23: return loadCANServerFile(filename, frameCache);
+    case 24: return loadWiresharkFile(filename, frameCache);
+    case 25: return loadWiresharkSocketCANFile(filename, frameCache);
+    case 26: return loadIXXATCsvFile(filename, frameCache);
+    case 27: return loadCanWise(filename, frameCache);
+    }
+    return false;
+}
+
+bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCache, QString *fullPath)
+{
+    QString filename;
+    QFileDialog dialog;
+    QSettings settings;
+    bool result = false;
+
+    const QStringList filters = loadFilters();
 
     dialog.setDirectory(settings.value("FileIO/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -209,7 +264,8 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
     if (dialog.exec() == QDialog::Accepted)
     {
         filename = dialog.selectedFiles()[0];
-        QString selectedNameFilter = dialog.selectedNameFilter();
+        const int filterIndex = int(filters.indexOf(dialog.selectedNameFilter()));
+        if (fullPath) *fullPath = filename;
 
         QProgressDialog progress(qApp->activeWindow());
         progress.setWindowModality(Qt::WindowModal);
@@ -221,35 +277,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
 
         qApp->processEvents();
 
-        if (selectedNameFilter == filters[0]) result = autoDetectLoadFile(filename, frameCache);
-        if (selectedNameFilter == filters[1]) result = loadNativeCSVFile(filename, frameCache);
-        if (selectedNameFilter == filters[2]) result = loadCRTDFile(filename, frameCache);
-        if (selectedNameFilter == filters[3]) result = loadLogFile(filename, frameCache);
-        if (selectedNameFilter == filters[4]) result = loadMicrochipFile(filename, frameCache);
-        if (selectedNameFilter == filters[5]) result = loadTraceFile(filename, frameCache);
-        if (selectedNameFilter == filters[6]) result = loadIXXATFile(filename, frameCache);
-        if (selectedNameFilter == filters[7]) result = loadCANDOFile(filename, frameCache);
-        if (selectedNameFilter == filters[8]) result = loadVehicleSpyFile(filename, frameCache);
-        if (selectedNameFilter == filters[9]) result = loadCanDumpFile(filename, frameCache);
-        if (selectedNameFilter == filters[10]) result = loadLawicelFile(filename, frameCache);
-        if (selectedNameFilter == filters[11]) result = loadPCANFile(filename, frameCache);
-        if (selectedNameFilter == filters[12]) result = loadKvaserFile(filename, frameCache, false);
-        if (selectedNameFilter == filters[13]) result = loadKvaserFile(filename, frameCache, true);
-        if (selectedNameFilter == filters[14]) result = loadCanalyzerASC(filename, frameCache);
-        if (selectedNameFilter == filters[15]) result = loadCanalyzerBLF(filename, frameCache);
-        if (selectedNameFilter == filters[16]) result = loadCARBUSAnalyzerFile(filename, frameCache);
-        if (selectedNameFilter == filters[17]) result = loadCANHackerFile(filename, frameCache);
-        if (selectedNameFilter == filters[18]) result = loadGenericCSVFile(filename, frameCache);
-        if (selectedNameFilter == filters[19]) result = loadCabanaFile(filename, frameCache);
-        if (selectedNameFilter == filters[20]) result = loadCANOpenFile(filename, frameCache);
-        if (selectedNameFilter == filters[21]) result = loadTeslaAPFile(filename, frameCache);
-        if (selectedNameFilter == filters[22]) result = loadCLX000File(filename, frameCache);
-        if (selectedNameFilter == filters[23]) result = loadCANServerFile(filename, frameCache);
-        if (selectedNameFilter == filters[24]) result = loadWiresharkFile(filename, frameCache);
-        if (selectedNameFilter == filters[25]) result = loadWiresharkSocketCANFile(filename, frameCache);
-        if (selectedNameFilter == filters[26]) result = loadIXXATCsvFile(filename, frameCache);
-        if (selectedNameFilter == filters[27]) result = loadCanWise(filename, frameCache);
-
+        result = loadFrameFileAs(filename, filterIndex, frameCache);
 
         progress.cancel();
 
@@ -262,7 +290,7 @@ bool FrameFileIO::loadFrameFile(QString &fileName, QVector<CommFrame>* frameCach
         }
         else
         {
-            if (dialog.selectedNameFilter() != filters[0])
+            if (filterIndex != 0)
             {
                 QMessageBox msgBox;
                 msgBox.setText("File load completed with errors.\r\nPerhaps you selected the wrong file type?");
@@ -664,11 +692,12 @@ bool FrameFileIO::loadVehicleSpyFile(QString filename, QVector<CommFrame> *frame
     return !foundErrors;
 }
 
+//Not written: the layout of a real Vehicle Spy export isn't known well enough to write one, so it isn't in saveFilters()
 bool FrameFileIO::saveVehicleSpyFile(QString filename, const QVector<CommFrame> *frames)
 {
     Q_UNUSED(filename);
     Q_UNUSED(frames);
-    return true;
+    return false;
 }
 
 //first character of a token, or 0 if it's empty (indexing an empty QByteArray reads out of bounds)
@@ -1463,9 +1492,10 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
             if (line.contains("$FILEVERSION=1.1")) fileVersion = 11;
             continue;
         }
-        if (line.length() > 41)
+        //lines are checked by their token count below: a frame with no data is shorter than one with data
+        line = line.simplified();
+        if (!line.isEmpty())
         {
-            line = line.simplified();
             QList<QByteArray> tokens = line.split(' ');
             if (fileVersion == 11)
             {
@@ -1476,6 +1506,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[4].toInt();
+                        if (tokens.value(5) != "R" && tokens.length() - 5 < numBytes) numBytes = qMax(0, (int)tokens.length() - 5);
                         QByteArray bytes(numBytes, 0);
                         thisFrame.setReceived(true);
                         thisFrame.setBus(0);
@@ -1527,6 +1558,7 @@ bool FrameFileIO::loadPCANFile(QString filename, QVector<CommFrame>* frames)
                     if (thisFrame.frameId() < 0x1FFFFFFF)
                     {
                         int numBytes = tokens[6].toInt();
+                        if (tokens.value(7) != "R" && tokens.length() - 7 < numBytes) numBytes = qMax(0, (int)tokens.length() - 7);
                         QByteArray bytes(numBytes, 0);
                         //qDebug() << thisFrame.payload().length();
                         thisFrame.setReceived(true);
@@ -2199,7 +2231,7 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
 
         if (!inFile.atEnd()) {
             line = inFile.readLine().simplified();
-            if (line.length() > 2)
+            if (line.length() > 2 && !LogNotes::isNotesLine(line)) //notes and no frames: still a native CSV log
             {
                 QList<QByteArray> tokens = line.split(',');
                 if (tokens.length() >= 5)
@@ -2210,7 +2242,8 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
                     }
                     else if (fileVersion == 2)
                     {
-                        if ( tokens[5].toUInt() > 64) isMatch = false; //CAN FD frames carry up to 64 bytes
+                        //CAN FD frames carry up to 64 bytes, FlexRay frames the cycle count and up to 254 bytes
+                        if ( tokens[5].toUInt() > 1 + CommFrame::FLEXRAY_MAX_PAYLOAD) isMatch = false;
                     }
                 }
                 else isMatch = false;
@@ -2232,6 +2265,10 @@ bool FrameFileIO::isNativeCSVFile(QString filename)
 //(error state indicator). Classic CAN rows are unchanged and have nothing in that column. Readers that
 //don't know about it still get the first 8 data bytes.
 //39747828,000001A0,false,Rx,1,12,00,01,02,03,04,05,06,07,08,09,0A,0B,FD+BRS,
+//FlexRay frames are written the same way with "FR" in the flags column, plus "+NULL" for null frames and "+CRCERR"
+//for frames the capture device found a CRC error in. The ID is the slot ID and the first data byte is the cycle
+//count (see CommFrame::isFlexRay()), so LEN goes up to 255.
+//39747828,00000048,false,Rx,0,17,01,D6,...,FR,
 
 //one row of the native CSV format (see above), including the line end
 static QByteArray nativeCSVRow(const CommFrame &frame)
@@ -2250,7 +2287,8 @@ static QByteArray nativeCSVRow(const CommFrame &frame)
     row.append(QString::number(dataLen).toUtf8());
     row.append(',');
     const bool fd = frame.hasFlexibleDataRateFormat();
-    const int columns = fd ? qMax(8, dataLen) : 8; //classic rows always have exactly 8 data columns
+    const bool flexRay = frame.isFlexRay();
+    const int columns = (fd || flexRay) ? qMax(8, dataLen) : 8; //classic rows always have exactly 8 data columns
     for (int temp = 0; temp < columns; temp++)
     {
         if (temp < dataLen)
@@ -2264,6 +2302,13 @@ static QByteArray nativeCSVRow(const CommFrame &frame)
         row.append("FD");
         if (frame.hasBitrateSwitch()) row.append("+BRS");
         if (frame.hasErrorStateIndicator()) row.append("+ESI");
+        row.append(',');
+    }
+    else if (flexRay)
+    {
+        row.append("FR");
+        if (frame.isFlexRayNullFrame()) row.append("+NULL");
+        if (frame.hasFlexRayCrcError()) row.append("+CRCERR");
         row.append(',');
     }
     row.append('\n');
@@ -2297,6 +2342,7 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
         }
 
         line = inFile.readLine().simplified();
+        if (LogNotes::isNotesLine(line)) continue; //the notes at the end of the log (see loadLogNotes)
         if (line.length() > 2)
         {
             QList<QByteArray> tokens = line.split(',');
@@ -2343,19 +2389,28 @@ bool FrameFileIO::loadNativeCSVFile(QString filename, QVector<CommFrame>* frames
                     else thisFrame.setReceived(false);
                     thisFrame.setBus(tokens[4].toInt());
                     int lng = tokens[5].toInt();
-                    if (lng > 64) lng = 64; //CAN FD frames carry up to 64 bytes
+                    if (lng > 1 + CommFrame::FLEXRAY_MAX_PAYLOAD) lng = 1 + CommFrame::FLEXRAY_MAX_PAYLOAD;
                     if (lng < 0) lng = 0;
                     if (lng + 6 > tokens.length()) lng = tokens.length() - 6;
+                    //flags column after the max(8, LEN) data columns: "FD", "FD+BRS", ... or "FR" for FlexRay
+                    //(empty for classic CAN). More than 8 bytes is CAN FD unless the row says FlexRay.
+                    int flagsIdx = 6 + qMax(8, lng);
+                    QByteArray flags = (flagsIdx < tokens.length()) ? tokens[flagsIdx].trimmed().toUpper() : QByteArray();
+                    const bool flexRay = (flags == "FR" || flags.startsWith("FR+"));
+                    thisFrame.clearFlexRayInfo();
+                    if (flexRay)
+                    {
+                        thisFrame.setFrameType(CommFrame::FLEXRAYDataFrame);
+                        if (flags.contains("+NULL")) thisFrame.setFlexRayNullFrame(true);
+                        if (flags.contains("+CRCERR")) thisFrame.setFlexRayCrcStatus(true, false);
+                    }
+                    else if (lng > 64) lng = 64; //CAN FD frames carry up to 64 bytes
                     QByteArray bytes(lng, 0);
                     for (int c = 0; c < lng; c++) bytes[c] = 0;
                     for (int d = 0; d < lng; d++)
                         bytes[d] = static_cast<char>(tokens[6 + d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
-                    //flags column after the max(8, LEN) data columns: "FD", "FD+BRS", ... (empty for classic CAN).
-                    //More than 8 bytes can only be CAN FD, even if a file has no flags column.
-                    int flagsIdx = 6 + qMax(8, lng);
-                    QByteArray flags = (flagsIdx < tokens.length()) ? tokens[flagsIdx].trimmed().toUpper() : QByteArray();
-                    if (flags.startsWith("FD") || lng > 8)
+                    if (!flexRay && (flags.startsWith("FD") || lng > 8))
                     {
                         thisFrame.setFlexibleDataRateFormat(true);
                         thisFrame.setBitrateSwitch(flags.contains("BRS"));
@@ -2544,11 +2599,15 @@ bool FrameFileIO::loadGenericCSVFile(QString filename, QVector<CommFrame>* frame
             thisFrame.setFrameType(CommFrame::CANDataFrame);
             if (tokens.length() > 1)
             {
-                QList<QByteArray> dataTok = tokens[1].split(' ');
-                int dLen = dataTok.length();
-                if (dLen > 8) dLen = 8;
-                QByteArray bytes(dLen, 0);
-                for (int d = 0; d < dLen; d++) bytes[d] = static_cast<char>(dataTok[d].toInt(nullptr, 16));
+                //simplified() drops the space saveGenericCSVFile writes after the last byte, and the line end,
+                //which would otherwise each count as a byte
+                QList<QByteArray> dataTok = tokens[1].simplified().split(' ');
+                QByteArray bytes;
+                for (const QByteArray &tok : dataTok)
+                {
+                    if (tok.isEmpty() || bytes.length() == 8) break; //an empty token: a frame with no data
+                    bytes.append(static_cast<char>(tok.toInt(nullptr, 16)));
+                }
                 thisFrame.setPayload(bytes);
                 frames->append(thisFrame);
             }
@@ -2917,7 +2976,7 @@ bool FrameFileIO::loadIXXATFile(QString filename, QVector<CommFrame>* frames)
                 thisFrame.setBus(0);
                 thisFrame.setFrameType(CommFrame::CANDataFrame);
 
-                QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ');
+                QStringList dataToks = Utility::unQuote(tokens[4]).simplified().split(' ', Qt::SkipEmptyParts);
                 int numBytes = dataToks.length();
                 QByteArray bytes(numBytes, 0);
                 if (numBytes > 8) return false;
@@ -3007,15 +3066,23 @@ bool FrameFileIO::isCANDOFile(QString filename)
             lineCounter++;
 
             QByteArray data = inFile.read(12);
+            if (data.length() < 12)
+            {
+                isMatch = false;
+                break;
+            }
+            const unsigned char *uData = reinterpret_cast<const unsigned char *>(data.constData());
 
-            int ID = ((data[3] & 0x0F) * 256 + data[2]);
-            int len = data[3] >> 4;
+            if (uData[2] == 0xFF && uData[3] == 0xFF) continue; //the initial record, see loadCANDOFile
+
+            int ID = ((uData[3] & 0x0F) * 256 + uData[2]);
+            int len = uData[3] >> 4;
 
             if (len <= 8 && ID <= 0x7FF)
             {
                 if (len < 8)
                 {
-                    if (data[4 + len] != static_cast<char>(0xFF)) isMatch = false;
+                    if (uData[4 + len] != 0xFF) isMatch = false;
                 }
             }
             else isMatch = false;
@@ -3058,7 +3125,15 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CommFrame>* frames)
         }
 
         QByteArray data = inFile.read(12);
+        if (data.length() < 12)
+        {
+            foundErrors = true;
+            break;
+        }
         const unsigned char *uData = reinterpret_cast<const unsigned char *>(data.constData());
+
+        //The initial record that sets the global time (see saveCANDOFile) has FF for the ID and length: not a frame
+        if (uData[2] == 0xFF && uData[3] == 0xFF) continue;
 
         thisFrame.setBus(0);
         thisFrame.setReceived(true);
@@ -3068,9 +3143,10 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CommFrame>* frames)
         tempStamp = 1000000ul * (uData[0] >> 2);
         tempStamp += (((uData[0] & 3) << 8) + uData[1]) * 1000;
         tempStamp += timeOffset;
-        if (tempStamp < lastTimeStamp)
+        if (tempStamp < lastTimeStamp) //the time stamp counts up to a minute then starts again
         {
             timeOffset += 60000000ul;
+            tempStamp += 60000000ul;
         }
         lastTimeStamp = tempStamp;
         thisFrame.setTimeStamp(CommFrame::TimeStamp(0, tempStamp));
@@ -3089,27 +3165,29 @@ bool FrameFileIO::loadCANDOFile(QString filename, QVector<CommFrame>* frames)
     return !foundErrors;
 }
 
+//Bytes 0 - 1 of a CAN-DO record: seconds within the minute (top 6 bits) then milliseconds (bottom 10 bits)
+static void setCANDOTime(QByteArray &data, qint64 ms)
+{
+    data[0] = static_cast<char>((((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8));
+    data[1] = static_cast<char>((ms % 1000) & 0xFF);
+}
+
 bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CommFrame>* frames)
 {
     QFile outFile(filename);
     int lineCounter = 0;
-    QByteArray data;
+    QByteArray data(12, 0); //every record is 12 bytes, see loadCANDOFile
 
     if (!outFile.open(QIODevice::WriteOnly))
     {
         return false;
     }
 
-    data.reserve(13);
-
-    //The initial frame in official files sets the global time but I don't care so it is set all zeros here.
-    CommFrame thisFrame = frames->at(0);
-    qint64 ms = (thisFrame.timeStamp().microSeconds() / 1000);
-    data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
-    data[1] = (char)(ms & 0xFF);
-    data[2] = (char)0xFF;
-    data[3] = (char)0xFF;
-    for (int l = 0; l < 8; l++) data[4 + l] = 0;
+    //The initial record in official files sets the global time; here it's the first frame's time.
+    //Its ID and length bytes are all FF, which is how loadCANDOFile tells it from a frame.
+    setCANDOTime(data, frames->isEmpty() ? 0 : frames->at(0).timeStamp().microSeconds() / 1000);
+    data[2] = static_cast<char>(0xFF);
+    data[3] = static_cast<char>(0xFF);
     outFile.write(data);
 
     for (int c = 0; c < frames->count(); c++)
@@ -3121,22 +3199,17 @@ bool FrameFileIO::saveCANDOFile(QString filename, const QVector<CommFrame>* fram
             lineCounter = 0;
         }
         const CommFrame *frame = &frames->at(c);
-        const unsigned char *inData = reinterpret_cast<const unsigned char *>(frame->payload().constData());
-        int inDataLen = frame->payload().length();
+        const QByteArray payload = frame->payload(); //payload() returns a copy: keep it while its bytes are read
 
-        for (int j = 0; j < 8; j++) data[4 + j] = (char)0xFF;
+        //the format only has 11 bit IDs and up to 8 data bytes
+        if (frame->hasExtendedFrameFormat() || payload.length() > 8) continue;
 
-        if (!frame->hasExtendedFrameFormat())
-        {
-            ms = (frame->timeStamp().microSeconds() / 1000);
-            int id = frame->frameId() & 0x7FF;
-            data[0] = (((ms / 1000) % 60) << 2) + ((ms % 1000) >> 8);
-            data[1] = (char)(ms & 0xFF);
-            data[2] = (char)(id & 0xFF);
-            data[3] = (char)((id >> 8) + (inDataLen << 4));
-            for (int d = 0; d < inDataLen; d++) data[4 + d] = (char)inData[d];
-            outFile.write(data);
-        }
+        int id = frame->frameId() & 0x7FF;
+        setCANDOTime(data, frame->timeStamp().microSeconds() / 1000);
+        data[2] = static_cast<char>(id & 0xFF);
+        data[3] = static_cast<char>((id >> 8) + (payload.length() << 4));
+        for (int j = 0; j < 8; j++) data[4 + j] = static_cast<char>(j < payload.length() ? payload[j] : 0xFF);
+        outFile.write(data);
     }
     return true;
 }
@@ -3234,7 +3307,8 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CommFrame>* frames
             {
                 if (!inComment)
                 {
-                    QList<QByteArray> tokens = line.split(';');
+                    QList<QByteArray> tokens = line.trimmed().split(';');
+                    if (!tokens.isEmpty() && tokens.last().isEmpty()) tokens.removeLast(); //the ; after the last byte
                     if (tokens.length() >= 4)
                     {
                         long long timeStamp = tokens[0].toInt() * 1000;
@@ -3246,10 +3320,9 @@ bool FrameFileIO::loadMicrochipFile(QString filename, QVector<CommFrame>* frames
                         if (thisFrame.frameId() <= 0x7FF) thisFrame.setExtendedFrameFormat(false);
                             else thisFrame.setExtendedFrameFormat(true);
                         thisFrame.setBus(0);
-                        int numBytes = tokens[3].toInt();
+                        //no more than 8 bytes, and no more than the line gives
+                        int numBytes = qBound(0, tokens[3].toInt(), qMin(8, int(tokens.length()) - 4));
                         QByteArray bytes(numBytes, 0);
-                        if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
-                        if (thisFrame.payload().length() + 4 > tokens.length()) thisFrame.payload().resize( tokens.length() - 4 );
                         for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>( Utility::ParseStringToNum(tokens[4 + d]) );
                         thisFrame.setPayload(bytes);
                         frames->append(thisFrame);
@@ -3366,7 +3439,9 @@ bool FrameFileIO::isTraceFile(QString filename)
                         if (ID < 1 || ID > 0x1FFFFFFF) isMatch = false;
                         int len = tokens[3].toInt();
                         if (len > 8 || len < 0) isMatch = false;
-                        QList<QByteArray> dataToks = tokens[4].split(' ');
+                        //a frame with no data has no data column once the line is trimmed
+                        QList<QByteArray> dataToks;
+                        if (tokens.length() > 4) dataToks = tokens[4].split(' ');
                         if (len > dataToks.length()) isMatch = false;
                     }
                     else isMatch = false;
@@ -3461,9 +3536,11 @@ bool FrameFileIO::loadTraceFile(QString filename, QVector<CommFrame>* frames)
                     thisFrame.setFrameType(CommFrame::CANDataFrame);
                     int numBytes = tokens[3].toInt();
                     if (numBytes > 8) numBytes = 8;
+                    //a frame with no data has no data column once the line is trimmed
+                    QList<QByteArray> dataToks;
+                    if (tokens.length() > 4) dataToks = tokens[4].split(' ');
+                    if (numBytes > dataToks.length()) numBytes = dataToks.length();
                     QByteArray bytes(numBytes, 0);
-                    QList<QByteArray> dataToks = tokens[4].split(' ');
-                    //if (numBytes > dataToks.length()) thisFrame.payload().resize(dataToks.length());
                     for (int d = 0; d < numBytes; d++) bytes[d] = static_cast<char>(dataToks[d].toInt(nullptr, 16));
                     thisFrame.setPayload(bytes);
                     frames->append(thisFrame);
@@ -4258,12 +4335,10 @@ bool FrameFileIO::saveCabanaFile(QString filename, const QVector<CommFrame>* fra
         outFile.write(QString::number(frame->getBus()).toUtf8());
         outFile.putChar(44);
 
-        for (int temp = 0; temp < 8; temp++)
+        //only the bytes the frame has: the loader takes the frame length from the length of the data column
+        for (int temp = 0; temp < dataLen && temp < 8; temp++)
         {
-            if (temp < dataLen)
-                outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
-            else
-                outFile.write("00");
+            outFile.write(QString::number(data[temp], 16).toUpper().rightJustified(2, '0').toUtf8());
         }
 
         outFile.write("\n");
@@ -5049,7 +5124,15 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CommFrame>* frames
 
         thisFrame.setTimeStamp(CommFrame::TimeStamp(0, timeStamp));
         thisFrame.setReceived(true); // TODO: check if tx detection is possible
-            
+
+        //a record too short for the CAN header (16 bytes before it, then 8 bytes of ID, length and padding)
+        if (packetHeader.caplen < 24)
+        {
+            foundErrors = true;
+            packetData = (const char*)pcap_next(pcap_data_file, &packetHeader);
+            continue;
+        }
+
         thisFrame.setFrameType(CommFrame::CANDataFrame);
         if ((0x80 & *(packetData+19)))  {
             thisFrame.setExtendedFrameFormat(true);
@@ -5059,9 +5142,9 @@ bool FrameFileIO::loadWiresharkFile(QString filename, QVector<CommFrame>* frames
             thisFrame.setFrameId((0xff & *(packetData+17)) << 8 | (0xff & *(packetData+16)));
         }
         thisFrame.setBus(0);
-        int numBytes = *(packetData+20);
+        //classic CAN, so no more than 8 bytes, and no more than the record has
+        int numBytes = qMin(int(0xff & *(packetData+20)), qMin(8, int(packetHeader.caplen) - 24));
         QByteArray bytes(numBytes, 0);
-        if (thisFrame.payload().length() > 8) thisFrame.payload().resize(8);
         for (int d = 0; d < numBytes; d++) 
         { 
             bytes[d] = *(packetData + 24 + d);

@@ -78,6 +78,7 @@ public:
     bool saveFile(QString);
     bool loadFile(QString);
     QString getFullFilename();
+    void setFullFilename(const QString &fullName); //only the name it goes by: nothing is saved
     QString getFilename();
     QString getFilenameNoExt();
     QString getPath();
@@ -120,6 +121,12 @@ public:
     DBCFile* loadDBCFile(QString filename);
     DBCFile* loadDBCFile(int);
     void saveDBCFile(int);
+    //The file types the load and save dialogs offer, and loading or saving them without any GUI.
+    //Both add the type's extension to a file name without one.
+    static QStringList loadFilters();
+    static QStringList saveFilters();
+    DBCFile* loadFileAs(QString filename, int filterIndex);
+    bool saveDBCFileAs(int idx, QString &filename);
     void removeDBCFile(int);
     void removeAllFiles();
     void swapFiles(int pos1, int pos2);

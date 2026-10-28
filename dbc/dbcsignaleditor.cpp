@@ -725,7 +725,8 @@ void DBCSignalEditor::refreshBitGrid()
 
     startBit = currentSignal->startBit;
 
-    bitpattern[startBit / 8] |= 1 << (startBit % 8); //make the start bit a different color to set it apart
+    //the bit grid shows the first 64 bytes (512 bits); FlexRay messages can be longer
+    if (startBit >= 0 && startBit < 512) bitpattern[startBit / 8] |= 1 << (startBit % 8); //make the start bit a different color to set it apart
     ui->bitfield->setReference(bitpattern, false);
 
     if (currentSignal->intelByteOrder)
@@ -746,7 +747,7 @@ void DBCSignalEditor::refreshBitGrid()
         while (size > 0)
         {
             int byt = startBit / 8;
-            bitpattern[byt] |= 1 << (startBit % 8);
+            if (byt >= 0 && byt < 64) bitpattern[byt] |= 1 << (startBit % 8);
             size--;
             if ((startBit % 8) == 0) startBit += 15;
             else startBit--;
@@ -885,7 +886,7 @@ void DBCSignalEditor::generateUsedBits()
         {
             endBit = startBit + sig->signalSize - 1;
             if (startBit < 0) startBit = 0;
-            int maxBit = (dbcMessage->len * 8) - 1;
+            int maxBit = (qMin((int)dbcMessage->len, 64) * 8) - 1; //the bit grid shows the first 64 bytes
             if (endBit > maxBit) endBit = maxBit;
             for (int y = startBit; y <= endBit; y++)
             {
@@ -901,12 +902,12 @@ void DBCSignalEditor::generateUsedBits()
             while (size > 0)
             {
                 int byt = startBit / 8;
-                usedBits[byt] |= 1 << (startBit % 8);
+                if (byt >= 0 && byt < 64) usedBits[byt] |= 1 << (startBit % 8);
                 ui->bitfield->setUsedSignalName(startBit, sig->name);
                 size--;
                 if ((startBit % 8) == 0) startBit += 15;
                 else startBit--;
-                int maxBit = (dbcMessage->len * 8) - 1;
+                int maxBit = (qMin((int)dbcMessage->len, 64) * 8) - 1; //the bit grid shows the first 64 bytes
                 if (startBit > maxBit) startBit = maxBit;
             }
         }

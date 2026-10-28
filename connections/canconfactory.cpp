@@ -7,6 +7,7 @@
 #include "lawicel_serial.h"
 #include "canserver.h"
 #include "canlogserver.h"
+#include "picoflexray.h"
 
 using namespace CANCon;
 
@@ -32,6 +33,8 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
         return new CANserver(pPortName);
     case CANLOGSERVER:
         return new CanLogServer(pPortName);
+    case PICOFLEXRAY:
+        return new PicoFlexRay(pPortName);
     default: {}
     }
 

@@ -243,6 +243,16 @@
          </widget>
         </item>
         <item>
+         <widget class="QPushButton" name="btnAddMarker">
+          <property name="text">
+           <string>Add Marker</string>
+          </property>
+          <property name="toolTip">
+           <string>Mark this point of the log, e.g. &quot;AC on&quot; (Ctrl+M)</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QCheckBox" name="cbPersistentFilters">
           <property name="text">
            <string>Keep Filters When Clearing</string>
@@ -482,6 +492,7 @@
     <addaction name="actionScripting_INterface"/>
     <addaction name="actionFuzzing"/>
     <addaction name="actionUDS_Scanner"/>
+    <addaction name="actionOBD2_Poller"/>
     <addaction name="actionUDS_Firmware_Update"/>
     <addaction name="actionMotorControlConfig"/>
     <addaction name="actionCAN_Bridge"/>
@@ -491,11 +502,15 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen_Log_File"/>
+    <addaction name="actionLoad_Log_File_from_GitHub"/>
     <addaction name="actionSave_Filtered_Log_File"/>
     <addaction name="actionSave_Log_File"/>
+    <addaction name="actionSave_Log_File_to_GitHub"/>
     <addaction name="actionSave_Continuous_Logfile"/>
     <addaction name="actionSave_Continuous_Filtered_Logfile"/>
     <addaction name="separator"/>
+    <addaction name="actionLog_Notes"/>
+    <addaction name="actionAdd_Marker"/>
     <addaction name="separator"/>
     <addaction name="actionLoad_Filter_Definition"/>
     <addaction name="actionSave_Filter_Definition"/>
@@ -506,6 +521,7 @@
     <addaction name="separator"/>
     <addaction name="actionCrop_Log"/>
     <addaction name="separator"/>
+    <addaction name="actionGitHub_Account"/>
     <addaction name="actionPreferences"/>
     <addaction name="separator"/>
     <addaction name="actionExit_Application"/>
@@ -553,6 +569,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionLoad_Log_File_from_GitHub">
+   <property name="text">
+    <string>Load Log File from GitHub...</string>
+   </property>
+  </action>
+  <action name="actionSave_Log_File_to_GitHub">
+   <property name="text">
+    <string>Save Log File to GitHub...</string>
+   </property>
+  </action>
+  <action name="actionGitHub_Account">
+   <property name="text">
+    <string>GitHub Account...</string>
    </property>
   </action>
   <action name="actionSave_Log_File">
@@ -660,6 +691,11 @@
     <string>UDS Scanner</string>
    </property>
   </action>
+  <action name="actionOBD2_Poller">
+   <property name="text">
+    <string>OBD-II Poller</string>
+   </property>
+  </action>
   <action name="actionISO_TP_Decoder">
    <property name="text">
     <string>ISO-TP Decoder</string>
@@ -718,6 +754,25 @@
   <action name="actionCAN_Bridge">
    <property name="text">
     <string>CAN Bridge</string>
+   </property>
+  </action>
+  <action name="actionLog_Notes">
+   <property name="text">
+    <string>Log Notes...</string>
+   </property>
+   <property name="toolTip">
+    <string>The notes of this log: setup, scenario, observations</string>
+   </property>
+  </action>
+  <action name="actionAdd_Marker">
+   <property name="text">
+    <string>Add Marker...</string>
+   </property>
+   <property name="toolTip">
+    <string>Mark this point of the log (the newest frame while capturing, else the selected one)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+M</string>
    </property>
   </action>
   <action name="actionCrop_Log">

@@ -225,6 +225,8 @@ void GraphingWindow::updatedFrames(int numFrames)
                 thisFrame = modelFrames->at(i);
                 if ( graphParams[j].ID == thisFrame.frameId() && ( (graphParams[j].bus == -1) || (graphParams[j].bus == thisFrame.getBus()) ) && ( (graphParams[j].frameLen == -1) || (graphParams[j].frameLen == thisFrame.payload().length()) ) )
                 {
+                    //a multiplexed signal is only in the frames carrying its multiplexor value (as createGraph checks)
+                    if (graphParams[j].associatedSignal && !graphParams[j].associatedSignal->isSignalInMessage(thisFrame)) continue;
                     appendToGraph(graphParams[j], thisFrame, x, y);
                     appendedToGraph = true;
                 }
@@ -647,7 +649,7 @@ void GraphingWindow::removeAllGraphs()
         ui->graphingView->clearItems();
         graphParams.clear();
         needScaleSetup = true;
-        ui->graphingView->replot();
+        drawLogMarkers(); //the markers belong to the log, not to the graphs (this also replots)
         actRemoveAll->setEnabled(false);
         actRescale->setEnabled(false);
         actEditSelected->setEnabled(false);
@@ -706,6 +708,15 @@ void GraphingWindow::setupMenuBar()
     actRescale->setEnabled(false);
     viewMenu->addAction(tr("Zoom In"), this, SLOT(zoomIn()));
     viewMenu->addAction(tr("Zoom Out"), this, SLOT(zoomOut()));
+    viewMenu->addSeparator();
+    actShowMarkers = viewMenu->addAction(tr("Show Log Markers"));
+    actShowMarkers->setCheckable(true);
+    actShowMarkers->setChecked(QSettings().value("Graphing/ShowLogMarkers", true).toBool());
+    connect(actShowMarkers, &QAction::toggled, this, [this](bool show)
+    {
+        QSettings().setValue("Graphing/ShowLogMarkers", show);
+        drawLogMarkers();
+    });
 
     // Legend menu
     QMenu *legendMenu = menuBar->addMenu(tr("Legend"));
@@ -717,6 +728,56 @@ void GraphingWindow::setupMenuBar()
 
     ui->verticalLayout->insertWidget(0, menuBar, 0);
     ui->verticalLayout->setStretchFactor(ui->graphingView, 1);
+}
+
+void GraphingWindow::setLogMarkers(const QVector<LogMarker> &markers)
+{
+    logMarkers = markers;
+    drawLogMarkers();
+}
+
+void GraphingWindow::drawLogMarkers()
+{
+    //Remove All Graphs clears every item, so some of these may be gone already
+    for (QCPAbstractItem *item : markerItems)
+        if (ui->graphingView->hasItem(item)) ui->graphingView->removeItem(item);
+    markerItems.clear();
+
+    if (actShowMarkers->isChecked())
+    {
+        QPen pen(QColor(200, 90, 0));
+        pen.setStyle(Qt::DashLine);
+        for (const LogMarker &marker : logMarkers)
+        {
+            //the same x as the graphs give a frame at that time
+            double x;
+            if (Utility::timeStyle == TS_SECONDS) x = marker.timeUs / 1000000.0;
+            else if (Utility::timeStyle == TS_CLOCK)
+                x = QDateTime::fromMSecsSinceEpoch(marker.timeUs / 1000).time().msecsSinceStartOfDay() / 1000.0;
+            else x = double(marker.timeUs);
+
+            QCPItemStraightLine *line = new QCPItemStraightLine(ui->graphingView);
+            line->point1->setCoords(x, 0);
+            line->point2->setCoords(x, 1);
+            line->setPen(pen);
+            line->setSelectable(false);
+
+            QCPItemText *label = new QCPItemText(ui->graphingView);
+            label->position->setTypeX(QCPItemPosition::ptPlotCoords);
+            label->position->setTypeY(QCPItemPosition::ptAxisRectRatio);
+            //at the bottom of the plot, clear of the X/Y readout and the legend at the top
+            label->position->setCoords(x, 0.99);
+            label->setPositionAlignment(Qt::AlignLeft | Qt::AlignBottom);
+            label->setPadding(QMargins(3, 0, 0, 0));
+            label->setColor(pen.color());
+            label->setText(marker.text.isEmpty() ? LogNotes::formatSeconds(marker.timeUs) + " s" : marker.text);
+            label->setSelectable(false);
+
+            markerItems.append(line);
+            markerItems.append(label);
+        }
+    }
+    ui->graphingView->replot();
 }
 
 void GraphingWindow::contextMenuRequest(QPoint pos)

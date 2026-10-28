@@ -27,6 +27,8 @@ SOURCES += main.cpp\
     canbridgewindow.cpp \
     connections/canlogserver.cpp \
     connections/canserver.cpp \
+    connections/picoflexray.cpp \
+    connections/picoflexrayparser.cpp \
     connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
     dbc/dbcnodeduplicateeditor.cpp \
@@ -55,6 +57,18 @@ SOURCES += main.cpp\
     candatagrid.cpp \
     framesenderwindow.cpp \
     framefileio.cpp \
+    lognotes.cpp \
+    lognotesdialog.cpp \
+    lognotespanel.cpp \
+    markerpresets.cpp \
+    markerpresetsdialog.cpp \
+    shortcutcheck.cpp \
+    github/githubaccountdialog.cpp \
+    github/githubbrowserdialog.cpp \
+    github/githubcache.cpp \
+    github/githubclient.cpp \
+    github/githubdeviceflow.cpp \
+    github/githubsettings.cpp \
     mainsettingsdialog.cpp \
     scriptingwindow.cpp \
     scriptcontainer.cpp \
@@ -86,6 +100,7 @@ SOURCES += main.cpp\
     re/isotp_interpreterwindow.cpp \
     re/rangestatewindow.cpp \
     re/udsscanwindow.cpp \
+    re/obd2window.cpp \
     connections/canbus.cpp \
     connections/canconnectionmodel.cpp \
     connections/connectionwindow.cpp \
@@ -95,6 +110,9 @@ SOURCES += main.cpp\
     signalviewerwindow.cpp \
     bus_protocols/isotp_handler.cpp \
     bus_protocols/j1939_handler.cpp \
+    bus_protocols/obd2_pids.cpp \
+    bus_protocols/obd2_poller.cpp \
+    bus_protocols/obd2_dbc.cpp \
     bus_protocols/uds_handler.cpp \
     jsedit.cpp \
     frameplaybackobject.cpp \
@@ -113,6 +131,8 @@ HEADERS  += mainwindow.h \
     canframemodel.h \
     connections/canlogserver.h \
     connections/canserver.h \
+    connections/picoflexray.h \
+    connections/picoflexrayparser.h \
     connections/lawicel_serial.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
@@ -149,6 +169,19 @@ HEADERS  += mainwindow.h \
     framesenderwindow.h \
     can_trigger_structs.h \
     framefileio.h \
+    lognotes.h \
+    lognotesdialog.h \
+    lognotespanel.h \
+    markerpresets.h \
+    markerpresetsdialog.h \
+    shortcutcheck.h \
+    github/githubaccountdialog.h \
+    github/githubbrowserdialog.h \
+    github/githubcache.h \
+    github/githubclient.h \
+    github/githubdeviceflow.h \
+    github/githubhelp.h \
+    github/githubsettings.h \
     config.h \
     mainsettingsdialog.h \
     scriptingwindow.h \
@@ -181,6 +214,7 @@ HEADERS  += mainwindow.h \
     re/isotp_interpreterwindow.h \
     re/rangestatewindow.h \
     re/udsscanwindow.h \
+    re/obd2window.h \
     connections/canbus.h \
     connections/canconnectionmodel.h \
     connections/connectionwindow.h \
@@ -190,6 +224,9 @@ HEADERS  += mainwindow.h \
     signalviewerwindow.h \
     bus_protocols/isotp_handler.h \
     bus_protocols/j1939_handler.h \
+    bus_protocols/obd2_pids.h \
+    bus_protocols/obd2_poller.h \
+    bus_protocols/obd2_dbc.h \
     bus_protocols/uds_handler.h \
     bus_protocols/isotp_message.h \
     jsedit.h \
@@ -245,6 +282,13 @@ RESOURCES += \
 
 win32-msvc* {
    LIBS += opengl32.lib
+}
+
+# libusb-1.0 for the pico-flexray connection (optional: without it SavvyCAN builds without pico-flexray support)
+packagesExist(libusb-1.0) {
+   CONFIG += link_pkgconfig
+   PKGCONFIG += libusb-1.0
+   DEFINES += HAVE_LIBUSB
 }
 
 win32-g++ {

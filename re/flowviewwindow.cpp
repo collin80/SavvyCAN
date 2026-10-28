@@ -403,7 +403,7 @@ void FlowViewWindow::gotCenterTimeID(uint32_t ID, double timestamp)
 
         memset(currBytes, 0, 64); //first zero out all 8 bytes
 
-        memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
+        memcpy(currBytes, frameCache.at(currentPosition).payload().data(), qMin((int)frameCache.at(currentPosition).payload().length(), (int)sizeof(currBytes))); //frames can be longer than 64 bytes (FlexRay)
 
         updateDataView();
     }
@@ -547,7 +547,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
         {
             thisFrame = &modelFrames->at(i);
             data = reinterpret_cast<const unsigned char *>(thisFrame->payload().constData());
-            dataLen = thisFrame->payload().length();
+            dataLen = qMin((int)thisFrame->payload().length(), 64); //the flow view shows up to 64 bytes
 
             if (!foundID.contains(thisFrame->frameId()))
             {
@@ -584,7 +584,7 @@ void FlowViewWindow::updatedFrames(int numFrames)
         {
             currentPosition = frameCache.count() - 1;
             memset(currBytes, 0, 64);
-            memcpy(currBytes, frameCache.at(currentPosition).payload().data(), frameCache.at(currentPosition).payload().length());
+            memcpy(currBytes, frameCache.at(currentPosition).payload().data(), qMin((int)frameCache.at(currentPosition).payload().length(), (int)sizeof(currBytes))); //frames can be longer than 64 bytes (FlexRay)
             memcpy(refBytes, currBytes, 64);
 
         }
@@ -712,7 +712,7 @@ void FlowViewWindow::changeID(QString newID)
         {
             thisFrame.payload().clear();
             frameCache.append(thisFrame);
-            if (thisFrame.payload().length() > maxBytes) maxBytes = thisFrame.payload().length();
+            if (thisFrame.payload().length() > maxBytes) maxBytes = qMin((int)thisFrame.payload().length(), 64); //the flow view shows up to 64 bytes
         }
     }
     ui->flowView->setBytesToDraw(maxBytes);
@@ -732,7 +732,7 @@ void FlowViewWindow::changeID(QString newID)
     updateGraphLocation();
 
     memset(currBytes, 0, 64);
-    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), qMin((int)frameCache.at(currentPosition).payload().length(), (int)sizeof(currBytes))); //frames can be longer than 64 bytes (FlexRay)
     memcpy(refBytes, currBytes, 64);
 
     updateDataView();
@@ -772,7 +772,7 @@ void FlowViewWindow::btnStopClick()
     currentPosition = 0;
 
     memset(currBytes, 0, 64);
-    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), qMin((int)frameCache.at(currentPosition).payload().length(), (int)sizeof(currBytes))); //frames can be longer than 64 bytes (FlexRay)
     memcpy(refBytes, currBytes, 64);
 
     updateFrameLabel();
@@ -904,12 +904,14 @@ void FlowViewWindow::processNewPosition()
     //get through that then they're changed and a trigger so we stop playback at this frame.
     //This is complicated by the fact that CAN-FD frames might have far more than 64 bits. It is necessary
     //to thus process them 64 bits at a time and just move chunk to chunk until done.
-    for (int chunk = 0; chunk < frameCache.at(currentPosition).payload().length(); chunk += 8)
+    //chunk is a byte offset; the flow view covers the first 64 bytes (FlexRay frames can be longer)
+    const int trigLen = qMin((int)frameCache.at(currentPosition).payload().length(), (int)sizeof(currBytes));
+    for (int chunk = 0; chunk < trigLen; chunk += 8)
     {
         uint64_t changedBits = 0;
         uint8_t cngByte;
-        int maxVal = qMin(chunk * 8 + 8, frameCache.at(currentPosition).payload().length());
-        for (int i = chunk * 8; i < maxVal; i++)
+        int maxVal = qMin(chunk + 8, trigLen);
+        for (int i = chunk; i < maxVal; i++)
         {
             unsigned char thisByte = static_cast<unsigned char>(frameCache.at(currentPosition).payload()[i]);
             cngByte = currBytes[i] ^ thisByte;
@@ -927,7 +929,7 @@ void FlowViewWindow::processNewPosition()
         }
     }
     memset(currBytes, 0, 64);
-    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), frameCache.at(currentPosition).payload().length());
+    memcpy(currBytes, frameCache.at(currentPosition).payload().constData(), qMin((int)frameCache.at(currentPosition).payload().length(), (int)sizeof(currBytes))); //frames can be longer than 64 bytes (FlexRay)
 
     if (ui->cbSync->checkState() == Qt::Checked) emit sendCenterTimeID(frameCache[currentPosition].frameId(), frameCache[currentPosition].timeStamp().microSeconds() / 1000000.0);
 }

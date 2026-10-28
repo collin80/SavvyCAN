@@ -392,6 +392,8 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
     int64_t minInterval;
     int64_t maxInterval;
     int64_t thisInterval;
+    //the per-byte statistics cover the first 8 bytes; CAN FD and FlexRay frames can be longer
+    const int statBytes = 8;
     int minData[8];
     int maxData[8];
     int dataHistogram[256][8];
@@ -527,7 +529,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         baseNode->addChild(tempItem);
 
         //clear out all the counters and accumulators
-        minLen = 8;
+        minLen = 0x7FFFFFFF; //frames can be longer than 8 bytes (CAN FD, FlexRay)
         maxLen = 0;
         minInterval = 0x7FFFFFFF;
         maxInterval = 0;
@@ -547,7 +549,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         data = reinterpret_cast<const unsigned char *>(frameCache.at(0).payload().constData());
         dataLen = frameCache.at(0).payload().length();
 
-        for (int c = 0; c < dataLen; c++)
+        for (int c = 0; c < qMin(dataLen, statBytes); c++)
         {
             changedBits[c] = 0;
             referenceBits[c] = data[c];
@@ -567,7 +569,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             dataLen = frameCache.at(j).payload().length();
 
             byteGraphX.append(j);
-            for (int bytcnt = 0; bytcnt < dataLen; bytcnt++)
+            for (int bytcnt = 0; bytcnt < qMin(dataLen, statBytes); bytcnt++)
             {
                 byteGraphY[bytcnt].append(data[bytcnt]);
             }
@@ -590,7 +592,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
             thisLen = dataLen;
             if (thisLen > maxLen) maxLen = thisLen;
             if (thisLen < minLen) minLen = thisLen;
-            for (int c = 0; c < thisLen; c++)
+            for (int c = 0; c < qMin(thisLen, statBytes); c++)
             {
                 unsigned char dat = data[c];
                 if (minData[c] > dat) minData[c] = dat;
@@ -720,7 +722,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         baseNode->addChild(tempItem);
 
         //display accumulated data for all the bytes in the message
-        for (int c = 0; c < maxLen; c++)
+        for (int c = 0; c < qMin(maxLen, statBytes); c++)
         {
             dataBase = new QTreeWidgetItem();
             histBase = new QTreeWidgetItem();
@@ -753,7 +755,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
 
         dataBase = new QTreeWidgetItem();
         dataBase->setText(0, tr("Bitfield Histogram"));
-        for (int c = 0; c < 8 * maxLen; c++)
+        for (int c = 0; c < 8 * qMin(maxLen, statBytes); c++)
         {
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "
@@ -770,7 +772,7 @@ void FrameInfoWindow::updateDetailsWindow(QString newID)
         dataBase = new QTreeWidgetItem();
         dataBase->setText(0, tr("Bitchange Heatmap"));
         memset(heatVals, 0, 512); //always clear the array before populating it.
-        for (int c = 0; c < 8 * maxLen; c++)
+        for (int c = 0; c < 8 * qMin(maxLen, statBytes); c++)
         {
             tempItem = new QTreeWidgetItem();
             tempItem->setText(0, QString::number(c) + " (Byte " + QString::number(c / 8) + " Bit "

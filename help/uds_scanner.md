@@ -35,3 +35,6 @@ You need to also set a type of scan to do. Each test you register will do one ty
 "Wildcard" - Allows for you to set a lower and upper range for the service byte as well as the number of subfunction bytes and the range there as well. This allows for UDS fuzzing by shooting the moon and trying a huge range of traffic just to see what is supported and what isn't. This test can take a VERY long time if you aren't careful but will thoroughly determine what the ECU will support and what it won't.
 
 "Run test in session type" is supported for some of the above scan types. This will cause the program to attempt to put the ECU into the chosen session type before doing the test. This can be useful as some things will only be supported in diagnostics mode or programming mode. Unfortunately, entering programming mode is likely to require one to elevate the security level which this program is not set up to do (that being a proprietary process.)
+
+
+To read live OBD-II values (speed, engine speed, temperatures) rather than scan for UDS services, use the [OBD-II Poller](obd2.md).

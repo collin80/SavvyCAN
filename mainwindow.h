@@ -9,6 +9,7 @@
 #include "can_structs.h"
 #include "framefileio.h"
 #include "dbc/dbchandler.h"
+#include "github/githubcache.h"
 #include "bus_protocols/isotp_handler.h"
 #include "framesenderobject.h"
 #include "re/graphingwindow.h"
@@ -26,6 +27,7 @@
 #include "dbc/dbcloadsavewindow.h"
 #include "re/fuzzingwindow.h"
 #include "re/udsscanwindow.h"
+#include "re/obd2window.h"
 #include "re/sniffer/snifferwindow.h"
 #include "re/isotp_interpreterwindow.h"
 #include "motorcontrollerconfigwindow.h"
@@ -36,8 +38,12 @@
 #include "canbridgewindow.h"
 #include "re/searchwindow.h"
 #include "croplogdialog.h"
+#include "lognotes.h"
+#include "markerpresets.h"
+#include <QShortcut>
 
 class CANConnection;
+class LogNotesPanel;
 class ConnectionWindow;
 class ISOTP_InterpreterWindow;
 class ScriptingWindow;
@@ -73,8 +79,19 @@ public:
 
 private slots:
     void handleLoadFile();
+    void handleLoadFromGitHub();
+    void handleSaveToGitHub();
+    void showGitHubAccount();
     void handleSaveFile();
     void handleSaveFilteredFile();
+    void editLogNotes();
+    void addLogMarker();
+    void addPresetMarker(int index);
+    void addNextPresetMarker();
+    void undoLastMarker();
+    void showMarkerPresets();
+    void goToLogTime(qint64 timeUs);
+    void askCaptureNotes();
     void handleSaveFilters();
     void handleLoadFilters();
     void handleContinousLogging();
@@ -99,6 +116,7 @@ private slots:
     void showFuzzingWindow();
     void showMCConfigWindow();
     void showUDSScanWindow();
+    void showObd2Window();
     void showISOInterpreterWindow();
     void showSnifferWindow();
     void showBisectWindow();
@@ -185,6 +203,27 @@ private:
     bool continuousLogging;
     bool continuousLoggingUseFilter;
     int continuousLogFlushCounter;
+    qint64 continuousFrameCount; //what the continuous log has, for its notes
+    qint64 continuousFirstUs;
+    qint64 continuousLastUs;
+    int connectedBusCount; //to notice the first bus connecting
+
+    //Log notes (see lognotes.h): those of the loaded or last saved log, or typed for a capture not saved yet
+    LogNotes logNotes;
+    QString logNotesFile;   //the log file they're saved back to by File > Log Notes...; empty if none (or GitHub's)
+    QString logNotesSource; //the log they're from, as shown; empty if they aren't from a log file
+    LogNotesPanel *logNotesPanel;
+    //marker presets (markerpresets.h): their keys, and the markers added since the log was loaded, for Undo
+    MarkerPresets markerPresets;
+    QList<QShortcut *> presetShortcuts;
+    QAction *actNextPreset;
+    QAction *actUndoMarker;
+    struct AddedMarker
+    {
+        LogMarker marker;
+        bool byNextKey;
+    };
+    QVector<AddedMarker> addedMarkers;
 
     //References to other windows we can display
 
@@ -207,6 +246,7 @@ private:
     DBCLoadSaveWindow *dbcFileWindow;
     FuzzingWindow *fuzzingWindow;
     UDSScanWindow *udsScanWindow;
+    Obd2Window *obd2Window;
     ISOTP_InterpreterWindow *isoWindow;
     SnifferWindow* snifferWindow;
     MotorControllerConfigWindow *motorctrlConfigWindow;
@@ -236,9 +276,25 @@ private:
     void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CommFrame &, bool);
     void updateFileStatus();
+    bool loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure,
+                     bool notesWritable = true);
+    GitHubOrigin gitHubLogOrigin; //where the log shown came from or went to on GitHub, if it did
+    void saveLog(const QVector<CommFrame> *frames, bool filtered);
+    LogNotes notesForSaving(const QVector<CommFrame> *frames, bool filtered) const;
+    void loadNotesOfLog(const QString &filename, const QString &displayName, bool writable);
+    void updateLogNotesPanel();
+    bool anyBusConnected() const;
+    void finishContinuousLogNotes();
+    bool markerTime(qint64 &timeUs) const;
+    void addMarkerAt(qint64 timeUs, const QString &text, bool byNextKey);
+    void saveMarkersBack();
+    void applyMarkerPresets();
+    void reloadMarkerPresets();
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);
+    bool attachObd2Dbc(const QString &path, int bus, const QList<quint32> &ecus, QString *error);
+    bool graphObd2Signals(int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error);
     void readSettings();
     void writeSettings();
     bool eventFilter(QObject *obj, QEvent *event);

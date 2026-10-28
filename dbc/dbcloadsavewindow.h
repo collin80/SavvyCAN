@@ -18,9 +18,13 @@ class DBCLoadSaveWindow : public QDialog
 public:
     explicit DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *parent = 0);
     ~DBCLoadSaveWindow();
+    //Lists a file loaded somewhere else (the OBD-II Poller's DBC) with the bus it's attached to
+    void addLoadedFile(DBCFile *file);
 
 private slots:
     void loadFile();
+    void loadFromGitHub();
+    void saveToGitHub();
     void loadJSON();
     void saveFile();
     void removeFile();
@@ -49,6 +53,7 @@ private:
     bool eventFilter(QObject *obj, QEvent *event);
     void updateSettings();
     QComboBox * addMatchingCriteriaCombobox(int row);
+    void addFileRow(DBCFile *file);
 };
 
 #endif // DBCLOADSAVEWINDOW_H

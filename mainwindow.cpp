@@ -3,14 +3,23 @@
 #include "can_structs.h"
 #include <QDateTime>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QtSerialPort/QSerialPortInfo>
 #include "connections/canconmanager.h"
+#include "bus_protocols/handler_factory.h"
 #include "connections/connectionwindow.h"
 #include "helpwindow.h"
 #include "utility.h"
 #include "filterutility.h"
+#include "github/githubaccountdialog.h"
+#include "github/githubbrowserdialog.h"
+#include "github/githubhelp.h"
+#include "lognotesdialog.h"
+#include "lognotespanel.h"
+#include "markerpresetsdialog.h"
 
 #include <QClipboard>
+#include <QInputDialog>
 #include <QTimer>
 /*
 Some notes on things I'd like to put into the program but haven't put on github (yet)
@@ -90,6 +99,7 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcFileWindow = nullptr;
     fuzzingWindow = nullptr;
     udsScanWindow = nullptr;
+    obd2Window = nullptr;
     motorctrlConfigWindow = nullptr;
     isoWindow = nullptr;
     snifferWindow = nullptr;
@@ -99,6 +109,8 @@ MainWindow::MainWindow(QWidget *parent) :
     dbcComparatorWindow = nullptr;
     canBridgeWindow = nullptr;
     searchWindow = nullptr;
+    actNextPreset = nullptr; //made with the Log Notes panel, below
+    actUndoMarker = nullptr;
     dbcHandler = DBCHandler::getReference();
     bDirty = false;
     inhibitFilterUpdate = false;
@@ -107,14 +119,24 @@ MainWindow::MainWindow(QWidget *parent) :
     continuousLogging = false;
     continuousLoggingUseFilter = false;
     continuousLogFlushCounter = 0;
+    continuousFrameCount = 0;
+    continuousFirstUs = continuousLastUs = 0;
+    connectedBusCount = 0;
 
     //handlers for all menu entries
     connect(ui->actionSetup, SIGNAL(triggered(bool)), SLOT(showConnectionSettingsWindow()));
     connect(ui->actionOpen_Log_File, &QAction::triggered, this, &MainWindow::handleLoadFile);
+    connect(ui->actionLoad_Log_File_from_GitHub, &QAction::triggered, this, &MainWindow::handleLoadFromGitHub);
+    connect(ui->actionGitHub_Account, &QAction::triggered, this, &MainWindow::showGitHubAccount);
+    connect(ui->actionSave_Log_File_to_GitHub, &QAction::triggered, this, &MainWindow::handleSaveToGitHub);
+    gitHubHelp() = [](const QString &page) { HelpWindow::getRef()->showHelp(page); };
     connect(ui->actionGraph_Dta, &QAction::triggered, this, &MainWindow::showGraphingWindow);
     connect(ui->actionFrame_Data_Analysis, &QAction::triggered, this, &MainWindow::showFrameDataAnalysis);
     connect(ui->actionSave_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFile);
     connect(ui->actionSave_Filtered_Log_File, &QAction::triggered, this, &MainWindow::handleSaveFilteredFile);
+    connect(ui->actionLog_Notes, &QAction::triggered, this, &MainWindow::editLogNotes);
+    connect(ui->actionAdd_Marker, &QAction::triggered, this, &MainWindow::addLogMarker);
+    connect(ui->btnAddMarker, &QAbstractButton::clicked, this, &MainWindow::addLogMarker);
     connect(ui->actionLoad_Filter_Definition, &QAction::triggered, this, &MainWindow::handleLoadFilters);
     connect(ui->actionSave_Filter_Definition, &QAction::triggered, this, &MainWindow::handleSaveFilters);
     connect(ui->action_Playback, &QAction::triggered, this, &MainWindow::showPlaybackWindow);
@@ -135,6 +157,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionDBC_File_Manager, &QAction::triggered, this, &MainWindow::showDBCFileWindow);
     connect(ui->actionFuzzing, &QAction::triggered, this, &MainWindow::showFuzzingWindow);
     connect(ui->actionUDS_Scanner, &QAction::triggered, this, &MainWindow::showUDSScanWindow);
+    connect(ui->actionOBD2_Poller, &QAction::triggered, this, &MainWindow::showObd2Window);
     connect(ui->actionISO_TP_Decoder, &QAction::triggered, this, &MainWindow::showISOInterpreterWindow);
     connect(ui->actionSniffer, &QAction::triggered, this, &MainWindow::showSnifferWindow);
     connect(ui->actionMotorControlConfig, &QAction::triggered, this, &MainWindow::showMCConfigWindow);
@@ -241,6 +264,38 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->leSearchFilter->setClearButtonEnabled(true);
     connect(ui->leSearchFilter, &QLineEdit::textChanged, this, &MainWindow::onSearchFilterChanged);
 
+    //Log Notes panel, hidden until a log with notes is loaded or it's turned on in the File menu
+    logNotesPanel = new LogNotesPanel(this);
+    addDockWidget(Qt::RightDockWidgetArea, logNotesPanel);
+    logNotesPanel->setVisible(QSettings().value("LogNotes/PanelVisible", false).toBool());
+    connect(logNotesPanel, &LogNotesPanel::editRequested, this, &MainWindow::editLogNotes);
+    connect(logNotesPanel, &LogNotesPanel::addMarkerRequested, this, &MainWindow::addLogMarker);
+    connect(logNotesPanel, &LogNotesPanel::markerActivated, this, &MainWindow::goToLogTime);
+    QAction *showNotesAction = logNotesPanel->toggleViewAction();
+    showNotesAction->setText(tr("Show Log Notes Panel"));
+    const QList<QAction *> fileActions = ui->menuFile->actions();
+    ui->menuFile->insertAction(fileActions.value(int(fileActions.indexOf(ui->actionLog_Notes)) + 1), showNotesAction);
+
+    //marker presets: after Add Marker in the File menu. Their keys work in every SavvyCAN window (e.g. with a graph
+    //in front), so they're application shortcuts; MarkerPresetsDialog only lets keys nothing else uses be picked.
+    actNextPreset = new QAction(tr("Add Next Preset Marker"), this);
+    actNextPreset->setShortcutContext(Qt::ApplicationShortcut);
+    connect(actNextPreset, &QAction::triggered, this, &MainWindow::addNextPresetMarker);
+    actUndoMarker = new QAction(tr("Undo Last Marker"), this);
+    actUndoMarker->setShortcutContext(Qt::ApplicationShortcut);
+    connect(actUndoMarker, &QAction::triggered, this, &MainWindow::undoLastMarker);
+    QAction *actPresets = new QAction(tr("Marker Presets..."), this);
+    connect(actPresets, &QAction::triggered, this, &MainWindow::showMarkerPresets);
+    const QList<QAction *> menuActions = ui->menuFile->actions();
+    QAction *afterAddMarker = menuActions.value(int(menuActions.indexOf(ui->actionAdd_Marker)) + 1);
+    ui->menuFile->insertActions(afterAddMarker, { actNextPreset, actUndoMarker, actPresets });
+    connect(logNotesPanel, &LogNotesPanel::presetActivated, this, &MainWindow::addPresetMarker);
+    connect(logNotesPanel, &LogNotesPanel::undoMarkerRequested, this, &MainWindow::undoLastMarker);
+    connect(logNotesPanel, &LogNotesPanel::presetsRequested, this, &MainWindow::showMarkerPresets);
+    markerPresets = MarkerPresets::load();
+    applyMarkerPresets();
+    updateLogNotesPanel();
+
     connect(&updateTimer, &QTimer::timeout, this, &MainWindow::tickGUIUpdate);
     updateTimer.setInterval(250);
     updateTimer.start();
@@ -339,6 +394,7 @@ void MainWindow::killEmAll()
     killWindow(dbcFileWindow);
     killWindow(fuzzingWindow);
     killWindow(udsScanWindow);
+    killWindow(obd2Window);
     killWindow(isoWindow);
     killWindow(snifferWindow);
     killWindow(bisectWindow);
@@ -622,6 +678,7 @@ void MainWindow::writeSettings()
     }
     // Always save splitterLeft so send-panel height is restored on next launch
     settings.setValue("Main/SplitterLeft", ui->splitterLeft->saveState());
+    settings.setValue("LogNotes/PanelVisible", logNotesPanel->isVisible());
 }
 
 void MainWindow::onSenderCellChanged(int row, int col)
@@ -1297,6 +1354,14 @@ void MainWindow::logReceivedFrame(CANConnection* conn, QVector<CommFrame> frames
     if (!continuousLoggingUseFilter)
     {
         FrameFileIO::writeContinuousNative(&frames, 0);
+        //for the continuous log's notes
+        for (const CommFrame &frame : frames)
+        {
+            const qint64 us = frame.timeStamp().seconds() * 1000000 + frame.timeStamp().microSeconds();
+            if (continuousFrameCount == 0 || us < continuousFirstUs) continuousFirstUs = us;
+            if (continuousFrameCount == 0 || us > continuousLastUs) continuousLastUs = us;
+            continuousFrameCount++;
+        }
     }
     else
     {
@@ -1412,6 +1477,13 @@ void MainWindow::clearFrames()
     ui->lbNumFrames->setText(QString::number(model->rowCount()));
     bDirty = false;
     loadedFileName = "";
+    //a new capture: what the user typed carries over, what described the old log doesn't
+    logNotes = logNotes.userFields();
+    logNotesFile.clear();
+    logNotesSource.clear();
+    addedMarkers.clear();
+    markerPresets.reset(); //the Next key starts again
+    updateLogNotesPanel();
     updateFileStatus();
     emit framesUpdated(-1);
 }
@@ -1450,11 +1522,12 @@ void MainWindow::handleCropLog()
 void MainWindow::handleLoadFile()
 {
     QString filename;
+    QString fullPath;
     QVector<CommFrame> tempFrames;
 
     QMessageBox::StandardButton confirmDialog;
 
-    bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames);
+    bool loadResult = FrameFileIO::loadFrameFile(filename, &tempFrames, &fullPath);
 
     if (!loadResult)
     {
@@ -1479,12 +1552,100 @@ void MainWindow::handleLoadFile()
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
+        loadNotesOfLog(fullPath, QFileInfo(fullPath).fileName(), true);
         updateFileStatus();
         emit framesUpdated(-1);
     }
 }
 
 void MainWindow::handleDroppedFile(const QString &filename)
+{
+    loadLogFile(filename, 0, filename, false);
+}
+
+void MainWindow::handleLoadFromGitHub()
+{
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Open, FrameFileIO::loadFilters(), this);
+    dialog.setCompanionSuffixes({ LogNotes::sidecarSuffix() }); //a log's notes file is downloaded with it
+    if (dialog.exec() != QDialog::Accepted) return;
+    //notes are read from the downloaded copy, but not written back to it
+    if (loadLogFile(dialog.localFile(), dialog.fileTypeIndex(), dialog.origin().displayName(), true, false))
+        gitHubLogOrigin = dialog.origin();
+}
+
+void MainWindow::handleSaveToGitHub()
+{
+    const QVector<CommFrame> *frames = model->getListReference();
+    if (frames->isEmpty())
+    {
+        QMessageBox::information(this, tr("Save Log File to GitHub"), tr("There are no frames to save."));
+        return;
+    }
+
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::Logs, GitHubBrowserDialog::Save, FrameFileIO::saveFilters(), this);
+    //the log's notes: asked when Save is pressed (the file type is known then), inside a GVRET log or in a notes file
+    //committed with it. Saving again (after a conflict) starts from what was typed the first time.
+    dialog.setCompanionSuffixes({ LogNotes::sidecarSuffix() });
+    LogNotes notes = notesForSaving(frames, false);
+    bool withNotes = false;
+    dialog.setSaveWriter([this, frames, &notes, &withNotes, &dialog](const QString &localFile, int fileType, QString &error)
+    {
+        withNotes = notes.hasUserFields() || !notes.markers.isEmpty();
+        if (LogNotesDialog::askOnSave())
+        {
+            LogNotesDialog notesDialog(LogNotesDialog::Saving, &dialog);
+            notesDialog.setNotes(notes);
+            notesDialog.setTarget(QFileInfo(localFile).fileName(), fileType == 0);
+            notesDialog.exec();
+            if (notesDialog.choice() == LogNotesDialog::Cancelled) return false; //no error: nothing is saved
+            withNotes = notesDialog.choice() == LogNotesDialog::WithNotes;
+            if (withNotes) notes = notesDialog.notes();
+        }
+        QString name = localFile;
+        if (!FrameFileIO::saveFrameFileAs(name, fileType, frames))
+        {
+            error = tr("The log couldn't be written as that file type.");
+            return false;
+        }
+        notes.logFile = QFileInfo(name).fileName();
+        if (withNotes && !FrameFileIO::saveLogNotes(name, fileType, notes))
+        {
+            error = tr("The log's notes couldn't be written.");
+            return false;
+        }
+        return true;
+    });
+    //back where it came from, if it came from GitHub; otherwise under its own name
+    if (gitHubLogOrigin.isValid() && loadedFileName == gitHubLogOrigin.displayName())
+        dialog.setSuggestion(gitHubLogOrigin, QString());
+    else
+    {
+        const QString name = QFileInfo(loadedFileName).fileName();
+        dialog.setSuggestion(GitHubOrigin(), name.isEmpty() || loadedFileName.startsWith("github:") ? "log" : name);
+    }
+    if (dialog.exec() != QDialog::Accepted) return;
+
+    gitHubLogOrigin = dialog.origin();
+    loadedFileName = gitHubLogOrigin.displayName();
+    if (withNotes) LogNotesDialog::setLastNotes(notes);
+    logNotes = withNotes ? notes : LogNotes();
+    logNotesFile.clear(); //the cached copy isn't written back to
+    logNotesSource = loadedFileName;
+    updateLogNotesPanel();
+    updateFileStatus();
+}
+
+void MainWindow::showGitHubAccount()
+{
+    GitHubAccountDialog dialog(this);
+    dialog.exec();
+}
+
+//Loads a log file into the frame list as the file type at that index of FrameFileIO::loadFilters() (0 autodetects),
+//showing it as displayName. reportFailure: say so when nothing at all could be loaded. notesWritable: File > Log
+//Notes... may save the log's notes back into the file (or next to it).
+bool MainWindow::loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure,
+                             bool notesWritable)
 {
     QProgressDialog progress(qApp->activeWindow());
     progress.setWindowModality(Qt::WindowModal);
@@ -1495,10 +1656,16 @@ void MainWindow::handleDroppedFile(const QString &filename)
     progress.show();
     
     QVector<CommFrame> loadedFrames;
-    bool loadResult = FrameFileIO::autoDetectLoadFile(filename, &loadedFrames);
+    bool loadResult = FrameFileIO::loadFrameFileAs(filename, fileType, &loadedFrames);
     
     progress.cancel();
     
+    if (!loadResult && reportFailure && loadedFrames.isEmpty())
+    {
+        QMessageBox::warning(this, tr("Error Loading"), tr("No frames could be loaded from %1. Perhaps it isn't "
+                                                           "that type of file?").arg(displayName));
+    }
+
     if (!loadResult)
     {
         if (loadedFrames.count() > 0) //only ask if at least one frame was decoded.
@@ -1518,26 +1685,419 @@ void MainWindow::handleDroppedFile(const QString &filename)
         ui->canFramesView->scrollToTop();
         model->clearFrames();
         model->insertFrames(loadedFrames);
-        loadedFileName = filename;
+        loadedFileName = displayName;
         model->recalcOverwrite();
         ui->lbNumFrames->setText(QString::number(model->rowCount()));
         if (ui->cbAutoScroll->isChecked()) ui->canFramesView->scrollToBottom();
 
+        loadNotesOfLog(filename, displayName, notesWritable);
         updateFileStatus();
         emit framesUpdated(-1);
     }
+    return loadResult;
 }
 
 
 void MainWindow::handleSaveFile()
 {
-    QString filename;
+    saveLog(model->getListReference(), false);
+}
 
-    if (FrameFileIO::saveFrameFile(filename, model->getListReference()))
+//One line per bus of the current connections, for the log notes: "0: GVRET COM11, 500 kbit/s"
+static QStringList connectedBuses()
+{
+    auto rate = [](int bitsPerSecond)
     {
-        loadedFileName = filename;
-        updateFileStatus();
+        if (bitsPerSecond % 1000 == 0) return QString("%1 kbit/s").arg(bitsPerSecond / 1000);
+        return QString("%1 bit/s").arg(bitsPerSecond);
+    };
+    QStringList buses;
+    CANConManager *manager = CANConManager::getInstance();
+    for (CANConnection *conn : manager->getConnections())
+    {
+        QString type;
+        switch (conn->getType())
+        {
+        case CANCon::KVASER: type = "KVASER"; break;
+        case CANCon::SERIALBUS: type = conn->getDriver(); break;
+        case CANCon::GVRET_SERIAL: type = "GVRET"; break;
+        case CANCon::REMOTE: type = "Remote"; break;
+        case CANCon::KAYAK: type = "socketcand"; break;
+        case CANCon::MQTT: type = "MQTT"; break;
+        case CANCon::LAWICEL: type = "LAWICEL"; break;
+        case CANCon::CANSERVER: type = "CANserver"; break;
+        case CANCon::CANLOGSERVER: type = "CanLogServer"; break;
+        default: type = "?"; break;
+        }
+        const int base = manager->getBusBase(conn);
+        for (int i = 0; i < conn->getNumBuses(); i++)
+        {
+            CANBus bus;
+            if (!conn->getBusSettings(i, bus) || !bus.isActive()) continue;
+            QString line = QString("%1: %2 %3, %4").arg(base + i).arg(type, conn->getPort(), rate(bus.getSpeed()));
+            if (bus.isCanFD()) line += QString(", CAN FD data %1").arg(rate(bus.getDataRate()));
+            if (bus.isListenOnly()) line += ", listen only";
+            if (conn->getStatus() != CANCon::CONNECTED) line += ", not connected";
+            buses.append(line);
+        }
     }
+    return buses;
+}
+
+//One line per loaded DBC or LDF file: "bmw_e90.dbc (bus 0)"
+static QStringList loadedDbcFiles()
+{
+    QStringList files;
+    DBCHandler *handler = DBCHandler::getReference();
+    for (int i = 0; i < handler->getFileCount(); i++)
+    {
+        DBCFile *file = handler->getFileByIdx(i);
+        if (!file) continue;
+        if (file->getAssocBus() < 0) files.append(QString("%1 (all buses)").arg(file->getFilename()));
+        else files.append(QString("%1 (bus %2)").arg(file->getFilename()).arg(file->getAssocBus()));
+    }
+    return files;
+}
+
+//The notes to save with these frames: the current ones (or the typed fields of the last ones saved), with the fields
+//SavvyCAN knows filled in. Buses and DBC files describe the current setup, unless the notes came from a log file:
+//then they describe that log's capture, and are only filled in where it had none.
+LogNotes MainWindow::notesForSaving(const QVector<CommFrame> *frames, bool filtered) const
+{
+    LogNotes notes = logNotes;
+    if (!notes.hasUserFields()) notes.setUserFields(LogNotesDialog::lastNotes());
+    if (notes.author.isEmpty()) notes.author = qEnvironmentVariable("USERNAME", qEnvironmentVariable("USER"));
+
+    const qint64 total = model->getListReference()->count();
+    notes.setFrames(*frames, (filtered && frames->count() != total) ? total : -1);
+    notes.saved = QDateTime::currentDateTime();
+    notes.savvycanVersion = QString::number(VERSION);
+
+    const bool fromLog = !logNotesSource.isEmpty();
+    const QStringList buses = connectedBuses();
+    if (!buses.isEmpty() && (!fromLog || notes.buses.isEmpty())) notes.buses = buses;
+    const QStringList dbcFiles = loadedDbcFiles();
+    if (!dbcFiles.isEmpty() && (!fromLog || notes.dbcFiles.isEmpty())) notes.dbcFiles = dbcFiles;
+    return notes;
+}
+
+//Save Log File and Save Filtered Log File: pick the file, ask for the notes, save both
+void MainWindow::saveLog(const QVector<CommFrame> *frames, bool filtered)
+{
+    QString path;
+    int filterIndex;
+    if (!FrameFileIO::pickSaveFile(path, filterIndex)) return;
+
+    LogNotes notes = notesForSaving(frames, filtered);
+    //without asking, the notes are saved if the user has typed any
+    bool withNotes = notes.hasUserFields() || !notes.markers.isEmpty();
+    if (LogNotesDialog::askOnSave())
+    {
+        LogNotesDialog dialog(LogNotesDialog::Saving, this);
+        dialog.setNotes(notes);
+        dialog.setTarget(QFileInfo(path).fileName(), filterIndex == 0);
+        dialog.exec();
+        if (dialog.choice() == LogNotesDialog::Cancelled) return;
+        withNotes = dialog.choice() == LogNotesDialog::WithNotes;
+        if (withNotes) notes = dialog.notes();
+    }
+
+    if (!FrameFileIO::saveFrameFileWithProgress(path, filterIndex, frames)) return;
+    loadedFileName = QFileInfo(path).fileName();
+
+    notes.logFile = QFileInfo(path).fileName();
+    if (withNotes)
+    {
+        if (!FrameFileIO::saveLogNotes(path, filterIndex, notes))
+            QMessageBox::warning(this, tr("Log Notes"), tr("The log was saved, but its notes couldn't be saved."));
+        LogNotesDialog::setLastNotes(notes);
+    }
+
+    //a notes file next to the log is from an earlier log of that name: it would be read as this log's notes
+    if ((!withNotes || filterIndex == 0) && QFile::exists(LogNotes::sidecarPath(path)))
+    {
+        if (QMessageBox::question(this, tr("Log Notes"),
+                tr("There is a notes file %1 from an earlier log with this name, which would be shown as this log's "
+                   "notes. Delete it?").arg(QFileInfo(LogNotes::sidecarPath(path)).fileName())) == QMessageBox::Yes)
+            LogNotes::removeSidecar(path);
+    }
+
+    logNotes = withNotes ? notes : LogNotes();
+    logNotesFile = path;
+    logNotesSource = loadedFileName;
+    updateLogNotesPanel();
+    updateFileStatus();
+}
+
+//Reads the notes of a log just loaded (the empty notes if it has none)
+void MainWindow::loadNotesOfLog(const QString &filename, const QString &displayName, bool writable)
+{
+    LogNotes notes;
+    const bool found = !filename.isEmpty() && FrameFileIO::loadLogNotes(filename, notes);
+    logNotes = found ? notes : LogNotes();
+    logNotesFile = writable ? filename : QString();
+    logNotesSource = displayName;
+    addedMarkers.clear(); //Undo doesn't reach into another log's markers
+    markerPresets.reset();
+    updateLogNotesPanel();
+    if (found) logNotesPanel->show();
+}
+
+//shows the current notes in the panel, and their markers in the graphs
+void MainWindow::updateLogNotesPanel()
+{
+    reloadMarkerPresets();
+    logNotesPanel->setNotes(logNotes, logNotesSource);
+    logNotesPanel->setPresets(markerPresets);
+    for (GraphingWindow *win : graphWindows) win->setLogMarkers(logNotes.markers);
+}
+
+bool MainWindow::anyBusConnected() const
+{
+    for (CANConnection *conn : CANConManager::getInstance()->getConnections())
+        if (conn->getStatus() == CANCon::CONNECTED) return true;
+    return false;
+}
+
+//Where a marker goes now. While capturing that's the newest frame; on a log that isn't being captured (no bus
+//connected, or capturing suspended), the frame clicked in the list (or the newest one). False if there are no frames.
+bool MainWindow::markerTime(qint64 &timeUs) const
+{
+    const QVector<CommFrame> *frames = model->getFilteredListReference();
+    if (frames->isEmpty()) return false;
+    auto timeOf = [](const CommFrame &frame)
+    {
+        return frame.timeStamp().seconds() * 1000000 + frame.timeStamp().microSeconds();
+    };
+    //the frame list selects single cells, so the clicked frame is the current index's row (selectedRows() is empty)
+    const QModelIndex current = ui->canFramesView->currentIndex();
+    const bool capturing = anyBusConnected() && allowCapture;
+    if (!capturing && current.isValid() && ui->canFramesView->selectionModel()->isSelected(current)
+        && current.row() < frames->count())
+        timeUs = timeOf(frames->at(current.row()));
+    else
+    {
+        //the newest frame: not always the last row (overwrite mode orders the list by ID)
+        const QVector<CommFrame> *all = model->getListReference();
+        timeUs = timeOf(all->isEmpty() ? frames->last() : all->first());
+        for (const CommFrame &frame : *all) timeUs = qMax(timeUs, timeOf(frame));
+    }
+    return true;
+}
+
+//Ctrl+M, the Add Marker buttons: a marker with typed text
+void MainWindow::addLogMarker()
+{
+    qint64 timeUs;
+    if (!markerTime(timeUs))
+    {
+        QMessageBox::information(this, tr("Add Marker"), tr("There are no frames to mark yet."));
+        return;
+    }
+    bool ok = false;
+    QString text = QInputDialog::getText(this, tr("Add Marker"),
+                                         tr("Marker at %1 s:").arg(LogNotes::formatSeconds(timeUs)),
+                                         QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok) return;
+    if (text.isEmpty()) text = tr("Marker %1").arg(logNotes.markers.count() + 1);
+    addMarkerAt(timeUs, text, false);
+}
+
+void MainWindow::addMarkerAt(qint64 timeUs, const QString &text, bool byNextKey)
+{
+    LogMarker marker;
+    marker.timeUs = timeUs;
+    marker.text = text;
+    logNotes.addMarker(marker);
+    addedMarkers.append({ marker, byNextKey });
+    saveMarkersBack();
+    updateLogNotesPanel();
+    updateFileStatus();
+}
+
+//a loaded log's markers are saved back at once, as File > Log Notes... does
+void MainWindow::saveMarkersBack()
+{
+    if (logNotesFile.isEmpty() || !QFile::exists(logNotesFile)) return;
+    if (logNotes.logFile.isEmpty()) logNotes.logFile = QFileInfo(logNotesFile).fileName();
+    const bool saved = FrameFileIO::isNativeCSVFile(logNotesFile) ? logNotes.writeToNativeCSV(logNotesFile)
+                                                                  : logNotes.writeSidecar(logNotesFile);
+    if (!saved) QMessageBox::warning(this, tr("Markers"), tr("The markers couldn't be saved with %1.")
+                                                            .arg(QFileInfo(logNotesFile).fileName()));
+}
+
+//a preset's key or button: its marker at once, no dialog
+void MainWindow::addPresetMarker(int index)
+{
+    if (QApplication::activeModalWidget()) return; //a dialog is open, maybe editing these notes
+    if (index < 0 || index >= markerPresets.presets.count()) return;
+    qint64 timeUs;
+    if (!markerTime(timeUs))
+    {
+        statusBar()->showMessage(tr("No frames to mark yet."), 4000);
+        return;
+    }
+    const QString text = markerPresets.presets[index].text;
+    addMarkerAt(timeUs, text, false);
+    statusBar()->showMessage(tr("Marker \"%1\" at %2 s").arg(text, LogNotes::formatSeconds(timeUs)), 4000);
+}
+
+//the Next preset key: the presets in order, one per press
+void MainWindow::addNextPresetMarker()
+{
+    if (QApplication::activeModalWidget()) return;
+    const int index = markerPresets.next();
+    if (index < 0)
+    {
+        statusBar()->showMessage(markerPresets.isEmpty() ? tr("No marker presets: set them up in File > Marker Presets...")
+                                                         : tr("All the presets have been added; Ctrl+M adds another marker."),
+                                 4000);
+        return;
+    }
+    qint64 timeUs;
+    if (!markerTime(timeUs))
+    {
+        statusBar()->showMessage(tr("No frames to mark yet."), 4000);
+        return;
+    }
+    const QString text = markerPresets.presets[index].text;
+    markerPresets.advance();
+    addMarkerAt(timeUs, text, true);
+    statusBar()->showMessage(tr("Marker \"%1\" at %2 s").arg(text, LogNotes::formatSeconds(timeUs)), 4000);
+}
+
+//removes the marker added last (by any key or button) since the log was loaded or the frames cleared
+void MainWindow::undoLastMarker()
+{
+    if (QApplication::activeModalWidget()) return;
+    if (addedMarkers.isEmpty())
+    {
+        statusBar()->showMessage(tr("No marker to undo."), 4000);
+        return;
+    }
+    const AddedMarker last = addedMarkers.takeLast();
+    for (int i = int(logNotes.markers.count()) - 1; i >= 0; i--)
+        if (logNotes.markers[i] == last.marker)
+        {
+            logNotes.markers.removeAt(i);
+            break;
+        }
+    if (last.byNextKey) markerPresets.stepBack();
+    saveMarkersBack();
+    updateLogNotesPanel();
+    updateFileStatus();
+    statusBar()->showMessage(tr("Removed the marker \"%1\"").arg(last.marker.text), 4000);
+}
+
+void MainWindow::showMarkerPresets()
+{
+    const QString scenario = logNotes.scenario.isEmpty() ? LogNotesDialog::lastNotes().scenario : logNotes.scenario;
+    MarkerPresetsDialog dialog(markerPresets, scenario, this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    markerPresets = dialog.presets();
+    markerPresets.save();
+    applyMarkerPresets();
+    updateLogNotesPanel();
+}
+
+//the presets' keys (in every SavvyCAN window), and the Next and Undo keys on their menu entries
+void MainWindow::applyMarkerPresets()
+{
+    qDeleteAll(presetShortcuts);
+    presetShortcuts.clear();
+    for (int i = 0; i < markerPresets.presets.count(); i++)
+    {
+        if (markerPresets.presets[i].key.isEmpty()) continue;
+        presetShortcuts.append(new QShortcut(markerPresets.presets[i].key, this, this, [this, i]() { addPresetMarker(i); },
+                                             Qt::ApplicationShortcut));
+    }
+    if (!actNextPreset || !actUndoMarker) return;
+    actNextPreset->setShortcut(markerPresets.nextKey);
+    actNextPreset->setEnabled(!markerPresets.isEmpty());
+    actUndoMarker->setShortcut(markerPresets.undoKey);
+}
+
+//presets a template brought in (LogNotesDialog's Use) replace the ones in use; unchanged ones keep their place
+void MainWindow::reloadMarkerPresets()
+{
+    const MarkerPresets saved = MarkerPresets::load();
+    if (saved == markerPresets) return;
+    markerPresets = saved;
+    applyMarkerPresets();
+}
+
+//a marker double-clicked in the Log Notes panel: select the frame closest to its time
+void MainWindow::goToLogTime(qint64 timeUs)
+{
+    const QVector<CommFrame> *frames = model->getFilteredListReference();
+    int best = -1;
+    qint64 bestDistance = 0;
+    for (int i = 0; i < frames->count(); i++)
+    {
+        const CommFrame::TimeStamp stamp = frames->at(i).timeStamp();
+        const qint64 distance = qAbs(stamp.seconds() * 1000000 + stamp.microSeconds() - timeUs);
+        if (best < 0 || distance < bestDistance)
+        {
+            best = i;
+            bestDistance = distance;
+        }
+    }
+    if (best < 0) return;
+    ui->cbAutoScroll->setChecked(false); //or the next frames would scroll it away
+    ui->canFramesView->selectRow(best);
+    ui->canFramesView->scrollTo(model->index(best, 0), QAbstractItemView::PositionAtCenter);
+}
+
+//When capture starts (the first bus connects with no frames, or continuous logging starts): ask for the setup and
+//scenario now, so they're written down before the test rather than after
+void MainWindow::askCaptureNotes()
+{
+    LogNotes notes = notesForSaving(model->getListReference(), false);
+    notes.frameCount = -1; //nothing captured yet
+    notes.hasSpan = false;
+    notes.saved = QDateTime();
+
+    LogNotesDialog dialog(LogNotesDialog::Starting, this);
+    dialog.setNotes(notes);
+    dialog.setTarget(continuousLogging ? QFileInfo(FrameFileIO::continuousFileName()).fileName() : QString(), true);
+    dialog.exec();
+    if (dialog.choice() != LogNotesDialog::WithNotes) return;
+
+    logNotes = dialog.notes();
+    if (logNotes.hasUserFields()) LogNotesDialog::setLastNotes(logNotes);
+    //these notes are for the capture, not for a log file that was open
+    logNotesFile.clear();
+    logNotesSource.clear();
+    updateLogNotesPanel();
+}
+
+//File > Log Notes...: the notes of the loaded log, saved back into it (or next to it) straight away; with no log
+//file, they're kept for the next save
+void MainWindow::editLogNotes()
+{
+    LogNotes notes = logNotes.isEmpty() ? notesForSaving(model->getListReference(), false) : logNotes;
+    const bool hasFile = !logNotesFile.isEmpty() && QFile::exists(logNotesFile);
+    const bool insideLog = hasFile && FrameFileIO::isNativeCSVFile(logNotesFile);
+    if (hasFile && notes.logFile.isEmpty()) notes.logFile = QFileInfo(logNotesFile).fileName();
+
+    LogNotesDialog dialog(LogNotesDialog::Editing, this);
+    dialog.setNotes(notes);
+    dialog.setTarget(hasFile ? QFileInfo(logNotesFile).fileName() : QString(), insideLog);
+    if (dialog.exec() != QDialog::Accepted) return;
+    notes = dialog.notes();
+
+    if (hasFile)
+    {
+        bool saved;
+        if (insideLog) saved = notes.writeToNativeCSV(logNotesFile);
+        else if (notes.isEmpty()) saved = LogNotes::removeSidecar(logNotesFile);
+        else saved = notes.writeSidecar(logNotesFile);
+        if (!saved) QMessageBox::warning(this, tr("Log Notes"), tr("The notes couldn't be saved with %1.")
+                                                                  .arg(QFileInfo(logNotesFile).fileName()));
+    }
+    if (notes.hasUserFields()) LogNotesDialog::setLastNotes(notes);
+    logNotes = notes;
+    updateLogNotesPanel();
 }
 
 void MainWindow::handleContinousLogging()
@@ -1549,6 +2109,7 @@ void MainWindow::handleContinousLogging()
         ui->actionSave_Continuous_Logfile->setText(tr("Start Continuous Logging"));
         ui->lblContMsg->setText("");
         FrameFileIO::closeContinuousNative();
+        finishContinuousLogNotes();
         return;
     }
 
@@ -1556,6 +2117,7 @@ void MainWindow::handleContinousLogging()
     if (continuousLogging)
     {
         FrameFileIO::closeContinuousNative();
+        finishContinuousLogNotes();
         continuousLogging = false;
         ui->actionSave_Continuous_Filtered_Logfile->setText(tr("Start Continuous Logging (Filtered)"));
         ui->lblContMsg->setText("");
@@ -1568,6 +2130,7 @@ void MainWindow::handleContinousLogging()
     continuousLoggingUseFilter = false;
     continuousLogging = true;
     ui->actionSave_Continuous_Logfile->setText(tr("Cease Continuous Logging"));
+    if (LogNotesDialog::askOnCapture()) askCaptureNotes();
 }
 
 void MainWindow::handleContinousLoggingFiltered()
@@ -1600,15 +2163,42 @@ void MainWindow::handleContinousLoggingFiltered()
     ui->actionSave_Continuous_Filtered_Logfile->setText(tr("Cease Continuous Logging (Filtered)"));
 }
 
+//Continuous logging stopped: the notes go at the end of the log it wrote, after asking for what was seen
+void MainWindow::finishContinuousLogNotes()
+{
+    const QString path = FrameFileIO::continuousFileName();
+    LogNotes notes = notesForSaving(model->getListReference(), false);
+    notes.frameCount = continuousFrameCount;
+    notes.unfilteredCount = -1;
+    notes.hasSpan = continuousFrameCount > 0;
+    notes.firstUs = continuousFirstUs;
+    notes.lastUs = continuousLastUs;
+    notes.logFile = QFileInfo(path).fileName();
+
+    bool withNotes = notes.hasUserFields() || !notes.markers.isEmpty();
+    if (LogNotesDialog::askOnSave())
+    {
+        LogNotesDialog dialog(LogNotesDialog::Finishing, this);
+        dialog.setNotes(notes);
+        dialog.setTarget(notes.logFile, true);
+        dialog.exec();
+        withNotes = dialog.choice() == LogNotesDialog::WithNotes;
+        if (withNotes) notes = dialog.notes();
+    }
+    if (!withNotes) return;
+
+    if (!notes.writeToNativeCSV(path))
+        QMessageBox::warning(this, tr("Log Notes"), tr("The notes couldn't be saved in %1.").arg(notes.logFile));
+    LogNotesDialog::setLastNotes(notes);
+    //the frames on screen are still the capture's, so the notes (and markers) stay with them
+    logNotes = notes;
+    logNotes.logFile.clear();
+    updateLogNotesPanel();
+}
+
 void MainWindow::handleSaveFilteredFile()
 {
-    QString filename;
-
-    if (FrameFileIO::saveFrameFile(filename, model->getFilteredListReference()))
-    {
-        loadedFileName = filename;
-        updateFileStatus();
-    }
+    saveLog(model->getFilteredListReference(), true);
 }
 
 void MainWindow::handleSaveFilters()
@@ -1957,6 +2547,12 @@ void MainWindow::toggleCapture()
 void MainWindow::connectionStatusUpdated(int conns)
 {
     lbStatusConnected.setText(tr("Connected to ") + QString::number(conns) + tr(" buses"));
+
+    //capture starts: the first bus connected with nothing captured yet (continuous logging asks on its own)
+    const bool firstConnection = connectedBusCount == 0 && conns > 0;
+    connectedBusCount = conns;
+    if (firstConnection && model->rowCount() == 0 && !continuousLogging && LogNotesDialog::askOnCapture())
+        QTimer::singleShot(0, this, &MainWindow::askCaptureNotes); //not from inside the connection manager's signal
 }
 
 void MainWindow::updateFileStatus()
@@ -1971,6 +2567,7 @@ void MainWindow::updateFileStatus()
         if (loadedFileName.length() > 2)
         {
             output = loadedFileName + " loaded";
+            if (!logNotesSource.isEmpty() && !logNotes.isEmpty()) output += tr(", with notes");
         }
         else
         {
@@ -2028,6 +2625,7 @@ void MainWindow::showGraphingWindow()
         frames = model->getFilteredListReference();
     lastGraphingWindow = new GraphingWindow(frames);
     graphWindows.append(lastGraphingWindow);
+    lastGraphingWindow->setLogMarkers(logNotes.markers);
 
     connect(lastGraphingWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), this, SLOT(gotCenterTimeID(uint32_t,double)));
     connect(this, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(uint32_t,double)));
@@ -2239,6 +2837,145 @@ void MainWindow::showUDSScanWindow()
         udsScanWindow = new UDSScanWindow(model->getListReference());
     }
     udsScanWindow->show();
+}
+
+void MainWindow::showObd2Window()
+{
+    if (!obd2Window)
+    {
+        ISOTP_HANDLER *isotp = HandlerFactory::createISOTPHandler();
+        obd2Window = new Obd2Window(new Obd2Poller(isotp), CANConManager::getInstance()->getNumBuses());
+        isotp->setParent(obd2Window); //deleted with the window, after the poller that uses it
+        obd2Window->setHelpCallback([]() { HelpWindow::getRef()->showHelp("obd2.md"); });
+        obd2Window->setListenOnlyCheck([](int bus) {
+            int busBase = 0;
+            for (CANConnection *conn : CANConManager::getInstance()->getConnections())
+            {
+                if (bus < busBase + conn->getNumBuses())
+                {
+                    CANBus settings;
+                    return conn->getBusSettings(bus - busBase, settings) && settings.isListenOnly();
+                }
+                busBase += conn->getNumBuses();
+            }
+            return false;
+        });
+        obd2Window->setClockCheck([]() {
+            //each adapter stamps its frames with its own clock unless the system clock is used for all of them
+            return CANConManager::getInstance()->getConnections().count() > 1
+                   && !QSettings().value("Main/TimeClock", false).toBool();
+        });
+        obd2Window->setDbcLoader([this](const QString &path, int bus, const QList<quint32> &ecus, QString *error) {
+            return attachObd2Dbc(path, bus, ecus, error);
+        });
+        obd2Window->setGraphOpener([this](int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error) {
+            return graphObd2Signals(bus, sigs, error);
+        });
+    }
+    obd2Window->show();
+    obd2Window->raise();
+}
+
+//Loads the DBC file the OBD-II Poller wrote and attaches it to its bus. A copy already loaded from that file is used
+//as it is when it has every ECU, since graphs may point at its signals; otherwise it has to be removed first.
+bool MainWindow::attachObd2Dbc(const QString &path, int bus, const QList<quint32> &ecus, QString *error)
+{
+    DBCHandler *dbc = DBCHandler::getReference();
+    DBCFile *file = nullptr;
+    for (int i = 0; i < dbc->getFileCount(); i++)
+    {
+        if (QFileInfo(dbc->getFileByIdx(i)->getFullFilename()) == QFileInfo(path)) file = dbc->getFileByIdx(i);
+    }
+
+    bool loadedNow = false;
+    if (file)
+    {
+        for (quint32 ecu : ecus)
+        {
+            if (!file->messageHandler->findMsgByID(ecu))
+            {
+                *error = tr("%1 is already loaded, without ECU 0x%2. Remove it in the DBC File Manager first (close the "
+                            "graphs using it), or save the DBC under another name.").arg(file->getFilename()).arg(ecu, 0, 16);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        file = dbc->loadDBCFile(path);
+        if (!file)
+        {
+            *error = tr("%1 was written but couldn't be loaded.").arg(path);
+            return false;
+        }
+        loadedNow = true;
+    }
+    file->setAssocBus(bus);
+    if (loadedNow && dbcFileWindow) dbcFileWindow->addLoadedFile(file);
+    DBCSettingsUpdated();
+    return true;
+}
+
+//Opens a graph window with the OBD-II Poller's signals, decoded by the DBC on that bus. ECUs that haven't sent a
+//frame yet are left out, unless nothing has been captured at all.
+bool MainWindow::graphObd2Signals(int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error)
+{
+    QSet<quint32> idsSeen;
+    for (const CommFrame &frame : *model->getListReference())
+    {
+        if (frame.getBus() == bus) idsSeen.insert(frame.frameId());
+    }
+
+    DBCHandler *dbc = DBCHandler::getReference();
+    QList<DBC_SIGNAL *> found;
+    bool described = false;
+    for (const Obd2Window::GraphSignal &wanted : sigs)
+    {
+        DBC_SIGNAL *sig = nullptr;
+        for (int i = 0; i < dbc->getFileCount() && !sig; i++)
+        {
+            DBCFile *file = dbc->getFileByIdx(i);
+            if (file->getAssocBus() != -1 && file->getAssocBus() != bus) continue;
+            DBC_MESSAGE *msg = file->messageHandler->findMsgByID(wanted.first);
+            if (msg) sig = msg->sigHandler->findSignalByName(wanted.second);
+        }
+        if (!sig) continue;
+        described = true;
+        if (idsSeen.isEmpty() || idsSeen.contains(wanted.first)) found.append(sig);
+    }
+    if (!described)
+    {
+        *error = tr("No DBC file on bus %1 describes these PIDs. Click Make DBC... first.").arg(bus);
+        return false;
+    }
+    if (found.isEmpty())
+    {
+        *error = tr("None of these ECUs has answered on bus %1 yet.").arg(bus);
+        return false;
+    }
+
+    static const QColor colors[] = {QColor(31, 119, 180), QColor(214, 39, 40), QColor(44, 160, 44),
+                                    QColor(255, 127, 14), QColor(148, 103, 189), QColor(140, 86, 75),
+                                    QColor(227, 119, 194), QColor(23, 190, 207)};
+    showGraphingWindow();
+    int n = 0;
+    for (DBC_SIGNAL *sig : found)
+    {
+        GraphParams params;
+        params.ID = sig->parentMessage->ID;
+        params.bus = bus;
+        params.startBit = sig->startBit;
+        params.numBits = sig->signalSize;
+        params.intelFormat = sig->intelByteOrder;
+        params.isSigned = (sig->valType == SIGNED_INT);
+        params.scale = sig->factor;
+        params.bias = sig->bias;
+        params.associatedSignal = sig;
+        params.graphName = sig->name;
+        params.lineColor = colors[n++ % 8];
+        lastGraphingWindow->createGraph(params);
+    }
+    return true;
 }
 
 void MainWindow::showScriptingWindow()

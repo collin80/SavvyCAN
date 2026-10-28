@@ -399,6 +399,16 @@ bool DBC_SIGNAL::processAsInt(const CommFrame &frame, int32_t &outValue)
 //except STRING. Useful for when you know you'll need floating point data and don't want to incur a conversion
 //back and forth to double or float. Such a use is the graphing window.
 //Similar syntax to processSignalInt but with double instead.
+
+//The last payload byte a signal uses. An Intel signal counts up from its start bit; a Motorola signal's start bit
+//is its most significant bit and it counts down through each byte into the next one.
+static int lastByteOfSignal(int startBit, int signalSize, bool intelByteOrder)
+{
+    if (intelByteOrder) return (startBit + signalSize - 1) / 8;
+    int msb = (startBit / 8) * 8 + (7 - (startBit % 8)); //bits numbered from the top of byte 0
+    return (msb + signalSize - 1) / 8;
+}
+
 bool DBC_SIGNAL::processAsDouble(const CommFrame &frame, double &outValue)
 {
     int64_t result = 0;
@@ -415,7 +425,7 @@ bool DBC_SIGNAL::processAsDouble(const CommFrame &frame, double &outValue)
     if (valType == SIGNED_INT) isSigned = true;
     if (valType == SIGNED_INT || valType == UNSIGNED_INT)
     {
-        if ( frame.payload().length() * 8 < (startBit+signalSize) )
+        if (lastByteOfSignal(startBit, signalSize, intelByteOrder) >= frame.payload().length())
         {
             result = 0;
             return false;

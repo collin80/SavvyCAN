@@ -327,7 +327,7 @@ public:
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
-                if (bit < 512) {
+                if (bit < 2048) { //up to 256 bytes: CAN FD (64) and FlexRay (cycle count + 254)
                     int bytePos = bit / 8;
                     if (bytePos >= data.length()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))
@@ -342,7 +342,7 @@ public:
             bit = startBit;
             for (int bitpos = 0; bitpos < sigSize; bitpos++)
             {
-                if (bit < 512) {
+                if (bit < 2048) { //up to 256 bytes: CAN FD (64) and FlexRay (cycle count + 254)
                     int bytePos = bit / 8;
                     if (bytePos >= data.length()) return 0; //error!
                     if (data[bit / 8] & (1 << (bit % 8)))

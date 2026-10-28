@@ -6,6 +6,7 @@
 #include <qevent.h>
 #include "helpwindow.h"
 #include "connections/canconmanager.h"
+#include "github/githubbrowserdialog.h"
 
 DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *parent) :
     QDialog(parent),
@@ -61,6 +62,8 @@ DBCLoadSaveWindow::DBCLoadSaveWindow(const QVector<CommFrame> *frames, QWidget *
 
     connect(ui->btnEdit, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::editFile);
     connect(ui->btnLoad, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFile);
+    connect(ui->btnLoadGitHub, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::loadFromGitHub);
+    connect(ui->btnSaveGitHub, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::saveToGitHub);
     connect(ui->btnMoveDown, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveDown);
     connect(ui->btnMoveUp, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::moveUp);
     connect(ui->btnRemove, &QAbstractButton::clicked, this, &DBCLoadSaveWindow::removeFile);
@@ -158,10 +161,7 @@ void DBCLoadSaveWindow::loadFile()
     QFileDialog dialog;
     QSettings settings;
 
-    QStringList filters;
-    filters.append(QString(tr("DBC File (*.dbc)")));
-    filters.append(QString(tr("Tesla JSON File (*.json)")));
-    filters.append(QString(tr("Secret CSV Signal Defs (*.csv)")));
+    const QStringList filters = DBCHandler::loadFilters();
 
     dialog.setDirectory(settings.value("DBC/LoadSaveDirectory", dialog.directory().path()).toString());
     dialog.setFileMode(QFileDialog::ExistingFile);
@@ -174,23 +174,69 @@ void DBCLoadSaveWindow::loadFile()
         //right now there is only one file type that can be loaded here so just do it.
         settings.setValue("DBC/LoadSaveDirectory", dialog.directory().path());
 
-        if (dialog.selectedNameFilter() == filters[0])
-        {
-            if (!filename.contains('.')) filename += ".dbc";
-            file = dbcHandler->loadDBCFile(filename);
-        }
-        if (dialog.selectedNameFilter() == filters[1])
-        {
-            if (!filename.contains('.')) filename += ".json";
-            file = dbcHandler->loadJSONFile(filename);
-        }
-        if (dialog.selectedNameFilter() == filters[2])
-        {
-            if (!filename.contains('.')) filename += ".csv";
-            file = dbcHandler->loadSecretCSVFile(filename);
-        }
+        file = dbcHandler->loadFileAs(filename, int(filters.indexOf(dialog.selectedNameFilter())));
     }
 
+    addFileRow(file);
+}
+
+void DBCLoadSaveWindow::loadFromGitHub()
+{
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Open, DBCHandler::loadFilters(), this);
+    if (dialog.exec() != QDialog::Accepted) return;
+
+    DBCFile *file = dbcHandler->loadFileAs(dialog.localFile(), dialog.fileTypeIndex());
+    if (!file)
+    {
+        QMessageBox::warning(this, tr("Load from GitHub"), tr("%1 couldn't be loaded as that type of file.")
+                             .arg(dialog.origin().displayName()));
+        return;
+    }
+    addFileRow(file);
+}
+
+void DBCLoadSaveWindow::saveToGitHub()
+{
+    const int idx = ui->tableFiles->currentRow();
+    DBCFile *file = dbcHandler->getFileByIdx(idx);
+    if (idx < 0 || !file)
+    {
+        QMessageBox::information(this, tr("Save to GitHub"), tr("Pick a DBC file in the list first."));
+        return;
+    }
+
+    //the saver renames the file to wherever it writes, so its name and dirty flag are put back if nothing's saved
+    const QString oldName = file->getFullFilename();
+    const bool wasDirty = file->getDirtyFlag();
+
+    GitHubBrowserDialog dialog(GitHubBrowserDialog::DBCs, GitHubBrowserDialog::Save, DBCHandler::saveFilters(), this);
+    dialog.setSaveWriter([this, idx](const QString &localFile, int, QString &error)
+    {
+        QString name = localFile;
+        if (dbcHandler->saveDBCFileAs(idx, name)) return true;
+        error = tr("The DBC file couldn't be written.");
+        return false;
+    });
+    QString name = file->getFilename();
+    if (name.endsWith(".ldf", Qt::CaseInsensitive)) name = name.left(name.length() - 4) + ".dbc"; //saved as DBC
+    const GitHubOrigin from = GitHubCache::originOf(oldName);
+    dialog.setSuggestion(from.isValid() && from.path.endsWith(".dbc", Qt::CaseInsensitive) ? from : GitHubOrigin(), name);
+
+    if (dialog.exec() == QDialog::Accepted && !dialog.localFile().isEmpty())
+    {
+        file->saveFile(dialog.localFile()); //the same text the dialog saved: the file now goes by its GitHub copy
+        ui->tableFiles->setItem(idx, 0, new QTableWidgetItem(file->getFilename()));
+        updateSettings();
+        return;
+    }
+    file->setFullFilename(oldName);
+    if (wasDirty) file->setDirtyFlag();
+    else file->clearDirtyFlag();
+}
+
+//a row in the table for a file just loaded
+void DBCLoadSaveWindow::addFileRow(DBCFile *file)
+{
     if(file) {
         inhibitCellProcessing=true;
         int idx = ui->tableFiles->rowCount();
@@ -220,6 +266,16 @@ void DBCLoadSaveWindow::loadFile()
 
         updateSettings();
     }
+}
+
+void DBCLoadSaveWindow::addLoadedFile(DBCFile *file)
+{
+    if (!file) return;
+    int bus = file->getAssocBus();
+    addFileRow(file);
+    inhibitCellProcessing = true;
+    ui->tableFiles->item(ui->tableFiles->rowCount() - 1, 1)->setText(QString::number(bus));
+    inhibitCellProcessing = false;
 }
 
 void DBCLoadSaveWindow::loadJSON()

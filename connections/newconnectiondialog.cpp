@@ -1,6 +1,7 @@
 #include <QCanBus>
 #include "newconnectiondialog.h"
 #include "ui_newconnectiondialog.h"
+#include "picoflexray.h"
 
 NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QString>* kayakhosts, QWidget *parent) :
     QDialog(parent),
@@ -30,6 +31,12 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QSt
     connect(ui->rbLawicel, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbCANserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
     connect(ui->rbCanlogserver, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+    connect(ui->rbPicoFlexRay, &QAbstractButton::clicked, this, &NewConnectionDialog::handleConnTypeChanged);
+    if (!PicoFlexRay::isAvailable())
+    {
+        ui->rbPicoFlexRay->setEnabled(false);
+        ui->rbPicoFlexRay->setToolTip(tr("This SavvyCAN was built without libusb"));
+    }
 
     connect(ui->cbDeviceType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &NewConnectionDialog::handleDeviceTypeChanged);
     connect(ui->btnOK, &QPushButton::clicked, this, &NewConnectionDialog::handleCreateButton);
@@ -70,6 +77,7 @@ void NewConnectionDialog::handleConnTypeChanged()
     if (ui->rbMQTT->isChecked()) selectMQTT();
     if (ui->rbCANserver->isChecked()) selectCANserver();
     if (ui->rbCanlogserver->isChecked()) selectCANlogserver();
+    if (ui->rbPicoFlexRay->isChecked()) selectPicoFlexRay();
 }
 
 void NewConnectionDialog::handleDeviceTypeChanged()
@@ -256,6 +264,24 @@ void NewConnectionDialog::selectCANlogserver()
     ui->cbPort->clear();
 }
 
+void NewConnectionDialog::selectPicoFlexRay()
+{
+    ui->lPort->setText("Device serial number (empty: first one found):");
+
+    ui->lblDeviceType->setHidden(true);
+    ui->cbDeviceType->setHidden(true);
+    ui->cbCANSpeed->setHidden(true);
+    ui->cbSerialSpeed->setHidden(true);
+    ui->lblCANSpeed->setHidden(true);
+    ui->lblSerialSpeed->setHidden(true);
+    ui->cbCanFd->setHidden(true);
+    ui->cbDataRate->setHidden(true);
+    ui->lblDataRate->setHidden(true);
+
+    ui->cbPort->clear();
+    ui->cbPort->addItems(PicoFlexRay::availableDevices());
+}
+
 void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QString pDriver)
 {
 
@@ -284,6 +310,9 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
           break;
         case CANCon::CANLOGSERVER:
           ui->rbCanlogserver->setChecked(true);
+          break;
+        case CANCon::PICOFLEXRAY:
+          ui->rbPicoFlexRay->setChecked(true);
           break;
         default: {}
     }
@@ -330,6 +359,7 @@ void NewConnectionDialog::setPortName(CANCon::type pType, QString pPortName, QSt
             break;
         case CANCon::CANSERVER:
         case CANCon::CANLOGSERVER:
+        case CANCon::PICOFLEXRAY:
         {
             ui->cbPort->setCurrentText(pPortName);
             break;
@@ -351,6 +381,7 @@ QString NewConnectionDialog::getPortName()
         return ui->cbPort->currentText();
     case CANCon::CANSERVER:
     case CANCon::CANLOGSERVER:
+    case CANCon::PICOFLEXRAY:
         return ui->cbPort->currentText();
 
     default:
@@ -429,6 +460,7 @@ CANCon::type NewConnectionDialog::getConnectionType()
     if (ui->rbLawicel->isChecked()) return CANCon::LAWICEL;
     if (ui->rbCANserver->isChecked()) return CANCon::CANSERVER;
     if (ui->rbCanlogserver->isChecked()) return CANCon::CANLOGSERVER;
+    if (ui->rbPicoFlexRay->isChecked()) return CANCon::PICOFLEXRAY;
     qDebug() << "getConnectionType: error";
 
     return CANCon::NONE;

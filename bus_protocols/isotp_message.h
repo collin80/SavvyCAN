@@ -10,9 +10,9 @@
 class ISOTP_MESSAGE : public CommFrame
 {
 public:
-    int reportedLength;
-    int lastSequence;
-    bool isMultiframe;
+    int reportedLength = 0;
+    int lastSequence = 0;
+    bool isMultiframe = false;
 };
 
 #endif // ISOTP_MESSAGE_H
