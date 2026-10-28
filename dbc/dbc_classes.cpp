@@ -21,6 +21,15 @@ void DBC_SIGNAL::addMultiplexRange(int min, int max)
     //which are identical. So, detect this and don't store on subsequent calls
     if (!multiplexLowAndHighValues.contains(QPair<int, int>(min, max)))
         multiplexLowAndHighValues.append(QPair<int, int>(min, max));
+    if (multiplexLowAndHighValues.count() > 1)
+        hasExtendedMultiplexing = true;
+}
+
+void DBC_SIGNAL::clearMultiplexRanges()
+{
+    multiplexLowAndHighValues.clear();
+    isMultiplexed = false;
+    hasExtendedMultiplexing = false;
 }
 
 bool DBC_SIGNAL::isSignalInMessage(const CANFrame &frame)
@@ -58,7 +67,7 @@ QString DBC_SIGNAL::multiplexDbcString(DbcMuxStringFormat fmt) const
     for (auto limitPair : multiplexLowAndHighValues) {
         if (fmt == MuxStringFormat_DbcFile) {
             if (!ret.isEmpty())
-                ret.append(QStringLiteral(" "));
+                ret.append(QStringLiteral(", "));
             ret.append(QString("%1-%2").arg(limitPair.first).arg(limitPair.second));
         } else {
             if (!ret.isEmpty())
