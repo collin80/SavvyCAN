@@ -7,6 +7,9 @@
 #include "lawicel_serial.h"
 #include "canserver.h"
 #include "canlogserver.h"
+#ifdef WITH_PANDA
+#include "panda_usb.h"
+#endif
 
 using namespace CANCon;
 
@@ -32,6 +35,10 @@ CANConnection* CanConFactory::create(type pType, QString pPortName, QString pDri
         return new CANserver(pPortName);
     case CANLOGSERVER:
         return new CanLogServer(pPortName);
+#ifdef WITH_PANDA
+    case PANDA:
+        return new PandaUSB(pPortName, pBusSpeed);
+#endif
     default: {}
     }
 
