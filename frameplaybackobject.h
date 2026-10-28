@@ -70,6 +70,8 @@ private slots:
     void timerTriggered();
 
 private:
+     friend class TestOriginalPlayback;
+     void processOriginalTiming(quint64 elapsed);
      QList<CANFrame> sendingBuffer;
      SequenceItem *currentSeqItem;
      int currentPosition;
@@ -87,7 +89,7 @@ private:
      QThread*            mThread_p;
 
      quint64 updatePosition(bool forward);
-     quint64 peekPosition(bool forward);
+     quint64 peekPosition();
      /**
       * @brief starts the device
       */
