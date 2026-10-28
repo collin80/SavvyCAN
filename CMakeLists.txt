@@ -14,6 +14,7 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ui)
 option(USE_DBUS "Enable DBus support" OFF)
 option(BUILD_TESTS "Build test target" OFF)
 option(USE_SANITIZER "Enable sanitizers for Debug builds" OFF)
+option(USE_LIBUSB "pico-flexray (FlexRay over USB) support, if libusb-1.0 is found" ON)
 
 find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS Core Gui PrintSupport SerialBus SerialPort Widgets Help Network OpenGL Qml)
 find_package(OpenGL REQUIRED)
@@ -66,6 +67,8 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     connections/canconnectionmodel.cpp connections/canconnectionmodel.h
     connections/canlogserver.cpp connections/canlogserver.h
     connections/canserver.cpp connections/canserver.h
+    connections/picoflexray.cpp connections/picoflexray.h
+    connections/picoflexrayparser.cpp connections/picoflexrayparser.h
     connections/connectionwindow.cpp connections/connectionwindow.h
     connections/gvretserial.cpp connections/gvretserial.h
     connections/lawicel_serial.cpp connections/lawicel_serial.h
@@ -203,6 +206,32 @@ target_link_libraries(SavvyCAN PRIVATE
 
 if(USE_DBUS AND UNIX AND NOT APPLE)
     target_link_libraries(SavvyCAN PRIVATE Qt6::DBus)
+endif()
+
+# libusb-1.0 for the pico-flexray connection: pkg-config first, then a plain search (vcpkg, or set
+# LIBUSB_INCLUDE_DIR/LIBUSB_LIBRARY by hand). Without it, SavvyCAN builds without pico-flexray support.
+if(USE_LIBUSB)
+    find_package(PkgConfig QUIET)
+    if(PKG_CONFIG_FOUND)
+        pkg_check_modules(LIBUSB QUIET IMPORTED_TARGET libusb-1.0)
+    endif()
+    if(LIBUSB_FOUND)
+        target_link_libraries(SavvyCAN PRIVATE PkgConfig::LIBUSB)
+    else()
+        find_path(LIBUSB_INCLUDE_DIR libusb.h PATH_SUFFIXES libusb-1.0)
+        find_library(LIBUSB_LIBRARY NAMES usb-1.0 libusb-1.0)
+        if(LIBUSB_INCLUDE_DIR AND LIBUSB_LIBRARY)
+            set(LIBUSB_FOUND TRUE)
+            target_include_directories(SavvyCAN PRIVATE ${LIBUSB_INCLUDE_DIR})
+            target_link_libraries(SavvyCAN PRIVATE ${LIBUSB_LIBRARY})
+        endif()
+    endif()
+    if(LIBUSB_FOUND)
+        target_compile_definitions(SavvyCAN PRIVATE HAVE_LIBUSB)
+        message(STATUS "libusb-1.0 found: pico-flexray support enabled")
+    else()
+        message(STATUS "libusb-1.0 not found: pico-flexray support disabled")
+    endif()
 endif()
 
 if(WIN32)

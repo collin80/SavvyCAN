@@ -43,6 +43,21 @@ Received CAN FD frames show "D" in the Type column of the main frame list, "DB" 
 
 QT also includes a "virtualcan" device type. You can use this to create a bus that will loop back anything you send to it. This is useful for testing without needing to connect any devices or load any log files.
 
+Connecting to a pico-flexray (FlexRay)
+======================================
+
+[pico-flexray](https://github.com/dynm/pico-flexray) is a Raspberry Pi Pico based FlexRay capture and man-in-the-middle board. Select "pico-flexray (FlexRay, USB)". The port list shows the serial numbers of the connected boards (they start with "picoflex"); leave it empty to use the first one found. The board appears as a Panda (USB VID 0x3801, PID 0xddcc).
+
+- **Windows:** the board needs the WinUSB driver. Install it once with [Zadig](https://zadig.akeo.ie/): Options > List All Devices, pick the "panda" device (interface 0), choose WinUSB and press Install Driver.
+- **Linux:** the user needs access to the USB device, e.g. a udev rule such as `SUBSYSTEM=="usb", ATTR{idVendor}=="3801", ATTR{idProduct}=="ddcc", MODE="0666"`.
+- The option is greyed out if SavvyCAN was built without libusb-1.0.
+
+Captured frames go to bus 0 (FR1) and bus 1 (FR2) of the connection and show "F" in the Type column. The ID is the FlexRay slot ID and the first data byte is the cycle count, followed by the FlexRay payload (up to 254 bytes). This matches the FlexRay DBC files used with pico-flexray (for example its `dbc/lateral.dbc`), which multiplex on the cycle count in byte 0, so those files decode the frames as they are. Null frames are kept and show "FN" in the Type column; they carry no valid data, so they aren't decoded with a DBC or graphed. Frames the board found a payload CRC error in show "F!".
+
+Timestamps: with firmware that supports record format 2 (see the pico-flexray README), SavvyCAN asks for it when it connects, and each frame is stamped with the board's own microsecond clock at the end of the frame, mapped onto SavvyCAN's clock. Frame-to-frame timing is then the board's, good enough to see the slot schedule. With stock firmware, frames are stamped by the PC when each USB transfer arrives, so frames that arrive together share a timestamp. The debug console says which one you have.
+
+FlexRay frames are saved in SavvyCAN's native CSV format with "FR" in the flags column after the data. The Frame Info window's per-byte statistics cover the first 8 bytes and Flow View shows the first 64 bytes of longer frames.
+
 Connecting to Socketcand
 ========================
 

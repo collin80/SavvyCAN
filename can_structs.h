@@ -173,8 +173,68 @@ public:
         }
     }
 
-    //A frame carrying data: classic CAN or CAN FD (as opposed to remote, error, LIN, ...)
-    constexpr bool isDataFrame() const noexcept { return format == 0x0 || format == 0x1; }
+    //A frame carrying data: classic CAN, CAN FD or FlexRay, but not a FlexRay null frame (as opposed to remote,
+    //error, LIN, ...)
+    constexpr bool isDataFrame() const noexcept
+    {
+        return format == 0x0 || format == 0x1 || (format == 0x2 && !isFlexRayNullFrame());
+    }
+
+    /*
+     * FlexRay frames: the frame ID is the 11-bit slot ID, byte 0 of the payload is the cycle count (0-63) and the
+     * FlexRay payload (0-254 bytes) follows. Keeping the cycle count in the payload lets DBC files multiplex on it,
+     * as pico-flexray's and openpilot cabana's FlexRay DBC files do.
+     */
+    static constexpr int FLEXRAY_MAX_PAYLOAD = 254;
+    constexpr bool isFlexRay() const noexcept { return format == 0x2; }
+
+    /*
+     * FlexRay header details from the capture device, kept with the frame (none for frames loaded from most logs).
+     * Indicators are the header's 5 bits: reserved, payload preamble, null frame (0 = null frame), sync, startup.
+     * The CRC status is what the device checked; header and frame CRCs are the values received.
+     */
+    static constexpr quint8 FLEXRAY_IND_NULL_FRAME = 0x04; //null frame indicator: set = data valid
+    void setFlexRayHeader(quint8 indicators, quint16 headerCrc, quint32 frameCrc)
+    {
+        flexRayInfo = (flexRayInfo & (FR_CRC_CHECKED | FR_HEADER_CRC_OK | FR_FRAME_CRC_OK | FR_DEVICE_TIME))
+                      | FR_HAS_HEADER | (quint64(indicators & 0x1F) << FR_IND_SHIFT)
+                      | (quint64(headerCrc & 0x7FF) << FR_HCRC_SHIFT) | (quint64(frameCrc & 0xFFFFFF) << FR_FCRC_SHIFT);
+    }
+    //for sources that only know whether it was a null frame (e.g. native CSV)
+    void setFlexRayNullFrame(bool isNull)
+    {
+        quint8 ind = hasFlexRayHeader() ? flexRayIndicators() : FLEXRAY_IND_NULL_FRAME;
+        ind = isNull ? quint8(ind & ~FLEXRAY_IND_NULL_FRAME) : quint8(ind | FLEXRAY_IND_NULL_FRAME);
+        setFlexRayHeader(ind, flexRayHeaderCrc(), flexRayFrameCrc());
+    }
+    void setFlexRayCrcStatus(bool headerCrcOk, bool frameCrcOk)
+    {
+        flexRayInfo = (flexRayInfo & ~(FR_HEADER_CRC_OK | FR_FRAME_CRC_OK)) | FR_CRC_CHECKED
+                      | (headerCrcOk ? FR_HEADER_CRC_OK : 0) | (frameCrcOk ? FR_FRAME_CRC_OK : 0);
+    }
+    void setFlexRayDeviceTimestamp(bool fromDevice)
+    {
+        flexRayInfo = fromDevice ? (flexRayInfo | FR_DEVICE_TIME) : (flexRayInfo & ~FR_DEVICE_TIME);
+    }
+    void clearFlexRayInfo() { flexRayInfo = 0; }
+
+    constexpr bool hasFlexRayHeader() const noexcept { return flexRayInfo & FR_HAS_HEADER; }
+    constexpr quint8 flexRayIndicators() const noexcept { return quint8((flexRayInfo >> FR_IND_SHIFT) & 0x1F); }
+    constexpr quint16 flexRayHeaderCrc() const noexcept { return quint16((flexRayInfo >> FR_HCRC_SHIFT) & 0x7FF); }
+    constexpr quint32 flexRayFrameCrc() const noexcept { return quint32((flexRayInfo >> FR_FCRC_SHIFT) & 0xFFFFFF); }
+    constexpr bool isFlexRayNullFrame() const noexcept
+    {
+        return format == 0x2 && hasFlexRayHeader() && !(flexRayIndicators() & FLEXRAY_IND_NULL_FRAME);
+    }
+    constexpr bool flexRayCrcChecked() const noexcept { return flexRayInfo & FR_CRC_CHECKED; }
+    constexpr bool flexRayHeaderCrcOk() const noexcept { return flexRayInfo & FR_HEADER_CRC_OK; }
+    constexpr bool flexRayFrameCrcOk() const noexcept { return flexRayInfo & FR_FRAME_CRC_OK; }
+    //checked by the device and failed
+    constexpr bool hasFlexRayCrcError() const noexcept
+    {
+        return flexRayCrcChecked() && !(flexRayHeaderCrcOk() && flexRayFrameCrcOk());
+    }
+    constexpr bool hasFlexRayDeviceTimestamp() const noexcept { return flexRayInfo & FR_DEVICE_TIME; }
 
     constexpr QCanBusFrame::FrameType toQCanBusFrameType() noexcept
     {
@@ -285,11 +345,12 @@ public:
         isLocalEcho = !(received & 0x1);
     }
 
+    //more than 8 bytes makes a CAN frame CAN FD; other frame types (FlexRay, LIN, ...) keep their type
     void setPayload(const QByteArray &data)
     {
         dataBytes = data;
         if (data.size() > 8)
-            isFlexibleDataRate = 0x1;
+            setFlexibleDataRateFormat(true);
     }
 
     QByteArray payload() const { return dataBytes; }
@@ -327,6 +388,9 @@ public:
 
         // maximum permitted payload size in CAN or CAN FD
         const qsizetype length = dataBytes.size();
+        if (format == FLEXRAYDataFrame) // 11-bit slot ID, cycle count byte + up to 254 bytes
+            return !isExtendedFrame && msgId <= 0x7FFU && length >= 1 && length <= 1 + FLEXRAY_MAX_PAYLOAD;
+
         if (isFlexibleDataRate) {
             if (format == RemoteRequestFrame)
                 return false;
@@ -355,6 +419,18 @@ private:
     int bus;
     uint64_t timedelta;
     uint32_t frameCount; //used in overwrite mode
+
+    //FlexRay header details (see setFlexRayHeader()), packed: flags in bits 0-4, indicators 5-9,
+    //header CRC 10-20, frame CRC 21-44
+    static constexpr quint64 FR_HAS_HEADER = 1ull << 0;
+    static constexpr quint64 FR_CRC_CHECKED = 1ull << 1;
+    static constexpr quint64 FR_HEADER_CRC_OK = 1ull << 2;
+    static constexpr quint64 FR_FRAME_CRC_OK = 1ull << 3;
+    static constexpr quint64 FR_DEVICE_TIME = 1ull << 4;
+    static constexpr int FR_IND_SHIFT = 5;
+    static constexpr int FR_HCRC_SHIFT = 10;
+    static constexpr int FR_FCRC_SHIFT = 21;
+    quint64 flexRayInfo = 0;
 };
 
 

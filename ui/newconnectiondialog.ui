@@ -85,6 +85,13 @@
         </property>
        </widget>
       </item>
+      <item row="8" column="0">
+       <widget class="QRadioButton" name="rbPicoFlexRay">
+        <property name="text">
+         <string>pico-flexray (FlexRay, USB)</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>

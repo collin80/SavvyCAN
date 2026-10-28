@@ -27,6 +27,8 @@ SOURCES += main.cpp\
     canbridgewindow.cpp \
     connections/canlogserver.cpp \
     connections/canserver.cpp \
+    connections/picoflexray.cpp \
+    connections/picoflexrayparser.cpp \
     connections/lawicel_serial.cpp \
     connections/mqtt_bus.cpp \
     dbc/dbcnodeduplicateeditor.cpp \
@@ -129,6 +131,8 @@ HEADERS  += mainwindow.h \
     canframemodel.h \
     connections/canlogserver.h \
     connections/canserver.h \
+    connections/picoflexray.h \
+    connections/picoflexrayparser.h \
     connections/lawicel_serial.h \
     connections/socketcand.h \
     connections/mqtt_bus.h \
@@ -278,6 +282,13 @@ RESOURCES += \
 
 win32-msvc* {
    LIBS += opengl32.lib
+}
+
+# libusb-1.0 for the pico-flexray connection (optional: without it SavvyCAN builds without pico-flexray support)
+packagesExist(libusb-1.0) {
+   CONFIG += link_pkgconfig
+   PKGCONFIG += libusb-1.0
+   DEFINES += HAVE_LIBUSB
 }
 
 win32-g++ {
