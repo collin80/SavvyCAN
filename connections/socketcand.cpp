@@ -27,7 +27,6 @@ SocketCANd::SocketCANd(QString portName) :
     QVarLengthArray<QTcpSocket*> tcpClient(0);
     mNumBuses = hostCanIDs.length();
     mBusData.resize(mNumBuses);
-    reconnecting = false;
 
     for (int i = 0; i < mNumBuses; i++)
     {
@@ -213,7 +212,7 @@ void SocketCANd::connectDevice()
     stats.conStatus = getStatus();
     stats.numHardwareBuses = mNumBuses;
     //signalSender = qobject_cast<QTcpSocket*>(QObject::sender());
-    if (!reconnecting) emit status(stats);
+    emit status(stats);
 }
 
 void SocketCANd::deviceConnected(int busNum)
@@ -227,18 +226,15 @@ void SocketCANd::deviceConnected(int busNum)
 
 void SocketCANd::checkConnection()
 {
-    int bufSize = 0;
+    // A quiet CAN bus does not mean its TCP connection has failed.
     for (int i = 0; i < tcpClient.length(); i++)
     {
-        bufSize += tcpClient[i]->readBufferSize();
-        //sendDebug("Buffer size: " + QString::number(bufSize));
-    }
-
-    if (bufSize == 0)
-    {
-        reconnecting = true;
-        connectDevice();
-        sendDebug("Reconnecting to TCP Host " + hostIP.toString());
+        if (!tcpClient[i] || tcpClient[i]->state() == QAbstractSocket::UnconnectedState)
+        {
+            connectDevice();
+            sendDebug("Reconnecting to TCP Host " + hostIP.toString());
+            return;
+        }
     }
 }
 

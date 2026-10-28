@@ -67,7 +67,6 @@ private:
 
 protected:
     QTimer mTimer;
-    bool reconnecting;
     QVarLengthArray<QTcpSocket*> tcpClient;
     QHostAddress hostIP;
     int hostPort;
