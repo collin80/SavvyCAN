@@ -1724,8 +1724,7 @@ bool FrameFileIO::loadCanalyzerASC(QString filename, QVector<CANFrame>* frames)
         {
             if (line.startsWith("//"))
             {
-                line = line.right(line.length() - 11);
-                QList<QByteArray> versionTokens = line.split('.');
+                QList<QByteArray> versionTokens = line.mid(11).split('.');
                 if (versionTokens.length() > 2)
                 {
                     verMajor = versionTokens[0].toInt();
