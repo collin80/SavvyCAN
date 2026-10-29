@@ -316,18 +316,21 @@ void ConnectionWindow::handleResetConn()
     type = conn_p->getType();
     port = conn_p->getPort();
     driver = conn_p->getDriver();
-    serSpeed = 0; //TODO: implement these
-    busSpeed = 0;
-    dataRate = 0;
-    canFd = false;
-
-
     /* stop and delete connection */
     conn_p->stop();
 
+    // The worker is joined: even an unavailable or manually stopped device has
+    // a safe constructor/last-saved snapshot without a blocking queued getter.
+    CANBus bus;
+    if (!conn_p->getStoppedBusSettings(0, bus)) return;
+    serSpeed = conn_p->getSerialSpeed();
+    busSpeed = bus.getSpeed();
+    dataRate = bus.getDataRate();
+    canFd = bus.isCanFD();
+
     conn_p = nullptr;
 
-    conn_p = create(type, port, driver, serSpeed, busSpeed,canFd,dataRate);
+    conn_p = create(type, port, driver, serSpeed, busSpeed,canFd,dataRate,&bus);
     if (conn_p) connModel->replace(selIdx, conn_p);
 }
 
@@ -519,7 +522,7 @@ void ConnectionWindow::handleSendText() {
     emit sendDebugData(bytes);
 }
 
-CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate)
+CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QString pDriver, int pSerialSpeed, int pBusSpeed, bool pCanFd, int pDataRate, const CANBus *initialBus)
 {
     CANConnection* conn_p;
 
@@ -527,6 +530,12 @@ CANConnection* ConnectionWindow::create(CANCon::type pTye, QString pPortName, QS
     conn_p = CanConFactory::create(pTye, pPortName, pDriver, pSerialSpeed, pBusSpeed, pCanFd, pDataRate);
     if(conn_p)
     {
+        if (initialBus && !conn_p->setInitialBusSettings(0, *initialBus))
+        {
+            conn_p->stop();
+            delete conn_p;
+            return nullptr;
+        }
         /* connect signal */
         connect(conn_p, &CANConnection::status, this, &ConnectionWindow::connectionStatus);
         if (ui->ckEnableConsole->isChecked())
