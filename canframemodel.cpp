@@ -7,6 +7,7 @@
 #include <QBrush>
 #include <QDateTime>
 #include <QSettings>
+#include <algorithm>
 #include "utility.h"
 
 CANFrameModel::~CANFrameModel()
@@ -63,8 +64,8 @@ CANFrameModel::CANFrameModel(QObject *parent)
     QSettings settings;
     preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
 
-    //Each CANFrame object takes up 56 bytes and we're allocating two arrays here so take the
-    //# of pre-alloc frames and multiply by 112 to get the RAM usage. This is around 1GiB for the default.
+    //Both arrays reserve preallocSize * sizeof(CANFrame) bytes. With 64-byte
+    //frames, the default ten million rows reserve about 1.2 GiB before payloads.
 
     //the goal is to prevent a reallocation from ever happening
     frames.reserve(preallocSize);
@@ -86,6 +87,7 @@ CANFrameModel::CANFrameModel(QObject *parent)
     timeFormat =  "MMM-dd HH:mm:ss.zzz";
     sortDirAsc = false;
     bytesPerLine = 8;
+    nextCaptureOrder = 0;
 }
 
 void CANFrameModel::setBytesPerLine(int bpl)
@@ -343,12 +345,22 @@ void CANFrameModel::qSortCANFrameDesc(QVector<CANFrame> *frames, Column column, 
 
 void CANFrameModel::sortByColumn(int column)
 {
-    sortDirAsc = !sortDirAsc;
-    if (sortDirAsc) qSortCANFrameAsc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
-    else qSortCANFrameDesc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
-
     mutex.lock();
     beginResetModel();
+    sortDirAsc = !sortDirAsc;
+    if (Column(column) == Column::TimeStamp && !overwriteDups)
+    {
+        // Other column sorts must not become the tie-breaker for equal times.
+        std::sort(filteredFrames.begin(), filteredFrames.end(), [this](const CANFrame &a, const CANFrame &b) {
+            const uint64_t aTime = static_cast<uint64_t>(a.timeStamp().microSeconds());
+            const uint64_t bTime = static_cast<uint64_t>(b.timeStamp().microSeconds());
+            if (aTime == bTime) return a.captureOrder < b.captureOrder;
+            return sortDirAsc ? aTime < bTime : aTime > bTime;
+        });
+    }
+    else if (sortDirAsc) qSortCANFrameAsc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
+    else qSortCANFrameDesc(&filteredFrames, Column(column), 0, filteredFrames.count()-1);
+
     endResetModel();
     mutex.unlock();
 }
@@ -684,6 +696,7 @@ void CANFrameModel::addFrame(const CANFrame& frame, bool autoRefresh = false)
     mutex.lock();
     CANFrame tempFrame;
     tempFrame = frame;
+    tempFrame.captureOrder = nextCaptureOrder++;
 
     tempFrame.setTimeStamp(QCanBusFrame::TimeStamp(0, tempFrame.timeStamp().microSeconds() - timeOffset));
 
@@ -882,6 +895,7 @@ void CANFrameModel::clearFrames()
     this->beginResetModel();
     frames.clear();
     filteredFrames.clear();
+    nextCaptureOrder = 0;
     if(filtersPersistDuringClear == false)
     {
         filters.clear();
@@ -911,7 +925,9 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
     int insertedFiltered = 0;
     for (int i = 0; i < newFrames.count(); i++)
     {
-        frames.append(newFrames[i]);
+        CANFrame frame = newFrames[i];
+        frame.captureOrder = nextCaptureOrder++;
+        frames.append(frame);
         if (!filters.contains(newFrames[i].frameId()))
         {
             filters.insert(newFrames[i].frameId(), true);
@@ -925,7 +941,7 @@ void CANFrameModel::insertFrames(const QVector<CANFrame> &newFrames)
         if (filters[newFrames[i].frameId()] && busFilters[newFrames[i].bus])
         {
             insertedFiltered++;
-            filteredFrames.append(newFrames[i]);
+            filteredFrames.append(frame);
         }
     }
     lastUpdateNumFrames = newFrames.count();

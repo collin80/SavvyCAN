@@ -15,6 +15,7 @@ public:
     bool isReceived; //did we receive this or send it?
     uint64_t timedelta;
     uint32_t frameCount; //used in overwrite mode
+    uint64_t captureOrder; //assigned by the capture model, not part of CAN data
 
     friend bool operator<(const CANFrame& l, const CANFrame& r)
     {
@@ -32,6 +33,7 @@ public:
         isReceived = true;
         timedelta = 0;
         frameCount = 1;
+        captureOrder = 0;
     }
 };
 

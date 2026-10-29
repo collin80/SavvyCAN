@@ -103,6 +103,7 @@ private:
     uint32_t preallocSize;
     bool sortDirAsc;
     int bytesPerLine;
+    uint64_t nextCaptureOrder;
 };
 
 
