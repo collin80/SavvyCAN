@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QTranslator>
 #include <QLocale>
+#include <QFontDatabase>
 #include <QDebug>
 
 class SavvyCANApplication : public QApplication
@@ -67,8 +68,17 @@ int main(int argc, char *argv[])
 
     a.mainWindow = new MainWindow();
 
+    // Load the bundled Smiley Sans (得意黑) font and use it as the application font.
+    QString appFontFamily = "Smiley Sans Oblique";
+    int fontId = QFontDatabase::addApplicationFont(":/fonts/SmileySans-Oblique.ttf");
+    if (fontId != -1) {
+        QStringList families = QFontDatabase::applicationFontFamilies(fontId);
+        if (!families.isEmpty())
+            appFontFamily = families.at(0);
+    }
+
     int fontSize = settings.value("Main/FontSize", 9).toUInt();
-    QFont sysFont = QFont(); //get default font
+    QFont sysFont(appFontFamily); //use the bundled Smiley Sans font
     sysFont.setPointSize(fontSize);
     a.setFont(sysFont);
 

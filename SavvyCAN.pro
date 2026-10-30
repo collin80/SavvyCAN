@@ -255,7 +255,8 @@ FORMS    += ui/candatagrid.ui \
     
 RESOURCES += \
     icons.qrc \
-    images.qrc
+    images.qrc \
+    fonts.qrc
 
 win32-msvc* {
    LIBS += opengl32.lib
@@ -296,7 +297,8 @@ INSTALLS += target
 
 TRANSLATIONS += \
     translations/SavvyCAN_en.ts \
-    translations/SavvyCAN_pt_BR.ts
+    translations/SavvyCAN_pt_BR.ts \
+    translations/SavvyCAN_zh_CN.ts
 
 DISTFILES += \
     translations/pt_BR.qph
