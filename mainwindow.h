@@ -122,6 +122,8 @@ private slots:
     void normalizeTiming();
     void updateFilterList();
     void filterListItemChanged(QListWidgetItem *item);
+    void filterStandardIdsClicked(bool checked);
+    void filterExtendedIdsClicked(bool checked);
     void busFilterListItemChanged(QListWidgetItem *item);
     void filterSetAll();
     void filterClearAll();
@@ -222,6 +224,8 @@ private:
     void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CANFrame &, bool);
     void updateFileStatus();
+    void setFilterRange(unsigned int minimumID, unsigned int maximumID, bool state);
+    void updateFilterGroupCheckStates();
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);

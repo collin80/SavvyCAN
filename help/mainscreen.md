@@ -66,6 +66,8 @@ will see only the newest one. This is generally used alongside "Interpret Frames
 *"Bus Filtering" allows for messages to be shown or hidden based on which bus they came in on.
 
 *"Frame Filtering" provides a list of all the frame IDs seen so far. Any ID which is checked will be shown in the main list. Any ID which is unchecked will not.
+
+The **Standard (11-bit)** and **Extended (29-bit)** checkboxes select or deselect all currently known IDs in their respective numeric ranges. A partially checked group indicates a mixture of selected and deselected IDs. A group is disabled when no current IDs belong to it.
 This can be used to hone in on frames of importance while hiding frames that are currently of no interest. The filtered list can be saved as well.
 
 
