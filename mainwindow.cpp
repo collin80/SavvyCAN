@@ -257,6 +257,12 @@ MainWindow::MainWindow(QWidget *parent) :
     frameSender->startSending(); //start the timer in the object so enabled things can send
 
     installEventFilter(this);
+
+    QLineEdit *txtSearchTrace = new QLineEdit(this);
+    txtSearchTrace->setPlaceholderText("Search Trace by ID or Data");
+    txtSearchTrace->setClearButtonEnabled(true);
+    ui->verticalLayout_3->insertWidget(0, txtSearchTrace);
+    connect(txtSearchTrace, &QLineEdit::textChanged, model, &CANFrameModel::setSearchText);
 }
 
 MainWindow::~MainWindow()

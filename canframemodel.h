@@ -68,6 +68,8 @@ public:
     const QVector<CANFrame> *getFilteredListReference() const; //Thus saith the Lord, NO.
     const QMap<int, bool> *getFiltersReference() const; //this neither
     const QMap<int, bool> *getBusFiltersReference() const; //this neither
+    void setSearchText(const QString &text);
+    bool passesSearchFilter(const CANFrame& frame) const;
 
 public slots:
     void addFrame(const CANFrame&, bool);
@@ -103,6 +105,7 @@ private:
     uint32_t preallocSize;
     bool sortDirAsc;
     int bytesPerLine;
+    QString searchText;
 };
 
 
