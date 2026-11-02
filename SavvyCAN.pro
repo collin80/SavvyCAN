@@ -330,6 +330,7 @@ INSTALLS += target
 QMAKE_PROJECT_DEPTH = 0
 
 TRANSLATIONS += \
+    translations/SavvyCAN_de.ts \
     translations/SavvyCAN_en.ts \
     translations/SavvyCAN_pt_BR.ts
 
