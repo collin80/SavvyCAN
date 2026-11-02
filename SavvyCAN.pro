@@ -332,7 +332,20 @@ QMAKE_PROJECT_DEPTH = 0
 TRANSLATIONS += \
     translations/SavvyCAN_de.ts \
     translations/SavvyCAN_en.ts \
-    translations/SavvyCAN_pt_BR.ts
+    translations/SavvyCAN_pt_BR.ts \
+    translations/SavvyCAN_tr.ts
+
+qt_standard_translations.prefix = /translations
+qt_standard_translations.base = $$[QT_INSTALL_TRANSLATIONS]
+for(language, $$list(de tr pt_BR)) {
+    translation_file = $$[QT_INSTALL_TRANSLATIONS]/qtbase_$${language}.qm
+    exists($$translation_file) {
+        qt_standard_translations.files += $$translation_file
+    } else {
+        warning("Qt standard translation not found: $$translation_file")
+    }
+}
+!isEmpty(qt_standard_translations.files): RESOURCES += qt_standard_translations
 
 DISTFILES += \
     translations/pt_BR.qph
