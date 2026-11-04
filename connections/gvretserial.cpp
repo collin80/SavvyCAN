@@ -364,7 +364,10 @@ void GVRetSerial::connectDevice()
     }
     else {
         sendDebug("Serial connection to a GVRET device");
-        serial = new QSerialPort(QSerialPortInfo(getPort()));
+        // A listed port is opened through its info; a path that is not listed (e.g. a link to the
+        // device) is opened by name, so it does not end in "device not found"
+        const QSerialPortInfo portInfo(getPort());
+        serial = portInfo.isNull() ? new QSerialPort(getPort()) : new QSerialPort(portInfo);
         if(!serial) {
             sendDebug("can't open serial port " + getPort());
             return;
