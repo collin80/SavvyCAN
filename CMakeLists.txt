@@ -106,6 +106,8 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     github/githubhelp.h
     github/githubsettings.cpp github/githubsettings.h
     helpwindow.cpp helpwindow.h
+    highlightitemdelegate.cpp highlightitemdelegate.h
+    highlightoverviewbar.cpp highlightoverviewbar.h
     jsedit.cpp jsedit.h
     main.cpp
     mainsettingsdialog.cpp mainsettingsdialog.h
