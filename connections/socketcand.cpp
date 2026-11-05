@@ -186,7 +186,7 @@ bool SocketCANd::piSendFrame(const CommFrame& frame)
     QString sendStr = "< send " + QString::number(ID, 16) + " " + QString::number(frame.payload().length()) + " ";
     for (c = 0; c < frame.payload().length(); c++)
     {
-       sendStr.append(QString::number(frame.payload()[c], 16) + " ");
+       sendStr.append(QString::number(static_cast<unsigned char>(frame.payload()[c]), 16) + " ");
     }
     sendStr.append(">");
     std::string str = sendStr.toStdString();
