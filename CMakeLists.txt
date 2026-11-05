@@ -161,6 +161,25 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     ui/bisectwindow.ui ui/canbridgewindow.ui ui/candatagrid.ui ui/connectionwindow.ui ui/dbccomparatorwindow.ui ui/dbcloadsavewindow.ui ui/dbcmaineditor.ui ui/dbcmessageeditor.ui ui/dbcnodeduplicateeditor.ui ui/dbcnodeeditor.ui ui/dbcnoderebaseeditor.ui ui/dbcsignaleditor.ui ui/discretestatewindow.ui ui/filecomparatorwindow.ui ui/udsfirmwareuploaderwindow.ui ui/flowviewwindow.ui ui/frameinfowindow.ui ui/frameplaybackwindow.ui ui/framesenderwindow.ui ui/fuzzingwindow.ui ui/graphingwindow.ui ui/helpwindow.ui ui/isotp_interpreterwindow.ui ui/mainsettingsdialog.ui ui/mainwindow.ui ui/motorcontrollerconfigwindow.ui ui/newconnectiondialog.ui ui/newgraphdialog.ui ui/rangestatewindow.ui ui/scriptingwindow.ui ui/searchwindow.ui ui/signalviewerwindow.ui ui/snifferwindow.ui ui/temporalgraphwindow.ui ui/udsscanwindow.ui
 )
 
+get_filename_component(QT_TRANSLATIONS_DIR "${QT6_INSTALL_TRANSLATIONS}"
+    ABSOLUTE BASE_DIR "${QT6_INSTALL_PREFIX}")
+set(QT_STANDARD_TRANSLATIONS)
+foreach(LANGUAGE de tr pt_BR)
+    set(TRANSLATION_FILE "${QT_TRANSLATIONS_DIR}/qtbase_${LANGUAGE}.qm")
+    if(EXISTS "${TRANSLATION_FILE}")
+        list(APPEND QT_STANDARD_TRANSLATIONS "${TRANSLATION_FILE}")
+    else()
+        message(WARNING "Qt standard translation not found: ${TRANSLATION_FILE}")
+    endif()
+endforeach()
+if(QT_STANDARD_TRANSLATIONS)
+    qt_add_resources(SavvyCAN qt_standard_translations
+        PREFIX "/translations"
+        BASE "${QT_TRANSLATIONS_DIR}"
+        FILES ${QT_STANDARD_TRANSLATIONS}
+    )
+endif()
+
 if(APPLE)
     set(APP_ICON_MACOS "${CMAKE_CURRENT_SOURCE_DIR}/icons/SavvyIcon.icns")
     set_source_files_properties(${APP_ICON_MACOS} PROPERTIES

@@ -6,6 +6,9 @@
 #include <QDir>
 #include <QRegularExpression>
 #include <QCoreApplication>
+#include <QScrollArea>
+#include <QScreen>
+#include <QVBoxLayout>
 #include <QDebug>
 #include "simplecrypt.h"
 
@@ -57,6 +60,20 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
 {
     QSettings settings;
     ui->setupUi(this);
+
+    // Keep every setting reachable when translations or larger fonts need more space.
+    auto *settingsContents = new QWidget;
+    settingsContents->setLayout(ui->horizontalLayout_5);
+    auto *scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setWidget(settingsContents);
+    auto *dialogLayout = new QVBoxLayout(this);
+    dialogLayout->setContentsMargins(0, 0, 0, 0);
+    dialogLayout->addWidget(scrollArea);
+    if (QScreen *currentScreen = screen()) {
+        resize(size().boundedTo(currentScreen->availableGeometry().size() * 0.9));
+    }
 
     populateLanguageCombo();
 

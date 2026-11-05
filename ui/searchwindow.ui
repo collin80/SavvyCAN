@@ -10,12 +10,6 @@
     <height>700</height>
    </rect>
   </property>
-  <property name="minimumSize">
-   <size>
-    <width>700</width>
-    <height>580</height>
-   </size>
-  </property>
   <property name="windowTitle">
    <string>Frame Search</string>
   </property>

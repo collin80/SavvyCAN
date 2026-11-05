@@ -2,6 +2,7 @@
 #include <QApplication>
 #include <QKeyEvent>
 #include <QTranslator>
+#include <QLibraryInfo>
 #include <QLocale>
 #include <QDebug>
 
@@ -79,7 +80,21 @@ int main(int argc, char *argv[])
     QString lang = locale.name();
     QString shortLang = locale.name().left(2);
 
-    if (QString translationDir = QCoreApplication::applicationDirPath() + "/translations"; !translator.load("SavvyCAN_" + lang, translationDir)) {
+    QTranslator qtTranslator;
+    const QString translationDir = QCoreApplication::applicationDirPath() + "/translations";
+    const QStringList qtTranslationDirs = {
+        translationDir,
+        QStringLiteral(":/translations"),
+        QLibraryInfo::path(QLibraryInfo::TranslationsPath)
+    };
+    for (const QString &directory : qtTranslationDirs) {
+        if (qtTranslator.load(locale, QStringLiteral("qtbase"), QStringLiteral("_"), directory)) {
+            a.installTranslator(&qtTranslator);
+            break;
+        }
+    }
+
+    if (!translator.load("SavvyCAN_" + lang, translationDir)) {
         translator.load("SavvyCAN_" + shortLang, translationDir);
     }
     a.installTranslator(&translator);
