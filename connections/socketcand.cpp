@@ -114,8 +114,12 @@ void SocketCANd::sendStringToTCP(const char* data, int busNum)
 void SocketCANd::piStarted()
 {
     connectDevice();
-    checkConnection();
     mTimer.start();
+    // Defer the first checkConnection() to give the TCP connection time to establish.
+    // connectToHost() is asynchronous: immediately after it returns the socket is in
+    // ConnectingState, not ConnectedState. Calling checkConnection() right away causes
+    // a false NOT_CONNECTED status and an unnecessary socket recreation loop.
+    QTimer::singleShot(1000, this, SLOT(checkConnection()));
 }
 
 
