@@ -26,8 +26,11 @@ struct CommFrame
         constexpr TimeStamp(qint64 s = 0, qint64 usec = 0) noexcept
             : secs(s), usecs(usec) {}
 
+        // SavvyCAN keeps the whole timestamp in microSeconds() and leaves seconds() at 0: the frame view,
+        // the log writers, the graphs and the RE tools only read microSeconds(). Splitting the value into
+        // seconds + remainder here made system clock timestamps wrap every second (#834, #965, #1075).
         constexpr static TimeStamp fromMicroSeconds(qint64 usec) noexcept
-        { return TimeStamp(usec / 1000000, usec % 1000000); }
+        { return TimeStamp(0, usec); }
 
         constexpr qint64 seconds() const noexcept { return secs; }
         constexpr qint64 microSeconds() const noexcept { return usecs; }
