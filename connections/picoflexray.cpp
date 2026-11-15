@@ -656,6 +656,61 @@ void PicoFlexRay::saveConfigToSettings()
     settings.setValue(base + "/srcEnable", mSourceParams.enable);
 }
 
+QStringList PicoFlexRay::describeConfig() const
+{
+    const QString label = getName();
+    QString tag = label.isEmpty() ? const_cast<PicoFlexRay *>(this)->getPort() : label;
+    if (tag.isEmpty()) tag = QStringLiteral("pico-flexray");
+
+    QStringList lines;
+
+    //run mode (live, cached from the 0xa5 GET_MODE reads)
+    const int mode = lastKnownMode();
+    lines.append(QString("%1: mode %2").arg(tag,
+        mode < 0 ? QStringLiteral("unknown (not connected / firmware without mode support)") : modeName(mode)));
+
+    //persisted injection rules + generator schedule (the same stored config the editor loads)
+    QSettings settings;
+    const QString base = settingsGroup();
+
+    const QList<InjectRule> rules = deserialiseInjectRules(settings.value(base + "/injectRules").toByteArray());
+    for (const InjectRule &r : rules)
+        lines.append(QString("%1: inject rule slot 0x%2 cycle %3 mask 0x%4 window off %5 len %6")
+                         .arg(tag)
+                         .arg(r.slotId, 3, 16, QLatin1Char('0'))
+                         .arg(r.cycleBase)
+                         .arg(r.cycleMask, 2, 16, QLatin1Char('0'))
+                         .arg(r.winOffset).arg(r.winLength));
+
+    const QList<SourceSlot> srcSlots = deserialiseSourceSlots(settings.value(base + "/sourceSlots").toByteArray());
+    for (const SourceSlot &s : srcSlots)
+    {
+        QStringList chans;
+        if (s.chanMask & 0x1) chans << QStringLiteral("FR1");
+        if (s.chanMask & 0x2) chans << QStringLiteral("FR2");
+        QString line = QString("%1: source slot 0x%2 ch %3 payload %4")
+                           .arg(tag)
+                           .arg(s.slotId, 3, 16, QLatin1Char('0'))
+                           .arg(chans.isEmpty() ? QStringLiteral("none") : chans.join('+'),
+                                s.payload.isEmpty() ? QStringLiteral("(none)")
+                                                    : QString::fromLatin1(s.payload.toHex(' ')));
+        if (s.lastByteTracksCycle) line += QStringLiteral(", last byte tracks cycle");
+        lines.append(line);
+    }
+
+    if (!srcSlots.isEmpty())
+    {
+        const quint32 periodUs = settings.value(base + "/srcPeriodUs").toUInt();
+        const quint32 gapUs = settings.value(base + "/srcCycleGapUs").toUInt();
+        const bool running = settings.value(base + "/srcEnable").toBool();
+        lines.append(QString("%1: generator period %2us gap %3us %4")
+                         .arg(tag).arg(periodUs).arg(gapUs).arg(running ? QStringLiteral("running")
+                                                                        : QStringLiteral("stopped")));
+    }
+
+    return lines;
+}
+
 void PicoFlexRay::pushInjectRules()
 {
 #ifdef HAVE_LIBUSB
@@ -887,10 +942,13 @@ void PicoFlexRay::pollMode()
     const uint8_t vendorIn = LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE;
     unsigned char buf[1] = {0};
     int rc = libusb_control_transfer(mHandle, vendorIn, PICOFLEX_GET_MODE, 0, 0, buf, sizeof(buf), 200);
-    if (rc < 1) { emit deviceMode(-1); return; } //unsupported / no reply
+    if (rc < 1) { mLastKnownMode.storeRelaxed(-1); emit deviceMode(-1); return; } //unsupported / no reply
     const int mode = buf[0];
-    emit deviceMode(isValidMode(mode) ? mode : -1);
+    const int resolved = isValidMode(mode) ? mode : -1;
+    mLastKnownMode.storeRelaxed(resolved);
+    emit deviceMode(resolved);
 #else
+    mLastKnownMode.storeRelaxed(-1);
     emit deviceMode(-1);
 #endif
 }

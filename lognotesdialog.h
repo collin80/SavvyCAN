@@ -67,6 +67,7 @@ private:
     QPlainTextEdit *editObservations;
     QPlainTextEdit *editBuses;
     QPlainTextEdit *editDbcFiles;
+    QPlainTextEdit *editDeviceConfigs;
     QPlainTextEdit *editMarkers;
     QLabel *lblFilledIn;
     QCheckBox *cbAsk; //"ask when saving" (Saving, Finishing) or "ask when capture starts" (Starting)

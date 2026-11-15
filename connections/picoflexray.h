@@ -163,6 +163,15 @@ public:
     //worker thread's copy.
     QString settingsGroup() const;
 
+    //The device's last-known run mode (0..3), or -1 if never read / unsupported. Cached from the 0xa5 GET_MODE
+    //reads (on connect and after setMode); safe to read from any thread. Used by the log notes.
+    int lastKnownMode() const { return mLastKnownMode.loadRelaxed(); }
+
+    //Human-readable lines describing this device's host-set config for the log notes: run mode, each injection
+    //rule and each generator slot, every line prefixed with the device's label/serial. Reads the persisted
+    //QSettings config (the same source the editor loads) plus lastKnownMode(); safe to call from the main thread.
+    QStringList describeConfig() const;
+
 signals:
     //emitted after a successful 0xa3 status read (the raw 16 bytes; parse with parseInjectStatus).
     void injectStatus(QByteArray reply);
@@ -229,6 +238,7 @@ private:
     QString mLastError;
     int mRecordFormat = 1; //record format the firmware accepted (1 stock, 2 device us, 3 + fine clock/seq)
     bool mInjectorEnabled = false; //true once a bus is taken out of listen-only; sent to the device as op 0x91
+    QAtomicInt mLastKnownMode { -1 }; //last mode the device reported (0xa5), cached for the log notes; -1 = unknown
 
     //host-configured injection rules + generator schedule (authoritative copy, re-pushed on reconnect)
     QList<InjectRule> mInjectRules;

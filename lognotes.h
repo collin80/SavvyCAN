@@ -46,6 +46,7 @@ public:
     qint64 lastUs = 0;
     QStringList buses;        //one line per bus: interface, port, bitrate...
     QStringList dbcFiles;     //one line per DBC or LDF file, with its bus
+    QStringList deviceConfigs; //one line per connected PiFlex config detail (mode, injection rule, generator slot)
 
     //header keys and sections this version doesn't know, kept so saving again doesn't drop them
     QList<QPair<QString, QString>> otherFields;

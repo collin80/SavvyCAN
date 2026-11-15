@@ -73,6 +73,8 @@ LogNotesDialog::LogNotesDialog(Mode mode, QWidget *parent)
     filledForm->addRow(tr("Buses:"), editBuses);
     editDbcFiles = textBox(1, tr("One DBC or LDF file per line"));
     filledForm->addRow(tr("DBC files:"), editDbcFiles);
+    editDeviceConfigs = textBox(2, tr("Connected PiFlex board config: run mode, injection rules, generator schedule"));
+    filledForm->addRow(tr("PiFlex config:"), editDeviceConfigs);
     editMarkers = textBox(2, tr("One per line, e.g. 12.4 s: AC on"));
     filledForm->addRow(tr("Markers:"), editMarkers);
     lblFilledIn = new QLabel(filledIn);
@@ -172,6 +174,7 @@ void LogNotesDialog::setNotes(const LogNotes &notes)
     showUserFields(notes);
     editBuses->setPlainText(notes.buses.join('\n'));
     editDbcFiles->setPlainText(notes.dbcFiles.join('\n'));
+    editDeviceConfigs->setPlainText(notes.deviceConfigs.join('\n'));
     QStringList markers;
     for (const LogMarker &marker : notes.markers)
         markers.append(QString("%1 s: %2").arg(LogNotes::formatSeconds(marker.timeUs), marker.text).trimmed());
@@ -227,6 +230,7 @@ LogNotes LogNotesDialog::notes() const
     notes.observations = editObservations->toPlainText();
     notes.buses = boxLines(editBuses);
     notes.dbcFiles = boxLines(editDbcFiles);
+    notes.deviceConfigs = boxLines(editDeviceConfigs);
 
     //the markers are read the way the Markdown's Markers section is
     QStringList markerLines;

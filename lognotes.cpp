@@ -43,7 +43,7 @@ bool LogNotes::isEmpty() const
     return title.isEmpty() && author.isEmpty() && tags.isEmpty() && system.isEmpty() && setup.isEmpty()
         && scenario.isEmpty() && observations.isEmpty() && markers.isEmpty() && !saved.isValid()
         && savvycanVersion.isEmpty() && logFile.isEmpty() && frameCount < 0 && unfilteredCount < 0 && !hasSpan
-        && buses.isEmpty() && dbcFiles.isEmpty() && otherFields.isEmpty() && otherSections.isEmpty();
+        && buses.isEmpty() && dbcFiles.isEmpty() && deviceConfigs.isEmpty() && otherFields.isEmpty() && otherSections.isEmpty();
 }
 
 bool LogNotes::operator==(const LogNotes &other) const
@@ -53,7 +53,7 @@ bool LogNotes::operator==(const LogNotes &other) const
         && markers == other.markers && saved == other.saved && savvycanVersion == other.savvycanVersion
         && logFile == other.logFile && frameCount == other.frameCount && unfilteredCount == other.unfilteredCount
         && hasSpan == other.hasSpan && (!hasSpan || (firstUs == other.firstUs && lastUs == other.lastUs))
-        && buses == other.buses && dbcFiles == other.dbcFiles && otherFields == other.otherFields
+        && buses == other.buses && dbcFiles == other.dbcFiles && deviceConfigs == other.deviceConfigs && otherFields == other.otherFields
         && otherSections == other.otherSections;
 }
 
@@ -162,6 +162,7 @@ QString LogNotes::toMarkdown() const
     for (const auto &other : otherSections) section(other.first, other.second);
     listSection("Buses", buses);
     listSection("DBC files", dbcFiles);
+    listSection("PiFlex config", deviceConfigs);
     QStringList markerLines;
     for (const LogMarker &marker : markers)
         markerLines.append(QString("- %1 s: %2").arg(formatSeconds(marker.timeUs), oneLine(marker.text)).trimmed());
@@ -243,6 +244,7 @@ bool LogNotes::fromMarkdown(const QString &markdown, LogNotes &notes)
         else if (name == "observations") result.observations = text;
         else if (name == "buses") result.buses = listItems(text);
         else if (name == "dbc files") result.dbcFiles = listItems(text);
+        else if (name == "piflex config") result.deviceConfigs = listItems(text);
         else if (name == "markers")
         {
             result.markers.clear();

@@ -9,6 +9,7 @@
 #include "connections/canconmanager.h"
 #include "bus_protocols/handler_factory.h"
 #include "connections/connectionwindow.h"
+#include "connections/picoflexray.h"
 #include "helpwindow.h"
 #include "utility.h"
 #include "filterutility.h"
@@ -1793,6 +1794,19 @@ static QStringList connectedBuses()
     return buses;
 }
 
+//Config lines for each connected PiFlex board (run mode, injection rules, generator schedule), so a capture
+//records how the board(s) were set up. Empty when no pico-flexray device is connected.
+static QStringList piFlexConfigs()
+{
+    QStringList out;
+    for (CANConnection *conn : CANConManager::getInstance()->getConnections())
+    {
+        if (conn->getType() != CANCon::PICOFLEXRAY) continue;
+        if (PicoFlexRay *pf = qobject_cast<PicoFlexRay *>(conn)) out.append(pf->describeConfig());
+    }
+    return out;
+}
+
 //One line per loaded DBC or LDF file: "bmw_e90.dbc (bus 0)"
 static QStringList loadedDbcFiles()
 {
@@ -1827,6 +1841,8 @@ LogNotes MainWindow::notesForSaving(const QVector<CommFrame> *frames, bool filte
     if (!buses.isEmpty() && (!fromLog || notes.buses.isEmpty())) notes.buses = buses;
     const QStringList dbcFiles = loadedDbcFiles();
     if (!dbcFiles.isEmpty() && (!fromLog || notes.dbcFiles.isEmpty())) notes.dbcFiles = dbcFiles;
+    const QStringList deviceCfgs = piFlexConfigs();
+    if (!deviceCfgs.isEmpty() && (!fromLog || notes.deviceConfigs.isEmpty())) notes.deviceConfigs = deviceCfgs;
     return notes;
 }
 

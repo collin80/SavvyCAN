@@ -74,6 +74,8 @@ static LogNotes sampleNotes()
     notes.lastUs = 4000;
     notes.buses = QStringList{"0: PCAN-USB Pro FD (PCAN_USBBUS1), 500 kbit/s", "1: APGDT001 LIN, 9600 bit/s"};
     notes.dbcFiles = QStringList{"bmw_e90.dbc (bus 0)"};
+    notes.deviceConfigs = QStringList{"Board A: mode Bridge",
+                                      "Board A: inject rule slot 0x012 cycle 3 mask 0x3f window off 2 len 4"};
     notes.otherFields = {qMakePair(QString("bench"), QString("rig 2"))};
     notes.otherSections = {qMakePair(QString("Wiring"), QString("pin 3: CAN-H\npin 4: CAN-L"))};
     return notes;
