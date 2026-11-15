@@ -299,6 +299,9 @@ private:
     void closeEvent(QCloseEvent *event);
     void killEmAll();
     void killWindow(QDialog *win);
+    //Show a child window and bring it to the front (raise + activate, un-minimising if needed), so re-picking
+    //an already-open window from a menu actually surfaces it instead of looking like a no-op.
+    void raiseChildWindow(QWidget *win);
     bool attachObd2Dbc(const QString &path, int bus, const QList<quint32> &ecus, QString *error);
     bool graphObd2Signals(int bus, const QList<Obd2Window::GraphSignal> &sigs, QString *error);
     void readSettings();

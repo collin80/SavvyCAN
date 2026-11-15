@@ -461,6 +461,18 @@ void MainWindow::killWindow(QDialog *win)
     }
 }
 
+//Bring a child window to the front. A plain show() on a window that is already open but behind others
+//doesn't raise it, so re-picking it from a menu looked like nothing happened; raise + activate (and
+//un-minimise) fixes that while still showing it the first time.
+void MainWindow::raiseChildWindow(QWidget *win)
+{
+    if (!win) return;
+    if (win->isMinimized()) win->showNormal();
+    else win->show();
+    win->raise();
+    win->activateWindow();
+}
+
 void MainWindow::exitApp()
 {
     this->close();
@@ -2669,7 +2681,7 @@ void MainWindow::showSettingsDialog()
         settingsDialog = new MainSettingsDialog();
         connect (settingsDialog, SIGNAL(updatedSettings()), this, SLOT(readUpdateableSettings()));
     }
-    settingsDialog->show();
+    raiseChildWindow(settingsDialog);
 }
 
 //always gets unfiltered list. You ask for the graphs so there is no need to send filtered frames
@@ -2706,7 +2718,7 @@ void MainWindow::showGraphingWindow()
         connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(uint32_t,double)));
     }
 
-    lastGraphingWindow->show();
+    raiseChildWindow(lastGraphingWindow);
 }
 
 void MainWindow::showTemporalGraphWindow()
@@ -2734,7 +2746,7 @@ void MainWindow::showTemporalGraphWindow()
         temporalGraphWindow = new TemporalGraphWindow(frames);
     }
 
-    temporalGraphWindow->show();
+    raiseChildWindow(temporalGraphWindow);
 }
 
 void MainWindow::showFrameDataAnalysis()
@@ -2747,7 +2759,7 @@ void MainWindow::showFrameDataAnalysis()
         else
             frameInfoWindow = new FrameInfoWindow(model->getFilteredListReference());
     }
-    frameInfoWindow->show();
+    raiseChildWindow(frameInfoWindow);
 }
 
 void MainWindow::showISOInterpreterWindow()
@@ -2759,14 +2771,14 @@ void MainWindow::showISOInterpreterWindow()
         else
             isoWindow = new ISOTP_InterpreterWindow(model->getFilteredListReference());
     }
-    isoWindow->show();
+    raiseChildWindow(isoWindow);
 }
 
 void MainWindow::showSnifferWindow()
 {
     if (!snifferWindow)
         snifferWindow = new SnifferWindow(this);
-    snifferWindow->show();
+    raiseChildWindow(snifferWindow);
 }
 
 void MainWindow::showBisectWindow()
@@ -2775,7 +2787,7 @@ void MainWindow::showBisectWindow()
     {
         bisectWindow = new BisectWindow(model->getListReference());
     }
-    bisectWindow->show();
+    raiseChildWindow(bisectWindow);
 }
 
 void MainWindow::showCANBridgeWindow()
@@ -2784,7 +2796,7 @@ void MainWindow::showCANBridgeWindow()
     {
         canBridgeWindow = new CANBridgeWindow(model->getListReference());
     }
-    canBridgeWindow->show();
+    raiseChildWindow(canBridgeWindow);
 }
 
 void MainWindow::showSearchWindow()
@@ -2799,7 +2811,7 @@ void MainWindow::showSearchWindow()
             searchWindow->updatedFrames(0);
         });
     }
-    searchWindow->show();
+    raiseChildWindow(searchWindow);
     searchWindow->raise();
 }
 
@@ -2829,7 +2841,7 @@ void MainWindow::showFrameSenderWindow()
         else
             frameSenderWindow = new FrameSenderWindow(model->getFilteredListReference());
     }
-    frameSenderWindow->show();
+    raiseChildWindow(frameSenderWindow);
 }
 
 void MainWindow::showPlaybackWindow()
@@ -2841,7 +2853,7 @@ void MainWindow::showPlaybackWindow()
         else
             playbackWindow = new FramePlaybackWindow(model->getFilteredListReference());
     }
-    playbackWindow->show();
+    raiseChildWindow(playbackWindow);
 }
 
 void MainWindow::showUDSFirmwareUploaderWindow()
@@ -2850,7 +2862,7 @@ void MainWindow::showUDSFirmwareUploaderWindow()
     {
         udsFirmwareUploaderWindow = new UDSFirmwareUploaderWindow(model->getListReference());
     }
-    udsFirmwareUploaderWindow->show();
+    raiseChildWindow(udsFirmwareUploaderWindow);
 }
 
 void MainWindow::showComparisonWindow()
@@ -2859,7 +2871,7 @@ void MainWindow::showComparisonWindow()
     {
         comparatorWindow = new FileComparatorWindow();
     }
-    comparatorWindow->show();
+    raiseChildWindow(comparatorWindow);
 }
 
 void MainWindow::showDBCComparisonWindow()
@@ -2868,7 +2880,7 @@ void MainWindow::showDBCComparisonWindow()
     {
         dbcComparatorWindow = new DBCComparatorWindow();
     }
-    dbcComparatorWindow->show();
+    raiseChildWindow(dbcComparatorWindow);
 }
 
 void MainWindow::showSingleMultiWindow()
@@ -2877,7 +2889,7 @@ void MainWindow::showSingleMultiWindow()
     {
         discreteStateWindow = new DiscreteStateWindow(model->getListReference());
     }
-    discreteStateWindow->show();
+    raiseChildWindow(discreteStateWindow);
 }
 
 void MainWindow::showFuzzingWindow()
@@ -2886,7 +2898,7 @@ void MainWindow::showFuzzingWindow()
     {
         fuzzingWindow = new FuzzingWindow(model->getListReference());
     }
-    fuzzingWindow->show();
+    raiseChildWindow(fuzzingWindow);
 }
 
 void MainWindow::showMCConfigWindow()
@@ -2897,7 +2909,7 @@ void MainWindow::showMCConfigWindow()
         //connect(motorctrlConfigWindow, SIGNAL(sendCommFrame(const CommFrame*,int)), worker, SLOT(sendFrame(const CommFrame*,int)));
         //connect(motorctrlConfigWindow, SIGNAL(sendFrameBatch(const QList<CommFrame>*)), worker, SLOT(sendFrameBatch(const QList<CommFrame>*)));
     }
-    motorctrlConfigWindow->show();
+    raiseChildWindow(motorctrlConfigWindow);
 }
 
 void MainWindow::showUDSScanWindow()
@@ -2906,7 +2918,7 @@ void MainWindow::showUDSScanWindow()
     {
         udsScanWindow = new UDSScanWindow(model->getListReference());
     }
-    udsScanWindow->show();
+    raiseChildWindow(udsScanWindow);
 }
 
 void MainWindow::showObd2Window()
@@ -2954,7 +2966,7 @@ void MainWindow::showObd2Window()
             return graphObd2Signals(bus, sigs, error);
         });
     }
-    obd2Window->show();
+    raiseChildWindow(obd2Window);
     obd2Window->raise();
 }
 
@@ -3066,7 +3078,7 @@ void MainWindow::showScriptingWindow()
     {
         scriptingWindow = new ScriptingWindow(model->getListReference());
     }
-    scriptingWindow->show();
+    raiseChildWindow(scriptingWindow);
 }
 
 void MainWindow::showRangeWindow()
@@ -3075,7 +3087,7 @@ void MainWindow::showRangeWindow()
     {
         rangeWindow = new RangeStateWindow(model->getListReference());
     }
-    rangeWindow->show();
+    raiseChildWindow(rangeWindow);
 }
 
 void MainWindow::showFuzzyScopeWindow()
@@ -3101,7 +3113,7 @@ void MainWindow::showFlowViewWindow()
         connect(flowViewWindow, SIGNAL(sendCenterTimeID(uint32_t,double)), lastGraphingWindow, SLOT(gotCenterTimeID(int32_t,double)));
     }
 
-    flowViewWindow->show();
+    raiseChildWindow(flowViewWindow);
 }
 
 
@@ -3118,7 +3130,7 @@ void MainWindow::showDBCFileWindow()
         dbcFileWindow = new DBCLoadSaveWindow(model->getListReference());
         connect(dbcFileWindow, &DBCLoadSaveWindow::updatedDBCSettings, this, &MainWindow::DBCSettingsUpdated);
     }
-    dbcFileWindow->show();
+    raiseChildWindow(dbcFileWindow);
 }
 
 void MainWindow::showSignalViewer()
@@ -3130,7 +3142,7 @@ void MainWindow::showSignalViewer()
         else
             signalViewerWindow = new SignalViewerWindow(model->getFilteredListReference());
     }
-    signalViewerWindow->show();
+    raiseChildWindow(signalViewerWindow);
 }
 
 void MainWindow::showConnectionSettingsWindow()
@@ -3146,5 +3158,5 @@ void MainWindow::showConnectionSettingsWindow()
             QMetaObject::invokeMethod(conn, "probeConnectionState", Qt::QueuedConnection);
     }
 
-    connectionWindow->show();
+    raiseChildWindow(connectionWindow);
 }
