@@ -75,6 +75,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     connections/lawicel_serial.cpp connections/lawicel_serial.h
     connections/mqtt_bus.cpp connections/mqtt_bus.h
     connections/newconnectiondialog.cpp connections/newconnectiondialog.h
+    connections/devicescanner.cpp connections/devicescanner.h
     connections/serialbusconnection.cpp connections/serialbusconnection.h
     connections/socketcand.cpp connections/socketcand.h
     dbc/dbc_classes.cpp dbc/dbc_classes.h

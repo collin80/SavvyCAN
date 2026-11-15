@@ -1,7 +1,13 @@
 #include <QCanBus>
+#include <QListWidget>
+#include <QPushButton>
+#include <QGroupBox>
+#include <QLabel>
+#include <QVBoxLayout>
 #include "newconnectiondialog.h"
 #include "ui_newconnectiondialog.h"
 #include "picoflexray.h"
+#include "connections/devicescanner.h"
 
 NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QString>* kayakhosts, QWidget *parent) :
     QDialog(parent),
@@ -53,8 +59,119 @@ NewConnectionDialog::NewConnectionDialog(QVector<QString>* gvretips, QVector<QSt
 
     selectSerial();
 
+    buildDetectPanel(); //detected devices are the primary way to connect; manual setup collapses below
+
     qDebug() << "Was passed " << remoteDeviceIPGVRET->count() << " remote GVRET IPs";
     qDebug() << "Was passed " << remoteBusKayak->count() << " remote Kayak Busses";
+}
+
+//Build the "Detected devices" group at the top of the dialog and a collapsible toggle for the
+//original manual controls. Picking a detected device drives the same manual controls, so the
+//existing getConnectionType()/getPortName()/… path (and the Create button) are unchanged.
+void NewConnectionDialog::buildDetectPanel()
+{
+    mManualWidgets = { ui->gbType, ui->lblDeviceType, ui->cbDeviceType, ui->lPort, ui->cbPort,
+                       ui->lblSerialSpeed, ui->cbSerialSpeed, ui->lblCANSpeed, ui->cbCANSpeed,
+                       ui->cbCanFd, ui->lblDataRate, ui->cbDataRate };
+
+    QGroupBox *box = new QGroupBox(tr("Detected devices"), this);
+    QVBoxLayout *v = new QVBoxLayout(box);
+    QLabel *hint = new QLabel(tr("Pick a detected device to connect (double-click to connect at once), "
+                                 "or open Manual setup below."), box);
+    hint->setWordWrap(true);
+    v->addWidget(hint);
+    mDetectedList = new QListWidget(box);
+    mDetectedList->setSelectionMode(QAbstractItemView::SingleSelection);
+    v->addWidget(mDetectedList);
+    QPushButton *rescan = new QPushButton(tr("Rescan"), box);
+    v->addWidget(rescan, 0, Qt::AlignLeft);
+    connect(rescan, &QPushButton::clicked, this, &NewConnectionDialog::rescanDevices);
+    connect(mDetectedList, &QListWidget::itemClicked, this, &NewConnectionDialog::onDetectedClicked);
+    connect(mDetectedList, &QListWidget::itemActivated, this, &NewConnectionDialog::onDetectedActivated);
+
+    mManualToggle = new QPushButton(tr("Manual setup ▸"), this);
+    mManualToggle->setCheckable(true);
+    connect(mManualToggle, &QPushButton::toggled, this, [this](bool on){
+        mManualToggle->setText(on ? tr("Manual setup ▾") : tr("Manual setup ▸"));
+        setManualVisible(on);
+    });
+
+    ui->verticalLayout->insertWidget(0, box);            //detected group at the very top
+    ui->verticalLayout->insertWidget(1, mManualToggle);  //toggle above the manual block
+
+    setManualVisible(false); //collapsed by default
+    rescanDevices();
+}
+
+void NewConnectionDialog::setManualVisible(bool show)
+{
+    if (!show) {
+        for (QWidget *w : mManualWidgets) if (w) w->setVisible(false);
+        return;
+    }
+    //reveal the type picker + port, then let the per-type logic set the rest of the fields' visibility
+    ui->gbType->setVisible(true);
+    ui->lPort->setVisible(true);
+    ui->cbPort->setVisible(true);
+    handleConnTypeChanged();
+}
+
+void NewConnectionDialog::rescanDevices()
+{
+    if (!mDetectedList) return;
+    mDetectedList->clear();
+    mDetected = DeviceScanner::scan(*remoteDeviceIPGVRET, *remoteBusKayak);
+    if (mDetected.isEmpty()) {
+        QListWidgetItem *none = new QListWidgetItem(tr("No devices detected — use Manual setup"), mDetectedList);
+        none->setFlags(Qt::NoItemFlags);
+        return;
+    }
+    for (int i = 0; i < mDetected.size(); i++) {
+        const DetectedDevice &d = mDetected.at(i);
+        const QString conf = d.confidence == DetectedDevice::Certain ? QString()
+                           : d.confidence == DetectedDevice::Likely  ? tr("  (likely)")
+                           :                                           tr("  (confirm type)");
+        QListWidgetItem *it = new QListWidgetItem(
+            QStringLiteral("%1 — %2%3").arg(d.displayName, d.location, conf), mDetectedList);
+        it->setData(Qt::UserRole, i);
+        if (!d.detail.isEmpty()) it->setToolTip(d.detail);
+    }
+}
+
+//Drive the manual controls from a detected device so the existing create path connects to it.
+void NewConnectionDialog::applyDetected(const DetectedDevice &d)
+{
+    if (d.type == CANCon::NONE) return;
+    setPortName(d.type, d.portArg, d.driver); //checks the right connection-type radio
+    handleConnTypeChanged();                   //populate cbPort / cbDeviceType for that type
+    if (d.type == CANCon::SERIALBUS && !d.driver.isEmpty()) {
+        int idx = ui->cbDeviceType->findText(d.driver);
+        if (idx >= 0) { ui->cbDeviceType->setCurrentIndex(idx); handleDeviceTypeChanged(); }
+    }
+    int idx = ui->cbPort->findText(d.portArg);
+    if (idx >= 0) ui->cbPort->setCurrentIndex(idx);
+    else if (ui->cbPort->isEditable()) ui->cbPort->setCurrentText(d.portArg);
+    //a generic serial chip is only a guess - open manual so the user can confirm/change the protocol
+    if (d.confidence == DetectedDevice::Unknown && mManualToggle && !mManualToggle->isChecked())
+        mManualToggle->setChecked(true);
+}
+
+void NewConnectionDialog::onDetectedClicked(QListWidgetItem *item)
+{
+    if (!item) return;
+    const int i = item->data(Qt::UserRole).toInt();
+    if (i < 0 || i >= mDetected.size()) return;
+    applyDetected(mDetected.at(i));
+}
+
+void NewConnectionDialog::onDetectedActivated(QListWidgetItem *item)
+{
+    if (!item) return;
+    const int i = item->data(Qt::UserRole).toInt();
+    if (i < 0 || i >= mDetected.size()) return;
+    const DetectedDevice d = mDetected.at(i);
+    applyDetected(d);
+    if (d.confidence != DetectedDevice::Unknown) accept(); //confident match: connect straight away
 }
 
 NewConnectionDialog::~NewConnectionDialog()

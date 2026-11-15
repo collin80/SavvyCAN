@@ -123,6 +123,7 @@ SOURCES += main.cpp\
     blfhandler.cpp \
     re/sniffer/SnifferDelegate.cpp \
     connections/newconnectiondialog.cpp \
+    connections/devicescanner.cpp \
     re/temporalgraphwindow.cpp \
     re/udsfirmwareuploaderwindow.cpp \
     filterutility.cpp \
@@ -243,6 +244,7 @@ HEADERS  += mainwindow.h \
     blfhandler.h \
     re/sniffer/SnifferDelegate.h \
     connections/newconnectiondialog.h \
+    connections/devicescanner.h \
     re/temporalgraphwindow.h \
     re/udsfirmwareuploaderwindow.h \
     filterutility.h \
