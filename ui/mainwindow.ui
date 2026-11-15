@@ -350,7 +350,7 @@
         <item>
          <widget class="QLineEdit" name="leSearchFilter">
           <property name="placeholderText">
-           <string>Filter IDs…</string>
+           <string>Filter by ID or data…</string>
           </property>
          </widget>
         </item>

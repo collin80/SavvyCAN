@@ -890,9 +890,14 @@ bool CommFrameModel::passesFrameFilters(const CommFrame &frame)
     int dir = frame.isReceived() ? 1 : 0;
     if (!dirFilters.value(dir, true)) return false;
     if (!lengthFilters.value(frame.payload().length(), true)) return false;
-    if (!m_searchFilter.isEmpty() &&
-        !QString::number(frame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive))
-        return false;
+    if (!m_searchFilter.isEmpty())
+    {
+        // Match the search text against the frame ID (hex) OR the payload bytes (hex).
+        // The ID-only search already existed; the payload match is from upstream #1113.
+        const bool idMatch   = QString::number(frame.frameId(), 16).contains(m_searchFilter, Qt::CaseInsensitive);
+        const bool dataMatch = QString(frame.payload().toHex(' ')).contains(m_searchFilter, Qt::CaseInsensitive);
+        if (!idMatch && !dataMatch) return false;
+    }
     return true;
 }
 
