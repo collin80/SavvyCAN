@@ -57,6 +57,7 @@ private slots:
     void connectionStatus(CANConStatus);
     void readPendingDatagrams();
     void handlePiFlexConfig(); //open the PiFlex injection/generator editor for the selected connection
+    void handleConnDoubleClicked(const QModelIndex &index); //double-click a pico-flexray row -> open its config
 
 private:
     Ui::ConnectionWindow *ui;

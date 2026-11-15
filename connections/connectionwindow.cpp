@@ -75,6 +75,8 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     btnPiFlexConfig->setToolTip(tr("Define this pico-flexray device's injection rules and generator schedule"));
     if (ui->groupBus->layout()) ui->groupBus->layout()->addWidget(btnPiFlexConfig);
     connect(btnPiFlexConfig, &QPushButton::clicked, this, &ConnectionWindow::handlePiFlexConfig);
+    //double-clicking a pico-flexray row (other than its editable Label cell) opens its PiFlex Config
+    connect(ui->tableConnections, &QAbstractItemView::doubleClicked, this, &ConnectionWindow::handleConnDoubleClicked);
 
 
     ui->cbBusSpeed->addItem("33333");
@@ -876,4 +878,15 @@ void ConnectionWindow::handlePiFlexConfig()
     PiFlexConfigDialog* dlg = new PiFlexConfigDialog(pf, this);
     dlg->setAttribute(Qt::WA_DeleteOnClose);
     dlg->show();
+}
+
+void ConnectionWindow::handleConnDoubleClicked(const QModelIndex &index)
+{
+    if (!index.isValid()) return;
+    //column 0 is the editable Label: let a double-click there start the rename, don't open the dialog
+    if (index.column() == 0) return;
+    //elsewhere on a pico-flexray row, open that device's PiFlex Config (the double-click made it current,
+    //so handlePiFlexConfig acts on this row). Non-PiFlex rows are ignored there.
+    CANConnection *conn_p = connModel->getAtIdx(index.row());
+    if (conn_p && conn_p->getType() == CANCon::PICOFLEXRAY) handlePiFlexConfig();
 }
