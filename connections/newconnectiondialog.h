@@ -58,6 +58,7 @@ private:
     void setManualVisible(bool show);    //show/hide the manual section
     void onDetectedClicked(QListWidgetItem *item);
     void onDetectedActivated(QListWidgetItem *item); //double-click: apply + connect
+    void onIdentifyClicked();            //opt-in active GVRET probe of the selected serial device
 
     void selectSerial();
     void selectKvaser();

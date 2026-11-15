@@ -2,8 +2,11 @@
 #include "connections/picoflexray.h"
 
 #include <QSerialPortInfo>
+#include <QSerialPort>
 #include <QCanBus>
 #include <QCanBusDeviceInfo>
+#include <QSettings>
+#include <QElapsedTimer>
 #include <algorithm>
 
 // --- serial adapter identification -------------------------------------------------------------
@@ -20,6 +23,8 @@ DetectedDevice DeviceScanner::identifySerial(quint16 vid, quint16 pid,
     DetectedDevice d;
     d.location = portName;
     d.portArg = portName;
+    //matches GVRET/LAWICEL getLabelKey(): USB serial when reported, else the port name
+    d.labelKey = serialNumber.isEmpty() ? portName : serialNumber;
 
     QString hay = (description + " " + manufacturer).toLower();
     auto has = [&hay](const char *s){ return hay.contains(QLatin1String(s)); };
@@ -83,6 +88,7 @@ QList<DetectedDevice> DeviceScanner::scan(const QVector<QString> &gvretIps,
             d.detail = QStringLiteral("FlexRay over USB");
             d.type = CANCon::PICOFLEXRAY;
             d.portArg = serial;
+            d.labelKey = serial; //getLabelKey() for pico-flexray is the USB serial (its port)
             d.confidence = DetectedDevice::Certain;
             out.append(d);
         }
@@ -109,6 +115,8 @@ QList<DetectedDevice> DeviceScanner::scan(const QVector<QString> &gvretIps,
             d.type = CANCon::SERIALBUS;
             d.driver = plugin;
             d.portArg = info.name();
+            //matches SerialBus getLabelKey(): USB serial when the plugin reports one, else the channel name
+            d.labelKey = info.serialNumber().isEmpty() ? info.name() : info.serialNumber();
             d.confidence = DetectedDevice::Certain;
             out.append(d);
         }
@@ -130,6 +138,7 @@ QList<DetectedDevice> DeviceScanner::scan(const QVector<QString> &gvretIps,
         d.detail = QStringLiteral("network GVRET (UDP broadcast)");
         d.type = CANCon::REMOTE;
         d.portArg = ip;
+        d.labelKey = ip; //getLabelKey() for a network connection is its host/port string
         d.confidence = DetectedDevice::Certain;
         out.append(d);
     }
@@ -140,8 +149,24 @@ QList<DetectedDevice> DeviceScanner::scan(const QVector<QString> &gvretIps,
         d.detail = QStringLiteral("network socketcand (UDP broadcast)");
         d.type = CANCon::KAYAK;
         d.portArg = host;
+        d.labelKey = host;
         d.confidence = DetectedDevice::Certain;
         out.append(d);
+    }
+
+    // Show the user's own saved label (set in the Connected Devices table, persisted per device by
+    // CANConnection::getLabelKey()) for any detected device that has one - so a device the user named
+    // once shows that name here. The technical name moves into the tooltip.
+    {
+        QSettings settings;
+        for (DetectedDevice &d : out) {
+            if (d.labelKey.isEmpty()) continue;
+            const QString lbl = settings.value("DeviceLabels/" + d.labelKey).toString();
+            if (lbl.isEmpty()) continue;
+            d.detail = d.detail.isEmpty() ? d.displayName : (d.displayName + " — " + d.detail);
+            d.displayName = lbl;
+            d.hasUserLabel = true;
+        }
     }
 
     // Order: physical USB hardware we enumerate directly (pico-flexray + USB-serial adapters) always
@@ -163,4 +188,42 @@ QList<DetectedDevice> DeviceScanner::scan(const QVector<QString> &gvretIps,
     });
 
     return out;
+}
+
+bool DeviceScanner::probeGvret(const QString &portName, int &buildNum, bool &fdCapable)
+{
+    buildNum = 0;
+    fdCapable = false;
+
+    QSerialPort port;
+    port.setPortName(portName);
+    port.setBaudRate(1000000); // GVRET default; over USB-CDC the rate is nominal (ignored)
+    if (!port.open(QIODevice::ReadWrite)) return false; // busy (already connected) or not openable
+    port.setDataTerminalReady(true);
+
+    // GVRET binary commands are 0xF1 followed by an opcode. Ask for device info (0x07) and FD
+    // settings (0x16); a GVRET device echoes the opcode back with its reply payload.
+    port.write(QByteArray::fromHex("F107F116"));
+    port.flush();
+
+    QByteArray resp;
+    QElapsedTimer t; t.start();
+    while (t.elapsed() < 500 && resp.size() < 256) {
+        if (port.waitForReadyRead(120)) resp.append(port.readAll());
+        else if (!resp.isEmpty()) break; // got something then a quiet gap - reply is complete
+    }
+    port.close();
+
+    bool isGvret = false;
+    for (int i = 0; i + 3 < resp.size(); i++) {
+        if ((quint8)resp[i] == 0xF1 && (quint8)resp[i + 1] == 0x07) { // GET_DEVICE_INFO reply
+            buildNum = (quint8)resp[i + 2] | ((quint8)resp[i + 3] << 8);
+            isGvret = true;
+            break;
+        }
+    }
+    for (int j = 0; j + 1 < resp.size(); j++) {
+        if ((quint8)resp[j] == 0xF1 && (quint8)resp[j + 1] == 0x16) { fdCapable = true; isGvret = true; break; }
+    }
+    return isGvret;
 }

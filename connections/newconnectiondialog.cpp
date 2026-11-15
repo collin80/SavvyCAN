@@ -4,6 +4,8 @@
 #include <QGroupBox>
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QApplication>
 #include "newconnectiondialog.h"
 #include "ui_newconnectiondialog.h"
 #include "picoflexray.h"
@@ -83,9 +85,16 @@ void NewConnectionDialog::buildDetectPanel()
     mDetectedList = new QListWidget(box);
     mDetectedList->setSelectionMode(QAbstractItemView::SingleSelection);
     v->addWidget(mDetectedList);
+    QHBoxLayout *btnRow = new QHBoxLayout();
     QPushButton *rescan = new QPushButton(tr("Rescan"), box);
-    v->addWidget(rescan, 0, Qt::AlignLeft);
     connect(rescan, &QPushButton::clicked, this, &NewConnectionDialog::rescanDevices);
+    btnRow->addWidget(rescan);
+    QPushButton *identify = new QPushButton(tr("Identify selected"), box);
+    identify->setToolTip(tr("Probe the selected serial device with the GVRET handshake to confirm it's a GVRET adapter"));
+    connect(identify, &QPushButton::clicked, this, &NewConnectionDialog::onIdentifyClicked);
+    btnRow->addWidget(identify);
+    btnRow->addStretch(1);
+    v->addLayout(btnRow);
     connect(mDetectedList, &QListWidget::itemClicked, this, &NewConnectionDialog::onDetectedClicked);
     connect(mDetectedList, &QListWidget::itemActivated, this, &NewConnectionDialog::onDetectedActivated);
 
@@ -172,6 +181,46 @@ void NewConnectionDialog::onDetectedActivated(QListWidgetItem *item)
     const DetectedDevice d = mDetected.at(i);
     applyDetected(d);
     if (d.confidence != DetectedDevice::Unknown) accept(); //confident match: connect straight away
+}
+
+//Opt-in: actively probe the selected serial device with the GVRET handshake to confirm it (and whether
+//it does CAN FD), promoting a "likely" guess to "certain". Only serial ports can be probed.
+void NewConnectionDialog::onIdentifyClicked()
+{
+    QListWidgetItem *item = mDetectedList ? mDetectedList->currentItem() : nullptr;
+    if (!item) return;
+    const int i = item->data(Qt::UserRole).toInt();
+    if (i < 0 || i >= mDetected.size()) return;
+    DetectedDevice &d = mDetected[i];
+    if (d.type != CANCon::GVRET_SERIAL && d.type != CANCon::LAWICEL) {
+        item->setToolTip(tr("Only a serial device can be probed for GVRET."));
+        return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    int build = 0; bool fd = false;
+    const bool isGvret = DeviceScanner::probeGvret(d.portArg, build, fd);
+    QApplication::restoreOverrideCursor();
+
+    if (isGvret) {
+        d.type = CANCon::GVRET_SERIAL;
+        d.confidence = DetectedDevice::Certain;
+        if (!d.hasUserLabel) //keep the user's own label if they set one
+            d.displayName = fd ? tr("GVRET device (CAN FD)") : tr("GVRET device");
+        QString note = fd ? tr("GVRET, CAN FD") : tr("GVRET");
+        if (build) note += tr(", build %1").arg(build);
+        d.detail = d.detail.isEmpty() ? note : (note + " — " + d.detail);
+    } else {
+        d.detail = d.detail.isEmpty() ? tr("no GVRET reply") : (tr("no GVRET reply") + " — " + d.detail);
+    }
+
+    const QString conf = d.confidence == DetectedDevice::Certain ? QString()
+                       : d.confidence == DetectedDevice::Likely  ? tr("  (likely)")
+                       :                                           tr("  (confirm type)");
+    item->setText(QStringLiteral("%1 — %2%3").arg(d.displayName, d.location, conf));
+    if (!d.detail.isEmpty()) item->setToolTip(d.detail);
+    //reflect the (now certain) pick into the manual controls too
+    applyDetected(d);
 }
 
 NewConnectionDialog::~NewConnectionDialog()

@@ -25,6 +25,8 @@ struct DetectedDevice {
     CANCon::type type = CANCon::NONE; // best-guess connection type
     QString driver;                   // QtSerialBus plugin name when type==SERIALBUS, else empty
     QString portArg;                  // value handed to NewConnectionDialog::setPortName()
+    QString labelKey;                 // matches CANConnection::getLabelKey(): used to look up the user's saved label
+    bool hasUserLabel = false;        // displayName is the user's saved label (don't overwrite it on probe)
     Confidence confidence = Unknown;
 };
 
@@ -43,6 +45,12 @@ public:
                                          const QString &description,
                                          const QString &manufacturer,
                                          const QString &serialNumber);
+
+    // Opt-in active probe: briefly open the serial port and run the GVRET handshake
+    // (0xF1 0x07 GET_DEVICE_INFO, 0xF1 0x16 GET_FD). Returns true if a GVRET device answered,
+    // filling buildNum and fdCapable. Fails cleanly if the port is busy / not GVRET. Only called
+    // on explicit user action, never during the passive scan (which never opens a port).
+    static bool probeGvret(const QString &portName, int &buildNum, bool &fdCapable);
 };
 
 #endif // DEVICESCANNER_H
