@@ -14,6 +14,7 @@
 #include "framesenderobject.h"
 #include "highlightitemdelegate.h"
 #include "highlightoverviewbar.h"
+#include "candataitemdelegate.h"
 #include "re/graphingwindow.h"
 #include "re/frameinfowindow.h"
 #include "frameplaybackwindow.h"

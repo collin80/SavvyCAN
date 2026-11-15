@@ -61,6 +61,8 @@ MainWindow::MainWindow(QWidget *parent) :
     proxyModel->setSourceModel(model);
 
     ui->canFramesView->setModel(proxyModel);
+    //Highlight payload bytes that changed vs the previous frame (overwrite+hex mode only; see CanDataItemDelegate).
+    ui->canFramesView->setItemDelegateForColumn((int)Column::Data, new CanDataItemDelegate(model, this));
 
     settingsDialog = new MainSettingsDialog(); //instantiate the settings dialog so it can initialize settings if this is the first run or the config file was deleted.
     settingsDialog->updateSettings(); //write out all the settings. If this is the first run it'll write defaults out.

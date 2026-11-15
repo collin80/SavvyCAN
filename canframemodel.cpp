@@ -544,6 +544,10 @@ QVariant CommFrameModel::data(const QModelIndex &index, int role) const
 
     thisFrame = filteredFrames.at(index.row());
 
+    // Custom roles for CanDataItemDelegate (changed-byte highlighting in overwrite mode).
+    if (role == ChangedBytesRole) return (qulonglong) thisFrame.getChangedPayloadBytes();
+    if (role == PayloadRole)      return thisFrame.payload();
+
     const unsigned char *data = reinterpret_cast<const unsigned char *>(thisFrame.payload().constData());
     int dataLen = thisFrame.payload().length();
 
@@ -942,6 +946,10 @@ const QMap<int, bool> *CommFrameModel::getLengthFiltersReference() const
     return &lengthFilters;
 }
 
+bool CommFrameModel::getHexMode() const { return useHexMode; }
+bool CommFrameModel::getOverwriteMode() const { return overwriteDups; }
+int  CommFrameModel::getBytesPerLine() const { return bytesPerLine; }
+
 
 void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
 {
@@ -1054,7 +1062,20 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
                         lastSeenData[ckey] = tempFrame.payload();
                 }
                 if (dataChanged)
+                {
+                    // Overwrite mode: record which payload bytes changed vs the frame being replaced,
+                    // so CanDataItemDelegate can highlight them.
+                    quint64 changedMask = 0;
+                    const QByteArray oldPl = filteredFrames[i].payload();
+                    const QByteArray newPl = tempFrame.payload();
+                    const int cmpLen = qMin(newPl.size(), oldPl.size());
+                    for (int b = 0; b < cmpLen && b < 64; b++)
+                        if (newPl.at(b) != oldPl.at(b)) changedMask |= (1ull << b);
+                    for (int b = oldPl.size(); b < newPl.size() && b < 64; b++)
+                        changedMask |= (1ull << b); // bytes that newly appeared count as changed
+                    tempFrame.setChangedPayloadBytes(changedMask);
                     filteredFrames.replace(i, tempFrame);
+                }
                 found = true;
                 break;
             }

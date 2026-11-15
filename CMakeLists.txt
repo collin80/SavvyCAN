@@ -110,6 +110,7 @@ qt_add_executable(SavvyCAN WIN32 MACOSX_BUNDLE
     helpwindow.cpp helpwindow.h
     highlightitemdelegate.cpp highlightitemdelegate.h
     highlightoverviewbar.cpp highlightoverviewbar.h
+    candataitemdelegate.cpp candataitemdelegate.h
     jsedit.cpp jsedit.h
     main.cpp
     mainsettingsdialog.cpp mainsettingsdialog.h
