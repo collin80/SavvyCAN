@@ -21,6 +21,14 @@ LAWICELSerial::LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed
     readSettings();
 }
 
+QString LAWICELSerial::getLabelKey()
+{
+    //key the label on the USB serial number so it follows the hardware across
+    //USB sockets / COM-port renumbering. Fall back to the port if none is reported.
+    const QString sn = QSerialPortInfo(getPort()).serialNumber();
+    return sn.isEmpty() ? getPort() : sn;
+}
+
 
 LAWICELSerial::~LAWICELSerial()
 {

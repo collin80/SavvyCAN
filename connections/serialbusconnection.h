@@ -31,6 +31,10 @@ public:
 		      int pDataRate, bool pCanFd, bool pListenOnly = false, bool pActive = true);
     virtual ~SerialBusConnection();
 
+    //key the device label on the adapter's USB serial when the plugin reports one
+    //(PCAN, Kvaser, etc.); falls back to the channel name (so socketcan's can0 is unchanged)
+    QString getLabelKey() override;
+
 protected:
 
     virtual void piStarted() override;

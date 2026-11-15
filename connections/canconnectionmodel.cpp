@@ -128,9 +128,10 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
                 QString lbl = conn_p->getName();
                 if (lbl.isEmpty())
                 {
-                    //lazily restore a label persisted for this device (keyed by its port/serial)
+                    //lazily restore a label persisted for this device (keyed by its stable id:
+                    //USB serial for serial adapters, else the port - see getLabelKey())
                     QSettings settings;
-                    lbl = settings.value("DeviceLabels/" + conn_p->getPort()).toString();
+                    lbl = settings.value("DeviceLabels/" + conn_p->getLabelKey()).toString();
                     if (!lbl.isEmpty()) conn_p->setName(lbl);
                 }
                 return lbl;
@@ -162,9 +163,10 @@ bool CANConnectionModel::setData(const QModelIndex &index, const QVariant &value
     const QString label = value.toString().trimmed();
     conn_p->setName(label);
 
-    //persist per-device (keyed by port/serial) so the label survives reconnects/restarts
+    //persist per-device (keyed by stable id - USB serial for serial adapters, else the
+    //port - see getLabelKey()) so the label survives reconnects/restarts and USB renumbering
     QSettings settings;
-    const QString key = "DeviceLabels/" + conn_p->getPort();
+    const QString key = "DeviceLabels/" + conn_p->getLabelKey();
     if (label.isEmpty()) settings.remove(key);
     else                 settings.setValue(key, label);
 

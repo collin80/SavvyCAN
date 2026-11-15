@@ -3,6 +3,7 @@
 #include "canconmanager.h"
 
 #include <QCanBus>
+#include <QCanBusDeviceInfo>
 #include <QCanBusFrame>
 #include <QDateTime>
 #include <QDebug>
@@ -22,6 +23,24 @@ SerialBusConnection::SerialBusConnection(QString portName, QString driverName, i
 SerialBusConnection::~SerialBusConnection()
 {
     stop();
+}
+
+
+QString SerialBusConnection::getLabelKey()
+{
+    //ask the QtSerialBus plugin whether this device reports a USB serial number. Many USB
+    //adapters (PCAN, Kvaser, ...) do, so the label can follow the hardware across COM/channel
+    //renumbering. socketcan reports none, so we fall back to the channel name (e.g. can0),
+    //which is itself stable. Enumeration mirrors what newconnectiondialog already does.
+    const QList<QCanBusDeviceInfo> devices = QCanBus::instance()->availableDevices(getDriver());
+    for (const QCanBusDeviceInfo &info : devices) {
+        if (info.name() == getPort()) {
+            const QString sn = info.serialNumber();
+            if (!sn.isEmpty()) return sn;
+            break;
+        }
+    }
+    return getPort();
 }
 
 

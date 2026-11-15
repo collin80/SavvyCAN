@@ -85,6 +85,15 @@ public:
      */
     void setName(const QString &name) { mName = name; }
 
+    /**
+     * @brief getLabelKey
+     * @return a stable identity string used as the QSettings key for the user's
+     * device label. Defaults to getPort(). USB-serial backends (GVRET, LAWICEL)
+     * override this to return the adapter's USB serial number, so a label follows
+     * the hardware instead of its OS-assigned COM/tty port (which can renumber).
+     */
+    virtual QString getLabelKey() { return getPort(); }
+
 
     /**
      * @brief getQueue

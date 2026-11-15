@@ -35,6 +35,16 @@ GVRetSerial::GVRetSerial(QString portName, bool useTcp) :
     readSettings();
 }
 
+QString GVRetSerial::getLabelKey()
+{
+    //TCP/UDP: the "port" is a host address, not a USB device - fall back to it
+    if (useTcp) return getPort();
+    //for a USB adapter, key the label on the serial number so it follows the hardware
+    //across USB sockets / COM-port renumbering. Fall back to the port if none is reported.
+    const QString sn = QSerialPortInfo(getPort()).serialNumber();
+    return sn.isEmpty() ? getPort() : sn;
+}
+
 
 GVRetSerial::~GVRetSerial()
 {

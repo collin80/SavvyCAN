@@ -15,6 +15,9 @@ public:
     LAWICELSerial(QString portName, int serialSpeed, int lawicelSpeed, bool canFd, int dataRate);
     virtual ~LAWICELSerial();
 
+    //key the device label on the USB serial number (not the COM/tty port)
+    QString getLabelKey() override;
+
 protected:
 
     virtual void piStarted();

@@ -42,6 +42,9 @@ public:
     GVRetSerial(QString portName, bool useTcp);
     virtual ~GVRetSerial();
 
+    //over serial, key the device label on the USB serial number (not the COM/tty port)
+    QString getLabelKey() override;
+
 protected:
 
     virtual void piStarted();
