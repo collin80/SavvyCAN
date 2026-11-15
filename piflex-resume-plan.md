@@ -46,25 +46,34 @@ Other backlog: runtime-check the two Qt6 ports now on fork-ci (#1168 connection 
 
 ## Upstream alignment — collin80/SavvyCAN `QT6WIP` (as of 2026-11-15)
 
-`fork-ci` tracks upstream **`QT6WIP`** (the Qt6 line), not `master`. Drift: **21 ahead /
-2 behind**; **all beneficial QT6WIP PRs are now in `fork-ci`.** No open SavvyCAN PRs.
+`fork-ci` tracks upstream **`QT6WIP`** (the Qt6 line), not `master`. Only **2 commits behind**
+(upstream #1173, intentionally skipped); well ahead with our own work. **Every beneficial
+QT6WIP PR is now in `fork-ci`.** No open SavvyCAN PRs.
 
-- **In fork-ci (done):** #1181 timestamp-wrap, #1177 + #1179 SocketCANd (clean cherry-picks,
-  PR #4); #1168 connection-ownership use-after-free + #1164 sort tie-order (**ported** to our
-  diverged Qt6 `CANConManager`/`CommFrameModel`, PR #4); #1144 Frame ID highlight + per-ID
-  count + overview bar (ported, hand-merged the scroll-area `.ui` + model init, PR #5 merge
-  `f73b27d`).
+- **In fork-ci (done):**
+  - #1181 timestamp-wrap, #1177 + #1179 SocketCANd — clean cherry-picks (PR #4).
+  - #1168 connection-ownership use-after-free + #1164 sort tie-order — **ported** to our
+    diverged Qt6 `CANConManager`/`CommFrameModel` (PR #4).
+  - #1144 Frame ID highlight + per-ID count + overview bar — ported, hand-merged the
+    scroll-area `.ui` (PR #5).
+  - #1113 real-time search — our fork already had the ID search bar, so only the **payload/data
+    search** was added (PR #6).
+  - #708 changed-byte highlight (overwrite mode) — **lean** port: a new `CanDataItemDelegate`
+    highlights changed bytes without touching `CommFrameModel::data()` (no FlexRay/LIN
+    regression); automatic in overwrite+hex mode, no toggle. **Visually verified** (PR #7).
 - **Already in our Qt6 base (no action):** #1161 (via #1035), #1170 (via Tom's #1138), #1160.
 - **Skipped by user:** #1173 (macOS serial-port fix — the 2 commits we're behind; clean to
-  cherry-pick anytime for byte parity), #1174 (German/Turkish translations).
-- **Optional, NOT alignment (each needs a Qt6 port — they are `master`/Qt5):** #835 gs_usb
-  (CANable/CANtact on Windows), #1113 real-time search bar, #708 changed-byte highlight,
-  #1105 frame-filter group selectors, #1126 Simplified Chinese UI.
-- **Runtime-check pending:** #1168, #1164, #1144 are **compile-validated by CI only** — not
-  yet exercised in the app (test: reorder connections, sort by timestamp with equal-time rows,
-  toggle frame-ID highlight).
-- These statuses come from the PR authors' own notes + verification against our code; the
-  SavvyCAN `fix(...)` PRs on `master` (#1161/#1164/#1168/#1170) are all accounted for.
+  cherry-pick anytime for byte parity), #1174 (translations), #1105 (filter group selectors),
+  #1126 (Chinese UI + Windows installer).
+- **Remaining candidate — parked:** #835 gs_usb (CANable / CANtact / CAN Bus Debugger on
+  Windows). The big one — external **LGPL `candle_dll`** build integration + new connection
+  backend + needs the hardware to verify. Waiting on a ~£12 CANable-compatible CAN-FD adapter
+  to arrive and confirming it runs **gs_usb / candleLight** firmware (some cheap ones are
+  slcan-only, which #835 doesn't use). Only worth the port once that's confirmed.
+- **Runtime-check pending (compile-validated by CI only):** #1168 (reorder connections),
+  #1164 (sort by timestamp with equal-time rows), #1144 (toggle frame-ID highlight). #1113 and
+  #708 are effectively verified in use.
+- SavvyCAN `fix(...)` PRs on `master` (#1161/#1164/#1168/#1170) are all accounted for.
 
 ## Key behavioral findings (carry forward — already corrected in help text)
 
