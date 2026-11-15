@@ -3,6 +3,7 @@
 
 #include <QAbstractTableModel>
 #include <QList>
+#include <QSet>
 #include <QVector>
 #include <QDebug>
 #include <QMutex>
@@ -67,7 +68,13 @@ public:
     void setBytesPerLine(int bpl);
     void loadFilterFile(QString filename);
     void saveFilterFile(QString filename);
+    void toggleHighlight(int id);
+    void clearAllHighlights();
+    bool isHighlighted(int id) const;
+    const QSet<int>& getHighlightedIds() const;
+    int getFrameCountForId(int id) const;
     void setSearchFilter(const QString &text);
+    void setHighlightEnabled(bool enabled);
     void normalizeTiming();
     void recalcOverwrite();
     bool needsFilterRefresh();
@@ -88,6 +95,7 @@ public slots:
 
 signals:
     void updatedFiltersList();
+    void highlightChanged();
 
 private:
     void qSortCommFrameAsc(QVector<CommFrame>* frames, Column column, int lowerBound, int upperBound);
@@ -125,7 +133,10 @@ private:
     uint32_t preallocSize;
     bool sortDirAsc;
     int bytesPerLine;
+    QSet<int> m_highlightedIds;
     QString m_searchFilter;
+    bool m_highlightEnabled;
+    QHash<int,int> m_idCounts;
 };
 
 

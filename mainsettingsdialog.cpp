@@ -141,6 +141,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     ui->cbIgnoreDBCColors->setChecked(settings.value("Main/IgnoreDBCColors", false).toBool());
     ui->cbColorsByCanId->setChecked(settings.value("Main/ColorsByCanId", false).toBool());
     ui->cbShowSendPanel->setChecked(settings.value("Main/ShowSendPanel", true).toBool());
+    ui->cbEnableFrameHighlight->setChecked(settings.value("Main/EnableFrameHighlight", true).toBool());
 
     ui->cbEqualSniffer->setChecked(settings.value("Main/EqualDataSniff", false).toBool());
 
@@ -201,6 +202,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     connect(ui->cbFontFixedWidth, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
     connect(ui->spinBytesPerLine, SIGNAL(valueChanged(int)), this, SLOT(updateSettings()));
     connect(ui->cbShowSendPanel, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
+    connect(ui->cbEnableFrameHighlight, SIGNAL(toggled(bool)), this, SLOT(updateSettings()));
 
     //settings are saved as they change; Close goes through closeEvent so the last edit is saved too
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
@@ -320,6 +322,7 @@ void MainSettingsDialog::updateSettings()
     settings.setValue("Main/FontFixedWidth", ui->cbFontFixedWidth->isChecked());
     settings.setValue("Main/ColorsByCanId", ui->cbColorsByCanId->isChecked());
     settings.setValue("Main/ShowSendPanel", ui->cbShowSendPanel->isChecked());
+    settings.setValue("Main/EnableFrameHighlight", ui->cbEnableFrameHighlight->isChecked());
 
     settings.setValue("Playback/AutoLoop", ui->cbPlaybackLoop->isChecked());
     settings.setValue("Playback/DefSpeed", ui->spinPlaybackSpeed->value());
