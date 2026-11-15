@@ -88,6 +88,13 @@ public:
     const QMap<int, bool> *getDirFiltersReference() const;
     const QMap<int, bool> *getLengthFiltersReference() const;
     bool passesFrameFilters(const CommFrame &frame);
+    bool getHexMode() const;
+    bool getOverwriteMode() const;
+    int  getBytesPerLine() const;
+
+    // Custom data() roles used by CanDataItemDelegate to highlight changed payload bytes in overwrite mode.
+    static constexpr int ChangedBytesRole = Qt::UserRole + 42;
+    static constexpr int PayloadRole      = Qt::UserRole + 43;
 
 public slots:
     void addFrame(const CommFrame&, bool);

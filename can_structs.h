@@ -337,6 +337,13 @@ public:
         captureOrder = order;
     }
 
+    constexpr quint64 getChangedPayloadBytes() const noexcept {return changedPayloadBytes;}
+
+    constexpr void setChangedPayloadBytes(quint64 mask) noexcept
+    {
+        changedPayloadBytes = mask;
+    }
+
     constexpr bool hasFlexibleDataRateFormat() const noexcept { return (isFlexibleDataRate & 0x1); }
     //keeps the frame type in step with the FD flag (see setFrameType())
     constexpr void setFlexibleDataRateFormat(bool isFlexibleData) noexcept
@@ -454,6 +461,7 @@ private:
     uint64_t timedelta;
     uint32_t frameCount; //used in overwrite mode
     uint64_t captureOrder = 0; //capture sequence stamped by the model; tie-breaks equal timestamps, not CAN data
+    uint64_t changedPayloadBytes = 0; //overwrite mode: bit i set when byte i differs from the previous frame of this ID
 
     //FlexRay header details (see setFlexRayHeader()), packed: flags in bits 0-4, indicators 5-9,
     //header CRC 10-20, frame CRC 21-44
