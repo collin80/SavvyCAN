@@ -75,7 +75,10 @@ PiFlexConfigDialog::PiFlexConfigDialog(PicoFlexRay *conn, QWidget *parent) :
     QDialog(parent),
     mConn(conn)
 {
-    setWindowTitle("PiFlex injection + generator config");
+    //Show which device this dialog is editing (user label if set, else the port/serial).
+    const QString devId = conn ? (conn->getName().isEmpty() ? conn->getPort() : conn->getName()) : QString();
+    setWindowTitle(devId.isEmpty() ? QStringLiteral("PiFlex injection + generator config")
+                                   : QStringLiteral("PiFlex config — %1").arg(devId));
     setWindowFlags(windowFlags() | Qt::Window);
     buildUi();
     loadFromSettings();

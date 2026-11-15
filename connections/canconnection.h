@@ -73,6 +73,18 @@ public:
      */
     QString getDriver();
 
+    /**
+     * @brief getName
+     * @return the user-assigned label for this device (empty if none)
+     */
+    QString getName() const { return mName; }
+
+    /**
+     * @brief setName
+     * @param name a user-friendly label so multiple devices can be told apart
+     */
+    void setName(const QString &name) { mName = name; }
+
 
     /**
      * @brief getQueue
@@ -334,6 +346,7 @@ private:
     const QString       mPort;
     const QString       mDriver;
     const CANCon::type  mType;
+    QString             mName; //user-assigned label (editable from the Connected Devices table)
     bool                mIsCapSuspended;
     QAtomicInt          mStatus;
     bool                mStarted;

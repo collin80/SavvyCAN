@@ -1,6 +1,7 @@
 #include "canconnectionmodel.h"
 #include "connections/canconnection.h"
 #include "connections/canconmanager.h"
+#include <QSettings>
 
 CANConnectionModel::CANConnectionModel(QObject *parent)
     : QAbstractTableModel(parent)
@@ -12,12 +13,13 @@ CANConnectionModel::~CANConnectionModel()
 }
 
 enum class Column {
-    Type       = 0, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
-    Subtype    = 1, ///< Mostly used by SerialBus devices to pick the sub type
-    Port       = 2, ///< The CAN hardware port, e.g. can0 for socketcan
-    Speed      = 3,
-    NumBuses   = 4, ///< Number of buses exposed by this device. Usually non-GVRET devices will just have one
-    Status     = 5  ///< The bus status as text message
+    Label      = 0, ///< A user-assigned label to tell multiple devices apart (leftmost)
+    Type       = 1, ///< The CAN driver/backend type, e.g. GVRET, peakcan, or socketcan
+    Subtype    = 2, ///< Mostly used by SerialBus devices to pick the sub type
+    Port       = 3, ///< The CAN hardware port, e.g. can0 for socketcan
+    Speed      = 4,
+    NumBuses   = 5, ///< Number of buses exposed by this device. Usually non-GVRET devices will just have one
+    Status     = 6  ///< The bus status as text message
 };
 
 QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation, int role) const
@@ -41,6 +43,8 @@ QVariant CANConnectionModel::headerData(int section, Qt::Orientation orientation
             return QString(tr("Buses"));
         case Column::Status:
             return QString(tr("Status"));
+        case Column::Label:
+            return QString(tr("Label"));
         }
     }
 
@@ -54,7 +58,7 @@ int CANConnectionModel::columnCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent);
     //return 5;
-    return 6;
+    return 7;
 }
 
 
@@ -76,6 +80,9 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     CANConnection *conn_p = getAtIdx(index.row());
 
     if (!conn_p) return QVariant();
+
+    if (role == Qt::EditRole && Column(index.column()) == Column::Label)
+        return conn_p->getName();
 
     //bool isSocketCAN = (conn_p->getType() == CANCon::SERIALBUS) ? true: false;
     CANBus Bus;
@@ -116,6 +123,18 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
             case Column::NumBuses:
                 return conn_p->getNumBuses();
                 break;
+            case Column::Label:
+            {
+                QString lbl = conn_p->getName();
+                if (lbl.isEmpty())
+                {
+                    //lazily restore a label persisted for this device (keyed by its port/serial)
+                    QSettings settings;
+                    lbl = settings.value("DeviceLabels/" + conn_p->getPort()).toString();
+                    if (!lbl.isEmpty()) conn_p->setName(lbl);
+                }
+                return lbl;
+            }
             case Column::Status:
                  return (conn_p->getStatus()==CANCon::CONNECTED) ? "Connected" : "Not Connected";                                
         }
@@ -123,6 +142,35 @@ QVariant CANConnectionModel::data(const QModelIndex &index, int role) const
     return QVariant();
 }
 
+
+Qt::ItemFlags CANConnectionModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags f = QAbstractTableModel::flags(index);
+    if (index.isValid() && Column(index.column()) == Column::Label)
+        f |= Qt::ItemIsEditable;
+    return f;
+}
+
+bool CANConnectionModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (role != Qt::EditRole || !index.isValid() || Column(index.column()) != Column::Label)
+        return false;
+
+    CANConnection *conn_p = getAtIdx(index.row());
+    if (!conn_p) return false;
+
+    const QString label = value.toString().trimmed();
+    conn_p->setName(label);
+
+    //persist per-device (keyed by port/serial) so the label survives reconnects/restarts
+    QSettings settings;
+    const QString key = "DeviceLabels/" + conn_p->getPort();
+    if (label.isEmpty()) settings.remove(key);
+    else                 settings.setValue(key, label);
+
+    emit dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole});
+    return true;
+}
 
 void CANConnectionModel::add(CANConnection* pConn_p)
 {

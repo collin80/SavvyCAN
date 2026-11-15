@@ -32,12 +32,15 @@ ConnectionWindow::ConnectionWindow(QWidget *parent) :
     //List of devices with details. None of it can be edited. connection type, serialbus type, port name, number of buses, status
     connModel = new CANConnectionModel(this);
     ui->tableConnections->setModel(connModel);
-    ui->tableConnections->setColumnWidth(0, 100);
-    ui->tableConnections->setColumnWidth(1, 100);
-    ui->tableConnections->setColumnWidth(2, 130);
-    ui->tableConnections->setColumnWidth(3, 100);
-    ui->tableConnections->setColumnWidth(4, 70);
-    ui->tableConnections->setColumnWidth(5, 200);
+    ui->tableConnections->setColumnWidth(0, 140); //Label (leftmost)
+    ui->tableConnections->setColumnWidth(1, 100); //Type
+    ui->tableConnections->setColumnWidth(2, 100); //Subtype
+    ui->tableConnections->setColumnWidth(3, 130); //Port
+    ui->tableConnections->setColumnWidth(4, 100); //Speed
+    ui->tableConnections->setColumnWidth(5, 70);  //Buses
+    ui->tableConnections->setColumnWidth(6, 200); //Status
+    //the Label column is editable (double-click or F2); every other column stays read-only via flags()
+    ui->tableConnections->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
     QHeaderView *HorzHdr = ui->tableConnections->horizontalHeader();
     HorzHdr->setStretchLastSection(true); //causes the data column to automatically fill the tableview
 
