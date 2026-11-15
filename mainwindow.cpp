@@ -2106,7 +2106,12 @@ void MainWindow::askCaptureNotes()
     notes.hasSpan = false;
     notes.saved = QDateTime();
 
-    LogNotesDialog dialog(LogNotesDialog::Starting, this);
+    //Parent the dialog to whichever window is active (the Connection Manager when the user
+    //just connected from it), not always MainWindow. Parenting to MainWindow raises it to
+    //the front on exec(), pushing the independent Connection Manager window behind it.
+    QWidget *dlgParent = QApplication::activeWindow();
+    if (!dlgParent) dlgParent = this;
+    LogNotesDialog dialog(LogNotesDialog::Starting, dlgParent);
     dialog.setNotes(notes);
     dialog.setTarget(continuousLogging ? QFileInfo(FrameFileIO::continuousFileName()).fileName() : QString(), true);
     dialog.exec();
