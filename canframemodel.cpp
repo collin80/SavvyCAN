@@ -56,7 +56,10 @@ CommFrameModel::CommFrameModel(QObject *parent)
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        maxFramesDefault = 10000000;
+        // Keep the startup footprint bounded.  CommFrame data is stored in both
+        // the capture and filtered vectors, so 10 million entries can consume
+        // roughly a gigabyte before the first frame arrives.
+        maxFramesDefault = 1000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
@@ -65,7 +68,9 @@ CommFrameModel::CommFrameModel(QObject *parent)
     }
 
     QSettings settings;
-    preallocSize = settings.value("Main/MaximumFrames", maxFramesDefault).toInt();
+    // A corrupt or legacy setting must not turn startup into a multi-gigabyte
+    // allocation.  The vectors remain bounded at this value and roll over.
+    preallocSize = qBound(100000, settings.value("Main/MaximumFrames", maxFramesDefault).toInt(), 5000000);
 
     //Each CommFrame object takes up 56 bytes and we're allocating two arrays here so take the
     //# of pre-alloc frames and multiply by 112 to get the RAM usage. This is around 1GiB for the default.
@@ -1001,33 +1006,43 @@ void CommFrameModel::addFrame(const CommFrame& frame, bool autoRefresh = false)
 
 void CommFrameModel::addFrames(const CANConnection*, const QVector<CommFrame>& pFrames)
 {
-    if(frames.length() > frames.capacity() * 0.99)
-    {
-        mutex.lock();
-        qDebug() << "Frames count: " << frames.length() << " of " << frames.capacity() << " capacity, removing first " << (int)(frames.capacity() * 0.05) << " frames";
-        frames.remove(0, (int)(frames.capacity() * 0.05));
-        qDebug() << "Frames removed, new count: " << frames.length();
-        mutex.unlock();
-    }
+    if (pFrames.isEmpty()) return;
 
-    if(filteredFrames.length() > filteredFrames.capacity() * 0.99)
-    {
-        mutex.lock();
-        qDebug() << "filteredFrames count: " << filteredFrames.length() << " of " << filteredFrames.capacity() << " capacity, removing first " << (int)(filteredFrames.capacity() * 0.05) << " frames";
-        filteredFrames.remove(0, (int)(filteredFrames.capacity() * 0.05));
-        qDebug() << "filteredFrames removed, new count: " << filteredFrames.length();
-        mutex.unlock();
-    }
+    // Trim based on the configured logical limit, never QVector::capacity().
+    // capacity() may have doubled after an append and using it here allowed
+    // the process to grow without bound under sustained traffic.
+    mutex.lock();
+    trimToFrameLimit(pFrames.size());
+    mutex.unlock();
 
-    foreach(const CommFrame& frame, pFrames)
+    // A producer can hand us more frames than the model is allowed to retain.
+    // Keep the newest portion and avoid a transient oversized model.
+    const int first = qMax(0, pFrames.size() - static_cast<int>(preallocSize));
+    for (int i = first; i < pFrames.size(); ++i)
     {
-        addFrame(frame);
+        addFrame(pFrames.at(i));
     }
     if (overwriteDups) //if in overwrite mode we'll update every time frames come in
     {
         beginResetModel();
         endResetModel();
     }
+}
+
+void CommFrameModel::trimToFrameLimit(int incomingCount)
+{
+    const int excess = frames.size() + qMax(0, incomingCount) - static_cast<int>(preallocSize);
+    if (excess <= 0) return;
+
+    // Remove a chunk to avoid doing a QVector memmove for every frame.  Keep
+    // at least one incoming batch worth of room whenever possible.
+    const int removeCount = qMin(frames.size(), qMax(excess, static_cast<int>(preallocSize / 20)));
+    if (removeCount <= 0) return;
+    beginResetModel();
+    frames.remove(0, removeCount);
+    if (!filteredFrames.isEmpty())
+        filteredFrames.remove(0, qMin(removeCount, filteredFrames.size()));
+    endResetModel();
 }
 
 void CommFrameModel::sendRefresh()

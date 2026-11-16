@@ -20,9 +20,18 @@ SocketCANd::SocketCANd(QString portName) :
 
     sendDebug("SocketCANd()");
     hostCanIDs = portName.left(portName.indexOf("@")).split(',');
-    QString hostIPandPort = portName.mid(portName.indexOf("can://")+6, portName.length() - portName.indexOf("can://") - 7); //7 is lenght of 'can://'
+    /* port string form: "<bus>@can://<ip>:<port>)". The old code sliced a fixed 7
+     * chars off the end, so one stray character (a newline from a paste, an extra
+     * ')', a trailing space) shifted the window and toInt() silently returned 0:
+     * "host 127.0.0.1:0" and no TCP connection was ever opened. Take everything
+     * after "can://", trim it, drop the wrapper ')' and parse the tail. */
+    QString hostIPandPort = portName.mid(portName.indexOf("can://") + 6).trimmed();
+    while (hostIPandPort.endsWith(')'))
+        hostIPandPort.chop(1);
     hostIP = QHostAddress(hostIPandPort.left(hostIPandPort.indexOf(":")));
-    hostPort = (hostIPandPort.right(hostIPandPort.length() - hostIPandPort.lastIndexOf(":") -1)).toInt();
+    hostPort = hostIPandPort.mid(hostIPandPort.lastIndexOf(":") + 1).toInt();
+    if (hostPort <= 0 || hostPort > 65535)
+        qWarning() << "socketcand: cannot parse port from port string" << portName;
     mNumBuses = hostCanIDs.length();
     mBusData.resize(mNumBuses);
 

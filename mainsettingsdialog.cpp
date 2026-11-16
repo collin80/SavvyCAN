@@ -153,7 +153,7 @@ MainSettingsDialog::MainSettingsDialog(QWidget *parent) :
     if (QSysInfo::WordSize > 32)
     {
         qDebug() << "64 bit OS detected. Requesting a large preallocation";
-        maxFramesDefault = 10000000;
+        maxFramesDefault = 1000000;
     }
     else //if compiling for 32 bit you can't ask for gigabytes of preallocation so tone it down.
     {
