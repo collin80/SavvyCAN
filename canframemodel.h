@@ -96,6 +96,7 @@ private:
     bool any_busfilters_are_configured(void);
     bool any_dirfilters_are_configured(void);
     bool any_lengthfilters_are_configured(void);
+    void trimToFrameLimit(int incomingCount = 0);
 
     QVector<CommFrame> frames;
     QVector<CommFrame> filteredFrames;
