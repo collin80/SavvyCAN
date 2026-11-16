@@ -198,8 +198,8 @@ void NewConnectionDialog::onIdentifyClicked()
     }
 
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    int build = 0; bool fd = false;
-    const bool isGvret = DeviceScanner::probeGvret(d.portArg, build, fd);
+    QString probeDetails; bool fd = false;
+    const bool isGvret = DeviceScanner::probeGvret(d.portArg, probeDetails, fd);
     QApplication::restoreOverrideCursor();
 
     if (isGvret) {
@@ -207,9 +207,8 @@ void NewConnectionDialog::onIdentifyClicked()
         d.confidence = DetectedDevice::Certain;
         if (!d.hasUserLabel) //keep the user's own label if they set one
             d.displayName = fd ? tr("GVRET device (CAN FD)") : tr("GVRET device");
-        QString note = fd ? tr("GVRET, CAN FD") : tr("GVRET");
-        if (build) note += tr(", build %1").arg(build);
-        d.detail = d.detail.isEmpty() ? note : (note + " — " + d.detail);
+        //probeDetails already reads like "GVRET build 345, 2 buses (bus0 CAN FD @ 5000k, bus1 classic)"
+        d.detail = d.detail.isEmpty() ? probeDetails : (probeDetails + " — " + d.detail);
     } else {
         d.detail = d.detail.isEmpty() ? tr("no GVRET reply") : (tr("no GVRET reply") + " — " + d.detail);
     }

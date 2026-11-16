@@ -47,10 +47,12 @@ public:
                                          const QString &serialNumber);
 
     // Opt-in active probe: briefly open the serial port and run the GVRET handshake
-    // (0xF1 0x07 GET_DEVICE_INFO, 0xF1 0x16 GET_FD). Returns true if a GVRET device answered,
-    // filling buildNum and fdCapable. Fails cleanly if the port is busy / not GVRET. Only called
-    // on explicit user action, never during the passive scan (which never opens a port).
-    static bool probeGvret(const QString &portName, int &buildNum, bool &fdCapable);
+    // (0xF1 0x07 GET_DEVICE_INFO, 0xF1 0x0C GET_NUM_BUSES, 0xF1 0x16 GET_FD). Returns true if a
+    // GVRET device answered; `details` gets a human-readable summary (firmware build, bus count,
+    // per-bus CAN FD capability + data rate) and `anyFd` is set if any bus can do CAN FD. Fails
+    // cleanly if the port is busy / not GVRET. Only called on explicit user action, never during
+    // the passive scan (which never opens a port).
+    static bool probeGvret(const QString &portName, QString &details, bool &anyFd);
 };
 
 #endif // DEVICESCANNER_H

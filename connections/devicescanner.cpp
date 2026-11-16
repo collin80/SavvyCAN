@@ -190,40 +190,82 @@ QList<DetectedDevice> DeviceScanner::scan(const QVector<QString> &gvretIps,
     return out;
 }
 
-bool DeviceScanner::probeGvret(const QString &portName, int &buildNum, bool &fdCapable)
+bool DeviceScanner::probeGvret(const QString &portName, QString &details, bool &anyFd)
 {
-    buildNum = 0;
-    fdCapable = false;
+    details.clear();
+    anyFd = false;
 
     QSerialPort port;
     port.setPortName(portName);
     port.setBaudRate(1000000); // GVRET default; over USB-CDC the rate is nominal (ignored)
+    port.setFlowControl(QSerialPort::NoFlowControl);
     if (!port.open(QIODevice::ReadWrite)) return false; // busy (already connected) or not openable
-    port.setDataTerminalReady(true);
+    // ESP32 boards use DTR/RTS for reset + bootloader selection; keep them LOW so the probe never
+    // resets the board or drops it into the ROM download mode. Matches GVRetSerial's own port setup.
+    port.setDataTerminalReady(false);
+    port.setRequestToSend(false);
 
-    // GVRET binary commands are 0xF1 followed by an opcode. Ask for device info (0x07) and FD
-    // settings (0x16); a GVRET device echoes the opcode back with its reply payload.
-    port.write(QByteArray::fromHex("F107F116"));
+    // 0xE7 switches an ESP32RET/GVRET board into binary mode (no reply); harmless on a non-GVRET
+    // device. Then the binary commands (0xF1 + opcode): device info (0x07) and FD settings (0x16);
+    // a GVRET device echoes the opcode back with its reply payload. Note: this leaves a GVRET board
+    // in binary mode, which is fine for SavvyCAN (it sends 0xE7 on connect too).
+    port.write(QByteArray::fromHex("E7F107F116"));
     port.flush();
 
-    QByteArray resp;
+    QByteArray r;
     QElapsedTimer t; t.start();
-    while (t.elapsed() < 500 && resp.size() < 256) {
-        if (port.waitForReadyRead(120)) resp.append(port.readAll());
-        else if (!resp.isEmpty()) break; // got something then a quiet gap - reply is complete
+    while (t.elapsed() < 600 && r.size() < 512) {
+        if (port.waitForReadyRead(120)) r.append(port.readAll());
+        else if (!r.isEmpty()) break; // got something then a quiet gap - reply is complete
     }
     port.close();
 
-    bool isGvret = false;
-    for (int i = 0; i + 3 < resp.size(); i++) {
-        if ((quint8)resp[i] == 0xF1 && (quint8)resp[i + 1] == 0x07) { // GET_DEVICE_INFO reply
-            buildNum = (quint8)resp[i + 2] | ((quint8)resp[i + 3] << 8);
-            isGvret = true;
-            break;
+    bool ok = false;
+    int buildNum = -1, numBuses = -1;
+    QStringList busBits;
+
+    // A GVRET board whose buses are enabled (the T2 saves bus enable in NVS, so this is the normal
+    // case) streams CAN frames alongside the replies once it's in binary mode - and an 0xF1 0x07 or
+    // 0xF1 0x16 can appear inside frame data. So a match must be a *well-formed* reply of the exact
+    // expected length AND be followed by end-of-buffer or another 0xF1 (the next framed message).
+    // (Hardening suggested by the T2 firmware session; reasonable, not yet bench-proven on a live bus.)
+    auto framedAt = [&r](int i, int len) -> bool {
+        if (i + len > r.size()) return false;                                   // reply not fully present
+        if (i + len < r.size() && (quint8)r[i + len] != 0xF1) return false;     // not followed by a framed msg
+        return true;
+    };
+
+    for (int i = 0; i + 1 < r.size(); i++) {
+        if ((quint8)r[i] != 0xF1) continue;
+        const quint8 op = (quint8)r[i + 1];
+        if (op == 0x07 && buildNum < 0 && framedAt(i, 8)) {
+            // GET_DEVICE_INFO reply: F1 07 build_lo build_hi [eeprom][filetype][autolog][singlewire]
+            buildNum = (quint8)r[i + 2] | ((quint8)r[i + 3] << 8);
+            ok = true;
+        } else if (op == 0x16 && numBuses < 0 && i + 2 < r.size()) {
+            // GET_FD reply: F1 16 nbuses, then per bus: flags(1, bit0 = FD capable) + data rate(u32 LE)
+            const int nb = (quint8)r[i + 2];
+            if (nb < 1 || nb > 16 || !framedAt(i, 3 + 5 * nb)) continue;
+            numBuses = nb;
+            int p = i + 3;
+            for (int b = 0; b < nb; b++, p += 5) {
+                const quint8 flags = (quint8)r[p];
+                const quint32 rate = (quint8)r[p + 1] | ((quint8)r[p + 2] << 8)
+                                   | ((quint8)r[p + 3] << 16) | ((quint32)(quint8)r[p + 4] << 24);
+                const bool fdCap = flags & 0x01;
+                if (fdCap) anyFd = true;
+                QString bb = QStringLiteral("bus%1 %2").arg(b).arg(fdCap ? "CAN FD" : "classic");
+                if (fdCap && rate > 0) bb += QStringLiteral(" @ %1k").arg(rate / 1000);
+                busBits << bb;
+            }
+            ok = true;
         }
     }
-    for (int j = 0; j + 1 < resp.size(); j++) {
-        if ((quint8)resp[j] == 0xF1 && (quint8)resp[j + 1] == 0x16) { fdCapable = true; isGvret = true; break; }
-    }
-    return isGvret;
+
+    if (!ok) return false;
+    QString head = QStringLiteral("GVRET");
+    if (buildNum >= 0) head += QStringLiteral(" build %1").arg(buildNum);
+    if (numBuses >= 0) head += QStringLiteral(", %1 bus%2").arg(numBuses).arg(numBuses == 1 ? "" : "es");
+    details = busBits.isEmpty() ? head : (head + " (" + busBits.join(", ") + ")");
+    return true;
 }
