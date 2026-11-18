@@ -278,8 +278,6 @@ private:
     uint32_t getMessageIDFromPosition(QPoint pos);
     void copySelection();
     void handleSaveDecodedMethod(bool csv);
-    void saveDecodedTextFile(QString);
-    void saveDecodedTextFileAsColumns(QString);
     void addFrameToDisplay(CommFrame &, bool);
     void updateFileStatus();
     bool loadLogFile(const QString &filename, int fileType, const QString &displayName, bool reportFailure,

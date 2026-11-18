@@ -1,5 +1,6 @@
 #include "framefileio.h"
 
+#include <QHash>
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QDateTime>
@@ -12,9 +13,111 @@
 
 #include "utility.h"
 #include "blfhandler.h"
+#include "dbc/dbchandler.h"
 #include "lognotes.h"
 
 QFile FrameFileIO::continuousFile;
+
+bool FrameFileIO::saveDecodedCSVFile(const QString &filename, const QVector<CommFrame> &frames, DBCHandler &dbc, bool absoluteTime)
+{
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return false;
+
+    auto writeRow = [&file](QStringList &fields) {
+        for (QString &field : fields)
+        {
+            if (field.contains(',') || field.contains('"') || field.contains('\r') || field.contains('\n'))
+            {
+                field.replace('"', "\"\"");
+                field = '"' + field + '"';
+            }
+        }
+        return file.write((fields.join(',') + ",\n").toUtf8()) >= 0;
+    };
+
+    QStringList header;
+    if (absoluteTime)
+        header << QCoreApplication::translate("MainWindow", "Year") << QCoreApplication::translate("MainWindow", "Month")
+               << QCoreApplication::translate("MainWindow", "Day") << QCoreApplication::translate("MainWindow", "Hour")
+               << QCoreApplication::translate("MainWindow", "Minute") << QCoreApplication::translate("MainWindow", "Second")
+               << QCoreApplication::translate("MainWindow", "Ms");
+    else
+        header << QCoreApplication::translate("MainWindow", "Time");
+    header << QCoreApplication::translate("MainWindow", "ID") << QCoreApplication::translate("MainWindow", "Bus")
+           << QCoreApplication::translate("MainWindow", "DataLen");
+
+    QHash<const DBC_MESSAGE *, qsizetype> firstColumn;
+    for (const CommFrame &frame : frames)
+    {
+        DBC_MESSAGE *msg = dbc.findMessage(frame);
+        if (!msg || firstColumn.contains(msg)) continue;
+        firstColumn.insert(msg, header.size());
+        for (DBC_SIGNAL *signal : msg->sigHandler->getSignalsAsList())
+            header << signal->name;
+    }
+    if (!writeRow(header)) return false;
+
+    for (const CommFrame &frame : frames)
+    {
+        QStringList row;
+        if (absoluteTime)
+        {
+            const QDateTime dt = QDateTime::fromMSecsSinceEpoch(frame.timeStamp().microSeconds() / 1000);
+            row << QString::number(dt.date().year()) << QString::number(dt.date().month()) << QString::number(dt.date().day())
+                << QString::number(dt.time().hour()) << QString::number(dt.time().minute()) << QString::number(dt.time().second())
+                << QString::number(dt.time().msec());
+        }
+        else
+            row << QString::number(frame.timeStamp().microSeconds() / 1000000.0, 'f', 6);
+        row << Utility::formatCANID(frame.frameId(), frame.hasExtendedFrameFormat())
+            << QString::number(frame.getBus()) << QString::number(frame.payload().size());
+        row.resize(header.size());
+
+        if (DBC_MESSAGE *msg = dbc.findMessage(frame))
+        {
+            qsizetype column = firstColumn.value(msg);
+            for (DBC_SIGNAL *signal : msg->sigHandler->getSignalsAsList())
+            {
+                if (signal->isSignalInMessage(frame))
+                    signal->processAsText(frame, row[column]);
+                ++column;
+            }
+        }
+        if (!writeRow(row)) return false;
+    }
+    return file.flush();
+}
+
+bool FrameFileIO::saveDecodedTextFile(const QString &filename, const QVector<CommFrame> &frames, DBCHandler &dbc)
+{
+    QFile file(filename);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) return false;
+
+    for (const CommFrame &frame : frames)
+    {
+        QString text = QCoreApplication::translate("MainWindow", "Time: ") + QString::number(frame.timeStamp().microSeconds() / 1000000.0, 'f', 6);
+        text += QCoreApplication::translate("MainWindow", "    ID: ") + Utility::formatCANID(frame.frameId(), frame.hasExtendedFrameFormat());
+        text += frame.hasExtendedFrameFormat() ? QCoreApplication::translate("MainWindow", " Ext ") : QCoreApplication::translate("MainWindow", " Std ");
+        text += QCoreApplication::translate("MainWindow", "Bus: ") + QString::number(frame.getBus()) + " Len: " + QString::number(frame.payload().size()) + "\n";
+        text += QCoreApplication::translate("MainWindow", "Data Bytes: ");
+        for (unsigned char byte : frame.payload())
+            text += Utility::formatNumber(byte) + " ";
+        text += '\n';
+
+        if (DBC_MESSAGE *msg = dbc.findMessage(frame))
+        {
+            for (DBC_SIGNAL *signal : msg->sigHandler->getSignalsAsList())
+            {
+                QString value;
+                if (signal->isSignalInMessage(frame) && signal->processAsText(frame, value))
+                    text += "\t" + value + "\n";
+            }
+        }
+        if (file.write((text + '\n').toUtf8()) < 0) return false;
+    }
+    return file.flush();
+}
+
 
 struct TeslaAPCANRecord
 {

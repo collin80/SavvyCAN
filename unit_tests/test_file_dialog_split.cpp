@@ -22,6 +22,7 @@ private slots:
     void testMicrochipBadLengths();
     void testWiresharkBadLengths();
     void testWiresharkLongRecords();
+    void testDecodedMultiplexedExport();
     void testDbcFilterLists();
     void testDbcSaveAndLoad();
     void testDbcBadIndex();
@@ -448,6 +449,73 @@ void TestFileDialogSplit::testWiresharkLongRecords()
         QCOMPARE(loaded.count(), 2);
         QCOMPARE(loaded[1].frameId(), 0x202u);
     }
+}
+
+void TestFileDialogSplit::testDecodedMultiplexedExport()
+{
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    QFile dbcFile(dir.filePath("mux.dbc"));
+    QVERIFY(dbcFile.open(QIODevice::WriteOnly));
+    dbcFile.write("VERSION \"\"\n\nNS_ :\n\nBS_:\n\nBU_: ECU\n\n"
+                  "BO_ 68 Battery: 2 ECU\n"
+                  " SG_ Selector M : 0|8@1+ (1,0) [0|255] \"\" ECU\n"
+                  " SG_ Temp m8 : 8|8@1+ (1,0) [0|255] \"\" ECU\n"
+                  " SG_ Volt m9 : 8|8@1+ (1,0) [0|255] \"\" ECU\n\n"
+                  "BO_ 69 Other: 1 ECU\n"
+                  " SG_ Gear : 0|8@1+ (1,0) [0|255] \"\" ECU\n\n"
+                  "VAL_ 69 Gear 4 \"Drive, manual\";\n");
+    dbcFile.close();
+
+    QFile trace(dir.filePath("mux.trc"));
+    QVERIFY(trace.open(QIODevice::WriteOnly));
+    trace.write(";$FILEVERSION=1.1\n"
+                "1) 100.0 Rx 0044 2 09 2A\n"
+                "2) 101.0 Rx 0045 1 03\n"
+                "3) 102.0 Rx 0044 2 08 00\n"
+                "4) 103.0 Rx 0045 1 04\n");
+    trace.close();
+    QVector<CommFrame> frames;
+    QVERIFY(FrameFileIO::loadPCANFile(trace.fileName(), &frames));
+    QCOMPARE(frames.size(), 4);
+    DBCHandler *dbc = DBCHandler::getReference();
+    dbc->removeAllFiles();
+    QVERIFY(dbc->loadFileAs(dbcFile.fileName(), 0));
+
+    QFile csv(dir.filePath("mux.csv"));
+    QVERIFY(FrameFileIO::saveDecodedCSVFile(csv.fileName(), frames, *dbc, false));
+    QVERIFY(csv.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QList<QByteArray> header = csv.readLine().trimmed().split(',');
+    // Signal columns stay in the same position even when a different message or branch is active.
+    const QByteArray expected[][4] = {{"Selector: 9", "", "Volt: 42", ""},
+                                      {"", "", "", "Gear: 3"},
+                                      {"Selector: 8", "Temp: 0", "", ""}};
+    const QList<QByteArray> names = {"Selector", "Temp", "Volt", "Gear"};
+    for (const auto &values : expected)
+    {
+        const auto row = csv.readLine().trimmed().split(',');
+        QCOMPARE(row.size(), header.size());
+        for (int i = 0; i < names.size(); ++i)
+        {
+            QVERIFY(header.contains(names[i]));
+            QCOMPARE(row.at(header.indexOf(names[i])).trimmed(), values[i]);
+        }
+    }
+
+    // A comma in a DBC value description must stay in the Gear column.
+    const QByteArray quotedRow = csv.readLine().trimmed();
+    QVERIFY(quotedRow.endsWith(",\"Gear: Drive, manual \","));
+    QVERIFY(csv.atEnd());
+    QFile txt(dir.filePath("mux.txt"));
+    QVERIFY(FrameFileIO::saveDecodedTextFile(txt.fileName(), frames, *dbc));
+    QVERIFY(txt.open(QIODevice::ReadOnly | QIODevice::Text));
+    const QByteArray text = txt.readAll();
+    QCOMPARE(text.count("Temp:"), 1);
+    QVERIFY(text.contains("Temp: 0"));
+    QCOMPARE(text.count("Volt:"), 1);
+    QVERIFY(text.contains("Volt: 42"));
+    QVERIFY(text.contains("Gear: 3"));
+    dbc->removeAllFiles();
 }
 
 void TestFileDialogSplit::testDbcFilterLists()
