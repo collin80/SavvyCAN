@@ -94,6 +94,7 @@ private:
     void refreshTree();
     void processSignalToTree(QTreeWidgetItem *parent, DBC_SIGNAL *sig);
     uint32_t getParentMessageID(QTreeWidgetItem *cell);
+    QString createMessageText(DBC_MESSAGE *msg);
     QString createSignalText(DBC_SIGNAL *sig);
 };
 

@@ -430,9 +430,7 @@ void DBCMainEditor::refreshTree()
             {
                 //qDebug() << "Got match of sender and this node";
                 QTreeWidgetItem *msgItem = new QTreeWidgetItem(nodeItem);
-                QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
-                if (msg->comment.length() > 0) msgInfo.append(" - ").append(msg->comment);
-                msgItem->setText(0, msgInfo);
+                msgItem->setText(0, createMessageText(msg));
                 msgItem->setIcon(0, messageIcon);
                 msgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
                 messageToItem.insert(msg, msgItem);
@@ -449,6 +447,15 @@ void DBCMainEditor::refreshTree()
         ui->treeDBC->addTopLevelItem(nodeItem);
     }
     ui->treeDBC->sortItems(0, Qt::SortOrder::AscendingOrder); //sort the display list for ease in viewing by mere mortals, helps me a lot.
+}
+
+QString DBCMainEditor::createMessageText(DBC_MESSAGE *msg)
+{
+    const uint32_t maskedId = msg->ID & 0x1FFFFFFFul;
+    const bool extended = msg->extendedID || maskedId > 0x7FF;
+    QString msgInfo = Utility::formatCANID(maskedId, extended) + " " + msg->name;
+    if (msg->comment.length() > 0) msgInfo.append(" - ").append(msg->comment);
+    return msgInfo;
 }
 
 QString DBCMainEditor::createSignalText(DBC_SIGNAL *sig)
@@ -513,9 +520,7 @@ void DBCMainEditor::updatedMessage(DBC_MESSAGE *msg, quint32 orig_ID)
     if (messageToItem.contains(msg))
     {
         QTreeWidgetItem *item = messageToItem.value(msg);
-        QString msgInfo = Utility::formatCANID(msg->ID) + " " + msg->name;
-        if (msg->comment.length() > 0) msgInfo.append(" - ").append(msg->comment);
-        item->setText(0, msgInfo);
+        item->setText(0, createMessageText(msg));
         //editor could have changed the parent Node too. Have to figure out which node
         //is parent in the GUI and compare that to parent in the data.
         DBC_NODE *oldParent = dbcFile->findNodeByName(item->parent()->text(0).split(" - ")[0]);
@@ -616,7 +621,8 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
     nodeItem = ui->treeDBC->currentItem();
 
     msgPtr->name = source->name;
-    msgPtr->ID = newMsgId;
+    msgPtr->ID = newMsgId & 0x1FFFFFFFul;
+    msgPtr->extendedID = source->extendedID || (msgPtr->ID > 0x7FF);
     msgPtr->len = source->len;
     msgPtr->canFD = source->canFD;
     msgPtr->bitRateSwitch = source->bitRateSwitch;
@@ -659,9 +665,7 @@ void DBCMainEditor::copyMessageToNode(DBC_NODE *parentNode, DBC_MESSAGE *source,
 
     dbcFile->messageHandler->addMessage(msgPtr);
     QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
-    QString msgInfo = Utility::formatCANID(msgPtr->ID) + " " + msgPtr->name;
-    if (msgPtr->comment.length() > 0) msgInfo.append(" - ").append(msgPtr->comment);
-    newMsgItem->setText(0, msgInfo);
+    newMsgItem->setText(0, createMessageText(msgPtr));
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
     messageToItem.insert(msgPtr, newMsgItem);
@@ -707,15 +711,16 @@ void DBCMainEditor::newMessage()
         if (oldMsg)
         {
             msgPtr->name = "Msg" + QString::number(randGen.bounded(500));
-            msgPtr->ID = oldMsg->ID + 1;
+            msgPtr->ID = (oldMsg->ID + 1) & 0x1FFFFFFFul;
 
             DBC_MESSAGE *overlappedMsg = dbcFile->messageHandler->findMsgByID(msgPtr->ID);
             while (overlappedMsg)
             {
-                msgPtr->ID++;
+                msgPtr->ID = (msgPtr->ID + 1) & 0x1FFFFFFFul;
                 overlappedMsg = dbcFile->messageHandler->findMsgByID(msgPtr->ID);
             }
 
+            msgPtr->extendedID = oldMsg->extendedID || (msgPtr->ID > 0x7FF);
             msgPtr->len = oldMsg->len;
             msgPtr->canFD = oldMsg->canFD;
             msgPtr->bitRateSwitch = oldMsg->bitRateSwitch;
@@ -741,9 +746,7 @@ void DBCMainEditor::newMessage()
 
     dbcFile->messageHandler->addMessage(msgPtr);
     QTreeWidgetItem *newMsgItem = new QTreeWidgetItem();
-    QString msgInfo = Utility::formatCANID(msgPtr->ID) + " " + msgPtr->name;
-    if (msgPtr->comment.length() > 0) msgInfo.append(" - ").append(msgPtr->comment);
-    newMsgItem->setText(0, msgInfo);
+    newMsgItem->setText(0, createMessageText(msgPtr));
     newMsgItem->setIcon(0, messageIcon);
     newMsgItem->setData(0, Qt::UserRole, DBCItemTypes::MESG);
     messageToItem.insert(msgPtr, newMsgItem);

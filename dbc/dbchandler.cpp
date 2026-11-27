@@ -37,6 +37,16 @@ static bool parseValueDescriptions(QString tokenString, QList<DBC_VAL_ENUM_ENTRY
     return values.count() > 0;
 }
 
+static uint32_t dbcEncodedMessageId(const DBC_MESSAGE *msg)
+{
+    uint32_t id = msg->ID & 0x1FFFFFFFul;
+    if (id > 0x7FF || msg->extendedID)
+    {
+        id |= 0x80000000ul; //set bit 31 if this ID is extended.
+    }
+    return id;
+}
+
 DBC_SIGNAL* DBCSignalHandler::findSignalByName(QString name)
 {
     if (sigs.count() == 0) return nullptr;
@@ -628,7 +638,7 @@ DBC_MESSAGE* DBCFile::parseMessageLine(QString line)
         uint32_t ID = match.captured(1).toULong(); //the ID is always stored in decimal format
         msgPtr->ID = ID & 0x1FFFFFFFul;
         // BO_ encodes extended frame information in bit 31.
-        msgPtr->extendedID = ((ID & 0x80000000ul) != 0);
+        msgPtr->extendedID = ((ID & 0x80000000ul) != 0) || (msgPtr->ID > 0x7FF);
         msgPtr->name = match.captured(2);
         msgPtr->len = match.captured(3).toUInt();
         msgPtr->sender = findNodeByName(match.captured(4));
@@ -1670,11 +1680,7 @@ bool DBCFile::saveFile(QString fileName)
             msgNumber++;
         }
 
-        uint32_t ID = msg->ID;
-        if (msg->ID > 0x7FF || msg->extendedID)
-        {
-            ID += 0x80000000ul; //set bit 31 if this ID is extended.
-        }
+        uint32_t ID = dbcEncodedMessageId(msg);
 
         msgOutput.append("BO_ " + QString::number(ID) + " " + msg->name + ": " + QString::number(msg->len) +
                          " " + msg->sender->name + "\n");
@@ -1899,11 +1905,7 @@ bool DBCFile::saveFile(QString fileName)
         {
             DBC_MESSAGE *msg = msgs[x];
 
-            uint32_t ID = msg->ID;
-            if (msg->ID > 0x7FF || msg->extendedID)
-            {
-                ID += 0x80000000ul; //set bit 31 if this ID is extended.
-            }
+            uint32_t ID = dbcEncodedMessageId(msg);
 
             QList<DBC_SIGNAL *> sigs = msg->sigHandler->getSignalsAsList();
             for (int s = 0; s < msg->sigHandler->getCount(); s++)
