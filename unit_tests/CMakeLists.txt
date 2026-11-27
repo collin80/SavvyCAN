@@ -225,6 +225,36 @@ target_link_libraries(TestLogNotesUi
     Qt6::Widgets
 )
 
+###### DBC message editor test ######
+set(TEST_SOURCES_DBC_MESSAGE_EDITOR
+    test_dbc_message_editor.cpp
+    ../dbc/dbcmessageeditor.cpp  # the class under test
+    ../dbc/dbchandler.cpp
+    ../dbc/dbc_classes.cpp
+    ../helpwindow.cpp
+    ../utility.cpp
+    ../ui/dbcmessageeditor.ui
+    ../ui/helpwindow.ui
+)
+
+add_executable(TestDbcMessageEditor ${TEST_SOURCES_DBC_MESSAGE_EDITOR})
+
+set_target_properties(TestDbcMessageEditor PROPERTIES
+    AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/../ui"
+)
+
+target_include_directories(TestDbcMessageEditor PRIVATE
+    ${SAVVYCAN_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../dbc
+)
+
+target_link_libraries(TestDbcMessageEditor
+    Qt6::Core
+    Qt6::Test
+    Qt6::SerialBus
+    Qt6::Widgets
+)
+
 
 # Enable ctest integration
 enable_testing()
@@ -238,3 +268,4 @@ add_test(NAME TestFileDialogSplit COMMAND TestFileDialogSplit)
 add_test(NAME TestGitHub COMMAND TestGitHub)
 add_test(NAME TestLogNotes COMMAND TestLogNotes)
 add_test(NAME TestLogNotesUi COMMAND TestLogNotesUi)
+add_test(NAME TestDbcMessageEditor COMMAND TestDbcMessageEditor)

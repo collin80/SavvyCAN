@@ -1,9 +1,11 @@
 #include "dbcmessageeditor.h"
 #include "ui_dbcmessageeditor.h"
 
+#include <QApplication>
 #include <QSettings>
 #include <QKeyEvent>
 #include <QColorDialog>
+#include <QPalette>
 #include "helpwindow.h"
 #include "utility.h"
 
@@ -19,14 +21,16 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
 
     dbcHandler = DBCHandler::getReference();
     dbcMessage = nullptr;
+    dbcFile = nullptr;
     suppressEditCallbacks = false;
+    origID = 0;
 
     connect(ui->lineComment, &QLineEdit::editingFinished,
         [=]()
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if (dbcMessage->comment != ui->lineComment->text()) dbcFile->setDirtyFlag();
+            if (dbcMessage->comment != ui->lineComment->text() && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->comment = ui->lineComment->text();
             emit updatedTreeInfo(dbcMessage, origID);
         });
@@ -36,16 +40,18 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if ((dbcMessage->ID & 0x1FFFFFFFul) != Utility::ParseStringToNum(ui->lineFrameID->text())) dbcFile->setDirtyFlag();
-            dbcMessage->ID = Utility::ParseStringToNum(ui->lineFrameID->text());
-
-            // Auto-enable extended for IDs that exceed standard 11-bit range.
-            if (dbcMessage->ID > 0x7FF && ui->checkExtended)
+            const uint32_t newID = static_cast<uint32_t>(Utility::ParseStringToNum(ui->lineFrameID->text())) & 0x1FFFFFFFul;
+            const bool newExtended = (newID > 0x7FF) ? true : dbcMessage->extendedID;
+            if (((dbcMessage->ID & 0x1FFFFFFFul) != newID || dbcMessage->extendedID != newExtended) && dbcFile)
             {
-                ui->checkExtended->setChecked(true);
+                dbcFile->setDirtyFlag();
             }
+            dbcMessage->ID = newID;
+            dbcMessage->extendedID = newExtended;
 
+            refreshView();
             emit updatedTreeInfo(dbcMessage, origID);
+            origID = dbcMessage->ID;
         });
 
     connect(ui->lineMsgName, &QLineEdit::editingFinished,
@@ -53,7 +59,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if (dbcMessage->name != ui->lineMsgName->text().simplified().replace(' ', '_')) dbcFile->setDirtyFlag();
+            if (dbcMessage->name != ui->lineMsgName->text().simplified().replace(' ', '_') && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->name = ui->lineMsgName->text().simplified().replace(' ', '_');
             emit updatedTreeInfo(dbcMessage, origID);
         });
@@ -65,7 +71,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
             if (suppressEditCallbacks) return;
             unsigned int newLen = Utility::ParseStringToNum(ui->lineFrameLen->text());
             if (newLen > 64) newLen = 64; //CAN FD maximum
-            if (dbcMessage->len != newLen) dbcFile->setDirtyFlag();
+            if (dbcMessage->len != newLen && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->len = newLen;
             if (newLen > 8) dbcMessage->canFD = true; //only CAN FD carries more than 8 bytes
             refreshView();
@@ -76,7 +82,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if (dbcMessage->canFD != checked) dbcFile->setDirtyFlag();
+            if (dbcMessage->canFD != checked && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->canFD = checked;
             if (!checked && dbcMessage->len > 8) dbcMessage->len = 8; //classic CAN carries at most 8 bytes
             refreshView();
@@ -87,14 +93,34 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
         {
             if (dbcMessage == nullptr) return;
             if (suppressEditCallbacks) return;
-            if (dbcMessage->bitRateSwitch != checked) dbcFile->setDirtyFlag();
+            if (dbcMessage->bitRateSwitch != checked && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->bitRateSwitch = checked;
+        });
+
+    connect(ui->checkExtended, &QCheckBox::toggled,
+        [=](bool checked)
+        {
+            if (dbcMessage == nullptr) return;
+            if (suppressEditCallbacks) return;
+            const uint32_t maskedId = dbcMessage->ID & 0x1FFFFFFFul;
+            const bool effective = (maskedId > 0x7FF) ? true : checked;
+            if (dbcMessage->extendedID != effective)
+            {
+                dbcMessage->extendedID = effective;
+                if (dbcFile) dbcFile->setDirtyFlag();
+                emit updatedTreeInfo(dbcMessage, origID);
+                refreshView();
+            }
+            else if (maskedId > 0x7FF && !checked)
+            {
+                refreshView();
+            }
         });
 
     connect(ui->comboSender, &QComboBox::currentTextChanged,
             [=](const QString newText)
             {
-                if (dbcMessage == nullptr) return;
+                if (dbcMessage == nullptr || dbcFile == nullptr) return;
                 if (suppressEditCallbacks) return;
                 DBC_NODE *node = dbcFile->findNodeByName(newText);
                 if (!node) return;
@@ -106,7 +132,7 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
     connect(ui->comboSender->lineEdit(), &QLineEdit::editingFinished,
             [=]()
             {
-                if (dbcMessage == nullptr) return;
+                if (dbcMessage == nullptr || dbcFile == nullptr) return;
                 if (suppressEditCallbacks) return;
                 QString newText = ui->comboSender->currentText();
                 DBC_NODE *node = dbcFile->findNodeByName(newText);
@@ -123,12 +149,15 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
                 emit updatedTreeInfo(dbcMessage, origID);
             });
 
+    ui->btnTextColor->setAutoDefault(false);
+    ui->btnBackgroundColor->setAutoDefault(false);
+
     connect(ui->btnTextColor, &QAbstractButton::clicked,
         [=]()
         {
-            if (suppressEditCallbacks) return;
+            if (dbcMessage == nullptr || suppressEditCallbacks) return;
             QColor newColor = QColorDialog::getColor(dbcMessage->fgColor);
-            if (dbcMessage->fgColor != newColor) dbcFile->setDirtyFlag();
+            if (dbcMessage->fgColor != newColor && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->fgColor = newColor;
             DBC_ATTRIBUTE_VALUE *val = dbcMessage->findAttrValByName("GenMsgForegroundColor");
             if (val)
@@ -148,9 +177,9 @@ DBCMessageEditor::DBCMessageEditor(QWidget *parent) :
     connect(ui->btnBackgroundColor, &QAbstractButton::clicked,
         [=]()
         {
-            if (suppressEditCallbacks) return;
+            if (dbcMessage == nullptr || suppressEditCallbacks) return;
             QColor newColor = QColorDialog::getColor(dbcMessage->bgColor);
-            if (dbcMessage->bgColor != newColor) dbcFile->setDirtyFlag();
+            if (dbcMessage->bgColor != newColor && dbcFile) dbcFile->setDirtyFlag();
             dbcMessage->bgColor = newColor;
             DBC_ATTRIBUTE_VALUE *val = dbcMessage->findAttrValByName("GenMsgBackgroundColor");
             if (val)
@@ -238,10 +267,14 @@ void DBCMessageEditor::writeSettings()
 
 void DBCMessageEditor::setMessageRef(DBC_MESSAGE *msg)
 {
+    if (!msg)
+    {
+        dbcMessage = nullptr;
+        origID = 0;
+        return;
+    }
     dbcMessage = msg;
     origID = msg->ID;
-    if (ui->checkExtended)
-        ui->checkExtended->setChecked(dbcMessage->extendedID);
 }
 
 void DBCMessageEditor::showEvent(QShowEvent* event)
@@ -257,22 +290,32 @@ void DBCMessageEditor::refreshView()
 
     suppressEditCallbacks = true;
 
+    const uint32_t maskedId = dbcMessage->ID & 0x1FFFFFFFul;
+    const bool forceExtended = maskedId > 0x7FF;
+    const bool isExtended = forceExtended || dbcMessage->extendedID;
+
     ui->lineComment->setText(dbcMessage->comment);
-    ui->lineFrameID->setText(Utility::formatCANID(dbcMessage->ID & 0x1FFFFFFFul));
+    ui->lineFrameID->setText(Utility::formatCANID(maskedId, isExtended));
     ui->lineMsgName->setText(dbcMessage->name);
     ui->lineFrameLen->setText(QString::number(dbcMessage->len));
     ui->checkCanFD->setChecked(dbcMessage->canFD);
     ui->checkBRS->setChecked(dbcMessage->canFD && dbcMessage->bitRateSwitch);
-    ui->checkBRS->setEnabled(dbcMessage->canFD);    
+    ui->checkBRS->setEnabled(dbcMessage->canFD);
     if (ui->checkExtended)
-        ui->checkExtended->setChecked(dbcMessage->extendedID);
-
-    for (int i = 0; i < ui->comboSender->count(); i++)
     {
-        if (ui->comboSender->itemText(i) == dbcMessage->sender->name)
+        ui->checkExtended->setChecked(isExtended);
+        ui->checkExtended->setEnabled(!forceExtended);
+    }
+
+    if (dbcMessage->sender)
+    {
+        for (int i = 0; i < ui->comboSender->count(); i++)
         {
-            ui->comboSender->setCurrentIndex(i);
-            break;
+            if (ui->comboSender->itemText(i) == dbcMessage->sender->name)
+            {
+                ui->comboSender->setCurrentIndex(i);
+                break;
+            }
         }
     }
 
@@ -283,12 +326,20 @@ void DBCMessageEditor::refreshView()
 
 void DBCMessageEditor::generateSampleText()
 {
+    if (!dbcMessage) return;
+
     QBrush fg, bg;
 
+    DBC_ATTRIBUTE *fgAttr = dbcFile ? dbcFile->findAttributeByName("GenMsgForegroundColor") : nullptr;
+    DBC_ATTRIBUTE *bgAttr = dbcFile ? dbcFile->findAttributeByName("GenMsgBackgroundColor") : nullptr;
+
     if (dbcMessage->fgColor.isValid()) fg = QBrush(dbcMessage->fgColor);
-    else fg = QBrush(QColor(dbcFile->findAttributeByName("GenMsgForegroundColor")->defaultValue.toString()));
+    else if (fgAttr) fg = QBrush(QColor(fgAttr->defaultValue.toString()));
+    else fg = QBrush(QApplication::palette().color(QPalette::WindowText));
+
     if (dbcMessage->bgColor.isValid()) bg = QBrush(dbcMessage->bgColor);
-    else bg = QBrush(QColor(dbcFile->findAttributeByName("GenMsgBackgroundColor")->defaultValue.toString()));
+    else if (bgAttr) bg = QBrush(QColor(bgAttr->defaultValue.toString()));
+    else bg = QBrush(QApplication::palette().color(QPalette::Base));
 
     ui->listSample->clear();
     QListWidgetItem *item = new QListWidgetItem("Test String");
